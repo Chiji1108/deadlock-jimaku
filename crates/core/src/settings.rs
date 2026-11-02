@@ -7,15 +7,46 @@ use crate::types::LangCode;
 pub struct Settings {
     /// 配信者が話す言語
     pub mic_language: LangCode,
+    /// マイクのデバイス名。None なら OS の既定の入力デバイス
+    pub mic_device: Option<String>,
     /// 翻訳先（最大 4 言語。mic_language は除く）
     pub translate_to: Vec<LangCode>,
+    pub models: Models,
+    /// Realtime の streaming delay（80〜1200、または 2400）
+    pub target_streaming_delay_ms: u32,
+    pub segmentation: Segmentation,
+}
+
+#[derive(Clone, Debug)]
+pub struct Models {
+    pub realtime: String,
+    pub batch: String,
+}
+
+/// 字幕の区切り（DESIGN.md 3.1）
+#[derive(Clone, Debug)]
+pub struct Segmentation {
+    /// この長さの無音で Segment を閉じる
+    pub min_silence_ms: u32,
+    /// この長さを超えたら、次の短い無音で閉じる
+    pub max_segment_ms: u32,
 }
 
 impl Default for Settings {
     fn default() -> Self {
         Self {
             mic_language: "ja".into(),
+            mic_device: None,
             translate_to: vec!["en".into()],
+            models: Models {
+                realtime: "voxtral-mini-transcribe-realtime-3".into(),
+                batch: "voxtral-small-transcribe-3".into(),
+            },
+            target_streaming_delay_ms: 480,
+            segmentation: Segmentation {
+                min_silence_ms: 400,
+                max_segment_ms: 8000,
+            },
         }
     }
 }

@@ -61,7 +61,7 @@ Deadlock 配信者向けの OBS オーバーレイツール。
 | 静的配信 | `rust-embed`（本番）/ Vite dev server（開発） | 本番は 1 つの exe に同梱 |
 | 型共有 | **ts-rs** | Rust の型から TS の型を生成し、フロントとの型ずれをなくす |
 | マイク入力 | `cpal`（WASAPI） | |
-| VAD | Silero VAD（ONNX, `ort`） | 字幕の区切りを決める（3.1） |
+| VAD | **earshot**（純 Rust、16ms フレーム） | 字幕の区切りを決める（3.1）。Silero と違って ONNX Runtime が要らず、exe に 100KB 程度しか足さない |
 | リサンプル | `rubato` | 16kHz mono に揃える |
 | Mistral | `reqwest` + `tokio-tungstenite` | 公式の Rust SDK がないので直接呼ぶ |
 | API キー | `keyring` | Windows 資格情報マネージャー |
@@ -86,6 +86,8 @@ Deadlock 配信者向けの OBS オーバーレイツール。
 |---|---|
 | `mise run dev` | Tauri アプリを開発モードで起動（Vite の HMR 付き） |
 | `mise run headless` | Tauri なしで中核だけ起動し、ダミー字幕を流し続ける（`--demo --translate-to en,ru`。`http://127.0.0.1:4510/overlay/subtitles`） |
+
+ヘッドレスの `overlays-headless` は `--mic` / `--mic-device NAME` でマイクを、`--input-file PATH.wav` で録音を実時間で流して字幕にできる（どちらも環境変数 `MISTRAL_API_KEY` が必要）。Tauri アプリは `MISTRAL_API_KEY` があれば起動時に既定のマイクで字幕を始める（キーの保存と開始・停止の操作は Phase 5）。
 | `mise run check` | oxfmt / oxlint / svelte-check / rustfmt / clippy / cargo test |
 
 - Git フック（**lefthook**）: commit 時に変更ファイルへ oxfmt / oxlint / cargo fmt、push 時に `mise run check`。clone 後に `mise exec -- lefthook install` を一度実行する。
@@ -142,7 +144,7 @@ Deadlock 配信者向けの OBS オーバーレイツール。
 
 ターン検出は「会話で誰が話す番か」を判定する機能で、字幕の区切り（文や息継ぎの単位）とは目的が違う。検証（16 章）では、0.4〜1.5 秒の間を挟みながら 22 秒話し続けた音声が、**既定値でも積極的な設定でも 1 ターン**になった。配信者は何分も話し続けるので、ターンの終わりを待つと final と翻訳がいつまでも出ない。
 
-そこで区切りはローカルの VAD（Silero）で決める。
+そこで区切りはローカルの VAD（earshot）で決める。
 
 - 無音が `minSilenceMs`（既定 400ms）続いたら Segment を閉じる
 - 長さが `maxSegmentSeconds`（既定 8 秒）を超えたら、次の短い無音で強制的に閉じる（字幕が長くなりすぎないように）
@@ -307,7 +309,7 @@ interface Segment {
 ### 7.2 状態遷移
 
 ```
-mic ─┬─▶ ローカル VAD（Silero）── 発話の開始 → Segment を開く
+mic ─┬─▶ ローカル VAD（earshot）── 発話の開始 → Segment を開く
      │                         └─ 無音 ≥ minSilenceMs、または長さ ≥ maxSegmentSeconds → Segment を閉じる
      │
      └─▶ Voxtral Realtime（WS。セッションを張りっぱなしにする）
@@ -325,7 +327,7 @@ mic ─┬─▶ ローカル VAD（Silero）── 発話の開始 → Segment 
 ```
 
 - **区切りはローカルの VAD で決める**（3.1 の「発話の区切り方」を参照）。
-- **delta の割り当て**: delta にはタイムスタンプがないので、「まだ partial を受け付けている Segment のうち最も古いもの」に追記する。Segment は閉じてから `targetStreamingDelayMs + 1 秒` の間だけ delta を受け付け、それを過ぎたら次の Segment に回す。境界で 1〜2 語ずれても、数秒後に final で置き換わるので許容する。
+- **delta の割り当て**: delta にはタイムスタンプがないので、「まだ partial を受け付けている Segment のうち最も古いもの」に追記する。Segment は閉じてから `targetStreamingDelayMs + 1.5 秒` の間だけ delta を受け付け、それを過ぎたら次の Segment に回す。境界で 1〜2 語ずれても、数秒後に final で置き換わるので許容する。
 - Segment ごとに独立した非同期タスクで処理する。enrich の完了順が前後しても、表示順は `startedAt` で固定する。
 - enrich には直前 2〜3 発話の final テキストを文脈として渡す（代名詞や話の流れのため）。
 - Realtime セッションが切れたら、新しいセッションを張り直す（開いている Segment はその時点の内容で final に進める）。
@@ -563,6 +565,11 @@ Phase 2 の前に、録音した実況音声で Voxtral 3 の精度（`context_b
   - realtime は句読点なし、batch は句読点あり。batch の応答は 22 秒の音声で約 2.7 秒
   - realtime の最初の delta は、発話開始から約 1.5 秒後
   - ターン検出は 22 秒全体で 1 ターンになった → VAD で区切る設計に変えた（3.1）
+- [x] パイプラインを通しで確認（`--input-file` で sample01 を実時間で流す）
+  - VAD で 4 発話に区切られ、partial → final が順に届いた。final は発話終了から 1〜3 秒
+  - 0.43〜0.45 秒の間（`min_silence_ms` 400 より少し長い程度）は区切られず、3 文が 1 つの字幕になった。実際のマイクで長すぎると感じたら 350ms 程度に下げる
+  - `context_bias` は 392 語（日本語の名前と略称）で、Realtime もバッチも 400 エラーにならなかった
+- [ ] 実際のマイクでの確認（このパイプラインはファイル入力でしか通していない。Windows の WASAPI と macOS のマイク許可を含めて確認する）
 - [ ] 本番に近い条件（配信用マイク、プレイしながら 5〜10 分、用語を多めに）でもう一度測る。`context_bias` の効果はこの条件でないと見えない
 - [ ] Realtime セッションの最大接続時間と、切れたときの挙動
 - [ ] Mistral Large 4 の正式な API ID、`response_format` での JSON Schema の指定方法、キャッシュが効く条件（固定の先頭部分の長さなど）

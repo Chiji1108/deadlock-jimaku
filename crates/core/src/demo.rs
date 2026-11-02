@@ -2,10 +2,11 @@
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::Duration;
 
 use tokio::time::sleep;
 
+use crate::now_ms;
 use crate::store::Store;
 use crate::types::{Enriched, EnrichedKind, Segment, Stage, Token};
 
@@ -171,13 +172,6 @@ fn new_segment() -> Segment {
         enriched: None,
         settled_at: None,
     }
-}
-
-pub fn now_ms() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_millis() as u64
 }
 
 #[cfg(test)]
