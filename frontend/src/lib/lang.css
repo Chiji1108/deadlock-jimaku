@@ -1,0 +1,26 @@
+/* CJK は同じ漢字でも言語によって字形が違うので、描画する要素には必ず lang 属性を付ける（DESIGN.md 6.3）。
+   Windows のシステムフォントを優先し、フォントは同梱しない。
+
+   `:lang()` は祖先の lang にも一致するので、ここで決めたフォントは子孫に継承される。
+   lang 属性を持つ要素ごとに必ずフォントを決め直し、<html lang="ja"> の日本語フォントが
+   lang="ru" の段落などに継承されないようにする（キリル文字が全角の字形で描かれてしまう）。 */
+
+/* ラテン・キリル・ギリシャ文字など */
+[lang] {
+  font-family: "Noto Sans", "Segoe UI", system-ui, sans-serif;
+}
+[lang]:lang(ja) {
+  font-family: "Noto Sans JP", "Yu Gothic UI", "Meiryo", "Hiragino Sans", sans-serif;
+}
+[lang]:lang(zh-Hans) {
+  font-family: "Noto Sans SC", "Microsoft YaHei UI", "PingFang SC", sans-serif;
+}
+[lang]:lang(zh-Hant) {
+  font-family: "Noto Sans TC", "Microsoft JhengHei UI", "PingFang TC", sans-serif;
+}
+[lang]:lang(ko) {
+  font-family: "Noto Sans KR", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+}
+[lang]:lang(th) {
+  font-family: "Noto Sans Thai", "Leelawadee UI", sans-serif;
+}

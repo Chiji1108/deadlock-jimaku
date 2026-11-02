@@ -1,0 +1,8 @@
+/target
+node_modules/
+/frontend/dist
+/app/gen
+# 自分の声の録音はリポジトリに入れない
+/experiments/data/*.m4a
+/experiments/data/*.wav
+.DS_Store

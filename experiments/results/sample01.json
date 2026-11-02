@@ -1,0 +1,1106 @@
+{
+  "realtime/no-bias": {
+    "events": [
+      {
+        "time_s": 0.96,
+        "type": "turn.start",
+        "_t": 1.927
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "さあ",
+        "_t": 2.493
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "始",
+        "_t": 2.869
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "まり",
+        "_t": 2.9
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ました",
+        "_t": 3.211
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "デ",
+        "_t": 3.868
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ッド",
+        "_t": 3.911
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ロ",
+        "_t": 4.014
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ッ",
+        "_t": 4.06
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ク",
+        "_t": 4.31
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "実",
+        "_t": 4.405
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "況",
+        "_t": 4.594
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "です",
+        "_t": 4.821
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "僕",
+        "_t": 7.007
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "の",
+        "_t": 7.236
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "一",
+        "_t": 7.524
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "番",
+        "_t": 7.722
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "好き",
+        "_t": 7.829
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "な",
+        "_t": 8.126
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "キャ",
+        "_t": 8.203
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ラ",
+        "_t": 8.326
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "は",
+        "_t": 8.462
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ヘ",
+        "_t": 8.505
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "イズ",
+        "_t": 8.562
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "です",
+        "_t": 8.823
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ね",
+        "_t": 9.102
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ヘ",
+        "_t": 9.604
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "イズ",
+        "_t": 9.639
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "め",
+        "_t": 9.913
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "っ",
+        "_t": 10.007
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ちゃ",
+        "_t": 10.038
+      },
+      {
+        "time_s": 9.2,
+        "type": "turn.eager_end",
+        "_t": 10.106
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "強",
+        "_t": 10.106
+      },
+      {
+        "time_s": 9.28,
+        "type": "turn.resume",
+        "_t": 10.219
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "いか",
+        "_t": 10.42
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ら",
+        "_t": 10.64
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "でも",
+        "_t": 11.371
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "最近",
+        "_t": 11.506
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "出",
+        "_t": 11.729
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "た",
+        "_t": 11.807
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "バイ",
+        "_t": 11.874
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "オ",
+        "_t": 12.049
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "レ",
+        "_t": 12.108
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ット",
+        "_t": 12.209
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "も",
+        "_t": 12.445
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "め",
+        "_t": 12.515
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "っ",
+        "_t": 12.598
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ちゃ",
+        "_t": 12.73
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "気に",
+        "_t": 13.613
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "なる",
+        "_t": 13.708
+      },
+      {
+        "time_s": 12.16,
+        "type": "turn.eager_end",
+        "_t": 13.736
+      },
+      {
+        "time_s": 12.24,
+        "type": "turn.resume",
+        "_t": 13.774
+      },
+      {
+        "time_s": 12.32,
+        "type": "turn.eager_end",
+        "_t": 13.786
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ね",
+        "_t": 13.786
+      },
+      {
+        "time_s": 12.4,
+        "type": "turn.resume",
+        "_t": 13.798
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "いや",
+        "_t": 14.432
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ー",
+        "_t": 14.484
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "楽",
+        "_t": 14.814
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "し",
+        "_t": 14.862
+      },
+      {
+        "time_s": 14.0,
+        "type": "turn.eager_end",
+        "_t": 14.91
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "み",
+        "_t": 14.91
+      },
+      {
+        "time_s": 14.08,
+        "type": "turn.resume",
+        "_t": 15.029
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "だな",
+        "_t": 15.029
+      },
+      {
+        "time_s": 14.16,
+        "type": "turn.eager_end",
+        "_t": 15.099
+      },
+      {
+        "time_s": 14.24,
+        "type": "turn.resume",
+        "_t": 15.198
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ー",
+        "_t": 15.33
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ヘ",
+        "_t": 16.467
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "イズ",
+        "_t": 16.531
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "の",
+        "_t": 16.853
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "バ",
+        "_t": 16.912
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "レ",
+        "_t": 16.94
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ット",
+        "_t": 17.033
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ダ",
+        "_t": 17.27
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ンス",
+        "_t": 17.336
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "も",
+        "_t": 17.428
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "め",
+        "_t": 17.637
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "っ",
+        "_t": 17.722
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ちゃ",
+        "_t": 17.826
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "強",
+        "_t": 17.921
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "い",
+        "_t": 18.121
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "んだ",
+        "_t": 18.194
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "け",
+        "_t": 18.319
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ど",
+        "_t": 18.619
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "バイ",
+        "_t": 19.118
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "オ",
+        "_t": 19.211
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "レ",
+        "_t": 19.227
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ット",
+        "_t": 19.332
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "の",
+        "_t": 19.658
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ウ",
+        "_t": 19.722
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ルト",
+        "_t": 19.805
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "も",
+        "_t": 20.052
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "なんか",
+        "_t": 20.095
+      },
+      {
+        "time_s": 19.84,
+        "type": "turn.eager_end",
+        "_t": 20.827
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "強",
+        "_t": 20.827
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "そう",
+        "_t": 20.867
+      },
+      {
+        "time_s": 20.08,
+        "type": "turn.resume",
+        "_t": 21.022
+      },
+      {
+        "time_s": 20.16,
+        "type": "turn.eager_end",
+        "_t": 21.12
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "である",
+        "_t": 21.12
+      },
+      {
+        "time_s": 20.32,
+        "type": "turn.resume",
+        "_t": 21.222
+      },
+      {
+        "time_s": 20.48,
+        "type": "turn.eager_end",
+        "_t": 21.412
+      },
+      {
+        "time_s": 21.04,
+        "type": "turn.end",
+        "end_reason": "threshold",
+        "_t": 21.892
+      },
+      {
+        "model": "voxtral-mini-transcribe-realtime-3-0-4",
+        "text": "さあ始まりましたデッドロック実況です僕の一番好きなキャラはヘイズですねヘイズめっちゃ強いからでも最近出たバイオレットもめっちゃ気になるねいやー楽しみだなーヘイズのバレットダンスもめっちゃ強いんだけどバイオレットのウルトもなんか強そうである",
+        "language": null,
+        "segments": [],
+        "usage": {
+          "prompt_audio_seconds": 21,
+          "prompt_tokens": 40,
+          "total_tokens": 324,
+          "completion_tokens": 284
+        },
+        "type": "transcription.done",
+        "_t": 22.825
+      }
+    ],
+    "text": "さあ始まりましたデッドロック実況です僕の一番好きなキャラはヘイズですねヘイズめっちゃ強いからでも最近出たバイオレットもめっちゃ気になるねいやー楽しみだなーヘイズのバレットダンスもめっちゃ強いんだけどバイオレットのウルトもなんか強そうである",
+    "turns": [
+      {
+        "start_s": 0.96,
+        "firstDeltaAt": 2.493,
+        "text": "さあ始まりましたデッドロック実況です僕の一番好きなキャラはヘイズですねヘイズめっちゃ強いからでも最近出たバイオレットもめっちゃ気になるねいやー楽しみだなーヘイズのバレットダンスもめっちゃ強いんだけどバイオレットのウルトもなんか強そうである",
+        "end_s": 21.04,
+        "endReason": "threshold",
+        "closeAt": 22.372
+      }
+    ]
+  },
+  "batch/no-bias": {
+    "text": "さあ始まりました。デッドロック実況です。僕の一番好きなキャラはヘイズですね。ヘイズめっちゃ強いから。でも最近出たバイオレットもめっちゃ気になるね。いやー楽しみだな。ヘイズのバレットダンスもめっちゃ強いんだけど、バイオレットのウルトもなんか強そうである。",
+    "latency_s": 2.56,
+    "raw": {
+      "model": "voxtral-small-transcribe-3",
+      "text": "さあ始まりました。デッドロック実況です。僕の一番好きなキャラはヘイズですね。ヘイズめっちゃ強いから。でも最近出たバイオレットもめっちゃ気になるね。いやー楽しみだな。ヘイズのバレットダンスもめっちゃ強いんだけど、バイオレットのウルトもなんか強そうである。",
+      "language": null,
+      "segments": [],
+      "usage": {
+        "prompt_audio_seconds": 21,
+        "prompt_tokens": 5,
+        "total_tokens": 468,
+        "completion_tokens": 88,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "audio_tokens": 375
+        },
+        "service_tier": "standard"
+      },
+      "finish_reason": null
+    }
+  },
+  "realtime/bias": {
+    "events": [
+      {
+        "time_s": 0.96,
+        "type": "turn.start",
+        "_t": 1.81
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "さあ",
+        "_t": 2.389
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "始",
+        "_t": 2.741
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "まり",
+        "_t": 2.791
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ました",
+        "_t": 3.09
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "デ",
+        "_t": 4.206
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ッド",
+        "_t": 4.258
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ロック",
+        "_t": 4.368
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "実",
+        "_t": 4.536
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "況",
+        "_t": 4.575
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "です",
+        "_t": 4.754
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "僕",
+        "_t": 6.92
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "の",
+        "_t": 7.13
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "一",
+        "_t": 7.483
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "番",
+        "_t": 7.84
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "好き",
+        "_t": 7.84
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "な",
+        "_t": 8.003
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "キャ",
+        "_t": 8.124
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ラ",
+        "_t": 8.22
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "は",
+        "_t": 8.286
+      },
+      {
+        "time_s": 7.52,
+        "type": "turn.eager_end",
+        "_t": 8.323
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ヘ",
+        "_t": 8.323
+      },
+      {
+        "time_s": 7.6,
+        "type": "turn.resume",
+        "_t": 8.411
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "イズ",
+        "_t": 8.411
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "です",
+        "_t": 8.741
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ね",
+        "_t": 9.005
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ヘ",
+        "_t": 9.509
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "イズ",
+        "_t": 9.55
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "め",
+        "_t": 9.836
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "っ",
+        "_t": 9.933
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ちゃ",
+        "_t": 9.933
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "強",
+        "_t": 10.043
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "いか",
+        "_t": 10.309
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ら",
+        "_t": 10.492
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "でも",
+        "_t": 11.058
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "最近",
+        "_t": 11.183
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "出",
+        "_t": 11.551
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "た",
+        "_t": 11.611
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "バイ",
+        "_t": 11.698
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "オ",
+        "_t": 11.951
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "レ",
+        "_t": 12.0
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ット",
+        "_t": 12.112
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "も",
+        "_t": 12.348
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "め",
+        "_t": 12.418
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "っ",
+        "_t": 12.508
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ちゃ",
+        "_t": 12.614
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "気に",
+        "_t": 12.717
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "なる",
+        "_t": 12.901
+      },
+      {
+        "time_s": 12.16,
+        "type": "turn.eager_end",
+        "_t": 13.006
+      },
+      {
+        "time_s": 12.24,
+        "type": "turn.resume",
+        "_t": 13.106
+      },
+      {
+        "time_s": 12.32,
+        "type": "turn.eager_end",
+        "_t": 13.137
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ね",
+        "_t": 13.137
+      },
+      {
+        "time_s": 12.4,
+        "type": "turn.resume",
+        "_t": 13.192
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "いや",
+        "_t": 14.302
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ー",
+        "_t": 14.34
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "楽",
+        "_t": 14.784
+      },
+      {
+        "time_s": 13.92,
+        "type": "turn.eager_end",
+        "_t": 14.812
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "し",
+        "_t": 14.812
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "み",
+        "_t": 14.836
+      },
+      {
+        "time_s": 14.08,
+        "type": "turn.resume",
+        "_t": 14.894
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "だな",
+        "_t": 14.894
+      },
+      {
+        "time_s": 14.16,
+        "type": "turn.eager_end",
+        "_t": 15.016
+      },
+      {
+        "time_s": 14.24,
+        "type": "turn.resume",
+        "_t": 15.09
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ー",
+        "_t": 15.332
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ヘ",
+        "_t": 16.302
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "イズ",
+        "_t": 16.395
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "の",
+        "_t": 16.7
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "バ",
+        "_t": 16.743
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "レ",
+        "_t": 16.787
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ット",
+        "_t": 16.898
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ダ",
+        "_t": 17.115
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ンス",
+        "_t": 17.192
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "も",
+        "_t": 17.292
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "め",
+        "_t": 17.509
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "っ",
+        "_t": 17.612
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ちゃ",
+        "_t": 17.705
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "強",
+        "_t": 17.806
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "い",
+        "_t": 18.002
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "んだ",
+        "_t": 18.111
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "け",
+        "_t": 18.194
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ど",
+        "_t": 18.498
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "バイ",
+        "_t": 18.998
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "オ",
+        "_t": 19.095
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "レ",
+        "_t": 19.113
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ット",
+        "_t": 19.206
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "の",
+        "_t": 19.555
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ウ",
+        "_t": 19.588
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ルト",
+        "_t": 19.702
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "も",
+        "_t": 19.916
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "なんか",
+        "_t": 20.007
+      },
+      {
+        "time_s": 19.84,
+        "type": "turn.eager_end",
+        "_t": 20.715
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "強",
+        "_t": 20.715
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "そう",
+        "_t": 20.773
+      },
+      {
+        "time_s": 20.08,
+        "type": "turn.resume",
+        "_t": 20.893
+      },
+      {
+        "time_s": 20.16,
+        "type": "turn.eager_end",
+        "_t": 20.988
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "である",
+        "_t": 20.988
+      },
+      {
+        "time_s": 20.32,
+        "type": "turn.resume",
+        "_t": 21.135
+      },
+      {
+        "time_s": 20.48,
+        "type": "turn.eager_end",
+        "_t": 21.318
+      },
+      {
+        "time_s": 21.04,
+        "type": "turn.end",
+        "end_reason": "threshold",
+        "_t": 21.825
+      },
+      {
+        "model": "voxtral-mini-transcribe-realtime-3-0-4",
+        "text": "さあ始まりましたデッドロック実況です僕の一番好きなキャラはヘイズですねヘイズめっちゃ強いからでも最近出たバイオレットもめっちゃ気になるねいやー楽しみだなーヘイズのバレットダンスもめっちゃ強いんだけどバイオレットのウルトもなんか強そうである",
+        "language": null,
+        "segments": [],
+        "usage": {
+          "prompt_audio_seconds": 21,
+          "prompt_tokens": 2789,
+          "total_tokens": 3073,
+          "completion_tokens": 284
+        },
+        "type": "transcription.done",
+        "_t": 22.889
+      }
+    ],
+    "text": "さあ始まりましたデッドロック実況です僕の一番好きなキャラはヘイズですねヘイズめっちゃ強いからでも最近出たバイオレットもめっちゃ気になるねいやー楽しみだなーヘイズのバレットダンスもめっちゃ強いんだけどバイオレットのウルトもなんか強そうである",
+    "turns": [
+      {
+        "start_s": 0.96,
+        "firstDeltaAt": 2.389,
+        "text": "さあ始まりましたデッドロック実況です僕の一番好きなキャラはヘイズですねヘイズめっちゃ強いからでも最近出たバイオレットもめっちゃ気になるねいやー楽しみだなーヘイズのバレットダンスもめっちゃ強いんだけどバイオレットのウルトもなんか強そうである",
+        "end_s": 21.04,
+        "endReason": "threshold",
+        "closeAt": 22.305
+      }
+    ]
+  },
+  "batch/bias": {
+    "text": "さあ始まりました。デッドロック実況です。僕の一番好きなキャラはヘイズですね。ヘイズめっちゃ強いから。でも最近出たバイオレットもめっちゃ気になるね。いや、楽しみだな。ヘイズのバレットダンスもめっちゃ強いんだけど、バイオレットのウルトもなんか強そうである。",
+    "latency_s": 2.32,
+    "raw": {
+      "model": "voxtral-small-transcribe-3",
+      "text": "さあ始まりました。デッドロック実況です。僕の一番好きなキャラはヘイズですね。ヘイズめっちゃ強いから。でも最近出たバイオレットもめっちゃ気になるね。いや、楽しみだな。ヘイズのバレットダンスもめっちゃ強いんだけど、バイオレットのウルトもなんか強そうである。",
+      "language": null,
+      "segments": [],
+      "usage": {
+        "prompt_audio_seconds": 21,
+        "prompt_tokens": 2754,
+        "total_tokens": 3217,
+        "completion_tokens": 88,
+        "prompt_tokens_details": {
+          "cached_tokens": 1,
+          "audio_tokens": 375
+        },
+        "service_tier": "standard"
+      },
+      "finish_reason": null
+    }
+  }
+}
