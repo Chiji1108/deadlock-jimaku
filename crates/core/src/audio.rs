@@ -2,7 +2,7 @@
 
 use std::collections::VecDeque;
 use std::io::Cursor;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use anyhow::Context;
@@ -10,6 +10,7 @@ use audioadapter_buffers::direct::InterleavedSlice;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use rubato::{Async, FixedAsync, Indexing, PolynomialDegree, Resampler as _};
 use tokio::sync::mpsc;
+use tokio::time::MissedTickBehavior;
 
 pub const SAMPLE_RATE: u32 = 16_000;
 
@@ -20,12 +21,16 @@ pub enum Input {
     File(PathBuf),
 }
 
-/// 入力を開き、16kHz mono のサンプルを流すチャンネルを返す
-pub fn open(input: Input) -> anyhow::Result<mpsc::Receiver<Vec<f32>>> {
+/// 入力を開き、16kHz mono のサンプルを流すチャンネルを返す。開いた時点から流れ始める
+pub async fn open(input: Input) -> anyhow::Result<mpsc::Receiver<Vec<f32>>> {
     let (tx, rx) = mpsc::channel(256);
+    // デバイスの初期化やファイルの読み込みは同期処理なので、非同期のワーカーを塞がない
     match input {
-        Input::Mic(device) => open_mic(device, tx)?,
-        Input::File(path) => open_file(path, tx)?,
+        Input::Mic(device) => tokio::task::spawn_blocking(move || open_mic(device, tx)).await??,
+        Input::File(path) => {
+            let audio = tokio::task::spawn_blocking(move || load_file(&path)).await??;
+            tokio::spawn(play(audio, tx));
+        }
     }
     Ok(rx)
 }
@@ -36,8 +41,7 @@ fn open_mic(device: Option<String>, tx: mpsc::Sender<Vec<f32>>) -> anyhow::Resul
     std::thread::Builder::new()
         .name("mic".into())
         .spawn(move || {
-            let stream = build_mic_stream(device.as_deref(), tx.clone());
-            let stream = match stream {
+            let stream = match build_mic_stream(device.as_deref(), tx.clone()) {
                 Ok(stream) => {
                     let _ = ready_tx.send(Ok(()));
                     stream
@@ -84,8 +88,10 @@ fn build_mic_stream(
 
     let channels = usize::from(config.channels());
     let mut resampler = Resampler::new(config.sample_rate())?;
-    let mut on_samples = move |mono: Vec<f32>| {
-        let out = resampler.process(&mono);
+    // コールバックは実時間のスレッドで呼ばれるので、作業用のバッファは使い回す
+    let mut mono = Vec::new();
+    let mut on_samples = move |mono: &[f32]| {
+        let out = resampler.process(mono);
         // 処理が詰まったら古い音声より今の音声を優先して捨てる
         if !out.is_empty() && tx.try_send(out).is_err() {
             tracing::warn!("audio dropped");
@@ -97,7 +103,10 @@ fn build_mic_stream(
         ($t:ty) => {
             device.build_input_stream(
                 config.clone().into(),
-                move |data: &[$t], _: &_| on_samples(downmix(data, channels)),
+                move |data: &[$t], _: &_| {
+                    downmix_into(data, channels, &mut mono);
+                    on_samples(&mono);
+                },
                 on_error,
                 None,
             )?
@@ -114,20 +123,22 @@ fn build_mic_stream(
     Ok(stream)
 }
 
-fn downmix<T: cpal::Sample>(data: &[T], channels: usize) -> Vec<f32>
+fn downmix_into<T: cpal::Sample>(data: &[T], channels: usize, out: &mut Vec<f32>)
 where
     f32: cpal::FromSample<T>,
 {
-    data.chunks(channels)
-        .map(|frame| frame.iter().map(|s| s.to_sample::<f32>()).sum::<f32>() / channels as f32)
-        .collect()
+    out.clear();
+    out.extend(
+        data.chunks(channels)
+            .map(|frame| frame.iter().map(|s| s.to_sample::<f32>()).sum::<f32>() / channels as f32),
+    );
 }
 
-fn open_file(path: PathBuf, tx: mpsc::Sender<Vec<f32>>) -> anyhow::Result<()> {
+/// WAV を読み、16kHz mono に揃える
+fn load_file(path: &Path) -> anyhow::Result<Vec<f32>> {
     let mut reader =
-        hound::WavReader::open(&path).with_context(|| format!("open {}", path.display()))?;
+        hound::WavReader::open(path).with_context(|| format!("open {}", path.display()))?;
     let spec = reader.spec();
-    let channels = usize::from(spec.channels);
     let samples: Vec<f32> = match spec.sample_format {
         hound::SampleFormat::Float => reader.samples::<f32>().collect::<Result<_, _>>()?,
         hound::SampleFormat::Int => {
@@ -138,31 +149,32 @@ fn open_file(path: PathBuf, tx: mpsc::Sender<Vec<f32>>) -> anyhow::Result<()> {
                 .collect::<Result<_, _>>()?
         }
     };
-    let mono: Vec<f32> = samples
-        .chunks(channels)
-        .map(|f| f.iter().sum::<f32>() / channels as f32)
-        .collect();
+    let mut mono = Vec::new();
+    downmix_into(&samples, usize::from(spec.channels), &mut mono);
     let mut audio = Resampler::new(spec.sample_rate)?.process(&mono);
     // 最後の発話が無音で閉じるよう、末尾に 2 秒の無音を足す
     audio.extend(std::iter::repeat_n(0.0, SAMPLE_RATE as usize * 2));
+    Ok(audio)
+}
 
-    tokio::spawn(async move {
-        const CHUNK: usize = SAMPLE_RATE as usize / 50; // 20ms
-        let mut tick = tokio::time::interval(Duration::from_millis(20));
-        for chunk in audio.chunks(CHUNK) {
-            tick.tick().await;
-            if tx.send(chunk.to_vec()).await.is_err() {
-                return;
-            }
+async fn play(audio: Vec<f32>, tx: mpsc::Sender<Vec<f32>>) {
+    const CHUNK: usize = SAMPLE_RATE as usize / 50; // 20ms
+    let mut tick = tokio::time::interval(Duration::from_millis(20));
+    // 受け手が詰まって遅れても、取り戻すために一気に流さない（実時間を保つ）
+    tick.set_missed_tick_behavior(MissedTickBehavior::Delay);
+    for chunk in audio.chunks(CHUNK) {
+        tick.tick().await;
+        if tx.send(chunk.to_vec()).await.is_err() {
+            return;
         }
-    });
-    Ok(())
+    }
 }
 
 /// 任意のサンプルレートの mono を 16kHz に変換する
 struct Resampler {
     inner: Option<Async<f32>>,
     pending: Vec<f32>,
+    buf: Vec<f32>,
 }
 
 impl Resampler {
@@ -179,9 +191,11 @@ impl Resampler {
                 )
             })
             .transpose()?;
+        let buf = vec![0.0; inner.as_ref().map_or(0, |r| r.output_frames_max())];
         Ok(Self {
             inner,
             pending: Vec::new(),
+            buf,
         })
     }
 
@@ -191,15 +205,14 @@ impl Resampler {
         };
         self.pending.extend_from_slice(input);
         let mut out = Vec::new();
-        let mut buf = vec![0.0; inner.output_frames_max()];
         let indexing = Indexing::new();
         while self.pending.len() >= inner.input_frames_next() {
             let n = inner.input_frames_next();
             let input = InterleavedSlice::new(&self.pending[..n], 1, n).expect("sized");
-            let cap = buf.len();
-            let mut output = InterleavedSlice::new_mut(&mut buf, 1, cap).expect("sized");
+            let cap = self.buf.len();
+            let mut output = InterleavedSlice::new_mut(&mut self.buf, 1, cap).expect("sized");
             match inner.process_into_buffer(&input, &mut output, Some(&indexing)) {
-                Ok((_, written)) => out.extend_from_slice(&buf[..written]),
+                Ok((_, written)) => out.extend_from_slice(&self.buf[..written]),
                 Err(e) => tracing::error!("resample: {e}"),
             }
             self.pending.drain(..n);

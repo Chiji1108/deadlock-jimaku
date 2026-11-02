@@ -61,14 +61,15 @@ pub async fn realtime(
                 Some(chunk) => {
                     pcm.extend(chunk.iter().flat_map(|s| to_i16(*s).to_le_bytes()));
                     if pcm.len() >= APPEND_SAMPLES * 2 {
-                        let audio = base64::engine::general_purpose::STANDARD.encode(&pcm);
-                        pcm.clear();
-                        let msg = json!({ "type": "input_audio.append", "audio": audio });
-                        sink.send(Message::text(msg.to_string())).await?;
+                        sink.send(append(&mut pcm)).await?;
                     }
                 }
                 None => {
                     audio_done = true;
+                    // 100ms に満たない残りも送ってから終える
+                    if !pcm.is_empty() {
+                        sink.send(append(&mut pcm)).await?;
+                    }
                     sink.send(Message::text(json!({ "type": "input_audio.end" }).to_string())).await?;
                 }
             },
@@ -93,6 +94,13 @@ pub async fn realtime(
             }
         }
     }
+}
+
+/// 溜めた PCM を input_audio.append にして空にする
+fn append(pcm: &mut Vec<u8>) -> Message {
+    let audio = base64::engine::general_purpose::STANDARD.encode(&*pcm);
+    pcm.clear();
+    Message::text(json!({ "type": "input_audio.append", "audio": audio }).to_string())
 }
 
 async fn expect_event<S>(stream: &mut S, expected: &str) -> anyhow::Result<()>

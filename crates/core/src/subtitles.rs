@@ -3,7 +3,7 @@
 //! マイク → VAD で区切る ─┬→ Voxtral Realtime の delta を Segment に追記（partial）
 //!                        └→ Segment が閉じたら区間を切り出して Small Transcribe 3（final）
 //!
-//! Segment の状態を書き換えるのはこのタスクだけにする。バッチの結果もチャンネルで受け取って反映する。
+//! Segment の状態を書き換えるのは `Pipeline` だけにする。バッチの結果もチャンネルで受け取って反映する。
 
 use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
@@ -13,9 +13,10 @@ use tokio::sync::mpsc;
 
 use crate::audio::{self, History, SAMPLE_RATE};
 use crate::now_ms;
+use crate::settings::Settings;
 use crate::store::Store;
 use crate::stt::{self, BatchRequest, RealtimeConfig};
-use crate::types::{Glossary, LangCode, Segment, Stage};
+use crate::types::{EntityKind, Glossary, LangCode, Segment, Stage};
 
 /// earshot が受け取るフレームの長さ（16ms）
 const FRAME: usize = 256;
@@ -24,12 +25,14 @@ const FRAME_MS: u32 = 16;
 const PADDING: u64 = SAMPLE_RATE as u64 * 300 / 1000;
 /// これより短い発話（咳やクリック）はバッチに送らず捨てる
 const MIN_SPEECH_MS: u32 = 250;
+/// 用語ヒントの上限。音声とコンテキストを共有するので、辞書が増えても送りすぎない
+const MAX_CONTEXT_BIAS: usize = 500;
 
 pub async fn run(store: Arc<Store>, input: audio::Input, api_key: String) -> anyhow::Result<()> {
     let settings = store.settings().clone();
-    let mut audio_rx = audio::open(input)?;
 
-    // 用語ヒントは Realtime のセッション開始時に 1 回しか渡せないので、辞書を少し待つ
+    // 用語ヒントは Realtime のセッション開始時に 1 回しか渡せないので、辞書を少し待つ。
+    // 入力は待ち終わってから開く（待っている間の音声を溜めない）
     let context_bias = match store.wait_glossary(Duration::from_secs(20)).await {
         Some(loaded) => context_bias(&loaded.glossary, &settings.mic_language),
         None => {
@@ -38,6 +41,7 @@ pub async fn run(store: Arc<Store>, input: audio::Input, api_key: String) -> any
         }
     };
     tracing::info!("context_bias: {} terms", context_bias.len());
+    let mut audio_rx = audio::open(input).await?;
 
     let (rt_audio_tx, rt_audio_rx) = mpsc::channel(512);
     let (delta_tx, mut delta_rx) = mpsc::channel(256);
@@ -50,104 +54,196 @@ pub async fn run(store: Arc<Store>, input: audio::Input, api_key: String) -> any
     };
     tokio::spawn(realtime_loop(realtime, rt_audio_rx, delta_tx));
 
-    let batch = Arc::new(BatchContext {
-        http: reqwest::Client::new(),
-        api_key,
-        model: settings.models.batch.clone(),
-        language: settings.mic_language.clone(),
-        context_bias,
-    });
-    let (final_tx, mut final_rx) = mpsc::channel::<Finalized>(64);
-
-    let mut history = History::new(60);
-    let mut detector = earshot::Detector::default();
-    let mut segmenter = Segmenter::new(&settings.segmentation);
-    // delta はおおよそ streaming delay + 処理時間だけ遅れて届く
-    let grace = Duration::from_millis(u64::from(settings.target_streaming_delay_ms) + 1500);
-    let mut router = Router::default();
-    let mut live: HashMap<String, Segment> = HashMap::new();
-    let mut frame: Vec<f32> = Vec::with_capacity(FRAME * 2);
-    let mut frame_pos: u64 = 0;
-    let mut seq: u64 = 0;
-    let mut current: Option<String> = None;
+    let (final_tx, mut final_rx) = mpsc::channel(64);
+    let mut pipeline = Pipeline::new(
+        store,
+        &settings,
+        Arc::new(BatchContext {
+            http: reqwest::Client::new(),
+            api_key,
+            model: settings.models.batch.clone(),
+            language: settings.mic_language.clone(),
+            context_bias,
+        }),
+        final_tx,
+    );
 
     loop {
         tokio::select! {
             chunk = audio_rx.recv() => {
                 let Some(chunk) = chunk else { break };
-                history.push(&chunk);
                 // Realtime が詰まっている（張り直し中など）ときは捨てる。final はバッチで取れる
                 let _ = rt_audio_tx.try_send(chunk.clone());
-                frame.extend_from_slice(&chunk);
-                while frame.len() >= FRAME {
-                    let prob = detector.predict_f32(&frame[..FRAME]);
-                    frame.drain(..FRAME);
-                    let event = segmenter.push(frame_pos, prob);
-                    frame_pos += FRAME as u64;
-                    match event {
-                        Some(Event::Open) => {
-                            seq += 1;
-                            let started_at = now_ms();
-                            let id = format!("mic-{started_at}-{seq}");
-                            router.open(id.clone());
-                            live.insert(id.clone(), Segment {
-                                id: id.clone(),
-                                started_at,
-                                stage: Stage::Partial,
-                                lang: settings.mic_language.clone(),
-                                text: String::new(),
-                                enriched: None,
-                                settled_at: None,
-                            });
-                            current = Some(id);
-                        }
-                        Some(Event::Close { start, end, speech_ms }) => {
-                            let Some(id) = current.take() else { continue };
-                            router.close(&id, Instant::now() + grace);
-                            if speech_ms < MIN_SPEECH_MS {
-                                discard(&store, &mut live, &id);
-                                continue;
-                            }
-                            let wav = audio::wav(&history.slice(start.saturating_sub(PADDING), end + PADDING));
-                            tokio::spawn(finalize(batch.clone(), id, wav, final_tx.clone()));
-                        }
-                        None => {}
-                    }
-                }
+                pipeline.on_audio(&chunk);
             }
-            Some(delta) = delta_rx.recv() => {
-                let Some(id) = router.assign(Instant::now()) else { continue };
-                if let Some(seg) = live.get_mut(&id).filter(|s| s.stage == Stage::Partial) {
-                    seg.text.push_str(&delta);
-                    store.upsert_segment(seg.clone());
-                }
-            }
-            Some(done) = final_rx.recv() => {
-                let Some(mut seg) = live.remove(&done.id) else { continue };
-                // バッチが失敗したら Realtime で溜めたテキストを使う
-                let text = done.text.unwrap_or_else(|| seg.text.clone());
-                if text.trim().is_empty() {
-                    seg.stage = Stage::Discarded;
-                } else {
-                    seg.stage = Stage::Final;
-                    seg.text = text;
-                    // enrich（Phase 3）が入るまでは final で確定とし、表示時間を数え始める
-                    seg.settled_at = Some(now_ms());
-                }
-                store.upsert_segment(seg);
-            }
+            Some(delta) = delta_rx.recv() => pipeline.on_delta(&delta),
+            Some(done) = final_rx.recv() => pipeline.on_final(done),
+        }
+    }
+
+    // 入力が終わったら、開いている発話を閉じ、バッチの結果がすべて届くまで待つ
+    drop(rt_audio_tx);
+    pipeline.finish();
+    while pipeline.pending > 0 {
+        tokio::select! {
+            Some(done) = final_rx.recv() => pipeline.on_final(done),
+            Some(delta) = delta_rx.recv() => pipeline.on_delta(&delta),
         }
     }
     Ok(())
 }
 
-fn discard(store: &Store, live: &mut HashMap<String, Segment>, id: &str) {
-    if let Some(mut seg) = live.remove(id) {
-        // まだ表示していなければ流す必要もない
-        if !seg.text.is_empty() {
-            seg.stage = Stage::Discarded;
-            store.upsert_segment(seg);
+struct Pipeline {
+    store: Arc<Store>,
+    lang: LangCode,
+    batch: Arc<BatchContext>,
+    final_tx: mpsc::Sender<Finalized>,
+    history: History,
+    detector: earshot::Detector,
+    segmenter: Segmenter,
+    router: Router,
+    /// delta はおおよそ streaming delay + 処理時間だけ遅れて届く
+    grace: Duration,
+    live: HashMap<String, Segment>,
+    current: Option<String>,
+    frame: Vec<f32>,
+    frame_pos: u64,
+    seq: u64,
+    /// バッチの結果を待っている Segment の数
+    pending: usize,
+}
+
+impl Pipeline {
+    fn new(
+        store: Arc<Store>,
+        settings: &Settings,
+        batch: Arc<BatchContext>,
+        final_tx: mpsc::Sender<Finalized>,
+    ) -> Self {
+        Self {
+            store,
+            lang: settings.mic_language.clone(),
+            batch,
+            final_tx,
+            history: History::new(60),
+            detector: earshot::Detector::default(),
+            segmenter: Segmenter::new(&settings.segmentation),
+            router: Router::default(),
+            grace: Duration::from_millis(u64::from(settings.target_streaming_delay_ms) + 1500),
+            live: HashMap::new(),
+            current: None,
+            frame: Vec::with_capacity(FRAME * 2),
+            frame_pos: 0,
+            seq: 0,
+            pending: 0,
         }
+    }
+
+    fn on_audio(&mut self, chunk: &[f32]) {
+        self.history.push(chunk);
+        self.frame.extend_from_slice(chunk);
+        while self.frame.len() >= FRAME {
+            let prob = self.detector.predict_f32(&self.frame[..FRAME]);
+            self.frame.drain(..FRAME);
+            let event = self.segmenter.push(self.frame_pos, prob);
+            self.frame_pos += FRAME as u64;
+            match event {
+                Some(Event::Open) => self.open(),
+                Some(Event::Close(close)) => self.close(close),
+                None => {}
+            }
+        }
+    }
+
+    fn finish(&mut self) {
+        if let Some(close) = self.segmenter.finish() {
+            self.close(close);
+        }
+    }
+
+    fn open(&mut self) {
+        self.seq += 1;
+        let started_at = now_ms();
+        let id = format!("mic-{started_at}-{}", self.seq);
+        self.router.open(id.clone());
+        self.live.insert(
+            id.clone(),
+            Segment {
+                id: id.clone(),
+                started_at,
+                stage: Stage::Partial,
+                lang: self.lang.clone(),
+                text: String::new(),
+                enriched: None,
+                settled_at: None,
+            },
+        );
+        self.current = Some(id);
+    }
+
+    fn close(&mut self, close: Close) {
+        let Some(id) = self.current.take() else {
+            return;
+        };
+        if close.speech_ms < MIN_SPEECH_MS {
+            // delta を受け付けないので、次の発話の delta を横取りしないよう枠ごと外す
+            self.router.remove(&id);
+            self.discard(&id);
+            return;
+        }
+        self.router.close(&id, Instant::now() + self.grace);
+        // 強制的に切った境界は無音ではないので、余白を付けると隣の発話と言葉が重なる
+        let from = if close.cut_start {
+            close.start
+        } else {
+            close.start.saturating_sub(PADDING)
+        };
+        let to = if close.cut_end {
+            close.end
+        } else {
+            close.end + PADDING
+        };
+        let wav = audio::wav(&self.history.slice(from, to));
+        self.pending += 1;
+        tokio::spawn(finalize(self.batch.clone(), id, wav, self.final_tx.clone()));
+    }
+
+    fn discard(&mut self, id: &str) {
+        if let Some(mut seg) = self.live.remove(id) {
+            // まだ表示していなければ流す必要もない
+            if !seg.text.is_empty() {
+                seg.stage = Stage::Discarded;
+                self.store.upsert_segment(seg);
+            }
+        }
+    }
+
+    fn on_delta(&mut self, delta: &str) {
+        let Some(id) = self.router.assign(Instant::now()) else {
+            return;
+        };
+        if let Some(seg) = self.live.get_mut(&id).filter(|s| s.stage == Stage::Partial) {
+            seg.text.push_str(delta);
+            self.store.upsert_segment(seg.clone());
+        }
+    }
+
+    fn on_final(&mut self, done: Finalized) {
+        self.pending -= 1;
+        let Some(mut seg) = self.live.remove(&done.id) else {
+            return;
+        };
+        // バッチが失敗したら Realtime で溜めたテキストを使う
+        let text = done.text.unwrap_or_else(|| seg.text.clone());
+        if text.trim().is_empty() {
+            seg.stage = Stage::Discarded;
+        } else {
+            seg.stage = Stage::Final;
+            seg.text = text;
+            // enrich（Phase 3）が入るまでは final で確定とし、表示時間を数え始める
+            seg.settled_at = Some(now_ms());
+        }
+        self.store.upsert_segment(seg);
     }
 }
 
@@ -168,6 +264,8 @@ async fn realtime_loop(
         }
         tokio::time::sleep(backoff).await;
         backoff = (backoff * 2).min(Duration::from_secs(30));
+        // 切れている間に溜まった古い音声は送らない（今話している発話に古い言葉が混ざる）
+        while audio.try_recv().is_ok() {}
     }
 }
 
@@ -203,15 +301,21 @@ async fn finalize(ctx: Arc<BatchContext>, id: String, wav: Vec<u8>, done: mpsc::
     let _ = done.send(Finalized { id, text }).await;
 }
 
-/// 用語ヒント: 話す言語での名前と略称（DESIGN.md 8.4）
+/// 用語ヒント: 話す言語での名前と略称（DESIGN.md 8.4）。
+/// 上限を超えるときはヒーロー → アイテム → スキルの順に残す
 pub fn context_bias(glossary: &Glossary, lang: &str) -> Vec<String> {
     let mut terms: Vec<String> = Vec::new();
-    for entity in glossary.entities.values() {
-        let names = entity.names.get(lang).into_iter();
-        let aliases = entity.aliases.get(lang).into_iter().flatten();
-        for term in names.chain(aliases) {
-            if !terms.contains(term) {
-                terms.push(term.clone());
+    for kind in [EntityKind::Hero, EntityKind::Item, EntityKind::Ability] {
+        for entity in glossary.entities.values().filter(|e| e.kind == kind) {
+            let names = entity.names.get(lang).into_iter();
+            let aliases = entity.aliases.get(lang).into_iter().flatten();
+            for term in names.chain(aliases) {
+                if terms.len() == MAX_CONTEXT_BIAS {
+                    return terms;
+                }
+                if !terms.contains(term) {
+                    terms.push(term.clone());
+                }
             }
         }
     }
@@ -221,12 +325,19 @@ pub fn context_bias(glossary: &Glossary, lang: &str) -> Vec<String> {
 #[derive(Debug, PartialEq)]
 enum Event {
     Open,
-    /// 位置は入力の先頭からのサンプル数
-    Close {
-        start: u64,
-        end: u64,
-        speech_ms: u32,
-    },
+    Close(Close),
+}
+
+/// 位置は入力の先頭からのサンプル数
+#[derive(Debug, PartialEq)]
+struct Close {
+    start: u64,
+    end: u64,
+    speech_ms: u32,
+    /// 前の発話を強制的に切った直後から始まっている
+    cut_start: bool,
+    /// 発話の途中で強制的に切った
+    cut_end: bool,
 }
 
 /// VAD の確率から発話の区切りを決める（DESIGN.md 3.1）
@@ -236,6 +347,8 @@ struct Segmenter {
     open: Option<Open>,
     /// 発話していないときに続いている音声フレームの数
     onset: u32,
+    /// 直前に強制的に切った位置
+    last_cut: Option<u64>,
 }
 
 struct Open {
@@ -243,6 +356,7 @@ struct Open {
     last_speech_end: u64,
     speech_frames: u32,
     silence_frames: u32,
+    cut_start: bool,
 }
 
 impl Segmenter {
@@ -260,6 +374,7 @@ impl Segmenter {
             max_frames: cfg.max_segment_ms / FRAME_MS,
             open: None,
             onset: 0,
+            last_cut: None,
         }
     }
 
@@ -279,6 +394,7 @@ impl Segmenter {
                 last_speech_end: frame_end,
                 speech_frames: Self::ONSET_FRAMES,
                 silence_frames: 0,
+                cut_start: self.last_cut == Some(start),
             });
             return Some(Event::Open);
         };
@@ -299,7 +415,8 @@ impl Segmenter {
             return None;
         }
         let open = self.open.take().expect("checked");
-        Some(Event::Close {
+        self.last_cut = hard.then_some(frame_end);
+        Some(Event::Close(Close {
             start: open.start,
             end: if hard {
                 frame_end
@@ -307,6 +424,20 @@ impl Segmenter {
                 open.last_speech_end
             },
             speech_ms: open.speech_frames * FRAME_MS,
+            cut_start: open.cut_start,
+            cut_end: hard,
+        }))
+    }
+
+    /// 入力が終わったときに、開いている発話を閉じる
+    fn finish(&mut self) -> Option<Close> {
+        let open = self.open.take()?;
+        Some(Close {
+            start: open.start,
+            end: open.last_speech_end,
+            speech_ms: open.speech_frames * FRAME_MS,
+            cut_start: open.cut_start,
+            cut_end: false,
         })
     }
 }
@@ -327,6 +458,10 @@ impl Router {
         if let Some(slot) = self.slots.iter_mut().find(|(s, _)| s == id) {
             slot.1 = Some(until);
         }
+    }
+
+    fn remove(&mut self, id: &str) {
+        self.slots.retain(|(s, _)| s != id);
     }
 
     fn assign(&mut self, now: Instant) -> Option<String> {
@@ -365,6 +500,16 @@ mod tests {
         std::iter::repeat_n(prob, (ms / FRAME_MS) as usize)
     }
 
+    fn closes(events: &[(usize, Event)]) -> Vec<&Close> {
+        events
+            .iter()
+            .filter_map(|(_, e)| match e {
+                Event::Close(c) => Some(c),
+                Event::Open => None,
+            })
+            .collect()
+    }
+
     #[test]
     fn opens_on_speech_and_closes_after_min_silence() {
         let mut s = segmenter();
@@ -380,11 +525,13 @@ mod tests {
         assert_eq!(events[0].1, Event::Open);
         assert_eq!(
             events[1].1,
-            Event::Close {
+            Event::Close(Close {
                 start: speech_start,
                 end: speech_end,
-                speech_ms: 800
-            }
+                speech_ms: 800,
+                cut_start: false,
+                cut_end: false,
+            })
         );
         // 400ms の無音（25 フレーム）が続いたところで閉じる
         assert_eq!(events[1].0, 10 + 50 + 25 - 1);
@@ -418,14 +565,28 @@ mod tests {
             .map(|(_, e)| matches!(e, Event::Open))
             .collect();
         assert_eq!(kinds, [true, false, true]);
+        assert!(!closes(&events)[0].cut_end);
     }
 
     #[test]
-    fn endless_speech_is_cut_hard() {
+    fn endless_speech_is_cut_hard_without_overlapping_padding() {
         let mut s = segmenter();
-        let events = run(&mut s, frames(13_000, 0.9));
-        assert!(matches!(events[1].1, Event::Close { .. }));
+        let events = run(&mut s, frames(14_000, 0.9).chain(frames(500, 0.0)));
+        let closes = closes(&events);
         assert_eq!(events[1].0 as u32 + 1, (8000 + 4000) / FRAME_MS);
+        assert!(closes[0].cut_end && !closes[0].cut_start);
+        // 切った直後から続く発話は、切った位置から始まる
+        assert!(closes[1].cut_start && !closes[1].cut_end);
+        assert_eq!(closes[1].start, closes[0].end);
+    }
+
+    #[test]
+    fn finish_closes_open_speech() {
+        let mut s = segmenter();
+        run(&mut s, frames(600, 0.9));
+        let close = s.finish().unwrap();
+        assert_eq!(close.speech_ms, 600 / FRAME_MS * FRAME_MS);
+        assert!(s.finish().is_none());
     }
 
     #[test]
@@ -441,19 +602,48 @@ mod tests {
     }
 
     #[test]
-    fn context_bias_collects_names_and_aliases_once() {
-        let glossary: Glossary = serde_json::from_value(serde_json::json!({
-            "clientVersion": 1,
-            "languages": ["ja"],
-            "entities": {
-                "hero:13": { "kind": "hero", "className": "h", "names": { "ja": "ヘイズ", "en": "Haze" }, "aliases": { "ja": ["ヘイズ"] } },
-                "item:1": { "kind": "item", "className": "i", "names": { "ja": "基礎拡張マガジン" }, "aliases": { "ja": ["拡張マガジン"] } }
-            }
+    fn removed_slot_does_not_take_deltas() {
+        let mut r = Router::default();
+        r.open("cough".into());
+        r.remove("cough");
+        r.open("speech".into());
+        assert_eq!(r.assign(Instant::now()).as_deref(), Some("speech"));
+    }
+
+    fn glossary(json: serde_json::Value) -> Glossary {
+        serde_json::from_value(serde_json::json!({
+            "clientVersion": 1, "languages": ["ja"], "entities": json
         }))
-        .unwrap();
+        .unwrap()
+    }
+
+    #[test]
+    fn context_bias_collects_names_and_aliases_once() {
+        let g = glossary(serde_json::json!({
+            "hero:13": { "kind": "hero", "className": "h", "names": { "ja": "ヘイズ", "en": "Haze" }, "aliases": { "ja": ["ヘイズ"] } },
+            "item:1": { "kind": "item", "className": "i", "names": { "ja": "基礎拡張マガジン" }, "aliases": { "ja": ["拡張マガジン"] } }
+        }));
         assert_eq!(
-            context_bias(&glossary, "ja"),
+            context_bias(&g, "ja"),
             ["ヘイズ", "基礎拡張マガジン", "拡張マガジン"]
         );
+    }
+
+    #[test]
+    fn context_bias_keeps_heroes_and_items_first_when_capped() {
+        let mut entities = serde_json::Map::new();
+        for i in 0..MAX_CONTEXT_BIAS {
+            entities.insert(
+                format!("ability:{i}"),
+                serde_json::json!({ "kind": "ability", "className": "a", "names": { "ja": format!("スキル{i}") }, "aliases": {} }),
+            );
+        }
+        entities.insert(
+            "hero:13".into(),
+            serde_json::json!({ "kind": "hero", "className": "h", "names": { "ja": "ヘイズ" }, "aliases": {} }),
+        );
+        let terms = context_bias(&glossary(entities.into()), "ja");
+        assert_eq!(terms.len(), MAX_CONTEXT_BIAS);
+        assert_eq!(terms[0], "ヘイズ");
     }
 }
