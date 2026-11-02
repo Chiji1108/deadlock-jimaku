@@ -1,13 +1,31 @@
-//! 設定（DESIGN.md 5 章）。保存と操作パネルからの変更は Phase 5 で入れる。
+//! 設定（DESIGN.md 5 章）。`{データディレクトリ}/settings.json` に保存し、操作パネルから変える。
+//!
+//! API キーはここには入れない（`secrets`。OS の資格情報ストアに保存する）。
+
+use std::path::Path;
+
+use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 use crate::lang;
 use crate::types::LangCode;
 
-#[derive(Clone, Debug)]
+/// `{データディレクトリ}` の中の設定ファイル
+pub const FILE: &str = "settings.json";
+
+/// 翻訳先の上限（多いほど出力が増えて遅くなる）
+pub const MAX_TRANSLATE_TO: usize = 4;
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[serde(default, rename_all = "camelCase")]
+#[ts(export)]
 pub struct Settings {
+    /// マイクを字幕にするか（操作パネルの開始・停止）
+    pub transcription_enabled: bool,
     /// 配信者が話す言語
     pub mic_language: LangCode,
     /// マイクのデバイス名。None なら OS の既定の入力デバイス
+    #[ts(optional)]
     pub mic_device: Option<String>,
     /// 翻訳先（最大 4 言語。mic_language は除く）
     pub translate_to: Vec<LangCode>,
@@ -16,12 +34,16 @@ pub struct Settings {
     pub target_streaming_delay_ms: u32,
     pub segmentation: Segmentation,
     /// ランクを表示するアカウント（Steam の 32bit アカウント ID）。None ならランクを取りに行かない
+    #[ts(optional)]
     pub rank_account: Option<u32>,
     /// ランクを取りに行く間隔（試合後すぐには反映されないので短くしない）
+    #[ts(type = "number")]
     pub rank_poll_seconds: u64,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[serde(default, rename_all = "camelCase")]
+#[ts(export)]
 pub struct Models {
     pub realtime: String,
     pub batch: String,
@@ -30,11 +52,14 @@ pub struct Models {
     /// 辞書の漢字名の読み（OpenAI）。名前ごとにキャッシュする
     pub readings: String,
     /// translate / readings の推論の深さ。推論しないモデルにするときは None
+    #[ts(optional)]
     pub reasoning_effort: Option<String>,
 }
 
 /// 字幕の区切り（DESIGN.md 3.1）
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[serde(default, rename_all = "camelCase")]
+#[ts(export)]
 pub struct Segmentation {
     /// この長さの無音で Segment を閉じる
     pub min_silence_ms: u32,
@@ -45,23 +70,36 @@ pub struct Segmentation {
 impl Default for Settings {
     fn default() -> Self {
         Self {
+            transcription_enabled: false,
             mic_language: "ja".into(),
             mic_device: None,
             translate_to: vec!["en".into()],
-            models: Models {
-                realtime: "voxtral-mini-transcribe-realtime-3".into(),
-                batch: "voxtral-small-transcribe-3".into(),
-                translate: "gpt-6.1-terra".into(),
-                readings: "gpt-6.1-terra".into(),
-                reasoning_effort: Some("none".into()),
-            },
+            models: Models::default(),
             target_streaming_delay_ms: 480,
-            segmentation: Segmentation {
-                min_silence_ms: 400,
-                max_segment_ms: 8000,
-            },
+            segmentation: Segmentation::default(),
             rank_account: None,
             rank_poll_seconds: 180,
+        }
+    }
+}
+
+impl Default for Models {
+    fn default() -> Self {
+        Self {
+            realtime: "voxtral-mini-transcribe-realtime-3".into(),
+            batch: "voxtral-small-transcribe-3".into(),
+            translate: "gpt-6.1-terra".into(),
+            readings: "gpt-6.1-terra".into(),
+            reasoning_effort: Some("none".into()),
+        }
+    }
+}
+
+impl Default for Segmentation {
+    fn default() -> Self {
+        Self {
+            min_silence_ms: 400,
+            max_segment_ms: 8000,
         }
     }
 }
@@ -75,9 +113,93 @@ impl Settings {
                 .chain(self.translate_to.iter().cloned()),
         )
     }
+
+    /// 操作パネルからの変更を当てる。読めない値はエラーにして何も変えない
+    pub fn apply(&self, patch: SettingsPatch) -> Result<Self, String> {
+        let mut next = self.clone();
+        if let Some(enabled) = patch.transcription_enabled {
+            next.transcription_enabled = enabled;
+        }
+        if let Some(device) = patch.mic_device {
+            next.mic_device = Some(device).filter(|d| !d.is_empty());
+        }
+        if let Some(code) = patch.mic_language {
+            if lang::find(&code).is_none() {
+                return Err(format!("unknown language: {code}"));
+            }
+            next.mic_language = code;
+        }
+        if let Some(targets) = patch.translate_to {
+            next.translate_to = targets;
+        }
+        // 話す言語を変えたときも、翻訳先から同じ言語を外す
+        let targets = lang::normalize(next.translate_to.iter().cloned());
+        next.translate_to = targets
+            .into_iter()
+            .filter(|t| *t != next.mic_language)
+            .collect();
+        if next.translate_to.len() > MAX_TRANSLATE_TO {
+            return Err(format!(
+                "translateTo accepts up to {MAX_TRANSLATE_TO} languages"
+            ));
+        }
+        if let Some(account) = patch.rank_account {
+            next.rank_account = match account.trim() {
+                "" => None,
+                value => Some(
+                    parse_account_id(value)
+                        .ok_or_else(|| format!("invalid Steam account ID: {value}"))?,
+                ),
+            };
+        }
+        Ok(next)
+    }
 }
 
-/// ランクを表示するアカウントを、コマンドライン引数や環境変数の値から読む。読めなければ警告する
+/// 操作パネルから変える項目。省いた項目は変えない
+#[derive(Clone, Debug, Default, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct SettingsPatch {
+    #[ts(optional)]
+    pub transcription_enabled: Option<bool>,
+    /// 空文字列なら OS の既定の入力デバイス
+    #[ts(optional)]
+    pub mic_device: Option<String>,
+    #[ts(optional)]
+    pub mic_language: Option<LangCode>,
+    #[ts(optional)]
+    pub translate_to: Option<Vec<LangCode>>,
+    /// SteamID64 か 32bit のアカウント ID。空文字列ならランクを表示しない
+    #[ts(optional)]
+    pub rank_account: Option<String>,
+}
+
+/// ファイルがなければ既定値。壊れていたら脇に退けて既定値から始める（黙って上書きしない）
+pub fn load(path: &Path) -> Settings {
+    let Ok(bytes) = std::fs::read(path) else {
+        return Settings::default();
+    };
+    match serde_json::from_slice(&bytes) {
+        Ok(settings) => settings,
+        Err(e) => {
+            let aside = path.with_extension("json.broken");
+            tracing::warn!("settings are broken ({e}); moved to {}", aside.display());
+            let _ = std::fs::rename(path, aside);
+            Settings::default()
+        }
+    }
+}
+
+pub fn save(path: &Path, settings: &Settings) -> anyhow::Result<()> {
+    std::fs::create_dir_all(path.parent().expect("has parent"))?;
+    let tmp = path.with_extension("json.tmp");
+    std::fs::write(&tmp, serde_json::to_vec_pretty(settings)?)?;
+    std::fs::rename(&tmp, path)?;
+    Ok(())
+}
+
+/// ランクを表示するアカウントを、コマンドライン引数の値から読む。読めなければ警告する
 pub fn account_id(value: Option<&str>) -> Option<u32> {
     let value = value?;
     let id = parse_account_id(value);
@@ -103,5 +225,78 @@ mod tests {
         assert_eq!(parse_account_id("76561198268652547"), Some(308_386_819));
         assert_eq!(parse_account_id("308386819"), Some(308_386_819));
         assert_eq!(parse_account_id("abc"), None);
+    }
+
+    #[test]
+    fn patch_changes_only_given_fields() {
+        let s = Settings::default();
+        let next = s
+            .apply(SettingsPatch {
+                rank_account: Some("76561198268652547".into()),
+                ..SettingsPatch::default()
+            })
+            .unwrap();
+        assert_eq!(next.rank_account, Some(308_386_819));
+        assert_eq!(next.translate_to, s.translate_to);
+        let cleared = next
+            .apply(SettingsPatch {
+                rank_account: Some(String::new()),
+                mic_device: Some(String::new()),
+                ..SettingsPatch::default()
+            })
+            .unwrap();
+        assert_eq!(cleared.rank_account, None);
+        assert_eq!(cleared.mic_device, None);
+    }
+
+    #[test]
+    fn patch_validates_languages_and_account() {
+        let s = Settings::default();
+        let bad = |patch| s.apply(patch).is_err();
+        assert!(bad(SettingsPatch {
+            mic_language: Some("xx".into()),
+            ..SettingsPatch::default()
+        }));
+        assert!(bad(SettingsPatch {
+            rank_account: Some("not-an-id".into()),
+            ..SettingsPatch::default()
+        }));
+        assert!(bad(SettingsPatch {
+            translate_to: Some(["en", "ru", "ko", "de", "fr"].map(String::from).to_vec()),
+            ..SettingsPatch::default()
+        }));
+    }
+
+    #[test]
+    fn translate_to_drops_the_spoken_language_and_unknown_codes() {
+        let s = Settings::default()
+            .apply(SettingsPatch {
+                translate_to: Some(["ja", "en", "xx", "en", "ru"].map(String::from).to_vec()),
+                ..SettingsPatch::default()
+            })
+            .unwrap();
+        assert_eq!(s.translate_to, ["en", "ru"]);
+        // 話す言語を英語に変えたら、翻訳先から英語を外す
+        let s = s
+            .apply(SettingsPatch {
+                mic_language: Some("en".into()),
+                ..SettingsPatch::default()
+            })
+            .unwrap();
+        assert_eq!(s.translate_to, ["ru"]);
+    }
+
+    #[test]
+    fn missing_fields_take_defaults_and_broken_files_are_moved_aside() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("settings.json");
+        std::fs::write(&path, r#"{ "micLanguage": "en" }"#).unwrap();
+        let s = load(&path);
+        assert_eq!(s.mic_language, "en");
+        assert_eq!(s.rank_poll_seconds, 180);
+
+        std::fs::write(&path, "{ broken").unwrap();
+        assert_eq!(load(&path), Settings::default());
+        assert!(dir.path().join("settings.json.broken").exists());
     }
 }

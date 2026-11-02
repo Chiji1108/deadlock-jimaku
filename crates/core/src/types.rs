@@ -95,8 +95,9 @@ pub enum ServerMsg {
     SegmentUpsert { segment: Segment },
     #[serde(rename = "glossary.updated", rename_all = "camelCase")]
     GlossaryUpdated { client_version: u32 },
+    /// None はランクを表示しない（アカウントが外された）
     #[serde(rename = "rank.update")]
-    RankUpdate { rank: RankState },
+    RankUpdate { rank: Option<RankState> },
 }
 
 impl ServerMsg {
@@ -206,4 +207,19 @@ pub struct RankState {
 pub struct RankProgress {
     pub value: u32,
     pub max: u32,
+}
+
+/// 操作パネルに返す設定。API キーはどこから読んだかだけ（キーそのものは返さない）
+#[derive(Clone, Debug, Serialize, TS)]
+#[ts(export)]
+pub struct SettingsView {
+    pub settings: crate::settings::Settings,
+    pub keys: crate::secrets::KeyStatus,
+}
+
+#[derive(Clone, Debug, Serialize, TS)]
+#[ts(export)]
+pub struct LanguageOption {
+    pub code: LangCode,
+    pub label: String,
 }

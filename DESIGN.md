@@ -65,7 +65,7 @@ Deadlock 配信者向けの OBS オーバーレイツール。
 | VAD | **earshot**（純 Rust、16ms フレーム） | 字幕の区切りを決める（3.1）。Silero と違って ONNX Runtime が要らず、exe に 100KB 程度しか足さない |
 | リサンプル | `rubato` | 16kHz mono に揃える |
 | Mistral | `reqwest` + `tokio-tungstenite` | 公式の Rust SDK がないので直接呼ぶ |
-| API キー | `keyring` | Windows 資格情報マネージャー |
+| API キー | `keyring`（v1） | Windows の資格情報マネージャー / macOS のキーチェーン |
 | 設定 | JSON（アプリの設定ディレクトリ） | |
 | フロント | **Svelte 5 (runes) + Vite + TypeScript** | 下記 |
 | スタイル | 素の CSS + CSS 変数 | OBS の「カスタム CSS」で見た目を上書きできる |
@@ -207,30 +207,29 @@ deadlock-stream-overlays/
       └─ generated/           # ts-rs の出力（言語の対応表もここに出す）
 ```
 
-## 5. 設定
+## 5. 設定（`settings.rs`, `secrets.rs`, `runtime.rs`）
+
+- 設定は `{データディレクトリ}/settings.json`（Tauri の `app_data_dir`。ヘッドレスも同じ場所）に JSON で保存する。アプリが書き直すファイルなので、コメントの書ける TOML にはしない（書き直すと消える）
+  - 項目が欠けていれば既定値。壊れていれば `.broken` に退けて既定値から始める
+  - 型は `types.rs` と同じく ts-rs で TS に出す（`Settings`, `SettingsPatch`）
+- **API キーは設定に入れない**。OS の資格情報ストア（Windows の資格情報マネージャー、macOS のキーチェーン。`keyring` クレート）に保存し、画面には「保存済み / 環境変数 / 未設定」だけを返す。開発中は環境変数 `MISTRAL_API_KEY` / `OPENAI_API_KEY` が優先する
+- **変更はその場で反映する**: `Store` が設定を watch チャンネルで持ち、`runtime` が「辞書・ランク・字幕」の処理を設定から起動する。設定か API キーが変わったら全部止めて張り直す（辞書はキャッシュから読むので 1 秒以内に戻る）
 
 ```ts
 interface Settings {
-  mic: {
-    device: string;               // cpal のデバイス名
-    language: LangCode;           // 配信者が話す言語。既定は "ja"
-  };
-  translateTo: LangCode[];        // 既定は ["en"]。最大 4 言語。mic.language は除く
-  realtime: {
-    targetStreamingDelayMs: number;  // 既定 480
-  };
-  segmentation: {
-    minSilenceMs: number;            // 既定 400
-    maxSegmentSeconds: number;       // 既定 8
-  };
-  models: { realtime: string; batch: string; translate: string; readings: string };  // translate / readings は OpenAI
-  rank: { accountId?: number; pollSeconds: number };  // 既定 180
-  display: { ttlSeconds: number; perCharSeconds: number };  // 既定 6, 0.15
+  transcriptionEnabled: boolean;   // 字幕の開始・停止（既定 false）
+  micLanguage: LangCode;           // 既定 "ja"
+  micDevice?: string;              // なければ OS の既定の入力デバイス
+  translateTo: LangCode[];         // 既定 ["en"]。最大 4。micLanguage は除く
+  models: { realtime; batch; translate; readings; reasoningEffort? };
+  targetStreamingDelayMs: number;  // 既定 480
+  segmentation: { minSilenceMs: number; maxSegmentMs: number };  // 既定 400 / 8000
+  rankAccount?: number;            // Steam の 32bit アカウント ID
+  rankPollSeconds: number;         // 既定 180
 }
 ```
 
-- `translateTo` を変えると、次の発話から反映される。
-- `mic.language` を変えたら、Realtime セッションを張り直す（設定は最初に 1 回しか送れないため）。
+操作パネルからは `SettingsPatch`（変える項目だけ）を送る。`rankAccount` は文字列で受け、SteamID64 でも 32bit の ID でも読む（JS の number では SteamID64 を正確に扱えないため）。読めない値は何も変えずに 400 を返す。
 
 ## 6. 言語
 
@@ -568,13 +567,26 @@ URL: `/overlay/rank?lang=ja`（`lang` はランク名の言語。既定は `ja`�
 
 ## 13. 操作パネル（control.html）
 
-- マイクデバイスの選択とレベルメーター、話す言語（`mic.language`）
-- 翻訳先の言語（最大 4 つ。選ぶとコストの目安を表示する）
-- Mistral API キー（keyring に保存し、画面には出さない）とモデル ID
-- 辞書の状態（clientVersion、取得済みの言語、未確認の読みの一覧）
-- ランク: account_id
-- オーバーレイ URL のコピー（パラメータを組み立てる UI）
-- 直近の Segment のログ（デバッグ用。段階ごとにかかった時間を表示する）
+Tauri のウィンドウでも OBS のカスタムブラウザドックでも同じ画面（`http://127.0.0.1:4510/`）。
+
+| 区画 | 内容 |
+|---|---|
+| 字幕 | 開始・停止（Mistral のキーがなければ押せない）、マイク（デバイス一覧 + 既定）、話す言語、翻訳先（最大 4。OpenAI のキーがなければ注意を出す）、字幕オーバーレイの URL、テスト字幕 |
+| ランク | Steam ID（SteamID64 か 32bit。空で非表示）、ランクオーバーレイの URL |
+| API キー | Mistral / OpenAI。状態（保存済み・環境変数・未設定）と、新しいキーの保存・削除。キーそのものは表示しない |
+
+API（すべて `/api`）:
+
+| メソッド | パス | 内容 |
+|---|---|---|
+| GET | `/settings` | `SettingsView`（設定と API キーの状態） |
+| PATCH | `/settings` | `SettingsPatch` を当てて保存し、処理を張り直す |
+| PUT | `/keys/{mistral\|openai}` | `{ key }` を資格情報ストアに保存（空文字列で削除）し、処理を張り直す |
+| GET | `/devices` | 入力デバイスの名前 |
+| GET | `/languages` | 言語の対応表（コードと表示名） |
+
+- `/api` は Host ヘッダーが `127.0.0.1` / `localhost` / `[::1]` のときだけ受け付ける（DNS リバインディング対策）。書き換えは JSON だけなので、別のサイトからの単純なフォーム送信も通らない（CSRF 対策）
+- 残り: 辞書の状態、直近の Segment のログ、マイクのレベルメーター
 
 ## 14. 実装フェーズ
 
@@ -585,7 +597,7 @@ URL: `/overlay/rank?lang=ja`（`lang` はランク名の言語。既定は `ja`�
 | 2 | mic → VAD で区切り → Voxtral Realtime（partial）→ Small Transcribe 3（final） ✅ | 自分の声が字幕になる |
 | 3 | enrich（ふりがな、翻訳、エンティティ） ✅ | 3 段階の表示が通しで動く |
 | 4 | ランクオーバーレイ ✅ | ランクバッジが表示され、更新される |
-| 5 | 仕上げ: 操作パネル、インストーラー、自動更新 | 配布できる |
+| 5 | 仕上げ: 設定の保存と操作パネル ✅、インストーラー、自動更新、見た目（torph など） | 配布できる |
 
 Phase 2 の前に、録音した実況音声で Voxtral 3 の精度（`context_bias` あり / なし、realtime / batch）を確かめる。
 

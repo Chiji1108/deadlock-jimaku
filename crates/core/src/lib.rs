@@ -7,6 +7,8 @@ pub mod lang;
 pub mod llm;
 pub mod markup;
 pub mod rank;
+pub mod runtime;
+pub mod secrets;
 pub mod server;
 pub mod settings;
 pub mod store;

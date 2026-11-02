@@ -3,12 +3,7 @@
 
 use std::net::{Ipv4Addr, SocketAddr};
 
-use overlays_core::{
-    DEFAULT_PORT, assets, audio, rank, server,
-    settings::{self, Settings},
-    store::Store,
-    subtitles,
-};
+use overlays_core::{DEFAULT_PORT, runtime, server, settings, store::Store};
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 use tokio::net::TcpListener;
 
@@ -17,35 +12,14 @@ fn main() {
 
     tauri::Builder::default()
         .setup(|app| {
-            // 設定・API キーの保存と、操作パネルからの変更・開始・停止は Phase 5
-            let settings = Settings {
-                rank_account: settings::account_id(
-                    std::env::var("DEADLOCK_ACCOUNT_ID").ok().as_deref(),
-                ),
-                ..Settings::default()
-            };
-            // Mistral は文字起こし、OpenAI は翻訳と辞書の漢字名の読み
-            let api_key = std::env::var("MISTRAL_API_KEY").ok();
-            let openai_key = std::env::var("OPENAI_API_KEY").ok();
-            let store = Store::new(settings);
-            tauri::async_runtime::spawn(rank::run_configured(store.clone()));
-            tauri::async_runtime::spawn(assets::load_into(
+            // 設定は操作パネルから変えて保存する。API キーは OS の資格情報ストア
+            let data_dir = app.path().app_data_dir()?;
+            let settings = settings::load(&data_dir.join(settings::FILE));
+            let store = Store::new(settings, data_dir);
+            tauri::async_runtime::spawn(runtime::run(
                 store.clone(),
-                app.path().app_data_dir()?.join("assets"),
-                openai_key.clone(),
+                runtime::Options { input_file: None },
             ));
-            match api_key {
-                Some(api_key) => {
-                    let store = store.clone();
-                    let input = audio::Input::Mic(store.settings().mic_device.clone());
-                    tauri::async_runtime::spawn(async move {
-                        if let Err(e) = subtitles::run(store, input, api_key, openai_key).await {
-                            tracing::error!("transcription stopped: {e:#}");
-                        }
-                    });
-                }
-                None => tracing::warn!("MISTRAL_API_KEY is not set; transcription is off"),
-            }
             // ウィンドウを開く前に bind して、ポートが使えないことを起動時に検出する
             let listener = tauri::async_runtime::block_on(TcpListener::bind(SocketAddr::from((
                 Ipv4Addr::LOCALHOST,
