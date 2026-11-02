@@ -29,6 +29,11 @@ pub struct Settings {
     pub mic_device: Option<String>,
     /// 翻訳先（最大 4 言語。mic_language は除く）
     pub translate_to: Vec<LangCode>,
+    /// 字幕オーバーレイの見せ方。変えると表示中のオーバーレイにそのまま届く
+    pub subtitle_display: SubtitleDisplay,
+    /// ランク名の言語。None なら話す言語
+    #[ts(optional)]
+    pub rank_language: Option<LangCode>,
     // 以下の詳細項目は操作パネルで変えない（`ADVANCED`）
     pub models: Models,
     /// Realtime の streaming delay（80〜1200、または 2400）
@@ -65,6 +70,37 @@ pub struct Models {
     pub reasoning_effort: Option<String>,
 }
 
+/// 字幕オーバーレイの見せ方（DESIGN.md 11 章）
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[serde(default, rename_all = "camelCase")]
+#[ts(export)]
+pub struct SubtitleDisplay {
+    /// 元の文（話した言葉）を出す
+    pub show_source: bool,
+    /// 元の文にふりがなを付ける
+    pub furigana: bool,
+    /// 同時に出す字幕の数
+    pub max_lines: u32,
+    /// 確定してから消すまでの秒数（長い文はそのぶん長く出す）
+    pub hold_seconds: f32,
+}
+
+impl Default for SubtitleDisplay {
+    fn default() -> Self {
+        Self {
+            show_source: true,
+            furigana: true,
+            max_lines: 3,
+            hold_seconds: 6.0,
+        }
+    }
+}
+
+impl SubtitleDisplay {
+    pub const MAX_LINES: std::ops::RangeInclusive<u32> = 1..=5;
+    pub const HOLD_SECONDS: std::ops::RangeInclusive<f32> = 2.0..=30.0;
+}
+
 /// 字幕の区切り（DESIGN.md 3.1）
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
 #[serde(default, rename_all = "camelCase")]
@@ -83,6 +119,8 @@ impl Default for Settings {
             mic_language: "ja".into(),
             mic_device: None,
             translate_to: vec!["en".into()],
+            subtitle_display: SubtitleDisplay::default(),
+            rank_language: None,
             models: Models::default(),
             target_streaming_delay_ms: 480,
             segmentation: Segmentation::default(),
@@ -104,10 +142,15 @@ impl Default for Models {
     }
 }
 
+impl Segmentation {
+    /// 操作パネルで選べる無音の長さ
+    pub const MIN_SILENCE_MS: std::ops::RangeInclusive<u32> = 200..=2000;
+}
+
 impl Default for Segmentation {
     fn default() -> Self {
         Self {
-            min_silence_ms: 400,
+            min_silence_ms: 750,
             max_segment_ms: 8000,
         }
     }
@@ -115,6 +158,14 @@ impl Default for Segmentation {
 
 impl Settings {
     /// 辞書に名前を載せる言語（DESIGN.md 8.2）
+    /// ランク名に使う言語。選んだ言語の名前を取っていなければ（翻訳先から外したなど）話す言語
+    pub fn rank_language(&self) -> LangCode {
+        self.rank_language
+            .clone()
+            .filter(|l| self.glossary_languages().contains(l))
+            .unwrap_or_else(|| self.mic_language.clone())
+    }
+
     pub fn glossary_languages(&self) -> Vec<LangCode> {
         lang::normalize(
             [self.mic_language.clone(), "en".into()]
@@ -166,6 +217,32 @@ impl Settings {
                 "translateTo accepts up to {MAX_TRANSLATE_TO} languages"
             ));
         }
+        if let Some(display) = patch.subtitle_display {
+            if !SubtitleDisplay::MAX_LINES.contains(&display.max_lines)
+                || !SubtitleDisplay::HOLD_SECONDS.contains(&display.hold_seconds)
+            {
+                return Err("subtitleDisplay is out of range".into());
+            }
+            next.subtitle_display = display;
+        }
+        if let Some(ms) = patch.min_silence_ms {
+            if !Segmentation::MIN_SILENCE_MS.contains(&ms) {
+                return Err(format!(
+                    "minSilenceMs must be in {:?}",
+                    Segmentation::MIN_SILENCE_MS
+                ));
+            }
+            next.segmentation.min_silence_ms = ms;
+        }
+        if let Some(code) = patch.rank_language {
+            next.rank_language = match code.as_str() {
+                "" => None,
+                _ if lang::find(&code).is_none() => {
+                    return Err(format!("unknown language: {code}"));
+                }
+                _ => Some(code),
+            };
+        }
         if let Some(account) = patch.rank_account {
             next.rank_account = match account.trim() {
                 "" => None,
@@ -196,6 +273,14 @@ pub struct SettingsPatch {
     /// SteamID64 か 32bit のアカウント ID。空文字列ならランクを表示しない
     #[ts(optional)]
     pub rank_account: Option<String>,
+    #[ts(optional)]
+    pub subtitle_display: Option<SubtitleDisplay>,
+    /// 何 ms 黙ったら区切るか
+    #[ts(optional)]
+    pub min_silence_ms: Option<u32>,
+    /// 空文字列なら話す言語
+    #[ts(optional)]
+    pub rank_language: Option<LangCode>,
 }
 
 /// ファイルがなければ既定値。壊れていたら脇に退けて既定値から始める。
@@ -285,6 +370,63 @@ mod tests {
             translate_to: Some(["en", "ru", "ko", "de", "fr"].map(String::from).to_vec()),
             ..SettingsPatch::default()
         }));
+    }
+
+    #[test]
+    fn patch_validates_display_pause_and_rank_language() {
+        let s = Settings::default();
+        let display = SubtitleDisplay {
+            max_lines: 2,
+            ..SubtitleDisplay::default()
+        };
+        let next = s
+            .apply(SettingsPatch {
+                subtitle_display: Some(display.clone()),
+                min_silence_ms: Some(700),
+                rank_language: Some("en".into()),
+                ..Default::default()
+            })
+            .unwrap();
+        assert_eq!(next.subtitle_display, display);
+        assert_eq!(next.segmentation.min_silence_ms, 700);
+        assert_eq!(next.rank_language(), "en");
+
+        let reset = next
+            .apply(SettingsPatch {
+                rank_language: Some(String::new()),
+                ..Default::default()
+            })
+            .unwrap();
+        assert_eq!(reset.rank_language(), "ja");
+
+        // 名前を取っていない言語（翻訳先から外した）は話す言語に戻る
+        let ru = next
+            .apply(SettingsPatch {
+                rank_language: Some("ru".into()),
+                ..Default::default()
+            })
+            .unwrap();
+        assert_eq!(ru.rank_language(), "ja");
+
+        for patch in [
+            SettingsPatch {
+                min_silence_ms: Some(50),
+                ..Default::default()
+            },
+            SettingsPatch {
+                subtitle_display: Some(SubtitleDisplay {
+                    max_lines: 0,
+                    ..SubtitleDisplay::default()
+                }),
+                ..Default::default()
+            },
+            SettingsPatch {
+                rank_language: Some("xx".into()),
+                ..Default::default()
+            },
+        ] {
+            assert!(s.apply(patch).is_err());
+        }
     }
 
     #[test]

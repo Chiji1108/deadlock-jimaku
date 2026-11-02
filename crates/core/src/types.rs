@@ -77,6 +77,10 @@ pub enum Topic {
     Rank,
     /// 字幕の処理の状態（操作パネル用）
     Status,
+    /// オーバーレイの見せ方
+    Display,
+    /// マイクの入力レベル（操作パネル用。字幕を動かしている間だけ流れる）
+    Level,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
@@ -103,6 +107,14 @@ pub enum ServerMsg {
     /// 字幕を始められなかった理由。None なら問題なし
     #[serde(rename = "transcription.status")]
     TranscriptionStatus { error: Option<String> },
+    #[serde(rename = "display", rename_all = "camelCase")]
+    Display {
+        subtitles: crate::settings::SubtitleDisplay,
+        rank_language: LangCode,
+    },
+    /// 直近のピーク（dBFS）。1 秒に 10 回ほど
+    #[serde(rename = "audio.level")]
+    AudioLevel { db: f32 },
 }
 
 impl ServerMsg {
@@ -112,6 +124,8 @@ impl ServerMsg {
             Self::GlossaryUpdated { .. } => Topic::Glossary,
             Self::RankUpdate { .. } => Topic::Rank,
             Self::TranscriptionStatus { .. } => Topic::Status,
+            Self::Display { .. } => Topic::Display,
+            Self::AudioLevel { .. } => Topic::Level,
         }
     }
 }

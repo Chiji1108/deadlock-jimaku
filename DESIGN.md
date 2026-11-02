@@ -68,7 +68,7 @@ Deadlock 配信者向けの OBS オーバーレイツール。
 | API キー | `keyring`（v1） | Windows の資格情報マネージャー / macOS のキーチェーン |
 | 設定 | JSON（アプリの設定ディレクトリ） | |
 | フロント | **Svelte 5 (runes) + Vite + TypeScript** | 下記 |
-| スタイル | 素の CSS + CSS 変数 | OBS の「カスタム CSS」で見た目を上書きできる |
+| スタイル | オーバーレイ: 素の CSS + CSS 変数 / 操作パネル: shadcn-svelte（Tailwind CSS v4） | オーバーレイは OBS の「カスタム CSS」で見た目を上書きできる |
 
 ### フロントに Svelte 5 を選ぶ理由
 
@@ -149,7 +149,7 @@ Deadlock 配信者向けの OBS オーバーレイツール。
 
 そこで区切りはローカルの VAD（earshot）で決める。
 
-- 無音が `minSilenceMs`（既定 400ms）続いたら Segment を閉じる
+- 無音が `minSilenceMs`（既定 750ms。操作パネルで すぐ 500 / ふつう 750 / つなぐ 1000 か、200〜2000 で選ぶ）続いたら Segment を閉じる。話している途中は partial が出続けるので、長くしても字幕が出始めるのは遅れない（確定と翻訳が遅れる）
 - 長さが `maxSegmentSeconds`（既定 8 秒）を超えたら、次の短い無音で強制的に閉じる（字幕が長くなりすぎないように）
 - 音声は手元にあるので、区切りの位置が正確にわかり、追加のコストもかからない
 
@@ -226,9 +226,11 @@ interface Settings {
   micLanguage: LangCode;           // 既定 "ja"
   micDevice?: string;              // なければ OS の既定の入力デバイス
   translateTo: LangCode[];         // 既定 ["en"]。最大 4。micLanguage は除く
+  subtitleDisplay: SubtitleDisplay; // 字幕オーバーレイの見せ方（11 章）
+  rankLanguage?: LangCode;         // ランク名の言語。なければ話す言語
   models: { realtime; batch; translate; readings; reasoningEffort? };
   targetStreamingDelayMs: number;  // 既定 480
-  segmentation: { minSilenceMs: number; maxSegmentMs: number };  // 既定 400 / 8000
+  segmentation: { minSilenceMs: number; maxSegmentMs: number };  // 既定 750 / 8000
   rankAccount?: number;            // Steam の 32bit アカウント ID
   rankPollSeconds: number;         // 既定 180
 }
@@ -501,7 +503,7 @@ interface Enriched {
 
 ```ts
 // client → server
-type ClientMsg = { type: "subscribe"; topics: ("subtitle" | "glossary" | "rank" | "status")[] };
+type ClientMsg = { type: "subscribe"; topics: ("subtitle" | "glossary" | "rank" | "status" | "display" | "level")[] };
 
 // server → client
 type ServerMsg =
@@ -509,32 +511,36 @@ type ServerMsg =
   | { type: "segment.upsert"; segment: Segment }
   | { type: "rank.update"; rank: RankState | null }               // null: アカウントを外した・替えた
   | { type: "transcription.status"; error: string | null }        // 操作パネル向け。字幕を始められない・止まった理由
-  | { type: "glossary.updated"; clientVersion: number };          // オーバーレイが辞書を取り直す
+  | { type: "glossary.updated"; clientVersion: number }           // オーバーレイが辞書を取り直す
+  | { type: "display"; subtitles: SubtitleDisplay; rankLanguage: LangCode }  // オーバーレイの見せ方（11・12 章）
+  | { type: "audio.level"; db: number };                          // 操作パネルのメーター。字幕を動かしている間、0.1 秒ごとのピーク（dBFS）
 ```
 
 - 辞書は `GET /api/glossary` で取得し、オーバーレイ側で持つ（Segment には ID しか載らない）。
 - サーバーは直近の Segment を（例: 50 件）保持して、snapshot で送る。
 - WS クライアントは指数バックオフで再接続し、再接続したら snapshot で状態を置き換える。
-- 接続直後と broadcast の取りこぼし（Lagged）の後は、購読しているすべてのトピックの現在の状態（`snapshot`、辞書があれば `glossary.updated`、ランクがあれば `rank.update`、`transcription.status`）を送る。
+- 接続直後と broadcast の取りこぼし（Lagged）の後は、購読しているすべてのトピックの現在の状態（`snapshot`、辞書があれば `glossary.updated`、ランクがあれば `rank.update`、`transcription.status`、`display`）。`audio.level` は持たずに流すだけを送る。
 
 ## 11. 字幕オーバーレイ
 
-URL: `/overlay/subtitles?langs=en&furigana=1&maxItems=3`
+URL: `/overlay/subtitles`（**パラメータはない**。OBS に一度貼れば、あとは貼り直さない）
 
-| パラメータ | 意味 | 既定値 |
+見せ方は操作パネルで変え、設定（`subtitleDisplay`）に保存する。変えたら `display`（トピック `display`）で表示中のオーバーレイに届き、その場で切り替わる。URL を手で書き換える運用はしない。
+
+| 項目 | 意味 | 既定値 |
 |---|---|---|
-| `langs` | 表示する訳文の言語（`translateTo` の中から選ぶ） | `translateTo` すべて |
-| `source` | 原文を表示するか | `1` |
-| `furigana` | ふりがなを表示するか | `1` |
-| `maxItems` | 同時に表示する Segment の上限 | `3` |
+| `showSource` | 話した言葉（原文）を出すか。出さないときは訳文が届くまで何も出さない | `true` |
+| `furigana` | ふりがなを出すか | `true` |
+| `maxLines` | 同時に出す字幕の数（1〜5） | `3` |
+| `holdSeconds` | 確定してから消すまでの秒数（2〜30） | `6` |
 
-言語ごとにブラウザソースを分ければ、別々の位置に表示できる（例: 原文だけのソースと `?source=0&langs=en` のソース）。
+訳文は翻訳先（`translateTo`）をすべて出す。出す言語を減らしたいときは翻訳先を減らす（そのぶん費用も減る）。
 
 ### 表示ルール
 
 - 映画字幕のような**中央揃え**。下から積み上げ、最新の発話を一番下に出す。partial の行は下端でその場で更新される。
-- 表示時間は `settledAt` から数え、`ttlSeconds + 文字数 × perCharSeconds` が過ぎたらフェードアウトする。partial / final の間は消さない。
-- `maxItems` を超えたら、時間に関係なく古いものから上に押し出す（`animate:slide`。`lib/slide.ts`）。
+- 表示時間は `settledAt` から数え、`holdSeconds + 文字数 × 0.15 秒` が過ぎたらフェードアウトする。partial / final の間は消さない。
+- `maxLines` を超えたら、時間に関係なく古いものから上に押し出す（`animate:slide`。`lib/slide.ts`）。
   - `animate:flip` は使わない。flip は大きさの変化も scale で補間するので、partial → final で行の幅が変わると文字が潰れて見える。
 - `discarded` になったらすぐに消す。
 - 画面上の位置は OBS 側で決める。Deadlock は画面下中央に HUD があるので、その少し上に置く想定。
@@ -543,7 +549,7 @@ URL: `/overlay/subtitles?langs=en&furigana=1&maxItems=3`
 
 ```
    [アイコン]インファーナスのultに気(き)をつけて      ← 原文（大きく。ふりがなは <ruby> で上に出す）
-   Watch out for [アイコン]Infernus's ult             ← 訳文（小さく。langs の分だけ並べる）
+   Watch out for [アイコン]Infernus's ult             ← 訳文（小さく。翻訳先の分だけ並べる）
 ```
 
 - エンティティは `[アイコン] 公式名` をハイライトして表示する（色は種類ごと: hero / item / ability）。
@@ -551,7 +557,7 @@ URL: `/overlay/subtitles?langs=en&furigana=1&maxItems=3`
 
 ## 12. ランクオーバーレイ（`rank.rs`, `/overlay/rank`）
 
-URL: `/overlay/rank?lang=ja`（`lang` はランク名の言語。既定は `ja`）
+URL: `/overlay/rank`（パラメータはない。ブラウザソースは幅 480・高さ 140）。ランク名の言語は操作パネルで選ぶ（`rankLanguage`。話す言語・英語・翻訳先から。既定は話す言語）。名前がない言語は英語で出す
 
 表示は **アイコン（サブランク付き）・ランク名（ランクの色、サブランクの数字付き。例: エミッサリー 3）・今のサブランクの中での進み具合のゲージ（例: 650 / 1,000）**。エターナスはサブランクが上位何 % かで決まるのでゲージを出さず、累積のランクポイント（例: 72,000 RP）を出す。
 
@@ -568,18 +574,27 @@ URL: `/overlay/rank?lang=ja`（`lang` はランク名の言語。既定は `ja`�
 - アイコン（約 75KB）はディスクに保存せず**バッジごとに**メモリに持ち、`/assets/rank/{badge}.webp` で配信する。取れていない間は `image` を出さず（画像を表示しない）、次の回に取り直す。別のバッジのアイコンを配信しない
 - ランク名は言語ごとに取り、失敗した言語だけ次の回に取り直す。外部 API の呼び出しには既定のタイムアウト（接続 10 秒、全体 60 秒）を付け、応答が返らずに止まらないようにする
 - アカウント ID を読み取れなければ警告してランクを止める
+- 並びは 1 行目にランク名と右寄せのポイント（`650 / 1,000`。分母は小さく）、2 行目に幅いっぱいのゲージ
 - バッジが変わると拡大しながら入れ替わり、ゲージは伸び縮みする
 - 当日の勝敗などは今は出さない（必要になったら `match-history` を使う）
 
 ## 13. 操作パネル（control.html）
 
-Tauri のウィンドウでも OBS のカスタムブラウザドックでも同じ画面（`http://127.0.0.1:4510/`）。
+Tauri のウィンドウでも OBS のカスタムブラウザドックでも同じ画面（`http://127.0.0.1:4510/`）。shadcn-svelte（Tailwind CSS v4）で作る。オーバーレイは軽さと OBS のカスタム CSS での上書きやすさを優先し、Tailwind を入れずに素の CSS のまま。
 
-| 区画 | 内容 |
+- **上部に固定**: 状態（停止中 / 準備しています / 字幕を出しています / 音が届いていません / 止まっています）と、開始・停止のボタン
+- **注意はタブの上に出す**: Mistral のキーがない、字幕が止まった理由、設定を保存できない
+- **URL を手で書き換えさせない**: 見せ方はすべて画面の操作で変え、OBS に貼る URL はコピーするだけ
+
+| タブ | 内容 |
 |---|---|
-| 字幕 | 開始・停止（Mistral のキーがなければ押せない）、マイク（デバイス一覧 + 既定）、話す言語、翻訳先（最大 4。OpenAI のキーがなければ注意を出す）、字幕オーバーレイの URL、テスト字幕 |
-| ランク | Steam ID（SteamID64 か 32bit。空で非表示）、ランクオーバーレイの URL |
-| API キー | Mistral / OpenAI。状態（保存済み・環境変数・未設定）と、新しいキーの保存・削除。キーそのものは表示しない |
+| マイクと翻訳 | 入力デバイス（一覧の更新つき。見つからなければそう出す）、入力レベルのメーター（-60〜0 dB）、5 秒間 -60 dB を超えなければ「音が届いていません」、話す言語、翻訳先（最大 4。OpenAI のキーがなければ注意）、文の区切り（すぐ 0.5 秒 / ふつう 0.75 秒 / つなぐ 1 秒 / 細かく = ミリ秒で入力。200〜2000） |
+| 字幕の表示 | プレビュー（オーバーレイを 1920×1080 で開いて縮めたもの）とテスト字幕、11 章の見せ方、OBS に貼る URL |
+| ランク | プレビュー（480×140）、Steam ID（SteamID64 かフレンドコード。空で非表示）、ランク名の言語、OBS に貼る URL |
+| API キー | Mistral / OpenAI。状態（保存済み・環境変数・未設定）、キーの作成ページへのリンク、新しいキーの保存・削除。キーそのものは表示しない |
+
+- プレビューの iframe は `color-scheme` を中身（ライト）に合わせる。ダークの画面に違う color-scheme の iframe を置くと、背景が白く塗られて透過しない
+- Tauri のウィンドウで外部へのリンクを開いたら、ふだんのブラウザで開く（`on_new_window`）
 
 API（すべて `/api`）:
 
@@ -592,7 +607,7 @@ API（すべて `/api`）:
 | GET | `/languages` | 言語の対応表（コードと表示名） |
 
 - `/api` は Host ヘッダーが `127.0.0.1` / `localhost` / `[::1]` のときだけ受け付ける（DNS リバインディング対策）。書き換えは JSON だけなので、別のサイトからの単純なフォーム送信も通らない（CSRF 対策）
-- 残り: 辞書の状態、直近の Segment のログ、マイクのレベルメーター
+- 残り: 辞書の状態、直近の Segment のログ、ミュート（グローバルショートカット）
 
 ## 14. 実装フェーズ
 

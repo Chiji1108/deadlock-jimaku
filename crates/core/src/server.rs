@@ -210,6 +210,8 @@ async fn session(mut socket: WebSocket, store: Arc<Store>) {
     };
 
     let mut rx = store.subscribe();
+    let wants_level = topics.contains(&Topic::Level);
+    let mut level = store.watch_level();
     if send_all(&mut socket, &topics, store.current_state())
         .await
         .is_err()
@@ -226,6 +228,12 @@ async fn session(mut socket: WebSocket, store: Arc<Store>) {
                     Err(RecvError::Closed) => return,
                 };
                 if send_all(&mut socket, &topics, msgs).await.is_err() {
+                    return;
+                }
+            }
+            Ok(()) = level.changed(), if wants_level => {
+                let db = *level.borrow_and_update();
+                if send_all(&mut socket, &topics, vec![ServerMsg::AudioLevel { db }]).await.is_err() {
                     return;
                 }
             }

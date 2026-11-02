@@ -31,6 +31,9 @@ pub struct Store {
     /// バッジ → アイコン（webp）。バッジごとに持ち、別のバッジのアイコンを配信しない
     rank_image: Mutex<Option<(u32, Bytes)>>,
     tx: broadcast::Sender<ServerMsg>,
+    /// マイクの入力レベル（dBFS）。1 秒に 10 回届くので、字幕などと同じ broadcast には流さない
+    /// （購読していないオーバーレイを起こさず、取りこぼしの原因にもしない）
+    level: watch::Sender<f32>,
 }
 
 impl Store {
@@ -58,6 +61,7 @@ impl Store {
             rank: Mutex::new(None),
             rank_image: Mutex::new(None),
             tx: broadcast::channel(256).0,
+            level: watch::Sender::new(f32::NEG_INFINITY),
         })
     }
 
@@ -81,11 +85,16 @@ impl Store {
             settings::save(&self.data_dir.join(settings::FILE), &next)
                 .map_err(|e| e.to_string())?;
         }
+        let display = display(&next);
+        let display_changed = display != self::display(&self.settings());
         self.settings.send_if_modified(|current| {
             let changed = *current != next;
             *current = next.clone();
             changed
         });
+        if display_changed {
+            let _ = self.tx.send(display);
+        }
         Ok(next)
     }
 
@@ -156,7 +165,17 @@ impl Store {
         msgs.push(ServerMsg::TranscriptionStatus {
             error: self.transcription_error(),
         });
+        msgs.push(display(&self.settings()));
         msgs
+    }
+
+    pub fn send_level(&self, db: f32) {
+        self.level.send_replace(db);
+    }
+
+    /// 購読した後の値だけが届く（あとから接続した画面には、次の値から届く）
+    pub fn watch_level(&self) -> watch::Receiver<f32> {
+        self.level.subscribe()
     }
 
     pub fn set_rank(&self, rank: RankState) {
@@ -218,6 +237,13 @@ impl Store {
     /// snapshot より先に呼ぶ。間に起きた更新は重複して届くが、upsert なので問題ない
     pub fn subscribe(&self) -> broadcast::Receiver<ServerMsg> {
         self.tx.subscribe()
+    }
+}
+
+fn display(settings: &Settings) -> ServerMsg {
+    ServerMsg::Display {
+        subtitles: settings.subtitle_display.clone(),
+        rank_language: settings.rank_language(),
     }
 }
 
