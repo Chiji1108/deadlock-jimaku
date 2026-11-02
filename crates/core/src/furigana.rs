@@ -1,6 +1,7 @@
 //! ふりがな（DESIGN.md 6.4）。読みは形態素解析（Lindera + IPADIC）で決める。
 //!
-//! LLM に読みを付けさせると、ずれたり（僕→ぼ）、送り仮名ごと付けたり（強い→つよい）するので使わない。
+//! 字幕の文は毎回ここで読む（LLM は読みがずれたり、別の文を作ったりするので使わない）。
+//! 辞書の漢字名は造語が多いので、LLM の読みを重ねる（`assets::readings`。検証にはここの関数を使う）。
 
 use std::borrow::Cow;
 
@@ -113,19 +114,7 @@ pub fn ruby_tokens(text: &str, ruby: Option<&str>) -> Vec<Token> {
     .collect()
 }
 
-/// 辞書が知らない複合語らしいか。IPADIC は知らない複合語を漢字 1 文字ずつ訓読みする
-/// （「人狼」→「人(ひと)狼(おおかみ)」）ので、1 文字のルビが続いたら読みを信用しない
-pub fn is_uncertain(tokens: &[Token]) -> bool {
-    let single_kanji = |t: &Token| {
-        matches!(t, Token::Text { text, ruby: Some(_) }
-            if text.chars().count() == 1 && text.chars().all(is_kanji))
-    };
-    tokens
-        .windows(2)
-        .any(|w| single_kanji(&w[0]) && single_kanji(&w[1]))
-}
-
-fn to_hiragana(s: &str) -> String {
+pub fn to_hiragana(s: &str) -> String {
     s.chars()
         .map(|c| match c {
             // カタカナ（ァ〜ヶ）をひらがなに。長音符などはそのまま
@@ -139,7 +128,7 @@ fn is_kana(c: char) -> bool {
     matches!(c, '\u{3041}'..='\u{309F}' | '\u{30A0}'..='\u{30FF}')
 }
 
-fn is_kanji(c: char) -> bool {
+pub fn is_kanji(c: char) -> bool {
     matches!(c, '\u{4E00}'..='\u{9FFF}' | '\u{3400}'..='\u{4DBF}' | '々')
 }
 
@@ -175,16 +164,6 @@ mod tests {
         assert_eq!(ruby_tokens("ヘイズ", Some("へいず")), [t("ヘイズ", None)]);
         assert_eq!(ruby_tokens("強い", Some("tsuyoi")), [t("強い", None)]);
         assert_eq!(ruby_tokens("つよい", Some("つよい")), [t("つよい", None)]);
-    }
-
-    #[test]
-    fn unknown_compounds_are_uncertain() {
-        let f = Furigana::new().unwrap();
-        assert!(is_uncertain(&f.annotate("人狼の呪い")));
-        assert!(is_uncertain(&f.annotate("退避の五芒星")));
-        assert!(!is_uncertain(&f.annotate("一意専心")));
-        assert!(!is_uncertain(&f.annotate("鳥の餌付け")));
-        assert!(!is_uncertain(&f.annotate("基礎拡張マガジン")));
     }
 
     #[test]

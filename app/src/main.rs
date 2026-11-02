@@ -17,9 +17,11 @@ fn main() {
             // 設定の保存と読み込みは Phase 5
             let settings = Settings::default();
             // API キーの保存（keyring）と、操作パネルからの開始・停止は Phase 5
+            // Mistral は文字起こし、OpenAI は翻訳と辞書の漢字名の読み
             let api_key = std::env::var("MISTRAL_API_KEY").ok();
+            let openai_key = std::env::var("OPENAI_API_KEY").ok();
             let languages = settings.glossary_languages();
-            let reading_model = api_key.clone().map(|api_key| assets::ReadingModel {
+            let reading_model = openai_key.clone().map(|api_key| assets::ReadingModel {
                 api_key,
                 model: settings.models.readings.clone(),
             });
@@ -35,7 +37,7 @@ fn main() {
                     let store = store.clone();
                     let input = audio::Input::Mic(store.settings().mic_device.clone());
                     tauri::async_runtime::spawn(async move {
-                        if let Err(e) = subtitles::run(store, input, api_key).await {
+                        if let Err(e) = subtitles::run(store, input, api_key, openai_key).await {
                             tracing::error!("transcription stopped: {e:#}");
                         }
                     });

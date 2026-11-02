@@ -138,23 +138,14 @@ pub fn build(client_version: u32, sources: &Sources, extras: &Extras) -> (Glossa
     (glossary, icons)
 }
 
-/// 漢字を含む日本語名で、`readings.ja.json` に読みがないものに、形態素解析で読みを付ける。
-/// 辞書が知らない語らしい（読みを信用できない）エンティティの参照を返す
-pub fn fill_readings(
-    glossary: &mut Glossary,
-    annotate: impl Fn(&str) -> Vec<Token>,
-    is_uncertain: impl Fn(&[Token]) -> bool,
-) -> Vec<String> {
-    let mut uncertain = Vec::new();
-    for (reference, entity) in &mut glossary.entities {
+/// 漢字を含む日本語名で、`readings.ja.json` に読みがないものに、形態素解析で読みを付ける
+/// （造語の多い名前は、配信前に LLM の読みを重ねる。`readings`）
+pub fn fill_readings(glossary: &mut Glossary, annotate: impl Fn(&str) -> Vec<Token>) {
+    for entity in glossary.entities.values_mut() {
         let Some(name) = entity.names.get("ja").filter(|_| entity.ruby.is_none()) else {
             continue;
         };
-        let tokens = annotate(name);
-        if is_uncertain(&tokens) {
-            uncertain.push(reference.clone());
-        }
-        let segments: Vec<RubySegment> = tokens
+        let segments: Vec<RubySegment> = annotate(name)
             .into_iter()
             .filter_map(|t| match t {
                 Token::Text { text, ruby } => Some(RubySegment { text, ruby }),
@@ -165,7 +156,6 @@ pub fn fill_readings(
             entity.ruby = Some(segments);
         }
     }
-    uncertain
 }
 
 fn apply_extras(entities: &mut BTreeMap<String, Entity>, extras: &Extras) {
@@ -387,21 +377,15 @@ mod tests {
             ..Extras::default()
         };
         let (mut g, _) = build(6518, &sources(), &extras);
-        let uncertain = fill_readings(
-            &mut g,
-            |name| match name {
-                "基礎拡張マガジン" => vec![
-                    ruby("基礎", "きそ"),
-                    ruby("拡張", "かくちょう"),
-                    ruby("マガジン", ""),
-                ],
-                "ヘイズ" => vec![ruby("ヘイズ", "")],
-                other => vec![ruby(other, "")],
-            },
-            |tokens| tokens.len() == 1,
-        );
-        // 手で書いた読みのある名前は解析しないので、信用できない語にも数えない
-        assert!(!uncertain.contains(&"item:1".to_owned()));
+        fill_readings(&mut g, |name| match name {
+            "基礎拡張マガジン" => vec![
+                ruby("基礎", "きそ"),
+                ruby("拡張", "かくちょう"),
+                ruby("マガジン", ""),
+            ],
+            "ヘイズ" => vec![ruby("ヘイズ", "")],
+            other => vec![ruby(other, "")],
+        });
         // 手で書いた読みは上書きしない。かなだけの名前には付けない
         assert_eq!(
             g.entities["item:1"].ruby.as_ref().unwrap()[0]

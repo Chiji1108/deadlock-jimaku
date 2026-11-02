@@ -23,7 +23,8 @@ const TIMEOUT: Duration = Duration::from_secs(8);
 
 pub struct Enricher {
     http: reqwest::Client,
-    api_key: String,
+    /// OpenAI の API キー。ないときは翻訳しない（固有名詞とふりがなは付ける）
+    api_key: Option<String>,
     model: String,
     source_lang: LangCode,
     targets: Vec<LangCode>,
@@ -37,7 +38,7 @@ pub struct Enricher {
 
 impl Enricher {
     pub fn new(
-        api_key: String,
+        api_key: Option<String>,
         model: String,
         source_lang: LangCode,
         targets: Vec<LangCode>,
@@ -69,17 +70,18 @@ impl Enricher {
             None => vec![Span::Text(text.to_owned())],
         };
         let source = self.source_tokens(&spans);
-        let translations = if self.targets.is_empty() {
-            BTreeMap::new()
-        } else {
-            let terms = Terms::new(&spans, glossary);
-            match self.translate(&terms, context).await {
-                Ok(raw) => self.translations(raw, &terms),
-                Err(e) => {
-                    tracing::warn!("translate: {e:#}");
-                    BTreeMap::new()
+        let translations = match &self.api_key {
+            Some(key) if !self.targets.is_empty() => {
+                let terms = Terms::new(&spans, glossary);
+                match self.translate(key, &terms, context).await {
+                    Ok(raw) => self.translations(raw, &terms),
+                    Err(e) => {
+                        tracing::warn!("translate: {e:#}");
+                        BTreeMap::new()
+                    }
                 }
             }
+            _ => BTreeMap::new(),
         };
         Enriched {
             source,
@@ -120,6 +122,7 @@ impl Enricher {
 
     async fn translate(
         &self,
+        api_key: &str,
         terms: &Terms,
         context: &[String],
     ) -> anyhow::Result<BTreeMap<LangCode, String>> {
@@ -131,13 +134,12 @@ impl Enricher {
         let out: Output = llm::chat_json(
             &self.http,
             llm::Request {
-                api_key: &self.api_key,
+                api_key,
                 model: &self.model,
                 system: &self.system,
                 user: user.to_string(),
                 schema_name: "translation",
                 schema: self.schema(),
-                reasoning_effort: None,
                 timeout: TIMEOUT,
             },
         )
@@ -517,7 +519,7 @@ mod tests {
 
     fn enricher(targets: &[&str]) -> Enricher {
         Enricher::new(
-            "key".into(),
+            Some("key".into()),
             "model".into(),
             "ja".into(),
             targets.iter().map(|t| (*t).to_owned()).collect(),

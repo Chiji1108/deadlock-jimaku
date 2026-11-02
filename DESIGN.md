@@ -21,7 +21,7 @@ Deadlock 配信者向けの OBS オーバーレイツール。
 - 配信 PC は Windows（Deadlock・OBS・本ツールを同じマシンで動かす）
 - ヘッドホンを使う（マイクにゲーム音が回り込まない）
 - 音声認識: Mistral Voxtral 3（Realtime と Small Transcribe 3）
-- 翻訳: Mistral Small 4（Large 4 は遅すぎるので使わない。9.3）
+- 翻訳と辞書の漢字名の読み: OpenAI GPT-6.1 Terra（推論なし。9.3）
 - ふりがな: 形態素解析（Lindera + IPADIC）、固有名詞: 辞書との照合（9 章）
 - ゲームデータ: [deadlock-api](https://api.deadlock-api.com/docs)（MIT）
 
@@ -88,7 +88,7 @@ Deadlock 配信者向けの OBS オーバーレイツール。
 | `mise run dev` | Tauri アプリを開発モードで起動（Vite の HMR 付き） |
 | `mise run headless` | Tauri なしで中核だけ起動し、ダミー字幕を流し続ける（`--demo --translate-to en,ru`。`http://127.0.0.1:4510/overlay/subtitles`） |
 
-ヘッドレスの `overlays-headless` は `--mic` / `--mic-device NAME` でマイクを、`--input-file PATH.wav` で録音を実時間で流して字幕にできる（どちらも環境変数 `MISTRAL_API_KEY` が必要）。Tauri アプリは `MISTRAL_API_KEY` があれば起動時に既定のマイクで字幕を始める（キーの保存と開始・停止の操作は Phase 5）。
+ヘッドレスの `overlays-headless` は `--mic` / `--mic-device NAME` でマイクを、`--input-file PATH.wav` で録音を実時間で流して字幕にできる（どちらも環境変数 `MISTRAL_API_KEY` が必要。翻訳と辞書の漢字名の読みには `OPENAI_API_KEY` も使い、なければ翻訳せず読みは形態素解析のまま）。Tauri アプリは `MISTRAL_API_KEY` があれば起動時に既定のマイクで字幕を始める（キーの保存と開始・停止の操作は Phase 5）。
 | `mise run check` | oxfmt / oxlint / svelte-check / rustfmt / clippy / cargo test |
 
 - Git フック（**lefthook**）: commit 時に変更ファイルへ oxfmt / oxlint / cargo fmt、push 時に `mise run check`。clone 後に `mise exec -- lefthook install` を一度実行する。
@@ -102,7 +102,8 @@ Deadlock 配信者向けの OBS オーバーレイツール。
 |---|---|---|---|
 | partial | `voxtral-mini-transcribe-realtime-3` | $0.008/分 | WebSocket。用語ヒントに対応 |
 | final | `voxtral-small-transcribe-3`（`-latest` はまだ v2 を指すので使わない） | $0.004/分 | `/v1/audio/transcriptions`。精度が最も高い |
-| enrich（翻訳） | `mistral-small-2603` | — | 推論なしで 1 発話 1〜3 秒。構造化出力に対応 |
+| （翻訳は OpenAI `gpt-6.1-terra`。9.3） | — | — | — |
+| （不採用） | `mistral-small-2603` | — | 推論なしで 1 発話 1〜2 秒と速いが、訳の質で Terra を選んだ |
 | （不採用） | `mistral-large-4` | 100 万トークンあたり 入力 $0.70 / キャッシュ済み入力 $0.07 / 出力 $2.10 | 推論を止められず 1 発話 21〜24 秒（9.3） |
 
 モデル ID はすべて設定で持つ（enrich を Mistral Small 4 に差し替えられるように）。
@@ -222,7 +223,7 @@ interface Settings {
     minSilenceMs: number;            // 既定 400
     maxSegmentSeconds: number;       // 既定 8
   };
-  models: { realtime: string; batch: string; enrich: string };
+  models: { realtime: string; batch: string; translate: string; readings: string };  // translate / readings は OpenAI
   rank: { accountId?: number; pollSeconds: number };  // 既定 180
   display: { ttlSeconds: number; perCharSeconds: number };  // 既定 6, 0.15
 }
@@ -368,13 +369,15 @@ mic ─┬─▶ ローカル VAD（earshot）── 発話の開始 → Segment
 1. **`mic.language`・`en`・`translateTo` の言語だけ**を取得し、`id` で結合する（アイテム一覧は 1 言語で約 7MB あるので、29 言語をまとめて取らない）。どのエンティティを載せるかは英語版で決める（英語名がないものは載せない）。
 2. アイコンを `{データディレクトリ}/assets/{形式}/{clientVersion}/icons/{kind}/{id}.webp` にダウンロードし、`/assets/{clientVersion}/icons/...` で配信する（配信中に外部へ依存しない。URL に版を含むので `immutable` で長くキャッシュできる）。ファイルは一時ファイルに書いてから置き換える。取れなかったアイコンはそのエンティティから外して表示せず、辞書も保存しない（次の起動で作り直し、欠けた分だけ取り直す）。
 3. `data/aliases.ja.json` と `data/readings.ja.json`（キーはエンティティの参照）をマージする。読みは、つなげた文字列が今の日本語名と一致するときだけ使う（パッチで改名されたら古い読みは捨てる）。
-4. 漢字を含む名前には、まず形態素解析で読みを付ける。IPADIC は**知らない複合語を漢字 1 文字ずつ訓読みする**（「人(ひと)狼(おおかみ)」「魔(ま)呪(のろい)」）ので、1 文字のルビが続く名前は「辞書が知らない語」とみなし、その名前だけ LLM（`models.readings`、既定 `mistral-large-4`。推論するが辞書を作るときに 1 回だけなので遅くてよい）に読ませる
-   - LLM の答えは、つなげると名前になること・読みがかなであることを確かめ、送り仮名を外に出す。1 文字ずつに分けた答え（「退(た)避(ひ)」）は、形態素解析と読みが一致するとき（「穴(あな)掘(ほ)り」）だけ受け取る
-   - 答えは**名前ごとに** `{データディレクトリ}/assets/readings-llm.ja.json` にキャッシュする。名前はパッチをまたいでもほぼ変わらないので、次からは新しい名前だけを問い合わせる
-   - 問い合わせが失敗したら形態素解析の読みのまま表示し、辞書を保存せず次の起動で問い直す。答えを検証で弾いた名前は形態素解析の読みのままにする（問い直さない）
-   - client 6839: 漢字を含む名前 35 件のうち 7 件が「知らない語」で、LLM はすべて正しく読んだ（人狼・屍鬼累々・魔瓶・聖別手榴弾・五芒星・魔呪・穴掘り）。残り 28 件は形態素解析で正しい
-   - 比較: Large 4 に 35 件すべてを読ませると、造語は正しいが、形態素解析が正しく読む語を 2 件誤った（一意→いつい、餌付け→えさつけ）。どちらか一方に任せず、それぞれ得意なほうを使う
-   - `data/readings.ja.json` は、それでも直したい名前を手で上書きするためだけに残す（今は空）
+4. 漢字を含む名前には、形態素解析で読みを付けて保存する（Lindera + IPADIC）。ただし IPADIC は造語に弱く、知らない複合語を漢字 1 文字ずつ訓読みする（「人(ひと)狼(おおかみ)」「魔(ま)呪(のろい)」）
+5. **辞書の漢字名の読みは LLM（`models.readings`、既定 `gpt-6.1-terra`、推論なし）に読ませ、名前ごとにキャッシュする**（`assets/readings.rs`）
+   - 辞書は形態素解析の読みのまま保存し、読み込むたびにキャッシュ（`{データディレクトリ}/assets/readings-llm.ja.json`）の読みを重ねて配信する。キャッシュにない名前は配信した後に問い合わせ、届いたら配信し直す
+   - 辞書の保存と切り離しているので、キーが無効・未設定でも辞書は保存され（形態素解析の読みで動く）、キーを後から設定すれば次の起動で効く。問い合わせが失敗したら次の起動で問い直す
+   - 答えは、つなげると名前になること・読みがひらがなであること（カタカナはひらがなにする）・ルビの付く部分は漢字だけで漢字には必ずルビがあることを確かめ、送り仮名を外に出す。通らなかった名前はキャッシュせず、次の起動で問い直す（答えは揺れるので、たいてい次は通る）
+   - キャッシュが壊れていたら `.broken` に退けて空から始める（黙って上書きしない）
+   - client 6839: 漢字を含む名前 35 件すべてに正しい読みが付いた（人狼・屍鬼累々・魔瓶・聖別手榴弾・五芒星・魔呪・一意専心・餌付け・袋叩き など）。初回の問い合わせは約 19 秒、2 回目以降はキャッシュから
+   - 比較（35 件、判断が難しい 10 件で採点）: GPT-6.1 Terra（推論なし）と Claude Sonnet 5.5（推論あり low）が 0 件、Sonnet 5.5（推論なし）1 件、Mistral Large 4 2 件（一意→いつい、餌付け→えさつけ）、Haiku 5.5 2〜3 件。形態素解析は造語 7 件を誤る
+   - `data/readings.ja.json` は、それでも直したい名前を手で上書きするためだけに残す（今は空）。手で書いた読みには LLM の読みを重ねない
 
 - キャッシュに必要な言語が揃っていれば作り直さない（2 回目以降の起動は 1 秒未満）。初回の生成は 3 言語で約 8 秒。`languages` には実際に名前が取れた言語だけを載せる。
 - `{形式}`（`CACHE_FORMAT`）は Glossary の形やアイコンの置き方を変えたら上げ、古いキャッシュを読まないようにする。
@@ -456,14 +459,16 @@ mic ─┬─▶ ローカル VAD（earshot）── 発話の開始 → Segment
 
 ### 9.3 LLM の入出力
 
-- モデル: `mistral-small-2603`（設定の `models.enrich`）
+- モデル: OpenAI `gpt-6.1-terra`（設定の `models.translate`、`reasoning_effort: none`）。速さより訳の質を優先した（確定字幕から翻訳まで 1.7〜2.6 秒）
   - Mistral Large 4 は推論を止められず（`reasoning_effort` は low / medium / high のみ）、1 発話に 21〜24 秒かかり、出力が途中で切れることもあったので使わない
   - Z.ai GLM 5.3 Flash（`zai-glm-5-3-flash`）も推論するモデルで、1 発話 5.5〜23 秒。訳の質は Small 4 とほぼ同じ。ふりがなを付けさせると普通の文は正しいが 20 秒かかり、造語の多い文では原文と無関係な文を作った
   - Small 4 は 1 発話 0.8〜1.8 秒、`⟦n⟧` は 4/4 で保たれた
   - OpenAI `gpt-6-luna`（`reasoning_effort: none`）は 1.1〜3.4 秒。ロシア語訳に日本語の「実況」が残った
-  - OpenAI `gpt-6.1-terra`（同）は 1.7〜3.8 秒。所有格のルールを守り、ロシア語がいちばん自然。質を優先するなら候補
+  - OpenAI `gpt-6.1-terra`（同）は 1.7〜3.8 秒。所有格のルールを守り、ロシア語がいちばん自然 → **採用**
+  - Claude Haiku 5.5（推論なし）2.4〜3.9 秒、Claude Sonnet 5.5（推論なし）2.3〜9.2 秒。Sonnet の訳は自然
 - system: 役割とルール（名前の一覧は渡さない）
 - user: `{ "context": [直前の確定字幕], "transcript": "⟦1⟧のウルト強い", "terms": { "⟦1⟧": "hero" } }`
+- OpenAI の API キーがなければ翻訳しない（固有名詞とふりがなは付ける）
 - 構造化出力（`response_format: json_schema`, `strict`）: `{ "translations": { "en": "...", "ru": "..." } }`。`translations` のキーは設定の翻訳先から毎回作る
 - タイムアウト 8 秒
 

@@ -1,9 +1,11 @@
-//! 辞書が知らない語（造語の多いゲーム用語）の読みを LLM で付ける（DESIGN.md 8.2）。
+//! 辞書の漢字名の読み（DESIGN.md 8.2）。
 //!
-//! 辞書を作るときに 1 回だけ問い合わせ、名前ごとにキャッシュする。名前はパッチをまたいでも
-//! ほとんど変わらないので、次からは新しい名前だけを問い合わせる。
+//! 辞書は形態素解析の読みで保存し、読み込むたびに LLM の読み（名前ごとのキャッシュ）を重ねる。
+//! キャッシュにない名前は辞書を配信した後に問い合わせ、届いたら配信し直す。
+//! 答えが検証に通らなかった名前はキャッシュせず、次の起動で問い直す（答えは揺れるので、たいてい次は通る）。
+//! 辞書の保存と切り離しているので、キーが無効でも辞書は保存され、キーを後から設定しても次の起動で効く。
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 use std::time::Duration;
 
@@ -12,51 +14,86 @@ use serde_json::json;
 
 use crate::furigana;
 use crate::llm;
-use crate::types::{RubySegment, Token};
+use crate::types::{Glossary, RubySegment, Token};
 
-/// 推論するモデルを使うので長めにする（35 語で 35 秒ほど）
-const TIMEOUT: Duration = Duration::from_secs(180);
+/// 35 語で 20 秒ほど
+const TIMEOUT: Duration = Duration::from_secs(120);
 
 pub struct ReadingModel {
     pub api_key: String,
     pub model: String,
 }
 
-/// 名前 → 形態素解析での読み（LLM の答えと比べるのに使う）
-pub type Fallbacks = BTreeMap<String, Vec<RubySegment>>;
+/// 名前 → 読み
+pub type Cache = BTreeMap<String, Vec<RubySegment>>;
 
-/// 名前の読みを返す。キャッシュになければ LLM に問い合わせる。
-/// LLM の答えが検証に通らなかった名前は含まない（形態素解析の読みのままにする）。
-/// Err は問い合わせ自体が失敗したときだけ（次の起動で問い直す）
-pub async fn readings(
-    model: &ReadingModel,
-    cache_path: &Path,
-    names: &Fallbacks,
-) -> anyhow::Result<BTreeMap<String, Vec<RubySegment>>> {
-    let mut cache: BTreeMap<String, Vec<RubySegment>> = std::fs::read(cache_path)
-        .ok()
-        .and_then(|b| serde_json::from_slice(&b).ok())
-        .unwrap_or_default();
-    let missing: Vec<&String> = names.keys().filter(|n| !cache.contains_key(*n)).collect();
-    if !missing.is_empty() {
-        let found = ask(model, &missing, names).await?;
-        tracing::info!("readings: {}/{} from LLM", found.len(), missing.len());
-        cache.extend(found);
-        if let Err(e) = save(cache_path, &cache).await {
-            tracing::warn!("readings cache: {e:#}");
+/// 壊れていたら脇に退けて空から始める（黙って上書きしない）
+pub async fn load_cache(path: &Path) -> Cache {
+    let Ok(bytes) = tokio::fs::read(path).await else {
+        return Cache::new();
+    };
+    match serde_json::from_slice(&bytes) {
+        Ok(cache) => cache,
+        Err(e) => {
+            let aside = path.with_extension("json.broken");
+            tracing::warn!(
+                "readings cache is broken ({e}); moved to {}",
+                aside.display()
+            );
+            let _ = tokio::fs::rename(path, aside).await;
+            Cache::new()
         }
     }
-    Ok(names
-        .keys()
-        .filter_map(|n| Some((n.clone(), cache.get(n)?.clone())))
-        .collect())
 }
 
-async fn ask(
+pub async fn save_cache(path: &Path, cache: &Cache) -> anyhow::Result<()> {
+    tokio::fs::create_dir_all(path.parent().expect("has parent")).await?;
+    let tmp = path.with_extension("json.tmp");
+    tokio::fs::write(&tmp, serde_json::to_vec_pretty(cache)?).await?;
+    tokio::fs::rename(&tmp, path).await?;
+    Ok(())
+}
+
+/// 読みが必要なエンティティの日本語名。手で読みを書いたもの（`manual`）は除く
+fn kanji_names<'a>(
+    glossary: &'a Glossary,
+    manual: &'a BTreeSet<String>,
+) -> impl Iterator<Item = (&'a String, &'a String)> {
+    glossary
+        .entities
+        .iter()
+        .filter(|(r, _)| !manual.contains(*r))
+        .filter_map(|(r, e)| Some((r, e.names.get("ja")?)))
+        .filter(|(_, name)| name.chars().any(furigana::is_kanji))
+}
+
+/// キャッシュにある読みを辞書に重ねる
+pub fn apply(glossary: &mut Glossary, cache: &Cache, manual: &BTreeSet<String>) {
+    let found: Vec<(String, Vec<RubySegment>)> = kanji_names(glossary, manual)
+        .filter_map(|(r, name)| Some((r.clone(), cache.get(name)?.clone())))
+        .collect();
+    for (reference, ruby) in found {
+        if let Some(e) = glossary.entities.get_mut(&reference) {
+            e.ruby = Some(ruby);
+        }
+    }
+}
+
+/// まだ問い合わせていない名前
+pub fn missing(glossary: &Glossary, cache: &Cache, manual: &BTreeSet<String>) -> Vec<String> {
+    let names: BTreeSet<&String> = kanji_names(glossary, manual)
+        .map(|(_, name)| name)
+        .filter(|name| !cache.contains_key(*name))
+        .collect();
+    names.into_iter().cloned().collect()
+}
+
+/// `names` の読みを問い合わせる。答えがない・検証に通らない名前は含めない
+pub async fn ask(
+    http: &reqwest::Client,
     model: &ReadingModel,
-    names: &[&String],
-    fallbacks: &Fallbacks,
-) -> anyhow::Result<BTreeMap<String, Vec<RubySegment>>> {
+    names: &[String],
+) -> anyhow::Result<Cache> {
     #[derive(Deserialize)]
     struct Output {
         names: Vec<Named>,
@@ -79,7 +116,7 @@ async fn ask(
         }}},
     });
     let out: Output = llm::chat_json(
-        &reqwest::Client::new(),
+        http,
         llm::Request {
             api_key: &model.api_key,
             model: &model.model,
@@ -87,22 +124,28 @@ async fn ask(
             user: serde_json::to_string(names)?,
             schema_name: "readings",
             schema,
-            reasoning_effort: Some("low"),
             timeout: TIMEOUT,
         },
     )
     .await?;
-    Ok(out
+    let mut answers: BTreeMap<String, Vec<RubySegment>> = out
         .names
         .into_iter()
-        .filter(|n| names.contains(&&n.name))
-        .filter_map(|n| {
-            let fallback = fallbacks.get(&n.name)?;
-            let checked = validate(&n.name, n.segments, fallback);
+        .map(|n| (n.name, n.segments))
+        .collect();
+    Ok(names
+        .iter()
+        .filter_map(|name| {
+            let Some(segments) = answers.remove(name) else {
+                tracing::warn!("readings: no answer for {name}");
+                return None;
+            };
+            let answer = serde_json::to_string(&segments).unwrap_or_default();
+            let checked = validate(name, segments);
             if checked.is_none() {
-                tracing::warn!("readings: rejected the LLM reading of {}", n.name);
+                tracing::warn!("readings: rejected {name}: {answer}");
             }
-            Some((n.name.clone(), checked?))
+            Some((name.clone(), checked?))
         })
         .collect())
 }
@@ -113,60 +156,39 @@ A kanji compound is one segment with the reading of the whole word (退避 → �
 Keep okurigana and kana in their own segments with ruby null. Joining the segments' text must give the name exactly. \
 Many names are coined compounds; read them the way a Japanese gamer would read them aloud.";
 
-/// つなげると名前になり、読みがかなであること。送り仮名は外に出す（「呪い / のろい」→「呪(のろ)」「い」）。
-/// 複合語を 1 文字ずつに分けて読んだもの（「退(た)避(ひ)」）は読みを誤りやすいので、
-/// 形態素解析と読みが一致するとき（「穴(あな)掘(ほ)り」）だけ受け取る
-fn validate(
-    name: &str,
-    segments: Vec<RubySegment>,
-    fallback: &[RubySegment],
-) -> Option<Vec<RubySegment>> {
+/// - つなげると名前になる
+/// - 読みはひらがな（カタカナはひらがなにする）
+/// - 送り仮名は外に出す（「呪い / のろい」→「呪(のろ)」「い」）
+/// - ルビの付く部分は漢字だけ、漢字には必ずルビがある（「魔呪の狩猟罠」全体に 1 つのルビ、のようなものは受け取らない）
+fn validate(name: &str, segments: Vec<RubySegment>) -> Option<Vec<RubySegment>> {
     let joined: String = segments.iter().map(|s| s.text.as_str()).collect();
     if joined != name {
         return None;
     }
-    let tokens: Vec<Token> = segments
-        .into_iter()
-        .flat_map(|s| furigana::ruby_tokens(&s.text, s.ruby.as_deref()))
-        .collect();
-    if furigana::is_uncertain(&tokens) && reading(&tokens) != reading_of(fallback) {
-        return None;
+    let mut out = Vec::new();
+    for s in segments {
+        let ruby = s.ruby.as_deref().map(furigana::to_hiragana);
+        if ruby
+            .as_deref()
+            .is_some_and(|r| !r.chars().all(|c| matches!(c, 'ぁ'..='ゖ' | 'ー')))
+        {
+            return None;
+        }
+        for t in furigana::ruby_tokens(&s.text, ruby.as_deref()) {
+            let Token::Text { text, ruby } = t else {
+                return None;
+            };
+            let ok = match &ruby {
+                Some(_) => text.chars().all(furigana::is_kanji),
+                None => !text.chars().any(furigana::is_kanji),
+            };
+            if !ok {
+                return None;
+            }
+            out.push(RubySegment { text, ruby });
+        }
     }
-    let out: Vec<RubySegment> = tokens
-        .into_iter()
-        .filter_map(|t| match t {
-            Token::Text { text, ruby } => Some(RubySegment { text, ruby }),
-            Token::Entity { .. } => None,
-        })
-        .collect();
-    out.iter().any(|s| s.ruby.is_some()).then_some(out)
-}
-
-/// 名前全体の読み（ルビのない部分はそのまま）
-fn reading(tokens: &[Token]) -> String {
-    tokens
-        .iter()
-        .map(|t| match t {
-            Token::Text { ruby: Some(r), .. } => r.as_str(),
-            Token::Text { text, .. } => text.as_str(),
-            Token::Entity { .. } => "",
-        })
-        .collect()
-}
-
-fn reading_of(segments: &[RubySegment]) -> String {
-    segments
-        .iter()
-        .map(|s| s.ruby.as_deref().unwrap_or(&s.text))
-        .collect()
-}
-
-async fn save(path: &Path, cache: &BTreeMap<String, Vec<RubySegment>>) -> anyhow::Result<()> {
-    tokio::fs::create_dir_all(path.parent().expect("has parent")).await?;
-    let tmp = path.with_extension("json.tmp");
-    tokio::fs::write(&tmp, serde_json::to_vec_pretty(cache)?).await?;
-    tokio::fs::rename(&tmp, path).await?;
-    Ok(())
+    Some(out)
 }
 
 #[cfg(test)]
@@ -181,16 +203,15 @@ mod tests {
     }
 
     #[test]
-    fn validate_splits_okurigana_and_rejects_mismatches() {
+    fn validate_splits_okurigana_and_normalizes_katakana() {
         assert_eq!(
             validate(
                 "人狼の呪い",
                 vec![
-                    seg("人狼", Some("じんろう")),
+                    seg("人狼", Some("ジンロウ")),
                     seg("の", None),
                     seg("呪い", Some("のろい"))
-                ],
-                &[]
+                ]
             ),
             Some(vec![
                 seg("人狼", Some("じんろう")),
@@ -199,45 +220,84 @@ mod tests {
                 seg("い", None)
             ])
         );
+    }
+
+    #[test]
+    fn validate_rejects_bad_answers() {
         // つなげても名前にならない（LLM が別の文を作った）
-        assert_eq!(validate("人狼", vec![seg("斧", Some("おの"))], &[]), None);
-        // 読みがかなでない
+        assert_eq!(validate("人狼", vec![seg("斧", Some("おの"))]), None);
+        // 読みがかなでない、区切り記号が入っている
+        assert_eq!(validate("人狼", vec![seg("人狼", Some("jinrou"))]), None);
         assert_eq!(
-            validate("人狼", vec![seg("人狼", Some("jinrou"))], &[]),
+            validate("人狼", vec![seg("人狼", Some("じん・ろう"))]),
             None
         );
-        // 複合語を 1 文字ずつに分けた。形態素解析と読みが違えば受け取らない
-        let split = vec![seg("退", Some("た")), seg("避", Some("ひ"))];
+        // 漢字に読みがない
         assert_eq!(
-            validate("退避", split, &[seg("退避", Some("たいひ"))]),
+            validate(
+                "狩猟罠",
+                vec![seg("狩猟", Some("しゅりょう")), seg("罠", None)]
+            ),
             None
         );
-        // 1 文字ずつでも、形態素解析と読みが一致すれば受け取る
-        let dig = vec![seg("穴", Some("あな")), seg("掘り", Some("ほり"))];
-        let lindera = [
-            seg("穴", Some("あな")),
-            seg("掘", Some("ほ")),
-            seg("り", None),
-        ];
-        assert!(validate("穴掘り", dig, &lindera).is_some());
+        // 助詞をはさんだ全体に 1 つのルビ
+        assert_eq!(
+            validate("魔呪の罠", vec![seg("魔呪の罠", Some("まじゅのわな"))]),
+            None
+        );
+    }
+
+    fn glossary() -> Glossary {
+        serde_json::from_value(json!({
+            "clientVersion": 1, "languages": ["ja"],
+            "entities": {
+                "ability:1": { "kind": "ability", "className": "a", "names": { "ja": "人狼の呪い" }, "aliases": {},
+                               "ruby": [{ "text": "人", "ruby": "ひと" }, { "text": "狼", "ruby": "おおかみ" }, { "text": "の呪い" }] },
+                "item:1": { "kind": "item", "className": "i", "names": { "ja": "基礎拡張マガジン" }, "aliases": {} },
+                "item:2": { "kind": "item", "className": "j", "names": { "ja": "穴掘り" }, "aliases": {} },
+                "hero:1": { "kind": "hero", "className": "h", "names": { "ja": "ヘイズ" }, "aliases": {} }
+            }
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn apply_overlays_cached_readings_except_manual_ones() {
+        let mut g = glossary();
+        let manual = BTreeSet::from(["item:1".to_owned()]);
+        let cache = Cache::from([
+            (
+                "人狼の呪い".to_owned(),
+                vec![seg("人狼", Some("じんろう")), seg("の呪い", None)],
+            ),
+            ("基礎拡張マガジン".to_owned(), vec![seg("x", Some("x"))]),
+        ]);
+        apply(&mut g, &cache, &manual);
+        assert_eq!(
+            g.entities["ability:1"].ruby.as_ref().unwrap()[0]
+                .ruby
+                .as_deref(),
+            Some("じんろう")
+        );
+        // 手で書いた読みは上書きしない。キャッシュにない名前はそのまま
+        assert!(g.entities["item:1"].ruby.is_none());
+        assert!(g.entities["item:2"].ruby.is_none());
+    }
+
+    #[test]
+    fn missing_skips_cached_manual_and_kana_names() {
+        let g = glossary();
+        let manual = BTreeSet::from(["item:1".to_owned()]);
+        let cache = Cache::from([("穴掘り".to_owned(), vec![seg("穴", Some("あな"))])]);
+        assert_eq!(missing(&g, &cache, &manual), ["人狼の呪い"]);
     }
 
     #[tokio::test]
-    async fn cached_names_do_not_call_the_llm() {
+    async fn broken_cache_is_moved_aside() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("cache.json");
-        let cached = BTreeMap::from([("人狼".to_owned(), vec![seg("人狼", Some("じんろう"))])]);
-        save(&path, &cached).await.unwrap();
-        // API キーが偽物なので、問い合わせれば失敗する。キャッシュだけで返ることを確かめる
-        let model = ReadingModel {
-            api_key: "invalid".into(),
-            model: "model".into(),
-        };
-        let names = BTreeMap::from([(
-            "人狼".to_owned(),
-            vec![seg("人", Some("ひと")), seg("狼", Some("おおかみ"))],
-        )]);
-        let got = readings(&model, &path, &names).await.unwrap();
-        assert_eq!(got, cached);
+        tokio::fs::write(&path, b"{ broken").await.unwrap();
+        assert!(load_cache(&path).await.is_empty());
+        assert!(dir.path().join("cache.json.broken").exists());
     }
 }
