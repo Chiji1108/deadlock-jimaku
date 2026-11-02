@@ -50,7 +50,7 @@ impl Loaded {
 /// 漢字名の読みは手書きの読みと、キャッシュ済みの LLM の読みを重ねて配信し、
 /// 足りない名前は配信した後に問い合わせて配信し直す（`openai_key` がなければ形態素解析の読みのまま）
 pub async fn load_into(store: Arc<Store>, root: PathBuf, openai_key: Option<String>) {
-    let settings = store.settings().clone();
+    let settings = store.settings();
     let loaded = match load(&root, &settings.glossary_languages()).await {
         Ok(loaded) => loaded,
         Err(e) => {

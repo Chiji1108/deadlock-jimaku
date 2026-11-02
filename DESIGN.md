@@ -86,9 +86,9 @@ Deadlock 配信者向けの OBS オーバーレイツール。
 | コマンド | 内容 |
 |---|---|
 | `mise run dev` | Tauri アプリを開発モードで起動（Vite の HMR 付き） |
-| `mise run headless` | Tauri なしで中核だけ起動し、ダミー字幕を流し続ける（`--demo --translate-to en,ru`。`http://127.0.0.1:4510/overlay/subtitles`） |
+| `mise run headless` | Tauri なしで中核だけ起動し、ダミー字幕を流し続ける（`--demo`。`http://127.0.0.1:4510/overlay/subtitles`） |
 
-ヘッドレスの `overlays-headless` は `--mic` / `--mic-device NAME` でマイクを、`--input-file PATH.wav` で録音を実時間で流して字幕にできる（どちらも環境変数 `MISTRAL_API_KEY` が必要。翻訳と辞書の漢字名の読みには `OPENAI_API_KEY` も使い、なければ翻訳せず読みは形態素解析のまま）。Tauri アプリは `MISTRAL_API_KEY` があれば起動時に既定のマイクで字幕を始める（キーの保存と開始・停止の操作は Phase 5）。
+ヘッドレスの `overlays-headless` も Tauri アプリと同じ `settings.json` と API キーを使い、操作パネル（`http://127.0.0.1:4510/`）で設定する。引数は開発用の `--demo` と、マイクの代わりに録音を実時間で流す `--input-file PATH.wav` だけ。
 | `mise run check` | oxfmt / oxlint / svelte-check / rustfmt / clippy / cargo test |
 
 - Git フック（**lefthook**）: commit 時に変更ファイルへ oxfmt / oxlint / cargo fmt、push 時に `mise run check`。clone 後に `mise exec -- lefthook install` を一度実行する。
@@ -210,10 +210,15 @@ deadlock-stream-overlays/
 ## 5. 設定（`settings.rs`, `secrets.rs`, `runtime.rs`）
 
 - 設定は `{データディレクトリ}/settings.json`（Tauri の `app_data_dir`。ヘッドレスも同じ場所）に JSON で保存する。アプリが書き直すファイルなので、コメントの書ける TOML にはしない（書き直すと消える）
-  - 項目が欠けていれば既定値。壊れていれば `.broken` に退けて既定値から始める
+  - 項目が欠けていれば既定値。壊れていれば `.broken` に退けて既定値から始める。権限などで読めないときは既定値で動くが**保存しない**（ファイルを既定値で上書きしない。操作パネルにエラーを出す）
+  - 既定値のままの詳細項目（`models` など）はファイルに書かない（既定値を変えたら、変えていない人にも届く）
+  - 保存は読み込み〜書き込みをまとめて排他する（同時の変更が消えない）
   - 型は `types.rs` と同じく ts-rs で TS に出す（`Settings`, `SettingsPatch`）
 - **API キーは設定に入れない**。OS の資格情報ストア（Windows の資格情報マネージャー、macOS のキーチェーン。`keyring` クレート）に保存し、画面には「保存済み / 環境変数 / 未設定」だけを返す。開発中は環境変数 `MISTRAL_API_KEY` / `OPENAI_API_KEY` が優先する
-- **変更はその場で反映する**: `Store` が設定を watch チャンネルで持ち、`runtime` が「辞書・ランク・字幕」の処理を設定から起動する。設定か API キーが変わったら全部止めて張り直す（辞書はキャッシュから読むので 1 秒以内に戻る）
+- **変更はその場で反映する**: `Store` が設定を watch チャンネルで持ち、`runtime` が「辞書・ランク・字幕」の処理を設定から起動する。設定か API キーが変わったら、**入力が変わった処理だけ**止めて張り直す（ランクの ID を変えても字幕は止めない）
+  - 辞書: 言語・OpenAI のキー / ランク: アカウント・言語・間隔（アカウントが変わったら前のランクを消す）/ 字幕: 開始・停止、マイク、言語、翻訳先、モデル、区切り、キー
+  - 字幕を止めたり張り直したりしたら、確定していない字幕を消す（`discarded`）。字幕は、話す言語の名前が入った辞書ができてから用語のヒントを作る
+  - 始められない・止まった理由（キーがない、マイクが開けない、など）は `transcription.status`（トピック `status`）で操作パネルに出す
 
 ```ts
 interface Settings {
@@ -496,20 +501,21 @@ interface Enriched {
 
 ```ts
 // client → server
-type ClientMsg = { type: "subscribe"; topics: ("subtitle" | "glossary" | "rank")[] };
+type ClientMsg = { type: "subscribe"; topics: ("subtitle" | "glossary" | "rank" | "status")[] };
 
 // server → client
 type ServerMsg =
   | { type: "snapshot"; segments: Segment[]; rank?: RankState }  // 接続直後
   | { type: "segment.upsert"; segment: Segment }
-  | { type: "rank.update"; rank: RankState }
+  | { type: "rank.update"; rank: RankState | null }               // null: アカウントを外した・替えた
+  | { type: "transcription.status"; error: string | null }        // 操作パネル向け。字幕を始められない・止まった理由
   | { type: "glossary.updated"; clientVersion: number };          // オーバーレイが辞書を取り直す
 ```
 
 - 辞書は `GET /api/glossary` で取得し、オーバーレイ側で持つ（Segment には ID しか載らない）。
 - サーバーは直近の Segment を（例: 50 件）保持して、snapshot で送る。
 - WS クライアントは指数バックオフで再接続し、再接続したら snapshot で状態を置き換える。
-- 接続直後と broadcast の取りこぼし（Lagged）の後は、購読しているすべてのトピックの現在の状態（`snapshot` と、辞書があれば `glossary.updated`）を送る。
+- 接続直後と broadcast の取りこぼし（Lagged）の後は、購読しているすべてのトピックの現在の状態（`snapshot`、辞書があれば `glossary.updated`、ランクがあれば `rank.update`、`transcription.status`）を送る。
 
 ## 11. 字幕オーバーレイ
 
@@ -556,7 +562,7 @@ URL: `/overlay/rank?lang=ja`（`lang` はランク名の言語。既定は `ja`�
 | ランク名・色 | `GET /v1/assets/ranks?language=…`（設定の言語の分だけ取る） |
 | アイコン | `GET /v1/assets/ranks/{tier}/{subrank}/image?format=webp`（サブランクのないティアは `large_webp`） |
 
-- アカウントは Steam の 32bit アカウント ID（SteamID64 からは `76561197960265728` を引く。どちらでも受け付ける）。ヘッドレスは `--rank-account`、Tauri アプリは設定画面ができるまで環境変数 `DEADLOCK_ACCOUNT_ID`
+- アカウントは Steam の 32bit アカウント ID（SteamID64 からは `76561197960265728` を引く。どちらでも受け付ける）。操作パネルで設定する
 - `rank_poll_seconds`（既定 180 秒）ごとに取りに行き、変わったら `rank.update`（トピック `rank`）を流す。接続直後にも送る
 - データの取り込みに時間がかかるので、試合が終わってすぐには反映されない（deadlock-api の bot とフレンドになるか、Patreon の優先取り込みで速くなる）
 - アイコン（約 75KB）はディスクに保存せず**バッジごとに**メモリに持ち、`/assets/rank/{badge}.webp` で配信する。取れていない間は `image` を出さず（画像を表示しない）、次の回に取り直す。別のバッジのアイコンを配信しない

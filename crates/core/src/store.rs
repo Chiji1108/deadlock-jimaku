@@ -10,7 +10,7 @@ use tokio::sync::{broadcast, watch};
 
 use crate::assets::Loaded;
 use crate::settings::{self, Settings, SettingsPatch};
-use crate::types::{RankState, Segment, ServerMsg};
+use crate::types::{RankState, Segment, ServerMsg, Stage};
 
 /// snapshot で送る直近の Segment の数
 const KEEP_SEGMENTS: usize = 50;
@@ -20,6 +20,11 @@ pub struct Store {
     settings: watch::Sender<Settings>,
     /// 設定・辞書・キャッシュを置く場所
     data_dir: PathBuf,
+    /// 設定ファイルを読めなかったときは保存しない（既定値で上書きしない）。
+    /// 保存の読み込み〜書き込みをまとめて排他し、同時の変更が消えないようにする
+    save: Mutex<Result<(), String>>,
+    /// 字幕を始められなかった理由（操作パネルに出す）
+    transcription_error: Mutex<Option<String>>,
     segments: Mutex<VecDeque<Segment>>,
     glossary: watch::Sender<Option<Loaded>>,
     rank: Mutex<Option<RankState>>,
@@ -29,10 +34,23 @@ pub struct Store {
 }
 
 impl Store {
-    pub fn new(settings: Settings, data_dir: PathBuf) -> Arc<Self> {
+    /// 設定は `settings::load` の結果。読めなかったら既定値で動き、保存はしない
+    pub fn new(settings: std::io::Result<Settings>, data_dir: PathBuf) -> Arc<Self> {
+        let (settings, save) = match settings {
+            Ok(settings) => (settings, Ok(())),
+            Err(e) => {
+                tracing::error!("cannot read settings: {e}; using defaults without saving");
+                (
+                    Settings::default(),
+                    Err(format!("設定ファイルを読めないため保存できません: {e}")),
+                )
+            }
+        };
         Arc::new(Self {
             settings: watch::Sender::new(settings),
             data_dir,
+            save: Mutex::new(save),
+            transcription_error: Mutex::new(None),
             segments: Mutex::new(VecDeque::new()),
             glossary: watch::Sender::new(None),
             rank: Mutex::new(None),
@@ -55,10 +73,41 @@ impl Store {
 
     /// 操作パネルからの変更を当てて保存する。読めない値なら何も変えずにエラー
     pub fn update_settings(&self, patch: SettingsPatch) -> Result<Settings, String> {
+        let save = self.save.lock().unwrap();
+        save.clone()?;
         let next = self.settings().apply(patch)?;
         settings::save(&self.data_dir.join(settings::FILE), &next).map_err(|e| e.to_string())?;
-        self.settings.send_replace(next.clone());
+        self.settings.send_if_modified(|current| {
+            let changed = *current != next;
+            *current = next.clone();
+            changed
+        });
         Ok(next)
+    }
+
+    pub fn set_transcription_error(&self, error: Option<String>) {
+        *self.transcription_error.lock().unwrap() = error.clone();
+        let _ = self.tx.send(ServerMsg::TranscriptionStatus { error });
+    }
+
+    pub fn transcription_error(&self) -> Option<String> {
+        self.transcription_error.lock().unwrap().clone()
+    }
+
+    /// 字幕を止めたとき、確定していない（表示時間の起点がない）字幕を消す
+    pub fn discard_unsettled(&self) {
+        let unsettled: Vec<Segment> = self
+            .segments
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|s| s.settled_at.is_none() && s.stage != Stage::Discarded)
+            .cloned()
+            .collect();
+        for mut segment in unsettled {
+            segment.stage = Stage::Discarded;
+            self.upsert_segment(segment);
+        }
     }
 
     /// 設定は変わらないが、処理を張り直す（API キーを変えたときなど）
@@ -94,6 +143,9 @@ impl Store {
         if let Some(rank) = self.rank.lock().unwrap().clone() {
             msgs.push(ServerMsg::RankUpdate { rank: Some(rank) });
         }
+        msgs.push(ServerMsg::TranscriptionStatus {
+            error: self.transcription_error(),
+        });
         msgs
     }
 
@@ -138,10 +190,14 @@ impl Store {
         self.glossary.borrow().clone()
     }
 
-    /// 辞書ができるまで待つ。時間内にできなければ None
-    pub async fn wait_glossary(&self, timeout: Duration) -> Option<Loaded> {
+    /// その言語の名前を持つ辞書ができるまで待つ（言語を変えた直後の古い辞書は使わない）。
+    /// 時間内にできなければ None
+    pub async fn wait_glossary(&self, lang: &str, timeout: Duration) -> Option<Loaded> {
         let mut rx = self.glossary.subscribe();
-        let ready = rx.wait_for(Option::is_some);
+        let ready = rx.wait_for(|g| {
+            g.as_ref()
+                .is_some_and(|l| l.glossary.languages.iter().any(|x| x == lang))
+        });
         tokio::time::timeout(timeout, ready)
             .await
             .ok()?
@@ -181,7 +237,7 @@ mod tests {
 
     #[test]
     fn upsert_replaces_by_id_and_broadcasts() {
-        let store = Store::new(Settings::default(), PathBuf::new());
+        let store = Store::new(Ok(Settings::default()), PathBuf::new());
         let mut rx = store.subscribe();
         store.upsert_segment(seg("a", "さあ"));
         store.upsert_segment(seg("a", "さあ始まりました"));
@@ -196,7 +252,7 @@ mod tests {
 
     #[test]
     fn keeps_only_recent_segments() {
-        let store = Store::new(Settings::default(), PathBuf::new());
+        let store = Store::new(Ok(Settings::default()), PathBuf::new());
         for i in 0..KEEP_SEGMENTS + 5 {
             store.upsert_segment(seg(&i.to_string(), ""));
         }

@@ -75,6 +75,8 @@ pub enum Topic {
     /// 辞書が作り直されたことの通知。オーバーレイは `/api/glossary` を取り直す
     Glossary,
     Rank,
+    /// 字幕の処理の状態（操作パネル用）
+    Status,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
@@ -98,6 +100,9 @@ pub enum ServerMsg {
     /// None はランクを表示しない（アカウントが外された）
     #[serde(rename = "rank.update")]
     RankUpdate { rank: Option<RankState> },
+    /// 字幕を始められなかった理由。None なら問題なし
+    #[serde(rename = "transcription.status")]
+    TranscriptionStatus { error: Option<String> },
 }
 
 impl ServerMsg {
@@ -106,6 +111,7 @@ impl ServerMsg {
             Self::Snapshot { .. } | Self::SegmentUpsert { .. } => Topic::Subtitle,
             Self::GlossaryUpdated { .. } => Topic::Glossary,
             Self::RankUpdate { .. } => Topic::Rank,
+            Self::TranscriptionStatus { .. } => Topic::Status,
         }
     }
 }

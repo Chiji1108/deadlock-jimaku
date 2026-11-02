@@ -29,16 +29,34 @@ pub struct Settings {
     pub mic_device: Option<String>,
     /// 翻訳先（最大 4 言語。mic_language は除く）
     pub translate_to: Vec<LangCode>,
+    // 以下は操作パネルで変えない項目。既定値から変えたときだけ保存する
+    // （保存してしまうと、アプリの既定値を直しても古い値が残る）
+    #[serde(skip_serializing_if = "is_default")]
     pub models: Models,
     /// Realtime の streaming delay（80〜1200、または 2400）
+    #[serde(skip_serializing_if = "is_default_delay")]
     pub target_streaming_delay_ms: u32,
+    #[serde(skip_serializing_if = "is_default")]
     pub segmentation: Segmentation,
     /// ランクを表示するアカウント（Steam の 32bit アカウント ID）。None ならランクを取りに行かない
     #[ts(optional)]
     pub rank_account: Option<u32>,
     /// ランクを取りに行く間隔（試合後すぐには反映されないので短くしない）
+    #[serde(skip_serializing_if = "is_default_poll")]
     #[ts(type = "number")]
     pub rank_poll_seconds: u64,
+}
+
+fn is_default<T: Default + PartialEq>(value: &T) -> bool {
+    *value == T::default()
+}
+
+fn is_default_delay(value: &u32) -> bool {
+    *value == Settings::default().target_streaming_delay_ms
+}
+
+fn is_default_poll(value: &u64) -> bool {
+    *value == Settings::default().rank_poll_seconds
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
@@ -114,6 +132,20 @@ impl Settings {
         )
     }
 
+    /// 手で編集されたファイルなども、操作パネルと同じ規則に揃える（知らない言語は既定、翻訳先は最大 4）
+    fn sanitized(mut self) -> Self {
+        if lang::find(&self.mic_language).is_none() {
+            self.mic_language = Settings::default().mic_language;
+        }
+        let mic = self.mic_language.clone();
+        self.translate_to = lang::normalize(self.translate_to)
+            .into_iter()
+            .filter(|t| *t != mic)
+            .take(MAX_TRANSLATE_TO)
+            .collect();
+        self
+    }
+
     /// 操作パネルからの変更を当てる。読めない値はエラーにして何も変えない
     pub fn apply(&self, patch: SettingsPatch) -> Result<Self, String> {
         let mut next = self.clone();
@@ -175,18 +207,21 @@ pub struct SettingsPatch {
     pub rank_account: Option<String>,
 }
 
-/// ファイルがなければ既定値。壊れていたら脇に退けて既定値から始める（黙って上書きしない）
-pub fn load(path: &Path) -> Settings {
-    let Ok(bytes) = std::fs::read(path) else {
-        return Settings::default();
+/// ファイルがなければ既定値。壊れていたら脇に退けて既定値から始める。
+/// 読めない（ほかのアプリが掴んでいるなど）ときは Err: 既定値で上書き保存しないため
+pub fn load(path: &Path) -> std::io::Result<Settings> {
+    let bytes = match std::fs::read(path) {
+        Ok(bytes) => bytes,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Settings::default()),
+        Err(e) => return Err(e),
     };
-    match serde_json::from_slice(&bytes) {
-        Ok(settings) => settings,
+    match serde_json::from_slice::<Settings>(&bytes) {
+        Ok(settings) => Ok(settings.sanitized()),
         Err(e) => {
             let aside = path.with_extension("json.broken");
             tracing::warn!("settings are broken ({e}); moved to {}", aside.display());
-            let _ = std::fs::rename(path, aside);
-            Settings::default()
+            std::fs::rename(path, aside)?;
+            Ok(Settings::default())
         }
     }
 }
@@ -291,12 +326,37 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("settings.json");
         std::fs::write(&path, r#"{ "micLanguage": "en" }"#).unwrap();
-        let s = load(&path);
+        let s = load(&path).unwrap();
         assert_eq!(s.mic_language, "en");
         assert_eq!(s.rank_poll_seconds, 180);
 
         std::fs::write(&path, "{ broken").unwrap();
-        assert_eq!(load(&path), Settings::default());
+        assert_eq!(load(&path).unwrap(), Settings::default());
         assert!(dir.path().join("settings.json.broken").exists());
+    }
+
+    #[test]
+    fn hand_edited_files_are_sanitized() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("settings.json");
+        std::fs::write(
+            &path,
+            r#"{ "micLanguage": "xx", "translateTo": ["ja", "en", "ru", "ko", "de", "fr"] }"#,
+        )
+        .unwrap();
+        let s = load(&path).unwrap();
+        assert_eq!(s.mic_language, "ja");
+        assert_eq!(s.translate_to, ["en", "ru", "ko", "de"]);
+    }
+
+    #[test]
+    fn only_customized_advanced_fields_are_saved() {
+        let json = serde_json::to_value(Settings::default()).unwrap();
+        assert!(json.get("models").is_none());
+        assert!(json.get("segmentation").is_none());
+        assert!(json.get("rankPollSeconds").is_none());
+        let mut s = Settings::default();
+        s.models.translate = "custom".into();
+        assert!(serde_json::to_value(s).unwrap().get("models").is_some());
     }
 }

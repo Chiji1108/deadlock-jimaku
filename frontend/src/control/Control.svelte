@@ -15,6 +15,8 @@
   let languages = $state<LanguageOption[]>([]);
   let devices = $state<string[]>([]);
   let error = $state<string | undefined>();
+  /** 字幕を始められなかった・止まった理由 */
+  let transcriptionError = $state<string | undefined>();
   let copied = $state<string | undefined>();
   let rankInput = $state("");
   let keyInputs = $state<Record<Provider, string>>({ mistral: "", openai: "" });
@@ -28,8 +30,10 @@
   onMount(() => {
     void load();
     return connect(
-      ["subtitle"],
-      () => {},
+      ["status"],
+      (msg) => {
+        if (msg.type === "transcription.status") transcriptionError = msg.error ?? undefined;
+      },
       (s) => (status = s),
     );
   });
@@ -108,13 +112,16 @@
         <button
           class="primary"
           class:on={s.transcriptionEnabled}
-          disabled={!view.keys.mistral}
+          disabled={!s.transcriptionEnabled && !view.keys.mistral}
           onclick={() => update({ transcriptionEnabled: !s.transcriptionEnabled })}
         >
           {s.transcriptionEnabled ? "■ 字幕を止める" : "● 字幕を始める"}
         </button>
         {#if !view.keys.mistral}<span class="hint">Mistral の API キーを設定してください</span>{/if}
       </div>
+      {#if s.transcriptionEnabled && transcriptionError}
+        <p class="error">字幕が止まっています: {transcriptionError}</p>
+      {/if}
 
       <label>
         マイク
