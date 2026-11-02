@@ -15,7 +15,6 @@ pub struct Sources {
 #[derive(Default)]
 pub struct Extras {
     pub aliases_ja: BTreeMap<String, Vec<String>>,
-    pub readings_ja: BTreeMap<String, Vec<RubySegment>>,
 }
 
 /// ダウンロードするアイコン。`path` は icons ディレクトリからの相対パス
@@ -139,6 +138,7 @@ pub fn build(client_version: u32, sources: &Sources, extras: &Extras) -> (Glossa
 }
 
 /// 漢字を含む日本語名で、`readings.ja.json` に読みがないものに、形態素解析で読みを付ける
+/// （造語の多い名前は、配信前に LLM の読みを重ねる。`readings`）
 pub fn fill_readings(glossary: &mut Glossary, annotate: impl Fn(&str) -> Vec<Token>) {
     for entity in glossary.entities.values_mut() {
         let Some(name) = entity.names.get("ja").filter(|_| entity.ruby.is_none()) else {
@@ -164,19 +164,6 @@ fn apply_extras(entities: &mut BTreeMap<String, Entity>, extras: &Extras) {
                 e.aliases.insert("ja".into(), aliases.clone());
             }
             None => tracing::warn!("aliases.ja.json: unknown entity {reference}"),
-        }
-    }
-    for (reference, ruby) in &extras.readings_ja {
-        let Some(e) = entities.get_mut(reference) else {
-            tracing::warn!("readings.ja.json: unknown entity {reference}");
-            continue;
-        };
-        // 名前が変わった（パッチで改名された）ら古い読みは使わない
-        let text: String = ruby.iter().map(|s| s.text.as_str()).collect();
-        if e.names.get("ja") == Some(&text) {
-            e.ruby = Some(ruby.clone());
-        } else {
-            tracing::warn!("readings.ja.json: {reference} does not match the name {text}");
         }
     }
 }
@@ -354,43 +341,23 @@ mod tests {
     }
 
     #[test]
-    fn fill_readings_keeps_manual_readings() {
+    fn fill_readings_skips_kana_names() {
         let ruby = |text: &str, r: &str| Token::Text {
             text: text.into(),
             ruby: (!r.is_empty()).then(|| r.into()),
         };
-        let extras = Extras {
-            readings_ja: BTreeMap::from([(
-                "item:1".into(),
-                vec![
-                    RubySegment {
-                        text: "基礎拡張".into(),
-                        ruby: Some("てがき".into()),
-                    },
-                    RubySegment {
-                        text: "マガジン".into(),
-                        ruby: None,
-                    },
-                ],
-            )]),
-            ..Extras::default()
-        };
-        let (mut g, _) = build(6518, &sources(), &extras);
+        let (mut g, _) = build(6518, &sources(), &Extras::default());
         fill_readings(&mut g, |name| match name {
-            "基礎拡張マガジン" => vec![
-                ruby("基礎", "きそ"),
-                ruby("拡張", "かくちょう"),
-                ruby("マガジン", ""),
-            ],
-            "ヘイズ" => vec![ruby("ヘイズ", "")],
+            "基礎拡張マガジン" => {
+                vec![ruby("基礎拡張", "きそかくちょう"), ruby("マガジン", "")]
+            }
             other => vec![ruby(other, "")],
         });
-        // 手で書いた読みは上書きしない。かなだけの名前には付けない
         assert_eq!(
             g.entities["item:1"].ruby.as_ref().unwrap()[0]
                 .ruby
                 .as_deref(),
-            Some("てがき")
+            Some("きそかくちょう")
         );
         assert!(g.entities["hero:13"].ruby.is_none());
     }
@@ -402,30 +369,11 @@ mod tests {
     }
 
     #[test]
-    fn applies_extras_only_when_they_match() {
-        let ruby = |text: &str| {
-            vec![
-                RubySegment {
-                    text: text.into(),
-                    ruby: Some("きそかくちょう".into()),
-                },
-                RubySegment {
-                    text: "マガジン".into(),
-                    ruby: None,
-                },
-            ]
-        };
+    fn applies_aliases() {
         let extras = Extras {
             aliases_ja: BTreeMap::from([("item:1".into(), vec!["拡張マガジン".into()])]),
-            readings_ja: BTreeMap::from([
-                ("item:1".into(), ruby("基礎拡張")),
-                ("hero:13".into(), ruby("古い名前")),
-            ]),
         };
         let (g, _) = build(6518, &sources(), &extras);
-
         assert_eq!(g.entities["item:1"].aliases["ja"], ["拡張マガジン"]);
-        assert!(g.entities["item:1"].ruby.is_some());
-        assert!(g.entities["hero:13"].ruby.is_none());
     }
 }

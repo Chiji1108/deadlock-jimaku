@@ -11,21 +11,22 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use anyhow::Context;
 use serde::Deserialize;
 use serde_json::{Value, json};
 
 use crate::furigana::Furigana;
 use crate::lang;
+use crate::llm;
 use crate::types::{Enriched, EntityKind, Glossary, LangCode, Token};
 
-const CHAT_URL: &str = "https://api.mistral.ai/v1/chat/completions";
 const TIMEOUT: Duration = Duration::from_secs(8);
 
 pub struct Enricher {
     http: reqwest::Client,
-    api_key: String,
+    /// OpenAI の API キー。ないときは翻訳しない（固有名詞とふりがなは付ける）
+    api_key: Option<String>,
     model: String,
+    reasoning_effort: Option<String>,
     source_lang: LangCode,
     targets: Vec<LangCode>,
     /// 固定の先頭部分（プロンプトキャッシュが効く）
@@ -38,17 +39,22 @@ pub struct Enricher {
 
 impl Enricher {
     pub fn new(
-        api_key: String,
+        api_key: Option<String>,
         model: String,
+        reasoning_effort: Option<String>,
         source_lang: LangCode,
         targets: Vec<LangCode>,
     ) -> anyhow::Result<Self> {
         let targets = lang::normalize(targets.into_iter().filter(|t| *t != source_lang));
+        if api_key.is_none() && !targets.is_empty() {
+            tracing::warn!("OPENAI_API_KEY is not set; subtitles will not be translated");
+        }
         let furigana = (source_lang == "ja").then(Furigana::new).transpose()?;
         Ok(Self {
-            http: reqwest::Client::new(),
+            http: crate::http().clone(),
             api_key,
             model,
+            reasoning_effort,
             system: system_prompt(&source_lang),
             source_lang,
             targets,
@@ -70,17 +76,18 @@ impl Enricher {
             None => vec![Span::Text(text.to_owned())],
         };
         let source = self.source_tokens(&spans);
-        let translations = if self.targets.is_empty() {
-            BTreeMap::new()
-        } else {
-            let terms = Terms::new(&spans, glossary);
-            match self.translate(&terms, context).await {
-                Ok(raw) => self.translations(raw, &terms),
-                Err(e) => {
-                    tracing::warn!("translate: {e:#}");
-                    BTreeMap::new()
+        let translations = match &self.api_key {
+            Some(key) if !self.targets.is_empty() => {
+                let terms = Terms::new(&spans, glossary);
+                match self.translate(key, &terms, context).await {
+                    Ok(raw) => self.translations(raw, &terms),
+                    Err(e) => {
+                        tracing::warn!("translate: {e:#}");
+                        BTreeMap::new()
+                    }
                 }
             }
+            _ => BTreeMap::new(),
         };
         Enriched {
             source,
@@ -121,6 +128,7 @@ impl Enricher {
 
     async fn translate(
         &self,
+        api_key: &str,
         terms: &Terms,
         context: &[String],
     ) -> anyhow::Result<BTreeMap<LangCode, String>> {
@@ -129,33 +137,20 @@ impl Enricher {
             "transcript": terms.transcript,
             "terms": terms.kinds,
         });
-        let body = json!({
-            "model": self.model,
-            "messages": [
-                { "role": "system", "content": self.system },
-                { "role": "user", "content": user.to_string() },
-            ],
-            "response_format": {
-                "type": "json_schema",
-                "json_schema": { "name": "translation", "strict": true, "schema": self.schema() },
+        let out: Output = llm::chat_json(
+            &self.http,
+            llm::Request {
+                api_key,
+                model: &self.model,
+                reasoning_effort: self.reasoning_effort.as_deref(),
+                system: &self.system,
+                user: user.to_string(),
+                schema_name: "translation",
+                schema: self.schema(),
+                timeout: TIMEOUT,
             },
-        });
-        let res = self
-            .http
-            .post(CHAT_URL)
-            .bearer_auth(&self.api_key)
-            .timeout(TIMEOUT)
-            .json(&body)
-            .send()
-            .await?;
-        let status = res.status();
-        if !status.is_success() {
-            anyhow::bail!("{status}: {}", res.text().await.unwrap_or_default());
-        }
-        let res: Value = res.json().await?;
-        let content =
-            message_text(&res["choices"][0]["message"]["content"]).context("no message content")?;
-        let out: Output = serde_json::from_str(&content).context("invalid translation JSON")?;
+        )
+        .await?;
         Ok(out.translations)
     }
 
@@ -403,21 +398,6 @@ fn is_spaced_word_char(c: char) -> bool {
         )
 }
 
-/// 推論するモデルは content が [{type: "thinking"}, {type: "text"}] の配列になる
-fn message_text(content: &Value) -> Option<String> {
-    match content {
-        Value::String(s) => Some(s.clone()),
-        Value::Array(parts) => Some(
-            parts
-                .iter()
-                .filter(|p| p["type"] == "text")
-                .filter_map(|p| p["text"].as_str())
-                .collect(),
-        ),
-        _ => None,
-    }
-}
-
 fn system_prompt(source_lang: &str) -> String {
     let lang_label = lang::find(source_lang).map_or(source_lang, |l| l.label);
     format!(
@@ -546,8 +526,9 @@ mod tests {
 
     fn enricher(targets: &[&str]) -> Enricher {
         Enricher::new(
-            "key".into(),
+            Some("key".into()),
             "model".into(),
+            None,
             "ja".into(),
             targets.iter().map(|t| (*t).to_owned()).collect(),
         )
@@ -612,12 +593,6 @@ mod tests {
         let t = e.translations(raw, &terms);
         assert_eq!(t.len(), 1);
         assert_eq!(t["en"], [ent("hero:13"), text(" wins")]);
-    }
-
-    #[test]
-    fn message_text_handles_thinking_parts() {
-        let content = json!([{ "type": "thinking", "thinking": [] }, { "type": "text", "text": "{\"a\":1}" }]);
-        assert_eq!(message_text(&content).as_deref(), Some("{\"a\":1}"));
     }
 
     #[test]

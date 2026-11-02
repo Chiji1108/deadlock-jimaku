@@ -47,9 +47,17 @@ pub struct ApiItem {
     pub shop_image_webp: Option<String>,
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct Client {
     http: reqwest::Client,
+}
+
+impl Default for Client {
+    fn default() -> Self {
+        Self {
+            http: crate::http().clone(),
+        }
+    }
 }
 
 impl Client {

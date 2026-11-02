@@ -32,7 +32,13 @@ const CONTEXT_LINES: usize = 3;
 /// 用語ヒントの上限。音声とコンテキストを共有するので、辞書が増えても送りすぎない
 const MAX_CONTEXT_BIAS: usize = 500;
 
-pub async fn run(store: Arc<Store>, input: audio::Input, api_key: String) -> anyhow::Result<()> {
+/// `api_key` は Mistral（文字起こし）、`openai_key` は OpenAI（翻訳。なければ翻訳しない）
+pub async fn run(
+    store: Arc<Store>,
+    input: audio::Input,
+    api_key: String,
+    openai_key: Option<String>,
+) -> anyhow::Result<()> {
     let settings = store.settings().clone();
 
     // 用語ヒントは Realtime のセッション開始時に 1 回しか渡せないので、辞書を少し待つ。
@@ -61,16 +67,18 @@ pub async fn run(store: Arc<Store>, input: audio::Input, api_key: String) -> any
 
     // 形態素解析の辞書の読み込みは同期処理なので、非同期のワーカーを塞がない
     let enricher = {
-        let (key, model) = (api_key.clone(), settings.models.enrich.clone());
+        let (key, model) = (openai_key, settings.models.translate.clone());
+        let effort = settings.models.reasoning_effort.clone();
         let (lang, targets) = (settings.mic_language.clone(), settings.translate_to.clone());
-        tokio::task::spawn_blocking(move || Enricher::new(key, model, lang, targets)).await??
+        tokio::task::spawn_blocking(move || Enricher::new(key, model, effort, lang, targets))
+            .await??
     };
     let (done_tx, mut done_rx) = mpsc::channel(64);
     let mut pipeline = Pipeline::new(
         store,
         &settings,
         Arc::new(BatchContext {
-            http: reqwest::Client::new(),
+            http: crate::http().clone(),
             api_key,
             model: settings.models.batch.clone(),
             language: settings.mic_language.clone(),

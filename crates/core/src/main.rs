@@ -39,12 +39,14 @@ async fn main() -> anyhow::Result<()> {
         None => None,
     };
 
-    let languages = settings.glossary_languages();
+    // なくても辞書とダミー字幕は動く。Mistral は文字起こし、OpenAI は翻訳と辞書の漢字名の読み
+    let api_key = std::env::var("MISTRAL_API_KEY").ok();
+    let openai_key = std::env::var("OPENAI_API_KEY").ok();
     let store = Store::new(settings);
     tokio::spawn(assets::load_into(
         store.clone(),
         default_data_dir().join("assets"),
-        languages,
+        openai_key.clone(),
     ));
     if flag("--demo") {
         let store = store.clone();
@@ -55,11 +57,10 @@ async fn main() -> anyhow::Result<()> {
         });
     }
     if let Some(input) = input {
-        let api_key = std::env::var("MISTRAL_API_KEY")
-            .map_err(|_| anyhow::anyhow!("MISTRAL_API_KEY is not set"))?;
+        let api_key = api_key.ok_or_else(|| anyhow::anyhow!("MISTRAL_API_KEY is not set"))?;
         let store = store.clone();
         tokio::spawn(async move {
-            if let Err(e) = subtitles::run(store, input, api_key).await {
+            if let Err(e) = subtitles::run(store, input, api_key, openai_key).await {
                 tracing::error!("transcription stopped: {e:#}");
             }
         });
