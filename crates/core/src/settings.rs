@@ -29,35 +29,26 @@ pub struct Settings {
     pub mic_device: Option<String>,
     /// 翻訳先（最大 4 言語。mic_language は除く）
     pub translate_to: Vec<LangCode>,
-    // 以下は操作パネルで変えない項目。既定値から変えたときだけ保存する
-    // （保存してしまうと、アプリの既定値を直しても古い値が残る）
-    #[serde(skip_serializing_if = "is_default")]
+    // 以下の詳細項目は操作パネルで変えない（`ADVANCED`）
     pub models: Models,
     /// Realtime の streaming delay（80〜1200、または 2400）
-    #[serde(skip_serializing_if = "is_default_delay")]
     pub target_streaming_delay_ms: u32,
-    #[serde(skip_serializing_if = "is_default")]
     pub segmentation: Segmentation,
     /// ランクを表示するアカウント（Steam の 32bit アカウント ID）。None ならランクを取りに行かない
     #[ts(optional)]
     pub rank_account: Option<u32>,
     /// ランクを取りに行く間隔（試合後すぐには反映されないので短くしない）
-    #[serde(skip_serializing_if = "is_default_poll")]
     #[ts(type = "number")]
     pub rank_poll_seconds: u64,
 }
 
-fn is_default<T: Default + PartialEq>(value: &T) -> bool {
-    *value == T::default()
-}
-
-fn is_default_delay(value: &u32) -> bool {
-    *value == Settings::default().target_streaming_delay_ms
-}
-
-fn is_default_poll(value: &u64) -> bool {
-    *value == Settings::default().rank_poll_seconds
-}
+/// 既定値から変えたときだけ保存する項目（保存してしまうと、アプリの既定値を直しても古い値が残る）
+const ADVANCED: [&str; 4] = [
+    "models",
+    "targetStreamingDelayMs",
+    "segmentation",
+    "rankPollSeconds",
+];
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
 #[serde(default, rename_all = "camelCase")]
@@ -229,19 +220,13 @@ pub fn load(path: &Path) -> std::io::Result<Settings> {
 pub fn save(path: &Path, settings: &Settings) -> anyhow::Result<()> {
     std::fs::create_dir_all(path.parent().expect("has parent"))?;
     let tmp = path.with_extension("json.tmp");
-    std::fs::write(&tmp, serde_json::to_vec_pretty(settings)?)?;
+    let defaults = serde_json::to_value(Settings::default())?;
+    let mut json = serde_json::to_value(settings)?;
+    let fields = json.as_object_mut().expect("Settings is an object");
+    fields.retain(|key, value| !ADVANCED.contains(&key.as_str()) || defaults[key] != *value);
+    std::fs::write(&tmp, serde_json::to_vec_pretty(&json)?)?;
     std::fs::rename(&tmp, path)?;
     Ok(())
-}
-
-/// ランクを表示するアカウントを、コマンドライン引数の値から読む。読めなければ警告する
-pub fn account_id(value: Option<&str>) -> Option<u32> {
-    let value = value?;
-    let id = parse_account_id(value);
-    if id.is_none() {
-        tracing::warn!("invalid Steam account ID {value:?}; the rank overlay is off");
-    }
-    id
 }
 
 /// SteamID64（76561198…）でも 32bit のアカウント ID でも受け付ける
@@ -351,12 +336,22 @@ mod tests {
 
     #[test]
     fn only_customized_advanced_fields_are_saved() {
-        let json = serde_json::to_value(Settings::default()).unwrap();
-        assert!(json.get("models").is_none());
-        assert!(json.get("segmentation").is_none());
-        assert!(json.get("rankPollSeconds").is_none());
+        let dir = std::env::temp_dir().join(format!("overlays-settings-{}", std::process::id()));
+        let path = dir.join(FILE);
+        let saved = |s: &Settings| {
+            save(&path, s).unwrap();
+            serde_json::from_slice::<serde_json::Value>(&std::fs::read(&path).unwrap()).unwrap()
+        };
+        let json = saved(&Settings::default());
+        for key in ADVANCED {
+            assert!(json.get(key).is_none(), "{key}");
+        }
+        assert!(json.get("translateTo").is_some());
+
         let mut s = Settings::default();
         s.models.translate = "custom".into();
-        assert!(serde_json::to_value(s).unwrap().get("models").is_some());
+        assert!(saved(&s).get("models").is_some());
+        assert_eq!(load(&path).unwrap(), s);
+        std::fs::remove_dir_all(dir).unwrap();
     }
 }

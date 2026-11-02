@@ -67,6 +67,7 @@ async fn get_settings(State(store): State<Arc<Store>>) -> Json<SettingsView> {
     Json(SettingsView {
         settings: store.settings(),
         keys,
+        unsaved: store.unsaved(),
     })
 }
 

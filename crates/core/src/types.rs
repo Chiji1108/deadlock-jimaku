@@ -221,6 +221,9 @@ pub struct RankProgress {
 pub struct SettingsView {
     pub settings: crate::settings::Settings,
     pub keys: crate::secrets::KeyStatus,
+    /// 設定を保存できない理由（変更はこの起動の間だけ効く）
+    #[ts(optional)]
+    pub unsaved: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, TS)]

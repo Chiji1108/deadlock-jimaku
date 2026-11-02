@@ -20,9 +20,9 @@ pub struct Store {
     settings: watch::Sender<Settings>,
     /// 設定・辞書・キャッシュを置く場所
     data_dir: PathBuf,
-    /// 設定ファイルを読めなかったときは保存しない（既定値で上書きしない）。
+    /// 設定ファイルを読めなかった理由。そのときは変更をメモリにだけ当てて保存しない（既定値で上書きしない）。
     /// 保存の読み込み〜書き込みをまとめて排他し、同時の変更が消えないようにする
-    save: Mutex<Result<(), String>>,
+    unsaved: Mutex<Option<String>>,
     /// 字幕を始められなかった理由（操作パネルに出す）
     transcription_error: Mutex<Option<String>>,
     segments: Mutex<VecDeque<Segment>>,
@@ -36,20 +36,22 @@ pub struct Store {
 impl Store {
     /// 設定は `settings::load` の結果。読めなかったら既定値で動き、保存はしない
     pub fn new(settings: std::io::Result<Settings>, data_dir: PathBuf) -> Arc<Self> {
-        let (settings, save) = match settings {
-            Ok(settings) => (settings, Ok(())),
+        let (settings, unsaved) = match settings {
+            Ok(settings) => (settings, None),
             Err(e) => {
                 tracing::error!("cannot read settings: {e}; using defaults without saving");
                 (
                     Settings::default(),
-                    Err(format!("設定ファイルを読めないため保存できません: {e}")),
+                    Some(format!(
+                        "設定ファイルを読めないため、変更は保存されません（{e}）"
+                    )),
                 )
             }
         };
         Arc::new(Self {
             settings: watch::Sender::new(settings),
             data_dir,
-            save: Mutex::new(save),
+            unsaved: Mutex::new(unsaved),
             transcription_error: Mutex::new(None),
             segments: Mutex::new(VecDeque::new()),
             glossary: watch::Sender::new(None),
@@ -73,16 +75,23 @@ impl Store {
 
     /// 操作パネルからの変更を当てて保存する。読めない値なら何も変えずにエラー
     pub fn update_settings(&self, patch: SettingsPatch) -> Result<Settings, String> {
-        let save = self.save.lock().unwrap();
-        save.clone()?;
+        let unsaved = self.unsaved.lock().unwrap();
         let next = self.settings().apply(patch)?;
-        settings::save(&self.data_dir.join(settings::FILE), &next).map_err(|e| e.to_string())?;
+        if unsaved.is_none() {
+            settings::save(&self.data_dir.join(settings::FILE), &next)
+                .map_err(|e| e.to_string())?;
+        }
         self.settings.send_if_modified(|current| {
             let changed = *current != next;
             *current = next.clone();
             changed
         });
         Ok(next)
+    }
+
+    /// 設定を保存できない理由（操作パネルに出す）
+    pub fn unsaved(&self) -> Option<String> {
+        self.unsaved.lock().unwrap().clone()
     }
 
     pub fn set_transcription_error(&self, error: Option<String>) {
@@ -101,7 +110,8 @@ impl Store {
             .lock()
             .unwrap()
             .iter()
-            .filter(|s| s.settled_at.is_none() && s.stage != Stage::Discarded)
+            // まだ何も表示していない Segment は流す必要がない（パイプラインの取り消しと同じ）
+            .filter(|s| s.settled_at.is_none() && s.stage != Stage::Discarded && !s.text.is_empty())
             .cloned()
             .collect();
         for mut segment in unsettled {
@@ -190,13 +200,13 @@ impl Store {
         self.glossary.borrow().clone()
     }
 
-    /// その言語の名前を持つ辞書ができるまで待つ（言語を変えた直後の古い辞書は使わない）。
+    /// その言語を頼んで作った辞書ができるまで待つ（言語を変えた直後の古い辞書は使わない）。
     /// 時間内にできなければ None
     pub async fn wait_glossary(&self, lang: &str, timeout: Duration) -> Option<Loaded> {
         let mut rx = self.glossary.subscribe();
         let ready = rx.wait_for(|g| {
             g.as_ref()
-                .is_some_and(|l| l.glossary.languages.iter().any(|x| x == lang))
+                .is_some_and(|l| l.requested.iter().any(|x| x == lang))
         });
         tokio::time::timeout(timeout, ready)
             .await

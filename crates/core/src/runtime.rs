@@ -32,13 +32,15 @@ impl<K: PartialEq> Slot<K> {
         }
     }
 
-    /// 入力が変わっていれば止めて `start` し直す
-    fn update(&mut self, input: K, start: impl FnOnce() -> Option<JoinHandle<()>>) {
+    /// 入力が変わっていれば止めて `start` し直す。前の処理が止まりきってから始める
+    /// （止まる途中の処理が、張り直した後の状態を書き換えないように）
+    async fn update(&mut self, input: K, start: impl FnOnce() -> Option<JoinHandle<()>>) {
         if self.input.as_ref() == Some(&input) {
             return;
         }
         if let Some(task) = self.task.take() {
             task.abort();
+            let _ = task.await;
         }
         self.input = Some(input);
         self.task = start();
@@ -82,6 +84,7 @@ pub async fn run(store: Arc<Store>, options: Options) {
     let mut assets_slot = Slot::new();
     let mut rank_slot = Slot::new();
     let mut subtitles_slot = Slot::new();
+    let mut rank_account = None;
     loop {
         let settings: Settings = settings_rx.borrow_and_update().clone();
         let keys = tokio::task::spawn_blocking(secrets::load)
@@ -89,34 +92,36 @@ pub async fn run(store: Arc<Store>, options: Options) {
             .unwrap_or_default();
         let languages = settings.glossary_languages();
 
-        assets_slot.update(
-            AssetsInput {
-                languages: languages.clone(),
-                openai: keys.openai.clone(),
-            },
-            || {
-                Some(tokio::spawn(assets::load_into(
-                    store.clone(),
-                    store.data_dir().join("assets"),
-                    keys.openai.clone(),
-                )))
-            },
-        );
+        assets_slot
+            .update(
+                AssetsInput {
+                    languages: languages.clone(),
+                    openai: keys.openai.clone(),
+                },
+                || {
+                    Some(tokio::spawn(assets::load_into(
+                        store.clone(),
+                        store.data_dir().join("assets"),
+                        keys.openai.clone(),
+                    )))
+                },
+            )
+            .await;
 
+        // 別のアカウントのランクを出し続けない
+        if std::mem::replace(&mut rank_account, settings.rank_account) != settings.rank_account {
+            store.clear_rank();
+        }
         let rank_input = RankInput {
             account: settings.rank_account,
             languages,
             poll_seconds: settings.rank_poll_seconds,
         };
-        let account_changed =
-            rank_slot.input.as_ref().map(|i: &RankInput| i.account) != Some(settings.rank_account);
-        rank_slot.update(rank_input, || {
-            // 別のアカウントのランクを出し続けない
-            if account_changed {
-                store.clear_rank();
-            }
-            Some(tokio::spawn(rank::run_configured(store.clone())))
-        });
+        rank_slot
+            .update(rank_input, || {
+                Some(tokio::spawn(rank::run_configured(store.clone())))
+            })
+            .await;
 
         let source = match &options.input_file {
             Some(path) => Some(Source::File(path.clone())),
@@ -134,10 +139,12 @@ pub async fn run(store: Arc<Store>, options: Options) {
             mistral: keys.mistral.clone(),
             openai: keys.openai.clone(),
         };
-        subtitles_slot.update(input, || {
-            store.discard_unsettled();
-            start_subtitles(&store, source, keys.mistral, keys.openai)
-        });
+        subtitles_slot
+            .update(input, || {
+                store.discard_unsettled();
+                start_subtitles(&store, source, keys.mistral, keys.openai)
+            })
+            .await;
 
         if settings_rx.changed().await.is_err() {
             return;
@@ -151,22 +158,31 @@ fn start_subtitles(
     mistral: Option<String>,
     openai: Option<String>,
 ) -> Option<JoinHandle<()>> {
-    let source = source?;
+    let Some(source) = source else {
+        store.set_transcription_error(None);
+        return None;
+    };
     let Some(api_key) = mistral else {
         store.set_transcription_error(Some("Mistral の API キーが設定されていません".into()));
         return None;
     };
     store.set_transcription_error(None);
     tracing::info!("transcription started");
-    let input = match source {
-        Source::Mic(device) => audio::Input::Mic(device),
-        Source::File(path) => audio::Input::File(path),
+    let (input, ended) = match source {
+        Source::Mic(device) => (
+            audio::Input::Mic(device),
+            Some("マイクの入力が途切れました"),
+        ),
+        Source::File(path) => (audio::Input::File(path), None),
     };
     let store = store.clone();
     Some(tokio::spawn(async move {
-        if let Err(e) = subtitles::run(store.clone(), input, api_key, openai).await {
-            tracing::error!("transcription stopped: {e:#}");
-            store.set_transcription_error(Some(format!("{e:#}")));
-        }
+        // 止まったら理由を出す（開始・停止を押し直すと始め直す）
+        let error = match subtitles::run(store.clone(), input, api_key, openai).await {
+            Ok(()) => ended.map(String::from),
+            Err(e) => Some(format!("{e:#}")),
+        };
+        tracing::info!("transcription ended: {error:?}");
+        store.set_transcription_error(error);
     }))
 }

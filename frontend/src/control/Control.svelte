@@ -96,6 +96,7 @@
     サーバー: {status === "open" ? "接続中" : status === "connecting" ? "接続しています…" : "切断"}
   </p>
   {#if error}<p class="error">{error}</p>{/if}
+  {#if view?.unsaved}<p class="error">{view.unsaved}</p>{/if}
 
   {#snippet url(href: string)}
     <div class="url">
@@ -119,7 +120,7 @@
         </button>
         {#if !view.keys.mistral}<span class="hint">Mistral の API キーを設定してください</span>{/if}
       </div>
-      {#if s.transcriptionEnabled && transcriptionError}
+      {#if transcriptionError}
         <p class="error">字幕が止まっています: {transcriptionError}</p>
       {/if}
 
