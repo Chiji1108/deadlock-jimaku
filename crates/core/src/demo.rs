@@ -1,4 +1,4 @@
-//! ダミーの Segment を partial → final → enriched と流す（Phase 0 の動作確認用）。
+//! ダミーの Segment を partial → final → enriched と流す（動作確認用）。
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -9,54 +9,33 @@ use tokio::time::sleep;
 use crate::store::Store;
 use crate::types::{Enriched, EnrichedKind, Segment, Stage, Token};
 
+/// `[漢字|かんじ]` はルビ、`{hero:13|ヘイズ}` はエンティティ（`|` の後は発話された表現）
 struct Line {
-    final_text: &'static str,
-    /// (text, ruby) / エンティティは ruby の代わりに ref を `@` で始めて書く
-    source: &'static [(&'static str, &'static str)],
+    source: &'static str,
     en: &'static str,
     ru: &'static str,
 }
 
 const LINES: &[Line] = &[
     Line {
-        final_text: "さあ、始まりました。デッドロック実況です。",
-        source: &[
-            ("さあ、", ""),
-            ("始", "はじ"),
-            ("まりました。", ""),
-            ("デッドロック", ""),
-            ("実況", "じっきょう"),
-            ("です。", ""),
-        ],
+        source: "さあ、[始|はじ]まりました。デッドロック[実況|じっきょう]です。",
         en: "Here we go! This is a Deadlock stream.",
         ru: "Итак, начинаем! Это стрим по Deadlock.",
     },
     Line {
-        final_text: "僕の一番好きなキャラはヘイズですね。",
-        source: &[
-            ("僕", "ぼく"),
-            ("の", ""),
-            ("一番", "いちばん"),
-            ("好", "す"),
-            ("きなキャラは", ""),
-            ("ヘイズ", "@hero:13"),
-            ("ですね。", ""),
-        ],
-        en: "My favorite character is Haze.",
-        ru: "Мой любимый персонаж — Haze.",
+        source: "[僕|ぼく]の[一番|いちばん][好|す]きなキャラは{hero:13|ヘイズ}ですね。",
+        en: "My favorite character is {hero:13}.",
+        ru: "Мой любимый персонаж — {hero:13}.",
     },
     Line {
-        final_text: "ヘイズのバレットダンスもめっちゃ強いんだけど。",
-        source: &[
-            ("ヘイズ", "@hero:13"),
-            ("の", ""),
-            ("バレットダンス", "@ability:bullet_dance"),
-            ("もめっちゃ", ""),
-            ("強", "つよ"),
-            ("いんだけど。", ""),
-        ],
-        en: "Haze's Bullet Dance is really strong too, though.",
-        ru: "Bullet Dance у Haze тоже очень сильный.",
+        source: "{hero:13|ヘイズ}の{ability:731943444|バレットダンス}はめっちゃ[強|つよ]い。",
+        en: "{hero:13}'s {ability:731943444} is really strong.",
+        ru: "{ability:731943444} у {hero:13} очень сильный.",
+    },
+    Line {
+        source: "まずは{item:1548066885|拡張マガジン}を[買|か]おう。",
+        en: "Let's buy {item:1548066885} first.",
+        ru: "Сначала купим {item:1548066885}.",
     },
 ];
 
@@ -84,10 +63,12 @@ pub async fn run(store: &Store) {
 }
 
 async fn play_line(store: &Store, line: &Line) {
+    let source = parse(line.source);
+    let final_text = plain(&source);
+
     let mut seg = new_segment();
     // realtime の partial は句読点なしで少しずつ伸びる
-    let partial: Vec<char> = line
-        .final_text
+    let partial: Vec<char> = final_text
         .chars()
         .filter(|c| !"、。".contains(*c))
         .collect();
@@ -99,21 +80,17 @@ async fn play_line(store: &Store, line: &Line) {
 
     sleep(Duration::from_millis(800)).await;
     seg.stage = Stage::Final;
-    seg.text = line.final_text.into();
+    seg.text = final_text;
     store.upsert_segment(seg.clone());
 
     sleep(Duration::from_millis(2000)).await;
     seg.stage = Stage::Enriched;
     seg.enriched = Some(Enriched {
         kind: EnrichedKind::Speech,
-        source: line
-            .source
-            .iter()
-            .map(|&(text, ruby)| token(text, ruby))
-            .collect(),
+        source,
         translations: [("en", line.en), ("ru", line.ru)]
             .into_iter()
-            .map(|(lang, text)| (lang.into(), vec![token(text, "")]))
+            .map(|(lang, text)| (lang.into(), parse(text)))
             .collect(),
     });
     seg.settled_at = Some(now_ms());
@@ -130,16 +107,54 @@ async fn play_noise(store: &Store) {
     store.upsert_segment(seg);
 }
 
-fn token(text: &str, ruby: &str) -> Token {
-    match ruby.strip_prefix('@') {
-        Some(reference) => Token::Entity {
-            reference: reference.into(),
-            spoken: Some(text.into()),
-        },
-        None => Token::Text {
-            text: text.into(),
-            ruby: (!ruby.is_empty()).then(|| ruby.into()),
-        },
+fn parse(markup: &str) -> Vec<Token> {
+    let mut tokens = Vec::new();
+    let mut rest = markup;
+    while let Some(start) = rest.find(['[', '{']) {
+        if start > 0 {
+            tokens.push(text(&rest[..start], None));
+        }
+        let close = if rest[start..].starts_with('[') {
+            ']'
+        } else {
+            '}'
+        };
+        let end = start + rest[start..].find(close).expect("unclosed markup");
+        let inner = &rest[start + 1..end];
+        let (head, tail) = inner
+            .split_once('|')
+            .map_or((inner, None), |(h, t)| (h, Some(t)));
+        tokens.push(if close == ']' {
+            text(head, tail)
+        } else {
+            Token::Entity {
+                reference: head.into(),
+                spoken: tail.map(Into::into),
+            }
+        });
+        rest = &rest[end + 1..];
+    }
+    if !rest.is_empty() {
+        tokens.push(text(rest, None));
+    }
+    tokens
+}
+
+/// 音声認識の結果に相当する文字列（エンティティは発話された表現）
+fn plain(tokens: &[Token]) -> String {
+    tokens
+        .iter()
+        .map(|t| match t {
+            Token::Text { text, .. } => text.as_str(),
+            Token::Entity { spoken, reference } => spoken.as_deref().unwrap_or(reference),
+        })
+        .collect()
+}
+
+fn text(text: &str, ruby: Option<&str>) -> Token {
+    Token::Text {
+        text: text.into(),
+        ruby: ruby.map(Into::into),
     }
 }
 
@@ -161,4 +176,41 @@ pub fn now_ms() -> u64 {
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_millis() as u64
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_ruby_and_entities() {
+        let tokens = parse("[僕|ぼく]は{hero:13|ヘイズ}と{item:1}。");
+        assert_eq!(
+            tokens,
+            vec![
+                text("僕", Some("ぼく")),
+                text("は", None),
+                Token::Entity {
+                    reference: "hero:13".into(),
+                    spoken: Some("ヘイズ".into())
+                },
+                text("と", None),
+                Token::Entity {
+                    reference: "item:1".into(),
+                    spoken: None
+                },
+                text("。", None),
+            ]
+        );
+        assert_eq!(plain(&tokens), "僕はヘイズとitem:1。");
+    }
+
+    #[test]
+    fn every_line_parses() {
+        for line in LINES {
+            for markup in [line.source, line.en, line.ru] {
+                assert!(!parse(markup).is_empty());
+            }
+        }
+    }
 }

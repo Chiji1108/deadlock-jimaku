@@ -1,25 +1,19 @@
 <script lang="ts">
   import type { Token } from "../generated/Token";
+  import EntityRef from "./EntityRef.svelte";
+  import Ruby from "./Ruby.svelte";
 
-  let { tokens, furigana = true }: { tokens: Token[]; furigana?: boolean } = $props();
+  let {
+    tokens,
+    lang,
+    furigana = true,
+  }: { tokens: Token[]; lang: string; furigana?: boolean } = $props();
 </script>
 
 <!-- 日本語ではトークンの間に空白が入らないよう、ブロックの間に改行を入れない -->
-{#each tokens as token, i (i)}{#if token.t === "entity"}<span class="entity"
-      >{token.spoken ?? token.ref}</span
-    >{:else if token.ruby && furigana}<ruby>{token.text}<rt>{token.ruby}</rt></ruby
-    >{:else}{token.text}{/if}{/each}
-
-<style>
-  /* Phase 1 で辞書の公式名とアイコンに置き換える */
-  .entity {
-    color: var(--entity-color, #ffd34d);
-  }
-  /* ルビが親文字より長くても、親文字の間を空けない */
-  ruby {
-    ruby-align: center;
-  }
-  rt {
-    font-size: 0.5em;
-  }
-</style>
+{#each tokens as token, i (i)}{#if token.t === "entity"}<EntityRef
+      ref={token.ref}
+      spoken={token.spoken}
+      {lang}
+      {furigana}
+    />{:else}<Ruby text={token.text} ruby={furigana ? token.ruby : undefined} />{/if}{/each}

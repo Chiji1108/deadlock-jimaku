@@ -2,9 +2,10 @@
 
 use std::sync::Arc;
 
+use axum::Json;
 use axum::Router;
-use axum::extract::State;
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
+use axum::extract::{Path, State};
 use axum::http::{StatusCode, Uri, header};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
@@ -24,6 +25,8 @@ pub fn router(store: Arc<Store>) -> Router {
     Router::new()
         .route("/ws", get(ws))
         .route("/api/demo", post(demo))
+        .route("/api/glossary", get(glossary))
+        .route("/assets/icons/{*path}", get(icon))
         .fallback(frontend)
         .with_state(store)
 }
@@ -35,6 +38,42 @@ pub async fn serve(listener: TcpListener, store: Arc<Store>) -> std::io::Result<
 async fn demo(State(store): State<Arc<Store>>) -> StatusCode {
     crate::demo::spawn_once(store);
     StatusCode::ACCEPTED
+}
+
+async fn glossary(State(store): State<Arc<Store>>) -> Response {
+    match store.glossary() {
+        Some(loaded) => Json(loaded.glossary.as_ref()).into_response(),
+        // 起動直後で辞書をまだ作っている。オーバーレイは glossary.updated を待って取り直す
+        None => StatusCode::SERVICE_UNAVAILABLE.into_response(),
+    }
+}
+
+/// 辞書と同じ clientVersion のディレクトリからアイコンを返す
+async fn icon(State(store): State<Arc<Store>>, Path(path): Path<String>) -> Response {
+    let safe = path.split('/').all(|seg| {
+        !seg.is_empty()
+            && seg != ".."
+            && seg
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || "._-".contains(c))
+    });
+    let Some(loaded) = store.glossary().filter(|_| safe) else {
+        return StatusCode::NOT_FOUND.into_response();
+    };
+    match tokio::fs::read(loaded.icons_dir().join(&path)).await {
+        Ok(bytes) => {
+            let mime = mime_guess::from_path(&path).first_or_octet_stream();
+            (
+                [
+                    (header::CONTENT_TYPE, mime.to_string()),
+                    (header::CACHE_CONTROL, "public, max-age=86400".to_owned()),
+                ],
+                bytes,
+            )
+                .into_response()
+        }
+        Err(_) => StatusCode::NOT_FOUND.into_response(),
+    }
 }
 
 async fn ws(upgrade: WebSocketUpgrade, State(store): State<Arc<Store>>) -> Response {

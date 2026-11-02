@@ -22,6 +22,7 @@ export default defineConfig({
     proxy: {
       "/ws": { target: `ws://${core}`, ws: true },
       "/api": `http://${core}`,
+      "/assets": `http://${core}`,
     },
   },
 });

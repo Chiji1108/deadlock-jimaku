@@ -1,10 +1,11 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { flip } from "svelte/animate";
   import { SvelteMap } from "svelte/reactivity";
   import { fade, fly } from "svelte/transition";
   import type { Segment } from "../../generated/Segment";
   import Rich from "../../lib/Rich.svelte";
+  import { loadGlossary } from "../../lib/glossary.svelte";
+  import { slide } from "../../lib/slide";
   import { connect } from "../../lib/ws";
   import { params } from "./params";
 
@@ -32,14 +33,19 @@
       now = Date.now();
       for (const [id, s] of segments) if (!isLive(s)) segments.delete(id);
     }, 250);
-    const disconnect = connect(["subtitle"], (msg) => {
+    const disconnect = connect(["subtitle", "glossary"], (msg) => {
       switch (msg.type) {
         case "snapshot":
+          // 接続（再接続）のたびに届く。サーバーが再起動していれば辞書も変わっている
+          void loadGlossary();
           segments.clear();
           for (const s of msg.segments) segments.set(s.id, s);
           break;
         case "segment.upsert":
           segments.set(msg.segment.id, msg.segment);
+          break;
+        case "glossary.updated":
+          void loadGlossary();
           break;
       }
     });
@@ -54,7 +60,7 @@
   {#each visible as s (s.id)}
     <li
       class="caption {s.stage}"
-      animate:flip={{ duration: 200 }}
+      animate:slide={{ duration: 200 }}
       in:fly={{ y: 16, duration: 200 }}
       out:fade={{ duration: 400 }}
     >
@@ -62,6 +68,7 @@
         <p class="source" lang={s.lang}>
           {#if s.enriched}<Rich
               tokens={s.enriched.source}
+              lang={s.lang}
               furigana={params.furigana}
             />{:else}{s.text}{/if}
         </p>
@@ -70,7 +77,7 @@
         {#each params.langs ?? Object.keys(s.enriched.translations) as lang (lang)}
           {@const tokens = s.enriched.translations[lang]}
           {#if tokens}
-            <p class="translation" {lang}><Rich {tokens} /></p>
+            <p class="translation" {lang}><Rich {tokens} {lang} furigana={params.furigana} /></p>
           {/if}
         {/each}
       {/if}
