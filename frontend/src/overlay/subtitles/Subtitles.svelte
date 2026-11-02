@@ -68,7 +68,14 @@
   });
 </script>
 
-<ol class="captions">
+<!-- 見せ方は操作パネルから届く値を CSS 変数で当てる（OBS のカスタム CSS で上書きもできる） -->
+<ol
+  class="captions"
+  data-align={display?.align ?? "center"}
+  style:--source-size={display && `${display.fontSize}px`}
+  style:--translation-size={display && `${display.translationFontSize}px`}
+  style:--text-color={display?.textColor}
+>
   {#each visible as s (s.id)}
     <li
       class="caption {s.stage}"
@@ -108,11 +115,12 @@
     background: transparent;
     overflow: hidden;
   }
+  /* オーバーレイは字幕の箱（置く場所は OBS で決める）。下から積み上げ、箱の幅で折り返す */
   .captions {
     position: fixed;
     inset: auto 0 0 0;
     margin: 0;
-    padding: 0 24px 16px;
+    padding: 0 12px 8px;
     list-style: none;
     display: flex;
     flex-direction: column;
@@ -123,6 +131,14 @@
     -webkit-text-stroke: 0.18em var(--outline-color);
     paint-order: stroke fill;
     text-shadow: 0 2px 6px rgb(0 0 0 / 0.6);
+  }
+  .captions[data-align="left"] {
+    align-items: flex-start;
+    text-align: left;
+  }
+  .captions[data-align="right"] {
+    align-items: flex-end;
+    text-align: right;
   }
   p {
     margin: 0;

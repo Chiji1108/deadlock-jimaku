@@ -77,6 +77,14 @@ pub struct Models {
 pub struct SubtitleDisplay {
     /// 話した言葉にふりがなを付ける
     pub furigana: bool,
+    /// 字幕の揃え。オーバーレイは字幕の箱で、置く場所は OBS で決める
+    pub align: Align,
+    /// 話した言葉の文字の大きさ（px）
+    pub font_size: u32,
+    /// 訳文の文字の大きさ（px）
+    pub translation_font_size: u32,
+    /// 確定した字幕の文字色（`#rrggbb`）。用語の色は種類ごとに決まっていて変えない
+    pub text_color: String,
     /// 同時に出す字幕の数
     pub max_lines: u32,
     /// 確定してから消すまでの秒数（長い文はそのぶん長く出す）
@@ -87,6 +95,10 @@ impl Default for SubtitleDisplay {
     fn default() -> Self {
         Self {
             furigana: true,
+            align: Align::Center,
+            font_size: 40,
+            translation_font_size: 26,
+            text_color: "#ffffff".into(),
             max_lines: 3,
             hold_seconds: 6.0,
         }
@@ -96,6 +108,69 @@ impl Default for SubtitleDisplay {
 impl SubtitleDisplay {
     pub const MAX_LINES: std::ops::RangeInclusive<u32> = 1..=5;
     pub const HOLD_SECONDS: std::ops::RangeInclusive<f32> = 2.0..=30.0;
+    pub const FONT_SIZE: std::ops::RangeInclusive<u32> = 16..=96;
+
+    fn validate(&self) -> Result<(), String> {
+        let color = self.text_color.strip_prefix('#').unwrap_or_default();
+        if !Self::MAX_LINES.contains(&self.max_lines)
+            || !Self::HOLD_SECONDS.contains(&self.hold_seconds)
+            || !Self::FONT_SIZE.contains(&self.font_size)
+            || !Self::FONT_SIZE.contains(&self.translation_font_size)
+            || color.len() != 6
+            || !color.chars().all(|c| c.is_ascii_hexdigit())
+        {
+            return Err("subtitleDisplay is out of range".into());
+        }
+        Ok(())
+    }
+}
+
+/// 字幕の見せ方の変更。省いた項目は変えない（続けて変えたとき、前の変更を古い値で戻さない）
+#[derive(Clone, Debug, Default, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct SubtitleDisplayPatch {
+    #[ts(optional)]
+    pub furigana: Option<bool>,
+    #[ts(optional)]
+    pub align: Option<Align>,
+    #[ts(optional)]
+    pub font_size: Option<u32>,
+    #[ts(optional)]
+    pub translation_font_size: Option<u32>,
+    #[ts(optional)]
+    pub text_color: Option<String>,
+    #[ts(optional)]
+    pub max_lines: Option<u32>,
+    #[ts(optional)]
+    pub hold_seconds: Option<f32>,
+}
+
+impl SubtitleDisplay {
+    fn apply(&self, patch: SubtitleDisplayPatch) -> Result<Self, String> {
+        let next = Self {
+            furigana: patch.furigana.unwrap_or(self.furigana),
+            align: patch.align.unwrap_or(self.align),
+            font_size: patch.font_size.unwrap_or(self.font_size),
+            translation_font_size: patch
+                .translation_font_size
+                .unwrap_or(self.translation_font_size),
+            text_color: patch.text_color.unwrap_or_else(|| self.text_color.clone()),
+            max_lines: patch.max_lines.unwrap_or(self.max_lines),
+            hold_seconds: patch.hold_seconds.unwrap_or(self.hold_seconds),
+        };
+        next.validate()?;
+        Ok(next)
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "lowercase")]
+#[ts(export)]
+pub enum Align {
+    Left,
+    Center,
+    Right,
 }
 
 /// 字幕の区切り（DESIGN.md 3.1）
@@ -215,12 +290,7 @@ impl Settings {
             ));
         }
         if let Some(display) = patch.subtitle_display {
-            if !SubtitleDisplay::MAX_LINES.contains(&display.max_lines)
-                || !SubtitleDisplay::HOLD_SECONDS.contains(&display.hold_seconds)
-            {
-                return Err("subtitleDisplay is out of range".into());
-            }
-            next.subtitle_display = display;
+            next.subtitle_display = next.subtitle_display.apply(display)?;
         }
         if let Some(ms) = patch.min_silence_ms {
             if !Segmentation::MIN_SILENCE_MS.contains(&ms) {
@@ -271,7 +341,7 @@ pub struct SettingsPatch {
     #[ts(optional)]
     pub rank_account: Option<String>,
     #[ts(optional)]
-    pub subtitle_display: Option<SubtitleDisplay>,
+    pub subtitle_display: Option<SubtitleDisplayPatch>,
     /// 何 ms 黙ったら区切るか
     #[ts(optional)]
     pub min_silence_ms: Option<u32>,
@@ -372,19 +442,25 @@ mod tests {
     #[test]
     fn patch_validates_display_pause_and_rank_language() {
         let s = Settings::default();
-        let display = SubtitleDisplay {
-            max_lines: 2,
-            ..SubtitleDisplay::default()
-        };
         let next = s
             .apply(SettingsPatch {
-                subtitle_display: Some(display.clone()),
+                subtitle_display: Some(SubtitleDisplayPatch {
+                    max_lines: Some(2),
+                    ..Default::default()
+                }),
                 min_silence_ms: Some(700),
                 rank_language: Some("en".into()),
                 ..Default::default()
             })
             .unwrap();
-        assert_eq!(next.subtitle_display, display);
+        // 送った項目だけが変わる
+        assert_eq!(
+            next.subtitle_display,
+            SubtitleDisplay {
+                max_lines: 2,
+                ..SubtitleDisplay::default()
+            }
+        );
         assert_eq!(next.segmentation.min_silence_ms, 700);
         assert_eq!(next.rank_language(), "en");
 
@@ -411,9 +487,23 @@ mod tests {
                 ..Default::default()
             },
             SettingsPatch {
-                subtitle_display: Some(SubtitleDisplay {
-                    max_lines: 0,
-                    ..SubtitleDisplay::default()
+                subtitle_display: Some(SubtitleDisplayPatch {
+                    text_color: Some("white".into()),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+            SettingsPatch {
+                subtitle_display: Some(SubtitleDisplayPatch {
+                    max_lines: Some(0),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+            SettingsPatch {
+                subtitle_display: Some(SubtitleDisplayPatch {
+                    translation_font_size: Some(200),
+                    ..Default::default()
                 }),
                 ..Default::default()
             },
