@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { SvelteMap } from "svelte/reactivity";
+  import { TextMorph } from "torph/svelte";
   import { fade, fly } from "svelte/transition";
   import type { Segment } from "../../generated/Segment";
   import type { SubtitleDisplay } from "../../generated/SubtitleDisplay";
@@ -8,6 +9,9 @@
   import { loadGlossary } from "../../lib/glossary.svelte";
   import { slide } from "../../lib/slide";
   import { connect } from "../../lib/ws";
+
+  /** partial が伸びる・final で直るときの文字の動き（DESIGN.md 11 章） */
+  const MORPH = { duration: 220, ease: "cubic-bezier(0.19, 1, 0.22, 1)" };
 
   /** 長い文ほど長く出す（1 文字あたりの秒数） */
   const PER_CHAR_SECONDS = 0.15;
@@ -75,16 +79,17 @@
     >
       {#if display?.showSource}
         <p class="source" lang={s.lang}>
-          {#if s.enriched}<Rich
-              tokens={s.enriched.source}
-              lang={s.lang}
-              furigana={display.furigana}
-            />{:else}{s.text}{/if}
+          <!-- partial / final は文字単位で変化させ、enriched ではふりがなとアイコンを足す -->
+          {#if s.enriched}<span class="enriched"
+              ><Rich tokens={s.enriched.source} lang={s.lang} furigana={display.furigana} /></span
+            >{:else}<TextMorph text={s.text} locale={s.lang} as="span" {...MORPH} />{/if}
         </p>
       {/if}
       {#if s.enriched}
         {#each Object.entries(s.enriched.translations) as [lang, tokens] (lang)}
-          <p class="translation" {lang}><Rich {tokens} {lang} furigana={display?.furigana} /></p>
+          <p class="translation" {lang} in:fly={{ y: 8, duration: 250 }}>
+            <Rich {tokens} {lang} furigana={display?.furigana} />
+          </p>
         {/each}
       {/if}
     </li>
@@ -133,9 +138,30 @@
   .translation {
     font-size: var(--translation-size);
   }
-  /* 確定前（partial / final）は色を落とす */
+  /* 確定前（partial / final）は色を落とし、enriched で白くなる */
+  .source {
+    transition: color 300ms ease-out;
+  }
   .partial .source,
   .final .source {
     color: var(--pending-color);
+  }
+  /* enriched になったら、ふりがな・アイコン・用語の色を後から重ねる（文字の位置は変えない） */
+  .enriched :global(rt),
+  .enriched :global(.icon) {
+    animation: reveal 300ms ease-out;
+  }
+  .enriched :global(.entity) {
+    animation: tint 400ms ease-out;
+  }
+  @keyframes reveal {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes tint {
+    from {
+      color: var(--text-color);
+    }
   }
 </style>
