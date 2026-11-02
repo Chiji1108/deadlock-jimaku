@@ -34,7 +34,7 @@ async fn main() -> anyhow::Result<()> {
         settings.translate_to = langs.split(',').map(str::to_owned).collect();
     }
     settings.mic_device = value("--mic-device");
-    settings.rank_account = value("--rank-account").and_then(|v| settings::parse_account_id(&v));
+    settings.rank_account = settings::account_id(value("--rank-account").as_deref());
     let input = match value("--input-file") {
         Some(path) => Some(audio::Input::File(path.into())),
         None if flag("--mic") || settings.mic_device.is_some() => {
@@ -52,9 +52,7 @@ async fn main() -> anyhow::Result<()> {
         default_data_dir().join("assets"),
         openai_key.clone(),
     ));
-    if let Some(account) = store.settings().rank_account {
-        tokio::spawn(rank::run(store.clone(), account));
-    }
+    tokio::spawn(rank::run_configured(store.clone()));
     if flag("--demo") {
         let store = store.clone();
         tokio::spawn(async move {

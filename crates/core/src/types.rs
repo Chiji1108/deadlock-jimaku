@@ -191,6 +191,19 @@ pub struct RankState {
     pub names: BTreeMap<LangCode, String>,
     /// ティアの色（`#B47FEB` など）
     pub color: String,
-    /// `/assets/rank/{badge}.webp`
-    pub image: String,
+    /// `/assets/rank/{badge}.webp`。アイコンをまだ取れていなければ None
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub image: Option<String>,
+    /// 今のサブランクの中での進み具合（ゲージ）。エターナスと未ランクは None
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub progress: Option<RankProgress>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct RankProgress {
+    pub value: u32,
+    pub max: u32,
 }

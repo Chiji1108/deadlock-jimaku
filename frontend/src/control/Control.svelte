@@ -51,7 +51,9 @@
 
   <section>
     <h2>ランクオーバーレイ</h2>
-    <p>ランク名の言語は <code>?lang=en</code> などで変えられます。</p>
+    <p>
+      ランク名の言語は <code>?lang=en</code> などで変えられます（話す言語・英語・翻訳先のどれか）。
+    </p>
     {@render url(overlays.rank)}
   </section>
 </main>

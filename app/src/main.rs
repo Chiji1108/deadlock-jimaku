@@ -17,21 +17,18 @@ fn main() {
 
     tauri::Builder::default()
         .setup(|app| {
-            // 設定の保存と読み込みは Phase 5
             // 設定・API キーの保存と、操作パネルからの変更・開始・停止は Phase 5
             let settings = Settings {
-                rank_account: std::env::var("DEADLOCK_ACCOUNT_ID")
-                    .ok()
-                    .and_then(|v| settings::parse_account_id(&v)),
+                rank_account: settings::account_id(
+                    std::env::var("DEADLOCK_ACCOUNT_ID").ok().as_deref(),
+                ),
                 ..Settings::default()
             };
             // Mistral は文字起こし、OpenAI は翻訳と辞書の漢字名の読み
             let api_key = std::env::var("MISTRAL_API_KEY").ok();
             let openai_key = std::env::var("OPENAI_API_KEY").ok();
             let store = Store::new(settings);
-            if let Some(account) = store.settings().rank_account {
-                tauri::async_runtime::spawn(rank::run(store.clone(), account));
-            }
+            tauri::async_runtime::spawn(rank::run_configured(store.clone()));
             tauri::async_runtime::spawn(assets::load_into(
                 store.clone(),
                 app.path().app_data_dir()?.join("assets"),

@@ -77,6 +77,16 @@ impl Settings {
     }
 }
 
+/// ランクを表示するアカウントを、コマンドライン引数や環境変数の値から読む。読めなければ警告する
+pub fn account_id(value: Option<&str>) -> Option<u32> {
+    let value = value?;
+    let id = parse_account_id(value);
+    if id.is_none() {
+        tracing::warn!("invalid Steam account ID {value:?}; the rank overlay is off");
+    }
+    id
+}
+
 /// SteamID64（76561198…）でも 32bit のアカウント ID でも受け付ける
 pub fn parse_account_id(s: &str) -> Option<u32> {
     const STEAM_ID64_BASE: u64 = 76_561_197_960_265_728;
