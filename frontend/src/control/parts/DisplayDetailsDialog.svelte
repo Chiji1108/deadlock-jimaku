@@ -25,7 +25,7 @@
   /** 開くたびに reset で今の設定から始める */
   let values = $state<Values>(pick(panel.settings!.subtitleDisplay));
   /** 開いたときの値。変えた項目だけを送る（開いている間にほかで変えた項目を戻さない） */
-  let opened = $state.snapshot(values);
+  let opened: Values = pick(panel.settings!.subtitleDisplay);
 
   const sizes = [
     { key: "fontSize", label: "話した言葉の大きさ" },
