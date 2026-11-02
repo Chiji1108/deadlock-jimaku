@@ -32,8 +32,7 @@
   const visible = $derived(
     display
       ? [...segments.values()]
-          // 原文を出さない設定なら、訳文が届くまで何も出さない
-          .filter((s) => isLive(s) && (display!.showSource || s.enriched))
+          .filter(isLive)
           .toSorted((a, b) => a.startedAt - b.startedAt)
           .slice(-display.maxLines)
       : [],
@@ -77,14 +76,12 @@
       in:fly={{ y: 16, duration: 200 }}
       out:fade={{ duration: 400 }}
     >
-      {#if display?.showSource}
-        <p class="source" lang={s.lang}>
-          <!-- partial / final は文字単位で変化させ、enriched ではふりがなとアイコンを足す -->
-          {#if s.enriched}<span class="enriched"
-              ><Rich tokens={s.enriched.source} lang={s.lang} furigana={display.furigana} /></span
-            >{:else}<TextMorph text={s.text} locale={s.lang} as="span" {...MORPH} />{/if}
-        </p>
-      {/if}
+      <p class="source" lang={s.lang}>
+        <!-- partial / final は文字単位で変化させ、enriched ではふりがなとアイコンを足す -->
+        {#if s.enriched}<span class="enriched"
+            ><Rich tokens={s.enriched.source} lang={s.lang} furigana={display?.furigana} /></span
+          >{:else}<TextMorph text={s.text} locale={s.lang} as="span" {...MORPH} />{/if}
+      </p>
       {#if s.enriched}
         {#each Object.entries(s.enriched.translations) as [lang, tokens] (lang)}
           <p class="translation" {lang} in:fly={{ y: 8, duration: 250 }}>

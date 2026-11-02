@@ -5,11 +5,7 @@
  */
 export type SubtitleDisplay = { 
 /**
- * 元の文（話した言葉）を出す
- */
-showSource: boolean, 
-/**
- * 元の文にふりがなを付ける
+ * 話した言葉にふりがなを付ける
  */
 furigana: boolean, 
 /**
