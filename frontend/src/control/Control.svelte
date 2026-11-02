@@ -22,8 +22,8 @@
   let keyInputs = $state<Record<Provider, string>>({ mistral: "", openai: "" });
 
   const overlays = {
-    subtitles: `${location.origin}/overlay/subtitles`,
-    rank: `${location.origin}/overlay/rank`,
+    subtitles: `${__CORE_ORIGIN__}/overlay/subtitles`,
+    rank: `${__CORE_ORIGIN__}/overlay/rank`,
   };
   const label = (code: string) => languages.find((l) => l.code === code)?.label ?? code;
 

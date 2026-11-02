@@ -6,6 +6,8 @@ const core = "127.0.0.1:4510";
 
 export default defineConfig({
   plugins: [svelte()],
+  // OBS に貼る URL は、開発中（Vite から開いたとき）も axum のもの
+  define: { __CORE_ORIGIN__: JSON.stringify(`http://${core}`) },
   build: {
     // /assets はゲームアイコンの配信に使うので、ビルド成果物は /_app に置く
     assetsDir: "_app",
