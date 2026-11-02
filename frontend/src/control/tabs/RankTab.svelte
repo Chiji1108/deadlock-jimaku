@@ -25,8 +25,8 @@
 
   /** サーバーは SteamID64 も 32bit の ID に直して保存するので、保存した値を入力欄に戻す */
   async function saveAccount() {
-    await panel.update({ rankAccount: account });
-    account = saved();
+    // 失敗したら直せるよう、入力は残す
+    if (await panel.update({ rankAccount: account })) account = saved();
   }
 </script>
 
