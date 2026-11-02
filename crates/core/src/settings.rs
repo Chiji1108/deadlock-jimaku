@@ -83,8 +83,14 @@ pub struct SubtitleDisplay {
     pub font_size: u32,
     /// 訳文の文字の大きさ（px）
     pub translation_font_size: u32,
-    /// 確定した字幕の文字色（`#rrggbb`）。用語の色は種類ごとに決まっていて変えない
+    /// 確定した字幕の文字色（`#rrggbb`）
     pub text_color: String,
+    /// ヒーロー名の色。ゲームに決まった色がないので選べる（アイテムはスロットの色で固定）
+    pub hero_color: String,
+    /// スキル名の色
+    pub ability_color: String,
+    /// 文字の後ろ。明るい場面でも読めるよう、半透明の帯も選べる
+    pub background: Background,
     /// 同時に出す字幕の数
     pub max_lines: u32,
     /// 確定してから消すまでの秒数（長い文はそのぶん長く出す）
@@ -99,6 +105,9 @@ impl Default for SubtitleDisplay {
             font_size: 40,
             translation_font_size: 26,
             text_color: "#ffffff".into(),
+            hero_color: "#ffd34d".into(),
+            ability_color: "#8fd8ff".into(),
+            background: Background::Outline,
             max_lines: 3,
             hold_seconds: 6.0,
         }
@@ -110,14 +119,26 @@ impl SubtitleDisplay {
     pub const HOLD_SECONDS: std::ops::RangeInclusive<f32> = 2.0..=30.0;
     pub const FONT_SIZE: std::ops::RangeInclusive<u32> = 16..=96;
 
+    fn colors_mut(&mut self) -> [&mut String; 3] {
+        [
+            &mut self.text_color,
+            &mut self.hero_color,
+            &mut self.ability_color,
+        ]
+    }
+
     fn validate(&self) -> Result<(), String> {
-        let color = self.text_color.strip_prefix('#').unwrap_or_default();
+        let is_hex = |c: &str| {
+            c.strip_prefix('#')
+                .is_some_and(|h| h.len() == 6 && h.chars().all(|c| c.is_ascii_hexdigit()))
+        };
         if !Self::MAX_LINES.contains(&self.max_lines)
             || !Self::HOLD_SECONDS.contains(&self.hold_seconds)
             || !Self::FONT_SIZE.contains(&self.font_size)
             || !Self::FONT_SIZE.contains(&self.translation_font_size)
-            || color.len() != 6
-            || !color.chars().all(|c| c.is_ascii_hexdigit())
+            || ![&self.text_color, &self.hero_color, &self.ability_color]
+                .iter()
+                .all(|c| is_hex(c))
         {
             return Err("subtitleDisplay is out of range".into());
         }
@@ -141,6 +162,12 @@ pub struct SubtitleDisplayPatch {
     #[ts(optional)]
     pub text_color: Option<String>,
     #[ts(optional)]
+    pub hero_color: Option<String>,
+    #[ts(optional)]
+    pub ability_color: Option<String>,
+    #[ts(optional)]
+    pub background: Option<Background>,
+    #[ts(optional)]
     pub max_lines: Option<u32>,
     #[ts(optional)]
     pub hold_seconds: Option<f32>,
@@ -148,23 +175,43 @@ pub struct SubtitleDisplayPatch {
 
 impl SubtitleDisplay {
     fn apply(&self, patch: SubtitleDisplayPatch) -> Result<Self, String> {
-        let next = Self {
+        let mut next = Self {
             furigana: patch.furigana.unwrap_or(self.furigana),
             align: patch.align.unwrap_or(self.align),
             font_size: patch.font_size.unwrap_or(self.font_size),
             translation_font_size: patch
                 .translation_font_size
                 .unwrap_or(self.translation_font_size),
-            // 操作パネルの色の候補と比べられるよう、小文字に揃える
-            text_color: patch
-                .text_color
-                .map_or_else(|| self.text_color.clone(), |c| c.to_ascii_lowercase()),
+            text_color: patch.text_color.unwrap_or_else(|| self.text_color.clone()),
+            hero_color: patch.hero_color.unwrap_or_else(|| self.hero_color.clone()),
+            ability_color: patch
+                .ability_color
+                .unwrap_or_else(|| self.ability_color.clone()),
+            background: patch.background.unwrap_or(self.background),
             max_lines: patch.max_lines.unwrap_or(self.max_lines),
             hold_seconds: patch.hold_seconds.unwrap_or(self.hold_seconds),
         };
+        next.normalize_colors();
         next.validate()?;
         Ok(next)
     }
+
+    /// 操作パネルの色の候補と比べられるよう、小文字に揃える
+    fn normalize_colors(&mut self) {
+        for color in self.colors_mut() {
+            color.make_ascii_lowercase();
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "lowercase")]
+#[ts(export)]
+pub enum Background {
+    /// 文字の縁取りだけ
+    Outline,
+    /// 行ごとに半透明の黒い帯を敷く
+    Band,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -264,7 +311,7 @@ impl Settings {
         if self.subtitle_display.validate().is_err() {
             self.subtitle_display = SubtitleDisplay::default();
         }
-        self.subtitle_display.text_color.make_ascii_lowercase();
+        self.subtitle_display.normalize_colors();
         self
     }
 

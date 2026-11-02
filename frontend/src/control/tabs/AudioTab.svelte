@@ -4,10 +4,10 @@
   import { Button } from "$lib/components/ui/button";
   import * as Card from "$lib/components/ui/card";
   import * as Field from "$lib/components/ui/field";
-  import { Input } from "$lib/components/ui/input";
   import * as Select from "$lib/components/ui/select";
   import * as ToggleGroup from "$lib/components/ui/toggle-group";
   import LevelMeter from "../parts/LevelMeter.svelte";
+  import PauseDialog from "../parts/PauseDialog.svelte";
   import { panel } from "../panel.svelte";
 
   const MAX_TRANSLATE_TO = 4;
@@ -21,20 +21,8 @@
   const s = $derived(panel.settings!);
   const pause = $derived(s.segmentation.minSilenceMs);
   const preset = $derived(PAUSES.find((p) => p.ms === pause));
-  let custom = $state(false);
 
   const DEFAULT_DEVICE = "__default__";
-  const PAUSE_RANGE = { min: 200, max: 2000 };
-
-  /** 範囲外や空なら送らずに、保存されている値に戻す */
-  function setPause(input: HTMLInputElement) {
-    const ms = Math.round(input.valueAsNumber);
-    if (Number.isFinite(ms) && ms >= PAUSE_RANGE.min && ms <= PAUSE_RANGE.max) {
-      void panel.update({ minSilenceMs: ms });
-    } else {
-      input.value = String(pause);
-    }
-  }
 </script>
 
 <div class="flex flex-col gap-6">
@@ -158,18 +146,15 @@
       <Card.Description
         >話し終えてから、どれだけ黙ったら 1 つの字幕として確定するか</Card.Description
       >
+      <Card.Action><PauseDialog /></Card.Action>
     </Card.Header>
     <Card.Content class="flex flex-col gap-3">
       <ToggleGroup.Root
         type="single"
         variant="outline"
         class="w-full"
-        value={custom || !preset ? "custom" : String(pause)}
-        onValueChange={(v) => {
-          if (!v) return;
-          custom = v === "custom";
-          if (!custom) void panel.update({ minSilenceMs: Number(v) });
-        }}
+        value={preset ? String(pause) : ""}
+        onValueChange={(v) => v && panel.update({ minSilenceMs: Number(v) })}
       >
         {#each PAUSES as p (p.ms)}
           <ToggleGroup.Item value={String(p.ms)} class="flex-1 flex-col gap-0 py-6">
@@ -177,27 +162,10 @@
             <span class="text-xs text-muted-foreground">{p.ms / 1000} 秒</span>
           </ToggleGroup.Item>
         {/each}
-        <ToggleGroup.Item value="custom" class="flex-1 flex-col gap-0 py-6">
-          <span>細かく</span>
-          <span class="text-xs text-muted-foreground">自分で決める</span>
-        </ToggleGroup.Item>
       </ToggleGroup.Root>
-      {#if custom || !preset}
-        <Field.Field orientation="horizontal">
-          <Input
-            type="number"
-            class="w-32"
-            min={PAUSE_RANGE.min}
-            max={PAUSE_RANGE.max}
-            step={50}
-            value={pause}
-            onchange={(e) => setPause(e.currentTarget)}
-          />
-          <Field.Label>ミリ秒（{PAUSE_RANGE.min}〜{PAUSE_RANGE.max}）</Field.Label>
-        </Field.Field>
-      {:else}
-        <p class="text-sm text-muted-foreground">{preset.hint}</p>
-      {/if}
+      <p class="text-sm text-muted-foreground">
+        {preset ? preset.hint : `数値で指定しています（${pause} ミリ秒）`}
+      </p>
     </Card.Content>
   </Card.Root>
 </div>
