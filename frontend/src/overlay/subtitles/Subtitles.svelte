@@ -73,9 +73,12 @@
 <ol
   class="captions"
   data-align={display?.align ?? "center"}
+  data-background={display?.background ?? "outline"}
   style:--source-size={display && `${display.fontSize}px`}
   style:--translation-size={display && `${display.translationFontSize}px`}
   style:--text-color={display?.textColor}
+  style:--hero-color={display?.heroColor}
+  style:--ability-color={display?.abilityColor}
 >
   {#each visible as s (s.id)}
     <li
@@ -129,9 +132,20 @@
     gap: var(--gap);
     text-align: center;
     color: var(--text-color);
-    -webkit-text-stroke: 0.18em var(--outline-color);
-    paint-order: stroke fill;
-    text-shadow: 0 2px 6px rgb(0 0 0 / 0.6);
+  }
+  /* 半透明の帯: 明るい場面でも読めるよう、行ごとに黒い帯を敷いて縁取りを細くする */
+  .captions[data-background="band"] p {
+    -webkit-text-stroke-width: 0.08em;
+    text-shadow: none;
+    padding: 0.08em 0.45em;
+    border-radius: 0.2em;
+    background: rgb(0 0 0 / 0.62);
+  }
+  /* 帯は行の幅だけにする（揃えは .captions の align-items に合わせる） */
+  .caption {
+    display: flex;
+    flex-direction: column;
+    align-items: inherit;
   }
   .captions[data-align="left"] {
     align-items: flex-start;
@@ -141,10 +155,14 @@
     align-items: flex-end;
     text-align: right;
   }
+  /* 縁取りの太さは行ごとの文字の大きさに合わせる（em は要素自身の font-size で決まる） */
   p {
     margin: 0;
     line-height: 1.5;
     font-weight: 700;
+    -webkit-text-stroke: 0.18em var(--outline-color);
+    paint-order: stroke fill;
+    text-shadow: 0 2px 6px rgb(0 0 0 / 0.6);
   }
   .source {
     font-size: var(--source-size);

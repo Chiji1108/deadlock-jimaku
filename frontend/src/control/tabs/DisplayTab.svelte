@@ -9,10 +9,11 @@
   import { Switch } from "$lib/components/ui/switch";
   import * as ToggleGroup from "$lib/components/ui/toggle-group";
   import type { Align } from "../../generated/Align";
+  import type { Background } from "../../generated/Background";
   import type { SubtitleDisplayPatch } from "../../generated/SubtitleDisplayPatch";
   import CopyUrl from "../parts/CopyUrl.svelte";
   import OverlayPreview from "../parts/OverlayPreview.svelte";
-  import TextDetailsDialog from "../parts/TextDetailsDialog.svelte";
+  import DisplayDetailsDialog from "../parts/DisplayDetailsDialog.svelte";
   import { overlayUrl, panel } from "../panel.svelte";
 
   /** OBS のブラウザソースの大きさ（目安。幅と高さを変えれば中身が合わせる） */
@@ -38,6 +39,14 @@
     { hex: "#c9f0ff", label: "水色" },
     { hex: "#d4ffc9", label: "薄緑" },
   ];
+  const BACKGROUNDS: { value: Background; label: string; hint: string }[] = [
+    { value: "outline", label: "縁取り", hint: "文字に黒い縁取りを付けます" },
+    {
+      value: "band",
+      label: "半透明の帯",
+      hint: "明るい場面でも読めるよう、行の後ろに黒い帯を敷きます",
+    },
+  ];
   const LINES = [1, 2, 3, 4, 5];
   const HOLDS = [4, 6, 10, 15];
 
@@ -59,7 +68,8 @@
       <Card.Description
         >ここで変えた見せ方は、OBS に表示中の字幕にもそのまま反映されます</Card.Description
       >
-      <Card.Action>
+      <Card.Action class="flex gap-1">
+        <DisplayDetailsDialog />
         <Button variant="outline" size="sm" onclick={panel.demo}>
           <PlayIcon />テスト字幕を流す
         </Button>
@@ -92,10 +102,7 @@
           </ToggleGroup.Root>
         </Field.Field>
         <Field.Field>
-          <div class="flex items-center justify-between">
-            <Field.Label>文字の大きさ</Field.Label>
-            <TextDetailsDialog />
-          </div>
+          <Field.Label>文字の大きさ</Field.Label>
           <ToggleGroup.Root
             type="single"
             variant="outline"
@@ -122,7 +129,7 @@
         <Field.Field>
           <Field.Label>文字の色</Field.Label>
           <Field.Description>
-            確定した字幕の色です。ヒーロー・アイテム・スキルの名前は種類ごとの色のままです
+            確定した字幕の色です。ヒーロー名とスキル名の色は、上の「詳しく設定」から変えられます（アイテム名はスロットの色のまま）
           </Field.Description>
           <div class="flex flex-wrap items-center gap-2">
             {#each COLORS as c (c.hex)}
@@ -149,6 +156,23 @@
               ほかの色
             </label>
           </div>
+        </Field.Field>
+        <Field.Field>
+          <Field.Label>背景</Field.Label>
+          <ToggleGroup.Root
+            type="single"
+            variant="outline"
+            class="w-full"
+            value={d.background}
+            onValueChange={(v) => v && set({ background: v as Background })}
+          >
+            {#each BACKGROUNDS as b (b.value)}
+              <ToggleGroup.Item value={b.value} class="flex-1">{b.label}</ToggleGroup.Item>
+            {/each}
+          </ToggleGroup.Root>
+          <Field.Description
+            >{BACKGROUNDS.find((b) => b.value === d.background)?.hint}</Field.Description
+          >
         </Field.Field>
 
         <Field.Separator />
