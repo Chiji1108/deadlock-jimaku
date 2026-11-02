@@ -39,12 +39,19 @@ async fn main() -> anyhow::Result<()> {
         None => None,
     };
 
+    // なくても辞書とダミー字幕は動く（読みは形態素解析だけになる）
+    let api_key = std::env::var("MISTRAL_API_KEY").ok();
     let languages = settings.glossary_languages();
+    let reading_model = api_key.clone().map(|api_key| assets::ReadingModel {
+        api_key,
+        model: settings.models.readings.clone(),
+    });
     let store = Store::new(settings);
     tokio::spawn(assets::load_into(
         store.clone(),
         default_data_dir().join("assets"),
         languages,
+        reading_model,
     ));
     if flag("--demo") {
         let store = store.clone();
@@ -55,8 +62,7 @@ async fn main() -> anyhow::Result<()> {
         });
     }
     if let Some(input) = input {
-        let api_key = std::env::var("MISTRAL_API_KEY")
-            .map_err(|_| anyhow::anyhow!("MISTRAL_API_KEY is not set"))?;
+        let api_key = api_key.ok_or_else(|| anyhow::anyhow!("MISTRAL_API_KEY is not set"))?;
         let store = store.clone();
         tokio::spawn(async move {
             if let Err(e) = subtitles::run(store, input, api_key).await {

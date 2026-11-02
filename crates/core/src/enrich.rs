@@ -11,15 +11,14 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use anyhow::Context;
 use serde::Deserialize;
 use serde_json::{Value, json};
 
 use crate::furigana::Furigana;
 use crate::lang;
+use crate::llm;
 use crate::types::{Enriched, EntityKind, Glossary, LangCode, Token};
 
-const CHAT_URL: &str = "https://api.mistral.ai/v1/chat/completions";
 const TIMEOUT: Duration = Duration::from_secs(8);
 
 pub struct Enricher {
@@ -129,33 +128,20 @@ impl Enricher {
             "transcript": terms.transcript,
             "terms": terms.kinds,
         });
-        let body = json!({
-            "model": self.model,
-            "messages": [
-                { "role": "system", "content": self.system },
-                { "role": "user", "content": user.to_string() },
-            ],
-            "response_format": {
-                "type": "json_schema",
-                "json_schema": { "name": "translation", "strict": true, "schema": self.schema() },
+        let out: Output = llm::chat_json(
+            &self.http,
+            llm::Request {
+                api_key: &self.api_key,
+                model: &self.model,
+                system: &self.system,
+                user: user.to_string(),
+                schema_name: "translation",
+                schema: self.schema(),
+                reasoning_effort: None,
+                timeout: TIMEOUT,
             },
-        });
-        let res = self
-            .http
-            .post(CHAT_URL)
-            .bearer_auth(&self.api_key)
-            .timeout(TIMEOUT)
-            .json(&body)
-            .send()
-            .await?;
-        let status = res.status();
-        if !status.is_success() {
-            anyhow::bail!("{status}: {}", res.text().await.unwrap_or_default());
-        }
-        let res: Value = res.json().await?;
-        let content =
-            message_text(&res["choices"][0]["message"]["content"]).context("no message content")?;
-        let out: Output = serde_json::from_str(&content).context("invalid translation JSON")?;
+        )
+        .await?;
         Ok(out.translations)
     }
 
@@ -403,21 +389,6 @@ fn is_spaced_word_char(c: char) -> bool {
         )
 }
 
-/// 推論するモデルは content が [{type: "thinking"}, {type: "text"}] の配列になる
-fn message_text(content: &Value) -> Option<String> {
-    match content {
-        Value::String(s) => Some(s.clone()),
-        Value::Array(parts) => Some(
-            parts
-                .iter()
-                .filter(|p| p["type"] == "text")
-                .filter_map(|p| p["text"].as_str())
-                .collect(),
-        ),
-        _ => None,
-    }
-}
-
 fn system_prompt(source_lang: &str) -> String {
     let lang_label = lang::find(source_lang).map_or(source_lang, |l| l.label);
     format!(
@@ -612,12 +583,6 @@ mod tests {
         let t = e.translations(raw, &terms);
         assert_eq!(t.len(), 1);
         assert_eq!(t["en"], [ent("hero:13"), text(" wins")]);
-    }
-
-    #[test]
-    fn message_text_handles_thinking_parts() {
-        let content = json!([{ "type": "thinking", "thinking": [] }, { "type": "text", "text": "{\"a\":1}" }]);
-        assert_eq!(message_text(&content).as_deref(), Some("{\"a\":1}"));
     }
 
     #[test]

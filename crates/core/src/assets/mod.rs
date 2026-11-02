@@ -6,6 +6,9 @@
 
 mod api;
 mod glossary;
+mod readings;
+
+pub use readings::ReadingModel;
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -14,14 +17,17 @@ use std::sync::Arc;
 use anyhow::Context;
 use futures_util::{StreamExt, future::try_join_all, stream};
 
-use crate::furigana::Furigana;
+use crate::furigana::{self, Furigana};
 use crate::lang;
 use crate::store::Store;
 use crate::types::{Glossary, LangCode};
 use glossary::{Extras, Icon, Sources};
 
 /// キャッシュの形式。Glossary の形やアイコンの置き方を変えたら上げる（古いキャッシュは読まない）
-const CACHE_FORMAT: &str = "v3";
+const CACHE_FORMAT: &str = "v4";
+
+/// LLM で付けた読みのキャッシュ。名前ごとなので、パッチやキャッシュ形式をまたいで使い回す
+const LLM_READINGS: &str = "readings-llm.ja.json";
 
 /// 同時にダウンロードするアイコンの数
 const ICON_CONCURRENCY: usize = 8;
@@ -40,8 +46,13 @@ impl Loaded {
 }
 
 /// 辞書を用意して store に載せる。失敗してもアプリは字幕なしの辞書で動き続ける
-pub async fn load_into(store: Arc<Store>, root: PathBuf, languages: Vec<LangCode>) {
-    match load(&root, &languages).await {
+pub async fn load_into(
+    store: Arc<Store>,
+    root: PathBuf,
+    languages: Vec<LangCode>,
+    reading_model: Option<ReadingModel>,
+) {
+    match load(&root, &languages, reading_model.as_ref()).await {
         Ok(loaded) => {
             tracing::info!(
                 "glossary {} ({} entities, {:?})",
@@ -55,7 +66,13 @@ pub async fn load_into(store: Arc<Store>, root: PathBuf, languages: Vec<LangCode
     }
 }
 
-pub async fn load(root: &Path, languages: &[LangCode]) -> anyhow::Result<Loaded> {
+/// `reading_model` がなければ、辞書が知らない語も形態素解析の読みのままにする
+pub async fn load(
+    root: &Path,
+    languages: &[LangCode],
+    reading_model: Option<&ReadingModel>,
+) -> anyhow::Result<Loaded> {
+    let readings_cache = root.join(LLM_READINGS);
     let root = &root.join(CACHE_FORMAT);
     // どのエンティティを載せるかは英語版で決めるので、en は常に取る
     let languages = lang::normalize(languages.iter().cloned().chain(["en".to_owned()]));
@@ -66,7 +83,8 @@ pub async fn load(root: &Path, languages: &[LangCode]) -> anyhow::Result<Loaded>
         if let Some(cached) = read_cached(root, version, &languages) {
             return Ok(cached);
         }
-        build_and_save(&client, root, version, &languages).await
+        let readings = reading_model.map(|m| (m, readings_cache.as_path()));
+        build_and_save(&client, root, version, &languages, readings).await
     };
     match built.await {
         Ok(loaded) => Ok(loaded),
@@ -82,6 +100,7 @@ async fn build_and_save(
     root: &Path,
     version: u32,
     languages: &[LangCode],
+    readings: Option<(&ReadingModel, &Path)>,
 ) -> anyhow::Result<Loaded> {
     tracing::info!("building glossary {version} for {languages:?}");
     let fetch = |code: &LangCode| {
@@ -106,13 +125,47 @@ async fn build_and_save(
 
     let extras = extras()?;
     // 名前の読みは形態素解析で付ける（辞書の読み込みと解析は同期処理なのでワーカーを塞がない）
-    let (mut glossary, icons) = tokio::task::spawn_blocking(move || {
+    let (mut glossary, icons, uncertain) = tokio::task::spawn_blocking(move || {
         let (mut glossary, icons) = glossary::build(version, &sources, &extras);
         let furigana = Furigana::new()?;
-        glossary::fill_readings(&mut glossary, |name| furigana.annotate(name));
-        anyhow::Ok((glossary, icons))
+        let uncertain = glossary::fill_readings(
+            &mut glossary,
+            |name| furigana.annotate(name),
+            furigana::is_uncertain,
+        );
+        anyhow::Ok((glossary, icons, uncertain))
     })
     .await??;
+    // 辞書が知らない語の読みだけ LLM に頼む。読めなかったら形態素解析の読みのまま
+    let mut readings_missing = false;
+    if let (Some((model, cache)), false) = (readings, uncertain.is_empty()) {
+        let names: readings::Fallbacks = uncertain
+            .iter()
+            .filter_map(|r| {
+                let e = glossary.entities.get(r)?;
+                Some((
+                    e.names.get("ja")?.clone(),
+                    e.ruby.clone().unwrap_or_default(),
+                ))
+            })
+            .collect();
+        match readings::readings(model, cache, &names).await {
+            Ok(found) => {
+                for reference in &uncertain {
+                    let Some(e) = glossary.entities.get_mut(reference) else {
+                        continue;
+                    };
+                    if let Some(ruby) = e.names.get("ja").and_then(|n| found.get(n)) {
+                        e.ruby = Some(ruby.clone());
+                    }
+                }
+            }
+            Err(e) => {
+                tracing::warn!("readings: {e:#}");
+                readings_missing = true;
+            }
+        }
+    }
     let dir = version_dir(root, version);
     let failed = download_icons(client, &dir.join("icons"), icons).await;
     // 取れなかったアイコンは表示しない（404 を出さない）
@@ -122,12 +175,12 @@ async fn build_and_save(
         }
     }
 
-    // アイコンが欠けていれば保存しない。次の起動で作り直し、欠けた分だけ取り直す
-    if failed.is_empty() {
+    // アイコンか読みが欠けていれば保存しない。次の起動で作り直し、欠けた分だけ取り直す
+    if failed.is_empty() && !readings_missing {
         write_atomic(&dir.join("glossary.json"), &serde_json::to_vec(&glossary)?).await?;
     } else {
         tracing::warn!(
-            "{} icons missing; the glossary will be rebuilt next time",
+            "{} icons missing, readings missing: {readings_missing}; the glossary will be rebuilt next time",
             failed.len()
         );
     }

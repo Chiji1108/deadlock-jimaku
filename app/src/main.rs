@@ -16,16 +16,22 @@ fn main() {
         .setup(|app| {
             // 設定の保存と読み込みは Phase 5
             let settings = Settings::default();
+            // API キーの保存（keyring）と、操作パネルからの開始・停止は Phase 5
+            let api_key = std::env::var("MISTRAL_API_KEY").ok();
             let languages = settings.glossary_languages();
+            let reading_model = api_key.clone().map(|api_key| assets::ReadingModel {
+                api_key,
+                model: settings.models.readings.clone(),
+            });
             let store = Store::new(settings);
             tauri::async_runtime::spawn(assets::load_into(
                 store.clone(),
                 app.path().app_data_dir()?.join("assets"),
                 languages,
+                reading_model,
             ));
-            // API キーの保存（keyring）と、操作パネルからの開始・停止は Phase 5
-            match std::env::var("MISTRAL_API_KEY") {
-                Ok(api_key) => {
+            match api_key {
+                Some(api_key) => {
                     let store = store.clone();
                     let input = audio::Input::Mic(store.settings().mic_device.clone());
                     tauri::async_runtime::spawn(async move {
@@ -34,7 +40,7 @@ fn main() {
                         }
                     });
                 }
-                Err(_) => tracing::warn!("MISTRAL_API_KEY is not set; transcription is off"),
+                None => tracing::warn!("MISTRAL_API_KEY is not set; transcription is off"),
             }
             // ウィンドウを開く前に bind して、ポートが使えないことを起動時に検出する
             let listener = tauri::async_runtime::block_on(TcpListener::bind(SocketAddr::from((

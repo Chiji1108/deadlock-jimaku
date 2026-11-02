@@ -4,6 +4,7 @@ pub mod demo;
 pub mod enrich;
 pub mod furigana;
 pub mod lang;
+pub mod llm;
 pub mod markup;
 pub mod server;
 pub mod settings;

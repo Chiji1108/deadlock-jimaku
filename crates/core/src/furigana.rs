@@ -113,6 +113,18 @@ pub fn ruby_tokens(text: &str, ruby: Option<&str>) -> Vec<Token> {
     .collect()
 }
 
+/// 辞書が知らない複合語らしいか。IPADIC は知らない複合語を漢字 1 文字ずつ訓読みする
+/// （「人狼」→「人(ひと)狼(おおかみ)」）ので、1 文字のルビが続いたら読みを信用しない
+pub fn is_uncertain(tokens: &[Token]) -> bool {
+    let single_kanji = |t: &Token| {
+        matches!(t, Token::Text { text, ruby: Some(_) }
+            if text.chars().count() == 1 && text.chars().all(is_kanji))
+    };
+    tokens
+        .windows(2)
+        .any(|w| single_kanji(&w[0]) && single_kanji(&w[1]))
+}
+
 fn to_hiragana(s: &str) -> String {
     s.chars()
         .map(|c| match c {
@@ -163,6 +175,16 @@ mod tests {
         assert_eq!(ruby_tokens("ヘイズ", Some("へいず")), [t("ヘイズ", None)]);
         assert_eq!(ruby_tokens("強い", Some("tsuyoi")), [t("強い", None)]);
         assert_eq!(ruby_tokens("つよい", Some("つよい")), [t("つよい", None)]);
+    }
+
+    #[test]
+    fn unknown_compounds_are_uncertain() {
+        let f = Furigana::new().unwrap();
+        assert!(is_uncertain(&f.annotate("人狼の呪い")));
+        assert!(is_uncertain(&f.annotate("退避の五芒星")));
+        assert!(!is_uncertain(&f.annotate("一意専心")));
+        assert!(!is_uncertain(&f.annotate("鳥の餌付け")));
+        assert!(!is_uncertain(&f.annotate("基礎拡張マガジン")));
     }
 
     #[test]
