@@ -9,6 +9,7 @@
 
 use std::net::{Ipv4Addr, SocketAddr};
 
+use anyhow::Context;
 use overlays_core::{
     DEFAULT_PORT, default_data_dir, demo, runtime, server, settings, store::Store,
 };
@@ -18,12 +19,20 @@ use tokio::net::TcpListener;
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt::init();
 
-    let args: Vec<String> = std::env::args().collect();
-    let flag = |name: &str| args.iter().any(|a| a == name);
-    let value = |name: &str| {
-        let i = args.iter().position(|a| a == name)?;
-        args.get(i + 1).cloned()
-    };
+    // 知らない引数は黙って無視しない（以前の --rank-account などは操作パネルに移った）
+    let mut demo_mode = false;
+    let mut input_file = None;
+    let mut args = std::env::args().skip(1);
+    while let Some(arg) = args.next() {
+        match arg.as_str() {
+            "--demo" => demo_mode = true,
+            "--input-file" => input_file = Some(args.next().context("--input-file needs a path")?),
+            _ => anyhow::bail!(
+                "unknown argument {arg:?}. usage: overlays-headless [--demo] [--input-file PATH]\n\
+                 settings (mic, languages, rank account) are in the control panel: http://127.0.0.1:{DEFAULT_PORT}/"
+            ),
+        }
+    }
 
     let data_dir = default_data_dir();
     let settings = settings::load(&data_dir.join(settings::FILE));
@@ -31,10 +40,10 @@ async fn main() -> anyhow::Result<()> {
     tokio::spawn(runtime::run(
         store.clone(),
         runtime::Options {
-            input_file: value("--input-file").map(Into::into),
+            input_file: input_file.map(Into::into),
         },
     ));
-    if flag("--demo") {
+    if demo_mode {
         let store = store.clone();
         tokio::spawn(async move {
             loop {
