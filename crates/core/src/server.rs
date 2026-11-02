@@ -27,6 +27,7 @@ pub fn router(store: Arc<Store>) -> Router {
         .route("/api/demo", post(demo))
         .route("/api/glossary", get(glossary))
         .route("/assets/{version}/icons/{*path}", get(icon))
+        .route("/assets/rank/{file}", get(rank_image))
         .fallback(frontend)
         .with_state(store)
 }
@@ -80,6 +81,24 @@ async fn icon(
         }
         Err(_) => StatusCode::NOT_FOUND.into_response(),
     }
+}
+
+/// 今のランクのアイコン。URL にバッジを含むので中身は変わらない
+async fn rank_image(State(store): State<Arc<Store>>, Path(file): Path<String>) -> Response {
+    let Some((rank, image)) = store.rank() else {
+        return StatusCode::NOT_FOUND.into_response();
+    };
+    if file != format!("{}.webp", rank.badge) || image.is_empty() {
+        return StatusCode::NOT_FOUND.into_response();
+    }
+    (
+        [
+            (header::CONTENT_TYPE, "image/webp"),
+            (header::CACHE_CONTROL, "public, max-age=31536000, immutable"),
+        ],
+        image.as_ref().clone(),
+    )
+        .into_response()
 }
 
 async fn ws(upgrade: WebSocketUpgrade, State(store): State<Arc<Store>>) -> Response {

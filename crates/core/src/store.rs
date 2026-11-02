@@ -8,7 +8,7 @@ use tokio::sync::{broadcast, watch};
 
 use crate::assets::Loaded;
 use crate::settings::Settings;
-use crate::types::{Segment, ServerMsg};
+use crate::types::{RankState, Segment, ServerMsg};
 
 /// snapshot で送る直近の Segment の数
 const KEEP_SEGMENTS: usize = 50;
@@ -17,6 +17,8 @@ pub struct Store {
     settings: Settings,
     segments: Mutex<VecDeque<Segment>>,
     glossary: watch::Sender<Option<Loaded>>,
+    /// ランクとそのアイコン（webp）
+    rank: Mutex<Option<(RankState, Arc<Vec<u8>>)>>,
     tx: broadcast::Sender<ServerMsg>,
 }
 
@@ -26,6 +28,7 @@ impl Store {
             settings,
             segments: Mutex::new(VecDeque::new()),
             glossary: watch::Sender::new(None),
+            rank: Mutex::new(None),
             tx: broadcast::channel(256).0,
         })
     }
@@ -59,7 +62,19 @@ impl Store {
                 client_version: loaded.glossary.client_version,
             });
         }
+        if let Some((rank, _)) = self.rank.lock().unwrap().clone() {
+            msgs.push(ServerMsg::RankUpdate { rank });
+        }
         msgs
+    }
+
+    pub fn set_rank(&self, rank: RankState, image: Arc<Vec<u8>>) {
+        *self.rank.lock().unwrap() = Some((rank.clone(), image));
+        let _ = self.tx.send(ServerMsg::RankUpdate { rank });
+    }
+
+    pub fn rank(&self) -> Option<(RankState, Arc<Vec<u8>>)> {
+        self.rank.lock().unwrap().clone()
     }
 
     pub fn snapshot(&self) -> ServerMsg {

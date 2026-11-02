@@ -6,11 +6,14 @@
 //!   --mic                マイクを字幕にする（MISTRAL_API_KEY が必要）
 //!   --mic-device NAME    使うマイク（--mic を兼ねる）
 //!   --input-file PATH    WAV ファイルを実時間で流して字幕にする（MISTRAL_API_KEY が必要）
+//!   --rank-account ID    ランクを表示するアカウント（SteamID64 か 32bit のアカウント ID）
 
 use std::net::{Ipv4Addr, SocketAddr};
 
 use overlays_core::{
-    DEFAULT_PORT, assets, audio, default_data_dir, demo, server, settings::Settings, store::Store,
+    DEFAULT_PORT, assets, audio, default_data_dir, demo, rank, server,
+    settings::{self, Settings},
+    store::Store,
     subtitles,
 };
 use tokio::net::TcpListener;
@@ -31,6 +34,7 @@ async fn main() -> anyhow::Result<()> {
         settings.translate_to = langs.split(',').map(str::to_owned).collect();
     }
     settings.mic_device = value("--mic-device");
+    settings.rank_account = value("--rank-account").and_then(|v| settings::parse_account_id(&v));
     let input = match value("--input-file") {
         Some(path) => Some(audio::Input::File(path.into())),
         None if flag("--mic") || settings.mic_device.is_some() => {
@@ -48,6 +52,9 @@ async fn main() -> anyhow::Result<()> {
         default_data_dir().join("assets"),
         openai_key.clone(),
     ));
+    if let Some(account) = store.settings().rank_account {
+        tokio::spawn(rank::run(store.clone(), account));
+    }
     if flag("--demo") {
         let store = store.clone();
         tokio::spawn(async move {

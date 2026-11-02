@@ -6,6 +6,7 @@ pub mod furigana;
 pub mod lang;
 pub mod llm;
 pub mod markup;
+pub mod rank;
 pub mod server;
 pub mod settings;
 pub mod store;
