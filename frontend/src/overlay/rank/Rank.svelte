@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { scale } from "svelte/transition";
+  import { TextMorph } from "torph/svelte";
   import type { RankState } from "../../generated/RankState";
   import { connect } from "../../lib/ws";
 
@@ -37,13 +38,18 @@
         {#if label}<p class="name" {lang}>{label}</p>{/if}
         {#if rank.progress}
           <p class="points">
-            {number(rank.progress.value)}<span class="max">{` / ${number(rank.progress.max)}`}</span
+            <!-- ポイントが変わったら桁ごとに数字を動かす -->
+            <TextMorph text={number(rank.progress.value)} numbers as="span" duration={600} /><span
+              class="max">{` / ${number(rank.progress.max)}`}</span
             >
           </p>
           <div class="bar"><div class="fill" style:width="{ratio * 100}%"></div></div>
         {:else if rank.points !== undefined}
           <!-- エターナスは上位何 % かで決まるのでゲージなし。累積のポイントだけ出す -->
-          <p class="points">{number(rank.points)} <span class="unit">RP</span></p>
+          <p class="points">
+            <TextMorph text={number(rank.points)} numbers as="span" duration={600} />
+            <span class="unit">RP</span>
+          </p>
         {/if}
       </div>
     </div>
