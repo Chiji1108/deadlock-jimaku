@@ -75,9 +75,7 @@ pub struct Models {
 #[serde(default, rename_all = "camelCase")]
 #[ts(export)]
 pub struct SubtitleDisplay {
-    /// 元の文（話した言葉）を出す
-    pub show_source: bool,
-    /// 元の文にふりがなを付ける
+    /// 話した言葉にふりがなを付ける
     pub furigana: bool,
     /// 同時に出す字幕の数
     pub max_lines: u32,
@@ -88,7 +86,6 @@ pub struct SubtitleDisplay {
 impl Default for SubtitleDisplay {
     fn default() -> Self {
         Self {
-            show_source: true,
             furigana: true,
             max_lines: 3,
             hold_seconds: 6.0,

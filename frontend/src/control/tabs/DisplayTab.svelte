@@ -38,20 +38,6 @@
       <Field.Group>
         <Field.Field orientation="horizontal">
           <Field.Content>
-            <!-- 「原文」より、実際の言語名の方が何のことか分かりやすい -->
-            <Field.Label for="show-source">{panel.label(s.micLanguage)}の字幕を出す</Field.Label>
-            <Field.Description>
-              あなたが話した言葉をそのまま出します。オフにすると翻訳だけになります（翻訳ができるまで少し遅れて出ます）
-            </Field.Description>
-          </Field.Content>
-          <Switch
-            id="show-source"
-            checked={d.showSource}
-            onCheckedChange={(v) => set({ showSource: v })}
-          />
-        </Field.Field>
-        <Field.Field orientation="horizontal">
-          <Field.Content>
             <Field.Label for="furigana">ふりがなを付ける</Field.Label>
             <Field.Description
               >漢字に読みを付けます（日本語を学んでいる視聴者向け）</Field.Description
