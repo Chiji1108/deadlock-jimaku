@@ -27,8 +27,8 @@
   let inputs = $state<Record<Provider, string>>({ mistral: "", openai: "" });
 
   async function save(provider: Provider, key: string) {
-    await panel.setKey(provider, key);
-    inputs[provider] = "";
+    // 失敗したら貼り直さずにやり直せるよう、入力は残す
+    if (await panel.setKey(provider, key)) inputs[provider] = "";
   }
 </script>
 

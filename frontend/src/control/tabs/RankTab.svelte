@@ -14,9 +14,20 @@
   const s = $derived(panel.settings!);
   // ランク名を取ってくる言語（話す言語・英語・翻訳先）から選ぶ
   const languages = $derived([...new Set([s.micLanguage, "en", ...s.translateTo])]);
-  const language = $derived(s.rankLanguage ?? s.micLanguage);
+  /** 選べる言語にないもの（翻訳先から外した）は、サーバーと同じく話す言語に合わせる */
+  const FOLLOW = "";
+  const language = $derived(
+    s.rankLanguage && languages.includes(s.rankLanguage) ? s.rankLanguage : FOLLOW,
+  );
 
-  let account = $state(panel.settings?.rankAccount?.toString() ?? "");
+  const saved = () => panel.settings?.rankAccount?.toString() ?? "";
+  let account = $state(saved());
+
+  /** サーバーは SteamID64 も 32bit の ID に直して保存するので、保存した値を入力欄に戻す */
+  async function saveAccount() {
+    await panel.update({ rankAccount: account });
+    account = saved();
+  }
 </script>
 
 <div class="flex flex-col gap-6">
@@ -37,7 +48,7 @@
       <form
         onsubmit={(e) => {
           e.preventDefault();
-          void panel.update({ rankAccount: account });
+          void saveAccount();
         }}
       >
         <Field.Field>
@@ -50,9 +61,7 @@
               inputmode="numeric"
               autocomplete="off"
             />
-            <Button type="submit" disabled={account === (s.rankAccount?.toString() ?? "")}>
-              保存
-            </Button>
+            <Button type="submit" disabled={account === saved()}>保存</Button>
           </div>
           <Field.Description>
             SteamID64（7656… で始まる 17 桁）か、フレンドコード。空にすると表示しません
@@ -67,8 +76,15 @@
           value={language}
           onValueChange={(v) => panel.update({ rankLanguage: v })}
         >
-          <Select.Trigger class="w-full">{panel.label(language)}</Select.Trigger>
+          <Select.Trigger class="w-full">
+            {language === FOLLOW
+              ? `話す言語に合わせる（${panel.label(s.micLanguage)}）`
+              : panel.label(language)}
+          </Select.Trigger>
           <Select.Content>
+            <Select.Item value={FOLLOW}
+              >話す言語に合わせる（{panel.label(s.micLanguage)}）</Select.Item
+            >
             {#each languages as code (code)}
               <Select.Item value={code}>{panel.label(code)}</Select.Item>
             {/each}

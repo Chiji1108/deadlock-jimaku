@@ -13,9 +13,9 @@
   const MAX_TRANSLATE_TO = 4;
   /** 何 ms 黙ったら区切るか */
   const PAUSES = [
-    { ms: 300, label: "早め", hint: "すぐ字幕になる。文の途中で切れやすい" },
-    { ms: 400, label: "ふつう", hint: "おすすめ" },
-    { ms: 700, label: "ゆったり", hint: "文がまとまる。出るまで少し待つ" },
+    { ms: 500, label: "すぐ", hint: "早く確定する。文の途中で切れやすい" },
+    { ms: 750, label: "ふつう", hint: "おすすめ" },
+    { ms: 1000, label: "つなぐ", hint: "文がまとまる。確定まで少し待つ" },
   ];
 
   const s = $derived(panel.settings!);
@@ -24,6 +24,17 @@
   let custom = $state(false);
 
   const DEFAULT_DEVICE = "__default__";
+  const PAUSE_RANGE = { min: 200, max: 2000 };
+
+  /** 範囲外や空なら送らずに、保存されている値に戻す */
+  function setPause(input: HTMLInputElement) {
+    const ms = Math.round(input.valueAsNumber);
+    if (Number.isFinite(ms) && ms >= PAUSE_RANGE.min && ms <= PAUSE_RANGE.max) {
+      void panel.update({ minSilenceMs: ms });
+    } else {
+      input.value = String(pause);
+    }
+  }
 </script>
 
 <div class="flex flex-col gap-6">
@@ -45,7 +56,7 @@
             <Select.Trigger class="flex-1">{s.micDevice ?? "OS の既定のマイク"}</Select.Trigger>
             <Select.Content>
               <Select.Item value={DEFAULT_DEVICE}>OS の既定のマイク</Select.Item>
-              {#each panel.devices as name (name)}
+              {#each panel.devices ?? [] as name (name)}
                 <Select.Item value={name}>{name}</Select.Item>
               {/each}
             </Select.Content>
@@ -59,7 +70,7 @@
             <RefreshCwIcon />
           </Button>
         </div>
-        {#if panel.devices.length === 0}
+        {#if panel.devices?.length === 0}
           <Field.Description class="text-amber-500">
             マイクが見つかりません。つないだら更新ボタンを押してください
           </Field.Description>
@@ -176,13 +187,13 @@
           <Input
             type="number"
             class="w-32"
-            min={200}
-            max={2000}
+            min={PAUSE_RANGE.min}
+            max={PAUSE_RANGE.max}
             step={50}
             value={pause}
-            onchange={(e) => panel.update({ minSilenceMs: e.currentTarget.valueAsNumber })}
+            onchange={(e) => setPause(e.currentTarget)}
           />
-          <Field.Label>ミリ秒（200〜2000）</Field.Label>
+          <Field.Label>ミリ秒（{PAUSE_RANGE.min}〜{PAUSE_RANGE.max}）</Field.Label>
         </Field.Field>
       {:else}
         <p class="text-sm text-muted-foreground">{preset.hint}</p>

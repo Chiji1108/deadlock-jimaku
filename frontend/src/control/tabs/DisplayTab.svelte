@@ -6,7 +6,6 @@
   import { Switch } from "$lib/components/ui/switch";
   import * as ToggleGroup from "$lib/components/ui/toggle-group";
   import type { SubtitleDisplay } from "../../generated/SubtitleDisplay";
-  import { api } from "../../lib/api";
   import CopyUrl from "../parts/CopyUrl.svelte";
   import OverlayPreview from "../parts/OverlayPreview.svelte";
   import { overlayUrl, panel } from "../panel.svelte";
@@ -28,7 +27,7 @@
         >ここで変えた見せ方は、OBS に表示中の字幕にもそのまま反映されます</Card.Description
       >
       <Card.Action>
-        <Button variant="outline" size="sm" onclick={() => api.demo()}>
+        <Button variant="outline" size="sm" onclick={panel.demo}>
           <PlayIcon />テスト字幕を流す
         </Button>
       </Card.Action>
@@ -50,7 +49,7 @@
             onCheckedChange={(v) => set({ showSource: v })}
           />
         </Field.Field>
-        <Field.Field orientation="horizontal" data-disabled={!d.showSource}>
+        <Field.Field orientation="horizontal">
           <Field.Content>
             <Field.Label for="furigana">ふりがなを付ける</Field.Label>
             <Field.Description
@@ -60,7 +59,6 @@
           <Switch
             id="furigana"
             checked={d.furigana}
-            disabled={!d.showSource}
             onCheckedChange={(v) => set({ furigana: v })}
           />
         </Field.Field>

@@ -19,7 +19,8 @@ const SILENT_MS = 5000;
 class Panel {
   view = $state<SettingsView | undefined>();
   languages = $state<LanguageOption[]>([]);
-  devices = $state<string[]>([]);
+  /** 取れるまでは undefined */
+  devices = $state<string[] | undefined>();
   server = $state<Status>("connecting");
   /** 字幕を始められなかった・止まった理由 */
   transcriptionError = $state<string | undefined>();
@@ -27,6 +28,8 @@ class Panel {
   level = $state<number | undefined>();
   /** 最後に SILENT_DB を超えた時刻 */
   private heardAt = 0;
+  /** 最後にレベルが届いた時刻 */
+  private levelAt = 0;
   now = $state(Date.now());
 
   get settings() {
@@ -66,8 +69,10 @@ class Panel {
     if (msg.type === "transcription.status") {
       this.transcriptionError = msg.error ?? undefined;
     } else if (msg.type === "audio.level") {
-      // 届き始めた時点を「聞こえた」とみなし、そこから数える
-      if (this.level === undefined || msg.db > SILENT_DB) this.heardAt = Date.now();
+      // 届き始めた（張り直しで途切れた後も）時点を「聞こえた」とみなし、そこから数える
+      const now = Date.now();
+      if (now - this.levelAt > 1000 || msg.db > SILENT_DB) this.heardAt = now;
+      this.levelAt = now;
       this.level = msg.db;
     }
   }
@@ -86,10 +91,17 @@ class Panel {
     return this.update({ transcriptionEnabled: enabled });
   }
 
+  /** 保存できたら true */
   setKey = (provider: Provider, key: string) =>
     this.run(async () => {
       this.view = await api.setKey(provider, key);
       toast.success(key ? "保存しました" : "削除しました");
+    });
+
+  demo = () =>
+    this.run(async () => {
+      const res = await api.demo();
+      if (!res.ok) throw new Error(await res.text());
     });
 
   /** 失敗したらサーバーの説明を出す。成功したら true */

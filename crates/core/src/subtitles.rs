@@ -586,6 +586,7 @@ impl Router {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::settings::Segmentation;
 
     #[test]
     fn level_meter_reports_peak_per_window() {
@@ -599,7 +600,6 @@ mod tests {
             Some(LevelMeter::FLOOR_DB)
         );
     }
-    use crate::settings::Segmentation;
 
     fn segmenter() -> Segmenter {
         Segmenter::new(&Segmentation {

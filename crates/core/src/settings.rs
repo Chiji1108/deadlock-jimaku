@@ -150,7 +150,7 @@ impl Segmentation {
 impl Default for Segmentation {
     fn default() -> Self {
         Self {
-            min_silence_ms: 400,
+            min_silence_ms: 750,
             max_segment_ms: 8000,
         }
     }
@@ -158,10 +158,11 @@ impl Default for Segmentation {
 
 impl Settings {
     /// 辞書に名前を載せる言語（DESIGN.md 8.2）
-    /// ランク名に使う言語
+    /// ランク名に使う言語。選んだ言語の名前を取っていなければ（翻訳先から外したなど）話す言語
     pub fn rank_language(&self) -> LangCode {
         self.rank_language
             .clone()
+            .filter(|l| self.glossary_languages().contains(l))
             .unwrap_or_else(|| self.mic_language.clone())
     }
 
@@ -397,6 +398,15 @@ mod tests {
             })
             .unwrap();
         assert_eq!(reset.rank_language(), "ja");
+
+        // 名前を取っていない言語（翻訳先から外した）は話す言語に戻る
+        let ru = next
+            .apply(SettingsPatch {
+                rank_language: Some("ru".into()),
+                ..Default::default()
+            })
+            .unwrap();
+        assert_eq!(ru.rank_language(), "ja");
 
         for patch in [
             SettingsPatch {

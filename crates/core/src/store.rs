@@ -31,6 +31,9 @@ pub struct Store {
     /// バッジ → アイコン（webp）。バッジごとに持ち、別のバッジのアイコンを配信しない
     rank_image: Mutex<Option<(u32, Bytes)>>,
     tx: broadcast::Sender<ServerMsg>,
+    /// マイクの入力レベル（dBFS）。1 秒に 10 回届くので、字幕などと同じ broadcast には流さない
+    /// （購読していないオーバーレイを起こさず、取りこぼしの原因にもしない）
+    level: watch::Sender<f32>,
 }
 
 impl Store {
@@ -58,6 +61,7 @@ impl Store {
             rank: Mutex::new(None),
             rank_image: Mutex::new(None),
             tx: broadcast::channel(256).0,
+            level: watch::Sender::new(f32::NEG_INFINITY),
         })
     }
 
@@ -165,9 +169,13 @@ impl Store {
         msgs
     }
 
-    /// 入力レベルは持たずに流すだけ（あとから接続した画面には、次の値から届く）
     pub fn send_level(&self, db: f32) {
-        let _ = self.tx.send(ServerMsg::AudioLevel { db });
+        self.level.send_replace(db);
+    }
+
+    /// 購読した後の値だけが届く（あとから接続した画面には、次の値から届く）
+    pub fn watch_level(&self) -> watch::Receiver<f32> {
+        self.level.subscribe()
     }
 
     pub fn set_rank(&self, rank: RankState) {
