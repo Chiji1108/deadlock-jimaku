@@ -112,8 +112,8 @@
         >
           <Select.Trigger class="w-full">{panel.label(s.micLanguage)}</Select.Trigger>
           <Select.Content>
-            {#each panel.languages as l (l.code)}
-              <Select.Item value={l.code}>{l.label}</Select.Item>
+            {#each panel.languages as code (code)}
+              <Select.Item value={code}>{panel.label(code)}</Select.Item>
             {/each}
           </Select.Content>
         </Select.Root>
@@ -133,13 +133,13 @@
           value={s.translateTo}
           onValueChange={(v) => panel.update({ translateTo: v })}
         >
-          {#each panel.languages.filter((l) => l.code !== s.micLanguage) as l (l.code)}
+          {#each panel.languages.filter((code) => code !== s.micLanguage) as code (code)}
             <ToggleGroup.Item
-              value={l.code}
+              value={code}
               size="sm"
-              disabled={!s.translateTo.includes(l.code) && s.translateTo.length >= MAX_TRANSLATE_TO}
+              disabled={!s.translateTo.includes(code) && s.translateTo.length >= MAX_TRANSLATE_TO}
             >
-              {l.label}
+              {panel.label(code)}
             </ToggleGroup.Item>
           {/each}
         </ToggleGroup.Root>

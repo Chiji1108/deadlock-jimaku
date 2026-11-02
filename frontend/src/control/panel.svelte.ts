@@ -1,6 +1,5 @@
 // 操作パネルの状態。各タブはこれを読み、変更は api 経由でサーバーに送る（サーバーの返す設定で置き換える）
 import { toast } from "svelte-sonner";
-import type { LanguageOption } from "../generated/LanguageOption";
 import type { Provider } from "../generated/Provider";
 import type { ServerMsg } from "../generated/ServerMsg";
 import type { SettingsPatch } from "../generated/SettingsPatch";
@@ -12,13 +11,19 @@ import { connect, type Status } from "../lib/ws";
 export const overlayUrl = (name: "subtitles" | "rank") =>
   `${import.meta.env.CORE_ORIGIN}/overlay/${name}`;
 
+/** 言語名は画面の言語（日本語）で出す。翻訳先は配信者が読める名前で選ぶ */
+const languageNames = new Intl.DisplayNames("ja", { type: "language" });
+/** Intl の名前が不自然なもの（「ポルトガル語 (イベリア半島)」）は地域を外す */
+const NAME_CODE: Record<string, string> = { "pt-PT": "pt" };
+
 /** これより小さい入力が続いたら「音が届いていない」 */
 const SILENT_DB = -60;
 const SILENT_MS = 5000;
 
 class Panel {
   view = $state<SettingsView | undefined>();
-  languages = $state<LanguageOption[]>([]);
+  /** 対応している言語のコード */
+  languages = $state<string[]>([]);
   /** 取れるまでは undefined */
   devices = $state<string[] | undefined>();
   server = $state<Status>("connecting");
@@ -46,7 +51,7 @@ class Panel {
     return this.running && this.level !== undefined && this.now - this.heardAt > SILENT_MS;
   }
 
-  label = (code: string) => this.languages.find((l) => l.code === code)?.label ?? code;
+  label = (code: string) => languageNames.of(NAME_CODE[code] ?? code) ?? code;
 
   start() {
     const tick = setInterval(() => (this.now = Date.now()), 500);

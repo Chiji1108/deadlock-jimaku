@@ -239,10 +239,3 @@ pub struct SettingsView {
     #[ts(optional)]
     pub unsaved: Option<String>,
 }
-
-#[derive(Clone, Debug, Serialize, TS)]
-#[ts(export)]
-pub struct LanguageOption {
-    pub code: LangCode,
-    pub label: String,
-}

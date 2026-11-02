@@ -1,4 +1,3 @@
-import type { LanguageOption } from "../generated/LanguageOption";
 import type { Provider } from "../generated/Provider";
 import type { SettingsPatch } from "../generated/SettingsPatch";
 import type { SettingsView } from "../generated/SettingsView";
@@ -24,6 +23,7 @@ export const api = {
       body: JSON.stringify({ key }),
     }),
   devices: () => request<string[]>("/api/devices"),
-  languages: () => request<LanguageOption[]>("/api/languages"),
+  /** 対応している言語のコード */
+  languages: () => request<string[]>("/api/languages"),
   demo: () => fetch("/api/demo", { method: "POST" }),
 };
