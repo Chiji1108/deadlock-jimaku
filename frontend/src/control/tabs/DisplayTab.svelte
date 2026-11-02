@@ -68,7 +68,8 @@
       <Card.Description
         >ここで変えた見せ方は、OBS に表示中の字幕にもそのまま反映されます</Card.Description
       >
-      <Card.Action>
+      <Card.Action class="flex gap-1">
+        <DisplayDetailsDialog />
         <Button variant="outline" size="sm" onclick={panel.demo}>
           <PlayIcon />テスト字幕を流す
         </Button>
@@ -101,10 +102,7 @@
           </ToggleGroup.Root>
         </Field.Field>
         <Field.Field>
-          <div class="flex items-center justify-between">
-            <Field.Label>文字の大きさ</Field.Label>
-            <DisplayDetailsDialog />
-          </div>
+          <Field.Label>文字の大きさ</Field.Label>
           <ToggleGroup.Root
             type="single"
             variant="outline"
@@ -131,7 +129,7 @@
         <Field.Field>
           <Field.Label>文字の色</Field.Label>
           <Field.Description>
-            確定した字幕の色です。ヒーロー名とスキル名の色は「詳しく設定」から変えられます（アイテム名はスロットの色のまま）
+            確定した字幕の色です。ヒーロー名とスキル名の色は、上の「詳しく設定」から変えられます（アイテム名はスロットの色のまま）
           </Field.Description>
           <div class="flex flex-wrap items-center gap-2">
             {#each COLORS as c (c.hex)}

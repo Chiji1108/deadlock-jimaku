@@ -119,6 +119,7 @@ impl SubtitleDisplay {
     pub const HOLD_SECONDS: std::ops::RangeInclusive<f32> = 2.0..=30.0;
     pub const FONT_SIZE: std::ops::RangeInclusive<u32> = 16..=96;
 
+    /// 色の項目。検証と小文字への統一はここに並べたものにかける
     fn colors_mut(&mut self) -> [&mut String; 3] {
         [
             &mut self.text_color,
@@ -136,9 +137,7 @@ impl SubtitleDisplay {
             || !Self::HOLD_SECONDS.contains(&self.hold_seconds)
             || !Self::FONT_SIZE.contains(&self.font_size)
             || !Self::FONT_SIZE.contains(&self.translation_font_size)
-            || ![&self.text_color, &self.hero_color, &self.ability_color]
-                .iter()
-                .all(|c| is_hex(c))
+            || !self.clone().colors_mut().iter().all(|c| is_hex(c))
         {
             return Err("subtitleDisplay is out of range".into());
         }
@@ -407,13 +406,30 @@ pub struct SettingsPatch {
 
 /// ファイルがなければ既定値。壊れていたら脇に退けて既定値から始める。
 /// 読めない（ほかのアプリが掴んでいるなど）ときは Err: 既定値で上書き保存しないため
+/// 手で書き換えて読めなくなった項目があっても、ほかの設定まで失わないよう、その項目だけ既定値にする。
+/// JSON として読めなければ Err
+fn parse(bytes: &[u8]) -> serde_json::Result<Settings> {
+    let mut json: serde_json::Value = serde_json::from_slice(bytes)?;
+    if let Some(fields) = json.as_object_mut() {
+        fields.retain(|key, value| {
+            let one = serde_json::json!({ key.as_str(): value.clone() });
+            let readable = serde_json::from_value::<Settings>(one).is_ok();
+            if !readable {
+                tracing::warn!("ignoring unreadable setting {key}; using the default");
+            }
+            readable
+        });
+    }
+    serde_json::from_value(json)
+}
+
 pub fn load(path: &Path) -> std::io::Result<Settings> {
     let bytes = match std::fs::read(path) {
         Ok(bytes) => bytes,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Settings::default()),
         Err(e) => return Err(e),
     };
-    match serde_json::from_slice::<Settings>(&bytes) {
+    match parse(&bytes) {
         Ok(settings) => Ok(settings.sanitized()),
         Err(e) => {
             let aside = path.with_extension("json.broken");
@@ -634,6 +650,60 @@ mod tests {
         )
         .unwrap();
         assert_eq!(load(&path).unwrap().subtitle_display.text_color, "#ffe066");
+    }
+
+    #[test]
+    fn unreadable_display_keeps_the_other_settings() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("settings.json");
+        std::fs::write(
+            &path,
+            r#"{ "rankAccount": 308386819, "subtitleDisplay": { "background": "none" } }"#,
+        )
+        .unwrap();
+        let s = load(&path).unwrap();
+        assert_eq!(s.rank_account, Some(308_386_819));
+        assert_eq!(s.subtitle_display, SubtitleDisplay::default());
+    }
+
+    #[test]
+    fn display_patch_checks_and_lowercases_every_color() {
+        let s = Settings::default();
+        let next = s
+            .apply(SettingsPatch {
+                subtitle_display: Some(SubtitleDisplayPatch {
+                    hero_color: Some("#FF7AB6".into()),
+                    ability_color: Some("#00AAFF".into()),
+                    background: Some(Background::Band),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            })
+            .unwrap();
+        let d = &next.subtitle_display;
+        assert_eq!(
+            (d.hero_color.as_str(), d.ability_color.as_str()),
+            ("#ff7ab6", "#00aaff")
+        );
+        assert_eq!(d.background, Background::Band);
+        for bad in [
+            SubtitleDisplayPatch {
+                hero_color: Some("pink".into()),
+                ..Default::default()
+            },
+            SubtitleDisplayPatch {
+                ability_color: Some("#12345".into()),
+                ..Default::default()
+            },
+        ] {
+            assert!(
+                s.apply(SettingsPatch {
+                    subtitle_display: Some(bad),
+                    ..Default::default()
+                })
+                .is_err()
+            );
+        }
     }
 
     #[test]

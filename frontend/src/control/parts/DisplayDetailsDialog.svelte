@@ -22,9 +22,10 @@
   });
 
   const d = $derived(panel.settings!.subtitleDisplay);
+  /** 開くたびに reset で今の設定から始める */
   let values = $state<Values>(pick(panel.settings!.subtitleDisplay));
   /** 開いたときの値。変えた項目だけを送る（開いている間にほかで変えた項目を戻さない） */
-  let opened = pick(panel.settings!.subtitleDisplay);
+  let opened = $state.snapshot(values);
 
   const sizes = [
     { key: "fontSize", label: "話した言葉の大きさ" },
@@ -49,9 +50,9 @@
   }
 
   function save() {
-    const patch: SubtitleDisplayPatch = Object.fromEntries(
-      Object.entries(values).filter(([k, v]) => opened[k as keyof Values] !== v),
-    );
+    const patch: SubtitleDisplayPatch = {};
+    for (const { key } of sizes) if (values[key] !== opened[key]) patch[key] = values[key];
+    for (const { key } of colors) if (values[key] !== opened[key]) patch[key] = values[key];
     return panel.update({ subtitleDisplay: patch });
   }
 </script>

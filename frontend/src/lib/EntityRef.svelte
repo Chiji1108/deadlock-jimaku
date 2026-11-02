@@ -31,6 +31,9 @@
     color: var(--entity-color, #ffd34d);
     white-space: nowrap;
   }
+  .hero {
+    color: var(--hero-color, #ffd34d);
+  }
   .ability {
     color: var(--ability-color, #8fd8ff);
   }
