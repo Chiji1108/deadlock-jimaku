@@ -1,6 +1,8 @@
 //! Tauri なしで中核だけを起動する（開発・動作確認用）。
 //!
-//! usage: overlays-headless [--demo]   # --demo: ダミー字幕を流し続ける（翻訳先は en, ru）
+//! usage: overlays-headless [--demo] [--translate-to en,ru]
+//!   --demo          ダミー字幕を流し続ける
+//!   --translate-to  翻訳先の言語（既定は Settings::default()）
 
 use std::net::{Ipv4Addr, SocketAddr};
 
@@ -13,22 +15,23 @@ use tokio::net::TcpListener;
 async fn main() -> std::io::Result<()> {
     tracing_subscriber::fmt::init();
 
-    let demo = std::env::args().any(|a| a == "--demo");
-    let settings = Settings {
-        // ダミー字幕は英語とロシア語の訳文を出すので、辞書にもその言語を入れる
-        translate_to: if demo {
-            vec!["en".into(), "ru".into()]
-        } else {
-            Settings::default().translate_to
-        },
-        ..Settings::default()
-    };
+    let args: Vec<String> = std::env::args().collect();
+    let demo = args.iter().any(|a| a == "--demo");
+    let mut settings = Settings::default();
+    if let Some(langs) = args
+        .iter()
+        .position(|a| a == "--translate-to")
+        .and_then(|i| args.get(i + 1))
+    {
+        settings.translate_to = langs.split(',').map(str::to_owned).collect();
+    }
 
-    let store = Store::new();
+    let languages = settings.glossary_languages();
+    let store = Store::new(settings);
     tokio::spawn(assets::load_into(
         store.clone(),
         default_data_dir().join("assets"),
-        settings.glossary_languages(),
+        languages,
     ));
     if demo {
         let store = store.clone();

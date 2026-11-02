@@ -9,7 +9,8 @@ use tokio::time::sleep;
 use crate::store::Store;
 use crate::types::{Enriched, EnrichedKind, Segment, Stage, Token};
 
-/// `[漢字|かんじ]` はルビ、`{hero:13|ヘイズ}` はエンティティ（`|` の後は発話された表現）
+/// `[漢字|かんじ]` はルビ、`{hero:13|ヘイズ}` はエンティティ（`|` の後は発話された表現。
+/// 訳文では辞書がまだないときに出す名前）。訳文は設定の翻訳先にある言語だけを流す
 struct Line {
     source: &'static str,
     en: &'static str,
@@ -24,18 +25,18 @@ const LINES: &[Line] = &[
     },
     Line {
         source: "[僕|ぼく]の[一番|いちばん][好|す]きなキャラは{hero:13|ヘイズ}ですね。",
-        en: "My favorite character is {hero:13}.",
-        ru: "Мой любимый персонаж — {hero:13}.",
+        en: "My favorite character is {hero:13|Haze}.",
+        ru: "Мой любимый персонаж — {hero:13|Haze}.",
     },
     Line {
         source: "{hero:13|ヘイズ}の{ability:731943444|バレットダンス}はめっちゃ[強|つよ]い。",
-        en: "{hero:13}'s {ability:731943444} is really strong.",
-        ru: "{ability:731943444} у {hero:13} очень сильный.",
+        en: "{hero:13|Haze}'s {ability:731943444|Bullet Dance} is really strong.",
+        ru: "{ability:731943444|Bullet Dance} у {hero:13|Haze} очень сильный.",
     },
     Line {
         source: "まずは{item:1548066885|拡張マガジン}を[買|か]おう。",
-        en: "Let's buy {item:1548066885} first.",
-        ru: "Сначала купим {item:1548066885}.",
+        en: "Let's buy {item:1548066885|Extended Magazine} first.",
+        ru: "Сначала купим {item:1548066885|Extended Magazine}.",
     },
 ];
 
@@ -90,6 +91,7 @@ async fn play_line(store: &Store, line: &Line) {
         source,
         translations: [("en", line.en), ("ru", line.ru)]
             .into_iter()
+            .filter(|(lang, _)| store.settings().translate_to.iter().any(|t| t == lang))
             .map(|(lang, text)| (lang.into(), parse(text)))
             .collect(),
     });

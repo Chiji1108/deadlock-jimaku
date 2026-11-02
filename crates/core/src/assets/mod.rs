@@ -1,6 +1,7 @@
 //! 用語辞書とアイコンのキャッシュ（DESIGN.md 8.2）。
 //!
-//! `{root}/{clientVersion}/glossary.json` と `{root}/{clientVersion}/icons/{kind}/{id}.{ext}` に置く。
+//! `{root}/{CACHE_FORMAT}/{clientVersion}/glossary.json` と `.../{clientVersion}/icons/{kind}/{id}.{ext}` に置き、
+//! アイコンは `/assets/{clientVersion}/icons/...` で配信する（URL に版を含めるので、長くキャッシュできる）。
 //! 起動時に最新の clientVersion を確認し、キャッシュがなければ作る。通信できなければ手元の最新を使う。
 
 mod api;
@@ -18,19 +19,22 @@ use crate::store::Store;
 use crate::types::{Glossary, LangCode};
 use glossary::{Extras, Icon, Sources};
 
+/// キャッシュの形式。Glossary の形やアイコンの置き方を変えたら上げる（古いキャッシュは読まない）
+const CACHE_FORMAT: &str = "v2";
+
 /// 同時にダウンロードするアイコンの数
 const ICON_CONCURRENCY: usize = 8;
 
 #[derive(Clone)]
 pub struct Loaded {
     pub glossary: Arc<Glossary>,
-    /// clientVersion ごとのディレクトリ（`icons/` を含む）
-    pub dir: PathBuf,
+    /// clientVersion ごとのディレクトリを並べる場所
+    pub root: PathBuf,
 }
 
 impl Loaded {
-    pub fn icons_dir(&self) -> PathBuf {
-        self.dir.join("icons")
+    pub fn icons_dir(&self, version: u32) -> PathBuf {
+        version_dir(&self.root, version).join("icons")
     }
 }
 
@@ -51,6 +55,7 @@ pub async fn load_into(store: Arc<Store>, root: PathBuf, languages: Vec<LangCode
 }
 
 pub async fn load(root: &Path, languages: &[LangCode]) -> anyhow::Result<Loaded> {
+    let root = &root.join(CACHE_FORMAT);
     // どのエンティティを載せるかは英語版で決めるので、en は常に取る
     let languages = lang::normalize(languages.iter().cloned().chain(["en".to_owned()]));
     let client = api::Client::default();
@@ -98,45 +103,67 @@ async fn build_and_save(
         sources.items.insert(code, items);
     }
 
-    let (glossary, icons) = glossary::build(version, &sources, &extras()?);
-    let dir = root.join(version.to_string());
-    download_icons(client, &dir.join("icons"), icons).await;
+    let (mut glossary, icons) = glossary::build(version, &sources, &extras()?);
+    let dir = version_dir(root, version);
+    let failed = download_icons(client, &dir.join("icons"), icons).await;
+    // 取れなかったアイコンは表示しない（404 を出さない）
+    for reference in &failed {
+        if let Some(e) = glossary.entities.get_mut(reference) {
+            e.icon = None;
+        }
+    }
 
-    let json = serde_json::to_vec(&glossary)?;
-    tokio::fs::create_dir_all(&dir).await?;
-    let tmp = dir.join("glossary.json.tmp");
-    tokio::fs::write(&tmp, json).await?;
-    tokio::fs::rename(&tmp, dir.join("glossary.json")).await?;
+    // アイコンが欠けていれば保存しない。次の起動で作り直し、欠けた分だけ取り直す
+    if failed.is_empty() {
+        write_atomic(&dir.join("glossary.json"), &serde_json::to_vec(&glossary)?).await?;
+    } else {
+        tracing::warn!(
+            "{} icons missing; the glossary will be rebuilt next time",
+            failed.len()
+        );
+    }
     Ok(Loaded {
         glossary: Arc::new(glossary),
-        dir,
+        root: root.to_owned(),
     })
 }
 
-/// 取れなかったアイコンは警告だけ出して、アイコンなしで表示する
-async fn download_icons(client: &api::Client, icons_dir: &Path, icons: Vec<Icon>) {
+/// 取れなかったアイコンのエンティティの参照を返す
+async fn download_icons(client: &api::Client, icons_dir: &Path, icons: Vec<Icon>) -> Vec<String> {
     stream::iter(icons)
-        .for_each_concurrent(ICON_CONCURRENCY, |icon| async move {
+        .map(|icon| async move {
             let path = icons_dir.join(&icon.path);
             if path.exists() {
-                return;
+                return None;
             }
-            let saved = async {
-                tokio::fs::create_dir_all(path.parent().expect("has parent")).await?;
-                let bytes = client.bytes(&icon.url).await?;
-                tokio::fs::write(&path, bytes).await?;
-                anyhow::Ok(())
-            }
-            .await;
-            if let Err(e) = saved {
+            let saved = async { write_atomic(&path, &client.bytes(&icon.url).await?).await }.await;
+            saved.err().map(|e| {
                 tracing::warn!("icon {}: {e:#}", icon.url);
-            }
+                icon.reference
+            })
         })
-        .await;
+        .buffer_unordered(ICON_CONCURRENCY)
+        .filter_map(std::future::ready)
+        .collect()
+        .await
+}
+
+/// 途中で止まっても壊れたファイルが残らないよう、一時ファイルに書いてから置き換える
+async fn write_atomic(path: &Path, bytes: &[u8]) -> anyhow::Result<()> {
+    tokio::fs::create_dir_all(path.parent().expect("has parent")).await?;
+    let mut tmp = path.as_os_str().to_owned();
+    tmp.push(".tmp");
+    tokio::fs::write(&tmp, bytes).await?;
+    tokio::fs::rename(&tmp, path).await?;
+    Ok(())
+}
+
+fn version_dir(root: &Path, version: u32) -> PathBuf {
+    root.join(version.to_string())
 }
 
 fn read_cached(root: &Path, version: u32, languages: &[LangCode]) -> Option<Loaded> {
-    let loaded = read_dir(&root.join(version.to_string()))?;
+    let loaded = read_version(root, version)?;
     let covers = languages
         .iter()
         .all(|l| loaded.glossary.languages.contains(l));
@@ -149,15 +176,15 @@ fn newest_cached(root: &Path) -> Option<Loaded> {
         .ok()?
         .filter_map(|e| e.ok()?.file_name().to_str()?.parse::<u32>().ok())
         .max()
-        .and_then(|version| read_dir(&root.join(version.to_string())))
+        .and_then(|version| read_version(root, version))
 }
 
-fn read_dir(dir: &Path) -> Option<Loaded> {
-    let json = std::fs::read(dir.join("glossary.json")).ok()?;
+fn read_version(root: &Path, version: u32) -> Option<Loaded> {
+    let json = std::fs::read(version_dir(root, version).join("glossary.json")).ok()?;
     let glossary = serde_json::from_slice(&json).ok()?;
     Some(Loaded {
         glossary: Arc::new(glossary),
-        dir: dir.to_owned(),
+        root: root.to_owned(),
     })
 }
 
@@ -183,7 +210,7 @@ mod tests {
     fn newest_cached_picks_highest_version() {
         let root = tempfile::tempdir().unwrap();
         for v in [6500u32, 6518, 6510] {
-            let dir = root.path().join(v.to_string());
+            let dir = version_dir(root.path(), v);
             std::fs::create_dir_all(&dir).unwrap();
             let g = Glossary {
                 client_version: v,

@@ -85,7 +85,7 @@ Deadlock 配信者向けの OBS オーバーレイツール。
 | コマンド | 内容 |
 |---|---|
 | `mise run dev` | Tauri アプリを開発モードで起動（Vite の HMR 付き） |
-| `mise run headless` | Tauri なしで中核だけ起動し、ダミー字幕を流し続ける（`http://127.0.0.1:4510/overlay/subtitles`） |
+| `mise run headless` | Tauri なしで中核だけ起動し、ダミー字幕を流し続ける（`--demo --translate-to en,ru`。`http://127.0.0.1:4510/overlay/subtitles`） |
 | `mise run check` | oxfmt / oxlint / svelte-check / rustfmt / clippy / cargo test |
 
 - Git フック（**lefthook**）: commit 時に変更ファイルへ oxfmt / oxlint / cargo fmt、push 時に `mise run check`。clone 後に `mise exec -- lefthook install` を一度実行する。
@@ -360,14 +360,16 @@ mic ─┬─▶ ローカル VAD（Silero）── 発話の開始 → Segment 
 アプリの起動時に `client-versions` の最新を確認し、その版のキャッシュがなければ作る。
 
 1. **`mic.language`・`en`・`translateTo` の言語だけ**を取得し、`id` で結合する（アイテム一覧は 1 言語で約 7MB あるので、29 言語をまとめて取らない）。どのエンティティを載せるかは英語版で決める（英語名がないものは載せない）。
-2. アイコンを `{データディレクトリ}/assets/{clientVersion}/icons/{kind}/{id}.webp` にダウンロードし、`/assets/icons/...` で配信する（配信中に外部へ依存しない）。取れなかったアイコンは警告だけ出し、アイコンなしで表示する。
+2. アイコンを `{データディレクトリ}/assets/{形式}/{clientVersion}/icons/{kind}/{id}.webp` にダウンロードし、`/assets/{clientVersion}/icons/...` で配信する（配信中に外部へ依存しない。URL に版を含むので `immutable` で長くキャッシュできる）。ファイルは一時ファイルに書いてから置き換える。取れなかったアイコンはそのエンティティから外して表示せず、辞書も保存しない（次の起動で作り直し、欠けた分だけ取り直す）。
 3. `data/aliases.ja.json` と `data/readings.ja.json`（キーはエンティティの参照）をマージする。読みは、つなげた文字列が今の日本語名と一致するときだけ使う（パッチで改名されたら古い読みは捨てる）。
 4. 読みが登録されていない漢字の名前は、Phase 3 で LLM に読みを作らせてキャッシュし、「未確認」として操作パネルに出す（人が確認したら `readings.ja.json` に入れる）。それまではルビなしで表示する。
 
-- キャッシュに必要な言語が揃っていれば作り直さない（2 回目以降の起動は 1 秒未満）。初回の生成は 3 言語で約 8 秒。
+- キャッシュに必要な言語が揃っていれば作り直さない（2 回目以降の起動は 1 秒未満）。初回の生成は 3 言語で約 8 秒。`languages` には実際に名前が取れた言語だけを載せる。
+- `{形式}`（`CACHE_FORMAT`）は Glossary の形やアイコンの置き方を変えたら上げ、古いキャッシュを読まないようにする。
+- 同じスキルを複数のヒーローが持つ場合は、最初のヒーローのものとして 1 件だけ載せる。
 - 通信できないときは、手元にある最新の版を使う（言語が足りなくても使う）。
 - データディレクトリは Tauri の `app_data_dir`（ヘッドレスでは `dirs::data_dir()/dev.deadlock-stream-overlays.app`。同じ場所）。
-- 辞書ができたら `glossary.updated` を流し、オーバーレイは `GET /api/glossary` を取り直す（まだないときは 503）。
+- 辞書ができたら `glossary.updated` を流し、オーバーレイは `GET /api/glossary` を取り直す（まだないときは 503）。`glossary.updated` は接続直後と取りこぼし後にも送る（10 章）。
 - 実測（client 6839）: ヒーロー 44、アイテム 173、スキル 176。
 
 ### 8.3 形式（`types.rs` の `Glossary`）
@@ -382,7 +384,7 @@ mic ─┬─▶ ローカル VAD（Silero）── 発話の開始 → Segment 
       "className": "hero_haze",
       "names": { "en": "Haze", "ja": "ヘイズ", "ru": "Пелена" },
       "aliases": {},
-      "icon": "/assets/icons/hero/13.webp"
+      "icon": "/assets/6839/icons/hero/13.webp"
     },
     "item:1548066885": {
       "kind": "item",
@@ -390,7 +392,7 @@ mic ─┬─▶ ローカル VAD（Silero）── 発話の開始 → Segment 
       "names": { "en": "Extended Magazine", "ja": "基礎拡張マガジン", "ru": "Увеличенный магазин" },
       "ruby": [{ "text": "基礎拡張", "ruby": "きそかくちょう" }, { "text": "マガジン" }],
       "aliases": { "ja": ["拡張マガジン"] },
-      "icon": "/assets/icons/item/1548066885.webp",
+      "icon": "/assets/6839/icons/item/1548066885.webp",
       "slot": "weapon"
     },
     "ability:731943444": {
@@ -398,7 +400,7 @@ mic ─┬─▶ ローカル VAD（Silero）── 発話の開始 → Segment 
       "className": "ability_bullet_flurry",
       "names": { "en": "Bullet Dance", "ja": "バレットダンス", "ru": "Танец пуль" },
       "aliases": {},
-      "icon": "/assets/icons/ability/731943444.webp",
+      "icon": "/assets/6839/icons/ability/731943444.webp",
       "hero": "hero:13"
     }
   }
@@ -471,6 +473,7 @@ type ServerMsg =
 - 辞書は `GET /api/glossary` で取得し、オーバーレイ側で持つ（Segment には ID しか載らない）。
 - サーバーは直近の Segment を（例: 50 件）保持して、snapshot で送る。
 - WS クライアントは指数バックオフで再接続し、再接続したら snapshot で状態を置き換える。
+- 接続直後と broadcast の取りこぼし（Lagged）の後は、購読しているすべてのトピックの現在の状態（`snapshot` と、辞書があれば `glossary.updated`）を送る。
 
 ## 11. 字幕オーバーレイ
 

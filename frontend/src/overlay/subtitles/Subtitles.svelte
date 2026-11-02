@@ -36,14 +36,13 @@
     const disconnect = connect(["subtitle", "glossary"], (msg) => {
       switch (msg.type) {
         case "snapshot":
-          // 接続（再接続）のたびに届く。サーバーが再起動していれば辞書も変わっている
-          void loadGlossary();
           segments.clear();
           for (const s of msg.segments) segments.set(s.id, s);
           break;
         case "segment.upsert":
           segments.set(msg.segment.id, msg.segment);
           break;
+        // 辞書ができたとき（と接続直後）に届く
         case "glossary.updated":
           void loadGlossary();
           break;

@@ -21,6 +21,8 @@ pub struct Extras {
 /// ダウンロードするアイコン。`path` は icons ディレクトリからの相対パス
 #[derive(Debug, PartialEq)]
 pub struct Icon {
+    /// このアイコンを使うエンティティの参照
+    pub reference: String,
     pub url: String,
     pub path: String,
 }
@@ -49,11 +51,17 @@ pub fn build(client_version: u32, sources: &Sources, extras: &Extras) -> (Glossa
     let mut icons = Vec::new();
     let mut add = |kind: EntityKind, id: u32, entity: Entity, icon_url: Option<&str>| {
         let reference = format!("{}:{id}", kind_str(kind));
+        // 同じスキルを複数のヒーローが持つことがあれば、最初のヒーローのものとして載せる
+        if entities.contains_key(&reference) {
+            return;
+        }
         let mut entity = entity;
         if let Some(url) = icon_url {
             let path = format!("{}/{id}.{}", kind_str(kind), extension(url));
-            entity.icon = Some(format!("/assets/icons/{path}"));
+            // URL に版を含め、パッチでアイコンが変わっても古いキャッシュが残らないようにする
+            entity.icon = Some(format!("/assets/{client_version}/icons/{path}"));
             icons.push(Icon {
+                reference: reference.clone(),
                 url: url.to_owned(),
                 path,
             });
@@ -115,9 +123,16 @@ pub fn build(client_version: u32, sources: &Sources, extras: &Extras) -> (Glossa
 
     apply_extras(&mut entities, extras);
 
+    // 実際に名前が取れた言語だけを載せる（空の応答の言語をキャッシュ済みと扱わない）
+    let languages = sources
+        .heroes
+        .keys()
+        .filter(|lang| entities.values().any(|e| e.names.contains_key(*lang)))
+        .cloned()
+        .collect();
     let glossary = Glossary {
         client_version,
-        languages: sources.heroes.keys().cloned().collect(),
+        languages,
         entities,
     };
     (glossary, icons)
@@ -209,8 +224,11 @@ fn slot(s: &str) -> Option<ItemSlot> {
     }
 }
 
+/// URL のパス部分の拡張子（クエリやフラグメントは見ない）
 fn extension(url: &str) -> &str {
-    url.rsplit_once('.')
+    let path = url.split(['?', '#']).next().unwrap_or(url);
+    let file = path.rsplit('/').next().unwrap_or(path);
+    file.rsplit_once('.')
         .map(|(_, ext)| ext)
         .filter(|ext| ext.chars().all(|c| c.is_ascii_alphanumeric()))
         .unwrap_or("png")
@@ -282,11 +300,44 @@ mod tests {
         );
         let haze = &g.entities["hero:13"];
         assert_eq!(haze.names["ja"], "ヘイズ");
-        assert_eq!(haze.icon.as_deref(), Some("/assets/icons/hero/13.webp"));
+        assert_eq!(
+            haze.icon.as_deref(),
+            Some("/assets/6518/icons/hero/13.webp")
+        );
         assert_eq!(g.entities["ability:2"].hero.as_deref(), Some("hero:13"));
         assert_eq!(g.entities["item:1"].slot, Some(ItemSlot::Weapon));
         assert_eq!(icons.len(), 3);
         assert_eq!(g.languages, ["en", "ja"]);
+    }
+
+    #[test]
+    fn shared_ability_is_listed_once() {
+        let mut s = sources();
+        let other = hero(14, "hero_other", "Other", true);
+        s.heroes.get_mut("en").unwrap().push(other);
+        let (g, icons) = build(6518, &s, &Extras::default());
+
+        assert_eq!(g.entities["ability:2"].hero.as_deref(), Some("hero:13"));
+        assert_eq!(
+            icons.iter().filter(|i| i.reference == "ability:2").count(),
+            1
+        );
+    }
+
+    #[test]
+    fn languages_without_names_are_not_listed() {
+        let mut s = sources();
+        s.heroes.insert("th".into(), vec![]);
+        s.items.insert("th".into(), vec![]);
+        let (g, _) = build(6518, &s, &Extras::default());
+
+        assert_eq!(g.languages, ["en", "ja"]);
+    }
+
+    #[test]
+    fn extension_ignores_query_and_dots_in_host() {
+        assert_eq!(extension("https://cdn.example/a/haze.webp?v=2#x"), "webp");
+        assert_eq!(extension("https://cdn.example/a/haze"), "png");
     }
 
     #[test]
