@@ -25,6 +25,8 @@ pub struct Models {
     pub translate: String,
     /// 辞書の漢字名の読み（OpenAI）。名前ごとにキャッシュする
     pub readings: String,
+    /// translate / readings の推論の深さ。推論しないモデルにするときは None
+    pub reasoning_effort: Option<String>,
 }
 
 /// 字幕の区切り（DESIGN.md 3.1）
@@ -47,6 +49,7 @@ impl Default for Settings {
                 batch: "voxtral-small-transcribe-3".into(),
                 translate: "gpt-6.1-terra".into(),
                 readings: "gpt-6.1-terra".into(),
+                reasoning_effort: Some("none".into()),
             },
             target_streaming_delay_ms: 480,
             segmentation: Segmentation {

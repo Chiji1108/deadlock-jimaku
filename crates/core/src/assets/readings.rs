@@ -1,6 +1,7 @@
 //! 辞書の漢字名の読み（DESIGN.md 8.2）。
 //!
-//! 辞書は形態素解析の読みで保存し、読み込むたびに LLM の読み（名前ごとのキャッシュ）を重ねる。
+//! 辞書は形態素解析の読みで保存し、読み込むたびに重ねる。優先順は
+//! 手で書いた読み（`data/readings.ja.json`）→ LLM の読み（名前ごとのキャッシュ）→ 形態素解析。
 //! キャッシュにない名前は辞書を配信した後に問い合わせ、届いたら配信し直す。
 //! 答えが検証に通らなかった名前はキャッシュせず、次の起動で問い直す（答えは揺れるので、たいてい次は通る）。
 //! 辞書の保存と切り離しているので、キーが無効でも辞書は保存され、キーを後から設定しても次の起動で効く。
@@ -22,26 +23,33 @@ const TIMEOUT: Duration = Duration::from_secs(120);
 pub struct ReadingModel {
     pub api_key: String,
     pub model: String,
+    pub reasoning_effort: Option<String>,
 }
 
 /// 名前 → 読み
 pub type Cache = BTreeMap<String, Vec<RubySegment>>;
 
-/// 壊れていたら脇に退けて空から始める（黙って上書きしない）
-pub async fn load_cache(path: &Path) -> Cache {
-    let Ok(bytes) = tokio::fs::read(path).await else {
-        return Cache::new();
+/// 手で書いた読み。参照 → 読み（つなげると今の名前になるものだけが使われる）
+pub type Manual = BTreeMap<String, Vec<RubySegment>>;
+
+/// ファイルがなければ空。壊れていたら脇に退けて空から始める。
+/// 読めない（権限など）、退けられないときは Err（黙って上書きしない）
+pub async fn load_cache(path: &Path) -> anyhow::Result<Cache> {
+    let bytes = match tokio::fs::read(path).await {
+        Ok(bytes) => bytes,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Cache::new()),
+        Err(e) => return Err(e.into()),
     };
     match serde_json::from_slice(&bytes) {
-        Ok(cache) => cache,
+        Ok(cache) => Ok(cache),
         Err(e) => {
             let aside = path.with_extension("json.broken");
+            tokio::fs::rename(path, &aside).await?;
             tracing::warn!(
                 "readings cache is broken ({e}); moved to {}",
                 aside.display()
             );
-            let _ = tokio::fs::rename(path, aside).await;
-            Cache::new()
+            Ok(Cache::new())
         }
     }
 }
@@ -54,24 +62,41 @@ pub async fn save_cache(path: &Path, cache: &Cache) -> anyhow::Result<()> {
     Ok(())
 }
 
-/// 読みが必要なエンティティの日本語名。手で読みを書いたもの（`manual`）は除く
+/// その名前に使える手書きの読み（パッチで名前が変わっていたら使わない）
+fn manual_for<'a>(manual: &'a Manual, reference: &str, name: &str) -> Option<&'a Vec<RubySegment>> {
+    let ruby = manual.get(reference)?;
+    let text: String = ruby.iter().map(|s| s.text.as_str()).collect();
+    if text != name {
+        tracing::warn!("readings.ja.json: {reference} does not match the name {name}");
+        return None;
+    }
+    Some(ruby)
+}
+
+/// LLM に読ませる名前（漢字を含み、使える手書きの読みがないもの）
 fn kanji_names<'a>(
     glossary: &'a Glossary,
-    manual: &'a BTreeSet<String>,
+    manual: &'a Manual,
 ) -> impl Iterator<Item = (&'a String, &'a String)> {
     glossary
         .entities
         .iter()
-        .filter(|(r, _)| !manual.contains(*r))
         .filter_map(|(r, e)| Some((r, e.names.get("ja")?)))
         .filter(|(_, name)| name.chars().any(furigana::is_kanji))
+        .filter(|(r, name)| manual_for(manual, r, name).is_none())
 }
 
-/// キャッシュにある読みを辞書に重ねる
-pub fn apply(glossary: &mut Glossary, cache: &Cache, manual: &BTreeSet<String>) {
-    let found: Vec<(String, Vec<RubySegment>)> = kanji_names(glossary, manual)
+/// 手書きの読みと、キャッシュにある LLM の読みを辞書に重ねる
+pub fn apply(glossary: &mut Glossary, cache: &Cache, manual: &Manual) {
+    let mut found: Vec<(String, Vec<RubySegment>)> = kanji_names(glossary, manual)
         .filter_map(|(r, name)| Some((r.clone(), cache.get(name)?.clone())))
         .collect();
+    found.extend(glossary.entities.iter().filter_map(|(r, e)| {
+        Some((
+            r.clone(),
+            manual_for(manual, r, e.names.get("ja")?)?.clone(),
+        ))
+    }));
     for (reference, ruby) in found {
         if let Some(e) = glossary.entities.get_mut(&reference) {
             e.ruby = Some(ruby);
@@ -80,7 +105,7 @@ pub fn apply(glossary: &mut Glossary, cache: &Cache, manual: &BTreeSet<String>) 
 }
 
 /// まだ問い合わせていない名前
-pub fn missing(glossary: &Glossary, cache: &Cache, manual: &BTreeSet<String>) -> Vec<String> {
+pub fn missing(glossary: &Glossary, cache: &Cache, manual: &Manual) -> Vec<String> {
     let names: BTreeSet<&String> = kanji_names(glossary, manual)
         .map(|(_, name)| name)
         .filter(|name| !cache.contains_key(*name))
@@ -120,6 +145,7 @@ pub async fn ask(
         llm::Request {
             api_key: &model.api_key,
             model: &model.model,
+            reasoning_effort: model.reasoning_effort.as_deref(),
             system: SYSTEM,
             user: serde_json::to_string(names)?,
             schema_name: "readings",
@@ -158,8 +184,9 @@ Many names are coined compounds; read them the way a Japanese gamer would read t
 
 /// - つなげると名前になる
 /// - 読みはひらがな（カタカナはひらがなにする）
-/// - 送り仮名は外に出す（「呪い / のろい」→「呪(のろ)」「い」）
-/// - ルビの付く部分は漢字だけ、漢字には必ずルビがある（「魔呪の狩猟罠」全体に 1 つのルビ、のようなものは受け取らない）
+/// - 読みは漢字の部分ごとに割り当てる（「取り扱い / とりあつかい」→ 取(と)り扱(あつか)い、
+///   「魔呪の罠 / まじゅのわな」→ 魔呪(まじゅ)の罠(わな)）。割り当てられなければ受け取らない
+/// - 漢字には必ず読みがある
 fn validate(name: &str, segments: Vec<RubySegment>) -> Option<Vec<RubySegment>> {
     let joined: String = segments.iter().map(|s| s.text.as_str()).collect();
     if joined != name {
@@ -167,26 +194,19 @@ fn validate(name: &str, segments: Vec<RubySegment>) -> Option<Vec<RubySegment>> 
     }
     let mut out = Vec::new();
     for s in segments {
-        let ruby = s.ruby.as_deref().map(furigana::to_hiragana);
-        if ruby
-            .as_deref()
-            .is_some_and(|r| !r.chars().all(|c| matches!(c, 'ぁ'..='ゖ' | 'ー')))
-        {
-            return None;
-        }
-        for t in furigana::ruby_tokens(&s.text, ruby.as_deref()) {
-            let Token::Text { text, ruby } = t else {
-                return None;
-            };
-            let ok = match &ruby {
-                Some(_) => text.chars().all(furigana::is_kanji),
-                None => !text.chars().any(furigana::is_kanji),
-            };
-            if !ok {
-                return None;
-            }
-            out.push(RubySegment { text, ruby });
-        }
+        let tokens = match s.ruby.as_deref().map(furigana::to_hiragana) {
+            None if s.text.chars().any(furigana::is_kanji) => return None,
+            None => vec![Token::Text {
+                text: s.text,
+                ruby: None,
+            }],
+            Some(r) if !r.chars().all(|c| matches!(c, 'ぁ'..='ゟ' | 'ー')) => return None,
+            Some(r) => furigana::align(&s.text, &r)?,
+        };
+        out.extend(tokens.into_iter().filter_map(|t| match t {
+            Token::Text { text, ruby } => Some(RubySegment { text, ruby }),
+            Token::Entity { .. } => None,
+        }));
     }
     Some(out)
 }
@@ -240,10 +260,26 @@ mod tests {
             ),
             None
         );
-        // 助詞をはさんだ全体に 1 つのルビ
+        // 読みのかなの部分が名前と合わない
+        assert_eq!(
+            validate("魔呪の罠", vec![seg("魔呪の罠", Some("まじゅがわな"))]),
+            None
+        );
+    }
+
+    #[test]
+    fn validate_aligns_readings_across_kana() {
         assert_eq!(
             validate("魔呪の罠", vec![seg("魔呪の罠", Some("まじゅのわな"))]),
-            None
+            Some(vec![
+                seg("魔呪", Some("まじゅ")),
+                seg("の", None),
+                seg("罠", Some("わな"))
+            ])
+        );
+        assert_eq!(
+            validate("いすゞ", vec![seg("いすゞ", None)]),
+            Some(vec![seg("いすゞ", None)])
         );
     }
 
@@ -264,13 +300,31 @@ mod tests {
     #[test]
     fn apply_overlays_cached_readings_except_manual_ones() {
         let mut g = glossary();
-        let manual = BTreeSet::from(["item:1".to_owned()]);
+        let manual = Manual::from([
+            (
+                "item:1".to_owned(),
+                vec![seg("基礎拡張", Some("てがき")), seg("マガジン", None)],
+            ),
+            // 名前が変わった手書きの読みは使わず、LLM の読みを使う
+            (
+                "item:2".to_owned(),
+                vec![seg("古い名前", Some("ふるいなまえ"))],
+            ),
+        ]);
         let cache = Cache::from([
             (
                 "人狼の呪い".to_owned(),
                 vec![seg("人狼", Some("じんろう")), seg("の呪い", None)],
             ),
             ("基礎拡張マガジン".to_owned(), vec![seg("x", Some("x"))]),
+            (
+                "穴掘り".to_owned(),
+                vec![
+                    seg("穴", Some("あな")),
+                    seg("掘", Some("ほ")),
+                    seg("り", None),
+                ],
+            ),
         ]);
         apply(&mut g, &cache, &manual);
         assert_eq!(
@@ -279,15 +333,34 @@ mod tests {
                 .as_deref(),
             Some("じんろう")
         );
-        // 手で書いた読みは上書きしない。キャッシュにない名前はそのまま
-        assert!(g.entities["item:1"].ruby.is_none());
-        assert!(g.entities["item:2"].ruby.is_none());
+        assert_eq!(
+            g.entities["item:1"].ruby.as_ref().unwrap()[0]
+                .ruby
+                .as_deref(),
+            Some("てがき")
+        );
+        assert_eq!(
+            g.entities["item:2"].ruby.as_ref().unwrap()[0]
+                .ruby
+                .as_deref(),
+            Some("あな")
+        );
     }
 
     #[test]
     fn missing_skips_cached_manual_and_kana_names() {
         let g = glossary();
-        let manual = BTreeSet::from(["item:1".to_owned()]);
+        let manual = Manual::from([
+            (
+                "item:1".to_owned(),
+                vec![seg("基礎拡張", Some("てがき")), seg("マガジン", None)],
+            ),
+            // 名前が変わった手書きの読みは使わず、LLM の読みを使う
+            (
+                "item:2".to_owned(),
+                vec![seg("古い名前", Some("ふるいなまえ"))],
+            ),
+        ]);
         let cache = Cache::from([("穴掘り".to_owned(), vec![seg("穴", Some("あな"))])]);
         assert_eq!(missing(&g, &cache, &manual), ["人狼の呪い"]);
     }
@@ -297,7 +370,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("cache.json");
         tokio::fs::write(&path, b"{ broken").await.unwrap();
-        assert!(load_cache(&path).await.is_empty());
+        assert!(load_cache(&path).await.unwrap().is_empty());
         assert!(dir.path().join("cache.json.broken").exists());
     }
 }

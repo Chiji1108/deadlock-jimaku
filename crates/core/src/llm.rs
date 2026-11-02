@@ -1,6 +1,6 @@
 //! 翻訳と名前の読みに使う LLM（OpenAI の chat completions、構造化出力）。
 //!
-//! 推論はさせない（`reasoning_effort: none`）。比較した結果は DESIGN.md 9.3。
+//! 推論の深さは設定（`models.reasoning_effort`、既定 `none`）。比較した結果は DESIGN.md 9.3。
 
 use std::time::Duration;
 
@@ -13,6 +13,8 @@ const CHAT_URL: &str = "https://api.openai.com/v1/chat/completions";
 pub struct Request<'a> {
     pub api_key: &'a str,
     pub model: &'a str,
+    /// 推論しないモデルでは None（パラメータを送らない）
+    pub reasoning_effort: Option<&'a str>,
     pub system: &'a str,
     pub user: String,
     pub schema_name: &'a str,
@@ -24,9 +26,8 @@ pub async fn chat_json<T: DeserializeOwned>(
     http: &reqwest::Client,
     req: Request<'_>,
 ) -> anyhow::Result<T> {
-    let body = json!({
+    let mut body = json!({
         "model": req.model,
-        "reasoning_effort": "none",
         "messages": [
             { "role": "system", "content": req.system },
             { "role": "user", "content": req.user },
@@ -36,6 +37,9 @@ pub async fn chat_json<T: DeserializeOwned>(
             "json_schema": { "name": req.schema_name, "strict": true, "schema": req.schema },
         },
     });
+    if let Some(effort) = req.reasoning_effort {
+        body["reasoning_effort"] = json!(effort);
+    }
     let res = http
         .post(CHAT_URL)
         .bearer_auth(req.api_key)

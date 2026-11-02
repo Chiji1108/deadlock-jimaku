@@ -26,6 +26,7 @@ pub struct Enricher {
     /// OpenAI の API キー。ないときは翻訳しない（固有名詞とふりがなは付ける）
     api_key: Option<String>,
     model: String,
+    reasoning_effort: Option<String>,
     source_lang: LangCode,
     targets: Vec<LangCode>,
     /// 固定の先頭部分（プロンプトキャッシュが効く）
@@ -40,15 +41,20 @@ impl Enricher {
     pub fn new(
         api_key: Option<String>,
         model: String,
+        reasoning_effort: Option<String>,
         source_lang: LangCode,
         targets: Vec<LangCode>,
     ) -> anyhow::Result<Self> {
         let targets = lang::normalize(targets.into_iter().filter(|t| *t != source_lang));
+        if api_key.is_none() && !targets.is_empty() {
+            tracing::warn!("OPENAI_API_KEY is not set; subtitles will not be translated");
+        }
         let furigana = (source_lang == "ja").then(Furigana::new).transpose()?;
         Ok(Self {
-            http: reqwest::Client::new(),
+            http: crate::http().clone(),
             api_key,
             model,
+            reasoning_effort,
             system: system_prompt(&source_lang),
             source_lang,
             targets,
@@ -136,6 +142,7 @@ impl Enricher {
             llm::Request {
                 api_key,
                 model: &self.model,
+                reasoning_effort: self.reasoning_effort.as_deref(),
                 system: &self.system,
                 user: user.to_string(),
                 schema_name: "translation",
@@ -521,6 +528,7 @@ mod tests {
         Enricher::new(
             Some("key".into()),
             "model".into(),
+            None,
             "ja".into(),
             targets.iter().map(|t| (*t).to_owned()).collect(),
         )

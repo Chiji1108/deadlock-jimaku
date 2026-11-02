@@ -71,9 +71,8 @@ fn plain(text: &str) -> Token {
     }
 }
 
-/// ルビを確かめて、送り仮名を外に出す。
-/// 漢字のない語や、かな以外の読みにはルビを付けない。
-/// 「強い / つよい」→「強(つよ)」「い」、「お金 / おかね」→「お」「金(かね)」
+/// 語の読みを漢字の部分ごとに割り当てる。漢字のない語や、かな以外の読みにはルビを付けない。
+/// 「強い / つよい」→「強(つよ)」「い」、「取り扱い / とりあつかい」→「取(と)」「り」「扱(あつか)」「い」
 pub fn ruby_tokens(text: &str, ruby: Option<&str>) -> Vec<Token> {
     let Some(ruby) = ruby.filter(|r| !r.is_empty() && r.chars().all(is_kana)) else {
         return vec![plain(text)];
@@ -81,37 +80,51 @@ pub fn ruby_tokens(text: &str, ruby: Option<&str>) -> Vec<Token> {
     if !text.chars().any(is_kanji) {
         return vec![plain(text)];
     }
-    let t: Vec<char> = text.chars().collect();
-    let r: Vec<char> = ruby.chars().collect();
-    let prefix = t
-        .iter()
-        .zip(&r)
-        .take_while(|(a, b)| a == b && is_kana(**a))
-        .count();
-    let suffix = t[prefix..]
-        .iter()
-        .rev()
-        .zip(r[prefix..].iter().rev())
-        .take_while(|(a, b)| a == b && is_kana(**a))
-        .count();
-    let core: String = t[prefix..t.len() - suffix].iter().collect();
-    let core_ruby: String = r[prefix..r.len() - suffix].iter().collect();
-    if core.is_empty() || core_ruby.is_empty() {
-        return vec![plain(text)];
+    align(text, &to_hiragana(ruby)).unwrap_or_else(|| vec![plain(text)])
+}
+
+/// 漢字の続く部分と、それ以外（かななど）の部分に分け、かなの部分を読みの中で探して区切る。
+/// 読みとかなの部分が合わなければ None
+pub fn align(text: &str, reading: &str) -> Option<Vec<Token>> {
+    let mut runs: Vec<(bool, String)> = Vec::new();
+    for c in text.chars() {
+        match runs.last_mut() {
+            Some((kanji, run)) if *kanji == is_kanji(c) => run.push(c),
+            _ => runs.push((is_kanji(c), c.to_string())),
+        }
     }
-    let head: String = t[..prefix].iter().collect();
-    let tail: String = t[t.len() - suffix..].iter().collect();
-    [
-        (!head.is_empty()).then(|| plain(&head)),
-        Some(Token::Text {
-            text: core,
-            ruby: Some(core_ruby),
-        }),
-        (!tail.is_empty()).then(|| plain(&tail)),
-    ]
-    .into_iter()
-    .flatten()
-    .collect()
+    let r: Vec<char> = reading.chars().collect();
+    let mut pos = 0;
+    let mut out = Vec::new();
+    for (i, (kanji, run)) in runs.iter().enumerate() {
+        if !kanji {
+            let kana: Vec<char> = to_hiragana(run).chars().collect();
+            if r.get(pos..pos + kana.len())? != kana.as_slice() {
+                return None;
+            }
+            out.push(plain(run));
+            pos += kana.len();
+            continue;
+        }
+        // 漢字の読みは、次のかなの部分が読みに現れるところまで（漢字 1 文字に少なくとも 1 文字）
+        let end = match runs.get(i + 1) {
+            None => r.len(),
+            Some((_, next)) => {
+                let next: Vec<char> = to_hiragana(next).chars().collect();
+                (pos + 1..=r.len().saturating_sub(next.len()))
+                    .find(|&j| r[j..].starts_with(&next))?
+            }
+        };
+        if end <= pos {
+            return None;
+        }
+        out.push(Token::Text {
+            text: run.clone(),
+            ruby: Some(r[pos..end].iter().collect()),
+        });
+        pos = end;
+    }
+    (pos == r.len()).then_some(out)
 }
 
 pub fn to_hiragana(s: &str) -> String {
@@ -157,6 +170,29 @@ mod tests {
             ruby_tokens("実況", Some("じっきょう")),
             [t("実況", Some("じっきょう"))]
         );
+    }
+
+    #[test]
+    fn ruby_is_split_around_kana_inside_a_word() {
+        assert_eq!(
+            ruby_tokens("取り扱い", Some("とりあつかい")),
+            [
+                t("取", Some("と")),
+                t("り", None),
+                t("扱", Some("あつか")),
+                t("い", None)
+            ]
+        );
+        assert_eq!(
+            align("魔呪の罠", "まじゅのわな"),
+            Some(vec![
+                t("魔呪", Some("まじゅ")),
+                t("の", None),
+                t("罠", Some("わな"))
+            ])
+        );
+        // かなの部分が読みに現れない
+        assert_eq!(align("取り扱い", "とあつかい"), None);
     }
 
     #[test]

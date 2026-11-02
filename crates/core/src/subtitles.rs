@@ -68,15 +68,17 @@ pub async fn run(
     // 形態素解析の辞書の読み込みは同期処理なので、非同期のワーカーを塞がない
     let enricher = {
         let (key, model) = (openai_key, settings.models.translate.clone());
+        let effort = settings.models.reasoning_effort.clone();
         let (lang, targets) = (settings.mic_language.clone(), settings.translate_to.clone());
-        tokio::task::spawn_blocking(move || Enricher::new(key, model, lang, targets)).await??
+        tokio::task::spawn_blocking(move || Enricher::new(key, model, effort, lang, targets))
+            .await??
     };
     let (done_tx, mut done_rx) = mpsc::channel(64);
     let mut pipeline = Pipeline::new(
         store,
         &settings,
         Arc::new(BatchContext {
-            http: reqwest::Client::new(),
+            http: crate::http().clone(),
             api_key,
             model: settings.models.batch.clone(),
             language: settings.mic_language.clone(),

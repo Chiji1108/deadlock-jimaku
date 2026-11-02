@@ -8,9 +8,7 @@ mod api;
 mod glossary;
 mod readings;
 
-pub use readings::ReadingModel;
-
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -24,10 +22,13 @@ use crate::types::{Glossary, LangCode};
 use glossary::{Extras, Icon, Sources};
 
 /// キャッシュの形式。Glossary の形やアイコンの置き方を変えたら上げる（古いキャッシュは読まない）
-const CACHE_FORMAT: &str = "v5";
+const CACHE_FORMAT: &str = "v6";
 
 /// LLM で付けた読みのキャッシュ。名前ごとなので、パッチやキャッシュ形式をまたいで使い回す
 const LLM_READINGS: &str = "readings-llm.ja.json";
+
+/// 1 回の問い合わせで読ませる名前の数
+const READINGS_PER_REQUEST: usize = 40;
 
 /// 同時にダウンロードするアイコンの数
 const ICON_CONCURRENCY: usize = 8;
@@ -46,30 +47,26 @@ impl Loaded {
 }
 
 /// 辞書を用意して store に載せる。失敗してもアプリは辞書なしで動き続ける。
-/// 漢字名の読みはキャッシュ済みの LLM の読みを重ねて配信し、足りない名前は配信した後に問い合わせる
-/// （`reading_model` がなければ形態素解析の読みのまま）
-pub async fn load_into(
-    store: Arc<Store>,
-    root: PathBuf,
-    languages: Vec<LangCode>,
-    reading_model: Option<ReadingModel>,
-) {
-    let loaded = match load(&root, &languages).await {
+/// 漢字名の読みは手書きの読みと、キャッシュ済みの LLM の読みを重ねて配信し、
+/// 足りない名前は配信した後に問い合わせて配信し直す（`openai_key` がなければ形態素解析の読みのまま）
+pub async fn load_into(store: Arc<Store>, root: PathBuf, openai_key: Option<String>) {
+    let settings = store.settings().clone();
+    let loaded = match load(&root, &settings.glossary_languages()).await {
         Ok(loaded) => loaded,
         Err(e) => {
             tracing::error!("glossary unavailable: {e:#}");
             return;
         }
     };
-    let manual = match extras() {
-        Ok(extras) => extras.readings_ja.into_keys().collect(),
+    let manual = match manual_readings() {
+        Ok(manual) => manual,
         Err(e) => {
             tracing::warn!("{e:#}");
-            BTreeSet::new()
+            readings::Manual::new()
         }
     };
     let cache_path = root.join(LLM_READINGS);
-    let mut cache = readings::load_cache(&cache_path).await;
+    let cache = readings::load_cache(&cache_path).await;
     let publish = |cache: &readings::Cache| {
         let mut glossary = (*loaded.glossary).clone();
         readings::apply(&mut glossary, cache, &manual);
@@ -84,27 +81,43 @@ pub async fn load_into(
             root: loaded.root.clone(),
         });
     };
+    let mut cache = match cache {
+        Ok(cache) => cache,
+        Err(e) => {
+            // キャッシュを読めないまま問い合わせると、保存で上書きしてしまう
+            tracing::warn!("readings cache unreadable, LLM readings are off: {e:#}");
+            publish(&readings::Cache::new());
+            return;
+        }
+    };
     publish(&cache);
 
-    let Some(model) = reading_model else {
+    let Some(api_key) = openai_key else {
         return;
+    };
+    let model = readings::ReadingModel {
+        api_key,
+        model: settings.models.readings.clone(),
+        reasoning_effort: settings.models.reasoning_effort.clone(),
     };
     let missing = readings::missing(&loaded.glossary, &cache, &manual);
     if missing.is_empty() {
         return;
     }
-    // 失敗しても辞書は形態素解析の読みで動いている。次の起動で問い直す
-    match readings::ask(&reqwest::Client::new(), &model, &missing).await {
-        Ok(found) => {
-            tracing::info!("readings: asked {} names", missing.len());
-            cache.extend(found);
-            if let Err(e) = readings::save_cache(&cache_path, &cache).await {
-                tracing::warn!("readings cache: {e:#}");
+    // 1 回の問い合わせを小さくし、届いた分ずつ保存する。失敗した分は次の起動で問い直す
+    for names in missing.chunks(READINGS_PER_REQUEST) {
+        match readings::ask(crate::http(), &model, names).await {
+            Ok(found) => {
+                tracing::info!("readings: {}/{} names", found.len(), names.len());
+                cache.extend(found);
+                if let Err(e) = readings::save_cache(&cache_path, &cache).await {
+                    tracing::warn!("readings cache: {e:#}");
+                }
             }
-            publish(&cache);
+            Err(e) => tracing::warn!("readings: {e:#}"),
         }
-        Err(e) => tracing::warn!("readings: {e:#}"),
     }
+    publish(&cache);
 }
 
 pub async fn load(root: &Path, languages: &[LangCode]) -> anyhow::Result<Loaded> {
@@ -254,9 +267,13 @@ fn extras() -> anyhow::Result<Extras> {
     Ok(Extras {
         aliases_ja: serde_json::from_str(include_str!("../../../../data/aliases.ja.json"))
             .context("data/aliases.ja.json")?,
-        readings_ja: serde_json::from_str(include_str!("../../../../data/readings.ja.json"))
-            .context("data/readings.ja.json")?,
     })
+}
+
+/// 手で書いた読み。辞書には保存せず、読み込むたびに重ねる（名前が変わっていたら使わない）
+fn manual_readings() -> anyhow::Result<readings::Manual> {
+    serde_json::from_str(include_str!("../../../../data/readings.ja.json"))
+        .context("data/readings.ja.json")
 }
 
 #[cfg(test)]
@@ -266,6 +283,7 @@ mod tests {
     #[test]
     fn bundled_extras_parse() {
         extras().unwrap();
+        manual_readings().unwrap();
     }
 
     #[test]
