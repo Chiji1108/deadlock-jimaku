@@ -21,7 +21,8 @@ Deadlock 配信者向けの OBS オーバーレイツール。
 - 配信 PC は Windows（Deadlock・OBS・本ツールを同じマシンで動かす）
 - ヘッドホンを使う（マイクにゲーム音が回り込まない）
 - 音声認識: Mistral Voxtral 3（Realtime と Small Transcribe 3）
-- ふりがな・翻訳・固有名詞の判定: Mistral Large 4
+- 翻訳: Mistral Small 4（Large 4 は遅すぎるので使わない。9.3）
+- ふりがな: 形態素解析（Lindera + IPADIC）、固有名詞: 辞書との照合（9 章）
 - ゲームデータ: [deadlock-api](https://api.deadlock-api.com/docs)（MIT）
 
 ---
@@ -101,7 +102,8 @@ Deadlock 配信者向けの OBS オーバーレイツール。
 |---|---|---|---|
 | partial | `voxtral-mini-transcribe-realtime-3` | $0.008/分 | WebSocket。用語ヒントに対応 |
 | final | `voxtral-small-transcribe-3`（`-latest` はまだ v2 を指すので使わない） | $0.004/分 | `/v1/audio/transcriptions`。精度が最も高い |
-| enrich | `mistral-large-4` | 100 万トークンあたり 入力 $0.70 / キャッシュ済み入力 $0.07 / 出力 $2.10 | Public Preview。1M コンテキスト。構造化出力に対応 |
+| enrich（翻訳） | `mistral-small-2603` | — | 推論なしで 1 発話 1〜3 秒。構造化出力に対応 |
+| （不採用） | `mistral-large-4` | 100 万トークンあたり 入力 $0.70 / キャッシュ済み入力 $0.07 / 出力 $2.10 | 推論を止められず 1 発話 21〜24 秒（9.3） |
 
 モデル ID はすべて設定で持つ（enrich を Mistral Small 4 に差し替えられるように）。
 
@@ -167,6 +169,8 @@ Deadlock 配信者向けの OBS オーバーレイツール。
 | 合計（翻訳先が英語のみ） | **約 $1.2/時間** |
 
 辞書をプロンプトの固定の先頭部分に置いてキャッシュを効かせるのが、コストに一番効く。
+
+※ この表は Large 4 で見積もったもの。翻訳は Small 4 に変え、出力も訳文だけにしたので、実際はこれより安い（料金は Mistral の価格表で確認する）。
 
 ## 4. リポジトリ構成
 
@@ -364,7 +368,7 @@ mic ─┬─▶ ローカル VAD（earshot）── 発話の開始 → Segment
 1. **`mic.language`・`en`・`translateTo` の言語だけ**を取得し、`id` で結合する（アイテム一覧は 1 言語で約 7MB あるので、29 言語をまとめて取らない）。どのエンティティを載せるかは英語版で決める（英語名がないものは載せない）。
 2. アイコンを `{データディレクトリ}/assets/{形式}/{clientVersion}/icons/{kind}/{id}.webp` にダウンロードし、`/assets/{clientVersion}/icons/...` で配信する（配信中に外部へ依存しない。URL に版を含むので `immutable` で長くキャッシュできる）。ファイルは一時ファイルに書いてから置き換える。取れなかったアイコンはそのエンティティから外して表示せず、辞書も保存しない（次の起動で作り直し、欠けた分だけ取り直す）。
 3. `data/aliases.ja.json` と `data/readings.ja.json`（キーはエンティティの参照）をマージする。読みは、つなげた文字列が今の日本語名と一致するときだけ使う（パッチで改名されたら古い読みは捨てる）。
-4. 読みが登録されていない漢字の名前は、Phase 3 で LLM に読みを作らせてキャッシュし、「未確認」として操作パネルに出す（人が確認したら `readings.ja.json` に入れる）。それまではルビなしで表示する。
+4. 読みが登録されていない漢字の名前には、形態素解析で読みを付ける（client 6839 で 35 件すべてに付いた）。辞書が知らない造語（人狼・屍鬼・魔呪・五芒星など）で読みが誤るものは `readings.ja.json` で直す（今は 7 件）。
 
 - キャッシュに必要な言語が揃っていれば作り直さない（2 回目以降の起動は 1 秒未満）。初回の生成は 3 言語で約 8 秒。`languages` には実際に名前が取れた言語だけを載せる。
 - `{形式}`（`CACHE_FORMAT`）は Glossary の形やアイコンの置き方を変えたら上げ、古いキャッシュを読まないようにする。
@@ -418,43 +422,54 @@ mic ─┬─▶ ローカル VAD（earshot）── 発話の開始 → Segment
 
 `context_bias` には、`mic.language` での名前と略称を入れる（およそ 400 件）。音声とコンテキストを共有するので、多すぎて 400 エラーになるときは、ヒーローとアイテムを優先してスキルを削る。
 
-## 9. LLM（enrich）
+## 9. enrich（`enrich.rs`, `furigana.rs`）
 
-### 9.1 方針
+### 9.1 方針: LLM には翻訳だけを任せる
 
-- **固有名詞は名前ではなく ID で返させる**。描画するときに ID から各言語の公式名とアイコンに置き換えるので、公式名の正しさと強調表示が同じ仕組みで決まる。翻訳先の言語を増やしても、プロンプトの辞書は変わらない。
-- 出力はすべて **Rich**（トークンの列）にする。原文も訳文も同じ描画コンポーネントで扱える。
-- 音声認識の誤り（用語の聞き間違い）の補正も、同じ呼び出しの中でやる。
+最初は「トークン分け・ふりがな・固有名詞・翻訳・雑音の判定」をすべて LLM に返させたが、実測で次の問題が出たので役割を分けた（16 章）。
 
-### 9.2 入力
+| 問題（Mistral Small 4） | 対応 |
+|---|---|
+| ふりがながずれる（`僕(ぼ)`、`最(さい)近(き)`）、送り仮名ごと付ける（`強い(つよい)`） | **形態素解析**（Lindera + IPADIC、埋め込み辞書）で読みを決める。1 文 1ms 程度 |
+| 名前の途中で区切る（`ヘ⟨イズ⟩`）、同じ名前を付けたり付けなかったりする | **辞書の名前と略称の最長一致**で固有名詞を決める |
+| 普通の文を「雑音」と判定して消す | 判定しない。咳やフィラーだけの音声はバッチの文字起こしが空になり、そこで捨てる |
+| 訳文で `{id}` を使わず名前をそのまま書く（`Haze's`） | 原文に出てきたエンティティの、その言語と英語の名前を訳文から探してエンティティに戻す |
 
-- system: 役割、出力のルール、辞書（`mic.language` での名前・略称と ID の一覧）
-  - 辞書は固定の先頭部分に置いて、プロンプトキャッシュを効かせる
-- user: `{ sourceLang, translateTo, context: [直前の発話...], text }`
+### 9.2 処理の流れ
 
-### 9.3 出力（JSON Schema で指定する）
+1. final のテキストを、辞書の名前と略称（話す言語、2 文字以上）で最長一致に分ける。カタカナの名前は、前後もカタカナなら別の語の一部として一致させない（「セブンイレブン」の「セブン」）
+2. 固有名詞以外の部分を形態素解析し、漢字を含む語にルビを付ける（送り仮名と接頭のかなは外に出す。「強(つよ)い」「お金(かね)」）。日本語のときだけ
+3. LLM に `{id|発話された表現}` 入りの原文と直前 3 発話を渡し、各言語の訳文を `{id}` 入りで返させる
+4. 訳文を `{id}` で区切り、辞書にない ID は捨て、名前のまま書かれたものはエンティティに戻す
+
+翻訳に失敗しても、1・2 の結果（固有名詞とふりがな）は付けて enriched にする。
+
+### 9.3 LLM の入出力
+
+- モデル: `mistral-small-2603`（設定の `models.enrich`）
+  - Mistral Large 4 は推論を止められず（`reasoning_effort` は low / medium / high のみ）、1 発話に 21〜24 秒かかり、出力が途中で切れることもあったので使わない
+- system: 役割とルール、ゲーム用語の一覧（`id: 英語名`。固定の先頭部分にしてキャッシュを効かせる）
+- user: `{ "context": [直前の確定字幕], "transcript": "{hero:13|ヘイズ}のウルト強い" }`
+- 構造化出力（`response_format: json_schema`, `strict`）: `{ "translations": { "en": "...", "ru": "..." } }`。`translations` のキーは設定の翻訳先から毎回作る
+- タイムアウト 8 秒
+
+### 9.4 出力の型
 
 ```ts
 type Token =
-  | { t: "text"; text: string; ruby?: string }      // ruby は日本語の、漢字を含むトークンにだけ付ける
-  | { t: "entity"; ref: string; spoken?: string };  // spoken = 実際に発話された表現（略称など）
-
-type Rich = Token[];
+  | { t: "text"; text: string; ruby?: string }      // ruby は日本語の漢字を含む語にだけ
+  | { t: "entity"; ref: string; spoken?: string };  // spoken = 原文で発話された表現
 
 interface Enriched {
-  kind: "speech" | "noise";              // noise = 咳、独り言の断片など
-  source: Rich;                          // 補正した原文
-  translations: Partial<Record<LangCode, Rich>>;
+  source: Token[];                               // 原文（固有名詞 + ふりがな）
+  translations: Partial<Record<LangCode, Token[]>>;
 }
 ```
 
-### 9.4 検証（コード側）
+### 9.5 制約
 
-- `entity.ref` が辞書にない → そのトークンを `text`（`spoken`）に置き換える
-- 日本語以外のテキストに `ruby` がある、`text` に漢字がないのに `ruby` がある、`ruby` がかな以外 → `ruby` を外す
-- 日本語の Rich に出てくるエンティティには、辞書の `ruby` を使う
-- `translations` に足りない言語がある → その言語は表示しない
-- JSON が壊れている、またはタイムアウト（例: 8 秒）→ enrich の失敗として扱う（7.2 を参照）
+- 訳文の固有名詞は辞書の形（主格）のまま差し込むので、格変化する言語（ロシア語など）では文法的に不自然になることがある（`У Пелена`）
+- 日本語への翻訳（話す言語が日本語以外のとき）は、訳文にふりがなが付かない（訳文は文字列で返させているため）。必要になったら訳文にも 1・2 を通す
 
 ## 10. イベントプロトコル（WS `/ws`）
 
@@ -538,10 +553,10 @@ URL: `/overlay/rank?lang=ja`
 
 | Phase | 内容 | 完了条件 |
 |---|---|---|
-| 0 | 土台: workspace、Tauri + axum + Svelte、WS upsert、ダミーの Segment | OBS にダミー字幕が流れて消える |
-| 1 | 言語の対応表、assets（glossary 生成、アイコンのキャッシュ）、Rich の描画 | ダミーの Enriched がアイコン・ルビ付きで、複数の言語で表示される |
-| 2 | mic → VAD で区切り → Voxtral Realtime（partial）→ Small Transcribe 3（final） | 自分の声が字幕になる |
-| 3 | enrich（ふりがな、翻訳、エンティティ） | 3 段階の表示が通しで動く |
+| 0 | 土台: workspace、Tauri + axum + Svelte、WS upsert、ダミーの Segment ✅ | OBS にダミー字幕が流れて消える |
+| 1 | 言語の対応表、assets（glossary 生成、アイコンのキャッシュ）、Rich の描画 ✅ | ダミーの Enriched がアイコン・ルビ付きで、複数の言語で表示される |
+| 2 | mic → VAD で区切り → Voxtral Realtime（partial）→ Small Transcribe 3（final） ✅ | 自分の声が字幕になる |
+| 3 | enrich（ふりがな、翻訳、エンティティ） ✅ | 3 段階の表示が通しで動く |
 | 4 | ランクオーバーレイ | ランクバッジが表示され、更新される |
 | 5 | 仕上げ: 操作パネル、インストーラー、自動更新 | 配布できる |
 
@@ -572,7 +587,9 @@ Phase 2 の前に、録音した実況音声で Voxtral 3 の精度（`context_b
 - [ ] 実際のマイクでの確認（このパイプラインはファイル入力でしか通していない。Windows の WASAPI と macOS のマイク許可を含めて確認する）
 - [ ] 本番に近い条件（配信用マイク、プレイしながら 5〜10 分、用語を多めに）でもう一度測る。`context_bias` の効果はこの条件でないと見えない
 - [ ] Realtime セッションの最大接続時間と、切れたときの挙動
-- [ ] Mistral Large 4 の正式な API ID、`response_format` での JSON Schema の指定方法、キャッシュが効く条件（固定の先頭部分の長さなど）
-- [ ] Large 4 の応答の速さ（遅ければ enrich だけ Mistral Small 4 にする）
+- [x] Large 4 / Small 4 の比較（同じ文で Large 4 は 21〜24 秒・推論 2,400〜2,900 トークン、Small 4 は 3 秒・推論なし）→ Small 4 を採用
+- [x] `response_format: { type: "json_schema", json_schema: { name, strict, schema } }` が使える
+- [x] enrich を通しで確認（sample01）: 4 発話すべてが enriched になり、ふりがな・固有名詞は正しく、final から 0.5〜2 秒
+- [ ] プロンプトキャッシュが効いているか（`usage.prompt_tokens_details.cached_tokens`）を配信の長さで確認する
 - [ ] 翻訳の質: 英語・ロシア語・中国語以外の言語で、ゲーム実況の口語がどこまで自然に訳せるか
 - [ ] ヒーローの `items` から signature スキルを引くときの対応関係

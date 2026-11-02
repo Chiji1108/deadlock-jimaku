@@ -39,18 +39,9 @@ pub enum Token {
     },
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
-#[serde(rename_all = "lowercase")]
-#[ts(export)]
-pub enum EnrichedKind {
-    Speech,
-    Noise,
-}
-
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub struct Enriched {
-    pub kind: EnrichedKind,
     pub source: Vec<Token>,
     pub translations: BTreeMap<LangCode, Vec<Token>>,
 }

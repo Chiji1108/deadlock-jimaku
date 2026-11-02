@@ -14,13 +14,14 @@ use std::sync::Arc;
 use anyhow::Context;
 use futures_util::{StreamExt, future::try_join_all, stream};
 
+use crate::furigana::Furigana;
 use crate::lang;
 use crate::store::Store;
 use crate::types::{Glossary, LangCode};
 use glossary::{Extras, Icon, Sources};
 
 /// キャッシュの形式。Glossary の形やアイコンの置き方を変えたら上げる（古いキャッシュは読まない）
-const CACHE_FORMAT: &str = "v2";
+const CACHE_FORMAT: &str = "v3";
 
 /// 同時にダウンロードするアイコンの数
 const ICON_CONCURRENCY: usize = 8;
@@ -103,7 +104,15 @@ async fn build_and_save(
         sources.items.insert(code, items);
     }
 
-    let (mut glossary, icons) = glossary::build(version, &sources, &extras()?);
+    let extras = extras()?;
+    // 名前の読みは形態素解析で付ける（辞書の読み込みと解析は同期処理なのでワーカーを塞がない）
+    let (mut glossary, icons) = tokio::task::spawn_blocking(move || {
+        let (mut glossary, icons) = glossary::build(version, &sources, &extras);
+        let furigana = Furigana::new()?;
+        glossary::fill_readings(&mut glossary, |name| furigana.annotate(name));
+        anyhow::Ok((glossary, icons))
+    })
+    .await??;
     let dir = version_dir(root, version);
     let failed = download_icons(client, &dir.join("icons"), icons).await;
     // 取れなかったアイコンは表示しない（404 を出さない）

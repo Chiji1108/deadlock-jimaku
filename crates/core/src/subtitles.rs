@@ -2,8 +2,9 @@
 //!
 //! マイク → VAD で区切る ─┬→ Voxtral Realtime の delta を Segment に追記（partial）
 //!                        └→ Segment が閉じたら区間を切り出して Small Transcribe 3（final）
+//!                             → ふりがな・翻訳・固有名詞（enriched）
 //!
-//! Segment の状態を書き換えるのは `Pipeline` だけにする。バッチの結果もチャンネルで受け取って反映する。
+//! Segment の状態を書き換えるのは `Pipeline` だけにする。バッチや enrich の結果もチャンネルで受け取って反映する。
 
 use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
@@ -12,11 +13,12 @@ use std::time::{Duration, Instant};
 use tokio::sync::mpsc;
 
 use crate::audio::{self, History, SAMPLE_RATE};
+use crate::enrich::Enricher;
 use crate::now_ms;
 use crate::settings::Settings;
 use crate::store::Store;
 use crate::stt::{self, BatchRequest, RealtimeConfig};
-use crate::types::{EntityKind, Glossary, LangCode, Segment, Stage};
+use crate::types::{Enriched, EntityKind, Glossary, LangCode, Segment, Stage};
 
 /// earshot が受け取るフレームの長さ（16ms）
 const FRAME: usize = 256;
@@ -25,6 +27,8 @@ const FRAME_MS: u32 = 16;
 const PADDING: u64 = SAMPLE_RATE as u64 * 300 / 1000;
 /// これより短い発話（咳やクリック）はバッチに送らず捨てる
 const MIN_SPEECH_MS: u32 = 250;
+/// enrich に文脈として渡す直前の確定字幕の数
+const CONTEXT_LINES: usize = 3;
 /// 用語ヒントの上限。音声とコンテキストを共有するので、辞書が増えても送りすぎない
 const MAX_CONTEXT_BIAS: usize = 500;
 
@@ -33,7 +37,8 @@ pub async fn run(store: Arc<Store>, input: audio::Input, api_key: String) -> any
 
     // 用語ヒントは Realtime のセッション開始時に 1 回しか渡せないので、辞書を少し待つ。
     // 入力は待ち終わってから開く（待っている間の音声を溜めない）
-    let context_bias = match store.wait_glossary(Duration::from_secs(20)).await {
+    let glossary = store.wait_glossary(Duration::from_secs(20)).await;
+    let context_bias = match &glossary {
         Some(loaded) => context_bias(&loaded.glossary, &settings.mic_language),
         None => {
             tracing::warn!("starting transcription without glossary");
@@ -54,7 +59,17 @@ pub async fn run(store: Arc<Store>, input: audio::Input, api_key: String) -> any
     };
     tokio::spawn(realtime_loop(realtime, rt_audio_rx, delta_tx));
 
-    let (final_tx, mut final_rx) = mpsc::channel(64);
+    // 形態素解析の辞書の読み込みは同期処理なので、非同期のワーカーを塞がない
+    let enricher = {
+        let (key, model) = (api_key.clone(), settings.models.enrich.clone());
+        let (lang, targets) = (settings.mic_language.clone(), settings.translate_to.clone());
+        let glossary = glossary.as_ref().map(|l| l.glossary.clone());
+        tokio::task::spawn_blocking(move || {
+            Enricher::new(key, model, lang, targets, glossary.as_deref())
+        })
+        .await??
+    };
+    let (done_tx, mut done_rx) = mpsc::channel(64);
     let mut pipeline = Pipeline::new(
         store,
         &settings,
@@ -65,7 +80,8 @@ pub async fn run(store: Arc<Store>, input: audio::Input, api_key: String) -> any
             language: settings.mic_language.clone(),
             context_bias,
         }),
-        final_tx,
+        Arc::new(enricher),
+        done_tx,
     );
 
     loop {
@@ -77,16 +93,16 @@ pub async fn run(store: Arc<Store>, input: audio::Input, api_key: String) -> any
                 pipeline.on_audio(&chunk);
             }
             Some(delta) = delta_rx.recv() => pipeline.on_delta(&delta),
-            Some(done) = final_rx.recv() => pipeline.on_final(done),
+            Some(done) = done_rx.recv() => pipeline.on_done(done),
         }
     }
 
-    // 入力が終わったら、開いている発話を閉じ、バッチの結果がすべて届くまで待つ
+    // 入力が終わったら、開いている発話を閉じ、バッチと enrich の結果がすべて届くまで待つ
     drop(rt_audio_tx);
     pipeline.finish();
     while pipeline.pending > 0 {
         tokio::select! {
-            Some(done) = final_rx.recv() => pipeline.on_final(done),
+            Some(done) = done_rx.recv() => pipeline.on_done(done),
             Some(delta) = delta_rx.recv() => pipeline.on_delta(&delta),
         }
     }
@@ -97,7 +113,8 @@ struct Pipeline {
     store: Arc<Store>,
     lang: LangCode,
     batch: Arc<BatchContext>,
-    final_tx: mpsc::Sender<Finalized>,
+    enricher: Arc<Enricher>,
+    done_tx: mpsc::Sender<Done>,
     history: History,
     detector: earshot::Detector,
     segmenter: Segmenter,
@@ -109,7 +126,9 @@ struct Pipeline {
     frame: Vec<f32>,
     frame_pos: u64,
     seq: u64,
-    /// バッチの結果を待っている Segment の数
+    /// 直前の確定字幕（enrich の文脈）
+    context: VecDeque<String>,
+    /// バッチか enrich の結果を待っている数
     pending: usize,
 }
 
@@ -118,13 +137,15 @@ impl Pipeline {
         store: Arc<Store>,
         settings: &Settings,
         batch: Arc<BatchContext>,
-        final_tx: mpsc::Sender<Finalized>,
+        enricher: Arc<Enricher>,
+        done_tx: mpsc::Sender<Done>,
     ) -> Self {
         Self {
             store,
             lang: settings.mic_language.clone(),
             batch,
-            final_tx,
+            enricher,
+            done_tx,
             history: History::new(60),
             detector: earshot::Detector::default(),
             segmenter: Segmenter::new(&settings.segmentation),
@@ -135,6 +156,7 @@ impl Pipeline {
             frame: Vec::with_capacity(FRAME * 2),
             frame_pos: 0,
             seq: 0,
+            context: VecDeque::new(),
             pending: 0,
         }
     }
@@ -205,7 +227,12 @@ impl Pipeline {
         };
         let wav = audio::wav(&self.history.slice(from, to));
         self.pending += 1;
-        tokio::spawn(finalize(self.batch.clone(), id, wav, self.final_tx.clone()));
+        tokio::spawn(transcribe(
+            self.batch.clone(),
+            id,
+            wav,
+            self.done_tx.clone(),
+        ));
     }
 
     fn discard(&mut self, id: &str) {
@@ -228,21 +255,50 @@ impl Pipeline {
         }
     }
 
-    fn on_final(&mut self, done: Finalized) {
+    fn on_done(&mut self, done: Done) {
         self.pending -= 1;
-        let Some(mut seg) = self.live.remove(&done.id) else {
+        match done {
+            Done::Transcribed { id, text } => self.on_transcribed(&id, text),
+            Done::Enriched { id, enriched } => self.on_enriched(&id, enriched),
+        }
+    }
+
+    fn on_transcribed(&mut self, id: &str, text: Option<String>) {
+        let Some(seg) = self.live.get_mut(id) else {
             return;
         };
         // バッチが失敗したら Realtime で溜めたテキストを使う
-        let text = done.text.unwrap_or_else(|| seg.text.clone());
+        let text = text.unwrap_or_else(|| seg.text.clone());
         if text.trim().is_empty() {
-            seg.stage = Stage::Discarded;
-        } else {
-            seg.stage = Stage::Final;
-            seg.text = text;
-            // enrich（Phase 3）が入るまでは final で確定とし、表示時間を数え始める
-            seg.settled_at = Some(now_ms());
+            self.discard(id);
+            return;
         }
+        seg.stage = Stage::Final;
+        seg.text = text.clone();
+        self.store.upsert_segment(seg.clone());
+
+        let context: Vec<String> = self.context.iter().cloned().collect();
+        self.context.push_back(text.clone());
+        if self.context.len() > CONTEXT_LINES {
+            self.context.pop_front();
+        }
+        self.pending += 1;
+        tokio::spawn(enrich(
+            self.enricher.clone(),
+            id.to_owned(),
+            text,
+            context,
+            self.done_tx.clone(),
+        ));
+    }
+
+    fn on_enriched(&mut self, id: &str, enriched: Enriched) {
+        let Some(mut seg) = self.live.remove(id) else {
+            return;
+        };
+        seg.stage = Stage::Enriched;
+        seg.enriched = Some(enriched);
+        seg.settled_at = Some(now_ms());
         self.store.upsert_segment(seg);
     }
 }
@@ -277,13 +333,14 @@ struct BatchContext {
     context_bias: Vec<String>,
 }
 
-struct Finalized {
-    id: String,
+enum Done {
     /// None ならバッチが失敗した
-    text: Option<String>,
+    Transcribed { id: String, text: Option<String> },
+    /// 翻訳に失敗しても、固有名詞とふりがなは付いている
+    Enriched { id: String, enriched: Enriched },
 }
 
-async fn finalize(ctx: Arc<BatchContext>, id: String, wav: Vec<u8>, done: mpsc::Sender<Finalized>) {
+async fn transcribe(ctx: Arc<BatchContext>, id: String, wav: Vec<u8>, done: mpsc::Sender<Done>) {
     let request = BatchRequest {
         api_key: &ctx.api_key,
         model: &ctx.model,
@@ -298,7 +355,20 @@ async fn finalize(ctx: Arc<BatchContext>, id: String, wav: Vec<u8>, done: mpsc::
             None
         }
     };
-    let _ = done.send(Finalized { id, text }).await;
+    let _ = done.send(Done::Transcribed { id, text }).await;
+}
+
+async fn enrich(
+    enricher: Arc<Enricher>,
+    id: String,
+    text: String,
+    context: Vec<String>,
+    done: mpsc::Sender<Done>,
+) {
+    let started = Instant::now();
+    let enriched = enricher.enrich(&text, &context).await;
+    tracing::debug!("enriched in {:?}", started.elapsed());
+    let _ = done.send(Done::Enriched { id, enriched }).await;
 }
 
 /// 用語ヒント: 話す言語での名前と略称（DESIGN.md 8.4）。

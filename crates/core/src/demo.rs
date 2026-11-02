@@ -6,9 +6,10 @@ use std::time::Duration;
 
 use tokio::time::sleep;
 
+use crate::markup::{parse, plain};
 use crate::now_ms;
 use crate::store::Store;
-use crate::types::{Enriched, EnrichedKind, Segment, Stage, Token};
+use crate::types::{Enriched, Segment, Stage};
 
 /// `[漢字|かんじ]` はルビ、`{hero:13|ヘイズ}` はエンティティ（`|` の後は発話された表現。
 /// 訳文では辞書がまだないときに出す名前）。訳文は設定の翻訳先にある言語だけを流す
@@ -88,7 +89,6 @@ async fn play_line(store: &Store, line: &Line) {
     sleep(Duration::from_millis(2000)).await;
     seg.stage = Stage::Enriched;
     seg.enriched = Some(Enriched {
-        kind: EnrichedKind::Speech,
         source,
         translations: [("en", line.en), ("ru", line.ru)]
             .into_iter()
@@ -110,57 +110,6 @@ async fn play_noise(store: &Store) {
     store.upsert_segment(seg);
 }
 
-fn parse(markup: &str) -> Vec<Token> {
-    let mut tokens = Vec::new();
-    let mut rest = markup;
-    while let Some(start) = rest.find(['[', '{']) {
-        if start > 0 {
-            tokens.push(text(&rest[..start], None));
-        }
-        let close = if rest[start..].starts_with('[') {
-            ']'
-        } else {
-            '}'
-        };
-        let end = start + rest[start..].find(close).expect("unclosed markup");
-        let inner = &rest[start + 1..end];
-        let (head, tail) = inner
-            .split_once('|')
-            .map_or((inner, None), |(h, t)| (h, Some(t)));
-        tokens.push(if close == ']' {
-            text(head, tail)
-        } else {
-            Token::Entity {
-                reference: head.into(),
-                spoken: tail.map(Into::into),
-            }
-        });
-        rest = &rest[end + 1..];
-    }
-    if !rest.is_empty() {
-        tokens.push(text(rest, None));
-    }
-    tokens
-}
-
-/// 音声認識の結果に相当する文字列（エンティティは発話された表現）
-fn plain(tokens: &[Token]) -> String {
-    tokens
-        .iter()
-        .map(|t| match t {
-            Token::Text { text, .. } => text.as_str(),
-            Token::Entity { spoken, reference } => spoken.as_deref().unwrap_or(reference),
-        })
-        .collect()
-}
-
-fn text(text: &str, ruby: Option<&str>) -> Token {
-    Token::Text {
-        text: text.into(),
-        ruby: ruby.map(Into::into),
-    }
-}
-
 fn new_segment() -> Segment {
     let started_at = now_ms();
     Segment {
@@ -177,29 +126,6 @@ fn new_segment() -> Segment {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn parses_ruby_and_entities() {
-        let tokens = parse("[僕|ぼく]は{hero:13|ヘイズ}と{item:1}。");
-        assert_eq!(
-            tokens,
-            vec![
-                text("僕", Some("ぼく")),
-                text("は", None),
-                Token::Entity {
-                    reference: "hero:13".into(),
-                    spoken: Some("ヘイズ".into())
-                },
-                text("と", None),
-                Token::Entity {
-                    reference: "item:1".into(),
-                    spoken: None
-                },
-                text("。", None),
-            ]
-        );
-        assert_eq!(plain(&tokens), "僕はヘイズとitem:1。");
-    }
 
     #[test]
     fn every_line_parses() {
