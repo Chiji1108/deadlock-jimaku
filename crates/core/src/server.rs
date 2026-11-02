@@ -18,7 +18,7 @@ use tokio::sync::broadcast::error::RecvError;
 use crate::secrets::{self, Provider};
 use crate::settings::SettingsPatch;
 use crate::store::Store;
-use crate::types::{ClientMsg, LanguageOption, ServerMsg, SettingsView, Topic};
+use crate::types::{ClientMsg, LangCode, ServerMsg, SettingsView, Topic};
 use crate::{audio, lang};
 
 #[derive(RustEmbed)]
@@ -112,16 +112,9 @@ async fn devices() -> Response {
     }
 }
 
-async fn languages() -> Json<Vec<LanguageOption>> {
-    Json(
-        lang::LANGUAGES
-            .iter()
-            .map(|l| LanguageOption {
-                code: l.code.to_owned(),
-                label: l.label.to_owned(),
-            })
-            .collect(),
-    )
+/// 対応している言語のコード。表示名は画面の言語に合わせて操作パネルが作る
+async fn languages() -> Json<Vec<LangCode>> {
+    Json(lang::LANGUAGES.iter().map(|l| l.code.to_owned()).collect())
 }
 
 pub async fn serve(listener: TcpListener, store: Arc<Store>) -> std::io::Result<()> {
