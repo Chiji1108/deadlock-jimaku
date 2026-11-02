@@ -76,14 +76,23 @@ fn build_mic_stream(
     tx: mpsc::Sender<Vec<f32>>,
 ) -> anyhow::Result<cpal::Stream> {
     let host = cpal::default_host();
+    // 入力デバイスがないと、既定のデバイスとして使えないものが返ってくることがある（macOS）。
+    // 先に一覧を見て、操作パネルで分かる理由にする
+    let mut devices = host
+        .input_devices()
+        .context("マイクの一覧を取れません")?
+        .peekable();
+    anyhow::ensure!(
+        devices.peek().is_some(),
+        "マイクが見つかりません。マイクをつないでから字幕を始め直してください"
+    );
     let device = match name {
-        Some(name) => host
-            .input_devices()?
+        Some(name) => devices
             .find(|d| d.description().is_ok_and(|desc| desc.name() == name))
-            .with_context(|| format!("input device not found: {name}"))?,
+            .with_context(|| format!("マイク「{name}」が見つかりません"))?,
         None => host
             .default_input_device()
-            .context("no default input device")?,
+            .context("既定のマイクがありません")?,
     };
     let config = device.default_input_config()?;
     tracing::info!(
