@@ -544,20 +544,27 @@ URL: `/overlay/subtitles?langs=en&furigana=1&maxItems=3`
 - エンティティは `[アイコン] 公式名` をハイライトして表示する（色は種類ごと: hero / item / ability）。
 - partial は灰色、final は通常の色（翻訳待ち）、enriched で完成形になる。
 
-## 12. ランクオーバーレイ
+## 12. ランクオーバーレイ（`rank.rs`, `/overlay/rank`）
 
-URL: `/overlay/rank?lang=ja`
+URL: `/overlay/rank?lang=ja`（`lang` はランク名の言語。既定は `ja`）
+
+表示は **アイコン（サブランク付き）・ランク名（ランクの色、サブランクの数字付き。例: エミッサリー 3）・今のサブランクの中での進み具合のゲージ（例: 650 / 1,000）**。エターナスはサブランクが上位何 % かで決まるのでゲージを出さず、累積のランクポイント（例: 72,000 RP）を出す。
 
 | 用途 | エンドポイント |
 |---|---|
-| 現在のランク | `GET /v1/players/{account_id}/rank`（最後のランクマッチが終わった時点のランク。`last_match` が付く） |
-| ランク名・バッジ | `GET /v1/assets/ranks?language=…`（辞書と一緒にキャッシュする） |
-| 当日の勝敗（任意） | `GET /v1/players/{account_id}/match-history` |
+| 現在のランク | `GET /v1/players/{account_id}/rank`（最後のランクマッチが終わった時点。`badge` = `tier * 10 + subrank`） |
+| ランクポイント | 同じ応答の `last_match.player_rank_final_flat_progress`（累積。サブランク 1 つが 1000、6 番目だけ 2000 なので 1 ティアは 7000。ティア t・サブランク s の始まりは `(t-1)*7000 + (s-1)*1000`。7-3 の始まりが 44,000） |
+| ランク名・色 | `GET /v1/assets/ranks?language=…`（設定の言語の分だけ取る） |
+| アイコン | `GET /v1/assets/ranks/{tier}/{subrank}/image?format=webp`（サブランクのないティアは `large_webp`） |
 
-- `account_id` は操作パネルで設定する（Steam の 32bit アカウント ID）。
-- `rank.pollSeconds`（既定 180 秒）ごとにポーリングする。データの取り込みに時間がかかるので、試合が終わってすぐには反映されない（deadlock-api の bot とフレンドになるか、Patreon の優先取り込みで速くなる）。
-- `RankState { badge, tier, subrank, names: Record<LangCode, string>, color, image, updatedAt, today?: { win, loss } }`
-- ランクが上がったり下がったりしたらアニメーションする。
+- アカウントは Steam の 32bit アカウント ID（SteamID64 からは `76561197960265728` を引く。どちらでも受け付ける）。ヘッドレスは `--rank-account`、Tauri アプリは設定画面ができるまで環境変数 `DEADLOCK_ACCOUNT_ID`
+- `rank_poll_seconds`（既定 180 秒）ごとに取りに行き、変わったら `rank.update`（トピック `rank`）を流す。接続直後にも送る
+- データの取り込みに時間がかかるので、試合が終わってすぐには反映されない（deadlock-api の bot とフレンドになるか、Patreon の優先取り込みで速くなる）
+- アイコン（約 75KB）はディスクに保存せず**バッジごとに**メモリに持ち、`/assets/rank/{badge}.webp` で配信する。取れていない間は `image` を出さず（画像を表示しない）、次の回に取り直す。別のバッジのアイコンを配信しない
+- ランク名は言語ごとに取り、失敗した言語だけ次の回に取り直す。外部 API の呼び出しには既定のタイムアウト（接続 10 秒、全体 60 秒）を付け、応答が返らずに止まらないようにする
+- アカウント ID を読み取れなければ警告してランクを止める
+- バッジが変わると拡大しながら入れ替わり、ゲージは伸び縮みする
+- 当日の勝敗などは今は出さない（必要になったら `match-history` を使う）
 
 ## 13. 操作パネル（control.html）
 
@@ -577,7 +584,7 @@ URL: `/overlay/rank?lang=ja`
 | 1 | 言語の対応表、assets（glossary 生成、アイコンのキャッシュ）、Rich の描画 ✅ | ダミーの Enriched がアイコン・ルビ付きで、複数の言語で表示される |
 | 2 | mic → VAD で区切り → Voxtral Realtime（partial）→ Small Transcribe 3（final） ✅ | 自分の声が字幕になる |
 | 3 | enrich（ふりがな、翻訳、エンティティ） ✅ | 3 段階の表示が通しで動く |
-| 4 | ランクオーバーレイ | ランクバッジが表示され、更新される |
+| 4 | ランクオーバーレイ ✅ | ランクバッジが表示され、更新される |
 | 5 | 仕上げ: 操作パネル、インストーラー、自動更新 | 配布できる |
 
 Phase 2 の前に、録音した実況音声で Voxtral 3 の精度（`context_bias` あり / なし、realtime / batch）を確かめる。
@@ -605,6 +612,7 @@ Phase 2 の前に、録音した実況音声で Voxtral 3 の精度（`context_b
   - 0.43〜0.45 秒の間（`min_silence_ms` 400 より少し長い程度）は区切られず、3 文が 1 つの字幕になった。実際のマイクで長すぎると感じたら 350ms 程度に下げる
   - `context_bias` は 392 語（日本語の名前と略称）で、Realtime もバッチも 400 エラーにならなかった
 - [ ] 実際のマイクでの確認（このパイプラインはファイル入力でしか通していない。Windows の WASAPI と macOS のマイク許可を含めて確認する）
+- [ ] 音声認識の候補: Microsoft MAI-Transcribe-2（Artificial Analysis の英語中心の WER で 2.0%、Voxtral Small 3 は 2.1%。日本語対応、`phraseList` で用語ヒント、リアルタイム版は public preview で SLA なし）。準備の手間（Azure のリソース）と preview であることから今は採用しない。確定字幕の文字起こしだけなら `stt.rs` で差し替えられるので、正式版になって日本語で上回れば検討する
 - [ ] 本番に近い条件（配信用マイク、プレイしながら 5〜10 分、用語を多めに）でもう一度測る。`context_bias` の効果はこの条件でないと見えない
 - [ ] Realtime セッションの最大接続時間と、切れたときの挙動
 - [x] Large 4 / Small 4 の比較（同じ文で Large 4 は 21〜24 秒・推論 2,400〜2,900 トークン、Small 4 は 3 秒・推論なし）→ Small 4 を採用

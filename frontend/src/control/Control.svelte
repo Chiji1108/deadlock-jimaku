@@ -3,9 +3,12 @@
   import { connect, type Status } from "../lib/ws";
 
   let status = $state<Status>("connecting");
-  let copied = $state(false);
+  let copied = $state<string | undefined>();
 
-  const overlayUrl = `${location.origin}/overlay/subtitles`;
+  const overlays = {
+    subtitles: `${location.origin}/overlay/subtitles`,
+    rank: `${location.origin}/overlay/rank`,
+  };
 
   onMount(() =>
     connect(
@@ -15,10 +18,10 @@
     ),
   );
 
-  async function copy() {
-    await navigator.clipboard.writeText(overlayUrl);
-    copied = true;
-    setTimeout(() => (copied = false), 1500);
+  async function copy(url: string) {
+    await navigator.clipboard.writeText(url);
+    copied = url;
+    setTimeout(() => (copied = undefined), 1500);
   }
 
   async function demo() {
@@ -32,14 +35,26 @@
     サーバー: {status === "open" ? "接続中" : status === "connecting" ? "接続しています…" : "切断"}
   </p>
 
+  {#snippet url(href: string)}
+    <div class="url">
+      <code>{href}</code>
+      <button onclick={() => copy(href)}>{copied === href ? "コピーしました" : "コピー"}</button>
+    </div>
+  {/snippet}
+
   <section>
     <h2>字幕オーバーレイ</h2>
     <p>OBS のブラウザソースに次の URL を設定してください。</p>
-    <div class="url">
-      <code>{overlayUrl}</code>
-      <button onclick={copy}>{copied ? "コピーしました" : "コピー"}</button>
-    </div>
+    {@render url(overlays.subtitles)}
     <button onclick={demo} disabled={status !== "open"}>テスト字幕を流す</button>
+  </section>
+
+  <section>
+    <h2>ランクオーバーレイ</h2>
+    <p>
+      ランク名の言語は <code>?lang=en</code> などで変えられます（話す言語・英語・翻訳先のどれか）。
+    </p>
+    {@render url(overlays.rank)}
   </section>
 </main>
 

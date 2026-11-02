@@ -16,6 +16,7 @@ anyhow = "1.0.104"
 audioadapter-buffers = "5.1"
 axum = { version = "0.8.9", features = ["ws"] }
 base64 = "0.23.1"
+bytes = "1.12.1"
 cpal = "0.18.2"
 dirs = "7.0.0"
 earshot = "1.2.2"

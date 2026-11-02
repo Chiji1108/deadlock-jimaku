@@ -13,6 +13,7 @@ export default defineConfig({
       input: {
         control: "control.html",
         subtitles: "overlay/subtitles.html",
+        rank: "overlay/rank.html",
       },
     },
   },

@@ -15,6 +15,10 @@ pub struct Settings {
     /// Realtime の streaming delay（80〜1200、または 2400）
     pub target_streaming_delay_ms: u32,
     pub segmentation: Segmentation,
+    /// ランクを表示するアカウント（Steam の 32bit アカウント ID）。None ならランクを取りに行かない
+    pub rank_account: Option<u32>,
+    /// ランクを取りに行く間隔（試合後すぐには反映されないので短くしない）
+    pub rank_poll_seconds: u64,
 }
 
 #[derive(Clone, Debug)]
@@ -56,6 +60,8 @@ impl Default for Settings {
                 min_silence_ms: 400,
                 max_segment_ms: 8000,
             },
+            rank_account: None,
+            rank_poll_seconds: 180,
         }
     }
 }
@@ -68,5 +74,34 @@ impl Settings {
                 .into_iter()
                 .chain(self.translate_to.iter().cloned()),
         )
+    }
+}
+
+/// ランクを表示するアカウントを、コマンドライン引数や環境変数の値から読む。読めなければ警告する
+pub fn account_id(value: Option<&str>) -> Option<u32> {
+    let value = value?;
+    let id = parse_account_id(value);
+    if id.is_none() {
+        tracing::warn!("invalid Steam account ID {value:?}; the rank overlay is off");
+    }
+    id
+}
+
+/// SteamID64（76561198…）でも 32bit のアカウント ID でも受け付ける
+pub fn parse_account_id(s: &str) -> Option<u32> {
+    const STEAM_ID64_BASE: u64 = 76_561_197_960_265_728;
+    let n: u64 = s.trim().parse().ok()?;
+    u32::try_from(n.checked_sub(STEAM_ID64_BASE).unwrap_or(n)).ok()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn account_id_accepts_steam_id64_and_account_id() {
+        assert_eq!(parse_account_id("76561198268652547"), Some(308_386_819));
+        assert_eq!(parse_account_id("308386819"), Some(308_386_819));
+        assert_eq!(parse_account_id("abc"), None);
     }
 }

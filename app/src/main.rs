@@ -4,7 +4,10 @@
 use std::net::{Ipv4Addr, SocketAddr};
 
 use overlays_core::{
-    DEFAULT_PORT, assets, audio, server, settings::Settings, store::Store, subtitles,
+    DEFAULT_PORT, assets, audio, rank, server,
+    settings::{self, Settings},
+    store::Store,
+    subtitles,
 };
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 use tokio::net::TcpListener;
@@ -14,13 +17,18 @@ fn main() {
 
     tauri::Builder::default()
         .setup(|app| {
-            // 設定の保存と読み込みは Phase 5
-            let settings = Settings::default();
-            // API キーの保存（keyring）と、操作パネルからの開始・停止は Phase 5
+            // 設定・API キーの保存と、操作パネルからの変更・開始・停止は Phase 5
+            let settings = Settings {
+                rank_account: settings::account_id(
+                    std::env::var("DEADLOCK_ACCOUNT_ID").ok().as_deref(),
+                ),
+                ..Settings::default()
+            };
             // Mistral は文字起こし、OpenAI は翻訳と辞書の漢字名の読み
             let api_key = std::env::var("MISTRAL_API_KEY").ok();
             let openai_key = std::env::var("OPENAI_API_KEY").ok();
             let store = Store::new(settings);
+            tauri::async_runtime::spawn(rank::run_configured(store.clone()));
             tauri::async_runtime::spawn(assets::load_into(
                 store.clone(),
                 app.path().app_data_dir()?.join("assets"),

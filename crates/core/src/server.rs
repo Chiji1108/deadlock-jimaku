@@ -27,6 +27,7 @@ pub fn router(store: Arc<Store>) -> Router {
         .route("/api/demo", post(demo))
         .route("/api/glossary", get(glossary))
         .route("/assets/{version}/icons/{*path}", get(icon))
+        .route("/assets/rank/{file}", get(rank_image))
         .fallback(frontend)
         .with_state(store)
 }
@@ -66,20 +67,37 @@ async fn icon(
     match tokio::fs::read(loaded.icons_dir(version).join(&path)).await {
         Ok(bytes) => {
             let mime = mime_guess::from_path(&path).first_or_octet_stream();
-            (
-                [
-                    (header::CONTENT_TYPE, mime.to_string()),
-                    (
-                        header::CACHE_CONTROL,
-                        "public, max-age=31536000, immutable".to_owned(),
-                    ),
-                ],
-                bytes,
-            )
-                .into_response()
+            immutable(mime.as_ref(), bytes)
         }
         Err(_) => StatusCode::NOT_FOUND.into_response(),
     }
+}
+
+/// ランクのアイコン。URL にバッジを含み、そのバッジのアイコンだけを返すので中身は変わらない
+async fn rank_image(State(store): State<Arc<Store>>, Path(file): Path<String>) -> Response {
+    let image = file
+        .strip_suffix(".webp")
+        .and_then(|badge| badge.parse().ok())
+        .and_then(|badge| store.rank_image(badge));
+    match image {
+        Some(bytes) => immutable("image/webp", bytes),
+        None => StatusCode::NOT_FOUND.into_response(),
+    }
+}
+
+/// URL に版やバッジを含むアセット（中身が変わらない）を長くキャッシュさせて返す
+fn immutable(mime: &str, body: impl IntoResponse) -> Response {
+    (
+        [
+            (header::CONTENT_TYPE, mime.to_owned()),
+            (
+                header::CACHE_CONTROL,
+                "public, max-age=31536000, immutable".to_owned(),
+            ),
+        ],
+        body,
+    )
+        .into_response()
 }
 
 async fn ws(upgrade: WebSocketUpgrade, State(store): State<Arc<Store>>) -> Response {

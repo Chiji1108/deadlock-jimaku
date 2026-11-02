@@ -74,6 +74,7 @@ pub enum Topic {
     Subtitle,
     /// 辞書が作り直されたことの通知。オーバーレイは `/api/glossary` を取り直す
     Glossary,
+    Rank,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
@@ -94,6 +95,8 @@ pub enum ServerMsg {
     SegmentUpsert { segment: Segment },
     #[serde(rename = "glossary.updated", rename_all = "camelCase")]
     GlossaryUpdated { client_version: u32 },
+    #[serde(rename = "rank.update")]
+    RankUpdate { rank: RankState },
 }
 
 impl ServerMsg {
@@ -101,6 +104,7 @@ impl ServerMsg {
         match self {
             Self::Snapshot { .. } | Self::SegmentUpsert { .. } => Topic::Subtitle,
             Self::GlossaryUpdated { .. } => Topic::Glossary,
+            Self::RankUpdate { .. } => Topic::Rank,
         }
     }
 }
@@ -168,4 +172,38 @@ pub struct RubySegment {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub ruby: Option<String>,
+}
+
+/// 配信者の現在のランク（DESIGN.md 12 章）
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct RankState {
+    /// `tier * 10 + subrank`
+    pub badge: u32,
+    pub tier: u32,
+    pub subrank: u32,
+    /// 累積のランクポイント（最後のランクマッチ終了時点）。分からなければ None
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub points: Option<u32>,
+    /// ティアの名前（言語ごと）
+    pub names: BTreeMap<LangCode, String>,
+    /// ティアの色（`#B47FEB` など）
+    pub color: String,
+    /// `/assets/rank/{badge}.webp`。アイコンをまだ取れていなければ None
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub image: Option<String>,
+    /// 今のサブランクの中での進み具合（ゲージ）。エターナスと未ランクは None
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub progress: Option<RankProgress>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct RankProgress {
+    pub value: u32,
+    pub max: u32,
 }

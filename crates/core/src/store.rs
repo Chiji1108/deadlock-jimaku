@@ -4,11 +4,12 @@ use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+use bytes::Bytes;
 use tokio::sync::{broadcast, watch};
 
 use crate::assets::Loaded;
 use crate::settings::Settings;
-use crate::types::{Segment, ServerMsg};
+use crate::types::{RankState, Segment, ServerMsg};
 
 /// snapshot で送る直近の Segment の数
 const KEEP_SEGMENTS: usize = 50;
@@ -17,6 +18,9 @@ pub struct Store {
     settings: Settings,
     segments: Mutex<VecDeque<Segment>>,
     glossary: watch::Sender<Option<Loaded>>,
+    rank: Mutex<Option<RankState>>,
+    /// バッジ → アイコン（webp）。バッジごとに持ち、別のバッジのアイコンを配信しない
+    rank_image: Mutex<Option<(u32, Bytes)>>,
     tx: broadcast::Sender<ServerMsg>,
 }
 
@@ -26,6 +30,8 @@ impl Store {
             settings,
             segments: Mutex::new(VecDeque::new()),
             glossary: watch::Sender::new(None),
+            rank: Mutex::new(None),
+            rank_image: Mutex::new(None),
             tx: broadcast::channel(256).0,
         })
     }
@@ -59,7 +65,28 @@ impl Store {
                 client_version: loaded.glossary.client_version,
             });
         }
+        if let Some(rank) = self.rank.lock().unwrap().clone() {
+            msgs.push(ServerMsg::RankUpdate { rank });
+        }
         msgs
+    }
+
+    pub fn set_rank(&self, rank: RankState) {
+        *self.rank.lock().unwrap() = Some(rank.clone());
+        let _ = self.tx.send(ServerMsg::RankUpdate { rank });
+    }
+
+    pub fn set_rank_image(&self, badge: u32, image: Bytes) {
+        *self.rank_image.lock().unwrap() = Some((badge, image));
+    }
+
+    /// そのバッジのアイコン（今持っているものだけ）
+    pub fn rank_image(&self, badge: u32) -> Option<Bytes> {
+        let image = self.rank_image.lock().unwrap();
+        image
+            .as_ref()
+            .filter(|(b, _)| *b == badge)
+            .map(|(_, bytes)| bytes.clone())
     }
 
     pub fn snapshot(&self) -> ServerMsg {
