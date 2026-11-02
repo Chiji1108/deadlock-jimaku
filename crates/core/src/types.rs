@@ -81,6 +81,8 @@ pub struct Segment {
 #[ts(export)]
 pub enum Topic {
     Subtitle,
+    /// 辞書が作り直されたことの通知。オーバーレイは `/api/glossary` を取り直す
+    Glossary,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
@@ -99,12 +101,80 @@ pub enum ServerMsg {
     Snapshot { segments: Vec<Segment> },
     #[serde(rename = "segment.upsert")]
     SegmentUpsert { segment: Segment },
+    #[serde(rename = "glossary.updated", rename_all = "camelCase")]
+    GlossaryUpdated { client_version: u32 },
 }
 
 impl ServerMsg {
     pub fn topic(&self) -> Topic {
         match self {
             Self::Snapshot { .. } | Self::SegmentUpsert { .. } => Topic::Subtitle,
+            Self::GlossaryUpdated { .. } => Topic::Glossary,
         }
     }
+}
+
+/// 用語辞書（DESIGN.md 8.3）。`GET /api/glossary` で配信する。
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct Glossary {
+    pub client_version: u32,
+    /// 名前を取得した言語
+    pub languages: Vec<LangCode>,
+    /// キーは `"{kind}:{id}"`
+    pub entities: BTreeMap<String, Entity>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "lowercase")]
+#[ts(export)]
+pub enum EntityKind {
+    Hero,
+    Item,
+    Ability,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "lowercase")]
+#[ts(export)]
+pub enum ItemSlot {
+    Weapon,
+    Vitality,
+    Spirit,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct Entity {
+    pub kind: EntityKind,
+    pub class_name: String,
+    pub names: BTreeMap<LangCode, String>,
+    /// `names.ja` のふりがな（漢字を含む名前だけ）
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub ruby: Option<Vec<RubySegment>>,
+    #[serde(default)]
+    pub aliases: BTreeMap<LangCode, Vec<String>>,
+    /// `/assets/icons/...`
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub icon: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub slot: Option<ItemSlot>,
+    /// スキルの持ち主（`"hero:{id}"`）
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub hero: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct RubySegment {
+    pub text: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub ruby: Option<String>,
 }

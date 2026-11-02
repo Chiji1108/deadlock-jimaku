@@ -71,7 +71,7 @@ Deadlock 配信者向けの OBS オーバーレイツール。
 
 ### フロントに Svelte 5 を選ぶ理由
 
-- このオーバーレイの中心は「行が現れる・中身が変わる・押し上がる・消える」というアニメーション。Svelte は `transition:` と `animate:flip` が標準で入っていて、追加のライブラリなしで書ける。
+- このオーバーレイの中心は「行が現れる・中身が変わる・押し上がる・消える」というアニメーション。Svelte は `transition:` と `animate:` が標準で入っていて、追加のライブラリなしで書ける。
 - partial 字幕は頻繁に更新される。runes の細かい単位の反応性で、変わった部分だけを描き直す。
 - ランタイムが小さく、OBS の CEF でも軽い。
 - SvelteKit は使わない。Vite のマルチエントリで `control.html` / `overlay/subtitles.html` / `overlay/rank.html` を作る（SSR もルーターも要らない）。
@@ -85,7 +85,7 @@ Deadlock 配信者向けの OBS オーバーレイツール。
 | コマンド | 内容 |
 |---|---|
 | `mise run dev` | Tauri アプリを開発モードで起動（Vite の HMR 付き） |
-| `mise run headless` | Tauri なしで中核だけ起動し、ダミー字幕を流し続ける（`http://127.0.0.1:4510/overlay/subtitles`） |
+| `mise run headless` | Tauri なしで中核だけ起動し、ダミー字幕を流し続ける（`--demo --translate-to en,ru`。`http://127.0.0.1:4510/overlay/subtitles`） |
 | `mise run check` | oxfmt / oxlint / svelte-check / rustfmt / clippy / cargo test |
 
 - Git フック（**lefthook**）: commit 時に変更ファイルへ oxfmt / oxlint / cargo fmt、push 時に `mise run check`。clone 後に `mise exec -- lefthook install` を一度実行する。
@@ -355,54 +355,62 @@ mic ─┬─▶ ローカル VAD（Silero）── 発話の開始 → Segment 
 - `id` は全言語で共通なので、言語の対応づけに使う。
 - レート制限は 1 IP あたり 200 req/分。CORS は `*`。
 
-### 8.2 生成と更新
+### 8.2 生成と更新（`crates/core/src/assets/`）
 
-アプリの起動時に `client-versions` の最新を確認し、キャッシュより新しければ作り直す。
+アプリの起動時に `client-versions` の最新を確認し、その版のキャッシュがなければ作る。
 
-1. **`mic.language`・`en`・`translateTo` の言語だけ**を取得し、`id` で結合する（アイテム一覧は 1 言語で約 7MB あるので、29 言語をまとめて取らない）。翻訳先の言語を有効にしたら、その言語の分を追加で取得する。
-2. アイコンをアプリのデータディレクトリにダウンロードし、`/assets/icons/...` で配信する（配信中に外部へ依存しない）。
-3. `data/aliases.ja.json` と `data/readings.ja.json` をマージする。
-4. 読みが登録されていない漢字の名前は、LLM で読みを作ってキャッシュし、「未確認」として操作パネルに出す（人が確認したら `readings.ja.json` に入れる）。
+1. **`mic.language`・`en`・`translateTo` の言語だけ**を取得し、`id` で結合する（アイテム一覧は 1 言語で約 7MB あるので、29 言語をまとめて取らない）。どのエンティティを載せるかは英語版で決める（英語名がないものは載せない）。
+2. アイコンを `{データディレクトリ}/assets/{形式}/{clientVersion}/icons/{kind}/{id}.webp` にダウンロードし、`/assets/{clientVersion}/icons/...` で配信する（配信中に外部へ依存しない。URL に版を含むので `immutable` で長くキャッシュできる）。ファイルは一時ファイルに書いてから置き換える。取れなかったアイコンはそのエンティティから外して表示せず、辞書も保存しない（次の起動で作り直し、欠けた分だけ取り直す）。
+3. `data/aliases.ja.json` と `data/readings.ja.json`（キーはエンティティの参照）をマージする。読みは、つなげた文字列が今の日本語名と一致するときだけ使う（パッチで改名されたら古い読みは捨てる）。
+4. 読みが登録されていない漢字の名前は、Phase 3 で LLM に読みを作らせてキャッシュし、「未確認」として操作パネルに出す（人が確認したら `readings.ja.json` に入れる）。それまではルビなしで表示する。
 
-### 8.3 形式
+- キャッシュに必要な言語が揃っていれば作り直さない（2 回目以降の起動は 1 秒未満）。初回の生成は 3 言語で約 8 秒。`languages` には実際に名前が取れた言語だけを載せる。
+- `{形式}`（`CACHE_FORMAT`）は Glossary の形やアイコンの置き方を変えたら上げ、古いキャッシュを読まないようにする。
+- 同じスキルを複数のヒーローが持つ場合は、最初のヒーローのものとして 1 件だけ載せる。
+- 通信できないときは、手元にある最新の版を使う（言語が足りなくても使う）。
+- データディレクトリは Tauri の `app_data_dir`（ヘッドレスでは `dirs::data_dir()/dev.deadlock-stream-overlays.app`。同じ場所）。
+- 辞書ができたら `glossary.updated` を流し、オーバーレイは `GET /api/glossary` を取り直す（まだないときは 503）。`glossary.updated` は接続直後と取りこぼし後にも送る（10 章）。
+- 実測（client 6839）: ヒーロー 44、アイテム 173、スキル 176。
+
+### 8.3 形式（`types.rs` の `Glossary`）
 
 ```jsonc
 {
-  "clientVersion": 6518,
-  "generatedAt": "2026-11-02T00:00:00Z",
-  "languages": ["ja", "en", "ru"],
+  "clientVersion": 6839,
+  "languages": ["en", "ja", "ru"],
   "entities": {
-    "hero:1": {
+    "hero:13": {
       "kind": "hero",
-      "className": "hero_inferno",
-      "names": { "ja": "インファーナス", "en": "Infernus", "ru": "Инфернус" },
-      "ruby": null,
-      "aliases": { "ja": ["インファ"] },
-      "icon": "/assets/icons/hero/1.webp"
+      "className": "hero_haze",
+      "names": { "en": "Haze", "ja": "ヘイズ", "ru": "Пелена" },
+      "aliases": {},
+      "icon": "/assets/6839/icons/hero/13.webp"
     },
     "item:1548066885": {
       "kind": "item",
       "className": "upgrade_clip_size",
-      "names": { "ja": "基礎拡張マガジン", "en": "Extended Magazine", "ru": "Увеличенный магазин" },
+      "names": { "en": "Extended Magazine", "ja": "基礎拡張マガジン", "ru": "Увеличенный магазин" },
       "ruby": [{ "text": "基礎拡張", "ruby": "きそかくちょう" }, { "text": "マガジン" }],
       "aliases": { "ja": ["拡張マガジン"] },
-      "icon": "/assets/icons/item/1548066885.webp",
-      "tier": 1,
+      "icon": "/assets/6839/icons/item/1548066885.webp",
       "slot": "weapon"
     },
-    "ability:XXXX": {
+    "ability:731943444": {
       "kind": "ability",
-      "names": { "ja": "魂の壺", "en": "…", "ru": "…" },
-      "ruby": [{ "text": "魂", "ruby": "たましい" }, { "text": "の" }, { "text": "壺", "ruby": "つぼ" }],
-      "hero": "hero:7",
-      "icon": "/assets/icons/ability/XXXX.webp"
+      "className": "ability_bullet_flurry",
+      "names": { "en": "Bullet Dance", "ja": "バレットダンス", "ru": "Танец пуль" },
+      "aliases": {},
+      "icon": "/assets/6839/icons/ability/731943444.webp",
+      "hero": "hero:13"
     }
   }
 }
 ```
 
-- エンティティの参照は `"{kind}:{id}"`（`hero:1`, `item:…`, `ability:…`）で統一する。
-- `ruby` は日本語の名前の読み（`names.ja` 用）。
+- エンティティの参照は `"{kind}:{id}"`（`hero:13`, `item:…`, `ability:…`）で統一する。
+- `ruby` は日本語の名前の読み（`names.ja` 用）。漢字を含む名前だけに付ける。
+- `slot`（`weapon` / `vitality` / `spirit`）はアイテムの色分けに使う。
+- 描画では、日本語の段落でも発話された略称ではなく公式名を出す（`拡張マガジン` → `基礎拡張マガジン`）。辞書にない言語の名前は英語名で出す。
 
 ### 8.4 音声認識への用語ヒント
 
@@ -452,7 +460,7 @@ interface Enriched {
 
 ```ts
 // client → server
-type ClientMsg = { type: "subscribe"; topics: ("subtitle" | "rank")[] };
+type ClientMsg = { type: "subscribe"; topics: ("subtitle" | "glossary" | "rank")[] };
 
 // server → client
 type ServerMsg =
@@ -465,6 +473,7 @@ type ServerMsg =
 - 辞書は `GET /api/glossary` で取得し、オーバーレイ側で持つ（Segment には ID しか載らない）。
 - サーバーは直近の Segment を（例: 50 件）保持して、snapshot で送る。
 - WS クライアントは指数バックオフで再接続し、再接続したら snapshot で状態を置き換える。
+- 接続直後と broadcast の取りこぼし（Lagged）の後は、購読しているすべてのトピックの現在の状態（`snapshot` と、辞書があれば `glossary.updated`）を送る。
 
 ## 11. 字幕オーバーレイ
 
@@ -483,7 +492,8 @@ URL: `/overlay/subtitles?langs=en&furigana=1&maxItems=3`
 
 - 映画字幕のような**中央揃え**。下から積み上げ、最新の発話を一番下に出す。partial の行は下端でその場で更新される。
 - 表示時間は `settledAt` から数え、`ttlSeconds + 文字数 × perCharSeconds` が過ぎたらフェードアウトする。partial / final の間は消さない。
-- `maxItems` を超えたら、時間に関係なく古いものから上に押し出す（`animate:flip`）。
+- `maxItems` を超えたら、時間に関係なく古いものから上に押し出す（`animate:slide`。`lib/slide.ts`）。
+  - `animate:flip` は使わない。flip は大きさの変化も scale で補間するので、partial → final で行の幅が変わると文字が潰れて見える。
 - `discarded` になったらすぐに消す。
 - 画面上の位置は OBS 側で決める。Deadlock は画面下中央に HUD があるので、その少し上に置く想定。
 

@@ -3,8 +3,8 @@
 
 use std::net::{Ipv4Addr, SocketAddr};
 
-use overlays_core::{DEFAULT_PORT, server, store::Store};
-use tauri::{WebviewUrl, WebviewWindowBuilder};
+use overlays_core::{DEFAULT_PORT, assets, server, settings::Settings, store::Store};
+use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 use tokio::net::TcpListener;
 
 fn main() {
@@ -12,7 +12,15 @@ fn main() {
 
     tauri::Builder::default()
         .setup(|app| {
-            let store = Store::new();
+            // 設定の保存と読み込みは Phase 5
+            let settings = Settings::default();
+            let languages = settings.glossary_languages();
+            let store = Store::new(settings);
+            tauri::async_runtime::spawn(assets::load_into(
+                store.clone(),
+                app.path().app_data_dir()?.join("assets"),
+                languages,
+            ));
             // ウィンドウを開く前に bind して、ポートが使えないことを起動時に検出する
             let listener = tauri::async_runtime::block_on(TcpListener::bind(SocketAddr::from((
                 Ipv4Addr::LOCALHOST,

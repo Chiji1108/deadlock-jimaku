@@ -2,9 +2,10 @@
 
 use std::sync::Arc;
 
+use axum::Json;
 use axum::Router;
-use axum::extract::State;
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
+use axum::extract::{Path, State};
 use axum::http::{StatusCode, Uri, header};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
@@ -24,6 +25,8 @@ pub fn router(store: Arc<Store>) -> Router {
     Router::new()
         .route("/ws", get(ws))
         .route("/api/demo", post(demo))
+        .route("/api/glossary", get(glossary))
+        .route("/assets/{version}/icons/{*path}", get(icon))
         .fallback(frontend)
         .with_state(store)
 }
@@ -37,11 +40,53 @@ async fn demo(State(store): State<Arc<Store>>) -> StatusCode {
     StatusCode::ACCEPTED
 }
 
+async fn glossary(State(store): State<Arc<Store>>) -> Response {
+    match store.glossary() {
+        Some(loaded) => Json(loaded.glossary.as_ref()).into_response(),
+        // 起動直後で辞書をまだ作っている。オーバーレイは glossary.updated を待って取り直す
+        None => StatusCode::SERVICE_UNAVAILABLE.into_response(),
+    }
+}
+
+/// URL に clientVersion を含むので、中身は変わらない（長くキャッシュしてよい）
+async fn icon(
+    State(store): State<Arc<Store>>,
+    Path((version, path)): Path<(u32, String)>,
+) -> Response {
+    let safe = path.split('/').all(|seg| {
+        !seg.is_empty()
+            && seg != ".."
+            && seg
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || "._-".contains(c))
+    });
+    let Some(loaded) = store.glossary().filter(|_| safe) else {
+        return StatusCode::NOT_FOUND.into_response();
+    };
+    match tokio::fs::read(loaded.icons_dir(version).join(&path)).await {
+        Ok(bytes) => {
+            let mime = mime_guess::from_path(&path).first_or_octet_stream();
+            (
+                [
+                    (header::CONTENT_TYPE, mime.to_string()),
+                    (
+                        header::CACHE_CONTROL,
+                        "public, max-age=31536000, immutable".to_owned(),
+                    ),
+                ],
+                bytes,
+            )
+                .into_response()
+        }
+        Err(_) => StatusCode::NOT_FOUND.into_response(),
+    }
+}
+
 async fn ws(upgrade: WebSocketUpgrade, State(store): State<Arc<Store>>) -> Response {
     upgrade.on_upgrade(move |socket| session(socket, store))
 }
 
-/// 最初のメッセージで購読するトピックを受け取り、snapshot の後は更新を流し続ける
+/// 最初のメッセージで購読するトピックを受け取り、現在の状態を送った後は更新を流し続ける
 async fn session(mut socket: WebSocket, store: Arc<Store>) {
     let topics = match socket.recv().await {
         Some(Ok(Message::Text(text))) => match serde_json::from_str(text.as_str()) {
@@ -55,20 +100,22 @@ async fn session(mut socket: WebSocket, store: Arc<Store>) {
     };
 
     let mut rx = store.subscribe();
-    let snapshot = store.snapshot();
-    if wants(&topics, &snapshot) && send(&mut socket, &snapshot).await.is_err() {
+    if send_all(&mut socket, &topics, store.current_state())
+        .await
+        .is_err()
+    {
         return;
     }
     loop {
         tokio::select! {
             msg = rx.recv() => {
-                let msg = match msg {
-                    Ok(msg) => msg,
-                    // 取りこぼしたら snapshot で状態ごと置き換える
-                    Err(RecvError::Lagged(_)) => store.snapshot(),
+                let msgs = match msg {
+                    Ok(msg) => vec![msg],
+                    // 取りこぼしたら、すべてのトピックの現在の状態を送り直す
+                    Err(RecvError::Lagged(_)) => store.current_state(),
                     Err(RecvError::Closed) => return,
                 };
-                if wants(&topics, &msg) && send(&mut socket, &msg).await.is_err() {
+                if send_all(&mut socket, &topics, msgs).await.is_err() {
                     return;
                 }
             }
@@ -81,13 +128,17 @@ async fn session(mut socket: WebSocket, store: Arc<Store>) {
     }
 }
 
-fn wants(topics: &[Topic], msg: &ServerMsg) -> bool {
-    topics.contains(&msg.topic())
-}
-
-async fn send(socket: &mut WebSocket, msg: &ServerMsg) -> Result<(), axum::Error> {
-    let json = serde_json::to_string(msg).expect("ServerMsg is always serializable");
-    socket.send(Message::Text(json.into())).await
+/// 購読しているトピックのものだけを送る
+async fn send_all(
+    socket: &mut WebSocket,
+    topics: &[Topic],
+    msgs: Vec<ServerMsg>,
+) -> Result<(), axum::Error> {
+    for msg in msgs.iter().filter(|m| topics.contains(&m.topic())) {
+        let json = serde_json::to_string(msg).expect("ServerMsg is always serializable");
+        socket.send(Message::Text(json.into())).await?;
+    }
+    Ok(())
 }
 
 /// `/` → control.html、`/overlay/subtitles` → overlay/subtitles.html
