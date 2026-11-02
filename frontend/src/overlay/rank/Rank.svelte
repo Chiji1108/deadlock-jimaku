@@ -4,14 +4,14 @@
   import type { RankState } from "../../generated/RankState";
   import { connect } from "../../lib/ws";
 
-  // URL パラメータ（DESIGN.md 12 章）。lang はランク名の言語（話す言語・英語・翻訳先のどれか。ほかは英語）
-  const lang = new URLSearchParams(location.search).get("lang") ?? "ja";
-
   let rank = $state<RankState | undefined>();
+  /** ランク名の言語。操作パネルで変え、サーバーから届く（名前がなければ英語） */
+  let lang = $state("ja");
 
   onMount(() =>
-    connect(["rank"], (msg) => {
+    connect(["rank", "display"], (msg) => {
       if (msg.type === "rank.update") rank = msg.rank ?? undefined;
+      if (msg.type === "display") lang = msg.rankLanguage;
     }),
   );
 

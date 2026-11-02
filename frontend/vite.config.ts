@@ -1,11 +1,14 @@
 import { svelte } from "@sveltejs/vite-plugin-svelte";
+import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 
 // axum（crates/core の DEFAULT_PORT）
 const core = "127.0.0.1:4510";
 
 export default defineConfig({
-  plugins: [svelte()],
+  plugins: [svelte(), tailwindcss()],
+  // shadcn-svelte の $lib（/ から始めるとプロジェクトのルートからの位置）
+  resolve: { alias: { $lib: "/src/lib" } },
   // OBS に貼る URL は、開発中（Vite から開いたとき）も axum のもの
   define: { "import.meta.env.CORE_ORIGIN": JSON.stringify(`http://${core}`) },
   build: {

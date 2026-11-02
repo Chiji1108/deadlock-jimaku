@@ -4,6 +4,7 @@
 use std::net::{Ipv4Addr, SocketAddr};
 
 use overlays_core::{DEFAULT_PORT, runtime, server, settings, store::Store};
+use tauri::webview::NewWindowResponse;
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 use tokio::net::TcpListener;
 
@@ -34,6 +35,13 @@ fn main() {
             WebviewWindowBuilder::new(app, "main", control_url()?)
                 .title("Deadlock Stream Overlays")
                 .inner_size(960.0, 720.0)
+                // 外部へのリンク（API キーの作成ページなど）はふだんのブラウザで開く
+                .on_new_window(|url, _| {
+                    if let Err(e) = tauri_plugin_opener::open_url(url.as_str(), None::<&str>) {
+                        tracing::warn!("cannot open {url}: {e}");
+                    }
+                    NewWindowResponse::Deny
+                })
                 .build()?;
             Ok(())
         })

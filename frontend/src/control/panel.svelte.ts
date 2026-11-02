@@ -1,0 +1,107 @@
+// 操作パネルの状態。各タブはこれを読み、変更は api 経由でサーバーに送る（サーバーの返す設定で置き換える）
+import { toast } from "svelte-sonner";
+import type { LanguageOption } from "../generated/LanguageOption";
+import type { Provider } from "../generated/Provider";
+import type { ServerMsg } from "../generated/ServerMsg";
+import type { SettingsPatch } from "../generated/SettingsPatch";
+import type { SettingsView } from "../generated/SettingsView";
+import { api } from "../lib/api";
+import { connect, type Status } from "../lib/ws";
+
+/** OBS に貼る URL（axum。開発中に Vite から開いても同じ） */
+export const overlayUrl = (name: "subtitles" | "rank") =>
+  `${import.meta.env.CORE_ORIGIN}/overlay/${name}`;
+
+/** これより小さい入力が続いたら「音が届いていない」 */
+const SILENT_DB = -60;
+const SILENT_MS = 5000;
+
+class Panel {
+  view = $state<SettingsView | undefined>();
+  languages = $state<LanguageOption[]>([]);
+  devices = $state<string[]>([]);
+  server = $state<Status>("connecting");
+  /** 字幕を始められなかった・止まった理由 */
+  transcriptionError = $state<string | undefined>();
+  /** 直近の入力レベル（dBFS）。字幕を動かしている間だけ届く */
+  level = $state<number | undefined>();
+  /** 最後に SILENT_DB を超えた時刻 */
+  private heardAt = 0;
+  now = $state(Date.now());
+
+  get settings() {
+    return this.view?.settings;
+  }
+
+  /** 字幕を始める操作をしていて、止まった理由もない */
+  get running() {
+    return !!this.settings?.transcriptionEnabled && !this.transcriptionError;
+  }
+
+  /** 動いているのに、しばらく音が来ていない */
+  get silent() {
+    return this.running && this.level !== undefined && this.now - this.heardAt > SILENT_MS;
+  }
+
+  label = (code: string) => this.languages.find((l) => l.code === code)?.label ?? code;
+
+  start() {
+    const tick = setInterval(() => (this.now = Date.now()), 500);
+    void this.run(async () => {
+      [this.view, this.languages] = await Promise.all([api.settings(), api.languages()]);
+    });
+    void this.refreshDevices();
+    const disconnect = connect(
+      ["status", "level"],
+      (msg) => this.onMessage(msg),
+      (s) => (this.server = s),
+    );
+    return () => {
+      clearInterval(tick);
+      disconnect();
+    };
+  }
+
+  private onMessage(msg: ServerMsg) {
+    if (msg.type === "transcription.status") {
+      this.transcriptionError = msg.error ?? undefined;
+    } else if (msg.type === "audio.level") {
+      // 届き始めた時点を「聞こえた」とみなし、そこから数える
+      if (this.level === undefined || msg.db > SILENT_DB) this.heardAt = Date.now();
+      this.level = msg.db;
+    }
+  }
+
+  async refreshDevices() {
+    this.devices = await api.devices().catch(() => []);
+  }
+
+  update = (patch: SettingsPatch) =>
+    this.run(async () => {
+      this.view = await api.updateSettings(patch);
+    });
+
+  setTranscription(enabled: boolean) {
+    this.level = undefined;
+    return this.update({ transcriptionEnabled: enabled });
+  }
+
+  setKey = (provider: Provider, key: string) =>
+    this.run(async () => {
+      this.view = await api.setKey(provider, key);
+      toast.success(key ? "保存しました" : "削除しました");
+    });
+
+  /** 失敗したらサーバーの説明を出す。成功したら true */
+  private async run(action: () => Promise<void>) {
+    try {
+      await action();
+      return true;
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+      return false;
+    }
+  }
+}
+
+export const panel = new Panel();

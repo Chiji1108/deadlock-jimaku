@@ -3,29 +3,36 @@
   import { SvelteMap } from "svelte/reactivity";
   import { fade, fly } from "svelte/transition";
   import type { Segment } from "../../generated/Segment";
+  import type { SubtitleDisplay } from "../../generated/SubtitleDisplay";
   import Rich from "../../lib/Rich.svelte";
   import { loadGlossary } from "../../lib/glossary.svelte";
   import { slide } from "../../lib/slide";
   import { connect } from "../../lib/ws";
-  import { params } from "./params";
+
+  /** 長い文ほど長く出す（1 文字あたりの秒数） */
+  const PER_CHAR_SECONDS = 0.15;
 
   const segments = new SvelteMap<string, Segment>();
   let now = $state(Date.now());
+  /** 見せ方は操作パネルで変え、サーバーから届く（接続直後にも届く） */
+  let display = $state<SubtitleDisplay | undefined>();
 
   /** 表示時間は settledAt から数える。partial / final の間は消さない */
   const expiresAt = (s: Segment) =>
-    s.settledAt === undefined
+    s.settledAt === undefined || !display
       ? Infinity
-      : s.settledAt + (params.ttl + [...s.text].length * params.perChar) * 1000;
+      : s.settledAt + (display.holdSeconds + [...s.text].length * PER_CHAR_SECONDS) * 1000;
 
   const isLive = (s: Segment) => s.stage !== "discarded" && expiresAt(s) > now;
 
   const visible = $derived(
-    [...segments.values()]
-      // 原文を出さない設定なら、訳文が届くまで何も出さない
-      .filter((s) => isLive(s) && (params.source || s.enriched))
-      .toSorted((a, b) => a.startedAt - b.startedAt)
-      .slice(-params.maxItems),
+    display
+      ? [...segments.values()]
+          // 原文を出さない設定なら、訳文が届くまで何も出さない
+          .filter((s) => isLive(s) && (display!.showSource || s.enriched))
+          .toSorted((a, b) => a.startedAt - b.startedAt)
+          .slice(-display.maxLines)
+      : [],
   );
 
   onMount(() => {
@@ -33,7 +40,7 @@
       now = Date.now();
       for (const [id, s] of segments) if (!isLive(s)) segments.delete(id);
     }, 250);
-    const disconnect = connect(["subtitle", "glossary"], (msg) => {
+    const disconnect = connect(["subtitle", "glossary", "display"], (msg) => {
       switch (msg.type) {
         case "snapshot":
           segments.clear();
@@ -45,6 +52,9 @@
         // 辞書ができたとき（と接続直後）に届く
         case "glossary.updated":
           void loadGlossary();
+          break;
+        case "display":
+          display = msg.subtitles;
           break;
       }
     });
@@ -63,21 +73,18 @@
       in:fly={{ y: 16, duration: 200 }}
       out:fade={{ duration: 400 }}
     >
-      {#if params.source}
+      {#if display?.showSource}
         <p class="source" lang={s.lang}>
           {#if s.enriched}<Rich
               tokens={s.enriched.source}
               lang={s.lang}
-              furigana={params.furigana}
+              furigana={display.furigana}
             />{:else}{s.text}{/if}
         </p>
       {/if}
       {#if s.enriched}
-        {#each params.langs ?? Object.keys(s.enriched.translations) as lang (lang)}
-          {@const tokens = s.enriched.translations[lang]}
-          {#if tokens}
-            <p class="translation" {lang}><Rich {tokens} {lang} furigana={params.furigana} /></p>
-          {/if}
+        {#each Object.entries(s.enriched.translations) as [lang, tokens] (lang)}
+          <p class="translation" {lang}><Rich {tokens} {lang} furigana={display?.furigana} /></p>
         {/each}
       {/if}
     </li>

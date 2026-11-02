@@ -90,10 +90,14 @@ pub async fn run(
         done_tx,
     );
 
+    let mut level = LevelMeter::default();
     loop {
         tokio::select! {
             chunk = audio_rx.recv() => {
                 let Some(chunk) = chunk else { break };
+                if let Some(db) = level.push(&chunk) {
+                    pipeline.store.send_level(db);
+                }
                 // Realtime が詰まっている（張り直し中など）ときは捨てる。final はバッチで取れる
                 let _ = rt_audio_tx.try_send(chunk.clone());
                 pipeline.on_audio(&chunk);
@@ -113,6 +117,30 @@ pub async fn run(
         }
     }
     Ok(())
+}
+
+/// 操作パネルのメーター用。区間ごとのピークを dBFS で返す
+#[derive(Default)]
+struct LevelMeter {
+    peak: f32,
+    samples: usize,
+}
+
+impl LevelMeter {
+    /// 0.1 秒
+    const WINDOW: usize = audio::SAMPLE_RATE as usize / 10;
+    const FLOOR_DB: f32 = -90.0;
+
+    fn push(&mut self, chunk: &[f32]) -> Option<f32> {
+        self.peak = chunk.iter().fold(self.peak, |p, s| p.max(s.abs()));
+        self.samples += chunk.len();
+        if self.samples < Self::WINDOW {
+            return None;
+        }
+        let db = (20.0 * self.peak.log10()).max(Self::FLOOR_DB);
+        *self = Self::default();
+        Some(db)
+    }
 }
 
 struct Pipeline {
@@ -558,6 +586,19 @@ impl Router {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn level_meter_reports_peak_per_window() {
+        let mut meter = LevelMeter::default();
+        let half = LevelMeter::WINDOW / 2;
+        assert_eq!(meter.push(&vec![0.1; half]), None);
+        let db = meter.push(&vec![-0.5; half]).unwrap();
+        assert!((db - 20.0 * 0.5f32.log10()).abs() < 1e-3);
+        assert_eq!(
+            meter.push(&vec![0.0; LevelMeter::WINDOW]),
+            Some(LevelMeter::FLOOR_DB)
+        );
+    }
     use crate::settings::Segmentation;
 
     fn segmenter() -> Segmenter {
