@@ -1,33 +1,31 @@
 //! 短い記法から Token の列を作る。
 //!
 //! - `{hero:13}` / `{hero:13|ヘイズ}`: エンティティ（`|` の後は発話された表現）
-//! - `[漢字|かんじ]`: ルビ（`parse` だけ。LLM の訳文には使わない）
+//! - `[漢字|かんじ]`: ルビ
 //!
-//! 閉じていない括弧はそのまま文字として扱う（LLM の出力を落とさない）。
+//! 閉じていない括弧はそのまま文字として扱う。
 
 use crate::types::Token;
 
-/// ルビとエンティティの両方を読む（ダミー字幕用）
+/// ダミー字幕の記法を読む
 pub fn parse(markup: &str) -> Vec<Token> {
-    parse_with(markup, &['[', '{'])
-}
-
-/// エンティティだけを読む（LLM の訳文用。`[` は普通の文字として残す）
-pub fn parse_entities(markup: &str) -> Vec<Token> {
-    parse_with(markup, &['{'])
-}
-
-fn parse_with(markup: &str, opens: &[char]) -> Vec<Token> {
     let mut tokens = Vec::new();
     let mut rest = markup;
-    while let Some(start) = rest.find(opens) {
+    let mut text = String::new();
+    while let Some(start) = rest.find(['[', '{']) {
         let ruby = rest[start..].starts_with('[');
         let close = if ruby { ']' } else { '}' };
-        let Some(len) = rest[start..].find(close) else {
-            break;
+        // 閉じる前に次の括弧が開いたら、この括弧はただの文字
+        let inner_end = rest[start + 1..]
+            .find(['[', '{', close])
+            .map(|i| start + 1 + i);
+        let Some(end) = inner_end.filter(|&e| rest[e..].starts_with(close)) else {
+            text.push_str(&rest[..=start]);
+            rest = &rest[start + 1..];
+            continue;
         };
-        let end = start + len;
-        push_text(&mut tokens, &rest[..start], None);
+        text.push_str(&rest[..start]);
+        push_text(&mut tokens, &std::mem::take(&mut text), None);
         let inner = &rest[start + 1..end];
         let (head, tail) = inner
             .split_once('|')
@@ -42,7 +40,8 @@ fn parse_with(markup: &str, opens: &[char]) -> Vec<Token> {
         }
         rest = &rest[end + 1..];
     }
-    push_text(&mut tokens, rest, None);
+    text.push_str(rest);
+    push_text(&mut tokens, &text, None);
     tokens
 }
 
@@ -101,11 +100,11 @@ mod tests {
     }
 
     #[test]
-    fn entities_only_keeps_brackets_and_unclosed_braces() {
+    fn unclosed_brackets_stay_as_text() {
         assert_eq!(
-            parse_entities("[GG] {hero:13} wins {oops"),
+            parse("lol {wow {hero:13} wins {oops"),
             vec![
-                text("[GG] ", None),
+                text("lol {wow ", None),
                 Token::Entity {
                     reference: "hero:13".into(),
                     spoken: None

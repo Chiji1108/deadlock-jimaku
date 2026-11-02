@@ -63,11 +63,7 @@ pub async fn run(store: Arc<Store>, input: audio::Input, api_key: String) -> any
     let enricher = {
         let (key, model) = (api_key.clone(), settings.models.enrich.clone());
         let (lang, targets) = (settings.mic_language.clone(), settings.translate_to.clone());
-        let glossary = glossary.as_ref().map(|l| l.glossary.clone());
-        tokio::task::spawn_blocking(move || {
-            Enricher::new(key, model, lang, targets, glossary.as_deref())
-        })
-        .await??
+        tokio::task::spawn_blocking(move || Enricher::new(key, model, lang, targets)).await??
     };
     let (done_tx, mut done_rx) = mpsc::channel(64);
     let mut pipeline = Pipeline::new(
@@ -283,11 +279,14 @@ impl Pipeline {
             self.context.pop_front();
         }
         self.pending += 1;
+        // 辞書は enrich のたびに store から取る（後から届いたり、作り直されたりする）
+        let glossary = self.store.glossary().map(|l| l.glossary);
         tokio::spawn(enrich(
             self.enricher.clone(),
             id.to_owned(),
             text,
             context,
+            glossary,
             self.done_tx.clone(),
         ));
     }
@@ -363,10 +362,11 @@ async fn enrich(
     id: String,
     text: String,
     context: Vec<String>,
+    glossary: Option<Arc<Glossary>>,
     done: mpsc::Sender<Done>,
 ) {
     let started = Instant::now();
-    let enriched = enricher.enrich(&text, &context).await;
+    let enriched = enricher.enrich(&text, &context, glossary.as_deref()).await;
     tracing::debug!("enriched in {:?}", started.elapsed());
     let _ = done.send(Done::Enriched { id, enriched }).await;
 }
