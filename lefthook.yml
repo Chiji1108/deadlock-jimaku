@@ -1,0 +1,27 @@
+# GUI の Git クライアントから実行されても mise.toml のツールで動くよう、mise exec 経由で呼ぶ
+pre-commit:
+  parallel: true
+  jobs:
+    - name: frontend-fmt
+      root: frontend/
+      glob: "*.{ts,js,json,svelte,css}"
+      exclude:
+        - "frontend/src/generated/**"
+      run: mise exec -- pnpm exec oxfmt {staged_files}
+      stage_fixed: true
+    - name: frontend-lint
+      root: frontend/
+      glob: "*.{ts,js,svelte}"
+      exclude:
+        - "frontend/src/generated/**"
+      run: mise exec -- pnpm exec oxlint {staged_files}
+    - name: rust-fmt
+      glob: "*.rs"
+      run: mise exec -- cargo fmt --all
+      stage_fixed: true
+
+# 型チェック・clippy・テストは時間がかかるので push 前にまとめて流す
+pre-push:
+  jobs:
+    - name: check
+      run: mise run check

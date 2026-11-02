@@ -88,6 +88,7 @@ Deadlock 配信者向けの OBS オーバーレイツール。
 | `mise run headless` | Tauri なしで中核だけ起動し、ダミー字幕を流し続ける（`http://127.0.0.1:4510/overlay/subtitles`） |
 | `mise run check` | oxfmt / oxlint / svelte-check / rustfmt / clippy / cargo test |
 
+- Git フック（**lefthook**）: commit 時に変更ファイルへ oxfmt / oxlint / cargo fmt、push 時に `mise run check`。clone 後に `mise exec -- lefthook install` を一度実行する。
 - 整形とリント: フロントは **oxfmt**（`svelte: true` で `.svelte` も整形）と **oxlint**、Rust は rustfmt と clippy。
 - TypeScript は 6 系に固定する（svelte-check がまだ 7 系に対応していない）。
 - `frontend/src/generated/` は ts-rs の出力（`cargo test -p overlays-core` で更新）。手で編集しない。
