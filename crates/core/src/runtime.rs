@@ -108,10 +108,6 @@ pub async fn run(store: Arc<Store>, options: Options) {
             )
             .await;
 
-        // 別のアカウントのランクを出し続けない
-        if std::mem::replace(&mut rank_account, settings.rank_account) != settings.rank_account {
-            store.clear_rank();
-        }
         let rank_input = RankInput {
             account: settings.rank_account,
             languages,
@@ -119,6 +115,12 @@ pub async fn run(store: Arc<Store>, options: Options) {
         };
         rank_slot
             .update(rank_input, || {
+                // 別のアカウントのランクを出し続けない（前の処理が止まってから消す）
+                if std::mem::replace(&mut rank_account, settings.rank_account)
+                    != settings.rank_account
+                {
+                    store.clear_rank();
+                }
                 Some(tokio::spawn(rank::run_configured(store.clone())))
             })
             .await;
