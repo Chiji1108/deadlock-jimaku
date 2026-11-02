@@ -33,17 +33,19 @@
   {#key rank.badge}
     <div class="rank" style:--rank-color={rank.color} in:scale={{ start: 0.8, duration: 400 }}>
       {#if rank.image}<img class="badge" src={rank.image} alt="" />{/if}
-      <!-- 1 行目: ランク名と（右寄せで）ポイント、2 行目: 幅いっぱいのゲージ -->
+      <!-- 1 行目: ランク名、2 行目: 太いゲージ（ポイントは中に重ねる） -->
       <div class="text">
         {#if label}<p class="name" {lang}>{label}</p>{/if}
         {#if rank.progress}
-          <p class="points">
-            <!-- ポイントが変わったら桁ごとに数字を動かす -->
-            <TextMorph text={number(rank.progress.value)} numbers as="span" duration={600} /><span
-              class="max">{` / ${number(rank.progress.max)}`}</span
-            >
-          </p>
-          <div class="bar"><div class="fill" style:width="{ratio * 100}%"></div></div>
+          <div class="bar">
+            <div class="fill" style:width="{ratio * 100}%"></div>
+            <p class="points">
+              <!-- ポイントが変わったら桁ごとに数字を動かす -->
+              <TextMorph text={number(rank.progress.value)} numbers as="span" duration={600} /><span
+                class="max">{` / ${number(rank.progress.max)}`}</span
+              >
+            </p>
+          </div>
         {:else if rank.points !== undefined}
           <!-- エターナスは上位何 % かで決まるのでゲージなし。累積のポイントだけ出す -->
           <p class="points">
@@ -61,9 +63,9 @@
   :global(:root) {
     --badge-size: 96px;
     --name-size: 34px;
-    --points-size: 22px;
-    --gauge-width: 220px;
-    --gauge-height: 10px;
+    --points-size: 20px;
+    --gauge-width: 260px;
+    --gauge-height: 30px;
     --text-color: #fff;
     --outline-color: rgb(0 0 0 / 0.85);
   }
@@ -98,14 +100,14 @@
     color: var(--rank-color, var(--text-color));
   }
   .text {
-    display: grid;
-    grid-template-columns: auto auto;
-    align-items: baseline;
-    column-gap: 18px;
-    row-gap: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
   }
   .bar {
-    grid-column: 1 / -1;
+    position: relative;
+    display: grid;
+    place-items: center;
     min-width: var(--gauge-width);
     height: var(--gauge-height);
     border-radius: 999px;
@@ -114,13 +116,17 @@
     overflow: hidden;
   }
   .fill {
-    height: 100%;
-    border-radius: inherit;
+    position: absolute;
+    inset: 0 auto 0 0;
     background: var(--rank-color, var(--text-color));
     transition: width 0.6s ease-out;
   }
+  /* ゲージの色の上でも暗い地の上でも読めるよう、縁取りした白い文字を中央に重ねる */
+  .bar .points {
+    position: relative;
+    line-height: 1;
+  }
   .points {
-    justify-self: end;
     font-size: var(--points-size);
     font-variant-numeric: tabular-nums;
   }
