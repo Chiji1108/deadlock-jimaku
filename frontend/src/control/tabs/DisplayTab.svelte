@@ -38,10 +38,11 @@
       <Field.Group>
         <Field.Field orientation="horizontal">
           <Field.Content>
-            <Field.Label for="show-source">話した言葉を出す</Field.Label>
-            <Field.Description
-              >オフにすると訳文だけを出します（訳文が届くまで何も出ません）</Field.Description
-            >
+            <!-- 「原文」より、実際の言語名の方が何のことか分かりやすい -->
+            <Field.Label for="show-source">{panel.label(s.micLanguage)}の字幕を出す</Field.Label>
+            <Field.Description>
+              あなたが話した言葉をそのまま出します。オフにすると翻訳だけになります（翻訳ができるまで少し遅れて出ます）
+            </Field.Description>
           </Field.Content>
           <Switch
             id="show-source"
