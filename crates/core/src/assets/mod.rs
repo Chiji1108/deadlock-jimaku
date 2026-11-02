@@ -36,6 +36,8 @@ const ICON_CONCURRENCY: usize = 8;
 #[derive(Clone)]
 pub struct Loaded {
     pub glossary: Arc<Glossary>,
+    /// 頼んだ言語。名前のない言語は `glossary.languages` に載らないので、どの設定で作った辞書かはこちらで見る
+    pub requested: Vec<LangCode>,
     /// clientVersion ごとのディレクトリを並べる場所
     pub root: PathBuf,
 }
@@ -50,7 +52,7 @@ impl Loaded {
 /// 漢字名の読みは手書きの読みと、キャッシュ済みの LLM の読みを重ねて配信し、
 /// 足りない名前は配信した後に問い合わせて配信し直す（`openai_key` がなければ形態素解析の読みのまま）
 pub async fn load_into(store: Arc<Store>, root: PathBuf, openai_key: Option<String>) {
-    let settings = store.settings().clone();
+    let settings = store.settings();
     let loaded = match load(&root, &settings.glossary_languages()).await {
         Ok(loaded) => loaded,
         Err(e) => {
@@ -78,6 +80,7 @@ pub async fn load_into(store: Arc<Store>, root: PathBuf, openai_key: Option<Stri
         );
         store.set_glossary(Loaded {
             glossary: Arc::new(glossary),
+            requested: loaded.requested.clone(),
             root: loaded.root.clone(),
         });
     };
@@ -133,13 +136,17 @@ pub async fn load(root: &Path, languages: &[LangCode]) -> anyhow::Result<Loaded>
         }
         build_and_save(&client, root, version, &languages).await
     };
-    match built.await {
-        Ok(loaded) => Ok(loaded),
+    let loaded = match built.await {
+        Ok(loaded) => loaded,
         Err(e) => {
             tracing::warn!("using cached glossary: {e:#}");
-            newest_cached(root).ok_or(e)
+            newest_cached(root).ok_or(e)?
         }
-    }
+    };
+    Ok(Loaded {
+        requested: languages,
+        ..loaded
+    })
 }
 
 async fn build_and_save(
@@ -199,6 +206,7 @@ async fn build_and_save(
     }
     Ok(Loaded {
         glossary: Arc::new(glossary),
+        requested: Vec::new(),
         root: root.to_owned(),
     })
 }
@@ -259,6 +267,7 @@ fn read_version(root: &Path, version: u32) -> Option<Loaded> {
     let glossary = serde_json::from_slice(&json).ok()?;
     Some(Loaded {
         glossary: Arc::new(glossary),
+        requested: Vec::new(),
         root: root.to_owned(),
     })
 }

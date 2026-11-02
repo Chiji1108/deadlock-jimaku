@@ -11,7 +11,7 @@
 
   onMount(() =>
     connect(["rank"], (msg) => {
-      if (msg.type === "rank.update") rank = msg.rank;
+      if (msg.type === "rank.update") rank = msg.rank ?? undefined;
     }),
   );
 

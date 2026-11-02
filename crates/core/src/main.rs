@@ -2,19 +2,15 @@
 //!
 //! usage: overlays-headless [options]
 //!   --demo               ダミー字幕を流し続ける
-//!   --translate-to en,ru 翻訳先の言語（既定は Settings::default()）
-//!   --mic                マイクを字幕にする（MISTRAL_API_KEY が必要）
-//!   --mic-device NAME    使うマイク（--mic を兼ねる）
-//!   --input-file PATH    WAV ファイルを実時間で流して字幕にする（MISTRAL_API_KEY が必要）
-//!   --rank-account ID    ランクを表示するアカウント（SteamID64 か 32bit のアカウント ID）
+//!   --input-file PATH    マイクの代わりに WAV ファイルを実時間で流して字幕にする（検証用）
+//!
+//! 設定は操作パネル（http://127.0.0.1:4510/）で変える（Tauri アプリと同じ settings.json）。
+//! API キーは OS の資格情報ストア（操作パネルで設定）か、環境変数 MISTRAL_API_KEY / OPENAI_API_KEY
 
 use std::net::{Ipv4Addr, SocketAddr};
 
 use overlays_core::{
-    DEFAULT_PORT, assets, audio, default_data_dir, demo, rank, server,
-    settings::{self, Settings},
-    store::Store,
-    subtitles,
+    DEFAULT_PORT, default_data_dir, demo, runtime, server, settings, store::Store,
 };
 use tokio::net::TcpListener;
 
@@ -29,44 +25,20 @@ async fn main() -> anyhow::Result<()> {
         args.get(i + 1).cloned()
     };
 
-    let mut settings = Settings::default();
-    if let Some(langs) = value("--translate-to") {
-        settings.translate_to = langs.split(',').map(str::to_owned).collect();
-    }
-    settings.mic_device = value("--mic-device");
-    settings.rank_account = settings::account_id(value("--rank-account").as_deref());
-    let input = match value("--input-file") {
-        Some(path) => Some(audio::Input::File(path.into())),
-        None if flag("--mic") || settings.mic_device.is_some() => {
-            Some(audio::Input::Mic(settings.mic_device.clone()))
-        }
-        None => None,
-    };
-
-    // なくても辞書とダミー字幕は動く。Mistral は文字起こし、OpenAI は翻訳と辞書の漢字名の読み
-    let api_key = std::env::var("MISTRAL_API_KEY").ok();
-    let openai_key = std::env::var("OPENAI_API_KEY").ok();
-    let store = Store::new(settings);
-    tokio::spawn(assets::load_into(
+    let data_dir = default_data_dir();
+    let settings = settings::load(&data_dir.join(settings::FILE));
+    let store = Store::new(settings, data_dir);
+    tokio::spawn(runtime::run(
         store.clone(),
-        default_data_dir().join("assets"),
-        openai_key.clone(),
+        runtime::Options {
+            input_file: value("--input-file").map(Into::into),
+        },
     ));
-    tokio::spawn(rank::run_configured(store.clone()));
     if flag("--demo") {
         let store = store.clone();
         tokio::spawn(async move {
             loop {
                 demo::run(&store).await;
-            }
-        });
-    }
-    if let Some(input) = input {
-        let api_key = api_key.ok_or_else(|| anyhow::anyhow!("MISTRAL_API_KEY is not set"))?;
-        let store = store.clone();
-        tokio::spawn(async move {
-            if let Err(e) = subtitles::run(store, input, api_key, openai_key).await {
-                tracing::error!("transcription stopped: {e:#}");
             }
         });
     }

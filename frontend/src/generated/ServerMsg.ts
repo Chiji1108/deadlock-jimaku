@@ -2,4 +2,4 @@
 import type { RankState } from "./RankState";
 import type { Segment } from "./Segment";
 
-export type ServerMsg = { "type": "snapshot", segments: Array<Segment>, } | { "type": "segment.upsert", segment: Segment, } | { "type": "glossary.updated", clientVersion: number, } | { "type": "rank.update", rank: RankState, };
+export type ServerMsg = { "type": "snapshot", segments: Array<Segment>, } | { "type": "segment.upsert", segment: Segment, } | { "type": "glossary.updated", clientVersion: number, } | { "type": "rank.update", rank: RankState | null, } | { "type": "transcription.status", error: string | null, };

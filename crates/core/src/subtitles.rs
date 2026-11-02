@@ -39,11 +39,13 @@ pub async fn run(
     api_key: String,
     openai_key: Option<String>,
 ) -> anyhow::Result<()> {
-    let settings = store.settings().clone();
+    let settings = store.settings();
 
     // 用語ヒントは Realtime のセッション開始時に 1 回しか渡せないので、辞書を少し待つ。
     // 入力は待ち終わってから開く（待っている間の音声を溜めない）
-    let glossary = store.wait_glossary(Duration::from_secs(20)).await;
+    let glossary = store
+        .wait_glossary(&settings.mic_language, Duration::from_secs(20))
+        .await;
     let context_bias = match &glossary {
         Some(loaded) => context_bias(&loaded.glossary, &settings.mic_language),
         None => {

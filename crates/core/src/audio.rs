@@ -35,6 +35,17 @@ pub async fn open(input: Input) -> anyhow::Result<mpsc::Receiver<Vec<f32>>> {
     Ok(rx)
 }
 
+/// 入力デバイスの名前（操作パネルの選択肢）
+pub fn input_devices() -> anyhow::Result<Vec<String>> {
+    let mut names: Vec<String> = cpal::default_host()
+        .input_devices()?
+        .filter_map(|d| Some(d.description().ok()?.name().to_owned()))
+        .collect();
+    names.sort();
+    names.dedup();
+    Ok(names)
+}
+
 fn open_mic(device: Option<String>, tx: mpsc::Sender<Vec<f32>>) -> anyhow::Result<()> {
     // cpal の Stream は Send でないプラットフォームがあるので、専用のスレッドで持ち続ける
     let (ready_tx, ready_rx) = std::sync::mpsc::channel();

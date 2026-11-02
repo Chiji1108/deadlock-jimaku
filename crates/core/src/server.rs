@@ -5,16 +5,21 @@ use std::sync::Arc;
 use axum::Json;
 use axum::Router;
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
-use axum::extract::{Path, State};
-use axum::http::{StatusCode, Uri, header};
+use axum::extract::{Path, Request, State};
+use axum::http::{HeaderMap, StatusCode, Uri, header};
+use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Response};
-use axum::routing::{get, post};
+use axum::routing::{get, post, put};
 use rust_embed::RustEmbed;
+use serde::Deserialize;
 use tokio::net::TcpListener;
 use tokio::sync::broadcast::error::RecvError;
 
+use crate::secrets::{self, Provider};
+use crate::settings::SettingsPatch;
 use crate::store::Store;
-use crate::types::{ClientMsg, ServerMsg, Topic};
+use crate::types::{ClientMsg, LanguageOption, ServerMsg, SettingsView, Topic};
+use crate::{audio, lang};
 
 #[derive(RustEmbed)]
 #[folder = "../../frontend/dist"]
@@ -22,14 +27,101 @@ use crate::types::{ClientMsg, ServerMsg, Topic};
 struct Frontend;
 
 pub fn router(store: Arc<Store>) -> Router {
+    let api = Router::new()
+        .route("/demo", post(demo))
+        .route("/glossary", get(glossary))
+        .route("/settings", get(get_settings).patch(patch_settings))
+        .route("/keys/{provider}", put(put_key))
+        .route("/devices", get(devices))
+        .route("/languages", get(languages))
+        .layer(middleware::from_fn(local_only));
     Router::new()
         .route("/ws", get(ws))
-        .route("/api/demo", post(demo))
-        .route("/api/glossary", get(glossary))
+        .nest("/api", api)
         .route("/assets/{version}/icons/{*path}", get(icon))
         .route("/assets/rank/{file}", get(rank_image))
         .fallback(frontend)
         .with_state(store)
+}
+
+/// このマシンの画面（操作パネル、OBS のドック、開発中の Vite）からの呼び出しだけを受け付ける。
+/// 別のサイトを開いたブラウザから設定や API キーを書き換えられないようにする（DNS リバインディング対策）。
+/// 書き換えは JSON だけを受け付けるので、別のサイトからの単純なフォーム送信も通らない
+async fn local_only(headers: HeaderMap, request: Request, next: Next) -> Response {
+    let host = headers
+        .get(header::HOST)
+        .and_then(|h| h.to_str().ok())
+        .unwrap_or_default();
+    let hostname = host.rsplit_once(':').map_or(host, |(name, _)| name);
+    if matches!(hostname, "127.0.0.1" | "localhost" | "[::1]") {
+        next.run(request).await
+    } else {
+        StatusCode::FORBIDDEN.into_response()
+    }
+}
+
+async fn get_settings(State(store): State<Arc<Store>>) -> Json<SettingsView> {
+    let keys = tokio::task::spawn_blocking(secrets::status)
+        .await
+        .expect("keyring task");
+    Json(SettingsView {
+        settings: store.settings(),
+        keys,
+        unsaved: store.unsaved(),
+    })
+}
+
+async fn patch_settings(
+    State(store): State<Arc<Store>>,
+    Json(patch): Json<SettingsPatch>,
+) -> Response {
+    match store.update_settings(patch) {
+        Ok(_) => get_settings(State(store)).await.into_response(),
+        Err(e) => (StatusCode::BAD_REQUEST, e).into_response(),
+    }
+}
+
+#[derive(Deserialize)]
+struct KeyBody {
+    /// 空文字列なら消す
+    key: String,
+}
+
+async fn put_key(
+    State(store): State<Arc<Store>>,
+    Path(provider): Path<Provider>,
+    Json(body): Json<KeyBody>,
+) -> Response {
+    let saved = tokio::task::spawn_blocking(move || secrets::set(provider, &body.key))
+        .await
+        .expect("keyring task");
+    match saved {
+        Ok(()) => {
+            store.restart();
+            get_settings(State(store)).await.into_response()
+        }
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, format!("{e:#}")).into_response(),
+    }
+}
+
+async fn devices() -> Response {
+    match tokio::task::spawn_blocking(audio::input_devices).await {
+        Ok(Ok(names)) => Json(names).into_response(),
+        Ok(Err(e)) => (StatusCode::INTERNAL_SERVER_ERROR, format!("{e:#}")).into_response(),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+    }
+}
+
+async fn languages() -> Json<Vec<LanguageOption>> {
+    Json(
+        lang::LANGUAGES
+            .iter()
+            .map(|l| LanguageOption {
+                code: l.code.to_owned(),
+                label: l.label.to_owned(),
+            })
+            .collect(),
+    )
 }
 
 pub async fn serve(listener: TcpListener, store: Arc<Store>) -> std::io::Result<()> {

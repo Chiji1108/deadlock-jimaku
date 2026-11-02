@@ -75,6 +75,8 @@ pub enum Topic {
     /// 辞書が作り直されたことの通知。オーバーレイは `/api/glossary` を取り直す
     Glossary,
     Rank,
+    /// 字幕の処理の状態（操作パネル用）
+    Status,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
@@ -95,8 +97,12 @@ pub enum ServerMsg {
     SegmentUpsert { segment: Segment },
     #[serde(rename = "glossary.updated", rename_all = "camelCase")]
     GlossaryUpdated { client_version: u32 },
+    /// None はランクを表示しない（アカウントが外された）
     #[serde(rename = "rank.update")]
-    RankUpdate { rank: RankState },
+    RankUpdate { rank: Option<RankState> },
+    /// 字幕を始められなかった理由。None なら問題なし
+    #[serde(rename = "transcription.status")]
+    TranscriptionStatus { error: Option<String> },
 }
 
 impl ServerMsg {
@@ -105,6 +111,7 @@ impl ServerMsg {
             Self::Snapshot { .. } | Self::SegmentUpsert { .. } => Topic::Subtitle,
             Self::GlossaryUpdated { .. } => Topic::Glossary,
             Self::RankUpdate { .. } => Topic::Rank,
+            Self::TranscriptionStatus { .. } => Topic::Status,
         }
     }
 }
@@ -206,4 +213,22 @@ pub struct RankState {
 pub struct RankProgress {
     pub value: u32,
     pub max: u32,
+}
+
+/// 操作パネルに返す設定。API キーはどこから読んだかだけ（キーそのものは返さない）
+#[derive(Clone, Debug, Serialize, TS)]
+#[ts(export)]
+pub struct SettingsView {
+    pub settings: crate::settings::Settings,
+    pub keys: crate::secrets::KeyStatus,
+    /// 設定を保存できない理由（変更はこの起動の間だけ効く）
+    #[ts(optional)]
+    pub unsaved: Option<String>,
+}
+
+#[derive(Clone, Debug, Serialize, TS)]
+#[ts(export)]
+pub struct LanguageOption {
+    pub code: LangCode,
+    pub label: String,
 }

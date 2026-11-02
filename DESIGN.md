@@ -65,7 +65,7 @@ Deadlock 配信者向けの OBS オーバーレイツール。
 | VAD | **earshot**（純 Rust、16ms フレーム） | 字幕の区切りを決める（3.1）。Silero と違って ONNX Runtime が要らず、exe に 100KB 程度しか足さない |
 | リサンプル | `rubato` | 16kHz mono に揃える |
 | Mistral | `reqwest` + `tokio-tungstenite` | 公式の Rust SDK がないので直接呼ぶ |
-| API キー | `keyring` | Windows 資格情報マネージャー |
+| API キー | `keyring`（v1） | Windows の資格情報マネージャー / macOS のキーチェーン |
 | 設定 | JSON（アプリの設定ディレクトリ） | |
 | フロント | **Svelte 5 (runes) + Vite + TypeScript** | 下記 |
 | スタイル | 素の CSS + CSS 変数 | OBS の「カスタム CSS」で見た目を上書きできる |
@@ -86,9 +86,9 @@ Deadlock 配信者向けの OBS オーバーレイツール。
 | コマンド | 内容 |
 |---|---|
 | `mise run dev` | Tauri アプリを開発モードで起動（Vite の HMR 付き） |
-| `mise run headless` | Tauri なしで中核だけ起動し、ダミー字幕を流し続ける（`--demo --translate-to en,ru`。`http://127.0.0.1:4510/overlay/subtitles`） |
+| `mise run headless` | Tauri なしで中核だけ起動し、ダミー字幕を流し続ける（`--demo`。`http://127.0.0.1:4510/overlay/subtitles`） |
 
-ヘッドレスの `overlays-headless` は `--mic` / `--mic-device NAME` でマイクを、`--input-file PATH.wav` で録音を実時間で流して字幕にできる（どちらも環境変数 `MISTRAL_API_KEY` が必要。翻訳と辞書の漢字名の読みには `OPENAI_API_KEY` も使い、なければ翻訳せず読みは形態素解析のまま）。Tauri アプリは `MISTRAL_API_KEY` があれば起動時に既定のマイクで字幕を始める（キーの保存と開始・停止の操作は Phase 5）。
+ヘッドレスの `overlays-headless` も Tauri アプリと同じ `settings.json` と API キーを使い、操作パネル（`http://127.0.0.1:4510/`）で設定する。引数は開発用の `--demo` と、マイクの代わりに録音を実時間で流す `--input-file PATH.wav` だけ。
 | `mise run check` | oxfmt / oxlint / svelte-check / rustfmt / clippy / cargo test |
 
 - Git フック（**lefthook**）: commit 時に変更ファイルへ oxfmt / oxlint / cargo fmt、push 時に `mise run check`。clone 後に `mise exec -- lefthook install` を一度実行する。
@@ -207,30 +207,34 @@ deadlock-stream-overlays/
       └─ generated/           # ts-rs の出力（言語の対応表もここに出す）
 ```
 
-## 5. 設定
+## 5. 設定（`settings.rs`, `secrets.rs`, `runtime.rs`）
+
+- 設定は `{データディレクトリ}/settings.json`（Tauri の `app_data_dir`。ヘッドレスも同じ場所）に JSON で保存する。アプリが書き直すファイルなので、コメントの書ける TOML にはしない（書き直すと消える）
+  - 項目が欠けていれば既定値。壊れていれば `.broken` に退けて既定値から始める。権限などで読めないときは既定値で動き、変更はメモリにだけ当てて**保存しない**（ファイルを既定値で上書きしない。操作パネルにその旨を出す）
+  - 既定値のままの詳細項目（`models` など）はファイルに書かない（既定値を変えたら、変えていない人にも届く）
+  - 保存は読み込み〜書き込みをまとめて排他する（同時の変更が消えない）
+  - 型は `types.rs` と同じく ts-rs で TS に出す（`Settings`, `SettingsPatch`）
+- **API キーは設定に入れない**。OS の資格情報ストア（Windows の資格情報マネージャー、macOS のキーチェーン。`keyring` クレート）に保存し、画面には「保存済み / 環境変数 / 未設定」だけを返す。開発中は環境変数 `MISTRAL_API_KEY` / `OPENAI_API_KEY` が優先する
+- **変更はその場で反映する**: `Store` が設定を watch チャンネルで持ち、`runtime` が「辞書・ランク・字幕」の処理を設定から起動する。設定か API キーが変わったら、**入力が変わった処理だけ**止めて張り直す（ランクの ID を変えても字幕は止めない）
+  - 辞書: 言語・OpenAI のキー / ランク: アカウント・言語・間隔（アカウントが変わったら前のランクを消す）/ 字幕: 開始・停止、マイク、言語、翻訳先、モデル、区切り、キー
+  - 張り直すときは前の処理が止まりきってから始める。字幕を止めたり張り直したりしたら、確定していない字幕を消す（`discarded`）。字幕は、話す言語の名前が入った辞書ができてから用語のヒントを作る
+  - 始められない・止まった理由（キーがない、マイクが開けない、マイクの入力が途切れた、など）は `transcription.status`（トピック `status`）で操作パネルに出す
 
 ```ts
 interface Settings {
-  mic: {
-    device: string;               // cpal のデバイス名
-    language: LangCode;           // 配信者が話す言語。既定は "ja"
-  };
-  translateTo: LangCode[];        // 既定は ["en"]。最大 4 言語。mic.language は除く
-  realtime: {
-    targetStreamingDelayMs: number;  // 既定 480
-  };
-  segmentation: {
-    minSilenceMs: number;            // 既定 400
-    maxSegmentSeconds: number;       // 既定 8
-  };
-  models: { realtime: string; batch: string; translate: string; readings: string };  // translate / readings は OpenAI
-  rank: { accountId?: number; pollSeconds: number };  // 既定 180
-  display: { ttlSeconds: number; perCharSeconds: number };  // 既定 6, 0.15
+  transcriptionEnabled: boolean;   // 字幕の開始・停止（既定 false）
+  micLanguage: LangCode;           // 既定 "ja"
+  micDevice?: string;              // なければ OS の既定の入力デバイス
+  translateTo: LangCode[];         // 既定 ["en"]。最大 4。micLanguage は除く
+  models: { realtime; batch; translate; readings; reasoningEffort? };
+  targetStreamingDelayMs: number;  // 既定 480
+  segmentation: { minSilenceMs: number; maxSegmentMs: number };  // 既定 400 / 8000
+  rankAccount?: number;            // Steam の 32bit アカウント ID
+  rankPollSeconds: number;         // 既定 180
 }
 ```
 
-- `translateTo` を変えると、次の発話から反映される。
-- `mic.language` を変えたら、Realtime セッションを張り直す（設定は最初に 1 回しか送れないため）。
+操作パネルからは `SettingsPatch`（変える項目だけ）を送る。`rankAccount` は文字列で受け、SteamID64 でも 32bit の ID でも読む（JS の number では SteamID64 を正確に扱えないため）。読めない値は何も変えずに 400 を返す。
 
 ## 6. 言語
 
@@ -497,20 +501,21 @@ interface Enriched {
 
 ```ts
 // client → server
-type ClientMsg = { type: "subscribe"; topics: ("subtitle" | "glossary" | "rank")[] };
+type ClientMsg = { type: "subscribe"; topics: ("subtitle" | "glossary" | "rank" | "status")[] };
 
 // server → client
 type ServerMsg =
   | { type: "snapshot"; segments: Segment[]; rank?: RankState }  // 接続直後
   | { type: "segment.upsert"; segment: Segment }
-  | { type: "rank.update"; rank: RankState }
+  | { type: "rank.update"; rank: RankState | null }               // null: アカウントを外した・替えた
+  | { type: "transcription.status"; error: string | null }        // 操作パネル向け。字幕を始められない・止まった理由
   | { type: "glossary.updated"; clientVersion: number };          // オーバーレイが辞書を取り直す
 ```
 
 - 辞書は `GET /api/glossary` で取得し、オーバーレイ側で持つ（Segment には ID しか載らない）。
 - サーバーは直近の Segment を（例: 50 件）保持して、snapshot で送る。
 - WS クライアントは指数バックオフで再接続し、再接続したら snapshot で状態を置き換える。
-- 接続直後と broadcast の取りこぼし（Lagged）の後は、購読しているすべてのトピックの現在の状態（`snapshot` と、辞書があれば `glossary.updated`）を送る。
+- 接続直後と broadcast の取りこぼし（Lagged）の後は、購読しているすべてのトピックの現在の状態（`snapshot`、辞書があれば `glossary.updated`、ランクがあれば `rank.update`、`transcription.status`）を送る。
 
 ## 11. 字幕オーバーレイ
 
@@ -557,7 +562,7 @@ URL: `/overlay/rank?lang=ja`（`lang` はランク名の言語。既定は `ja`�
 | ランク名・色 | `GET /v1/assets/ranks?language=…`（設定の言語の分だけ取る） |
 | アイコン | `GET /v1/assets/ranks/{tier}/{subrank}/image?format=webp`（サブランクのないティアは `large_webp`） |
 
-- アカウントは Steam の 32bit アカウント ID（SteamID64 からは `76561197960265728` を引く。どちらでも受け付ける）。ヘッドレスは `--rank-account`、Tauri アプリは設定画面ができるまで環境変数 `DEADLOCK_ACCOUNT_ID`
+- アカウントは Steam の 32bit アカウント ID（SteamID64 からは `76561197960265728` を引く。どちらでも受け付ける）。操作パネルで設定する
 - `rank_poll_seconds`（既定 180 秒）ごとに取りに行き、変わったら `rank.update`（トピック `rank`）を流す。接続直後にも送る
 - データの取り込みに時間がかかるので、試合が終わってすぐには反映されない（deadlock-api の bot とフレンドになるか、Patreon の優先取り込みで速くなる）
 - アイコン（約 75KB）はディスクに保存せず**バッジごとに**メモリに持ち、`/assets/rank/{badge}.webp` で配信する。取れていない間は `image` を出さず（画像を表示しない）、次の回に取り直す。別のバッジのアイコンを配信しない
@@ -568,13 +573,26 @@ URL: `/overlay/rank?lang=ja`（`lang` はランク名の言語。既定は `ja`�
 
 ## 13. 操作パネル（control.html）
 
-- マイクデバイスの選択とレベルメーター、話す言語（`mic.language`）
-- 翻訳先の言語（最大 4 つ。選ぶとコストの目安を表示する）
-- Mistral API キー（keyring に保存し、画面には出さない）とモデル ID
-- 辞書の状態（clientVersion、取得済みの言語、未確認の読みの一覧）
-- ランク: account_id
-- オーバーレイ URL のコピー（パラメータを組み立てる UI）
-- 直近の Segment のログ（デバッグ用。段階ごとにかかった時間を表示する）
+Tauri のウィンドウでも OBS のカスタムブラウザドックでも同じ画面（`http://127.0.0.1:4510/`）。
+
+| 区画 | 内容 |
+|---|---|
+| 字幕 | 開始・停止（Mistral のキーがなければ押せない）、マイク（デバイス一覧 + 既定）、話す言語、翻訳先（最大 4。OpenAI のキーがなければ注意を出す）、字幕オーバーレイの URL、テスト字幕 |
+| ランク | Steam ID（SteamID64 か 32bit。空で非表示）、ランクオーバーレイの URL |
+| API キー | Mistral / OpenAI。状態（保存済み・環境変数・未設定）と、新しいキーの保存・削除。キーそのものは表示しない |
+
+API（すべて `/api`）:
+
+| メソッド | パス | 内容 |
+|---|---|---|
+| GET | `/settings` | `SettingsView`（設定と API キーの状態） |
+| PATCH | `/settings` | `SettingsPatch` を当てて保存し、処理を張り直す |
+| PUT | `/keys/{mistral\|openai}` | `{ key }` を資格情報ストアに保存（空文字列で削除）し、処理を張り直す |
+| GET | `/devices` | 入力デバイスの名前 |
+| GET | `/languages` | 言語の対応表（コードと表示名） |
+
+- `/api` は Host ヘッダーが `127.0.0.1` / `localhost` / `[::1]` のときだけ受け付ける（DNS リバインディング対策）。書き換えは JSON だけなので、別のサイトからの単純なフォーム送信も通らない（CSRF 対策）
+- 残り: 辞書の状態、直近の Segment のログ、マイクのレベルメーター
 
 ## 14. 実装フェーズ
 
@@ -585,7 +603,7 @@ URL: `/overlay/rank?lang=ja`（`lang` はランク名の言語。既定は `ja`�
 | 2 | mic → VAD で区切り → Voxtral Realtime（partial）→ Small Transcribe 3（final） ✅ | 自分の声が字幕になる |
 | 3 | enrich（ふりがな、翻訳、エンティティ） ✅ | 3 段階の表示が通しで動く |
 | 4 | ランクオーバーレイ ✅ | ランクバッジが表示され、更新される |
-| 5 | 仕上げ: 操作パネル、インストーラー、自動更新 | 配布できる |
+| 5 | 仕上げ: 設定の保存と操作パネル ✅、インストーラー、自動更新、見た目（torph など） | 配布できる |
 
 Phase 2 の前に、録音した実況音声で Voxtral 3 の精度（`context_bias` あり / なし、realtime / batch）を確かめる。
 

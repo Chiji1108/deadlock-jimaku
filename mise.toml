@@ -10,7 +10,7 @@ run = "frontend/node_modules/.bin/tauri dev"
 
 [tasks.headless]
 description = "Tauri なしで中核だけ起動し、ダミー字幕を流し続ける"
-run = ["pnpm --dir frontend build", "cargo run -p overlays-core --bin overlays-headless -- --demo --translate-to en,ru"]
+run = ["pnpm --dir frontend build", "cargo run -p overlays-core --bin overlays-headless -- --demo"]
 
 [tasks.check]
 description = "整形・リント・型チェック・テストをまとめて実行する"
