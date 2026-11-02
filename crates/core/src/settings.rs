@@ -155,7 +155,10 @@ impl SubtitleDisplay {
             translation_font_size: patch
                 .translation_font_size
                 .unwrap_or(self.translation_font_size),
-            text_color: patch.text_color.unwrap_or_else(|| self.text_color.clone()),
+            // 操作パネルの色の候補と比べられるよう、小文字に揃える
+            text_color: patch
+                .text_color
+                .map_or_else(|| self.text_color.clone(), |c| c.to_ascii_lowercase()),
             max_lines: patch.max_lines.unwrap_or(self.max_lines),
             hold_seconds: patch.hold_seconds.unwrap_or(self.hold_seconds),
         };
@@ -257,6 +260,11 @@ impl Settings {
             .filter(|t| *t != mic)
             .take(MAX_TRANSLATE_TO)
             .collect();
+        // 読めない値が残っていると、ほかの項目を変えるときの検証も通らなくなる
+        if self.subtitle_display.validate().is_err() {
+            self.subtitle_display = SubtitleDisplay::default();
+        }
+        self.subtitle_display.text_color.make_ascii_lowercase();
         self
     }
 
@@ -561,6 +569,24 @@ mod tests {
         let s = load(&path).unwrap();
         assert_eq!(s.mic_language, "ja");
         assert_eq!(s.translate_to, ["en", "ru", "ko", "de"]);
+    }
+
+    #[test]
+    fn broken_display_values_fall_back_to_defaults() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("settings.json");
+        std::fs::write(&path, r#"{ "subtitleDisplay": { "fontSize": 200 } }"#).unwrap();
+        assert_eq!(
+            load(&path).unwrap().subtitle_display,
+            SubtitleDisplay::default()
+        );
+
+        std::fs::write(
+            &path,
+            r##"{ "subtitleDisplay": { "textColor": "#FFE066" } }"##,
+        )
+        .unwrap();
+        assert_eq!(load(&path).unwrap().subtitle_display.text_color, "#ffe066");
     }
 
     #[test]

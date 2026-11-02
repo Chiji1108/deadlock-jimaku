@@ -68,7 +68,8 @@
   });
 </script>
 
-<!-- 見せ方は操作パネルから届く値を CSS 変数で当てる（OBS のカスタム CSS で上書きもできる） -->
+<!-- 見せ方は操作パネルから届く値を CSS 変数で当てる（操作パネルの値が優先。OBS のカスタム CSS で
+     大きさや色を変えるときは .captions に !important で書く） -->
 <ol
   class="captions"
   data-align={display?.align ?? "center"}

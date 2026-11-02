@@ -16,9 +16,12 @@
   let fontSize = $state(0);
   let translationFontSize = $state(0);
   let textColor = $state("");
+  /** 開いたときの値 */
+  let opened = { fontSize: 0, translationFontSize: 0, textColor: "" };
 
   /** 開くたびに、今の設定から始める */
   function reset() {
+    opened = { ...d };
     ({ fontSize, translationFontSize, textColor } = d);
   }
 
@@ -30,11 +33,12 @@
 
   async function save(e: SubmitEvent) {
     e.preventDefault();
-    const patch: SubtitleDisplayPatch = {
-      fontSize,
-      translationFontSize,
-      textColor: textColor.toLowerCase(),
-    };
+    // 変えた項目だけを送る（開いている間にほかで変えた項目を、開いたときの値で戻さない）
+    const patch: SubtitleDisplayPatch = {};
+    if (fontSize !== opened.fontSize) patch.fontSize = fontSize;
+    if (translationFontSize !== opened.translationFontSize)
+      patch.translationFontSize = translationFontSize;
+    if (textColor !== opened.textColor) patch.textColor = textColor;
     if (await panel.update({ subtitleDisplay: patch })) open = false;
   }
 </script>

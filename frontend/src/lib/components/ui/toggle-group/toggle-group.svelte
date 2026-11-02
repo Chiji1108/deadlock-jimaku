@@ -57,9 +57,18 @@
 <!--
 Discriminated Unions + Destructing (required for bindable) do not
 get along, so we shut typescript up by casting `value` to `never`.
+
+このアプリの 1 つだけ選ぶトグルは、選ばれていない状態を持たない。選ばれている項目を
+押し直しても外さない（外すと見た目だけが設定とずれる）。
 -->
 <ToggleGroupPrimitive.Root
-  bind:value={value as never}
+  bind:value={
+    () => value as never,
+    (v) => {
+      if (restProps.type === "single" && !v) return;
+      value = v;
+    }
+  }
   bind:ref
   {orientation}
   data-slot="toggle-group"
