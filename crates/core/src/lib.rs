@@ -1,7 +1,10 @@
 pub mod assets;
 pub mod audio;
 pub mod demo;
+pub mod enrich;
+pub mod furigana;
 pub mod lang;
+pub mod markup;
 pub mod server;
 pub mod settings;
 pub mod store;

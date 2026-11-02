@@ -21,6 +21,8 @@ pub struct Settings {
 pub struct Models {
     pub realtime: String,
     pub batch: String,
+    /// ふりがな・翻訳・固有名詞。推論するモデル（Mistral Large 4）は 1 発話に 20 秒以上かかるので使わない
+    pub enrich: String,
 }
 
 /// 字幕の区切り（DESIGN.md 3.1）
@@ -41,6 +43,7 @@ impl Default for Settings {
             models: Models {
                 realtime: "voxtral-mini-transcribe-realtime-3".into(),
                 batch: "voxtral-small-transcribe-3".into(),
+                enrich: "mistral-small-2603".into(),
             },
             target_streaming_delay_ms: 480,
             segmentation: Segmentation {

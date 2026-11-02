@@ -3,7 +3,7 @@
 use std::collections::{BTreeMap, HashMap};
 
 use super::api::{ApiHero, ApiItem};
-use crate::types::{Entity, EntityKind, Glossary, ItemSlot, LangCode, RubySegment};
+use crate::types::{Entity, EntityKind, Glossary, ItemSlot, LangCode, RubySegment, Token};
 
 /// 言語ごとの deadlock-api の応答。`en` は必須（どのエンティティを載せるかは英語版で決める）
 pub struct Sources {
@@ -136,6 +136,25 @@ pub fn build(client_version: u32, sources: &Sources, extras: &Extras) -> (Glossa
         entities,
     };
     (glossary, icons)
+}
+
+/// 漢字を含む日本語名で、`readings.ja.json` に読みがないものに、形態素解析で読みを付ける
+pub fn fill_readings(glossary: &mut Glossary, annotate: impl Fn(&str) -> Vec<Token>) {
+    for entity in glossary.entities.values_mut() {
+        let Some(name) = entity.names.get("ja").filter(|_| entity.ruby.is_none()) else {
+            continue;
+        };
+        let segments: Vec<RubySegment> = annotate(name)
+            .into_iter()
+            .filter_map(|t| match t {
+                Token::Text { text, ruby } => Some(RubySegment { text, ruby }),
+                Token::Entity { .. } => None,
+            })
+            .collect();
+        if segments.iter().any(|s| s.ruby.is_some()) {
+            entity.ruby = Some(segments);
+        }
+    }
 }
 
 fn apply_extras(entities: &mut BTreeMap<String, Entity>, extras: &Extras) {
@@ -332,6 +351,48 @@ mod tests {
         let (g, _) = build(6518, &s, &Extras::default());
 
         assert_eq!(g.languages, ["en", "ja"]);
+    }
+
+    #[test]
+    fn fill_readings_keeps_manual_readings() {
+        let ruby = |text: &str, r: &str| Token::Text {
+            text: text.into(),
+            ruby: (!r.is_empty()).then(|| r.into()),
+        };
+        let extras = Extras {
+            readings_ja: BTreeMap::from([(
+                "item:1".into(),
+                vec![
+                    RubySegment {
+                        text: "基礎拡張".into(),
+                        ruby: Some("てがき".into()),
+                    },
+                    RubySegment {
+                        text: "マガジン".into(),
+                        ruby: None,
+                    },
+                ],
+            )]),
+            ..Extras::default()
+        };
+        let (mut g, _) = build(6518, &sources(), &extras);
+        fill_readings(&mut g, |name| match name {
+            "基礎拡張マガジン" => vec![
+                ruby("基礎", "きそ"),
+                ruby("拡張", "かくちょう"),
+                ruby("マガジン", ""),
+            ],
+            "ヘイズ" => vec![ruby("ヘイズ", "")],
+            other => vec![ruby(other, "")],
+        });
+        // 手で書いた読みは上書きしない。かなだけの名前には付けない
+        assert_eq!(
+            g.entities["item:1"].ruby.as_ref().unwrap()[0]
+                .ruby
+                .as_deref(),
+            Some("てがき")
+        );
+        assert!(g.entities["hero:13"].ruby.is_none());
     }
 
     #[test]
