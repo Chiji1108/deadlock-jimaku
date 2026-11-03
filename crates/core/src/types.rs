@@ -111,6 +111,7 @@ pub enum ServerMsg {
     Display {
         subtitles: crate::settings::SubtitleDisplay,
         rank_language: LangCode,
+        item_cards: ItemCardsView,
     },
     /// 直近のピーク（dBFS）。1 秒に 10 回ほど
     #[serde(rename = "audio.level")]
@@ -227,6 +228,16 @@ pub struct RankState {
 pub struct RankProgress {
     pub value: u32,
     pub max: u32,
+}
+
+/// アイテム説明のオーバーレイの見せ方
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ItemCardsView {
+    pub hold_seconds: f32,
+    /// 説明の言語（deadlock-api の言語名。例: `japanese`）
+    pub language: String,
 }
 
 /// 操作パネルに返す設定。API キーはどこから読んだかだけ（キーそのものは返さない）

@@ -31,6 +31,8 @@ pub struct Settings {
     pub translate_to: Vec<LangCode>,
     /// 字幕オーバーレイの見せ方。変えると表示中のオーバーレイにそのまま届く
     pub subtitle_display: SubtitleDisplay,
+    /// アイテム説明のオーバーレイ（字幕でアイテム名が出たら説明のカードを出す）
+    pub item_cards: ItemCards,
     /// ランク名の言語。None なら話す言語
     #[ts(optional)]
     pub rank_language: Option<LangCode>,
@@ -145,6 +147,63 @@ impl SubtitleDisplay {
     }
 }
 
+/// アイテム説明のオーバーレイ（DESIGN.md 12.5）
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[serde(default, rename_all = "camelCase")]
+#[ts(export)]
+pub struct ItemCards {
+    /// 1 枚のカードを出しておく秒数
+    pub hold_seconds: f32,
+    /// 説明の言語。None なら話す言語
+    #[ts(optional)]
+    pub language: Option<LangCode>,
+}
+
+impl Default for ItemCards {
+    fn default() -> Self {
+        Self {
+            hold_seconds: 8.0,
+            language: None,
+        }
+    }
+}
+
+impl ItemCards {
+    pub const HOLD_SECONDS: std::ops::RangeInclusive<f32> = 3.0..=30.0;
+
+    fn apply(&self, patch: ItemCardsPatch) -> Result<Self, String> {
+        let mut next = self.clone();
+        if let Some(seconds) = patch.hold_seconds {
+            if !Self::HOLD_SECONDS.contains(&seconds) {
+                return Err(format!("holdSeconds must be in {:?}", Self::HOLD_SECONDS));
+            }
+            next.hold_seconds = seconds;
+        }
+        if let Some(code) = patch.language {
+            next.language = match code.as_str() {
+                "" => None,
+                _ if lang::find(&code).is_none() => {
+                    return Err(format!("unknown language: {code}"));
+                }
+                _ => Some(code),
+            };
+        }
+        Ok(next)
+    }
+}
+
+/// アイテム説明の設定の変更。省いた項目は変えない
+#[derive(Clone, Debug, Default, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ItemCardsPatch {
+    #[ts(optional)]
+    pub hold_seconds: Option<f32>,
+    /// 空文字列なら話す言語
+    #[ts(optional)]
+    pub language: Option<LangCode>,
+}
+
 /// 字幕の見せ方の変更。省いた項目は変えない（続けて変えたとき、前の変更を古い値で戻さない）
 #[derive(Clone, Debug, Default, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
@@ -241,6 +300,7 @@ impl Default for Settings {
             mic_device: None,
             translate_to: vec!["en".into()],
             subtitle_display: SubtitleDisplay::default(),
+            item_cards: ItemCards::default(),
             rank_language: None,
             models: Models::default(),
             target_streaming_delay_ms: 480,
@@ -279,6 +339,14 @@ impl Default for Segmentation {
 
 impl Settings {
     /// 辞書に名前を載せる言語（DESIGN.md 8.2）
+    /// アイテム説明に使う言語
+    pub fn item_language(&self) -> LangCode {
+        self.item_cards
+            .language
+            .clone()
+            .unwrap_or_else(|| self.mic_language.clone())
+    }
+
     /// ランク名に使う言語。選んだ言語の名前を取っていなければ（翻訳先から外したなど）話す言語
     pub fn rank_language(&self) -> LangCode {
         self.rank_language
@@ -346,6 +414,9 @@ impl Settings {
         if let Some(display) = patch.subtitle_display {
             next.subtitle_display = next.subtitle_display.apply(display)?;
         }
+        if let Some(cards) = patch.item_cards {
+            next.item_cards = next.item_cards.apply(cards)?;
+        }
         if let Some(ms) = patch.min_silence_ms {
             if !Segmentation::MIN_SILENCE_MS.contains(&ms) {
                 return Err(format!(
@@ -396,6 +467,8 @@ pub struct SettingsPatch {
     pub rank_account: Option<String>,
     #[ts(optional)]
     pub subtitle_display: Option<SubtitleDisplayPatch>,
+    #[ts(optional)]
+    pub item_cards: Option<ItemCardsPatch>,
     /// 何 ms 黙ったら区切るか
     #[ts(optional)]
     pub min_silence_ms: Option<u32>,
@@ -664,6 +737,41 @@ mod tests {
         let s = load(&path).unwrap();
         assert_eq!(s.rank_account, Some(308_386_819));
         assert_eq!(s.subtitle_display, SubtitleDisplay::default());
+    }
+
+    #[test]
+    fn item_cards_patch_validates_and_follows_the_spoken_language() {
+        let s = Settings::default();
+        assert_eq!(s.item_language(), "ja");
+        let next = s
+            .apply(SettingsPatch {
+                item_cards: Some(ItemCardsPatch {
+                    hold_seconds: Some(12.0),
+                    language: Some("en".into()),
+                }),
+                ..Default::default()
+            })
+            .unwrap();
+        assert_eq!(next.item_cards.hold_seconds, 12.0);
+        assert_eq!(next.item_language(), "en");
+        for bad in [
+            ItemCardsPatch {
+                hold_seconds: Some(1.0),
+                ..Default::default()
+            },
+            ItemCardsPatch {
+                language: Some("xx".into()),
+                ..Default::default()
+            },
+        ] {
+            assert!(
+                s.apply(SettingsPatch {
+                    item_cards: Some(bad),
+                    ..Default::default()
+                })
+                .is_err()
+            );
+        }
     }
 
     #[test]

@@ -11,6 +11,7 @@
   import { panel } from "./panel.svelte";
   import AudioTab from "./tabs/AudioTab.svelte";
   import DisplayTab from "./tabs/DisplayTab.svelte";
+  import ItemsTab from "./tabs/ItemsTab.svelte";
   import KeysTab from "./tabs/KeysTab.svelte";
   import RankTab from "./tabs/RankTab.svelte";
 
@@ -93,11 +94,13 @@
         <Tabs.List class="w-full">
           <Tabs.Trigger value="audio">マイクと翻訳</Tabs.Trigger>
           <Tabs.Trigger value="display">字幕の表示</Tabs.Trigger>
+          <Tabs.Trigger value="items">アイテム説明</Tabs.Trigger>
           <Tabs.Trigger value="rank">ランク</Tabs.Trigger>
           <Tabs.Trigger value="keys">API キー</Tabs.Trigger>
         </Tabs.List>
         <Tabs.Content value="audio" class="pt-4"><AudioTab /></Tabs.Content>
         <Tabs.Content value="display" class="pt-4"><DisplayTab /></Tabs.Content>
+        <Tabs.Content value="items" class="pt-4"><ItemsTab /></Tabs.Content>
         <Tabs.Content value="rank" class="pt-4"><RankTab /></Tabs.Content>
         <Tabs.Content value="keys" class="pt-4"><KeysTab /></Tabs.Content>
       </Tabs.Root>

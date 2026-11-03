@@ -512,7 +512,7 @@ type ServerMsg =
   | { type: "rank.update"; rank: RankState | null }               // null: アカウントを外した・替えた
   | { type: "transcription.status"; error: string | null }        // 操作パネル向け。字幕を始められない・止まった理由
   | { type: "glossary.updated"; clientVersion: number }           // オーバーレイが辞書を取り直す
-  | { type: "display"; subtitles: SubtitleDisplay; rankLanguage: LangCode }  // オーバーレイの見せ方（11・12 章）
+  | { type: "display"; subtitles: SubtitleDisplay; rankLanguage: LangCode; itemCards: { holdSeconds: number; language: string } }  // オーバーレイの見せ方（11・12 章）
   | { type: "audio.level"; db: number };                          // 操作パネルのメーター。字幕を動かしている間、0.1 秒ごとのピーク（dBFS）
 ```
 
@@ -589,6 +589,16 @@ URL: `/overlay/rank`（パラメータはない。ブラウザソースは幅 48
 - バッジが変わると拡大しながら入れ替わり、ゲージは伸び縮みする
 - 当日の勝敗などは今は出さない（必要になったら `match-history` を使う）
 
+### 12.5 アイテム説明オーバーレイ（`/overlay/items`）
+
+字幕でアイテム名が出たら、そのアイテムの説明をゲーム内のツールチップと同じカードで出す。ブラウザソースは幅 460・高さ 560（カードは幅 450 で、箱の左上から出る）。
+
+- カードは [deadlock-ui](https://github.com/deadlock-api/deadlock-ui)（`@deadlock-api/ui-core`。Stencil 製の Web Components、MIT）の `dl-item-tooltip` を使う。Web Components なので Svelte からそのまま使える。使う部品だけを `dist/components/*.js` から読み込む。開発中のライブラリなのでバージョンは固定する
+- 説明のデータは部品が deadlock-api から取る（こちらでは持たない）。言語は `<dl-provider language>` で渡す
+- 翻訳まで済んだ字幕（`enriched`）の用語から `kind = item` のものを話した順に拾い、辞書の `className` でカードを出す。1 枚ずつ `holdSeconds`（既定 8 秒）出し、続けて話したものは順番に出す
+- 同じアイテムは 1 分間は出し直さない。接続した時点で出ていた字幕では出さない（つなぎ直すたびに出し直さない）
+- 設定（`itemCards`）: 出しておく時間（3〜30 秒）、説明の言語（既定は話す言語）。`display` メッセージで deadlock-api の言語名（例: `japanese`）にして届ける。deadlock-ui が対応していない言語は英語で出す
+
 ## 13. 操作パネル（control.html）
 
 Tauri のウィンドウでも OBS のカスタムブラウザドックでも同じ画面（`http://127.0.0.1:4510/`）。shadcn-svelte（Tailwind CSS v4）で作る。オーバーレイは軽さと OBS のカスタム CSS での上書きやすさを優先し、Tailwind を入れずに素の CSS のまま。
@@ -601,6 +611,7 @@ Tauri のウィンドウでも OBS のカスタムブラウザドックでも同
 |---|---|
 | マイクと翻訳 | 入力デバイス（一覧の更新つき。見つからなければそう出す）、入力レベルのメーター（-60〜0 dB）、5 秒間 -60 dB を超えなければ「音が届いていません」、話す言語、翻訳先（最大 4。OpenAI のキーがなければ注意）、文の区切り（すぐ 0.5 秒 / ふつう 0.75 秒 / つなぐ 1 秒。ミリ秒は「数値で指定」のダイアログ） |
 | 字幕の表示 | プレビュー（オーバーレイを推奨サイズ 1000×400 で開いて縮めたもの）とテスト字幕、11 章の見せ方（揃え、文字の大きさは 小 / 中 / 大 / 特大 の組み合わせ、文字の色は明るい色の候補と OS の色選び、背景は縁取り / 半透明の帯。大きさ・文字色・ヒーロー名とスキル名の色を細かく決めるときは「詳しく設定」のダイアログ。アイテム名はゲーム内のスロットの色で固定）。並べた選択肢で足りない値は、どの設定も見出しの横のボタンから開くダイアログで決める（変えた項目だけを送る）、OBS に貼る URL と置き方 |
+| アイテム説明 | プレビュー（460×560）とテスト字幕、出しておく時間（5 / 8 / 12 / 20 秒）、説明の言語、OBS に貼る URL |
 | ランク | プレビュー（480×140）、Steam ID（SteamID64 かフレンドコード。空で非表示）、ランク名の言語、OBS に貼る URL |
 | API キー | Mistral / OpenAI。状態（保存済み・環境変数・未設定）、キーの作成ページへのリンク、新しいキーの保存・削除。キーそのものは表示しない |
 
