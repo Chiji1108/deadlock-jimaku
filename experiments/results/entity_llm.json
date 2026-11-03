@@ -1,0 +1,5088 @@
+[
+  {
+    "context": [],
+    "current": {
+      "source": [
+        {
+          "t": "text",
+          "text": "僕の一番好きなキャラは"
+        },
+        {
+          "ref": "hero:13",
+          "spoken": "ヘイズ",
+          "t": "entity"
+        },
+        {
+          "t": "text",
+          "text": "ですね。"
+        }
+      ],
+      "translations": {
+        "en": [
+          {
+            "t": "text",
+            "text": "My favorite character is "
+          },
+          {
+            "ref": "hero:13",
+            "t": "entity"
+          },
+          {
+            "t": "text",
+            "text": "."
+          }
+        ]
+      }
+    },
+    "currentMs": 2787,
+    "llm": [
+      {
+        "answer": {
+          "en": "My favorite character is ⟦1⟧.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "僕の一番好きなキャラは"
+            },
+            {
+              "ref": "hero:13",
+              "text": "ヘイズ"
+            },
+            {
+              "ref": null,
+              "text": "ですね。"
+            }
+          ]
+        },
+        "ms": 2009,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 61,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9735,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9732
+          },
+          "total_tokens": 9796
+        }
+      },
+      {
+        "answer": {
+          "en": "My favorite character is ⟦1⟧.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "僕の一番好きなキャラは"
+            },
+            {
+              "ref": "hero:13",
+              "text": "ヘイズ"
+            },
+            {
+              "ref": null,
+              "text": "ですね。"
+            }
+          ]
+        },
+        "ms": 1792,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 61,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9735,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9732
+          },
+          "total_tokens": 9796
+        }
+      },
+      {
+        "answer": {
+          "en": "My favorite character is ⟦1⟧.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "僕の一番好きなキャラは"
+            },
+            {
+              "ref": "hero:13",
+              "text": "ヘイズ"
+            },
+            {
+              "ref": null,
+              "text": "ですね。"
+            }
+          ]
+        },
+        "ms": 2558,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 61,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9735,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9732
+          },
+          "total_tokens": 9796
+        }
+      }
+    ],
+    "text": "僕の一番好きなキャラはヘイズですね。"
+  },
+  {
+    "context": [
+      "僕の一番好きなキャラはヘイズですね。"
+    ],
+    "current": {
+      "source": [
+        {
+          "t": "text",
+          "text": "いや"
+        },
+        {
+          "ref": "hero:13",
+          "spoken": "ヘイズ",
+          "t": "entity"
+        },
+        {
+          "t": "text",
+          "text": "の"
+        },
+        {
+          "ref": "ability:731943444",
+          "spoken": "バレットダンス",
+          "t": "entity"
+        },
+        {
+          "t": "text",
+          "text": "もめっちゃ強いんだけど、"
+        },
+        {
+          "ref": "hero:86",
+          "spoken": "バイオレット",
+          "t": "entity"
+        },
+        {
+          "t": "text",
+          "text": "の"
+        },
+        {
+          "ref": "ability:2516700978",
+          "spoken": "ウルト",
+          "t": "entity"
+        },
+        {
+          "t": "text",
+          "text": "もなんか強そうではある。"
+        }
+      ],
+      "translations": {
+        "en": [
+          {
+            "t": "text",
+            "text": "I mean, "
+          },
+          {
+            "ref": "hero:13",
+            "t": "entity"
+          },
+          {
+            "t": "text",
+            "text": "'s "
+          },
+          {
+            "ref": "ability:731943444",
+            "t": "entity"
+          },
+          {
+            "t": "text",
+            "text": " is really strong too, but "
+          },
+          {
+            "ref": "hero:86",
+            "t": "entity"
+          },
+          {
+            "t": "text",
+            "text": "'s "
+          },
+          {
+            "ref": "ability:2516700978",
+            "t": "entity"
+          },
+          {
+            "t": "text",
+            "text": " also looks pretty strong."
+          }
+        ]
+      }
+    },
+    "currentMs": 1658,
+    "llm": [
+      {
+        "answer": {
+          "en": "I mean, ⟦1⟧'s ⟦3⟧ is super strong too, but ⟦5⟧'s ⟦7⟧ also looks pretty strong.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "いや"
+            },
+            {
+              "ref": "hero:13",
+              "text": "ヘイズ"
+            },
+            {
+              "ref": null,
+              "text": "の"
+            },
+            {
+              "ref": "ability:731943444",
+              "text": "バレットダンス"
+            },
+            {
+              "ref": null,
+              "text": "もめっちゃ強いんだけど、"
+            },
+            {
+              "ref": "hero:86",
+              "text": "バイオレット"
+            },
+            {
+              "ref": null,
+              "text": "の"
+            },
+            {
+              "ref": "ability:2516700978",
+              "text": "ウルト"
+            },
+            {
+              "ref": null,
+              "text": "もなんか強そうではある。"
+            }
+          ]
+        },
+        "ms": 3951,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 168,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9769,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9766
+          },
+          "total_tokens": 9937
+        }
+      },
+      {
+        "answer": {
+          "en": "I mean, ⟦1⟧'s ⟦3⟧ is really strong too, but ⟦5⟧'s ⟦7⟧ looks pretty strong as well.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "いや"
+            },
+            {
+              "ref": "hero:13",
+              "text": "ヘイズ"
+            },
+            {
+              "ref": null,
+              "text": "の"
+            },
+            {
+              "ref": "ability:731943444",
+              "text": "バレットダンス"
+            },
+            {
+              "ref": null,
+              "text": "もめっちゃ強いんだけど、"
+            },
+            {
+              "ref": "hero:86",
+              "text": "バイオレット"
+            },
+            {
+              "ref": null,
+              "text": "の"
+            },
+            {
+              "ref": "ability:2516700978",
+              "text": "ウルト"
+            },
+            {
+              "ref": null,
+              "text": "もなんか強そうではある。"
+            }
+          ]
+        },
+        "ms": 3709,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 169,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9769,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9766
+          },
+          "total_tokens": 9938
+        }
+      },
+      {
+        "answer": {
+          "en": "I mean, ⟦1⟧'s ⟦3⟧ is crazy strong, but ⟦5⟧'s ⟦7⟧ looks pretty strong too.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "いや"
+            },
+            {
+              "ref": "hero:13",
+              "text": "ヘイズ"
+            },
+            {
+              "ref": null,
+              "text": "の"
+            },
+            {
+              "ref": "ability:731943444",
+              "text": "バレットダンス"
+            },
+            {
+              "ref": null,
+              "text": "もめっちゃ強いんだけど、"
+            },
+            {
+              "ref": "hero:86",
+              "text": "バイオレット"
+            },
+            {
+              "ref": null,
+              "text": "の"
+            },
+            {
+              "ref": "ability:2516700978",
+              "text": "ウルト"
+            },
+            {
+              "ref": null,
+              "text": "もなんか強そうではある。"
+            }
+          ]
+        },
+        "ms": 3012,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 167,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9769,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9766
+          },
+          "total_tokens": 9936
+        }
+      }
+    ],
+    "text": "いやヘイズのバレットダンスもめっちゃ強いんだけど、バイオレットのウルトもなんか強そうではある。"
+  },
+  {
+    "context": [],
+    "current": {
+      "source": [
+        {
+          "t": "text",
+          "text": "拡マガをちゃんとね、取りたいよね。最初は。"
+        }
+      ],
+      "translations": {
+        "en": [
+          {
+            "t": "text",
+            "text": "You definitely want to grab an extended mag early on."
+          }
+        ]
+      }
+    },
+    "currentMs": 1433,
+    "llm": [
+      {
+        "answer": {
+          "en": "You definitely wanna grab ⟦0⟧ early on.",
+          "segments": [
+            {
+              "ref": "item:1548066885",
+              "text": "拡マガ"
+            },
+            {
+              "ref": null,
+              "text": "をちゃんとね、取りたいよね。最初は。"
+            }
+          ]
+        },
+        "ms": 2616,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 64,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9740,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9737
+          },
+          "total_tokens": 9804
+        }
+      },
+      {
+        "answer": {
+          "en": "You definitely want to pick up ⟦0⟧ early on.",
+          "segments": [
+            {
+              "ref": "item:1548066885",
+              "text": "拡マガ"
+            },
+            {
+              "ref": null,
+              "text": "をちゃんとね、取りたいよね。最初は。"
+            }
+          ]
+        },
+        "ms": 2910,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 66,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9740,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9737
+          },
+          "total_tokens": 9806
+        }
+      },
+      {
+        "answer": {
+          "en": "You definitely wanna pick up ⟦0⟧ early on.",
+          "segments": [
+            {
+              "ref": "item:1548066885",
+              "text": "拡マガ"
+            },
+            {
+              "ref": null,
+              "text": "をちゃんとね、取りたいよね。最初は。"
+            }
+          ]
+        },
+        "ms": 2658,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 65,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9740,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9737
+          },
+          "total_tokens": 9805
+        }
+      }
+    ],
+    "text": "拡マガをちゃんとね、取りたいよね。最初は。"
+  },
+  {
+    "context": [
+      "拡マガをちゃんとね、取りたいよね。最初は。"
+    ],
+    "current": {
+      "source": [
+        {
+          "ref": "item:968099481",
+          "spoken": "エクストラスピリット",
+          "t": "entity"
+        },
+        {
+          "t": "text",
+          "text": "も重要だけど、拡マガは武器ダメージも上がるから。"
+        }
+      ],
+      "translations": {
+        "en": [
+          {
+            "ref": "item:968099481",
+            "t": "entity"
+          },
+          {
+            "t": "text",
+            "text": " is important too, but Extended Mag also boosts your weapon damage."
+          }
+        ]
+      }
+    },
+    "currentMs": 1676,
+    "llm": [
+      {
+        "answer": {
+          "en": "⟦0⟧ is important too, but ⟦2⟧ also boosts your weapon damage.",
+          "segments": [
+            {
+              "ref": "item:968099481",
+              "text": "エクストラスピリット"
+            },
+            {
+              "ref": null,
+              "text": "も重要だけど、"
+            },
+            {
+              "ref": "item:1548066885",
+              "text": "拡マガ"
+            },
+            {
+              "ref": null,
+              "text": "は武器ダメージも上がるから。"
+            }
+          ]
+        },
+        "ms": 2198,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 103,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9769,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9766
+          },
+          "total_tokens": 9872
+        }
+      },
+      {
+        "answer": {
+          "en": "⟦0⟧ is important too, but ⟦2⟧ also gives you weapon damage.",
+          "segments": [
+            {
+              "ref": "item:968099481",
+              "text": "エクストラスピリット"
+            },
+            {
+              "ref": null,
+              "text": "も重要だけど、"
+            },
+            {
+              "ref": "item:1548066885",
+              "text": "拡マガ"
+            },
+            {
+              "ref": null,
+              "text": "は武器ダメージも上がるから。"
+            }
+          ]
+        },
+        "ms": 2434,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 103,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9769,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9766
+          },
+          "total_tokens": 9872
+        }
+      },
+      {
+        "answer": {
+          "en": "⟦0⟧ is important too, but ⟦2⟧ also boosts weapon damage.",
+          "segments": [
+            {
+              "ref": "item:968099481",
+              "text": "エクストラスピリット"
+            },
+            {
+              "ref": null,
+              "text": "も重要だけど、"
+            },
+            {
+              "ref": "item:1548066885",
+              "text": "拡マガ"
+            },
+            {
+              "ref": null,
+              "text": "は武器ダメージも上がるから。"
+            }
+          ]
+        },
+        "ms": 2328,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 102,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9769,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9766
+          },
+          "total_tokens": 9871
+        }
+      }
+    ],
+    "text": "エクストラスピリットも重要だけど、拡マガは武器ダメージも上がるから。"
+  },
+  {
+    "context": [],
+    "current": {
+      "source": [
+        {
+          "t": "text",
+          "text": "まあ、あとは"
+        },
+        {
+          "ref": "item:2617435668",
+          "spoken": "呪いの遺物",
+          "t": "entity"
+        },
+        {
+          "t": "text",
+          "text": "？まあいわゆるカースだね。"
+        }
+      ],
+      "translations": {
+        "en": [
+          {
+            "t": "text",
+            "text": "Well, what else? "
+          },
+          {
+            "ref": "item:2617435668",
+            "t": "entity"
+          },
+          {
+            "t": "text",
+            "text": "? Yeah, basically Curse."
+          }
+        ]
+      }
+    },
+    "currentMs": 1460,
+    "llm": [
+      {
+        "answer": {
+          "en": "Well, there's also ⟦1⟧? You know, ⟦3⟧.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "まあ、あとは"
+            },
+            {
+              "ref": "item:2617435668",
+              "text": "呪いの遺物"
+            },
+            {
+              "ref": null,
+              "text": "？まあいわゆる"
+            },
+            {
+              "ref": "item:2617435668",
+              "text": "カース"
+            },
+            {
+              "ref": null,
+              "text": "だね。"
+            }
+          ]
+        },
+        "ms": 2464,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 103,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9744,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9741
+          },
+          "total_tokens": 9847
+        }
+      },
+      {
+        "answer": {
+          "en": "Well, there's also ⟦1⟧? You know, ⟦3⟧.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "まあ、あとは"
+            },
+            {
+              "ref": "item:2617435668",
+              "text": "呪いの遺物"
+            },
+            {
+              "ref": null,
+              "text": "？まあいわゆる"
+            },
+            {
+              "ref": "item:2617435668",
+              "text": "カース"
+            },
+            {
+              "ref": null,
+              "text": "だね。"
+            }
+          ]
+        },
+        "ms": 2299,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 103,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9744,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9741
+          },
+          "total_tokens": 9847
+        }
+      },
+      {
+        "answer": {
+          "en": "Well, there's also ⟦1⟧? You know, ⟦3⟧.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "まあ、あとは"
+            },
+            {
+              "ref": "item:2617435668",
+              "text": "呪いの遺物"
+            },
+            {
+              "ref": null,
+              "text": "？まあいわゆる"
+            },
+            {
+              "ref": "item:2617435668",
+              "text": "カース"
+            },
+            {
+              "ref": null,
+              "text": "だね。"
+            }
+          ]
+        },
+        "ms": 2138,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 103,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9744,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9741
+          },
+          "total_tokens": 9847
+        }
+      }
+    ],
+    "text": "まあ、あとは呪いの遺物？まあいわゆるカースだね。"
+  },
+  {
+    "context": [],
+    "current": {
+      "source": [
+        {
+          "t": "text",
+          "text": "エコシャ早めに積みたい。"
+        }
+      ],
+      "translations": {
+        "en": [
+          {
+            "t": "text",
+            "text": "I wanna build Echo Shard early."
+          }
+        ]
+      }
+    },
+    "currentMs": 1479,
+    "llm": [
+      {
+        "answer": {
+          "en": "I wanna pick up ⟦0⟧ early.",
+          "segments": [
+            {
+              "ref": "item:630839635",
+              "text": "エコシャ"
+            },
+            {
+              "ref": null,
+              "text": "早めに積みたい。"
+            }
+          ]
+        },
+        "ms": 1773,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 54,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9732,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9729
+          },
+          "total_tokens": 9786
+        }
+      },
+      {
+        "answer": {
+          "en": "I wanna pick up ⟦0⟧ early.",
+          "segments": [
+            {
+              "ref": "item:630839635",
+              "text": "エコシャ"
+            },
+            {
+              "ref": null,
+              "text": "早めに積みたい。"
+            }
+          ]
+        },
+        "ms": 2198,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 54,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9732,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9729
+          },
+          "total_tokens": 9786
+        }
+      },
+      {
+        "answer": {
+          "en": "I wanna pick up ⟦0⟧ early.",
+          "segments": [
+            {
+              "ref": "item:630839635",
+              "text": "エコシャ"
+            },
+            {
+              "ref": null,
+              "text": "早めに積みたい。"
+            }
+          ]
+        },
+        "ms": 1799,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 54,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9732,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9729
+          },
+          "total_tokens": 9786
+        }
+      }
+    ],
+    "text": "エコシャ早めに積みたい。"
+  },
+  {
+    "context": [],
+    "current": {
+      "source": [
+        {
+          "ref": "hero:67",
+          "spoken": "ページ",
+          "t": "entity"
+        },
+        {
+          "t": "text",
+          "text": "の"
+        },
+        {
+          "ref": "ability:1841901343",
+          "spoken": "ウルト",
+          "t": "entity"
+        },
+        {
+          "t": "text",
+          "text": "で回復して。"
+        }
+      ],
+      "translations": {
+        "en": [
+          {
+            "t": "text",
+            "text": "Heal up with "
+          },
+          {
+            "ref": "hero:67",
+            "t": "entity"
+          },
+          {
+            "t": "text",
+            "text": "'s "
+          },
+          {
+            "ref": "ability:1841901343",
+            "t": "entity"
+          },
+          {
+            "t": "text",
+            "text": "."
+          }
+        ]
+      }
+    },
+    "currentMs": 1477,
+    "llm": [
+      {
+        "answer": {
+          "en": "Heal up with ⟦0⟧'s ⟦2⟧.",
+          "segments": [
+            {
+              "ref": "hero:67",
+              "text": "ページ"
+            },
+            {
+              "ref": null,
+              "text": "の"
+            },
+            {
+              "ref": "ability:1841901343",
+              "text": "ウルト"
+            },
+            {
+              "ref": null,
+              "text": "で回復して。"
+            }
+          ]
+        },
+        "ms": 2231,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 77,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9731,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9728
+          },
+          "total_tokens": 9808
+        }
+      },
+      {
+        "answer": {
+          "en": "Heal up with ⟦0⟧'s ⟦2⟧.",
+          "segments": [
+            {
+              "ref": "hero:67",
+              "text": "ページ"
+            },
+            {
+              "ref": null,
+              "text": "の"
+            },
+            {
+              "ref": "ability:1841901343",
+              "text": "ウルト"
+            },
+            {
+              "ref": null,
+              "text": "で回復して。"
+            }
+          ]
+        },
+        "ms": 2110,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 77,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9731,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9728
+          },
+          "total_tokens": 9808
+        }
+      },
+      {
+        "answer": {
+          "en": "Heal up with ⟦0⟧'s ⟦2⟧.",
+          "segments": [
+            {
+              "ref": "hero:67",
+              "text": "ページ"
+            },
+            {
+              "ref": null,
+              "text": "の"
+            },
+            {
+              "ref": "ability:1841901343",
+              "text": "ウルト"
+            },
+            {
+              "ref": null,
+              "text": "で回復して。"
+            }
+          ]
+        },
+        "ms": 29323,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 77,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9731,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9728
+          },
+          "total_tokens": 9808
+        }
+      }
+    ],
+    "text": "ページのウルトで回復して。"
+  },
+  {
+    "context": [],
+    "current": {
+      "source": [
+        {
+          "t": "text",
+          "text": "リコシェット強すぎ。"
+        }
+      ],
+      "translations": {
+        "en": [
+          {
+            "t": "text",
+            "text": "Ricochet is way too strong."
+          }
+        ]
+      }
+    },
+    "currentMs": 1389,
+    "llm": [
+      {
+        "answer": {
+          "en": "⟦0⟧ is way too strong.",
+          "segments": [
+            {
+              "ref": "item:2480592370",
+              "text": "リコシェット"
+            },
+            {
+              "ref": null,
+              "text": "強すぎ。"
+            }
+          ]
+        },
+        "ms": 1747,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 53,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9731,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9728
+          },
+          "total_tokens": 9784
+        }
+      },
+      {
+        "answer": {
+          "en": "⟦0⟧ is way too strong.",
+          "segments": [
+            {
+              "ref": "item:2480592370",
+              "text": "リコシェット"
+            },
+            {
+              "ref": null,
+              "text": "強すぎ。"
+            }
+          ]
+        },
+        "ms": 1972,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 53,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9731,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9728
+          },
+          "total_tokens": 9784
+        }
+      },
+      {
+        "answer": {
+          "en": "⟦0⟧ is way too strong.",
+          "segments": [
+            {
+              "ref": "item:2480592370",
+              "text": "リコシェット"
+            },
+            {
+              "ref": null,
+              "text": "強すぎ。"
+            }
+          ]
+        },
+        "ms": 1705,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 53,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9731,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9728
+          },
+          "total_tokens": 9784
+        }
+      }
+    ],
+    "text": "リコシェット強すぎ。"
+  },
+  {
+    "context": [],
+    "current": {
+      "source": [
+        {
+          "ref": "hero:13",
+          "spoken": "ヘイズ",
+          "t": "entity"
+        },
+        {
+          "t": "text",
+          "text": "の"
+        },
+        {
+          "ref": "ability:731943444",
+          "spoken": "ウルト",
+          "t": "entity"
+        },
+        {
+          "t": "text",
+          "text": "は強い。"
+        }
+      ],
+      "translations": {
+        "en": [
+          {
+            "ref": "hero:13",
+            "t": "entity"
+          },
+          {
+            "t": "text",
+            "text": "'s "
+          },
+          {
+            "ref": "ability:731943444",
+            "t": "entity"
+          },
+          {
+            "t": "text",
+            "text": " is strong."
+          }
+        ]
+      }
+    },
+    "currentMs": 1331,
+    "llm": [
+      {
+        "answer": {
+          "en": "⟦0⟧'s ⟦2⟧ is strong.",
+          "segments": [
+            {
+              "ref": "hero:13",
+              "text": "ヘイズ"
+            },
+            {
+              "ref": null,
+              "text": "の"
+            },
+            {
+              "ref": "ability:731943444",
+              "text": "ウルト"
+            },
+            {
+              "ref": null,
+              "text": "は強い。"
+            }
+          ]
+        },
+        "ms": 2185,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 75,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9731,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9728
+          },
+          "total_tokens": 9806
+        }
+      },
+      {
+        "answer": {
+          "en": "⟦0⟧'s ⟦2⟧ is strong.",
+          "segments": [
+            {
+              "ref": "hero:13",
+              "text": "ヘイズ"
+            },
+            {
+              "ref": null,
+              "text": "の"
+            },
+            {
+              "ref": "ability:731943444",
+              "text": "ウルト"
+            },
+            {
+              "ref": null,
+              "text": "は強い。"
+            }
+          ]
+        },
+        "ms": 2152,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 75,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9731,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9728
+          },
+          "total_tokens": 9806
+        }
+      },
+      {
+        "answer": {
+          "en": "⟦0⟧'s ⟦2⟧ is strong.",
+          "segments": [
+            {
+              "ref": "hero:13",
+              "text": "ヘイズ"
+            },
+            {
+              "ref": null,
+              "text": "の"
+            },
+            {
+              "ref": "ability:731943444",
+              "text": "ウルト"
+            },
+            {
+              "ref": null,
+              "text": "は強い。"
+            }
+          ]
+        },
+        "ms": 1679,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 75,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9731,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9728
+          },
+          "total_tokens": 9806
+        }
+      }
+    ],
+    "text": "ヘイズのウルトは強い。"
+  },
+  {
+    "context": [],
+    "current": {
+      "source": [
+        {
+          "t": "text",
+          "text": "カースは買っとけ。"
+        }
+      ],
+      "translations": {
+        "en": [
+          {
+            "t": "text",
+            "text": "Make sure you buy Curse."
+          }
+        ]
+      }
+    },
+    "currentMs": 1354,
+    "llm": [
+      {
+        "answer": {
+          "en": "Make sure you buy ⟦0⟧.",
+          "segments": [
+            {
+              "ref": "item:2617435668",
+              "text": "カース"
+            },
+            {
+              "ref": null,
+              "text": "は買っとけ。"
+            }
+          ]
+        },
+        "ms": 2150,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 51,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9729,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9726
+          },
+          "total_tokens": 9780
+        }
+      },
+      {
+        "answer": {
+          "en": "Make sure you buy ⟦0⟧.",
+          "segments": [
+            {
+              "ref": "item:2617435668",
+              "text": "カース"
+            },
+            {
+              "ref": null,
+              "text": "は買っとけ。"
+            }
+          ]
+        },
+        "ms": 1913,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 51,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9729,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9726
+          },
+          "total_tokens": 9780
+        }
+      },
+      {
+        "answer": {
+          "en": "Make sure you buy ⟦0⟧.",
+          "segments": [
+            {
+              "ref": "item:2617435668",
+              "text": "カース"
+            },
+            {
+              "ref": null,
+              "text": "は買っとけ。"
+            }
+          ]
+        },
+        "ms": 1828,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 51,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9729,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9726
+          },
+          "total_tokens": 9780
+        }
+      }
+    ],
+    "text": "カースは買っとけ。"
+  },
+  {
+    "context": [],
+    "current": {
+      "source": [
+        {
+          "ref": "hero:69",
+          "spoken": "ドアマン",
+          "t": "entity"
+        },
+        {
+          "t": "text",
+          "text": "の"
+        },
+        {
+          "ref": "ability:1719512318",
+          "spoken": "カート",
+          "t": "entity"
+        },
+        {
+          "t": "text",
+          "text": "に乗せられた。"
+        }
+      ],
+      "translations": {
+        "en": [
+          {
+            "t": "text",
+            "text": "I got caught in "
+          },
+          {
+            "ref": "hero:69",
+            "t": "entity"
+          },
+          {
+            "t": "text",
+            "text": "'s "
+          },
+          {
+            "ref": "ability:1719512318",
+            "t": "entity"
+          },
+          {
+            "t": "text",
+            "text": "."
+          }
+        ]
+      }
+    },
+    "currentMs": 1480,
+    "llm": [
+      {
+        "answer": {
+          "en": "I got put on ⟦0⟧'s ⟦2⟧.",
+          "segments": [
+            {
+              "ref": "hero:69",
+              "text": "ドアマン"
+            },
+            {
+              "ref": null,
+              "text": "の"
+            },
+            {
+              "ref": "ability:1719512318",
+              "text": "カート"
+            },
+            {
+              "ref": null,
+              "text": "に乗せられた。"
+            }
+          ]
+        },
+        "ms": 2147,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 82,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9735,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9732
+          },
+          "total_tokens": 9817
+        }
+      },
+      {
+        "answer": {
+          "en": "I got put on ⟦0⟧'s ⟦2⟧.",
+          "segments": [
+            {
+              "ref": "hero:69",
+              "text": "ドアマン"
+            },
+            {
+              "ref": null,
+              "text": "の"
+            },
+            {
+              "ref": "ability:1719512318",
+              "text": "カート"
+            },
+            {
+              "ref": null,
+              "text": "に乗せられた。"
+            }
+          ]
+        },
+        "ms": 2073,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 82,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9735,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9732
+          },
+          "total_tokens": 9817
+        }
+      },
+      {
+        "answer": {
+          "en": "I got put on ⟦0⟧'s ⟦2⟧.",
+          "segments": [
+            {
+              "ref": "hero:69",
+              "text": "ドアマン"
+            },
+            {
+              "ref": null,
+              "text": "の"
+            },
+            {
+              "ref": "ability:1719512318",
+              "text": "カート"
+            },
+            {
+              "ref": null,
+              "text": "に乗せられた。"
+            }
+          ]
+        },
+        "ms": 2202,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 82,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9735,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9732
+          },
+          "total_tokens": 9817
+        }
+      }
+    ],
+    "text": "ドアマンのカートに乗せられた。"
+  },
+  {
+    "context": [],
+    "current": {
+      "source": [
+        {
+          "t": "text",
+          "text": "リコセ買ったら一気に楽になった。"
+        }
+      ],
+      "translations": {
+        "en": [
+          {
+            "t": "text",
+            "text": "Once I bought Ricochet, things got a whole lot easier."
+          }
+        ]
+      }
+    },
+    "currentMs": 1514,
+    "llm": [
+      {
+        "answer": {
+          "en": "Once I bought ⟦0⟧, things got way easier.",
+          "segments": [
+            {
+              "ref": "item:2480592370",
+              "text": "リコセ"
+            },
+            {
+              "ref": null,
+              "text": "買ったら一気に楽になった。"
+            }
+          ]
+        },
+        "ms": 2164,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 61,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9735,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9732
+          },
+          "total_tokens": 9796
+        }
+      },
+      {
+        "answer": {
+          "en": "Once I bought ⟦0⟧, things got way easier.",
+          "segments": [
+            {
+              "ref": "item:2480592370",
+              "text": "リコセ"
+            },
+            {
+              "ref": null,
+              "text": "買ったら一気に楽になった。"
+            }
+          ]
+        },
+        "ms": 1980,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 61,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9735,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9732
+          },
+          "total_tokens": 9796
+        }
+      },
+      {
+        "answer": {
+          "en": "Things got way easier once I bought ⟦0⟧.",
+          "segments": [
+            {
+              "ref": "item:2480592370",
+              "text": "リコセ"
+            },
+            {
+              "ref": null,
+              "text": "買ったら一気に楽になった。"
+            }
+          ]
+        },
+        "ms": 2081,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 60,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9735,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9732
+          },
+          "total_tokens": 9795
+        }
+      }
+    ],
+    "text": "リコセ買ったら一気に楽になった。"
+  },
+  {
+    "context": [],
+    "current": {
+      "source": [
+        {
+          "ref": "hero:76",
+          "spoken": "グレイブス",
+          "t": "entity"
+        },
+        {
+          "t": "text",
+          "text": "の３番は"
+        },
+        {
+          "ref": "item:3647584222",
+          "spoken": "スプリットショット",
+          "t": "entity"
+        },
+        {
+          "t": "text",
+          "text": "で強くなる。"
+        }
+      ],
+      "translations": {
+        "en": [
+          {
+            "ref": "hero:76",
+            "t": "entity"
+          },
+          {
+            "t": "text",
+            "text": "'s third ability gets stronger with "
+          },
+          {
+            "ref": "item:3647584222",
+            "t": "entity"
+          },
+          {
+            "t": "text",
+            "text": "."
+          }
+        ]
+      }
+    },
+    "currentMs": 1604,
+    "llm": [
+      {
+        "answer": {
+          "en": "⟦0⟧'s ⟦2⟧ gets stronger with ⟦4⟧.",
+          "segments": [
+            {
+              "ref": "hero:76",
+              "text": "グレイブス"
+            },
+            {
+              "ref": null,
+              "text": "の"
+            },
+            {
+              "ref": "ability:629925354",
+              "text": "３番"
+            },
+            {
+              "ref": null,
+              "text": "は"
+            },
+            {
+              "ref": "item:3647584222",
+              "text": "スプリットショット"
+            },
+            {
+              "ref": null,
+              "text": "で強くなる。"
+            }
+          ]
+        },
+        "ms": 2333,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 111,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9740,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9737
+          },
+          "total_tokens": 9851
+        }
+      },
+      {
+        "answer": {
+          "en": "⟦0⟧'s ⟦2⟧ gets stronger with ⟦4⟧.",
+          "segments": [
+            {
+              "ref": "hero:76",
+              "text": "グレイブス"
+            },
+            {
+              "ref": null,
+              "text": "の"
+            },
+            {
+              "ref": "ability:629925354",
+              "text": "３番"
+            },
+            {
+              "ref": null,
+              "text": "は"
+            },
+            {
+              "ref": "item:3647584222",
+              "text": "スプリットショット"
+            },
+            {
+              "ref": null,
+              "text": "で強くなる。"
+            }
+          ]
+        },
+        "ms": 2361,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 111,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9740,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9737
+          },
+          "total_tokens": 9851
+        }
+      },
+      {
+        "answer": {
+          "en": "⟦0⟧'s ⟦2⟧ gets stronger with ⟦4⟧.",
+          "segments": [
+            {
+              "ref": "hero:76",
+              "text": "グレイブス"
+            },
+            {
+              "ref": null,
+              "text": "の"
+            },
+            {
+              "ref": "ability:629925354",
+              "text": "３番"
+            },
+            {
+              "ref": null,
+              "text": "は"
+            },
+            {
+              "ref": "item:3647584222",
+              "text": "スプリットショット"
+            },
+            {
+              "ref": null,
+              "text": "で強くなる。"
+            }
+          ]
+        },
+        "ms": 2385,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 111,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9740,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9737
+          },
+          "total_tokens": 9851
+        }
+      }
+    ],
+    "text": "グレイブスの３番はスプリットショットで強くなる。"
+  },
+  {
+    "context": [],
+    "current": {
+      "source": [
+        {
+          "t": "text",
+          "text": "ドアマンカートで味方を運ぼう。"
+        }
+      ],
+      "translations": {
+        "en": [
+          {
+            "t": "text",
+            "text": "Let's use the doorman cart to carry our teammates."
+          }
+        ]
+      }
+    },
+    "currentMs": 1481,
+    "llm": [
+      {
+        "answer": {
+          "en": "Let's use ⟦0⟧'s ⟦1⟧ to carry a teammate.",
+          "segments": [
+            {
+              "ref": "hero:69",
+              "text": "ドアマン"
+            },
+            {
+              "ref": "ability:1719512318",
+              "text": "カート"
+            },
+            {
+              "ref": null,
+              "text": "で味方を運ぼう。"
+            }
+          ]
+        },
+        "ms": 1881,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 77,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9735,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9732
+          },
+          "total_tokens": 9812
+        }
+      },
+      {
+        "answer": {
+          "en": "Let's use ⟦0⟧'s ⟦1⟧ to carry a teammate.",
+          "segments": [
+            {
+              "ref": "hero:69",
+              "text": "ドアマン"
+            },
+            {
+              "ref": "ability:1719512318",
+              "text": "カート"
+            },
+            {
+              "ref": null,
+              "text": "で味方を運ぼう。"
+            }
+          ]
+        },
+        "ms": 2437,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 77,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9735,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9732
+          },
+          "total_tokens": 9812
+        }
+      },
+      {
+        "answer": {
+          "en": "Let's carry our teammates with ⟦0⟧'s ⟦1⟧.",
+          "segments": [
+            {
+              "ref": "hero:69",
+              "text": "ドアマン"
+            },
+            {
+              "ref": "ability:1719512318",
+              "text": "カート"
+            },
+            {
+              "ref": null,
+              "text": "で味方を運ぼう。"
+            }
+          ]
+        },
+        "ms": 2478,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 76,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9735,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9732
+          },
+          "total_tokens": 9811
+        }
+      }
+    ],
+    "text": "ドアマンカートで味方を運ぼう。"
+  },
+  {
+    "context": [
+      "ドアマンが前に出てきた"
+    ],
+    "current": {
+      "source": [
+        {
+          "t": "text",
+          "text": "カートに気をつけて。"
+        }
+      ],
+      "translations": {
+        "en": [
+          {
+            "t": "text",
+            "text": "Watch out for the cart."
+          }
+        ]
+      }
+    },
+    "currentMs": 1192,
+    "llm": [
+      {
+        "answer": {
+          "en": "Watch out for ⟦0⟧.",
+          "segments": [
+            {
+              "ref": "ability:1719512318",
+              "text": "カート"
+            },
+            {
+              "ref": null,
+              "text": "に気をつけて。"
+            }
+          ]
+        },
+        "ms": 1710,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 52,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9742,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9739
+          },
+          "total_tokens": 9794
+        }
+      },
+      {
+        "answer": {
+          "en": "Watch out for ⟦0⟧.",
+          "segments": [
+            {
+              "ref": "ability:1719512318",
+              "text": "カート"
+            },
+            {
+              "ref": null,
+              "text": "に気をつけて。"
+            }
+          ]
+        },
+        "ms": 1867,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 52,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9742,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9739
+          },
+          "total_tokens": 9794
+        }
+      },
+      {
+        "answer": {
+          "en": "Watch out for ⟦0⟧.",
+          "segments": [
+            {
+              "ref": "ability:1719512318",
+              "text": "カート"
+            },
+            {
+              "ref": null,
+              "text": "に気をつけて。"
+            }
+          ]
+        },
+        "ms": 2060,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 52,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9742,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9739
+          },
+          "total_tokens": 9794
+        }
+      }
+    ],
+    "text": "カートに気をつけて。"
+  },
+  {
+    "context": [],
+    "current": {
+      "source": [
+        {
+          "ref": "hero:13",
+          "spoken": "ヘイズ",
+          "t": "entity"
+        },
+        {
+          "t": "text",
+          "text": "の2で寝かせてからウルト。"
+        }
+      ],
+      "translations": {
+        "en": [
+          {
+            "t": "text",
+            "text": "Put them to sleep with "
+          },
+          {
+            "ref": "hero:13",
+            "t": "entity"
+          },
+          {
+            "t": "text",
+            "text": "'s 2, then ult."
+          }
+        ]
+      }
+    },
+    "currentMs": 1298,
+    "llm": [
+      {
+        "answer": {
+          "en": "Put them to sleep with ⟦0⟧'s ⟦2⟧, then ult.",
+          "segments": [
+            {
+              "ref": "hero:13",
+              "text": "ヘイズ"
+            },
+            {
+              "ref": null,
+              "text": "の"
+            },
+            {
+              "ref": "ability:2414191464",
+              "text": "2"
+            },
+            {
+              "ref": null,
+              "text": "で寝かせてからウルト。"
+            }
+          ]
+        },
+        "ms": 2437,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 86,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9735,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9732
+          },
+          "total_tokens": 9821
+        }
+      },
+      {
+        "answer": {
+          "en": "Put them to sleep with ⟦0⟧'s ⟦2⟧, then ult.",
+          "segments": [
+            {
+              "ref": "hero:13",
+              "text": "ヘイズ"
+            },
+            {
+              "ref": null,
+              "text": "の"
+            },
+            {
+              "ref": "ability:2414191464",
+              "text": "2"
+            },
+            {
+              "ref": null,
+              "text": "で寝かせてからウルト。"
+            }
+          ]
+        },
+        "ms": 2133,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 86,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9735,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9732
+          },
+          "total_tokens": 9821
+        }
+      },
+      {
+        "answer": {
+          "en": "Put them to sleep with ⟦0⟧'s ⟦2⟧, then ult.",
+          "segments": [
+            {
+              "ref": "hero:13",
+              "text": "ヘイズ"
+            },
+            {
+              "ref": null,
+              "text": "の"
+            },
+            {
+              "ref": "ability:2414191464",
+              "text": "2"
+            },
+            {
+              "ref": null,
+              "text": "で寝かせてからウルト。"
+            }
+          ]
+        },
+        "ms": 2130,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 86,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9735,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9732
+          },
+          "total_tokens": 9821
+        }
+      }
+    ],
+    "text": "ヘイズの2で寝かせてからウルト。"
+  },
+  {
+    "context": [],
+    "current": {
+      "source": [
+        {
+          "t": "text",
+          "text": "今日は1番強いキャラを使う。"
+        }
+      ],
+      "translations": {
+        "en": [
+          {
+            "t": "text",
+            "text": "I'm playing the strongest character today."
+          }
+        ]
+      }
+    },
+    "currentMs": 1456,
+    "llm": [
+      {
+        "answer": {
+          "en": "Today I'm playing the strongest character.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "今日は1番強いキャラを使う。"
+            }
+          ]
+        },
+        "ms": 1799,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 38,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9733,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9730
+          },
+          "total_tokens": 9771
+        }
+      },
+      {
+        "answer": {
+          "en": "Today I'm playing the strongest character.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "今日は1番強いキャラを使う。"
+            }
+          ]
+        },
+        "ms": 1625,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 38,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9733,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9730
+          },
+          "total_tokens": 9771
+        }
+      },
+      {
+        "answer": {
+          "en": "Today I'm playing the strongest character.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "今日は1番強いキャラを使う。"
+            }
+          ]
+        },
+        "ms": 1893,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 38,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9733,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9730
+          },
+          "total_tokens": 9771
+        }
+      }
+    ],
+    "text": "今日は1番強いキャラを使う。"
+  },
+  {
+    "context": [],
+    "current": {
+      "source": [
+        {
+          "t": "text",
+          "text": "次の"
+        },
+        {
+          "ref": "hero:67",
+          "spoken": "ページ",
+          "t": "entity"
+        },
+        {
+          "t": "text",
+          "text": "を見て。"
+        }
+      ],
+      "translations": {
+        "en": [
+          {
+            "t": "text",
+            "text": "Watch the next "
+          },
+          {
+            "ref": "hero:67",
+            "t": "entity"
+          },
+          {
+            "t": "text",
+            "text": "."
+          }
+        ]
+      }
+    },
+    "currentMs": 2851,
+    "llm": [
+      {
+        "answer": {
+          "en": "Look at the next page.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "次のページを見て。"
+            }
+          ]
+        },
+        "ms": 1601,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 33,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9729,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9726
+          },
+          "total_tokens": 9762
+        }
+      },
+      {
+        "answer": {
+          "en": "Check out the next page.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "次のページを見て。"
+            }
+          ]
+        },
+        "ms": 1731,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 33,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9729,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9726
+          },
+          "total_tokens": 9762
+        }
+      },
+      {
+        "answer": {
+          "en": "Check out the next page.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "次のページを見て。"
+            }
+          ]
+        },
+        "ms": 1973,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 33,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9729,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9726
+          },
+          "total_tokens": 9762
+        }
+      }
+    ],
+    "text": "次のページを見て。"
+  },
+  {
+    "context": [],
+    "current": {
+      "source": [
+        {
+          "t": "text",
+          "text": "コンビニでカート押してた。"
+        }
+      ],
+      "translations": {
+        "en": [
+          {
+            "t": "text",
+            "text": "I was pushing a cart at the convenience store."
+          }
+        ]
+      }
+    },
+    "currentMs": 1262,
+    "llm": [
+      {
+        "answer": {
+          "en": "I was pushing a cart at the convenience store.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "コンビニでカート押してた。"
+            }
+          ]
+        },
+        "ms": 1742,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 40,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9732,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9729
+          },
+          "total_tokens": 9772
+        }
+      },
+      {
+        "answer": {
+          "en": "I was pushing a cart at the convenience store.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "コンビニでカート押してた。"
+            }
+          ]
+        },
+        "ms": 2814,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 40,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9732,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9729
+          },
+          "total_tokens": 9772
+        }
+      },
+      {
+        "answer": {
+          "en": "I was pushing a cart at the convenience store.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "コンビニでカート押してた。"
+            }
+          ]
+        },
+        "ms": 1586,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 40,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9732,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9729
+          },
+          "total_tokens": 9772
+        }
+      }
+    ],
+    "text": "コンビニでカート押してた。"
+  },
+  {
+    "context": [],
+    "current": {
+      "source": [
+        {
+          "t": "text",
+          "text": "このチャージが溜まったら撃って。"
+        }
+      ],
+      "translations": {
+        "en": [
+          {
+            "t": "text",
+            "text": "Fire once this charge is full."
+          }
+        ]
+      }
+    },
+    "currentMs": 1535,
+    "llm": [
+      {
+        "answer": {
+          "en": "Shoot when this charge fills up.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "このチャージが溜まったら撃って。"
+            }
+          ]
+        },
+        "ms": 1923,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 39,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9734,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9731
+          },
+          "total_tokens": 9773
+        }
+      },
+      {
+        "answer": {
+          "en": "Fire when this charge fills up.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "このチャージが溜まったら撃って。"
+            }
+          ]
+        },
+        "ms": 2099,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 39,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9734,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9731
+          },
+          "total_tokens": 9773
+        }
+      },
+      {
+        "answer": {
+          "en": "Fire when this charge is full.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "このチャージが溜まったら撃って。"
+            }
+          ]
+        },
+        "ms": 1915,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 39,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9734,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9731
+          },
+          "total_tokens": 9773
+        }
+      }
+    ],
+    "text": "このチャージが溜まったら撃って。"
+  },
+  {
+    "context": [],
+    "current": {
+      "source": [
+        {
+          "t": "text",
+          "text": "マークついてるやつ狙って。"
+        }
+      ],
+      "translations": {
+        "en": [
+          {
+            "t": "text",
+            "text": "Focus the one with the mark."
+          }
+        ]
+      }
+    },
+    "currentMs": 1330,
+    "llm": [
+      {
+        "answer": {
+          "en": "Focus the one who's marked.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "マークついてるやつ狙って。"
+            }
+          ]
+        },
+        "ms": 1705,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 37,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9733,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9730
+          },
+          "total_tokens": 9770
+        }
+      },
+      {
+        "answer": {
+          "en": "Focus the one with the mark on them.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "マークついてるやつ狙って。"
+            }
+          ]
+        },
+        "ms": 1671,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 40,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9733,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9730
+          },
+          "total_tokens": 9773
+        }
+      },
+      {
+        "answer": {
+          "en": "Target the one with the mark on them.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "マークついてるやつ狙って。"
+            }
+          ]
+        },
+        "ms": 1763,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 40,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9733,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9730
+          },
+          "total_tokens": 9773
+        }
+      }
+    ],
+    "text": "マークついてるやつ狙って。"
+  },
+  {
+    "context": [],
+    "current": {
+      "source": [
+        {
+          "t": "text",
+          "text": "さあ、始まりました。デッドロック実況です。"
+        }
+      ],
+      "translations": {
+        "en": [
+          {
+            "t": "text",
+            "text": "All right, here we go. It's time for some Deadlock gameplay!"
+          }
+        ]
+      }
+    },
+    "currentMs": 1573,
+    "llm": [
+      {
+        "answer": {
+          "en": "All right, here we go. We're playing Deadlock!",
+          "segments": [
+            {
+              "ref": null,
+              "text": "さあ、始まりました。デッドロック実況です。"
+            }
+          ]
+        },
+        "ms": 1987,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 47,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9736,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 26,
+            "cached_tokens": 9707
+          },
+          "total_tokens": 9783
+        }
+      },
+      {
+        "answer": {
+          "en": "All right, here we go. Welcome to the Deadlock commentary.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "さあ、始まりました。デッドロック実況です。"
+            }
+          ]
+        },
+        "ms": 1946,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 48,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9736,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9733
+          },
+          "total_tokens": 9784
+        }
+      },
+      {
+        "answer": {
+          "en": "All right, here we go! It's Deadlock commentary time.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "さあ、始まりました。デッドロック実況です。"
+            }
+          ]
+        },
+        "ms": 1682,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 47,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9736,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9733
+          },
+          "total_tokens": 9783
+        }
+      }
+    ],
+    "text": "さあ、始まりました。デッドロック実況です。"
+  },
+  {
+    "context": [
+      "僕の一番好きなキャラはヘイズですね。"
+    ],
+    "current": {
+      "source": [
+        {
+          "ref": "hero:13",
+          "spoken": "ヘイズ",
+          "t": "entity"
+        },
+        {
+          "t": "text",
+          "text": "めっちゃ強いから。"
+        }
+      ],
+      "translations": {
+        "en": [
+          {
+            "t": "text",
+            "text": "Because "
+          },
+          {
+            "ref": "hero:13",
+            "t": "entity"
+          },
+          {
+            "t": "text",
+            "text": " is really strong."
+          }
+        ]
+      }
+    },
+    "currentMs": 1958,
+    "llm": [
+      {
+        "answer": {
+          "en": "⟦0⟧ is super strong.",
+          "segments": [
+            {
+              "ref": "hero:13",
+              "text": "ヘイズ"
+            },
+            {
+              "ref": null,
+              "text": "めっちゃ強いから。"
+            }
+          ]
+        },
+        "ms": 1888,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 49,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9745,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 35,
+            "cached_tokens": 9707
+          },
+          "total_tokens": 9794
+        }
+      },
+      {
+        "answer": {
+          "en": "⟦0⟧ is super strong.",
+          "segments": [
+            {
+              "ref": "hero:13",
+              "text": "ヘイズ"
+            },
+            {
+              "ref": null,
+              "text": "めっちゃ強いから。"
+            }
+          ]
+        },
+        "ms": 1843,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 49,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9745,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9742
+          },
+          "total_tokens": 9794
+        }
+      },
+      {
+        "answer": {
+          "en": "⟦0⟧ is super strong.",
+          "segments": [
+            {
+              "ref": "hero:13",
+              "text": "ヘイズ"
+            },
+            {
+              "ref": null,
+              "text": "めっちゃ強いから。"
+            }
+          ]
+        },
+        "ms": 3071,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 49,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9745,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9742
+          },
+          "total_tokens": 9794
+        }
+      }
+    ],
+    "text": "ヘイズめっちゃ強いから。"
+  },
+  {
+    "context": [],
+    "current": {
+      "source": [
+        {
+          "t": "text",
+          "text": "でも最近出た"
+        },
+        {
+          "ref": "hero:86",
+          "spoken": "バイオレット",
+          "t": "entity"
+        },
+        {
+          "t": "text",
+          "text": "もめっちゃ気になるね。"
+        }
+      ],
+      "translations": {
+        "en": [
+          {
+            "t": "text",
+            "text": "But I'm also really curious about "
+          },
+          {
+            "ref": "hero:86",
+            "t": "entity"
+          },
+          {
+            "t": "text",
+            "text": ", who came out recently."
+          }
+        ]
+      }
+    },
+    "currentMs": 1739,
+    "llm": [
+      {
+        "answer": {
+          "en": "But I'm also really curious about ⟦1⟧, who came out recently.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "でも最近出た"
+            },
+            {
+              "ref": "hero:86",
+              "text": "バイオレット"
+            },
+            {
+              "ref": null,
+              "text": "もめっちゃ気になるね。"
+            }
+          ]
+        },
+        "ms": 2149,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 71,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9738,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 28,
+            "cached_tokens": 9707
+          },
+          "total_tokens": 9809
+        }
+      },
+      {
+        "answer": {
+          "en": "But I'm also really curious about ⟦1⟧, who came out recently.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "でも最近出た"
+            },
+            {
+              "ref": "hero:86",
+              "text": "バイオレット"
+            },
+            {
+              "ref": null,
+              "text": "もめっちゃ気になるね。"
+            }
+          ]
+        },
+        "ms": 2007,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 71,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9738,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9735
+          },
+          "total_tokens": 9809
+        }
+      },
+      {
+        "answer": {
+          "en": "But I'm also really curious about ⟦1⟧, who came out recently.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "でも最近出た"
+            },
+            {
+              "ref": "hero:86",
+              "text": "バイオレット"
+            },
+            {
+              "ref": null,
+              "text": "もめっちゃ気になるね。"
+            }
+          ]
+        },
+        "ms": 1835,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 71,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9738,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9735
+          },
+          "total_tokens": 9809
+        }
+      }
+    ],
+    "text": "でも最近出たバイオレットもめっちゃ気になるね。"
+  },
+  {
+    "context": [],
+    "current": {
+      "source": [
+        {
+          "t": "text",
+          "text": "そこはちゃんと取りたいよね。"
+        }
+      ],
+      "translations": {
+        "en": [
+          {
+            "t": "text",
+            "text": "We definitely want to secure that, right?"
+          }
+        ]
+      }
+    },
+    "currentMs": 1380,
+    "llm": [
+      {
+        "answer": {
+          "en": "We definitely wanna secure that, right?",
+          "segments": [
+            {
+              "ref": null,
+              "text": "そこはちゃんと取りたいよね。"
+            }
+          ]
+        },
+        "ms": 1796,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 38,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9731,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 21,
+            "cached_tokens": 9707
+          },
+          "total_tokens": 9769
+        }
+      },
+      {
+        "answer": {
+          "en": "We definitely want to secure that, right?",
+          "segments": [
+            {
+              "ref": null,
+              "text": "そこはちゃんと取りたいよね。"
+            }
+          ]
+        },
+        "ms": 1647,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 39,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9731,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9728
+          },
+          "total_tokens": 9770
+        }
+      },
+      {
+        "answer": {
+          "en": "We definitely want to secure that, right?",
+          "segments": [
+            {
+              "ref": null,
+              "text": "そこはちゃんと取りたいよね。"
+            }
+          ]
+        },
+        "ms": 1573,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 39,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9731,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9728
+          },
+          "total_tokens": 9770
+        }
+      }
+    ],
+    "text": "そこはちゃんと取りたいよね。"
+  },
+  {
+    "context": [
+      "まあいわゆるカースだね。"
+    ],
+    "current": {
+      "source": [
+        {
+          "t": "text",
+          "text": "カースは最終盤に取りたいよね。ちゃんと。"
+        }
+      ],
+      "translations": {
+        "en": [
+          {
+            "t": "text",
+            "text": "You definitely want to pick up Curse in the late game."
+          }
+        ]
+      }
+    },
+    "currentMs": 1739,
+    "llm": [
+      {
+        "answer": {
+          "en": "You wanna make sure you pick up ⟦0⟧ in the very late game, right?",
+          "segments": [
+            {
+              "ref": "item:2617435668",
+              "text": "カース"
+            },
+            {
+              "ref": null,
+              "text": "は最終盤に取りたいよね。ちゃんと。"
+            }
+          ]
+        },
+        "ms": 2253,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 70,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9748,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 38,
+            "cached_tokens": 9707
+          },
+          "total_tokens": 9818
+        }
+      },
+      {
+        "answer": {
+          "en": "You wanna make sure you pick up ⟦0⟧ in the very late game, right?",
+          "segments": [
+            {
+              "ref": "item:2617435668",
+              "text": "カース"
+            },
+            {
+              "ref": null,
+              "text": "は最終盤に取りたいよね。ちゃんと。"
+            }
+          ]
+        },
+        "ms": 1859,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 70,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9748,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9745
+          },
+          "total_tokens": 9818
+        }
+      },
+      {
+        "answer": {
+          "en": "You definitely want to pick up ⟦0⟧ in the very late game, right?",
+          "segments": [
+            {
+              "ref": "item:2617435668",
+              "text": "カース"
+            },
+            {
+              "ref": null,
+              "text": "は最終盤に取りたいよね。ちゃんと。"
+            }
+          ]
+        },
+        "ms": 2157,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 69,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9748,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9745
+          },
+          "total_tokens": 9817
+        }
+      }
+    ],
+    "text": "カースは最終盤に取りたいよね。ちゃんと。"
+  },
+  {
+    "context": [],
+    "current": {
+      "source": [
+        {
+          "t": "text",
+          "text": "ソウル全然足りない。"
+        }
+      ],
+      "translations": {
+        "en": [
+          {
+            "t": "text",
+            "text": "I don't have nearly enough souls."
+          }
+        ]
+      }
+    },
+    "currentMs": 1226,
+    "llm": [
+      {
+        "answer": {
+          "en": "I'm nowhere near having enough souls.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "ソウル全然足りない。"
+            }
+          ]
+        },
+        "ms": 1856,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 36,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9731,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 21,
+            "cached_tokens": 9707
+          },
+          "total_tokens": 9767
+        }
+      },
+      {
+        "answer": {
+          "en": "I'm nowhere near having enough souls.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "ソウル全然足りない。"
+            }
+          ]
+        },
+        "ms": 1671,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 36,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9731,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9728
+          },
+          "total_tokens": 9767
+        }
+      },
+      {
+        "answer": {
+          "en": "I'm nowhere near having enough souls.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "ソウル全然足りない。"
+            }
+          ]
+        },
+        "ms": 1717,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 36,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9731,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9728
+          },
+          "total_tokens": 9767
+        }
+      }
+    ],
+    "text": "ソウル全然足りない。"
+  },
+  {
+    "context": [],
+    "current": {
+      "source": [
+        {
+          "t": "text",
+          "text": "敵全員ミッドに寄ってる。"
+        }
+      ],
+      "translations": {
+        "en": [
+          {
+            "t": "text",
+            "text": "The whole enemy team is rotating mid."
+          }
+        ]
+      }
+    },
+    "currentMs": 1350,
+    "llm": [
+      {
+        "answer": {
+          "en": "The whole enemy team is rotating mid.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "敵全員ミッドに寄ってる。"
+            }
+          ]
+        },
+        "ms": 1819,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 38,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9732,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 22,
+            "cached_tokens": 9707
+          },
+          "total_tokens": 9770
+        }
+      },
+      {
+        "answer": {
+          "en": "The whole enemy team is rotating mid.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "敵全員ミッドに寄ってる。"
+            }
+          ]
+        },
+        "ms": 1689,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 38,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9732,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9729
+          },
+          "total_tokens": 9770
+        }
+      },
+      {
+        "answer": {
+          "en": "The whole enemy team is rotating mid.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "敵全員ミッドに寄ってる。"
+            }
+          ]
+        },
+        "ms": 1590,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 38,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9732,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9729
+          },
+          "total_tokens": 9770
+        }
+      }
+    ],
+    "text": "敵全員ミッドに寄ってる。"
+  },
+  {
+    "context": [],
+    "current": {
+      "source": [
+        {
+          "t": "text",
+          "text": "ガーディアン硬すぎる。"
+        }
+      ],
+      "translations": {
+        "en": [
+          {
+            "t": "text",
+            "text": "The Guardian is way too tanky."
+          }
+        ]
+      }
+    },
+    "currentMs": 1699,
+    "llm": [
+      {
+        "answer": {
+          "en": "The Guardian's way too tanky.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "ガーディアン硬すぎる。"
+            }
+          ]
+        },
+        "ms": 1931,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 37,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9731,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 21,
+            "cached_tokens": 9707
+          },
+          "total_tokens": 9768
+        }
+      },
+      {
+        "answer": {
+          "en": "The Guardian's way too tanky.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "ガーディアン硬すぎる。"
+            }
+          ]
+        },
+        "ms": 1579,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 37,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9731,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9728
+          },
+          "total_tokens": 9768
+        }
+      },
+      {
+        "answer": {
+          "en": "The Guardian's way too tanky.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "ガーディアン硬すぎる。"
+            }
+          ]
+        },
+        "ms": 1625,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 37,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9731,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9728
+          },
+          "total_tokens": 9768
+        }
+      }
+    ],
+    "text": "ガーディアン硬すぎる。"
+  },
+  {
+    "context": [],
+    "current": {
+      "source": [
+        {
+          "t": "text",
+          "text": "ウルト溜まったから行くよ。"
+        }
+      ],
+      "translations": {
+        "en": [
+          {
+            "t": "text",
+            "text": "My ult's ready, so I'm going in."
+          }
+        ]
+      }
+    },
+    "currentMs": 2033,
+    "llm": [
+      {
+        "answer": {
+          "en": "My ult's up, so I'm going in.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "ウルト溜まったから行くよ。"
+            }
+          ]
+        },
+        "ms": 2139,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 41,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9733,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 23,
+            "cached_tokens": 9707
+          },
+          "total_tokens": 9774
+        }
+      },
+      {
+        "answer": {
+          "en": "My ult's up, so I'm going in.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "ウルト溜まったから行くよ。"
+            }
+          ]
+        },
+        "ms": 1699,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 41,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9733,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9730
+          },
+          "total_tokens": 9774
+        }
+      },
+      {
+        "answer": {
+          "en": "My ult's up, so I'm going in.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "ウルト溜まったから行くよ。"
+            }
+          ]
+        },
+        "ms": 1585,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 41,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9733,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9730
+          },
+          "total_tokens": 9774
+        }
+      }
+    ],
+    "text": "ウルト溜まったから行くよ。"
+  },
+  {
+    "context": [],
+    "current": {
+      "source": [
+        {
+          "t": "text",
+          "text": "スマホは"
+        },
+        {
+          "ref": "hero:50",
+          "spoken": "ポケット",
+          "t": "entity"
+        },
+        {
+          "t": "text",
+          "text": "に入れといて。"
+        }
+      ],
+      "translations": {
+        "en": [
+          {
+            "t": "text",
+            "text": "Put the phone in "
+          },
+          {
+            "ref": "hero:50",
+            "t": "entity"
+          },
+          {
+            "t": "text",
+            "text": " for now."
+          }
+        ]
+      }
+    },
+    "currentMs": 1432,
+    "llm": [
+      {
+        "answer": {
+          "en": "Keep your phone in your pocket.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "スマホはポケットに入れといて。"
+            }
+          ]
+        },
+        "ms": 1639,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 38,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9733,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 23,
+            "cached_tokens": 9707
+          },
+          "total_tokens": 9771
+        }
+      },
+      {
+        "answer": {
+          "en": "Keep your phone in your pocket.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "スマホはポケットに入れといて。"
+            }
+          ]
+        },
+        "ms": 1729,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 38,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9733,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9730
+          },
+          "total_tokens": 9771
+        }
+      },
+      {
+        "answer": {
+          "en": "Keep your phone in your pocket.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "スマホはポケットに入れといて。"
+            }
+          ]
+        },
+        "ms": 1749,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 38,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9733,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9730
+          },
+          "total_tokens": 9771
+        }
+      }
+    ],
+    "text": "スマホはポケットに入れといて。"
+  },
+  {
+    "context": [],
+    "current": {
+      "source": [
+        {
+          "ref": "hero:50",
+          "spoken": "ポケット",
+          "t": "entity"
+        },
+        {
+          "t": "text",
+          "text": "の"
+        },
+        {
+          "ref": "ability:2954330093",
+          "spoken": "ウルト",
+          "t": "entity"
+        },
+        {
+          "t": "text",
+          "text": "避けて。"
+        }
+      ],
+      "translations": {
+        "en": [
+          {
+            "t": "text",
+            "text": "Dodge "
+          },
+          {
+            "ref": "hero:50",
+            "t": "entity"
+          },
+          {
+            "t": "text",
+            "text": "'s "
+          },
+          {
+            "ref": "ability:2954330093",
+            "t": "entity"
+          },
+          {
+            "t": "text",
+            "text": "."
+          }
+        ]
+      }
+    },
+    "currentMs": 1538,
+    "llm": [
+      {
+        "answer": {
+          "en": "Dodge ⟦0⟧'s ⟦2⟧.",
+          "segments": [
+            {
+              "ref": "hero:50",
+              "text": "ポケット"
+            },
+            {
+              "ref": null,
+              "text": "の"
+            },
+            {
+              "ref": "ability:2954330093",
+              "text": "ウルト"
+            },
+            {
+              "ref": null,
+              "text": "避けて。"
+            }
+          ]
+        },
+        "ms": 2282,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 76,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9731,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 21,
+            "cached_tokens": 9707
+          },
+          "total_tokens": 9807
+        }
+      },
+      {
+        "answer": {
+          "en": "Dodge ⟦0⟧'s ⟦2⟧.",
+          "segments": [
+            {
+              "ref": "hero:50",
+              "text": "ポケット"
+            },
+            {
+              "ref": null,
+              "text": "の"
+            },
+            {
+              "ref": "ability:2954330093",
+              "text": "ウルト"
+            },
+            {
+              "ref": null,
+              "text": "避けて。"
+            }
+          ]
+        },
+        "ms": 2322,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 76,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9731,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9728
+          },
+          "total_tokens": 9807
+        }
+      },
+      {
+        "answer": {
+          "en": "Dodge ⟦0⟧'s ⟦2⟧.",
+          "segments": [
+            {
+              "ref": "hero:50",
+              "text": "ポケット"
+            },
+            {
+              "ref": null,
+              "text": "の"
+            },
+            {
+              "ref": "ability:2954330093",
+              "text": "ウルト"
+            },
+            {
+              "ref": null,
+              "text": "避けて。"
+            }
+          ]
+        },
+        "ms": 1946,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 76,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9731,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9728
+          },
+          "total_tokens": 9807
+        }
+      }
+    ],
+    "text": "ポケットのウルト避けて。"
+  },
+  {
+    "context": [],
+    "current": {
+      "source": [
+        {
+          "t": "text",
+          "text": "ちょっとセブンイレブン行ってくる。"
+        }
+      ],
+      "translations": {
+        "en": [
+          {
+            "t": "text",
+            "text": "I'm gonna run to 7-Eleven real quick."
+          }
+        ]
+      }
+    },
+    "currentMs": 1210,
+    "llm": [
+      {
+        "answer": {
+          "en": "I'm gonna pop over to 7-Eleven.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "ちょっとセブンイレブン行ってくる。"
+            }
+          ]
+        },
+        "ms": 1977,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 45,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9737,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 27,
+            "cached_tokens": 9707
+          },
+          "total_tokens": 9782
+        }
+      },
+      {
+        "answer": {
+          "en": "I'm gonna go to 7-Eleven real quick.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "ちょっとセブンイレブン行ってくる。"
+            }
+          ]
+        },
+        "ms": 1844,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 46,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9737,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9734
+          },
+          "total_tokens": 9783
+        }
+      },
+      {
+        "answer": {
+          "en": "I'm gonna run to 7-Eleven real quick.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "ちょっとセブンイレブン行ってくる。"
+            }
+          ]
+        },
+        "ms": 1929,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 46,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9737,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9734
+          },
+          "total_tokens": 9783
+        }
+      }
+    ],
+    "text": "ちょっとセブンイレブン行ってくる。"
+  },
+  {
+    "context": [],
+    "current": {
+      "source": [
+        {
+          "ref": "hero:2",
+          "spoken": "セブン",
+          "t": "entity"
+        },
+        {
+          "t": "text",
+          "text": "止めないとやばい。"
+        }
+      ],
+      "translations": {
+        "en": [
+          {
+            "t": "text",
+            "text": "We gotta stop "
+          },
+          {
+            "ref": "hero:2",
+            "t": "entity"
+          },
+          {
+            "t": "text",
+            "text": " or we're screwed."
+          }
+        ]
+      }
+    },
+    "currentMs": 1688,
+    "llm": [
+      {
+        "answer": {
+          "en": "We gotta stop ⟦0⟧, or we're screwed.",
+          "segments": [
+            {
+              "ref": "hero:2",
+              "text": "セブン"
+            },
+            {
+              "ref": null,
+              "text": "止めないとやばい。"
+            }
+          ]
+        },
+        "ms": 1996,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 55,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9733,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 23,
+            "cached_tokens": 9707
+          },
+          "total_tokens": 9788
+        }
+      },
+      {
+        "answer": {
+          "en": "We gotta stop ⟦0⟧ or we're screwed.",
+          "segments": [
+            {
+              "ref": "hero:2",
+              "text": "セブン"
+            },
+            {
+              "ref": null,
+              "text": "止めないとやばい。"
+            }
+          ]
+        },
+        "ms": 1846,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 54,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9733,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9730
+          },
+          "total_tokens": 9787
+        }
+      },
+      {
+        "answer": {
+          "en": "We gotta stop ⟦0⟧ or we're screwed.",
+          "segments": [
+            {
+              "ref": "hero:2",
+              "text": "セブン"
+            },
+            {
+              "ref": null,
+              "text": "止めないとやばい。"
+            }
+          ]
+        },
+        "ms": 1603,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 54,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9733,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9730
+          },
+          "total_tokens": 9787
+        }
+      }
+    ],
+    "text": "セブン止めないとやばい。"
+  },
+  {
+    "context": [],
+    "current": {
+      "source": [
+        {
+          "t": "text",
+          "text": "最初から"
+        },
+        {
+          "ref": "hero:31",
+          "spoken": "ラッシュ",
+          "t": "entity"
+        },
+        {
+          "t": "text",
+          "text": "しよう。"
+        }
+      ],
+      "translations": {
+        "en": [
+          {
+            "t": "text",
+            "text": "Let's play "
+          },
+          {
+            "ref": "hero:31",
+            "t": "entity"
+          },
+          {
+            "t": "text",
+            "text": " from the start."
+          }
+        ]
+      }
+    },
+    "currentMs": 1568,
+    "llm": [
+      {
+        "answer": {
+          "en": "Let's rush from the start.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "最初からラッシュしよう。"
+            }
+          ]
+        },
+        "ms": 1785,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 34,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9730,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 20,
+            "cached_tokens": 9707
+          },
+          "total_tokens": 9764
+        }
+      },
+      {
+        "answer": {
+          "en": "Let's rush from the start.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "最初からラッシュしよう。"
+            }
+          ]
+        },
+        "ms": 1591,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 34,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9730,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9727
+          },
+          "total_tokens": 9764
+        }
+      },
+      {
+        "answer": {
+          "en": "Let's rush from the start.",
+          "segments": [
+            {
+              "ref": null,
+              "text": "最初からラッシュしよう。"
+            }
+          ]
+        },
+        "ms": 1744,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 34,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9730,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9727
+          },
+          "total_tokens": 9764
+        }
+      }
+    ],
+    "text": "最初からラッシュしよう。"
+  },
+  {
+    "context": [],
+    "current": {
+      "source": [
+        {
+          "ref": "hero:31",
+          "spoken": "ラッシュ",
+          "t": "entity"
+        },
+        {
+          "t": "text",
+          "text": "に飛び込まれた。"
+        }
+      ],
+      "translations": {
+        "en": [
+          {
+            "ref": "hero:31",
+            "t": "entity"
+          },
+          {
+            "t": "text",
+            "text": " jumped on me."
+          }
+        ]
+      }
+    },
+    "currentMs": 1493,
+    "llm": [
+      {
+        "answer": {
+          "en": "⟦0⟧ jumped on me.",
+          "segments": [
+            {
+              "ref": "hero:31",
+              "text": "ラッシュ"
+            },
+            {
+              "ref": null,
+              "text": "に飛び込まれた。"
+            }
+          ]
+        },
+        "ms": 1875,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 50,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9732,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 22,
+            "cached_tokens": 9707
+          },
+          "total_tokens": 9782
+        }
+      },
+      {
+        "answer": {
+          "en": "⟦0⟧ jumped on me.",
+          "segments": [
+            {
+              "ref": "hero:31",
+              "text": "ラッシュ"
+            },
+            {
+              "ref": null,
+              "text": "に飛び込まれた。"
+            }
+          ]
+        },
+        "ms": 1664,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 50,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9732,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9729
+          },
+          "total_tokens": 9782
+        }
+      },
+      {
+        "answer": {
+          "en": "⟦0⟧ jumped on me.",
+          "segments": [
+            {
+              "ref": "hero:31",
+              "text": "ラッシュ"
+            },
+            {
+              "ref": null,
+              "text": "に飛び込まれた。"
+            }
+          ]
+        },
+        "ms": 2423,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 50,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9732,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9729
+          },
+          "total_tokens": 9782
+        }
+      }
+    ],
+    "text": "ラッシュに飛び込まれた。"
+  },
+  {
+    "context": [],
+    "current": {
+      "source": [
+        {
+          "ref": "hero:52",
+          "spoken": "ミラージュ",
+          "t": "entity"
+        },
+        {
+          "t": "text",
+          "text": "みたいに見えた。"
+        }
+      ],
+      "translations": {
+        "en": [
+          {
+            "t": "text",
+            "text": "It looked like "
+          },
+          {
+            "ref": "hero:52",
+            "t": "entity"
+          },
+          {
+            "t": "text",
+            "text": "."
+          }
+        ]
+      }
+    },
+    "currentMs": 1442,
+    "llm": [
+      {
+        "answer": {
+          "en": "It looked like ⟦0⟧.",
+          "segments": [
+            {
+              "ref": "hero:52",
+              "text": "ミラージュ"
+            },
+            {
+              "ref": null,
+              "text": "みたいに見えた。"
+            }
+          ]
+        },
+        "ms": 2059,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 51,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9733,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 23,
+            "cached_tokens": 9707
+          },
+          "total_tokens": 9784
+        }
+      },
+      {
+        "answer": {
+          "en": "It looked like ⟦0⟧.",
+          "segments": [
+            {
+              "ref": "hero:52",
+              "text": "ミラージュ"
+            },
+            {
+              "ref": null,
+              "text": "みたいに見えた。"
+            }
+          ]
+        },
+        "ms": 1938,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 51,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9733,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9730
+          },
+          "total_tokens": 9784
+        }
+      },
+      {
+        "answer": {
+          "en": "It looked like ⟦0⟧.",
+          "segments": [
+            {
+              "ref": "hero:52",
+              "text": "ミラージュ"
+            },
+            {
+              "ref": null,
+              "text": "みたいに見えた。"
+            }
+          ]
+        },
+        "ms": 2056,
+        "problems": [],
+        "usage": {
+          "completion_tokens": 51,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens": 9733,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 9730
+          },
+          "total_tokens": 9784
+        }
+      }
+    ],
+    "text": "ミラージュみたいに見えた。"
+  }
+]

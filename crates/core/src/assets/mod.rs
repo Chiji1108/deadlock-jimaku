@@ -11,7 +11,6 @@ mod readings;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::time::Duration;
 
 use anyhow::Context;
 use futures_util::{StreamExt, future::try_join_all, stream};
@@ -19,10 +18,10 @@ use futures_util::{StreamExt, future::try_join_all, stream};
 use crate::lang;
 use crate::store::Store;
 use crate::types::{Glossary, LangCode};
-use glossary::{Aliases, Icon, Sources};
+use glossary::{Icon, Sources};
 
 /// キャッシュの形式。Glossary の形やアイコンの置き方を変えたら上げる（古いキャッシュは読まない）
-const CACHE_FORMAT: &str = "v8";
+const CACHE_FORMAT: &str = "v9";
 
 /// LLM で付けた読みのキャッシュ。名前ごとなので、パッチやキャッシュ形式をまたいで使い回す
 const LLM_READINGS: &str = "readings-llm.ja.json";
@@ -32,10 +31,6 @@ const READINGS_PER_REQUEST: usize = 40;
 
 /// 同時にダウンロードするアイコンの数
 const ICON_CONCURRENCY: usize = 8;
-
-/// 別名を配るサーバー（DESIGN.md 17 章）。アプリの更新を待たずに別名を足せる
-const ALIASES_URL: &str = "https://api.deadlock.jp/jimaku/v1/aliases/ja";
-const ALIASES_TIMEOUT: Duration = Duration::from_secs(5);
 
 #[derive(Clone)]
 pub struct Loaded {
@@ -57,20 +52,13 @@ impl Loaded {
 /// 足りない名前は配信した後に問い合わせて配信し直す（`openai_key` がなければ手書きとキャッシュの読みだけ）
 pub async fn load_into(store: Arc<Store>, root: PathBuf, openai_key: Option<String>) {
     let settings = store.settings();
-    // サーバーの別名は辞書の読み込みと同時に取りに行き、届いたら足して配り直す（待たせない）
-    let fetching = tokio::spawn(server_aliases());
     let loaded = match load(&root, &settings.glossary_languages()).await {
         Ok(loaded) => loaded,
         Err(e) => {
             tracing::error!("glossary unavailable: {e:#}");
-            fetching.abort();
             return;
         }
     };
-    let mut aliases = bundled_aliases().unwrap_or_else(|e| {
-        tracing::warn!("{e:#}");
-        Aliases::new()
-    });
     let manual = match manual_readings() {
         Ok(manual) => manual,
         Err(e) => {
@@ -80,9 +68,8 @@ pub async fn load_into(store: Arc<Store>, root: PathBuf, openai_key: Option<Stri
     };
     let cache_path = root.join(LLM_READINGS);
     let cache = readings::load_cache(&cache_path).await;
-    let publish = |cache: &readings::Cache, aliases: &Aliases| {
+    let publish = |cache: &readings::Cache| {
         let mut glossary = (*loaded.glossary).clone();
-        glossary::apply_aliases(&mut glossary, aliases);
         readings::apply(&mut glossary, cache, &manual);
         tracing::info!(
             "glossary {} ({} entities, {:?})",
@@ -104,17 +91,7 @@ pub async fn load_into(store: Arc<Store>, root: PathBuf, openai_key: Option<Stri
             (readings::Cache::new(), false)
         }
     };
-    publish(&cache, &aliases);
-
-    match fetching.await {
-        Ok(Ok(server)) => {
-            if merge_aliases(&mut aliases, server) {
-                publish(&cache, &aliases);
-            }
-        }
-        Ok(Err(e)) => tracing::warn!("aliases from server: {e:#}"),
-        Err(_) => {}
-    }
+    publish(&cache);
 
     let (true, Some(api_key)) = (readable, openai_key) else {
         return;
@@ -142,7 +119,7 @@ pub async fn load_into(store: Arc<Store>, root: PathBuf, openai_key: Option<Stri
             Err(e) => tracing::warn!("readings: {e:#}"),
         }
     }
-    publish(&cache, &aliases);
+    publish(&cache);
 }
 
 pub async fn load(root: &Path, languages: &[LangCode]) -> anyhow::Result<Loaded> {
@@ -277,39 +254,6 @@ fn read_version(root: &Path, version: u32) -> Option<Loaded> {
     })
 }
 
-/// サーバーの別名（アプリの更新を待たずに足せる分）
-async fn server_aliases() -> anyhow::Result<Aliases> {
-    let res = crate::http()
-        .get(ALIASES_URL)
-        .timeout(ALIASES_TIMEOUT)
-        .send()
-        .await?
-        .error_for_status()?;
-    Ok(res.json().await?)
-}
-
-/// 同梱の別名にサーバーの別名を足す。サーバーの分が古くても空でも、同梱の別名は消さない。
-/// 増えたら true
-fn merge_aliases(aliases: &mut Aliases, server: Aliases) -> bool {
-    let mut added = false;
-    for (reference, names) in server {
-        let entry = aliases.entry(reference).or_default();
-        for name in names {
-            if !entry.contains(&name) {
-                entry.push(name);
-                added = true;
-            }
-        }
-    }
-    added
-}
-
-/// アプリに同梱の別名
-fn bundled_aliases() -> anyhow::Result<Aliases> {
-    serde_json::from_str(include_str!("../../../../data/aliases.ja.json"))
-        .context("data/aliases.ja.json")
-}
-
 /// 手で書いた読み。辞書には保存せず、読み込むたびに重ねる（名前が変わっていたら使わない）
 fn manual_readings() -> anyhow::Result<readings::Manual> {
     serde_json::from_str(include_str!("../../../../data/readings.ja.json"))
@@ -321,23 +265,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn server_aliases_add_to_bundled_ones() {
-        let mut aliases = Aliases::from([("item:1".into(), vec!["拡マガ".into()])]);
-        let server = Aliases::from([
-            ("item:1".into(), vec!["拡マガ".into(), "カクマガ".into()]),
-            ("item:2".into(), vec!["カース".into()]),
-        ]);
-        assert!(merge_aliases(&mut aliases, server));
-        assert_eq!(aliases["item:1"], ["拡マガ", "カクマガ"]);
-        assert_eq!(aliases["item:2"], ["カース"]);
-        // 古い・空のサーバーの分では、同梱の別名は消えない
-        assert!(!merge_aliases(&mut aliases, Aliases::new()));
-        assert_eq!(aliases["item:1"], ["拡マガ", "カクマガ"]);
-    }
-
-    #[test]
-    fn bundled_extras_parse() {
-        bundled_aliases().unwrap();
+    fn bundled_readings_parse() {
         manual_readings().unwrap();
     }
 

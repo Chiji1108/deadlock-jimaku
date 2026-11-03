@@ -219,8 +219,6 @@ pub struct Entity {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub ruby: Option<Vec<RubySegment>>,
-    #[serde(default)]
-    pub aliases: BTreeMap<LangCode, Vec<String>>,
     /// `/assets/icons/...`
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]

@@ -44,11 +44,9 @@ def load_glossary() -> dict:
 
 
 def load_keywords() -> list[str]:
-    """アプリの辞書から、日本語の公式名と別名"""
+    """アプリの辞書から、日本語の公式名"""
     entities = load_glossary()
-    aliases = json.loads((Path(__file__).parent.parent / "data" / "aliases.ja.json").read_text())
     words = [e["names"]["ja"] for e in entities.values() if e["names"].get("ja")]
-    words += [a for xs in aliases.values() for a in xs]
     return list(dict.fromkeys(w for w in words if not re.search(r"[<>\r\n]", w)))
 
 

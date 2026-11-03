@@ -7,7 +7,7 @@
   const rows: { use: Use; name: string; audio: boolean }[] = [
     { use: "realtime", name: "話している途中の字幕", audio: true },
     { use: "batch", name: "確定した字幕", audio: true },
-    { use: "translate", name: "翻訳", audio: false },
+    { use: "translate", name: "用語と翻訳", audio: false },
     { use: "furigana", name: "ふりがな", audio: false },
     { use: "readings", name: "辞書の読み", audio: false },
   ];

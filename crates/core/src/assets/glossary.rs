@@ -11,9 +11,6 @@ pub struct Sources {
     pub items: BTreeMap<LangCode, Vec<ApiItem>>,
 }
 
-/// 日本語の別名（`data/aliases.ja.json`）。キーはエンティティの参照
-pub type Aliases = BTreeMap<String, Vec<String>>;
-
 /// ダウンロードするアイコン。`path` は icons ディレクトリからの相対パス
 #[derive(Debug, PartialEq)]
 pub struct Icon {
@@ -134,19 +131,6 @@ pub fn build(client_version: u32, sources: &Sources) -> (Glossary, Vec<Icon>) {
     (glossary, icons)
 }
 
-/// 別名を重ねる。辞書には保存せず、配るたびに重ねる（アプリの更新で別名が変わっても、
-/// Deadlock の更新を待たずに効く）
-pub fn apply_aliases(glossary: &mut Glossary, aliases: &Aliases) {
-    for (reference, aliases) in aliases {
-        match glossary.entities.get_mut(reference) {
-            Some(e) => {
-                e.aliases.insert("ja".into(), aliases.clone());
-            }
-            None => tracing::warn!("aliases: unknown entity {reference}"),
-        }
-    }
-}
-
 type NamesByLang<'a> = BTreeMap<&'a str, HashMap<u32, &'a str>>;
 
 /// 名前が取れない（空、またはローカライズされていない class_name のまま）ものは除く
@@ -185,7 +169,6 @@ fn entity(kind: EntityKind, class_name: &str, names: BTreeMap<LangCode, String>)
         class_name: class_name.to_owned(),
         names,
         ruby: None,
-        aliases: BTreeMap::new(),
         icon: None,
         slot: None,
         hero: None,
@@ -324,15 +307,5 @@ mod tests {
     fn extension_ignores_query_and_dots_in_host() {
         assert_eq!(extension("https://cdn.example/a/haze.webp?v=2#x"), "webp");
         assert_eq!(extension("https://cdn.example/a/haze"), "png");
-    }
-
-    #[test]
-    fn applies_aliases() {
-        let (mut g, _) = build(6518, &sources());
-        apply_aliases(
-            &mut g,
-            &Aliases::from([("item:1".into(), vec!["拡張マガジン".into()])]),
-        );
-        assert_eq!(g.entities["item:1"].aliases["ja"], ["拡張マガジン"]);
     }
 }
