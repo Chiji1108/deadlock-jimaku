@@ -31,10 +31,39 @@
     { key: "fontSize", label: "話した言葉の大きさ" },
     { key: "translationFontSize", label: "翻訳の大きさ" },
   ] as const;
+  /** 候補は縁取りの黒に映える明るい色だけ。先頭が既定の色 */
   const colors = [
-    { key: "textColor", label: "文字の色" },
-    { key: "heroColor", label: "ヒーロー名の色" },
-    { key: "abilityColor", label: "スキル名の色" },
+    {
+      key: "textColor",
+      label: "文字の色",
+      swatches: [
+        { hex: "#ffffff", label: "白" },
+        { hex: "#fff3c4", label: "クリーム" },
+        { hex: "#ffe066", label: "黄" },
+        { hex: "#c9f0ff", label: "水色" },
+        { hex: "#d4ffc9", label: "薄緑" },
+      ],
+    },
+    {
+      key: "heroColor",
+      label: "ヒーロー名の色",
+      swatches: [
+        { hex: "#ffd34d", label: "黄" },
+        { hex: "#ff9f5c", label: "オレンジ" },
+        { hex: "#ff7ab6", label: "ピンク" },
+        { hex: "#b48cff", label: "紫" },
+      ],
+    },
+    {
+      key: "abilityColor",
+      label: "スキル名の色",
+      swatches: [
+        { hex: "#8fd8ff", label: "水色" },
+        { hex: "#7cf0c8", label: "ミント" },
+        { hex: "#a7b4ff", label: "青紫" },
+        { hex: "#ffffff", label: "白" },
+      ],
+    },
   ] as const;
 
   const valid = $derived(
@@ -81,9 +110,14 @@
     {/each}
     <Field.Separator />
     {#each colors as c (c.key)}
-      <Field.Field orientation="horizontal">
-        <Field.Label for={c.key} class="flex-1">{c.label}</Field.Label>
-        <ColorInput id={c.key} bind:value={values[c.key]} fallback={d[c.key]} />
+      <Field.Field>
+        <Field.Label for={c.key}>{c.label}</Field.Label>
+        <ColorInput
+          id={c.key}
+          bind:value={values[c.key]}
+          fallback={d[c.key]}
+          swatches={[...c.swatches]}
+        />
       </Field.Field>
     {/each}
   </Field.Group>

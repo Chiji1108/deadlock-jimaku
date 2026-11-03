@@ -31,14 +31,6 @@
     { label: "大", fontSize: 48, translationFontSize: 32 },
     { label: "特大", fontSize: 56, translationFontSize: 36 },
   ];
-  /** 縁取りの黒に映える、明るい色だけを並べる */
-  const COLORS = [
-    { hex: "#ffffff", label: "白" },
-    { hex: "#fff3c4", label: "クリーム" },
-    { hex: "#ffe066", label: "黄" },
-    { hex: "#c9f0ff", label: "水色" },
-    { hex: "#d4ffc9", label: "薄緑" },
-  ];
   const BACKGROUNDS: { value: Background; label: string; hint: string }[] = [
     { value: "outline", label: "縁取り", hint: "文字に黒い縁取りを付けます" },
     {
@@ -122,40 +114,9 @@
           </ToggleGroup.Root>
           {#if !size}
             <Field.Description>
-              数値で指定しています（話した言葉 {d.fontSize}px・翻訳 {d.translationFontSize}px）
+              「詳しく設定」で指定しています（話した言葉 {d.fontSize}px・翻訳 {d.translationFontSize}px）
             </Field.Description>
           {/if}
-        </Field.Field>
-        <Field.Field>
-          <Field.Label>文字の色</Field.Label>
-          <Field.Description>
-            確定した字幕の色です。ヒーロー名とスキル名の色は、上の「詳しく設定」から変えられます（アイテム名はスロットの色のまま）
-          </Field.Description>
-          <div class="flex flex-wrap items-center gap-2">
-            {#each COLORS as c (c.hex)}
-              <button
-                type="button"
-                class="size-8 rounded-full border-2 ring-offset-2 ring-offset-background transition {d.textColor ===
-                c.hex
-                  ? 'border-primary ring-2 ring-primary'
-                  : 'border-border'}"
-                style:background={c.hex}
-                aria-label={c.label}
-                aria-pressed={d.textColor === c.hex}
-                onclick={() => set({ textColor: c.hex })}
-              ></button>
-            {/each}
-            <!-- 並べた色以外は、OS の色選びから -->
-            <label class="flex items-center gap-2 text-sm text-muted-foreground">
-              <input
-                type="color"
-                class="size-8 cursor-pointer rounded-full border-0 bg-transparent p-0"
-                value={d.textColor}
-                onchange={(e) => set({ textColor: e.currentTarget.value })}
-              />
-              ほかの色
-            </label>
-          </div>
         </Field.Field>
         <Field.Field>
           <Field.Label>背景</Field.Label>
