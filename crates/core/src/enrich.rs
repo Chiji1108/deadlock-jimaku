@@ -1,11 +1,11 @@
 //! 確定した字幕に、固有名詞・ふりがな・翻訳を付ける（DESIGN.md 9 章）。
 //!
 //! - 固有名詞: 辞書の名前と略称を最長一致で探す（コードで決める）
-//! - ふりがな: 形態素解析（`furigana`）で決める
+//! - ふりがな: LLM に文ごとに聞き（`furigana`）、翻訳と同時に問い合わせる。答えは確かめてから使う
 //! - 翻訳: LLM。固有名詞は中身のない記号 `⟦1⟧` にして渡し、訳文の記号をエンティティに戻す。
 //!   名前を見せないので、LLM が名前を訳して書くことがない（各言語の公式名は描画時に辞書から出す）
 //!
-//! LLM にトークン分けや読みまで任せると、区切りやルビがずれるので任せない。
+//! 固有名詞の区切りは LLM に任せない。ふりがなは文字の位置で区切りに当てはめる（`source_tokens`）。
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::{Arc, Mutex};
@@ -14,10 +14,10 @@ use std::time::Duration;
 use serde::Deserialize;
 use serde_json::{Value, json};
 
-use crate::furigana::Furigana;
+use crate::furigana;
 use crate::lang;
 use crate::llm;
-use crate::types::{Enriched, EntityKind, Glossary, LangCode, Token};
+use crate::types::{Enriched, EntityKind, Glossary, LangCode, RubySegment, Token};
 
 const TIMEOUT: Duration = Duration::from_secs(8);
 
@@ -26,13 +26,13 @@ pub struct Enricher {
     /// OpenAI の API キー
     api_key: String,
     model: String,
+    /// ふりがなのモデル（辞書の名前の読みと同じ。DESIGN.md 8.2）
+    readings_model: String,
     reasoning_effort: Option<String>,
     source_lang: LangCode,
     targets: Vec<LangCode>,
     /// 固定の先頭部分（プロンプトキャッシュが効く）
     system: String,
-    /// 日本語のときだけ
-    furigana: Option<Furigana>,
     /// 辞書の版ごとに作り直す（辞書が後から届いたり、作り直されたりする）
     matcher: Mutex<Option<(u32, Arc<Matcher>)>>,
 }
@@ -41,23 +41,23 @@ impl Enricher {
     pub fn new(
         api_key: String,
         model: String,
+        readings_model: String,
         reasoning_effort: Option<String>,
         source_lang: LangCode,
         targets: Vec<LangCode>,
-    ) -> anyhow::Result<Self> {
+    ) -> Self {
         let targets = lang::normalize(targets.into_iter().filter(|t| *t != source_lang));
-        let furigana = (source_lang == "ja").then(Furigana::new).transpose()?;
-        Ok(Self {
+        Self {
             http: crate::http().clone(),
             api_key,
             model,
+            readings_model,
             reasoning_effort,
             system: system_prompt(&source_lang),
             source_lang,
             targets,
-            furigana,
             matcher: Mutex::new(None),
-        })
+        }
     }
 
     /// `context` は直前の確定字幕（古い順）。翻訳に失敗しても、原文の固有名詞とふりがなは返す。
@@ -72,11 +72,11 @@ impl Enricher {
             Some(g) => self.matcher(g).split(text),
             None => vec![Span::Text(text.to_owned())],
         };
-        let source = self.source_tokens(&spans);
-        let translations = if self.targets.is_empty() {
-            BTreeMap::new()
-        } else {
-            let terms = Terms::new(&spans, glossary);
+        let terms = Terms::new(&spans, glossary);
+        let (ruby, translations) = tokio::join!(self.furigana(text), async {
+            if self.targets.is_empty() {
+                return BTreeMap::new();
+            }
             match self.translate(&self.api_key, &terms, context).await {
                 Ok(raw) => self.translations(raw, &terms),
                 Err(e) => {
@@ -84,11 +84,29 @@ impl Enricher {
                     BTreeMap::new()
                 }
             }
-        };
+        });
         Enriched {
-            source,
+            source: source_tokens(&spans, ruby.as_deref().unwrap_or_default()),
             translations,
         }
+    }
+
+    /// 日本語で漢字を含む文だけ聞く。失敗したらふりがななし
+    async fn furigana(&self, text: &str) -> Option<Vec<RubySegment>> {
+        if self.source_lang != "ja" || !text.chars().any(furigana::is_kanji) {
+            return None;
+        }
+        let model = furigana::Model {
+            api_key: &self.api_key,
+            model: &self.readings_model,
+            reasoning_effort: self.reasoning_effort.as_deref(),
+        };
+        furigana::ask(&self.http, &model, text)
+            .await
+            .unwrap_or_else(|e| {
+                tracing::warn!("furigana: {e:#}");
+                None
+            })
     }
 
     fn matcher(&self, glossary: &Glossary) -> Arc<Matcher> {
@@ -101,30 +119,6 @@ impl Enricher {
                 m
             }
         }
-    }
-
-    fn source_tokens(&self, spans: &[Span]) -> Vec<Token> {
-        spans
-            .iter()
-            .flat_map(|span| match span {
-                Span::Entity {
-                    reference,
-                    spoken,
-                    as_spoken,
-                } => vec![Token::Entity {
-                    reference: reference.clone(),
-                    spoken: Some(spoken.clone()),
-                    as_spoken: *as_spoken,
-                }],
-                Span::Text(text) => match &self.furigana {
-                    Some(f) => f.annotate(text),
-                    None => vec![Token::Text {
-                        text: text.clone(),
-                        ruby: None,
-                    }],
-                },
-            })
-            .collect()
     }
 
     async fn translate(
@@ -194,15 +188,83 @@ struct Output {
     translations: BTreeMap<LangCode, String>,
 }
 
+/// 原文のトークン。文のふりがな（`ruby`、つなげると原文になる）を、文字の位置で区切りに当てはめる。
+/// 区切りをまたぐ部分はふりがなを付けない
+fn source_tokens(spans: &[Span], ruby: &[RubySegment]) -> Vec<Token> {
+    let mut placed = Vec::new();
+    let mut pos = 0;
+    for seg in ruby {
+        let len = seg.text.chars().count();
+        placed.push((pos, pos + len, seg));
+        pos += len;
+    }
+    let mut start = 0;
+    spans
+        .iter()
+        .flat_map(|span| {
+            let text = match span {
+                Span::Text(text) => text,
+                Span::Entity { spoken, .. } => spoken,
+            };
+            let end = start + text.chars().count();
+            let segments = cover(text, start, &placed);
+            start = end;
+            match span {
+                Span::Text(_) => segments
+                    .into_iter()
+                    .map(|s| Token::Text {
+                        text: s.text,
+                        ruby: s.ruby,
+                    })
+                    .collect(),
+                Span::Entity { reference, spoken } => vec![Token::Entity {
+                    reference: reference.clone(),
+                    spoken: Some(spoken.clone()),
+                    ruby: segments
+                        .iter()
+                        .any(|s| s.ruby.is_some())
+                        .then_some(segments),
+                }],
+            }
+        })
+        .collect()
+}
+
+/// `text`（原文の `offset` 文字目から）を、中に収まるふりがなの部分と、読みのない部分に分ける
+fn cover(text: &str, offset: usize, placed: &[(usize, usize, &RubySegment)]) -> Vec<RubySegment> {
+    let chars: Vec<char> = text.chars().collect();
+    let end = offset + chars.len();
+    let mut out: Vec<RubySegment> = Vec::new();
+    let plain = |out: &mut Vec<RubySegment>, from: usize, to: usize| {
+        if from >= to {
+            return;
+        }
+        let part: String = chars[from - offset..to - offset].iter().collect();
+        match out.last_mut() {
+            Some(last) if last.ruby.is_none() => last.text.push_str(&part),
+            _ => out.push(RubySegment {
+                text: part,
+                ruby: None,
+            }),
+        }
+    };
+    let mut pos = offset;
+    for &(s, e, seg) in placed {
+        if s < offset || e > end || seg.ruby.is_none() {
+            continue;
+        }
+        plain(&mut out, pos, s);
+        out.push(seg.clone());
+        pos = e;
+    }
+    plain(&mut out, pos, end);
+    out
+}
+
 #[derive(Debug, PartialEq)]
 enum Span {
     Text(String),
-    Entity {
-        reference: String,
-        spoken: String,
-        /// 公式名ではなく発話された表現のまま出す（「ヘイズのウルト」の「ウルト」）
-        as_spoken: bool,
-    },
+    Entity { reference: String, spoken: String },
 }
 
 /// ヒーロー名の直後の文字列が、スキルを番号で呼んでいるか。
@@ -329,7 +391,7 @@ impl Terms {
                     tokens.push(Token::Entity {
                         reference: reference.clone(),
                         spoken: None,
-                        as_spoken: false,
+                        ruby: None,
                     });
                 }
                 None => {
@@ -467,7 +529,6 @@ impl Matcher {
                     spans.push(Span::Entity {
                         reference: reference.clone(),
                         spoken: original[i..i + term.len()].iter().collect(),
-                        as_spoken: false,
                     });
                     i += term.len();
                 }
@@ -532,7 +593,6 @@ impl Matcher {
             out.push(Span::Entity {
                 reference: ability,
                 spoken: piece(prefix, prefix + phrase),
-                as_spoken: true,
             });
             if prefix + phrase < chars.len() {
                 out.push(Span::Text(piece(prefix + phrase, chars.len())));
@@ -618,15 +678,6 @@ mod tests {
         Span::Entity {
             reference: reference.into(),
             spoken: spoken.into(),
-            as_spoken: false,
-        }
-    }
-
-    fn by_slot(reference: &str, spoken: &str) -> Span {
-        Span::Entity {
-            reference: reference.into(),
-            spoken: spoken.into(),
-            as_spoken: true,
         }
     }
 
@@ -638,7 +689,7 @@ mod tests {
             vec![
                 entity("hero:13", "ヘイズ"),
                 Span::Text("の".into()),
-                by_slot("ability:8", "ウルト"),
+                entity("ability:8", "ウルト"),
                 Span::Text("が強い".into()),
             ]
         );
@@ -649,7 +700,7 @@ mod tests {
             ("ヘイズ１番目のスキル", "１番目のスキル"),
         ] {
             assert!(
-                m.split(text).contains(&by_slot("ability:7", spoken)),
+                m.split(text).contains(&entity("ability:7", spoken)),
                 "{text}"
             );
         }
@@ -658,7 +709,7 @@ mod tests {
             m.split("ヘイズウルト溜まった"),
             vec![
                 entity("hero:13", "ヘイズ"),
-                by_slot("ability:8", "ウルト"),
+                entity("ability:8", "ウルト"),
                 Span::Text("溜まった".into()),
             ]
         );
@@ -675,10 +726,7 @@ mod tests {
             assert!(
                 !m.split(text).iter().any(|s| matches!(
                     s,
-                    Span::Entity {
-                        as_spoken: true,
-                        ..
-                    }
+                    Span::Entity { reference, .. } if reference.starts_with("ability:")
                 )),
                 "{text}"
             );
@@ -687,14 +735,11 @@ mod tests {
         let m = Matcher::new(&glossary(), "en");
         assert!(
             m.split("Haze's ult is up")
-                .contains(&by_slot("ability:8", "ult"))
+                .contains(&entity("ability:8", "ult"))
         );
         assert!(!m.split("Haze's ultra").iter().any(|s| matches!(
             s,
-            Span::Entity {
-                as_spoken: true,
-                ..
-            }
+            Span::Entity { reference, .. } if reference.starts_with("ability:")
         )));
     }
 
@@ -709,7 +754,7 @@ mod tests {
         Token::Entity {
             reference: r.into(),
             spoken: None,
-            as_spoken: false,
+            ruby: None,
         }
     }
 
@@ -813,24 +858,36 @@ mod tests {
         Enricher::new(
             "key".into(),
             "model".into(),
+            "model".into(),
             None,
             "ja".into(),
             targets.iter().map(|t| (*t).to_owned()).collect(),
         )
-        .unwrap()
+    }
+
+    fn seg(text: &str, ruby: Option<&str>) -> RubySegment {
+        RubySegment {
+            text: text.into(),
+            ruby: ruby.map(Into::into),
+        }
     }
 
     #[test]
-    fn source_tokens_combine_entities_and_furigana() {
+    fn source_tokens_place_sentence_furigana_on_spans() {
         let e = enricher(&["en"]);
-        let tokens = e.source_tokens(&e.matcher(&glossary()).split("ヘイズは強い"));
+        let spans = e.matcher(&glossary()).split("ヘイズは強い");
+        let ruby = [
+            seg("ヘイズは", None),
+            seg("強", Some("つよ")),
+            seg("い", None),
+        ];
         assert_eq!(
-            tokens,
+            source_tokens(&spans, &ruby),
             [
                 Token::Entity {
                     reference: "hero:13".into(),
                     spoken: Some("ヘイズ".into()),
-                    as_spoken: false,
+                    ruby: None,
                 },
                 text("は"),
                 Token::Text {
@@ -838,6 +895,63 @@ mod tests {
                     ruby: Some("つよ".into())
                 },
                 text("い"),
+            ]
+        );
+        // ふりがながなければ、区切りだけ
+        assert_eq!(
+            source_tokens(&spans, &[]),
+            [
+                Token::Entity {
+                    reference: "hero:13".into(),
+                    spoken: Some("ヘイズ".into()),
+                    ruby: None,
+                },
+                text("は強い"),
+            ]
+        );
+    }
+
+    #[test]
+    fn source_tokens_give_entities_their_own_furigana() {
+        // 「ヘイズの一番スキル」。用語の中に収まる読みは用語に、区切りをまたぐ読みは付けない
+        let spans = [
+            Span::Text("見て".into()),
+            Span::Entity {
+                reference: "ability:7".into(),
+                spoken: "一番スキル".into(),
+            },
+        ];
+        let ruby = [
+            seg("見", Some("み")),
+            seg("て", None),
+            seg("一番", Some("いちばん")),
+            seg("スキル", None),
+        ];
+        assert_eq!(
+            source_tokens(&spans, &ruby),
+            [
+                Token::Text {
+                    text: "見".into(),
+                    ruby: Some("み".into())
+                },
+                text("て"),
+                Token::Entity {
+                    reference: "ability:7".into(),
+                    spoken: Some("一番スキル".into()),
+                    ruby: Some(vec![seg("一番", Some("いちばん")), seg("スキル", None)]),
+                },
+            ]
+        );
+        let straddling = [seg("見て一", Some("みていち")), seg("番スキル", None)];
+        assert_eq!(
+            source_tokens(&spans, &straddling),
+            [
+                text("見て"),
+                Token::Entity {
+                    reference: "ability:7".into(),
+                    spoken: Some("一番スキル".into()),
+                    ruby: None,
+                },
             ]
         );
     }
@@ -858,13 +972,14 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn no_targets_means_no_llm_call() {
+    async fn no_targets_and_no_kanji_means_no_llm_call() {
         // API キーもモデルも偽物なので、呼べばエラーになって warn が出るだけ。呼ばずに返ることを確かめる
+        // （翻訳先がなく、漢字もないので、翻訳もふりがなも聞かない）
         let e = enricher(&["ja"]);
         let started = std::time::Instant::now();
-        let out = e.enrich("ヘイズ強い", &[], Some(&glossary())).await;
+        let out = e.enrich("ヘイズつよい", &[], Some(&glossary())).await;
         assert!(out.translations.is_empty());
-        assert_eq!(out.source.len(), 3);
+        assert_eq!(out.source.len(), 2);
         assert!(started.elapsed() < Duration::from_secs(1));
     }
 

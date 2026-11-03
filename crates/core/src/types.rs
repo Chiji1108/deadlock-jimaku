@@ -32,18 +32,14 @@ pub enum Token {
         /// `"{kind}:{id}"`（例: `hero:13`）
         #[serde(rename = "ref")]
         reference: String,
-        /// 実際に発話された表現（略称など）
+        /// 実際に発話された表現（略称など）。原文ではこれをそのまま出す（翻訳では公式名を出す）
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[ts(optional)]
         spoken: Option<String>,
-        /// 公式名ではなく発話された表現のまま出す（「ヘイズのウルト」の「ウルト」）
-        #[serde(
-            rename = "asSpoken",
-            default,
-            skip_serializing_if = "std::ops::Not::not"
-        )]
-        #[ts(as = "Option<bool>", optional)]
-        as_spoken: bool,
+        /// 発話された表現のふりがな（漢字を含むときだけ）
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[ts(optional)]
+        ruby: Option<Vec<RubySegment>>,
     },
 }
 

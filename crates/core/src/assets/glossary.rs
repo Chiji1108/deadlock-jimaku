@@ -3,7 +3,7 @@
 use std::collections::{BTreeMap, HashMap};
 
 use super::api::{ApiHero, ApiItem};
-use crate::types::{Entity, EntityKind, Glossary, ItemSlot, LangCode, RubySegment, Token};
+use crate::types::{Entity, EntityKind, Glossary, ItemSlot, LangCode};
 
 /// 言語ごとの deadlock-api の応答。`en` は必須（どのエンティティを載せるかは英語版で決める）
 pub struct Sources {
@@ -132,26 +132,6 @@ pub fn build(client_version: u32, sources: &Sources) -> (Glossary, Vec<Icon>) {
         entities,
     };
     (glossary, icons)
-}
-
-/// 漢字を含む日本語名で、`readings.ja.json` に読みがないものに、形態素解析で読みを付ける
-/// （造語の多い名前は、配信前に LLM の読みを重ねる。`readings`）
-pub fn fill_readings(glossary: &mut Glossary, annotate: impl Fn(&str) -> Vec<Token>) {
-    for entity in glossary.entities.values_mut() {
-        let Some(name) = entity.names.get("ja").filter(|_| entity.ruby.is_none()) else {
-            continue;
-        };
-        let segments: Vec<RubySegment> = annotate(name)
-            .into_iter()
-            .filter_map(|t| match t {
-                Token::Text { text, ruby } => Some(RubySegment { text, ruby }),
-                Token::Entity { .. } => None,
-            })
-            .collect();
-        if segments.iter().any(|s| s.ruby.is_some()) {
-            entity.ruby = Some(segments);
-        }
-    }
 }
 
 /// 別名を重ねる。辞書には保存せず、配るたびに重ねる（アプリの更新で別名が変わっても、
@@ -338,28 +318,6 @@ mod tests {
         let (g, _) = build(6518, &s);
 
         assert_eq!(g.languages, ["en", "ja"]);
-    }
-
-    #[test]
-    fn fill_readings_skips_kana_names() {
-        let ruby = |text: &str, r: &str| Token::Text {
-            text: text.into(),
-            ruby: (!r.is_empty()).then(|| r.into()),
-        };
-        let (mut g, _) = build(6518, &sources());
-        fill_readings(&mut g, |name| match name {
-            "基礎拡張マガジン" => {
-                vec![ruby("基礎拡張", "きそかくちょう"), ruby("マガジン", "")]
-            }
-            other => vec![ruby(other, "")],
-        });
-        assert_eq!(
-            g.entities["item:1"].ruby.as_ref().unwrap()[0]
-                .ruby
-                .as_deref(),
-            Some("きそかくちょう")
-        );
-        assert!(g.entities["hero:13"].ruby.is_none());
     }
 
     #[test]
