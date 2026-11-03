@@ -1,7 +1,7 @@
 ---
 import Layout from "../layouts/Layout.astro";
 
-const REPO = "https://github.com/Chiji1108/deadlock-stream-overlays";
+import { REPO } from "../site";
 /** 最新のリリースのファイルを直接落とす（ファイル名に版の番号を付けないので、いつも最新版になる） */
 const file = (name: string) => `${REPO}/releases/latest/download/${name}`;
 const downloads = [
@@ -27,7 +27,7 @@ const downloads = [
     note: "AppImage（どのディストリビューションでも）",
     href: file("deadlock-jimaku_amd64.AppImage"),
     label: "AppImage をダウンロード",
-    help: "Ubuntu などは .deb、Fedora などは .rpm も使えます",
+    help: "AppImage は、ファイルのプロパティで「プログラムとして実行」を許可してから開きます（chmod +x でも可）。Ubuntu などは .deb、Fedora などは .rpm も使えます",
     more: [
       { label: ".deb", href: file("deadlock-jimaku_amd64.deb") },
       { label: ".rpm", href: file("deadlock-jimaku.x86_64.rpm") },
@@ -123,9 +123,8 @@ const faqs = [
       にそのまま重ねられます。アプリは無料です。
     </p>
     <div class="mt-8 flex flex-wrap items-center gap-4">
-      <!-- 見ている OS のファイルを直接落とす（分からなければ、下のダウンロードの節へ） -->
+      <!-- ダウンロードの節へ（初めて開くときの警告の進め方を見てから落としてもらう） -->
       <a
-        id="download-button"
         href="#download"
         class="rounded-lg bg-gold px-5 py-3 font-semibold text-ink transition hover:brightness-110"
       >
@@ -218,7 +217,7 @@ const faqs = [
     </ol>
   </section>
 
-  <section id="download" class="mx-auto max-w-5xl scroll-mt-8 px-4 py-16">
+  <section id="download" class="mx-auto max-w-5xl px-4 py-16">
     <h2 class="text-2xl font-bold">ダウンロード</h2>
     <p class="mt-3 text-muted">無料です。いつも最新版が落ちてきます。</p>
     <div class="mt-8 grid gap-6 sm:grid-cols-3">
@@ -229,7 +228,7 @@ const faqs = [
             <p class="mt-1 text-xs text-muted">{d.note}</p>
             <a
               href={d.href}
-              class="mt-5 block rounded-lg border border-gold/60 px-4 py-2.5 text-center text-sm font-semibold text-gold transition hover:bg-gold hover:text-ink"
+              class="download-main mt-5 block rounded-lg border border-gold/60 px-4 py-2.5 text-center text-sm font-semibold text-gold transition hover:bg-gold hover:text-ink"
             >
               {d.label}
             </a>
@@ -253,23 +252,18 @@ const faqs = [
   </section>
 
   <script>
-    // 見ている OS のボタンを目立たせ、上の「ダウンロード」をそのファイルにする（スマホは節へ）
+    // 見ている OS の欄を目立たせる。iPad は Mac と同じ UA を名乗るので、タッチで見分ける。
+    // Linux の AppImage は x86_64 用なので、ほかの CPU では目立たせない
     const ua = navigator.userAgent;
-    const os = /Android|iPhone|iPad/.test(ua)
-      ? undefined
-      : /Windows/.test(ua)
-        ? "windows"
-        : /Macintosh/.test(ua)
-          ? "mac"
-          : /Linux/.test(ua)
-            ? "linux"
-            : undefined;
-    const card = os ? document.querySelector<HTMLElement>(`.download[data-os="${os}"]`) : null;
-    const link = card?.querySelector<HTMLAnchorElement>("a");
-    if (card && link) {
-      card.classList.add("current");
-      document.querySelector<HTMLAnchorElement>("#download-button")!.href = link.href;
-    }
+    const touch = navigator.maxTouchPoints > 1;
+    const rules: [boolean, string][] = [
+      [/Android|iPhone|iPad/.test(ua) || (/Macintosh/.test(ua) && touch), ""],
+      [/Windows/.test(ua), "windows"],
+      [/Macintosh/.test(ua), "mac"],
+      [/Linux x86_64/.test(ua), "linux"],
+    ];
+    const os = rules.find(([match]) => match)?.[1];
+    if (os) document.querySelector(`.download[data-os="${os}"]`)?.classList.add("current");
   </script>
 
   <section id="pricing" class="mx-auto max-w-5xl px-4 py-16">

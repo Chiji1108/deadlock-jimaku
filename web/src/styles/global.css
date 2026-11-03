@@ -68,7 +68,7 @@ h3 {
 .download.current {
   border-color: var(--color-gold);
 }
-.download.current a:first-of-type {
+.download.current .download-main {
   background: var(--color-gold);
   color: var(--color-ink);
 }

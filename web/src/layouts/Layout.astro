@@ -1,5 +1,6 @@
 ---
 import "../styles/global.css";
+import { REPO } from "../site";
 
 interface Props {
   title?: string;
@@ -52,7 +53,7 @@ const year = new Date().getFullYear();
           <a href="/#download" class="hidden hover:text-white sm:inline">ダウンロード</a>
           <a href="/#pricing" class="hidden hover:text-white sm:inline">料金</a>
           <a href="/#faq" class="hidden hover:text-white sm:inline">よくある質問</a>
-          <a href="https://github.com/Chiji1108/deadlock-stream-overlays" class="hover:text-white">GitHub</a>
+          <a href={REPO} class="hover:text-white">GitHub</a>
         </div>
       </nav>
     </header>
@@ -63,10 +64,10 @@ const year = new Date().getFullYear();
       <div class="mx-auto flex max-w-5xl flex-col gap-3 px-4 py-8 text-sm text-muted">
         <div class="flex flex-wrap gap-5">
           <a href="/privacy" class="hover:text-white">プライバシーポリシー</a>
-          <a href="https://github.com/Chiji1108/deadlock-stream-overlays/issues" class="hover:text-white">
+          <a href={`${REPO}/issues`} class="hover:text-white">
             不具合・要望
           </a>
-          <a href="https://github.com/Chiji1108/deadlock-stream-overlays/blob/main/LICENSE.md" class="hover:text-white">
+          <a href={`${REPO}/blob/main/LICENSE.md`} class="hover:text-white">
             ライセンス
           </a>
         </div>
