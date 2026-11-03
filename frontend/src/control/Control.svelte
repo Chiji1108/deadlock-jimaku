@@ -9,6 +9,7 @@
   import { Toaster } from "$lib/components/ui/sonner";
   import * as Tabs from "$lib/components/ui/tabs";
   import { panel, transcriptionErrorText } from "./panel.svelte";
+  import { total, usd } from "./usage";
   import AudioTab from "./tabs/AudioTab.svelte";
   import DisplayTab from "./tabs/DisplayTab.svelte";
   import ItemsTab from "./tabs/ItemsTab.svelte";
@@ -38,12 +39,20 @@
 <div class="min-h-screen bg-background text-foreground">
   <header class="sticky top-0 z-10 border-b bg-background/80 backdrop-blur">
     <div class="mx-auto flex max-w-3xl items-center gap-4 px-4 py-3">
-      <div class="flex min-w-0 flex-1 flex-col">
-        <h1 class="text-sm font-semibold">デドロ字幕</h1>
-        <p class="flex items-center gap-2 text-xs text-muted-foreground">
+      <!-- 名前はウィンドウ（OBS ならドックのタブ）に出ているので、状態と今回の料金を置く -->
+      <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+        <p class="flex items-center gap-2 text-sm font-medium">
           <span class="size-2 shrink-0 rounded-full {status.dot}"></span>
           {panel.server === "open" ? status.label : "アプリに接続しています…"}
         </p>
+        {#if panel.usage}
+          <button
+            class="w-fit text-xs text-muted-foreground tabular-nums hover:text-foreground hover:underline"
+            onclick={() => (tab = "usage")}
+          >
+            起動してからの料金 {usd(total(panel.usage.session))}
+          </button>
+        {/if}
       </div>
       {#if s}
         {#if s.transcriptionEnabled}
