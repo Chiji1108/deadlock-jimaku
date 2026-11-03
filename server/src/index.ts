@@ -20,12 +20,15 @@ export const app = new Hono<{ Bindings: Env }>().basePath("/v1");
 /** memo の長さの上限 */
 const MAX_MEMO = 100;
 
+/** Responses API に渡す項目。ほかの項目（有料のツールなど）は、おすそ分けした人の料金を数えられないので通さない */
+const RESPONSES_FIELDS = ["model", "instructions", "input", "text", "reasoning", "max_output_tokens"];
+
 // ---- おすそ分けする人（合言葉で見分ける） ----
 
 /** おすそ分けを有効にする。同じキーで有効にし直したら、合言葉だけ作り直す（コードは残る） */
 app.post("/share", async (c) => {
-  const { key } = await c.req.json<{ key?: string }>();
-  if (!key) return c.json({ error: "noKey" }, 400);
+  const key = (await json<{ key?: unknown }>(c))?.key;
+  if (typeof key !== "string" || !key) return c.json({ error: "noKey" }, 400);
   if (!(await validKey(key))) return c.json({ error: "invalidKey" }, 400);
   const token = newToken();
   await c.env.DB.prepare(
@@ -41,10 +44,18 @@ app.post("/share", async (c) => {
 app.put("/share/key", async (c) => {
   const issuer = await admin(c);
   if (!issuer) return c.json({ error: "unauthorized" }, 401);
-  const { key } = await c.req.json<{ key?: string }>();
-  if (!key || !(await validKey(key))) return c.json({ error: "invalidKey" }, 400);
+  const key = (await json<{ key?: unknown }>(c))?.key;
+  if (typeof key !== "string" || !key || !(await validKey(key))) {
+    return c.json({ error: "invalidKey" }, 400);
+  }
+  const keyHash = await sha256(key);
+  const other = await c.env.DB.prepare("SELECT id FROM issuers WHERE key_hash = ? AND id != ?")
+    .bind(keyHash, issuer.id)
+    .first();
+  // そのキーで別におすそ分けを有効にしている（合言葉が 2 つある）。片方を無効にしてもらう
+  if (other) return c.json({ error: "keyInUse" }, 409);
   await c.env.DB.prepare("UPDATE issuers SET key_hash = ?, encrypted_key = ? WHERE id = ?")
-    .bind(await sha256(key), await encrypt(key, c.env.SHARE_KEY), issuer.id)
+    .bind(keyHash, await encrypt(key, c.env.SHARE_KEY), issuer.id)
     .run();
   return c.body(null, 204);
 });
@@ -76,8 +87,7 @@ app.get("/share/codes", async (c) => {
 app.post("/share/codes", async (c) => {
   const issuer = await admin(c);
   if (!issuer) return c.json({ error: "unauthorized" }, 401);
-  const body = await c.req.json<{ memo?: string; expiresAt?: number | null }>();
-  const fields = codeFields(body);
+  const fields = codeFields((await json(c)) ?? {});
   if (!fields) return c.json({ error: "invalid" }, 400);
   const id = newId();
   const code = newCode();
@@ -93,7 +103,7 @@ app.post("/share/codes", async (c) => {
 app.patch("/share/codes/:id", async (c) => {
   const issuer = await admin(c);
   if (!issuer) return c.json({ error: "unauthorized" }, 401);
-  const body = await c.req.json<{ memo?: string; expiresAt?: number | null; revoked?: boolean }>();
+  const body = (await json<{ memo?: unknown; expiresAt?: unknown; revoked?: unknown }>(c)) ?? {};
   const fields = codeFields(body);
   if (!fields || (body.revoked !== undefined && typeof body.revoked !== "boolean")) {
     return c.json({ error: "invalid" }, 400);
@@ -128,21 +138,23 @@ app.get("/gift", async (c) => {
 app.post("/openai/responses", async (c) => {
   const gift = await giftKey(c);
   if (gift instanceof Response) return gift;
-  const body = await c.req.json<{ model?: string; stream?: boolean; store?: boolean }>();
-  // 料金を応答の usage で数えるので、ストリームにはしない
-  if (!body.model || body.stream || tokensUsd(body.model, tokensOf(undefined)) === undefined) {
+  const body = (await json<Record<string, unknown>>(c)) ?? {};
+  const model = body.model;
+  // 料金は応答の usage で数えるので、ストリームにはしない（stream は通さない）
+  if (typeof model !== "string" || tokensUsd(model, tokensOf(undefined)) === undefined) {
     return c.json({ error: "notAllowed" }, 400);
   }
+  const forwarded = Object.fromEntries(RESPONSES_FIELDS.flatMap((k) => (k in body ? [[k, body[k]]] : [])));
   // 他人の字幕を通すので、OpenAI に応答を保存させない
   const res = await openai("/v1/responses", gift.key, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ...body, store: false }),
+    body: JSON.stringify({ ...forwarded, store: false }),
   });
   const text = await res.text();
   if (res.ok) {
     const usage = (JSON.parse(text) as { usage?: unknown }).usage;
-    const usd = tokensUsd(body.model, tokensOf(usage)) ?? 0;
+    const usd = tokensUsd(model, tokensOf(usage)) ?? 0;
     c.executionCtx.waitUntil(addUsage(c.env.DB, gift.code.id, usd, Date.now()));
   }
   return new Response(text, { status: res.status, headers: { "Content-Type": "application/json" } });
@@ -151,7 +163,8 @@ app.post("/openai/responses", async (c) => {
 app.post("/openai/audio/transcriptions", async (c) => {
   const gift = await giftKey(c);
   if (gift instanceof Response) return gift;
-  const form = await c.req.formData();
+  const form = await c.req.formData().catch(() => undefined);
+  if (!form) return c.json({ error: "invalid" }, 400);
   const model = form.get("model");
   const file = form.get("file");
   if (typeof model !== "string" || !(file instanceof File)) return c.json({ error: "invalid" }, 400);
@@ -194,11 +207,13 @@ async function giftKey(c: Ctx): Promise<{ code: Code; key: string } | Response> 
   const code = await giftCode(c);
   if (!code) return c.json({ error: "unknown" }, 401);
   if (!usable(code, Date.now())) return c.json({ error: code.revoked ? "revoked" : "expired" }, 403);
-  const issuer = await c.env.DB.prepare("SELECT encrypted_key FROM issuers WHERE id = ?")
-    .bind(code.issuer_id)
-    .first<{ encrypted_key: string }>();
-  if (!issuer) return c.json({ error: "unknown" }, 401);
-  return { code, key: await decrypt(issuer.encrypted_key, c.env.SHARE_KEY) };
+  return { code, key: await decrypt(code.encrypted_key, c.env.SHARE_KEY) };
+}
+
+/** JSON の本文。読めなければ undefined（400 にする） */
+async function json<T = Record<string, unknown>>(c: Ctx): Promise<T | undefined> {
+  const body: unknown = await c.req.json().catch(() => undefined);
+  return body !== null && typeof body === "object" ? (body as T) : undefined;
 }
 
 /** メモと期限を確かめる。省いた項目は undefined、期限なしは null */

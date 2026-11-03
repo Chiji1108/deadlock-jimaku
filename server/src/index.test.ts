@@ -90,6 +90,13 @@ describe("share", () => {
     expect((await call("/gift", { token: loose })).status).toBe(200);
   });
 
+  it("refuses to switch to a key already shared by someone else", async () => {
+    const mine = await share();
+    await share("sk-other");
+    const res = await call("/share/key", { method: "PUT", token: mine, ...json({ key: "sk-other" }) });
+    expect(res.status).toBe(409);
+  });
+
   it("only the issuer can change a code", async () => {
     const mine = await share();
     const { id } = await createCode(mine);
@@ -180,14 +187,52 @@ describe("relay", () => {
     expect(listed!.monthUsd).toBeCloseTo(0.0074);
   });
 
-  it("refuses models without a price and streaming", async () => {
+  it("refuses models without a price", async () => {
     const token = await share();
     const { code } = await createCode(token);
-    for (const body of [{ model: "gpt-9-ultra" }, { model: "gpt-6.1-terra", stream: true }]) {
-      const res = await call("/openai/responses", { method: "POST", token: code, ...json(body) });
-      expect(res.status).toBe(400);
-    }
+    const res = await call("/openai/responses", { method: "POST", token: code, ...json({ model: "gpt-9-ultra" }) });
+    expect(res.status).toBe(400);
     expect(openai).not.toHaveBeenCalled();
+  });
+
+  it("passes only the fields the app uses (no paid tools, no streaming)", async () => {
+    const token = await share();
+    const { code } = await createCode(token);
+    vi.mocked(openai).mockResolvedValue(Response.json({ usage: {} }));
+    const body = {
+      model: "gpt-6.1-terra",
+      instructions: "sys",
+      input: "x",
+      text: { format: { type: "json_schema" } },
+      reasoning: { effort: "none" },
+      stream: true,
+      tools: [{ type: "web_search" }],
+      background: true,
+    };
+    await call("/openai/responses", { method: "POST", token: code, ...json(body) });
+    const sent = JSON.parse(vi.mocked(openai).mock.calls[0]![2]!.body as string);
+    expect(Object.keys(sent).sort()).toEqual(["input", "instructions", "model", "reasoning", "store", "text"]);
+  });
+
+  it("refuses WAV that is not what the app sends", async () => {
+    const token = await share();
+    const { code } = await createCode(token);
+    const form = new FormData();
+    form.set("model", "gpt-transcribe");
+    form.set("file", new File([wav(1, 48_000)], "segment.wav"));
+    const res = await call("/openai/audio/transcriptions", { method: "POST", token: code, body: form });
+    expect(res.status).toBe(400);
+    expect(openai).not.toHaveBeenCalled();
+  });
+
+  it("answers broken bodies with 400", async () => {
+    const token = await share();
+    const broken = { body: "{", headers: { "Content-Type": "application/json" } };
+    expect((await call("/share", { method: "POST", ...broken })).status).toBe(400);
+    expect((await call("/share", { method: "POST", ...json(null) })).status).toBe(400);
+    expect((await call("/share/key", { method: "PUT", token, ...broken })).status).toBe(400);
+    const { code } = await createCode(token);
+    expect((await call("/openai/responses", { method: "POST", token: code, ...broken })).status).toBe(400);
   });
 
   it("counts transcription by the length of the WAV", async () => {
@@ -216,6 +261,12 @@ describe("price", () => {
   it("reads the length of a WAV and of realtime audio", () => {
     expect(wavSeconds(wav(2))).toBeCloseTo(2);
     expect(wavSeconds(new ArrayBuffer(8))).toBeUndefined();
+    // 長さはヘッダーではなく実際のバイト数で数える
+    const forged = wav(2);
+    new DataView(forged).setUint32(40, 0, true);
+    expect(wavSeconds(forged)).toBeCloseTo(2);
+    // 途中で切れたヘッダーでも投げない
+    expect(wavSeconds(wav(2).slice(0, 30))).toBeUndefined();
     // 100ms の 24kHz・16bit = 4,800 バイト
     expect(appendSeconds(btoa("\0".repeat(4_800)))).toBeCloseTo(0.1);
   });
@@ -226,9 +277,9 @@ describe("price", () => {
   });
 });
 
-/** `seconds` 秒の 16kHz・16bit・モノラルの WAV（中身は無音） */
-function wav(seconds: number): ArrayBuffer {
-  const data = 16_000 * 2 * seconds;
+/** `seconds` 秒の 16bit・モノラルの WAV（中身は無音） */
+function wav(seconds: number, rate = 16_000): ArrayBuffer {
+  const data = rate * 2 * seconds;
   const buf = new ArrayBuffer(44 + data);
   const v = new DataView(buf);
   const tag = (at: number, s: string) => [...s].forEach((ch, i) => v.setUint8(at + i, ch.charCodeAt(0)));
@@ -239,8 +290,8 @@ function wav(seconds: number): ArrayBuffer {
   v.setUint32(16, 16, true);
   v.setUint16(20, 1, true);
   v.setUint16(22, 1, true);
-  v.setUint32(24, 16_000, true);
-  v.setUint32(28, 32_000, true);
+  v.setUint32(24, rate, true);
+  v.setUint32(28, rate * 2, true);
   v.setUint16(32, 2, true);
   v.setUint16(34, 16, true);
   tag(36, "data");

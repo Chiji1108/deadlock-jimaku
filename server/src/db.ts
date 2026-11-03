@@ -15,6 +15,8 @@ export interface Code {
   issuer_id: string;
   expires_at: number | null;
   revoked: number;
+  /** おすそ分けした人の暗号化したキー */
+  encrypted_key: string;
 }
 
 export async function issuerByToken(db: D1Database, token: string): Promise<Issuer | null> {
@@ -26,8 +28,21 @@ export async function issuerByToken(db: D1Database, token: string): Promise<Issu
 
 export async function codeByValue(db: D1Database, code: string): Promise<Code | null> {
   return db
-    .prepare("SELECT id, issuer_id, expires_at, revoked FROM codes WHERE code_hash = ?")
+    .prepare(
+      `SELECT c.id, c.issuer_id, c.expires_at, c.revoked, i.encrypted_key
+       FROM codes c JOIN issuers i ON i.id = c.issuer_id WHERE c.code_hash = ?`,
+    )
     .bind(await sha256(normalizeCode(code)))
+    .first<Code>();
+}
+
+export async function codeById(db: D1Database, id: string): Promise<Code | null> {
+  return db
+    .prepare(
+      `SELECT c.id, c.issuer_id, c.expires_at, c.revoked, i.encrypted_key
+       FROM codes c JOIN issuers i ON i.id = c.issuer_id WHERE c.id = ?`,
+    )
+    .bind(id)
     .first<Code>();
 }
 

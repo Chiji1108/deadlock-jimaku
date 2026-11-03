@@ -45,17 +45,26 @@ export function tokensOf(usage: unknown): Tokens {
   };
 }
 
-/** WAV の長さ（秒）。読めなければ undefined */
+/**
+ * WAV の長さ（秒）。アプリが送る形（PCM・16kHz・16bit・モノラル）だけを読み、それ以外は undefined。
+ * 長さはヘッダーの値ではなく、実際に届いたバイト数から数える（ヘッダーを書き換えても安くならない）
+ */
 export function wavSeconds(bytes: ArrayBuffer): number | undefined {
   const view = new DataView(bytes);
   const tag = (at: number) =>
-    String.fromCharCode(...new Uint8Array(bytes, at, Math.min(4, bytes.byteLength - at)));
-  if (bytes.byteLength < 12 || tag(0) !== "RIFF" || tag(8) !== "WAVE") return undefined;
-  let byteRate: number | undefined;
+    at + 4 <= bytes.byteLength ? String.fromCharCode(...new Uint8Array(bytes, at, 4)) : "";
+  if (tag(0) !== "RIFF" || tag(8) !== "WAVE") return undefined;
+  let pcm16kMono = false;
   for (let at = 12; at + 8 <= bytes.byteLength; ) {
     const size = view.getUint32(at + 4, true);
-    if (tag(at) === "fmt " && at + 16 <= bytes.byteLength) byteRate = view.getUint32(at + 16, true);
-    if (tag(at) === "data") return byteRate ? size / byteRate : undefined;
+    if (tag(at) === "fmt " && at + 24 <= bytes.byteLength) {
+      pcm16kMono =
+        view.getUint16(at + 8, true) === 1 &&
+        view.getUint16(at + 10, true) === 1 &&
+        view.getUint32(at + 12, true) === 16_000 &&
+        view.getUint16(at + 22, true) === 16;
+    }
+    if (tag(at) === "data") return pcm16kMono ? (bytes.byteLength - at - 8) / 32_000 : undefined;
     at += 8 + size + (size % 2);
   }
   return undefined;
