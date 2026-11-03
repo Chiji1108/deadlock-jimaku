@@ -53,8 +53,7 @@ impl Store {
                 )
             }
         };
-        let tx = broadcast::channel(256).0;
-        let meter = Arc::new(Meter::new(data_dir.join("usage.json"), tx.clone()));
+        let meter = Arc::new(Meter::new(data_dir.join("usage.json")));
         Arc::new(Self {
             settings: watch::Sender::new(settings),
             data_dir,
@@ -64,7 +63,7 @@ impl Store {
             glossary: watch::Sender::new(None),
             rank: Mutex::new(None),
             rank_image: Mutex::new(None),
-            tx,
+            tx: broadcast::channel(256).0,
             level: watch::Sender::new(f32::NEG_INFINITY),
             meter,
         })
@@ -172,12 +171,12 @@ impl Store {
         });
         msgs.push(display(&self.settings()));
         msgs.push(ServerMsg::Usage {
-            usage: self.meter.view(),
+            usage: self.meter.watch().borrow().clone(),
         });
         msgs
     }
 
-    /// OpenAI の使用量を数える（変わったら `usage` を流す）
+    /// OpenAI の使用量を数える
     pub fn meter(&self) -> Arc<Meter> {
         self.meter.clone()
     }

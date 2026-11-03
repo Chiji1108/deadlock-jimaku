@@ -194,7 +194,7 @@ async fn build_and_save(
 
     // アイコンが欠けていれば保存しない。次の起動で作り直し、欠けた分だけ取り直す
     if failed.is_empty() {
-        write_atomic(&dir.join("glossary.json"), &serde_json::to_vec(&glossary)?).await?;
+        crate::write_atomic(&dir.join("glossary.json"), &serde_json::to_vec(&glossary)?).await?;
     } else {
         tracing::warn!(
             "{} icons missing; the glossary will be rebuilt next time",
@@ -216,7 +216,8 @@ async fn download_icons(client: &api::Client, icons_dir: &Path, icons: Vec<Icon>
             if path.exists() {
                 return None;
             }
-            let saved = async { write_atomic(&path, &client.bytes(&icon.url).await?).await }.await;
+            let saved =
+                async { crate::write_atomic(&path, &client.bytes(&icon.url).await?).await }.await;
             saved.err().map(|e| {
                 tracing::warn!("icon {}: {e:#}", icon.url);
                 icon.reference
@@ -226,16 +227,6 @@ async fn download_icons(client: &api::Client, icons_dir: &Path, icons: Vec<Icon>
         .filter_map(std::future::ready)
         .collect()
         .await
-}
-
-/// 途中で止まっても壊れたファイルが残らないよう、一時ファイルに書いてから置き換える
-async fn write_atomic(path: &Path, bytes: &[u8]) -> anyhow::Result<()> {
-    tokio::fs::create_dir_all(path.parent().expect("has parent")).await?;
-    let mut tmp = path.as_os_str().to_owned();
-    tmp.push(".tmp");
-    tokio::fs::write(&tmp, bytes).await?;
-    tokio::fs::rename(&tmp, path).await?;
-    Ok(())
 }
 
 fn version_dir(root: &Path, version: u32) -> PathBuf {

@@ -875,10 +875,8 @@ mod tests {
             None,
             "ja".into(),
             targets.iter().map(|t| (*t).to_owned()).collect(),
-            Arc::new(Meter::new(
-                std::env::temp_dir().join("overlays-test-usage.json"),
-                tokio::sync::broadcast::channel(16).0,
-            )),
+            // 保存しない（persist を動かさない）ので、ファイルは作られない
+            Arc::new(Meter::new("usage.json".into())),
         )
     }
 

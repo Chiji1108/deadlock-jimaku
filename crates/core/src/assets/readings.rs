@@ -58,11 +58,7 @@ pub async fn load_cache(path: &Path) -> anyhow::Result<Cache> {
 }
 
 pub async fn save_cache(path: &Path, cache: &Cache) -> anyhow::Result<()> {
-    tokio::fs::create_dir_all(path.parent().expect("has parent")).await?;
-    let tmp = path.with_extension("json.tmp");
-    tokio::fs::write(&tmp, serde_json::to_vec_pretty(cache)?).await?;
-    tokio::fs::rename(&tmp, path).await?;
-    Ok(())
+    crate::write_atomic(path, &serde_json::to_vec_pretty(cache)?).await
 }
 
 /// その名前に使える手書きの読み（パッチで名前が変わっていたら使わない）

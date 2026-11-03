@@ -176,7 +176,7 @@ pub async fn realtime(
                     if speaking.current.is_some() {
                         buffered += push(&mut upsampler, &mut pcm, &chunk);
                         if pcm.len() >= APPEND_SAMPLES * 2 {
-                            sink.send(append(&mut pcm)).await?;
+                            sink.send(append(cfg, &mut pcm)).await?;
                         }
                     } else {
                         speaking.remember(&chunk);
@@ -284,14 +284,8 @@ async fn close(
         return Ok(());
     };
     if !pcm.is_empty() {
-        sink.send(append(pcm)).await?;
+        sink.send(append(cfg, pcm)).await?;
     }
-    // commit しなくても、送った音声には料金がかかる
-    cfg.meter.audio(
-        Use::Realtime,
-        &cfg.model,
-        buffered as f64 / f64::from(REALTIME_RATE),
-    );
     if buffered >= MIN_COMMIT_SAMPLES {
         items.committing.push_back(segment.clone());
         let commit =
@@ -354,8 +348,15 @@ impl Upsampler {
     }
 }
 
-/// 溜めた PCM を input_audio_buffer.append にして空にする
-fn append(pcm: &mut Vec<u8>) -> Message {
+/// 溜めた PCM を input_audio_buffer.append にして空にする。送った長さを数える
+/// （commit しなくても、送った音声には料金がかかる）
+fn append(cfg: &RealtimeConfig, pcm: &mut Vec<u8>) -> Message {
+    let samples = pcm.len() / 2;
+    cfg.meter.audio(
+        Use::Realtime,
+        &cfg.model,
+        samples as f64 / f64::from(REALTIME_RATE),
+    );
     let audio = base64::engine::general_purpose::STANDARD.encode(&*pcm);
     pcm.clear();
     Message::text(json!({ "type": "input_audio_buffer.append", "audio": audio }).to_string())

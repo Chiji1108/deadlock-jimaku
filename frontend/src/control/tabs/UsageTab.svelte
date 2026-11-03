@@ -24,7 +24,7 @@
   const total = (usage: { [key in Use]?: Amount } | undefined) =>
     Object.values(usage ?? {}).reduce((sum, a) => sum + (a?.usd ?? 0), 0);
   const unpriced = $derived(
-    Object.values({ ...panel.usage?.session, ...panel.usage?.month }).some((a) => a?.unpriced),
+    columns.some((c) => Object.values(panel.usage?.[c.key] ?? {}).some((a) => a?.unpriced)),
   );
 </script>
 
@@ -35,7 +35,8 @@
       送った音声の長さと使ったトークン数に、OpenAI の単価を掛けた目安です。正確な金額は
       <a class="underline" href="https://platform.openai.com/usage" target="_blank" rel="noreferrer"
         >OpenAI の使用量のページ</a
-      >で確かめてください。今月は UTC の月で数えます
+      >で確かめてください。今月は UTC
+      の月で数えます。応答が届かなかった分（タイムアウトなど）は数えられないので、少なめに出ることがあります
     </Card.Description>
   </Card.Header>
   <Card.Content>
