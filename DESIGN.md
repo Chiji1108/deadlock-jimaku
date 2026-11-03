@@ -704,6 +704,17 @@ API（すべて `/api`）:
 - `/api` は Host ヘッダーが `127.0.0.1` / `localhost` / `[::1]` のときだけ受け付ける（DNS リバインディング対策）。書き換えは JSON だけなので、別のサイトからの単純なフォーム送信も通らない（CSRF 対策）
 - 残り: 辞書の状態、直近の Segment のログ、ミュート（グローバルショートカット）
 
+## 13.5 自動更新（`app/src/main.rs`、tauri-plugin-updater）
+
+- 起動したときに GitHub の最新のリリースの `latest.json` を読み、新しい版があれば「更新しますか？」のダイアログを出す。「更新する」で入れ替えて再起動する（字幕は一度止まる）。開発中のビルドでは確かめない
+- 更新のファイルは署名して配り、アプリは `tauri.conf.json` の公開鍵で確かめる。秘密鍵とそのパスワードは Secrets（`TAURI_SIGNING_PRIVATE_KEY` / `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`）にだけ置き、リリースのビルドの「署名して作る」手順にだけ渡す。秘密鍵をなくすと、今のアプリに更新を配れなくなる
+- 更新のファイルはリリースのときだけ作る（`--config '{"bundle":{"createUpdaterArtifacts":true}}'`。PR のビルドに秘密鍵を渡さない）
+  - macOS: `deadlock-jimaku_universal.app.tar.gz`（Apple シリコンと Intel の両方入り。`darwin-aarch64` と `darwin-x86_64` に同じものを書く）
+  - Windows: NSIS のインストーラー（`windows-x86_64-nsis`）
+  - Linux: AppImage だけ（`linux-x86_64-appimage`）。deb・rpm はそれぞれのパッケージの仕組みで入れ直すので、更新の知らせを出さない（`latest.json` に載せない）
+- `latest.json` はリリースのワークフローで作る（署名の `.sig` の中身を入れ、`.sig` 自体はリリースに載せない）
+- v0.1.2 までのアプリには自動更新がないので、一度だけ手で入れ直す
+
 ## 14. 実装フェーズ
 
 | Phase | 内容 | 完了条件 |
