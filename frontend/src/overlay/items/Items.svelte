@@ -9,6 +9,7 @@
   import { fade, fly } from "svelte/transition";
   import type { ItemCardsView } from "../../generated/ItemCardsView";
   import type { Segment } from "../../generated/Segment";
+  import { placeItems } from "../../lib/anchor";
   import { glossary, loadGlossary } from "../../lib/glossary.svelte";
   import { connect } from "../../lib/ws";
 
@@ -101,10 +102,15 @@
 </script>
 
 {#if view}
-  <dl-provider {language}>
+  <!-- ソースの箱の中で、操作パネルで選んだ位置に寄せる。右に寄せたら右から出す -->
+  <dl-provider {language} class="stage" style:place-items={placeItems(view.anchor)}>
     <!-- 1 枚ずつ。入れ替わるときは前のカードと重ねて入れ替える -->
     {#each current ? [current] : [] as item (item)}
-      <div class="card" in:fly={{ x: -24, duration: 250 }} out:fade={{ duration: 300 }}>
+      <div
+        class="card"
+        in:fly={{ x: view.anchor.endsWith("right") ? 24 : -24, duration: 250 }}
+        out:fade={{ duration: 300 }}
+      >
         <dl-item-tooltip class-name={item}></dl-item-tooltip>
       </div>
     {/each}
@@ -117,10 +123,19 @@
     background: transparent;
     overflow: hidden;
   }
+  :global(:root) {
+    --scale: 1;
+  }
+  /* カードが箱より大きくても、選んだ位置に寄せる（はみ出した分が切れる） */
+  .stage {
+    position: fixed;
+    inset: 0;
+    display: grid;
+    grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+  }
   /* 入れ替わるときに前のカードと重ねる */
   .card {
-    position: absolute;
-    top: 0;
-    left: 0;
+    grid-area: 1 / 1;
+    zoom: var(--scale);
   }
 </style>

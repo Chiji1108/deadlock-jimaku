@@ -2,10 +2,12 @@
   import { onMount } from "svelte";
   import { scale } from "svelte/transition";
   import { TextMorph } from "torph/svelte";
+  import type { Anchor } from "../../generated/Anchor";
   import type { LeaderboardRank } from "../../generated/LeaderboardRank";
   import type { Numerals } from "../../generated/Numerals";
   import type { RankContent } from "../../generated/RankContent";
   import type { RankState } from "../../generated/RankState";
+  import { placeItems } from "../../lib/anchor";
   import { REGIONS } from "../../lib/regions";
   import { connect } from "../../lib/ws";
 
@@ -14,6 +16,7 @@
   let lang = $state("ja");
   let content = $state<RankContent>("full");
   let numerals = $state<Numerals>("roman");
+  let anchor = $state<Anchor>("top-left");
 
   onMount(() =>
     connect(["rank", "display"], (msg) => {
@@ -22,6 +25,7 @@
         lang = msg.rankLanguage;
         content = msg.rankContent;
         numerals = msg.rankNumerals;
+        anchor = msg.rankAnchor;
       }
     }),
   );
@@ -49,47 +53,50 @@
   const number = (n: number) => n.toLocaleString("en-US");
 </script>
 
-{#if rank}
-  <!-- バッジが変わったら作り直してアニメーションさせる -->
-  {#key rank.badge}
-    <div class="rank" in:scale={{ start: 0.8, duration: 400 }}>
-      {#if rank.image}<img class="badge" src={rank.image} alt="" />{/if}
-      <!-- 1 行目: ランク名、2 行目: 太いゲージ（ポイントは中に重ねる）。出すものは操作パネルで選ぶ -->
-      {#if content !== "icon"}<div class="text">
-          {#if label}<p class="name" lang={shown}>{label}</p>{/if}
-          {#if content !== "full"}
-            <!-- 名前だけ -->
-          {:else if rank.leaderboard}
-            <!-- エターナスは上のティアがないので、リーダーボードの順位を出す -->
-            <p class="points">{placement(rank.leaderboard)}</p>
-          {:else if rank.progress}
-            <div class="bar">
-              <div class="fill" style:width="{ratio * 100}%"></div>
+<!-- ソースの箱の中で、操作パネルで選んだ位置に寄せる -->
+<div class="stage" style:place-items={placeItems(anchor)}>
+  {#if rank}
+    <!-- バッジが変わったら作り直してアニメーションさせる -->
+    {#key rank.badge}
+      <div class="rank" in:scale={{ start: 0.8, duration: 400 }}>
+        {#if rank.image}<img class="badge" src={rank.image} alt="" />{/if}
+        <!-- 1 行目: ランク名、2 行目: 太いゲージ（ポイントは中に重ねる）。出すものは操作パネルで選ぶ -->
+        {#if content !== "icon"}<div class="text">
+            {#if label}<p class="name" lang={shown}>{label}</p>{/if}
+            {#if content !== "full"}
+              <!-- 名前だけ -->
+            {:else if rank.leaderboard}
+              <!-- エターナスは上のティアがないので、リーダーボードの順位を出す -->
+              <p class="points">{placement(rank.leaderboard)}</p>
+            {:else if rank.progress}
+              <div class="bar">
+                <div class="fill" style:width="{ratio * 100}%"></div>
+                <p class="points">
+                  <!-- ポイントが変わったら桁ごとに数字を動かす -->
+                  <TextMorph
+                    text={number(rank.progress.value)}
+                    numbers
+                    as="span"
+                    duration={600}
+                  /><span class="max">{` / ${number(rank.progress.max)}`}</span>
+                </p>
+              </div>
+            {:else if rank.points !== undefined}
+              <!-- 順位が取れないエターナスは、累積のポイントを出す -->
               <p class="points">
-                <!-- ポイントが変わったら桁ごとに数字を動かす -->
-                <TextMorph
-                  text={number(rank.progress.value)}
-                  numbers
-                  as="span"
-                  duration={600}
-                /><span class="max">{` / ${number(rank.progress.max)}`}</span>
+                <TextMorph text={number(rank.points)} numbers as="span" duration={600} />
+                <span class="unit">RP</span>
               </p>
-            </div>
-          {:else if rank.points !== undefined}
-            <!-- 順位が取れないエターナスは、累積のポイントを出す -->
-            <p class="points">
-              <TextMorph text={number(rank.points)} numbers as="span" duration={600} />
-              <span class="unit">RP</span>
-            </p>
-          {/if}
-        </div>{/if}
-    </div>
-  {/key}
-{/if}
+            {/if}
+          </div>{/if}
+      </div>
+    {/key}
+  {/if}
+</div>
 
 <style>
   /* OBS の「カスタム CSS」で上書きできるよう、見た目は変数にまとめる。
-     大きさは既定のソース（480×140）での px に、ソースの大きさとの比（--scale。main.ts）を掛ける */
+     大きさは既定のソース（400×140）での px に、ソースの大きさとの比（--scale。main.ts）を掛ける */
   :global(:root) {
     --scale: 1;
     --badge-size: calc(96px * var(--scale));
@@ -105,6 +112,13 @@
     margin: 0;
     background: transparent;
     overflow: hidden;
+  }
+  /* 中身が箱より大きくても、選んだ位置に寄せる（はみ出した分が切れる） */
+  .stage {
+    position: fixed;
+    inset: 0;
+    display: grid;
+    grid-template: minmax(0, 1fr) / minmax(0, 1fr);
   }
   .rank {
     display: inline-flex;

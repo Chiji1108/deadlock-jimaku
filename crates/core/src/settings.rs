@@ -40,6 +40,8 @@ pub struct Settings {
     pub rank_content: RankContent,
     /// サブランクの書き方
     pub rank_numerals: Numerals,
+    /// ランクをソースの箱のどこに寄せるか
+    pub rank_anchor: Anchor,
     /// エターナスの順位を調べるリーダーボードの地域。None なら調べない
     #[ts(optional)]
     pub rank_region: Option<Region>,
@@ -162,6 +164,8 @@ pub struct ItemCards {
     /// 説明の言語。None なら話す言語
     #[ts(optional)]
     pub language: Option<LangCode>,
+    /// カードをソースの箱のどこに寄せるか
+    pub anchor: Anchor,
 }
 
 impl Default for ItemCards {
@@ -169,6 +173,7 @@ impl Default for ItemCards {
         Self {
             hold_seconds: 8.0,
             language: None,
+            anchor: Anchor::TopLeft,
         }
     }
 }
@@ -193,6 +198,9 @@ impl ItemCards {
                 _ => Some(code),
             };
         }
+        if let Some(anchor) = patch.anchor {
+            next.anchor = anchor;
+        }
         Ok(next)
     }
 }
@@ -207,6 +215,8 @@ pub struct ItemCardsPatch {
     /// 空文字列なら話す言語
     #[ts(optional)]
     pub language: Option<LangCode>,
+    #[ts(optional)]
+    pub anchor: Option<Anchor>,
 }
 
 /// 字幕の見せ方の変更。省いた項目は変えない（続けて変えたとき、前の変更を古い値で戻さない）
@@ -278,6 +288,22 @@ pub enum RankContent {
     Name,
     /// アイコンだけ
     Icon,
+}
+
+/// オーバーレイの中身をソースの箱のどこに寄せるか（3×3 のどれか）
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "kebab-case")]
+#[ts(export)]
+pub enum Anchor {
+    TopLeft,
+    Top,
+    TopRight,
+    Left,
+    Center,
+    Right,
+    BottomLeft,
+    Bottom,
+    BottomRight,
 }
 
 /// サブランクの書き方
@@ -369,6 +395,7 @@ impl Default for Settings {
             rank_language: None,
             rank_content: RankContent::Full,
             rank_numerals: Numerals::Roman,
+            rank_anchor: Anchor::TopLeft,
             rank_region: None,
             models: Models::default(),
             realtime_delay: "low".into(),
@@ -460,6 +487,7 @@ impl Settings {
         let cards = ItemCardsPatch {
             hold_seconds: Some(self.item_cards.hold_seconds),
             language: Some(self.item_cards.language.clone().unwrap_or_default()),
+            anchor: Some(self.item_cards.anchor),
         };
         self.item_cards = ItemCards::default().apply(cards).unwrap_or_default();
         self.subtitle_display.normalize_colors();
@@ -525,6 +553,9 @@ impl Settings {
         if let Some(numerals) = patch.rank_numerals {
             next.rank_numerals = numerals;
         }
+        if let Some(anchor) = patch.rank_anchor {
+            next.rank_anchor = anchor;
+        }
         if let Some(region) = patch.rank_region {
             next.rank_region = match region.as_str() {
                 "" => None,
@@ -577,6 +608,8 @@ pub struct SettingsPatch {
     pub rank_content: Option<RankContent>,
     #[ts(optional)]
     pub rank_numerals: Option<Numerals>,
+    #[ts(optional)]
+    pub rank_anchor: Option<Anchor>,
     /// 地域（`Region`）。空文字列なら順位を調べない
     #[ts(optional)]
     pub rank_region: Option<String>,
@@ -918,12 +951,14 @@ mod tests {
                 item_cards: Some(ItemCardsPatch {
                     hold_seconds: Some(12.0),
                     language: Some("en".into()),
+                    anchor: Some(Anchor::Center),
                 }),
                 ..Default::default()
             })
             .unwrap();
         assert_eq!(next.item_cards.hold_seconds, 12.0);
         assert_eq!(next.item_language(), "en");
+        assert_eq!(next.item_cards.anchor, Anchor::Center);
         for bad in [
             ItemCardsPatch {
                 hold_seconds: Some(1.0),

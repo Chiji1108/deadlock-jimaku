@@ -6,6 +6,7 @@
   import * as Select from "$lib/components/ui/select";
   import * as ToggleGroup from "$lib/components/ui/toggle-group";
   import AddToObs from "../parts/AddToObs.svelte";
+  import AnchorPicker from "../parts/AnchorPicker.svelte";
   import ItemHoldDialog from "../parts/ItemHoldDialog.svelte";
   import OverlayPreview from "../parts/OverlayPreview.svelte";
   import { ITEMS_SIZE } from "../../lib/overlay-size";
@@ -89,6 +90,15 @@
           </Select.Root>
           <Field.Description>カードが対応していない言語は英語で出します</Field.Description>
         </Field.Field>
+        <Field.Field>
+          <Field.Label>カードの位置</Field.Label>
+          <AnchorPicker
+            label="カードの位置"
+            value={c.anchor}
+            onchange={(anchor) => panel.update({ itemCards: { anchor } })}
+          />
+          <Field.Description>OBS のソースの箱の中で、カードを寄せる位置です</Field.Description>
+        </Field.Field>
       </Field.Group>
     </Card.Content>
   </Card.Root>
@@ -97,7 +107,7 @@
     <Card.Header>
       <Card.Title>OBS に追加する</Card.Title>
       <Card.Description>
-        カードは箱の左上から出ます。大きさを変えるときは、ソースを引き伸ばさずにプロパティの幅と高さを同じ割合で変えてください。カードがくっきりしたまま大きくなります
+        大きさを変えるときは、ソースを引き伸ばさずにプロパティの幅と高さを同じ割合で変えてください。カードがくっきりしたまま大きくなります
       </Card.Description>
     </Card.Header>
     <Card.Content>
