@@ -757,6 +757,14 @@ mod tests {
         )
         .unwrap();
         assert_eq!(load(&path).unwrap().item_language(), "en");
+
+        // 言語を選んでいなくても、秒数は残る
+        std::fs::write(&path, r#"{ "itemCards": { "holdSeconds": 12 } }"#).unwrap();
+        let s = load(&path).unwrap();
+        assert_eq!(
+            (s.item_cards.hold_seconds, s.item_language().as_str()),
+            (12.0, "ja")
+        );
     }
 
     #[test]
