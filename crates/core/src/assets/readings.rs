@@ -198,11 +198,11 @@ mod tests {
         serde_json::from_value(json!({
             "clientVersion": 1, "languages": ["ja"],
             "entities": {
-                "ability:1": { "kind": "ability", "className": "a", "names": { "ja": "人狼の呪い" }, "aliases": {},
+                "ability:1": { "kind": "ability", "className": "a", "names": { "ja": "人狼の呪い" },
                                "ruby": [{ "text": "人", "ruby": "ひと" }, { "text": "狼", "ruby": "おおかみ" }, { "text": "の呪い" }] },
-                "item:1": { "kind": "item", "className": "i", "names": { "ja": "基礎拡張マガジン" }, "aliases": {} },
-                "item:2": { "kind": "item", "className": "j", "names": { "ja": "穴掘り" }, "aliases": {} },
-                "hero:1": { "kind": "hero", "className": "h", "names": { "ja": "ヘイズ" }, "aliases": {} }
+                "item:1": { "kind": "item", "className": "i", "names": { "ja": "基礎拡張マガジン" } },
+                "item:2": { "kind": "item", "className": "j", "names": { "ja": "穴掘り" } },
+                "hero:1": { "kind": "hero", "className": "h", "names": { "ja": "ヘイズ" } }
             }
         }))
         .unwrap()

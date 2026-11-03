@@ -7,7 +7,7 @@ export type Entity = { kind: EntityKind, className: string, names: { [key in str
 /**
  * `names.ja` のふりがな（漢字を含む名前だけ）
  */
-ruby?: Array<RubySegment>, aliases: { [key in string]: Array<string> }, 
+ruby?: Array<RubySegment>, 
 /**
  * `/assets/icons/...`
  */

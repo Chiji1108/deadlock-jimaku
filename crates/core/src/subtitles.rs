@@ -440,22 +440,15 @@ async fn enrich(
     let _ = done.send(Done::Enriched { id, enriched }).await;
 }
 
-/// 用語ヒント: 話す言語での名前と別名（DESIGN.md 8.4）。
+/// 用語ヒント: 話す言語での名前（DESIGN.md 8.4）。
 /// 上限を超えるときはヒーロー → アイテム → スキルの順に残す
 pub fn keywords(glossary: &Glossary, lang: &str) -> Vec<String> {
-    // 公式名をすべて先に入れ、余った枠に別名を入れる（別名は話した言葉を用語に結びつける照合の側で効く）
-    let kinds = [EntityKind::Hero, EntityKind::Item, EntityKind::Ability];
-    let of_kind = |kind| glossary.entities.values().filter(move |e| e.kind == kind);
-    let names = kinds
+    let names = [EntityKind::Hero, EntityKind::Item, EntityKind::Ability]
         .into_iter()
-        .flat_map(of_kind)
+        .flat_map(|kind| glossary.entities.values().filter(move |e| e.kind == kind))
         .filter_map(|e| e.names.get(lang));
-    let aliases = kinds
-        .into_iter()
-        .flat_map(of_kind)
-        .flat_map(|e| e.aliases.get(lang).into_iter().flatten());
     let mut terms: Vec<String> = Vec::new();
-    for term in names.chain(aliases) {
+    for term in names {
         if terms.len() == MAX_KEYWORDS {
             break;
         }
@@ -721,27 +714,13 @@ mod tests {
     }
 
     #[test]
-    fn keywords_collects_names_and_aliases_once() {
+    fn keywords_collects_names_in_the_language() {
         let g = glossary(serde_json::json!({
-            "hero:13": { "kind": "hero", "className": "h", "names": { "ja": "ヘイズ", "en": "Haze" }, "aliases": { "ja": ["ヘイズ"] } },
-            "item:1": { "kind": "item", "className": "i", "names": { "ja": "基礎拡張マガジン" }, "aliases": { "ja": ["拡張マガジン"] } }
+            "ability:8": { "kind": "ability", "className": "b", "names": { "ja": "バレットダンス" } },
+            "hero:13": { "kind": "hero", "className": "h", "names": { "ja": "ヘイズ", "en": "Haze" } },
+            "item:1": { "kind": "item", "className": "i", "names": { "en": "Extended Magazine" } }
         }));
-        assert_eq!(
-            keywords(&g, "ja"),
-            ["ヘイズ", "基礎拡張マガジン", "拡張マガジン"]
-        );
-    }
-
-    #[test]
-    fn keywords_puts_every_name_before_aliases() {
-        let g = glossary(serde_json::json!({
-            "hero:13": { "kind": "hero", "className": "h", "names": { "ja": "ヘイズ" }, "aliases": { "ja": ["ヘイズちゃん"] } },
-            "ability:8": { "kind": "ability", "className": "b", "names": { "ja": "バレットダンス" }, "aliases": {} }
-        }));
-        assert_eq!(
-            keywords(&g, "ja"),
-            ["ヘイズ", "バレットダンス", "ヘイズちゃん"]
-        );
+        assert_eq!(keywords(&g, "ja"), ["ヘイズ", "バレットダンス"]);
     }
 
     #[test]
@@ -750,12 +729,12 @@ mod tests {
         for i in 0..MAX_KEYWORDS {
             entities.insert(
                 format!("ability:{i}"),
-                serde_json::json!({ "kind": "ability", "className": "a", "names": { "ja": format!("スキル{i}") }, "aliases": {} }),
+                serde_json::json!({ "kind": "ability", "className": "a", "names": { "ja": format!("スキル{i}") } }),
             );
         }
         entities.insert(
             "hero:13".into(),
-            serde_json::json!({ "kind": "hero", "className": "h", "names": { "ja": "ヘイズ" }, "aliases": {} }),
+            serde_json::json!({ "kind": "hero", "className": "h", "names": { "ja": "ヘイズ" } }),
         );
         let terms = keywords(&glossary(entities.into()), "ja");
         assert_eq!(terms.len(), MAX_KEYWORDS);
