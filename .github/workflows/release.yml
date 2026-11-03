@@ -15,6 +15,8 @@ jobs:
     with:
       sign: true
     secrets:
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
       APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
       APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
       APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
@@ -37,11 +39,32 @@ jobs:
           pattern: installers-*
           path: dist
           merge-multiple: true
-      # 成果物は OS ごとのフォルダ（dmg/ など）に入っているので、中のファイルを載せる。
+      # 自動更新の情報（latest.json）。アプリは最新のリリースのこのファイルを見て、署名を公開鍵で確かめる。
+      # Linux は AppImage だけ更新する（deb・rpm はそれぞれのパッケージの仕組みで入れ直す）
+      - name: 自動更新の情報を作る
+        run: |
+          url="https://github.com/$GITHUB_REPOSITORY/releases/download/$GITHUB_REF_NAME"
+          # ファイルか署名が見つからなければ止める（$(...) の中では set -e が効かないので exit で抜ける）
+          entry() {
+            file=$(find dist -name "$1"); sig=$(find dist -name "$1.sig")
+            [ -s "$file" ] && [ -s "$sig" ] || { echo "$1 か $1.sig がない" >&2; exit 1; }
+            jq -n --arg url "$url/$1" --arg sig "$(cat "$sig")" '{url: $url, signature: $sig}'
+          }
+          mac=$(entry deadlock-jimaku_universal.app.tar.gz)
+          win=$(entry deadlock-jimaku_x64-setup.exe)
+          linux=$(entry deadlock-jimaku_amd64.AppImage)
+          jq -n --arg version "${GITHUB_REF_NAME#v}" --arg date "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --argjson mac "$mac" --argjson win "$win" --argjson linux "$linux" \
+            '{version: $version, notes: "", pub_date: $date, platforms: {
+              "darwin-aarch64": $mac, "darwin-x86_64": $mac,
+              "windows-x86_64-nsis": $win, "windows-x86_64": $win,
+              "linux-x86_64-appimage": $linux}}' > dist/latest.json
+          cat dist/latest.json
+      # 成果物は OS ごとのフォルダ（dmg/ など）に入っているので、中のファイルを載せる（署名の .sig は latest.json に入れたので載せない）。
       # やり直したときは、作ってある下書きのファイルを置き換える
       - name: 下書きのリリースに載せる
         run: |
-          mapfile -t files < <(find dist -type f)
+          mapfile -t files < <(find dist -type f ! -name '*.sig')
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             gh release upload "$GITHUB_REF_NAME" "${files[@]}" --clobber
           else

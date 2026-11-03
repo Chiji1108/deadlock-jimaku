@@ -5,13 +5,17 @@ use std::net::{Ipv4Addr, SocketAddr};
 
 use overlays_core::{DEFAULT_PORT, runtime, server, settings, store::Store};
 use tauri::webview::NewWindowResponse;
-use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
+use tauri_plugin_updater::UpdaterExt;
 use tokio::net::TcpListener;
 
 fn main() {
     tracing_subscriber::fmt::init();
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             // 設定は操作パネルから変えて保存する。API キーは OS の資格情報ストア
             let data_dir = app.path().app_data_dir()?;
@@ -46,10 +50,48 @@ fn main() {
                     NewWindowResponse::Deny
                 })
                 .build()?;
+
+            // 開発中は確かめない（リリースの版と比べても意味がない）
+            if !cfg!(debug_assertions) {
+                let app = app.handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    if let Err(e) = update(app).await {
+                        tracing::warn!("update: {e}");
+                    }
+                });
+            }
             Ok(())
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+/// 新しい版があれば聞いて、入れ替えて再起動する（DESIGN.md 13.5）。
+/// 更新情報は GitHub の最新のリリースの latest.json で、署名を公開鍵（tauri.conf.json）で確かめる
+async fn update(app: AppHandle) -> Result<(), Box<dyn std::error::Error>> {
+    let Some(update) = app.updater()?.check().await? else {
+        return Ok(());
+    };
+    tracing::info!("update available: {}", update.version);
+    let dialog = app
+        .dialog()
+        .message(format!(
+            "新しい版（{}）があります。今の版は {} です。\n更新して再起動しますか？（字幕は一度止まります）",
+            update.version, update.current_version
+        ))
+        .title("デドロ字幕の更新")
+        // 操作パネルの前に出す（親がないと、Windows ではウィンドウの裏に隠れることがある）
+        .parent(&app.get_webview_window("main").ok_or("no main window")?)
+        .buttons(MessageDialogButtons::OkCancelCustom(
+            "更新する".into(),
+            "あとで".into(),
+        ));
+    // 答えを待つ間、非同期のワーカーを塞がない
+    if !tauri::async_runtime::spawn_blocking(move || dialog.blocking_show()).await? {
+        return Ok(());
+    }
+    update.download_and_install(|_, _| {}, || {}).await?;
+    app.restart();
 }
 
 /// 操作パネルは OBS のドックと同じく localhost の画面を開く（IPC は使わない）。

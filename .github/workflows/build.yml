@@ -21,6 +21,8 @@ on:
         type: boolean
         default: false
     secrets:
+      TAURI_SIGNING_PRIVATE_KEY:
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD:
       APPLE_CERTIFICATE:
       APPLE_CERTIFICATE_PASSWORD:
       APPLE_API_ISSUER:
@@ -36,9 +38,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Apple シリコンと Intel の両方で動く 1 つのアプリにする
+          # Apple シリコンと Intel の両方で動く 1 つのアプリにする。自動更新のファイル（.app.tar.gz）はアプリの包み（app）から作る
           - os: macos-latest
-            args: --target universal-apple-darwin --bundles dmg
+            args: --target universal-apple-darwin --bundles app,dmg
             rust-targets: aarch64-apple-darwin x86_64-apple-darwin
             bundle: target/universal-apple-darwin/release/bundle
           - os: windows-latest
@@ -67,32 +69,40 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: pnpm install --frozen-lockfile
       # Tauri の CLI はリポジトリのルートから動かす（app/tauri.conf.json を探す）
-      - if: ${{ !(inputs.sign && runner.os == 'macOS') }}
+      - if: ${{ !inputs.sign }}
         run: frontend/node_modules/.bin/tauri build ${{ matrix.args }}
-      # 証明書は Tauri が一時的なキーチェーンに読み込み、App Store Connect の API キーで公証する。
-      # 鍵はこの手順にだけ渡す
-      - name: 署名して公証する
-        if: ${{ inputs.sign && runner.os == 'macOS' }}
+      # リリースのとき: 自動更新のファイル（署名つき）も作る。Mac は Developer ID で署名して公証する
+      # （証明書は Tauri が一時的なキーチェーンに読み込み、App Store Connect の API キーで公証する）。
+      # 鍵はこの手順にだけ渡す（Apple の鍵は Mac にだけ）
+      - name: 署名して作る
+        if: ${{ inputs.sign }}
         run: |
-          for name in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_API_ISSUER APPLE_API_KEY APPLE_API_KEY_P8; do
-            [ -n "${!name}" ] || { echo "Secret $name がない"; exit 1; }
-          done
-          export APPLE_API_KEY_PATH="$RUNNER_TEMP/AuthKey.p8"
-          printf '%s' "$APPLE_API_KEY_P8" > "$APPLE_API_KEY_PATH"
-          frontend/node_modules/.bin/tauri build ${{ matrix.args }}
-          # Tauri が公証するのは中のアプリだけなので、ダウンロードして開く dmg も公証して印を付ける
-          for dmg in ${{ matrix.bundle }}/dmg/*.dmg; do
-            xcrun notarytool submit "$dmg" --key "$APPLE_API_KEY_PATH" --key-id "$APPLE_API_KEY" --issuer "$APPLE_API_ISSUER" --wait
-            xcrun stapler staple "$dmg"
-          done
+          [ -n "$TAURI_SIGNING_PRIVATE_KEY" ] || { echo "Secret TAURI_SIGNING_PRIVATE_KEY がない"; exit 1; }
+          if [ "$RUNNER_OS" = macOS ]; then
+            for name in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_API_ISSUER APPLE_API_KEY APPLE_API_KEY_P8; do
+              [ -n "${!name}" ] || { echo "Secret $name がない"; exit 1; }
+            done
+            export APPLE_SIGNING_IDENTITY="Developer ID Application"
+            export APPLE_API_KEY_PATH="$RUNNER_TEMP/AuthKey.p8"
+            printf '%s' "$APPLE_API_KEY_P8" > "$APPLE_API_KEY_PATH"
+          fi
+          frontend/node_modules/.bin/tauri build ${{ matrix.args }} \
+            --config '{"bundle":{"createUpdaterArtifacts":true}}'
+          if [ "$RUNNER_OS" = macOS ]; then
+            # Tauri が公証するのは中のアプリだけなので、ダウンロードして開く dmg も公証して印を付ける
+            for dmg in ${{ matrix.bundle }}/dmg/*.dmg; do
+              xcrun notarytool submit "$dmg" --key "$APPLE_API_KEY_PATH" --key-id "$APPLE_API_KEY" --issuer "$APPLE_API_ISSUER" --wait
+              xcrun stapler staple "$dmg"
+            done
+          fi
         env:
-          # tauri.conf.json のアドホック署名（"-"）より優先される
-          APPLE_SIGNING_IDENTITY: Developer ID Application
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
-          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
-          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          APPLE_CERTIFICATE: ${{ runner.os == 'macOS' && secrets.APPLE_CERTIFICATE || '' }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ runner.os == 'macOS' && secrets.APPLE_CERTIFICATE_PASSWORD || '' }}
+          APPLE_API_ISSUER: ${{ runner.os == 'macOS' && secrets.APPLE_API_ISSUER || '' }}
+          APPLE_API_KEY: ${{ runner.os == 'macOS' && secrets.APPLE_API_KEY || '' }}
+          APPLE_API_KEY_P8: ${{ runner.os == 'macOS' && secrets.APPLE_API_KEY_P8 || '' }}
       # インストーラーのファイル名は productName（デドロ字幕）から付く。GitHub のリリースは日本語のファイル名を
       # 書き換えるので、英数字にする（Linux は tauri.linux.conf.json で英数字の名前にしてある）
       - name: ファイル名を英数字にし、版の番号を外す
@@ -105,14 +115,16 @@ jobs:
           version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
           b=${{ matrix.bundle }}
           # インストーラーだけ（中間のフォルダは触らない）
-          for f in $b/dmg/*.dmg $b/nsis/*.exe $b/deb/*.deb $b/rpm/*.rpm $b/appimage/*.AppImage; do
+          for f in $b/dmg/*.dmg $b/nsis/*.exe* $b/deb/*.deb $b/rpm/*.rpm $b/appimage/*.AppImage* $b/macos/*.app.tar.gz*; do
             base=$(basename "$f")
             base=${base/デドロ字幕/$name}
+            # 自動更新の Mac のファイル（.app.tar.gz）は、Apple シリコンと Intel の両方入り
+            base=${base/$name.app.tar.gz/${name}_universal.app.tar.gz}
             base=${base/_${version}_/_}
             base=${base/-${version}-1./.}
             [ "$base" = "$(basename "$f")" ] || mv "$f" "$(dirname "$f")/$base"
           done
-          files=$(basename -a $b/dmg/*.dmg $b/nsis/*.exe $b/deb/*.deb $b/rpm/*.rpm $b/appimage/*.AppImage)
+          files=$(basename -a $b/dmg/*.dmg $b/nsis/*.exe* $b/deb/*.deb $b/rpm/*.rpm $b/appimage/*.AppImage* $b/macos/*.app.tar.gz*)
           echo "$files"
           # 書き換えられなかった（文字の表し方が違うなど）ら止める
           if echo "$files" | LC_ALL=C grep '[^ -~]'; then
@@ -125,9 +137,14 @@ jobs:
         with:
           name: installers-${{ runner.os }}
           if-no-files-found: error
+          # .sig と .app.tar.gz は自動更新のファイル（リリースのときだけできる）
           path: |
             ${{ matrix.bundle }}/dmg/*.dmg
             ${{ matrix.bundle }}/nsis/*.exe
+            ${{ matrix.bundle }}/nsis/*.exe.sig
             ${{ matrix.bundle }}/deb/*.deb
             ${{ matrix.bundle }}/rpm/*.rpm
             ${{ matrix.bundle }}/appimage/*.AppImage
+            ${{ matrix.bundle }}/appimage/*.AppImage.sig
+            ${{ matrix.bundle }}/macos/*.app.tar.gz
+            ${{ matrix.bundle }}/macos/*.app.tar.gz.sig
