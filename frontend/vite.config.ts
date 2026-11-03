@@ -19,6 +19,7 @@ export default defineConfig({
         control: "control.html",
         subtitles: "overlay/subtitles.html",
         rank: "overlay/rank.html",
+        items: "overlay/items.html",
       },
     },
   },

@@ -5,6 +5,10 @@ let current = $state<Glossary | undefined>();
 let latestRequest = 0;
 
 export const glossary = {
+  /** 一度でも読めたか */
+  get ready() {
+    return current !== undefined;
+  },
   entity(ref: string): Entity | undefined {
     return current?.entities[ref];
   },

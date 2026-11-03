@@ -8,7 +8,7 @@ import { api } from "../lib/api";
 import { connect, type Status } from "../lib/ws";
 
 /** OBS に貼る URL（axum。開発中に Vite から開いても同じ） */
-export const overlayUrl = (name: "subtitles" | "rank") =>
+export const overlayUrl = (name: "subtitles" | "rank" | "items") =>
   `${import.meta.env.CORE_ORIGIN}/overlay/${name}`;
 
 /** 言語名は画面の言語（日本語）で出す。翻訳先は配信者が読める名前で選ぶ */

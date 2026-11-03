@@ -10,7 +10,7 @@ use tokio::sync::{broadcast, watch};
 
 use crate::assets::Loaded;
 use crate::settings::{self, Settings, SettingsPatch};
-use crate::types::{RankState, Segment, ServerMsg, Stage};
+use crate::types::{ItemCardsView, RankState, Segment, ServerMsg, Stage};
 
 /// snapshot で送る直近の Segment の数
 const KEEP_SEGMENTS: usize = 50;
@@ -244,6 +244,12 @@ fn display(settings: &Settings) -> ServerMsg {
     ServerMsg::Display {
         subtitles: settings.subtitle_display.clone(),
         rank_language: settings.rank_language(),
+        item_cards: ItemCardsView {
+            hold_seconds: settings.item_cards.hold_seconds,
+            language: crate::lang::find(&settings.item_language())
+                .map_or("english", |l| l.api)
+                .to_owned(),
+        },
     }
 }
 
