@@ -462,6 +462,8 @@ struct Matcher {
     by_first: HashMap<char, Vec<(Vec<char>, String)>>,
     /// (ヒーローの参照, 何番目のスキルか) → スキルの参照
     abilities: HashMap<(String, u8), String>,
+    /// ヒーローの参照 → そのヒーローのスキルの名前と別名（`fold` で揃えたもの）とスキルの参照
+    hero_ability_names: HashMap<String, Vec<(Vec<char>, String)>>,
     heroes: HashSet<String>,
     lang: String,
 }
@@ -523,6 +525,21 @@ impl Matcher {
                 Some(((e.hero.clone()?, e.ability_slot?), reference.clone()))
             })
             .collect();
+        let mut hero_ability_names: HashMap<String, Vec<(Vec<char>, String)>> = HashMap::new();
+        for (reference, e) in &glossary.entities {
+            let Some(hero) = &e.hero else { continue };
+            let names = e
+                .names
+                .get(lang)
+                .into_iter()
+                .chain(e.aliases.get(lang).into_iter().flatten());
+            for name in names {
+                hero_ability_names
+                    .entry(hero.clone())
+                    .or_default()
+                    .push((fold(name), reference.clone()));
+            }
+        }
         let heroes = glossary
             .entities
             .iter()
@@ -532,6 +549,7 @@ impl Matcher {
         Self {
             by_first,
             abilities,
+            hero_ability_names,
             heroes,
             lang: lang.to_owned(),
         }
@@ -609,12 +627,15 @@ impl Matcher {
                 _ => None,
             };
             let found = match (&span, &hero) {
-                (Span::Text(text), Some(hero)) => {
-                    slot_reference(text, &self.lang).and_then(|(prefix, phrase, slot)| {
+                (Span::Text(text), Some(hero)) => slot_reference(text, &self.lang)
+                    .and_then(|(prefix, phrase, slot)| {
                         let ability = self.abilities.get(&(hero.clone(), slot))?;
                         Some((text, prefix, phrase, ability.clone()))
                     })
-                }
+                    .or_else(|| {
+                        let (prefix, phrase, ability) = self.ability_part(text, hero)?;
+                        Some((text, prefix, phrase, ability))
+                    }),
                 _ => None,
             };
             let Some((text, prefix, phrase, ability)) = found else {
@@ -635,6 +656,35 @@ impl Matcher {
             }
         }
         out
+    }
+
+    /// 「ドアマンのカート」: ヒーロー名（と「の」）のすぐ後ろのカタカナの語が、そのヒーローのスキル名の
+    /// 頭か後ろの部分（2 文字以上）なら、そのスキル（キャリーカート）。2 つ以上のスキルに当てはまれば決めない。
+    /// 返すのは (「の」の長さ, 語の長さ, スキルの参照)
+    fn ability_part(&self, text: &str, hero: &str) -> Option<(usize, usize, String)> {
+        if self.lang != "ja" {
+            return None;
+        }
+        let chars = fold(text);
+        let prefix = usize::from(chars.first() == Some(&'の'));
+        let len = chars[prefix..]
+            .iter()
+            .take_while(|c| is_katakana(**c))
+            .count();
+        if len < 2 {
+            return None;
+        }
+        let word = &chars[prefix..prefix + len];
+        let mut found: Option<&String> = None;
+        for (name, ability) in self.hero_ability_names.get(hero)? {
+            if name.len() > len && (name.starts_with(word) || name.ends_with(word)) {
+                if found.is_some_and(|f| f != ability) {
+                    return None;
+                }
+                found = Some(ability);
+            }
+        }
+        Some((prefix, len, found?.clone()))
     }
 
     /// 別の語の一部なら一致としない。
@@ -1069,6 +1119,53 @@ mod tests {
         let t = e.translations(raw, &terms);
         assert_eq!(t.len(), 1);
         assert_eq!(t["en"], [ent("hero:13"), text(" wins")]);
+    }
+
+    #[test]
+    fn part_of_an_ability_name_after_the_hero_means_that_ability() {
+        let g: Glossary = serde_json::from_value(json!({
+            "clientVersion": 1, "languages": ["ja"],
+            "entities": {
+                "hero:69": { "kind": "hero", "className": "d", "names": { "ja": "ドアマン" }, "aliases": {} },
+                "ability:1": { "kind": "ability", "className": "a", "names": { "ja": "コールベル" }, "aliases": {},
+                               "hero": "hero:69", "abilitySlot": 1 },
+                "ability:3": { "kind": "ability", "className": "c", "names": { "ja": "キャリーカート" },
+                               "aliases": { "ja": ["ラゲッジカート"] }, "hero": "hero:69", "abilitySlot": 3 },
+                "ability:4": { "kind": "ability", "className": "e", "names": { "ja": "ホテルゲスト" }, "aliases": {},
+                               "hero": "hero:69", "abilitySlot": 4 },
+                "ability:9": { "kind": "ability", "className": "f", "names": { "ja": "カートレース" }, "aliases": {},
+                               "hero": "hero:1", "abilitySlot": 1 },
+            }
+        }))
+        .unwrap();
+        let m = Matcher::new(&g, "ja");
+        assert_eq!(
+            m.split("ドアマンのカート強い"),
+            [
+                entity("hero:69", "ドアマン"),
+                Span::Text("の".into()),
+                entity("ability:3", "カート"),
+                Span::Text("強い".into()),
+            ]
+        );
+        assert_eq!(
+            m.split("ドアマンのベル"),
+            [
+                entity("hero:69", "ドアマン"),
+                Span::Text("の".into()),
+                entity("ability:1", "ベル")
+            ]
+        );
+        // ヒーロー名がなければ、ほかのヒーローのスキル（カートレース）とも取り違えない
+        assert_eq!(m.split("カート強い"), [Span::Text("カート強い".into())]);
+        // 長いカタカナ語の一部（カートリッジ）や 1 文字では決めない
+        assert_eq!(
+            m.split("ドアマンのカートリッジ"),
+            [
+                entity("hero:69", "ドアマン"),
+                Span::Text("のカートリッジ".into())
+            ]
+        );
     }
 
     #[test]
