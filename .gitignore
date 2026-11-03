@@ -8,3 +8,6 @@ node_modules/
 .DS_Store
 # API キーなど、手元だけの環境変数
 .env.local
+
+# wrangler dev の手元だけの秘密（SHARE_KEY など）
+.dev.vars
