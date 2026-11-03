@@ -113,14 +113,14 @@
     background: transparent;
     overflow: hidden;
   }
+  /* 中身が箱より大きくても、選んだ位置に寄せる（はみ出した分が切れる） */
   .stage {
     position: fixed;
     inset: 0;
     display: grid;
+    grid-template: minmax(0, 1fr) / minmax(0, 1fr);
   }
-  /* 入れ替わるときに前のバッジと重ねる */
   .rank {
-    grid-area: 1 / 1;
     display: inline-flex;
     align-items: center;
     gap: calc(14px * var(--scale));

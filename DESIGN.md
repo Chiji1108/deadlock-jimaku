@@ -570,7 +570,7 @@ type ServerMsg =
   | { type: "rank.update"; rank: RankState | null }               // null: アカウントを外した・替えた
   | { type: "transcription.status"; error: string | null }        // 操作パネル向け。字幕を始められない・止まった理由
   | { type: "glossary.updated"; clientVersion: number }           // オーバーレイが辞書を取り直す
-  | { type: "display"; subtitles: SubtitleDisplay; rankLanguage: LangCode; itemCards: { holdSeconds: number; language: string } }  // オーバーレイの見せ方（11・12 章）
+  | { type: "display"; subtitles: SubtitleDisplay; rankLanguage: LangCode; rankAnchor: Anchor; itemCards: { holdSeconds: number; language: string; anchor: Anchor } }  // オーバーレイの見せ方（11・12 章）
   | { type: "audio.level"; db: number }                           // 操作パネルのメーター。字幕を動かしている間、0.1 秒ごとのピーク（dBFS）
   | { type: "usage"; usage: UsageView };                          // 操作パネルの料金。使うたびに
 ```
@@ -659,7 +659,7 @@ URL: `/overlay/rank`（パラメータはない。ブラウザソースは幅 40
 
 **大きさ**（ランクとアイテム説明）: ブラウザソースの大きさに合わせて描き直す（`lib/overlay-size.ts` の `fitSource`）。既定の大きさ（操作パネルの案内と同じ定数）との比は、幅と高さの小さい方にする（片方だけ変えても切れない）。OBS でソースを引き伸ばすと描いた絵を拡大するのでぼやけるが、プロパティの幅と高さを変えれば描き直すのでくっきりする。大きさの設定は操作パネルに増やさない（OBS でいつもやる操作で済む）。
 - ランクは比を `--scale` にして、各部の px に掛ける。ページを `zoom` すると、ポイントの数字のアニメーション（torph）が位置を測って動かすときにずれるため
-- アイテム説明のカード（deadlock-ui）は中で大きさが決まっているので、ページを `zoom` する（アニメーションはない）
+- アイテム説明のカード（deadlock-ui）は中で大きさが決まっているので、カードを `zoom` する（アニメーションはない）。既定のソースではカード（幅 450）をソースの幅 420 に合わせる（比 × 420 / 450）。ページごと `zoom` しないのは、寄せる位置を決める箱（ソースいっぱい）まで大きくなってしまうため
 - 字幕は幅で折り返すので、大きさに合わせて大きくしない（文字の大きさは操作パネルで決める）
 
 - カードは [deadlock-ui](https://github.com/deadlock-api/deadlock-ui)（`@deadlock-api/ui-core`。Stencil 製の Web Components、MIT）の `dl-item-tooltip` を使う。Web Components なので Svelte からそのまま使える。使う部品だけを `dist/components/*.js` から読み込む。開発中のライブラリなのでバージョンは固定する
@@ -667,7 +667,7 @@ URL: `/overlay/rank`（パラメータはない。ブラウザソースは幅 40
 - 翻訳まで済んだ字幕（`enriched`）の用語から `kind = item` のものを話した順に拾い、辞書の `className` でカードを出す。1 枚ずつ `holdSeconds`（既定 8 秒）出し、続けて話したものは順番に出す
 - 出しているアイテムをもう一度話したら、残りの時間を最初に戻す。待っているアイテムなら何もしない。待ちは 3 枚までにし、それより古いものは捨てる（話から大きく遅れない）
 - 接続した時点で説明まで済んでいた字幕では出さない（つなぎ直すたびに出し直さない）。途中の字幕は説明が付いたときに拾う。辞書を読む前に届いた字幕は、読めてから拾う
-- 設定（`itemCards`）: 出しておく時間（3〜30 秒。読み込んだ値が範囲外なら既定値）、説明の言語（既定は話す言語）。`display` メッセージで deadlock-api の言語名（例: `japanese`）にして届ける。deadlock-ui が対応していない言語は英語で出す
+- 設定（`itemCards`）: 出しておく時間（3〜30 秒。読み込んだ値が範囲外なら既定値）、説明の言語（既定は話す言語）、カードの位置（`anchor`）。`display` メッセージで deadlock-api の言語名（例: `japanese`）にして届ける。deadlock-ui が対応していない言語は英語で出す
 
 ## 13. 操作パネル（control.html）
 

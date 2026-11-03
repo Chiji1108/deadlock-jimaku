@@ -126,10 +126,12 @@
   :global(:root) {
     --scale: 1;
   }
+  /* カードが箱より大きくても、選んだ位置に寄せる（はみ出した分が切れる） */
   .stage {
     position: fixed;
     inset: 0;
     display: grid;
+    grid-template: minmax(0, 1fr) / minmax(0, 1fr);
   }
   /* 入れ替わるときに前のカードと重ねる */
   .card {
