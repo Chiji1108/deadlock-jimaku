@@ -8,7 +8,7 @@
   import { Button } from "$lib/components/ui/button";
   import { Toaster } from "$lib/components/ui/sonner";
   import * as Tabs from "$lib/components/ui/tabs";
-  import { panel } from "./panel.svelte";
+  import { panel, transcriptionErrorText } from "./panel.svelte";
   import AudioTab from "./tabs/AudioTab.svelte";
   import DisplayTab from "./tabs/DisplayTab.svelte";
   import ItemsTab from "./tabs/ItemsTab.svelte";
@@ -64,7 +64,9 @@
       <Alert.Root variant="destructive">
         <CircleAlertIcon />
         <Alert.Title>設定を保存できません</Alert.Title>
-        <Alert.Description>{panel.view.unsaved}</Alert.Description>
+        <Alert.Description>
+          設定ファイルを読めないため、変更は保存されません（{panel.view.unsaved}）
+        </Alert.Description>
       </Alert.Root>
     {/if}
     {#if needsKey}
@@ -85,7 +87,9 @@
         <CircleAlertIcon />
         <Alert.Title>字幕が止まっています</Alert.Title>
         <Alert.Description>
-          {panel.transcriptionError}。直したら「字幕を止める」→「字幕を始める」で始め直してください
+          {transcriptionErrorText(
+            panel.transcriptionError,
+          )}。直したら「字幕を止める」→「字幕を始める」で始め直してください
         </Alert.Description>
       </Alert.Root>
     {/if}

@@ -110,9 +110,9 @@ pub enum ServerMsg {
     /// None はランクを表示しない（アカウントが外された）
     #[serde(rename = "rank.update")]
     RankUpdate { rank: Option<RankState> },
-    /// 字幕を始められなかった理由。None なら問題なし
+    /// 字幕を始められなかった・止まった理由。None なら問題なし
     #[serde(rename = "transcription.status")]
-    TranscriptionStatus { error: Option<String> },
+    TranscriptionStatus { error: Option<TranscriptionError> },
     #[serde(rename = "display", rename_all = "camelCase")]
     Display {
         subtitles: crate::settings::SubtitleDisplay,
@@ -126,6 +126,42 @@ pub enum ServerMsg {
     AudioLevel { db: f32 },
     #[serde(rename = "usage")]
     Usage { usage: crate::usage::UsageView },
+}
+
+/// 字幕を始められなかった・止まった理由。文は操作パネルが作る（サーバーは中身だけを返す）
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[serde(tag = "code", rename_all = "camelCase")]
+#[ts(export)]
+pub enum TranscriptionError {
+    MissingKey,
+    /// マイクの入力が途切れた
+    InputEnded,
+    /// マイクを開けない
+    Microphone {
+        #[serde(flatten)]
+        error: crate::audio::MicError,
+    },
+    /// そのほかのエラー（通信や API のエラー。`detail` は英語の技術的な説明）
+    Failed {
+        detail: String,
+    },
+    /// 想定外のエラー（panic）
+    Crashed {
+        detail: String,
+    },
+}
+
+impl TranscriptionError {
+    pub fn from_error(e: &anyhow::Error) -> Self {
+        match e.downcast_ref::<crate::audio::MicError>() {
+            Some(error) => Self::Microphone {
+                error: error.clone(),
+            },
+            None => Self::Failed {
+                detail: format!("{e:#}"),
+            },
+        }
+    }
 }
 
 impl ServerMsg {
@@ -270,7 +306,23 @@ pub struct ItemCardsView {
 pub struct SettingsView {
     pub settings: crate::settings::Settings,
     pub keys: crate::secrets::KeyStatus,
-    /// 設定を保存できない理由（変更はこの起動の間だけ効く）
+    /// 設定ファイルを読めない理由（OS のエラー）。そのときは変更をこの起動の間だけ当て、保存しない
     #[ts(optional)]
     pub unsaved: Option<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn microphone_error_is_flat_for_the_panel() {
+        let e = TranscriptionError::Microphone {
+            error: crate::audio::MicError::NotFound { name: "USB".into() },
+        };
+        assert_eq!(
+            serde_json::to_value(&e).unwrap(),
+            serde_json::json!({ "code": "microphone", "problem": "notFound", "name": "USB" })
+        );
+    }
 }

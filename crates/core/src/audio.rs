@@ -9,10 +9,37 @@ use anyhow::Context;
 use audioadapter_buffers::direct::InterleavedSlice;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use rubato::{Async, FixedAsync, Indexing, PolynomialDegree, Resampler as _};
+use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 use tokio::time::MissedTickBehavior;
+use ts_rs::TS;
 
 pub const SAMPLE_RATE: u32 = 16_000;
+
+/// マイクを開けない理由。そのまま操作パネルに送り、操作パネルが文にする（`TranscriptionError`）
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[serde(tag = "problem", rename_all = "camelCase")]
+#[ts(export)]
+pub enum MicError {
+    /// 入力デバイスの一覧を取れない（`detail` は OS のエラー）
+    ListFailed {
+        detail: String,
+    },
+    NoDevices,
+    NotFound {
+        name: String,
+    },
+    NoDefault,
+}
+
+/// ログ用（画面には出さない）
+impl std::fmt::Display for MicError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{self:?}")
+    }
+}
+
+impl std::error::Error for MicError {}
 
 pub enum Input {
     /// None なら OS の既定の入力デバイス
@@ -80,19 +107,20 @@ fn build_mic_stream(
     // 先に一覧を見て、操作パネルで分かる理由にする
     let mut devices = host
         .input_devices()
-        .context("マイクの一覧を取れません")?
+        .map_err(|e| MicError::ListFailed {
+            detail: e.to_string(),
+        })?
         .peekable();
-    anyhow::ensure!(
-        devices.peek().is_some(),
-        "マイクが見つかりません。マイクをつないでから字幕を始め直してください"
-    );
+    if devices.peek().is_none() {
+        return Err(MicError::NoDevices.into());
+    }
     let device = match name {
         Some(name) => devices
             .find(|d| d.description().is_ok_and(|desc| desc.name() == name))
-            .with_context(|| format!("マイク「{name}」が見つかりません"))?,
-        None => host
-            .default_input_device()
-            .context("既定のマイクがありません")?,
+            .ok_or_else(|| MicError::NotFound {
+                name: name.to_owned(),
+            })?,
+        None => host.default_input_device().ok_or(MicError::NoDefault)?,
     };
     let config = device.default_input_config()?;
     tracing::info!(

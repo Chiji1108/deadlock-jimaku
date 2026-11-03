@@ -12,7 +12,7 @@ use tokio::task::JoinHandle;
 
 use crate::settings::{Models, Region, Segmentation, Settings};
 use crate::store::Store;
-use crate::types::LangCode;
+use crate::types::{LangCode, TranscriptionError};
 use crate::{assets, audio, rank, secrets, subtitles};
 
 pub struct Options {
@@ -168,7 +168,7 @@ fn start_subtitles(
         return None;
     };
     let Some(api_key) = openai else {
-        store.set_transcription_error(Some("OpenAI の API キーが設定されていません".into()));
+        store.set_transcription_error(Some(TranscriptionError::MissingKey));
         return None;
     };
     store.set_transcription_error(None);
@@ -176,7 +176,7 @@ fn start_subtitles(
     let (input, ended) = match source {
         Source::Mic(device) => (
             audio::Input::Mic(device),
-            Some("マイクの入力が途切れました"),
+            Some(TranscriptionError::InputEnded),
         ),
         Source::File(path) => (audio::Input::File(path), None),
     };
@@ -186,8 +186,8 @@ fn start_subtitles(
         // 黙って止まらないよう、捕まえて知らせる
         let run = AssertUnwindSafe(subtitles::run(store.clone(), input, api_key));
         let error = match run.catch_unwind().await {
-            Ok(Ok(())) => ended.map(String::from),
-            Ok(Err(e)) => Some(format!("{e:#}")),
+            Ok(Ok(())) => ended,
+            Ok(Err(e)) => Some(TranscriptionError::from_error(&e)),
             Err(panic) => {
                 let reason = panic
                     .downcast_ref::<String>()
@@ -195,7 +195,9 @@ fn start_subtitles(
                     .or_else(|| panic.downcast_ref::<&str>().copied())
                     .unwrap_or("unknown");
                 tracing::error!("transcription panicked: {reason}");
-                Some(format!("内部エラーで止まりました: {reason}"))
+                Some(TranscriptionError::Crashed {
+                    detail: reason.to_owned(),
+                })
             }
         };
         tracing::info!("transcription ended: {error:?}");
