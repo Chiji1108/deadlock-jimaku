@@ -37,14 +37,16 @@ jobs:
           pattern: installers-*
           path: dist
           merge-multiple: true
+      # 成果物は OS ごとのフォルダ（dmg/ など）に入っているので、中のファイルを載せる。
       # やり直したときは、作ってある下書きのファイルを置き換える
       - name: 下書きのリリースに載せる
         run: |
+          mapfile -t files < <(find dist -type f)
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" dist/* --clobber
+            gh release upload "$GITHUB_REF_NAME" "${files[@]}" --clobber
           else
             prerelease=$([[ "$GITHUB_REF_NAME" == *-* ]] && echo --prerelease || true)
-            gh release create "$GITHUB_REF_NAME" dist/* --draft $prerelease --title "$GITHUB_REF_NAME" --generate-notes
+            gh release create "$GITHUB_REF_NAME" "${files[@]}" --draft $prerelease --title "$GITHUB_REF_NAME" --generate-notes
           fi
         env:
           GH_TOKEN: ${{ github.token }}
