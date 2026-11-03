@@ -46,6 +46,11 @@ class Panel {
     return this.view?.settings;
   }
 
+  /** OpenAI の API キーがまだ保存されていない（読めないだけのときは含めない） */
+  get keyMissing() {
+    return this.view?.keys.openai.state === "missing";
+  }
+
   /** 字幕を始める操作をしていて、止まった理由もない */
   get running() {
     return !!this.settings?.transcriptionEnabled && !this.transcriptionError;
