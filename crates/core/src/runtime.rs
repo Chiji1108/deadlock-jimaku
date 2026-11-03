@@ -186,7 +186,15 @@ fn start_subtitles(
         let error = match run.catch_unwind().await {
             Ok(Ok(())) => ended.map(String::from),
             Ok(Err(e)) => Some(format!("{e:#}")),
-            Err(_) => Some("内部エラーで止まりました（ログを確認してください）".to_owned()),
+            Err(panic) => {
+                let reason = panic
+                    .downcast_ref::<String>()
+                    .map(String::as_str)
+                    .or_else(|| panic.downcast_ref::<&str>().copied())
+                    .unwrap_or("unknown");
+                tracing::error!("transcription panicked: {reason}");
+                Some(format!("内部エラーで止まりました: {reason}"))
+            }
         };
         tracing::info!("transcription ended: {error:?}");
         store.set_transcription_error(error);

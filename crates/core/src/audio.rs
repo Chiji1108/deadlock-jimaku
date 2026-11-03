@@ -224,7 +224,8 @@ impl Resampler {
     fn process(&mut self, input: &[f32]) -> Vec<f32> {
         let mut out = self.resample(input);
         for s in &mut out {
-            *s = s.clamp(-1.0, 1.0);
+            // NaN（壊れたファイルなど）は無音にする（clamp は NaN を通してしまう）
+            *s = if s.is_nan() { 0.0 } else { s.clamp(-1.0, 1.0) };
         }
         out
     }
@@ -332,9 +333,10 @@ mod tests {
     #[test]
     fn loud_input_stays_within_pcm_range() {
         // 大きな音（範囲外の値）や、変換でのはみ出しがあっても -1〜1 に収まる
-        let loud: Vec<f32> = (0..48_000)
+        let mut loud: Vec<f32> = (0..48_000)
             .map(|i| if i % 2 == 0 { 3.0 } else { -3.0 })
             .collect();
+        loud[100] = f32::NAN;
         for rate in [48_000, SAMPLE_RATE] {
             let out = Resampler::new(rate).unwrap().process(&loud);
             assert!(!out.is_empty());
