@@ -4,8 +4,6 @@
 //! キーそのものは画面に返さない（保存してあるかだけを返す）。呼び出しは同期処理なので、
 //! 非同期の文脈からは `spawn_blocking` で呼ぶ。
 
-use std::collections::BTreeMap;
-
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
@@ -37,8 +35,8 @@ enum Slot {
     Gift,
     /// おすそ分けを管理する合言葉（サーバーが発行）
     ShareToken,
-    /// 自分が作ったおすそ分けのコード（コードの ID → コード）。サーバーはハッシュしか持たないので、こちらで覚える
-    ShareCodes,
+    /// 自分が作ったおすそ分けのコード（1 つずつ。サーバーはハッシュしか持たないので、こちらで覚える）
+    ShareCode,
 }
 
 impl Slot {
@@ -47,7 +45,7 @@ impl Slot {
             Self::OpenAi => "openai",
             Self::Gift => "gift",
             Self::ShareToken => "share-token",
-            Self::ShareCodes => "share-codes",
+            Self::ShareCode => "share-code",
         }
     }
 }
@@ -72,7 +70,7 @@ pub struct KeyStatus {
     pub gift: KeyState,
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default)]
 pub struct Keys {
     pub openai: Option<String>,
     pub gift: Option<String>,
@@ -91,7 +89,11 @@ impl Keys {
 
 /// 空の値は保存していないものとして扱う
 fn get(slot: Slot) -> Result<Option<String>, keyring::Error> {
-    let entry = keyring::Entry::new(IDENTIFIER, slot.account())?;
+    get_account(slot.account())
+}
+
+fn get_account(account: &str) -> Result<Option<String>, keyring::Error> {
+    let entry = keyring::Entry::new(IDENTIFIER, account)?;
     match entry.get_password() {
         Ok(value) => Ok(Some(value).filter(|v| !v.trim().is_empty())),
         Err(keyring::Error::NoEntry) => Ok(None),
@@ -101,7 +103,11 @@ fn get(slot: Slot) -> Result<Option<String>, keyring::Error> {
 
 /// 空文字列なら消す
 fn put(slot: Slot, value: &str) -> anyhow::Result<()> {
-    let entry = keyring::Entry::new(IDENTIFIER, slot.account())?;
+    put_account(slot.account(), value)
+}
+
+fn put_account(account: &str, value: &str) -> anyhow::Result<()> {
+    let entry = keyring::Entry::new(IDENTIFIER, account)?;
     let value = value.trim();
     if value.is_empty() {
         match entry.delete_credential() {
@@ -149,6 +155,14 @@ pub fn set(provider: Provider, key: &str) -> anyhow::Result<()> {
     put(provider.slot(), key)
 }
 
+pub fn openai() -> Option<String> {
+    get_or_warn(Slot::OpenAi)
+}
+
+pub fn gift() -> Option<String> {
+    get_or_warn(Slot::Gift)
+}
+
 /// 空文字列なら消す
 pub fn set_gift(code: &str) -> anyhow::Result<()> {
     put(Slot::Gift, code)
@@ -163,16 +177,16 @@ pub fn set_share_token(token: &str) -> anyhow::Result<()> {
     put(Slot::ShareToken, token)
 }
 
-/// 自分が作ったおすそ分けのコード（ID → コード）
-pub fn share_codes() -> BTreeMap<String, String> {
-    get_or_warn(Slot::ShareCodes)
-        .and_then(|json| serde_json::from_str(&json).ok())
-        .unwrap_or_default()
+/// 自分が作ったおすそ分けのコード。この PC で作っていなければ None
+pub fn share_code(id: &str) -> Option<String> {
+    let account = format!("{}:{id}", Slot::ShareCode.account());
+    get_account(&account).unwrap_or_else(|e| {
+        tracing::warn!("keyring ({account}): {e}");
+        None
+    })
 }
 
-pub fn set_share_codes(codes: &BTreeMap<String, String>) -> anyhow::Result<()> {
-    if codes.is_empty() {
-        return put(Slot::ShareCodes, "");
-    }
-    put(Slot::ShareCodes, &serde_json::to_string(codes)?)
+/// 空文字列なら消す
+pub fn set_share_code(id: &str, code: &str) -> anyhow::Result<()> {
+    put_account(&format!("{}:{id}", Slot::ShareCode.account()), code)
 }

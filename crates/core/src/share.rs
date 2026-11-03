@@ -136,17 +136,20 @@ impl Refused {
     }
 }
 
+/// サーバーを呼ぶ。断られたら日本語の理由にする。`token` は管理の合言葉（有効にするときはまだない）
 async fn call(
     api: &str,
     method: reqwest::Method,
     path: &str,
-    token: &str,
+    token: Option<&str>,
     body: Option<Value>,
 ) -> Result<Value, Refused> {
     let mut req = crate::http()
         .request(method, format!("{api}{path}"))
-        .bearer_auth(token)
         .timeout(TIMEOUT);
+    if let Some(token) = token {
+        req = req.bearer_auth(token);
+    }
     if let Some(body) = body {
         req = req.json(&body);
     }
@@ -172,43 +175,38 @@ async fn call(
 
 /// おすそ分けを有効にする（キーを預ける）。管理の合言葉を返す
 pub async fn enable(api: &str, key: &str) -> Result<String, Refused> {
-    let res = crate::http()
-        .post(format!("{api}/share"))
-        .json(&json!({ "key": key }))
-        .timeout(TIMEOUT)
-        .send()
-        .await
-        .map_err(Refused::from_error)?;
-    let status = res.status();
-    let value: Value = res.json().await.unwrap_or(Value::Null);
-    match value["token"].as_str() {
-        Some(token) if status.is_success() => Ok(token.to_owned()),
-        _ => Err(Refused {
-            status,
-            message: if value["error"].as_str() == Some("invalidKey") {
-                "OpenAI の API キーが使えません".to_owned()
-            } else {
-                format!("サーバーのエラー（{status}）")
-            },
-        }),
-    }
+    let body = json!({ "key": key });
+    let value = call(api, reqwest::Method::POST, "/share", None, Some(body)).await?;
+    value["token"]
+        .as_str()
+        .map(str::to_owned)
+        .ok_or_else(|| Refused {
+            status: StatusCode::BAD_GATEWAY,
+            message: "サーバーの答えを読めません".to_owned(),
+        })
 }
 
 pub async fn disable(api: &str, token: &str) -> Result<(), Refused> {
-    call(api, reqwest::Method::DELETE, "/share", token, None)
+    call(api, reqwest::Method::DELETE, "/share", Some(token), None)
         .await
         .map(drop)
 }
 
 pub async fn update_key(api: &str, token: &str, key: &str) -> Result<(), Refused> {
     let body = json!({ "key": key });
-    call(api, reqwest::Method::PUT, "/share/key", token, Some(body))
-        .await
-        .map(drop)
+    call(
+        api,
+        reqwest::Method::PUT,
+        "/share/key",
+        Some(token),
+        Some(body),
+    )
+    .await
+    .map(drop)
 }
 
 pub async fn codes(api: &str, token: &str) -> Result<Vec<SharedCode>, Refused> {
-    let value = call(api, reqwest::Method::GET, "/share/codes", token, None).await?;
+    let value = call(api, reqwest::Method::GET, "/share/codes", Some(token), None).await?;
     serde_json::from_value(value["codes"].clone()).map_err(|e| Refused {
         status: StatusCode::BAD_GATEWAY,
         message: format!("サーバーの答えを読めません（{e}）"),
@@ -221,7 +219,7 @@ pub async fn create(api: &str, token: &str, body: Value) -> Result<(String, Stri
         api,
         reqwest::Method::POST,
         "/share/codes",
-        token,
+        Some(token),
         Some(body),
     )
     .await?;
@@ -237,7 +235,7 @@ pub async fn create(api: &str, token: &str, body: Value) -> Result<(String, Stri
 /// メモ・期限・止めるかを変える（`body` はそのままサーバーへ）
 pub async fn update(api: &str, token: &str, id: &str, body: Value) -> Result<(), Refused> {
     let path = format!("/share/codes/{id}");
-    call(api, reqwest::Method::PATCH, &path, token, Some(body))
+    call(api, reqwest::Method::PATCH, &path, Some(token), Some(body))
         .await
         .map(drop)
 }

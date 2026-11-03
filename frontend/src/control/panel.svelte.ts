@@ -40,8 +40,10 @@ class Panel {
   usage = $state<UsageView | undefined>();
   /** もらったギフトコードの状態（保存していれば開いたときに確かめる） */
   gift = $state<GiftStatus | undefined>();
-  /** おすそ分け。開いたときに取る（自分のキーがなければ取らない） */
+  /** おすそ分け。起動したとき・キーを変えたとき・おすそ分けか料金のタブを開いたときに取り直す */
   share = $state<ShareView | undefined>();
+  /** おすそ分けの状態を取れなかった理由 */
+  shareError = $state<string | undefined>();
   /** 最後に SILENT_DB を超えた時刻 */
   private heardAt = 0;
   /** 最後にレベルが届いた時刻 */
@@ -81,6 +83,7 @@ class Panel {
     });
     void this.refreshDevices();
     void this.refreshGift();
+    void this.refreshShare();
     const disconnect = connect(
       ["status", "level", "usage"],
       (msg) => this.onMessage(msg),
@@ -120,12 +123,16 @@ class Panel {
     return this.update({ transcriptionEnabled: enabled });
   }
 
-  /** 保存できたら true */
-  setKey = (provider: Provider, key: string) =>
-    this.run(async () => {
+  /** 保存できたら true。預けたキーの差し替えに失敗しても、画面は今の状態にする */
+  setKey = async (provider: Provider, key: string) => {
+    const saved = await this.run(async () => {
       this.view = await api.setKey(provider, key);
       toast.success(key ? "保存しました" : "削除しました");
     });
+    if (!saved) this.view = await api.settings().catch(() => this.view);
+    void this.refreshShare();
+    return saved;
+  };
 
   refreshGift = async () => {
     this.gift = await api.gift().catch(() => undefined);
@@ -149,10 +156,15 @@ class Panel {
       toast.success("ギフトコードを削除しました");
     });
 
-  refreshShare = () =>
-    this.run(async () => {
+  /** 自動で取り直すので、失敗してもトーストは出さない（おすそ分けタブに理由を出す） */
+  refreshShare = async () => {
+    try {
       this.share = await api.share();
-    });
+      this.shareError = undefined;
+    } catch (e) {
+      this.shareError = e instanceof Error ? e.message : String(e);
+    }
+  };
 
   /** 失敗したら理由を出す。成功したら true */
   shareAction = (action: () => Promise<ShareView>, done?: string) =>

@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { onMount } from "svelte";
   import * as Card from "$lib/components/ui/card";
   import type { Use } from "../../generated/Use";
   import { panel } from "../panel.svelte";
@@ -23,17 +22,13 @@
 
   const unpriced = $derived(columns.some((c) => hasUnpriced(panel.usage?.[c.key])));
 
-  // おすそ分けで使われた分も、同じキーに請求される（今月の分だけ。コードごとはおすそ分けタブ）
-  const ownKey = $derived(panel.view?.keys.openai.state === "saved");
+  // おすそ分けで使われた分も、預けたキーに請求される（今月の分だけ。コードごとはおすそ分けタブ）
   const shared = $derived(
-    ownKey && panel.share?.enabled
-      ? panel.share.codes.reduce((sum, c) => sum + c.monthUsd, 0)
-      : undefined,
+    panel.share?.enabled ? panel.share.codes.reduce((sum, c) => sum + c.monthUsd, 0) : undefined,
   );
-  const gift = $derived(!ownKey && panel.view?.keys.gift.state === "saved");
-  onMount(() => {
-    if (ownKey) void panel.refreshShare();
-  });
+  const gift = $derived(
+    panel.view?.keys.openai.state !== "saved" && panel.view?.keys.gift.state === "saved",
+  );
 </script>
 
 <Card.Root>

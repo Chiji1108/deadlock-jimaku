@@ -90,6 +90,8 @@ pub async fn run(store: Arc<Store>, options: Options) {
     let mut rank_slot = Slot::new();
     let mut subtitles_slot = Slot::new();
     let mut rank_account = None;
+    // 字幕を出していたか（止めた状態から始めるときだけギフトコードの期限を確かめる）
+    let mut running = false;
     loop {
         let settings: Settings = settings_rx.borrow_and_update().clone();
         let keys = tokio::task::spawn_blocking(secrets::load)
@@ -147,10 +149,13 @@ pub async fn run(store: Arc<Store>, options: Options) {
             segmentation: settings.segmentation.clone(),
             access: access.clone(),
         };
+        let starting = !running;
+        running = source.is_some();
         subtitles_slot
             .update(input, || {
                 store.discard_unsettled();
-                start_subtitles(&store, source, access, settings.api_base.clone())
+                let check = starting.then(|| settings.api_base.clone());
+                start_subtitles(&store, source, access, check)
             })
             .await;
 
@@ -164,7 +169,8 @@ fn start_subtitles(
     store: &Arc<Store>,
     source: Option<Source>,
     access: Option<Access>,
-    api_base: String,
+    // Some なら、始める前にギフトコードの期限を確かめる（その API の根元）
+    check_gift: Option<String>,
 ) -> Option<JoinHandle<()>> {
     let Some(source) = source else {
         store.set_transcription_error(None);
@@ -187,9 +193,10 @@ fn start_subtitles(
     Some(tokio::spawn(async move {
         // 止まったら理由を出す（開始・停止を押し直すと始め直す）。想定外のエラー（panic）でも
         // 黙って止まらないよう、捕まえて知らせる
-        // ギフトコードの期限は始めるときだけ確かめる（配信の途中では止めない。DESIGN.md 17.1）
-        if access.is_gift()
-            && let Err(e) = share::check_gift(&api_base, access.token()).await
+        // ギフトコードの期限は始めるときだけ確かめる（配信の途中で設定を変えて作り直すときは
+        // 確かめない。止めない。DESIGN.md 17.1）
+        if let (true, Some(api)) = (access.is_gift(), &check_gift)
+            && let Err(e) = share::check_gift(api, access.token()).await
         {
             store.set_transcription_error(Some(e));
             return;

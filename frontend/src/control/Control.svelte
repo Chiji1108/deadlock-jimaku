@@ -45,9 +45,10 @@
   // デスクトップのウィンドウでは左のサイドバー。OBS のドックのように狭いときは上に並べる
   const wide = new MediaQuery("min-width: 768px");
 
-  // タブを変えたら（サイドバーからでも、料金や注意のリンクからでも）先頭から見せる
+  // タブを変えたら（サイドバーからでも、料金や注意のリンクからでも）先頭から見せる。
+  // おすそ分けで使われた額はサーバーにあるので、それを出すタブを開いたら取り直す
   $effect(() => {
-    void tab;
+    if (tab === "share" || tab === "usage") void panel.refreshShare();
     content?.scrollTo({ top: 0 });
     window.scrollTo({ top: 0 });
   });

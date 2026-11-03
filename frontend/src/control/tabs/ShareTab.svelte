@@ -1,6 +1,5 @@
 <script lang="ts">
   // おすそ分け（DESIGN.md 17.1）。自分のキーを預けてコードを作り、知り合いに使ってもらう
-  import { onMount } from "svelte";
   import { Badge } from "$lib/components/ui/badge";
   import { Button } from "$lib/components/ui/button";
   import * as Card from "$lib/components/ui/card";
@@ -17,17 +16,18 @@
   const ownKey = $derived(panel.view?.keys.openai.state === "saved");
   const share = $derived(panel.share);
 
-  onMount(() => {
-    if (ownKey) void panel.refreshShare();
-  });
-
-  // 新しいコード
+  // 新しいコード。期限の既定は 3 日後
+  const threeDays = () => Date.now() + 3 * 24 * 60 * 60 * 1000;
   let memo = $state("");
-  let expiresAt = $state<number | null>(Date.now() + 3 * 24 * 60 * 60 * 1000);
+  let expiresAt = $state<number | null>(threeDays());
+  const past = $derived(expiresAt !== null && expiresAt <= panel.now);
 
   async function create() {
     const body = { memo: memo.trim(), expiresAt };
-    if (await panel.shareAction(() => api.createCode(body), "コードを作りました")) memo = "";
+    if (await panel.shareAction(() => api.createCode(body), "コードを作りました")) {
+      memo = "";
+      expiresAt = threeDays();
+    }
   }
 
   // 期限を変えるダイアログ
@@ -51,11 +51,17 @@
       </Card.Description>
     </Card.Header>
     <Card.Content class="flex flex-col gap-4">
-      {#if !ownKey}
+      {#if !share}
+        <p class="text-sm text-muted-foreground">
+          {panel.shareError
+            ? `おすそ分けの状態を取れません（${panel.shareError}）`
+            : "読み込んでいます…"}
+        </p>
+      {:else if !share.enabled && !ownKey}
         <p class="text-sm text-muted-foreground">
           おすそ分けするには、先に「API キー」で自分の OpenAI のキーを保存してください
         </p>
-      {:else if share && !share.enabled}
+      {:else if !share.enabled}
         <p class="text-sm text-muted-foreground">
           有効にすると、API
           キーを暗号化して開発者のサーバー（api.jimaku.deadlock.jp）に預けます。コードを持つ人の字幕は、サーバーがこのキーで
@@ -64,7 +70,7 @@
         <Button class="w-fit" onclick={() => panel.shareAction(api.enableShare, "有効にしました")}>
           おすそ分けを有効にする
         </Button>
-      {:else if share?.enabled}
+      {:else}
         <form
           class="flex flex-col gap-4"
           onsubmit={(e) => {
@@ -85,12 +91,16 @@
             <Field.Label>期限</Field.Label>
             <ExpiryPicker bind:value={expiresAt} />
             <Field.Description>
-              {expiresAt === null
-                ? "期限なしで使えます"
-                : `${dateTime(expiresAt)} まで使えます`}。あとから変えられます。期限が過ぎても、始めていた配信は止まりません
+              {#if past}
+                <span class="text-destructive">この期限はもう過ぎています。選び直してください</span>
+              {:else}
+                {expiresAt === null
+                  ? "期限なしで使えます"
+                  : `${dateTime(expiresAt)} まで使えます`}。あとから変えられます。期限が過ぎても、始めていた配信は止まりません
+              {/if}
             </Field.Description>
           </Field.Field>
-          <Button type="submit" class="w-fit">コードを作る</Button>
+          <Button type="submit" class="w-fit" disabled={past}>コードを作る</Button>
         </form>
       {/if}
     </Card.Content>

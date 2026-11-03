@@ -134,7 +134,7 @@ async fn blocking<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'static) -> 
 // ---- ギフトコード（人からもらったもの。DESIGN.md 17.1） ----
 
 async fn get_gift(State(store): State<Arc<Store>>) -> Json<GiftStatus> {
-    Json(match blocking(secrets::load).await.gift {
+    Json(match blocking(secrets::gift).await {
         Some(code) => share::gift_status(&store.settings().api_base, &code).await,
         None => GiftStatus::None,
     })
@@ -178,7 +178,7 @@ pub struct ShareView {
 
 impl IntoResponse for Refused {
     fn into_response(self) -> Response {
-        let status = if self.status.is_server_error() || self.status == StatusCode::BAD_GATEWAY {
+        let status = if self.status.is_server_error() {
             StatusCode::BAD_GATEWAY
         } else {
             StatusCode::BAD_REQUEST
@@ -196,11 +196,17 @@ async fn get_share(State(store): State<Arc<Store>>) -> Response {
         .into_response();
     };
     match share::codes(&store.settings().api_base, &token).await {
-        Ok(mut codes) => {
-            let saved = blocking(secrets::share_codes).await;
-            for c in &mut codes {
-                c.code = saved.get(&c.id).cloned();
-            }
+        Ok(codes) => {
+            let codes = blocking(move || {
+                codes
+                    .into_iter()
+                    .map(|c| SharedCode {
+                        code: secrets::share_code(&c.id),
+                        ..c
+                    })
+                    .collect()
+            })
+            .await;
             Json(ShareView {
                 enabled: true,
                 codes,
@@ -213,7 +219,7 @@ async fn get_share(State(store): State<Arc<Store>>) -> Response {
 
 /// 自分のキーを預けて有効にする
 async fn enable_share(State(store): State<Arc<Store>>) -> Response {
-    let Some(key) = blocking(secrets::load).await.openai else {
+    let Some(key) = blocking(secrets::openai).await else {
         let message = "先に自分の OpenAI の API キーを保存してください";
         return (StatusCode::BAD_REQUEST, message).into_response();
     };
@@ -229,15 +235,24 @@ async fn enable_share(State(store): State<Arc<Store>>) -> Response {
 
 /// 預けたキーとコードを消す。サーバーに登録が残っていなくても、こちらの合言葉とコードは消す
 async fn disable_share(State(store): State<Arc<Store>>) -> Response {
-    if let Some(token) = blocking(secrets::share_token).await
-        && let Err(refused) = share::disable(&store.settings().api_base, &token).await
-        && refused.status != StatusCode::UNAUTHORIZED
-    {
-        return refused.into_response();
+    let api = store.settings().api_base;
+    let mut ids = Vec::new();
+    if let Some(token) = blocking(secrets::share_token).await {
+        // 消す前に、この PC に覚えたコードの ID を聞いておく
+        if let Ok(codes) = share::codes(&api, &token).await {
+            ids = codes.into_iter().map(|c| c.id).collect();
+        }
+        if let Err(refused) = share::disable(&api, &token).await
+            && refused.status != StatusCode::UNAUTHORIZED
+        {
+            return refused.into_response();
+        }
     }
-    let cleared = blocking(|| {
-        secrets::set_share_token("")?;
-        secrets::set_share_codes(&Default::default())
+    let cleared = blocking(move || {
+        for id in &ids {
+            secrets::set_share_code(id, "")?;
+        }
+        secrets::set_share_token("")
     })
     .await;
     if let Err(e) = cleared {
@@ -262,14 +277,17 @@ async fn create_code(State(store): State<Arc<Store>>, Json(body): Json<Value>) -
         Ok(created) => created,
         Err(refused) => return refused.into_response(),
     };
-    let saved = blocking(move || {
-        let mut codes = secrets::share_codes();
-        codes.insert(id, code);
-        secrets::set_share_codes(&codes)
-    })
-    .await;
+    let saved = {
+        let code = code.clone();
+        blocking(move || secrets::set_share_code(&id, &code)).await
+    };
+    // サーバーはハッシュしか持たないので、ここで覚えられなければ二度と出せない。今だけ見せる
     if let Err(e) = saved {
-        tracing::warn!("share codes: {e:#}");
+        tracing::warn!("share code: {e:#}");
+        let message = format!(
+            "コードは作りましたが、この PC に保存できませんでした。今のうちに控えてください: {code}"
+        );
+        return (StatusCode::INTERNAL_SERVER_ERROR, message).into_response();
     }
     get_share(State(store)).await
 }
