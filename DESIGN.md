@@ -751,7 +751,7 @@ Phase 2 の前に、録音した実況音声で Voxtral 3 の精度（`context_b
 
 - **日本語だけ**: ドメインと利用者が日本向けで、ふりがなのように日本語に寄せた機能なので、LP もアプリの画面も日本語だけにする（英語に対応すると、文言を足すたびに両方書く手間が続く）
 - **API**: `GET /jimaku/v1/aliases/{lang}` で別名（8.5）を返す（1 時間キャッシュ）。中身はリポジトリの `data/aliases.*.json` をビルド時に入れる。アプリは起動時に取りに行き、取れなければ同梱のものを使う
-- **LP**: ゲームの画像は載せない（字幕の見本は文字だけで組む）。フッターに Valve の公式ではないことと、ゲームのデータの出どころ（deadlock-api）を書く。プライバシーポリシーには、OpenAI・deadlock-api・api.deadlock.jp に送るものと、PC の中に保存するものを書く
+- **LP**: 字幕の見本は、アプリのオーバーレイと同じく名前の前にアイコンを出す（アイコンは deadlock-api から取ったものを `web/public/sample/` に同梱）。フッターに Valve の公式ではないことと、ゲームのデータとアイコンが Valve の著作物で deadlock-api から取っていることを書く。アイコンは `favicon.svg`（アプリのアイコンと同じ形）。プライバシーポリシーには、OpenAI・deadlock-api・api.deadlock.jp に送るものと、PC の中に保存するものを書く
 - **デプロイ**: 手元から `pnpm --filter ./web deploy` / `pnpm --filter ./server deploy`（先に `wrangler login`）。カスタムドメインは各 `wrangler.jsonc` の `routes`（`custom_domain: true`）で付く
 - サーバーは Hono（最初から Cloudflare Workers 向け）。ElysiaJS も考えたが、Workers 対応が実験的なので選ばない
 
