@@ -74,14 +74,7 @@ impl Enricher {
             None => vec![Span::Text(text.to_owned())],
         };
         let terms = Terms::new(&spans, glossary);
-        let ruby = async {
-            if furigana {
-                self.furigana(text, context).await
-            } else {
-                None
-            }
-        };
-        let (ruby, translations) = tokio::join!(ruby, async {
+        let (ruby, translations) = tokio::join!(self.furigana(text, context, furigana), async {
             if self.targets.is_empty() {
                 return BTreeMap::new();
             }
@@ -99,9 +92,14 @@ impl Enricher {
         }
     }
 
-    /// 日本語で漢字を含む文だけ聞く。失敗したらふりがななし
-    async fn furigana(&self, text: &str, context: &[String]) -> Option<Vec<RubySegment>> {
-        if self.source_lang != "ja" || !text.chars().any(furigana::is_kanji) {
+    /// ふりがなを出す設定で、日本語で漢字を含む文だけ聞く。失敗したらふりがななし
+    async fn furigana(
+        &self,
+        text: &str,
+        context: &[String],
+        enabled: bool,
+    ) -> Option<Vec<RubySegment>> {
+        if !enabled || self.source_lang != "ja" || !text.chars().any(furigana::is_kanji) {
             return None;
         }
         let model = furigana::Model {
