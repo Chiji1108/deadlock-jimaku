@@ -1,7 +1,7 @@
 //! 字幕パイプライン（DESIGN.md 7 章）。
 //!
 //! マイク → VAD で区切る ─┬→ GPT-Live-Transcribe の delta を Segment に追記（partial）。
-//!                        │   Segment を閉じたら commit し、delta は item の ID で Segment に結びつける
+//!                        │   Segment を開いたら音声を送り始め、閉じたら commit する
 //!                        └→ Segment が閉じたら区間を切り出して GPT-Transcribe（final）
 //!                             → ふりがな・翻訳・固有名詞（enriched）
 //!
@@ -61,19 +61,19 @@ pub async fn run(store: Arc<Store>, input: audio::Input, api_key: String) -> any
     });
     let mut audio_rx = audio::open(input).await?;
 
-    // 音声と commit は同じチャンネルで順番どおりに送る（commit を落とすと発話の対応がずれる）
+    // 開く・音声・閉じるは同じチャンネルで順番どおりに送る
     let (rt_tx, rt_rx) = mpsc::unbounded_channel();
-    let (event_tx, mut event_rx) = mpsc::channel(256);
+    let (delta_tx, mut delta_rx) = mpsc::channel(256);
     let realtime = RealtimeConfig {
         api_key: api_key.clone(),
         model: settings.models.realtime.clone(),
         delay: settings.realtime_delay.clone(),
     };
-    tokio::spawn(realtime_loop(realtime, hints.clone(), rt_rx, event_tx));
+    tokio::spawn(realtime_loop(realtime, hints.clone(), rt_rx, delta_tx));
 
     // 形態素解析の辞書の読み込みは同期処理なので、非同期のワーカーを塞がない
     let enricher = {
-        let (key, model) = (Some(api_key.clone()), settings.models.translate.clone());
+        let (key, model) = (api_key.clone(), settings.models.translate.clone());
         let effort = settings.models.reasoning_effort.clone();
         let (lang, targets) = (settings.mic_language.clone(), settings.translate_to.clone());
         tokio::task::spawn_blocking(move || Enricher::new(key, model, effort, lang, targets))
@@ -104,7 +104,7 @@ pub async fn run(store: Arc<Store>, input: audio::Input, api_key: String) -> any
                 }
                 pipeline.on_audio(&chunk);
             }
-            Some(event) = event_rx.recv() => pipeline.on_realtime(event),
+            Some(delta) = delta_rx.recv() => pipeline.on_delta(delta),
             Some(done) = done_rx.recv() => pipeline.on_done(done),
         }
     }
@@ -114,7 +114,7 @@ pub async fn run(store: Arc<Store>, input: audio::Input, api_key: String) -> any
     while pipeline.pending > 0 {
         tokio::select! {
             Some(done) = done_rx.recv() => pipeline.on_done(done),
-            Some(event) = event_rx.recv() => pipeline.on_realtime(event),
+            Some(delta) = delta_rx.recv() => pipeline.on_delta(delta),
         }
     }
     Ok(())
@@ -155,7 +155,6 @@ struct Pipeline {
     segmenter: Segmenter,
     /// リアルタイムの音声認識へ（入力が終わったら None にして閉じる）
     realtime: Option<mpsc::UnboundedSender<stt::Input>>,
-    items: Items,
     live: HashMap<String, Segment>,
     current: Option<String>,
     frame: Vec<f32>,
@@ -186,7 +185,7 @@ impl Pipeline {
             detector: earshot::Detector::default(),
             segmenter: Segmenter::new(&settings.segmentation),
             realtime: Some(realtime),
-            items: Items::default(),
+
             live: HashMap::new(),
             current: None,
             frame: Vec::with_capacity(FRAME * 2),
@@ -232,6 +231,7 @@ impl Pipeline {
         self.seq += 1;
         let started_at = now_ms();
         let id = format!("mic-{started_at}-{}", self.seq);
+        self.send_realtime(stt::Input::Open(id.clone()));
         self.live.insert(
             id.clone(),
             Segment {
@@ -251,9 +251,8 @@ impl Pipeline {
         let Some(id) = self.current.take() else {
             return;
         };
-        // 捨てる発話も commit する（commit しないと、その音声が次の発話の item に混ざる）
-        self.send_realtime(stt::Input::Commit);
-        self.items.commit(id.clone());
+        // 捨てる発話も閉じる（閉じないと、その音声が次の発話に混ざる）
+        self.send_realtime(stt::Input::Close);
         if close.speech_ms < MIN_SPEECH_MS {
             self.discard(&id);
             return;
@@ -280,7 +279,6 @@ impl Pipeline {
     }
 
     fn discard(&mut self, id: &str) {
-        self.items.forget(id);
         if let Some(mut seg) = self.live.remove(id) {
             // まだ表示していなければ流す必要もない
             if !seg.text.is_empty() {
@@ -290,20 +288,10 @@ impl Pipeline {
         }
     }
 
-    fn on_realtime(&mut self, event: stt::Event) {
-        match event {
-            stt::Event::Delta { item, text } => self.on_delta(item, &text),
-            stt::Event::Committed(item) => self.items.committed(item),
-            stt::Event::Reconnected => self.items = Items::default(),
-        }
-    }
-
-    fn on_delta(&mut self, item: String, delta: &str) {
-        let Some(id) = self.items.segment(item, self.current.as_ref()) else {
-            return;
-        };
-        if let Some(seg) = self.live.get_mut(&id).filter(|s| s.stage == Stage::Partial) {
-            seg.text.push_str(delta);
+    fn on_delta(&mut self, delta: stt::Delta) {
+        let seg = self.live.get_mut(&delta.segment);
+        if let Some(seg) = seg.filter(|s| s.stage == Stage::Partial) {
+            seg.text.push_str(&delta.text);
             self.store.upsert_segment(seg.clone());
         }
     }
@@ -349,7 +337,6 @@ impl Pipeline {
     }
 
     fn on_enriched(&mut self, id: &str, enriched: Enriched) {
-        self.items.forget(id);
         let Some(mut seg) = self.live.remove(id) else {
             return;
         };
@@ -360,66 +347,36 @@ impl Pipeline {
     }
 }
 
-/// リアルタイムの item と Segment の対応。item は commit した順に並ぶ（1 回の commit が 1 つの item）
-#[derive(Default)]
-struct Items {
-    /// item の ID → Segment の ID
-    by_item: HashMap<String, String>,
-    /// commit したが、まだ item の ID の確認が届いていない Segment（commit した順）
-    committing: VecDeque<String>,
-}
-
-impl Items {
-    fn commit(&mut self, segment: String) {
-        self.committing.push_back(segment);
-    }
-
-    /// commit の確認。commit しなかった（短すぎた）ものは None
-    fn committed(&mut self, item: Option<String>) {
-        if let (Some(segment), Some(item)) = (self.committing.pop_front(), item) {
-            self.by_item.entry(item).or_insert(segment);
-        }
-    }
-
-    /// delta の届け先。初めて見る item は、確認待ちの commit 済みの発話（先に commit したもの）、
-    /// なければ今話している発話のもの
-    fn segment(&mut self, item: String, current: Option<&String>) -> Option<String> {
-        if let Some(segment) = self.by_item.get(&item) {
-            return Some(segment.clone());
-        }
-        let segment = self.committing.front().or(current)?.clone();
-        self.by_item.insert(item, segment.clone());
-        Some(segment)
-    }
-
-    /// 終わった Segment の対応を消す
-    fn forget(&mut self, segment: &str) {
-        self.by_item.retain(|_, s| s != segment);
-    }
-}
-
 async fn realtime_loop(
     cfg: RealtimeConfig,
     hints: Arc<Hints>,
     mut input: mpsc::UnboundedReceiver<stt::Input>,
-    events: mpsc::Sender<stt::Event>,
+    deltas: mpsc::Sender<stt::Delta>,
 ) {
+    let mut speaking = stt::Speaking::default();
     let mut backoff = Duration::from_secs(1);
     loop {
         let started = Instant::now();
-        match stt::realtime(&cfg, &hints, &mut input, &events).await {
+        match stt::realtime(&cfg, &hints, &mut speaking, &mut input, &deltas).await {
             Ok(()) => return,
             Err(e) => tracing::warn!("realtime: {e:#}"),
         }
         if started.elapsed() > Duration::from_secs(30) {
             backoff = Duration::from_secs(1);
         }
-        tokio::time::sleep(backoff).await;
+        // 切れている間の音声は送らない（今話している発話に古い言葉が混ざる）。開く・閉じるだけ追う
+        let wait = tokio::time::sleep(backoff);
+        tokio::pin!(wait);
+        loop {
+            tokio::select! {
+                () = &mut wait => break,
+                next = input.recv() => match next {
+                    Some(next) => speaking.skip(next),
+                    None => return,
+                },
+            }
+        }
         backoff = (backoff * 2).min(Duration::from_secs(30));
-        // 切れている間に溜まった古い音声は送らない（今話している発話に古い言葉が混ざる）。
-        // commit も捨てるので、発話との対応は張り直してから数え直す
-        while input.try_recv().is_ok() {}
-        let _ = events.send(stt::Event::Reconnected).await;
     }
 }
 
@@ -746,32 +703,6 @@ mod tests {
             "clientVersion": 1, "languages": ["ja"], "entities": json
         }))
         .unwrap()
-    }
-
-    #[test]
-    fn items_follow_commit_order() {
-        let mut items = Items::default();
-        let a = "a".to_owned();
-        let b = "b".to_owned();
-        // 話している途中の delta は今の発話へ
-        assert_eq!(items.segment("i1".into(), Some(&a)), Some(a.clone()));
-        // commit した後、確認が届く前の遅れた delta も同じ item なら同じ発話へ
-        items.commit(a.clone());
-        assert_eq!(items.segment("i1".into(), None), Some(a.clone()));
-        // 確認が届く前に初めて見る item は、確認待ちの発話（先に commit したもの）
-        items.commit(b.clone());
-        items.committed(Some("i1".into()));
-        assert_eq!(items.segment("i2".into(), None), Some(b.clone()));
-        items.committed(Some("i2".into()));
-        // 次の発話の item は今の発話へ
-        let c = "c".to_owned();
-        assert_eq!(items.segment("i3".into(), Some(&c)), Some(c.clone()));
-        // 短すぎて commit しなかったものは None で順番だけ進む
-        items.commit(c.clone());
-        items.committed(None);
-        assert!(items.committing.is_empty());
-        items.forget("a");
-        assert!(!items.by_item.values().any(|s| s == "a"));
     }
 
     #[test]

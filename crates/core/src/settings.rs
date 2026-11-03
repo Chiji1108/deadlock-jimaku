@@ -372,6 +372,16 @@ impl Settings {
             .filter(|t| *t != mic)
             .take(MAX_TRANSLATE_TO)
             .collect();
+        // 音声認識は Mistral から OpenAI に替えた。前に保存した Voxtral のモデルは使えない
+        let defaults = Models::default();
+        for (model, default) in [
+            (&mut self.models.realtime, defaults.realtime),
+            (&mut self.models.batch, defaults.batch),
+        ] {
+            if model.starts_with("voxtral") {
+                *model = default;
+            }
+        }
         // 読めない値が残っていると、ほかの項目を変えるときの検証も通らなくなる
         if self.subtitle_display.validate().is_err() {
             self.subtitle_display = SubtitleDisplay::default();
@@ -709,6 +719,21 @@ mod tests {
         let s = load(&path).unwrap();
         assert_eq!(s.mic_language, "ja");
         assert_eq!(s.translate_to, ["en", "ru", "ko", "de"]);
+    }
+
+    #[test]
+    fn old_voxtral_models_fall_back_to_defaults() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("settings.json");
+        std::fs::write(
+            &path,
+            r#"{ "models": { "realtime": "voxtral-mini-transcribe-realtime-3", "batch": "voxtral-small-transcribe-3", "translate": "custom" } }"#,
+        )
+        .unwrap();
+        let models = load(&path).unwrap().models;
+        assert_eq!(models.realtime, Models::default().realtime);
+        assert_eq!(models.batch, Models::default().batch);
+        assert_eq!(models.translate, "custom");
     }
 
     #[test]

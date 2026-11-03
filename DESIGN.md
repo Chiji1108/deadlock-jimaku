@@ -122,7 +122,10 @@ Deadlock 配信者向けの OBS オーバーレイツール。
 ### 3.1 Realtime（GPT-Live-Transcribe）
 
 - URL: `wss://api.openai.com/v1/realtime?intent=transcription`。認証は `Authorization: Bearer <key>` ヘッダー（ブラウザの WebSocket では付けられないので、Rust の中核から接続する）
-- 流れ: 接続 → `session.created` → `session.update` → `session.updated` → `input_audio_buffer.append`（24kHz の PCM を base64。100ms ずつ）を繰り返す。**発話を閉じたら `input_audio_buffer.commit`**
+- 流れ: 接続 → `session.created` → `session.update` → `session.updated` → 発話を開いたら `input_audio_buffer.append`（24kHz の PCM を base64。100ms ずつ）を送り始める → **発話を閉じたら `input_audio_buffer.commit`**（100ms 未満なら commit できないので `input_audio_buffer.clear`）
+- 話していない間の音声は送らない（リアルタイムは送った音声の長さで課金される）。発話を開く前の 0.3 秒だけ手元に持ち、開いたら先に送る（VAD が開くのは話し始めより少し遅い）
+- 16kHz → 24kHz はちょうど 3/2 倍なので、ため込まない線形補間で変換する（発話の終わりまでその場で送れる）
+- 接続と設定には 10 秒の上限を付ける。接続している間・切れている間に溜まった音声は送らず、今の発話の続きから送る
 - `turn_detection` は使わない（`null`。このモデルはサーバー側の VAD に対応していない）。区切りはローカルの VAD で決める（下記）
 
 ```json
@@ -161,7 +164,7 @@ Deadlock 配信者向けの OBS オーバーレイツール。
 | `conversation.item.input_audio_transcription.completed` | `transcript`（その item の全文。final はバッチで取り直すので使わない） |
 | `error` | 1 つの要求の失敗（短すぎる commit など）。セッションは続く |
 
-**commit と item**: 1 回の commit までの音声が 1 つの item になり、次の音声は新しい item になる。delta には最初から `item_id` が付くので、Segment を閉じたら commit し、item と Segment を commit の順で 1 対 1 に結びつける（7.2）。短すぎる（100ms 未満）音声は commit できないので送らず、その分は「commit しなかった」として順番だけ進める。
+**commit と item**: 1 回の commit までの音声が 1 つの item になり、次の音声は新しい item になる。delta には最初から `item_id` が付くので、item と Segment を commit の順で 1 対 1 に結びつける（7.2）。対応は音声認識の接続の中だけで持ち（`stt.rs`）、字幕の流れには Segment の ID 付きで delta を返す。張り直したら対応も作り直すので、イベントが 1 つ欠けても以降がずれない。commit には `event_id` に Segment の ID を付け、断られたら（`error.event_id`）その Segment を待たない。入力が終わったら、最後の item の文字（`completed`）が届くまで待つ（上限 10 秒）。
 
 **発話の区切り方**: 区切りはローカルの VAD（earshot）で決める。会話の「話す番」を判定するターン検出は字幕の区切りと目的が違い、話し続ける配信者では区切りがいつまでも来ない（Voxtral の検証で、間を挟みながら 22 秒話した音声が 1 ターンになった）。
 
@@ -347,10 +350,10 @@ mic ─┬─▶ ローカル VAD（earshot）── 発話の開始 → Segment
 ```
 
 - **区切りはローカルの VAD で決める**（3.1 の「発話の区切り方」を参照）。
-- **delta と Segment の対応**: Segment を閉じたら（捨てる短い発話も）commit する。item は commit した順に並ぶので、初めて見る `item_id` は「commit したが確認がまだの Segment のうち最も古いもの」、なければ「今話している Segment」のものとする。commit の確認（`input_audio_buffer.committed`）が届いたら、その `item_id` を確認待ちの先頭の Segment に結びつける。
+- **delta と Segment の対応**: 字幕の流れは音声認識に「開いた（Segment の ID）」「音声」「閉じた」を順に送るだけ。捨てる短い発話も閉じる。item は commit した順に並ぶので、初めて見る `item_id` は「commit したが確認がまだの Segment のうち最も古いもの」、なければ「今話している Segment」のものとする（3.1）。
 - Segment ごとに独立した非同期タスクで処理する。enrich の完了順が前後しても、表示順は `startedAt` で固定する。
 - enrich には直前 2〜3 発話の final テキストを文脈として渡す（代名詞や話の流れのため）。
-- Realtime セッションが切れたら、新しいセッションを張り直す。切れている間の音声と commit は捨て、item と Segment の対応は張り直してから数え直す（final はバッチで取れる）。
+- Realtime セッションが切れたら、新しいセッションを張り直す。切れている間の音声は捨て、今の Segment の続きから送る（final はバッチで取れる）。
 
 ### 7.3 遅延の目安
 

@@ -107,7 +107,7 @@ fn build_mic_stream(
     );
 
     let channels = usize::from(config.channels());
-    let mut resampler = Resampler::new(config.sample_rate(), SAMPLE_RATE)?;
+    let mut resampler = Resampler::new(config.sample_rate())?;
     // コールバックは実時間のスレッドで呼ばれるので、作業用のバッファは使い回す
     let mut mono = Vec::new();
     let mut on_samples = move |mono: &[f32]| {
@@ -171,7 +171,7 @@ fn load_file(path: &Path) -> anyhow::Result<Vec<f32>> {
     };
     let mut mono = Vec::new();
     downmix_into(&samples, usize::from(spec.channels), &mut mono);
-    let mut audio = Resampler::new(spec.sample_rate, SAMPLE_RATE)?.process(&mono);
+    let mut audio = Resampler::new(spec.sample_rate)?.process(&mono);
     // 最後の発話が無音で閉じるよう、末尾に 2 秒の無音を足す
     audio.extend(std::iter::repeat_n(0.0, SAMPLE_RATE as usize * 2));
     Ok(audio)
@@ -190,19 +190,19 @@ async fn play(audio: Vec<f32>, tx: mpsc::Sender<Vec<f32>>) {
     }
 }
 
-/// mono のサンプルレートを変換する（入力 → 16kHz、16kHz → 音声認識の 24kHz）
-pub struct Resampler {
+/// 任意のサンプルレートの mono を 16kHz に変換する
+struct Resampler {
     inner: Option<Async<f32>>,
     pending: Vec<f32>,
     buf: Vec<f32>,
 }
 
 impl Resampler {
-    pub fn new(from: u32, to: u32) -> anyhow::Result<Self> {
-        let inner = (from != to)
+    fn new(rate: u32) -> anyhow::Result<Self> {
+        let inner = (rate != SAMPLE_RATE)
             .then(|| {
                 Async::<f32>::new_poly(
-                    f64::from(to) / f64::from(from),
+                    f64::from(SAMPLE_RATE) / f64::from(rate),
                     1.1,
                     PolynomialDegree::Cubic,
                     1024,
@@ -219,7 +219,7 @@ impl Resampler {
         })
     }
 
-    pub fn process(&mut self, input: &[f32]) -> Vec<f32> {
+    fn process(&mut self, input: &[f32]) -> Vec<f32> {
         let Some(inner) = &mut self.inner else {
             return input.to_vec();
         };
@@ -321,7 +321,7 @@ mod tests {
 
     #[test]
     fn resampler_converts_rate() {
-        let mut r = Resampler::new(48_000, SAMPLE_RATE).unwrap();
+        let mut r = Resampler::new(48_000).unwrap();
         let out = r.process(&vec![0.0; 48_000]);
         // 内部の遅延とチャンク待ちがあるので、おおよそ 1/3
         assert!((15_000..=16_100).contains(&out.len()), "{}", out.len());
