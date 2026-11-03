@@ -1,6 +1,6 @@
 # Mac・Windows・Linux のインストーラーを作り、Actions の成果物に置く。
 # PR と main で壊れていないかを確かめ（main のキャッシュはタグのビルドでも使える）、リリースでは release.yml から呼ぶ。
-# Mac はリリースのときだけ Developer ID で署名して公証する（数分かかる）。それ以外はアドホック署名
+# Mac はリリースのときだけ Developer ID で署名して公証する（数分かかる）。それ以外はアドホック署名（tauri.conf.json）
 name: build
 
 on:
@@ -15,6 +15,12 @@ on:
       sign:
         type: boolean
         default: false
+    secrets:
+      APPLE_CERTIFICATE:
+      APPLE_CERTIFICATE_PASSWORD:
+      APPLE_API_ISSUER:
+      APPLE_API_KEY:
+      APPLE_API_KEY_P8:
 
 permissions:
   contents: read
@@ -43,30 +49,6 @@ jobs:
         shell: bash
     steps:
       - uses: actions/checkout@v4
-      - name: Mac の署名の準備
-        if: runner.os == 'macOS'
-        run: |
-          if [ "$SIGN" = true ]; then
-            # 証明書は Tauri が一時的なキーチェーンに読み込む。公証には App Store Connect の API キーを使う
-            printf '%s' "$APPLE_API_KEY_P8" > "$RUNNER_TEMP/AuthKey.p8"
-            {
-              echo "APPLE_SIGNING_IDENTITY=Developer ID Application"
-              echo "APPLE_CERTIFICATE=$APPLE_CERTIFICATE"
-              echo "APPLE_CERTIFICATE_PASSWORD=$APPLE_CERTIFICATE_PASSWORD"
-              echo "APPLE_API_ISSUER=$APPLE_API_ISSUER"
-              echo "APPLE_API_KEY=$APPLE_API_KEY"
-              echo "APPLE_API_KEY_PATH=$RUNNER_TEMP/AuthKey.p8"
-            } >> "$GITHUB_ENV"
-          else
-            echo "APPLE_SIGNING_IDENTITY=-" >> "$GITHUB_ENV"
-          fi
-        env:
-          SIGN: ${{ inputs.sign }}
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
-          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
-          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
       - name: Linux のビルドに要るライブラリ（Tauri の WebView とマイク）
         if: runner.os == 'Linux'
         run: |
@@ -80,7 +62,27 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: pnpm --dir frontend install --frozen-lockfile
       # Tauri の CLI はリポジトリのルートから動かす（app/tauri.conf.json を探す）
-      - run: frontend/node_modules/.bin/tauri build ${{ matrix.args }}
+      - if: ${{ !(inputs.sign && runner.os == 'macOS') }}
+        run: frontend/node_modules/.bin/tauri build ${{ matrix.args }}
+      # 証明書は Tauri が一時的なキーチェーンに読み込み、App Store Connect の API キーで公証する。
+      # 鍵はこの手順にだけ渡す
+      - name: 署名して公証する
+        if: ${{ inputs.sign && runner.os == 'macOS' }}
+        run: |
+          for name in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_API_ISSUER APPLE_API_KEY APPLE_API_KEY_P8; do
+            [ -n "${!name}" ] || { echo "Secret $name がない"; exit 1; }
+          done
+          export APPLE_API_KEY_PATH="$RUNNER_TEMP/AuthKey.p8"
+          printf '%s' "$APPLE_API_KEY_P8" > "$APPLE_API_KEY_PATH"
+          frontend/node_modules/.bin/tauri build ${{ matrix.args }}
+        env:
+          # tauri.conf.json のアドホック署名（"-"）より優先される
+          APPLE_SIGNING_IDENTITY: Developer ID Application
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
       - uses: actions/upload-artifact@v4
         with:
           name: installers-${{ runner.os }}

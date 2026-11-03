@@ -34,7 +34,7 @@ macOS 版の署名と公証には、リポジトリの Actions の Secrets に�
 
 | Secret | 中身 |
 |---|---|
-| `APPLE_CERTIFICATE` | Developer ID Application 証明書の `.p12` を base64 にしたもの |
+| `APPLE_CERTIFICATE` | Developer ID Application 証明書（1 つだけ）の `.p12` を base64 にしたもの |
 | `APPLE_CERTIFICATE_PASSWORD` | `.p12` を書き出したときのパスワード |
 | `APPLE_API_ISSUER` | App Store Connect の API キーの Issuer ID |
 | `APPLE_API_KEY` | 同じく Key ID |
