@@ -34,7 +34,7 @@ const READINGS_PER_REQUEST: usize = 40;
 const ICON_CONCURRENCY: usize = 8;
 
 /// 別名を配るサーバー（DESIGN.md 17 章）。アプリの更新を待たずに別名を足せる
-const ALIASES_URL: &str = "https://api.deadlock.jp/obs/v1/aliases/ja";
+const ALIASES_URL: &str = "https://api.deadlock.jp/jimaku/v1/aliases/ja";
 /// 辞書の読み込みと同時に取りに行く。届かなければ同梱の別名で始める（起動を待たせすぎない）
 const ALIASES_TIMEOUT: Duration = Duration::from_secs(3);
 
