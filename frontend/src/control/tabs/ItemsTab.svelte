@@ -99,7 +99,7 @@
       <Card.Title>OBS に追加する</Card.Title>
       <Card.Description>
         ソースの「＋」→「ブラウザ」で、この URL を貼り付け、幅 {ITEMS_SIZE[0]}・高さ
-        {ITEMS_SIZE[1]} にして好きな位置に置いてください。カードは箱の左上から出ます
+        {ITEMS_SIZE[1]} にして好きな位置に置いてください。カードは箱の左上から出ます。大きさを変えるときは、ソースを引き伸ばさずにプロパティの幅と高さを同じ割合で変えてください。カードが幅に合わせてくっきりしたまま大きくなります
       </Card.Description>
     </Card.Header>
     <Card.Content>

@@ -165,7 +165,7 @@
       <Card.Title>OBS に追加する</Card.Title>
       <Card.Description>
         ソースの「＋」→「ブラウザ」で、この URL を貼り付けてください（幅 {RANK_SIZE[0]}・高さ
-        {RANK_SIZE[1]}）
+        {RANK_SIZE[1]}）。大きさを変えるときは、ソースを引き伸ばさずにプロパティの幅と高さを同じ割合で変えてください。中身が幅に合わせてくっきりしたまま大きくなります
       </Card.Description>
     </Card.Header>
     <Card.Content>
