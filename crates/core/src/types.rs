@@ -130,10 +130,23 @@ pub enum ServerMsg {
 
 /// 字幕を始められなかった・止まった理由。文は操作パネルが作る（サーバーは中身だけを返す）
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
-#[serde(tag = "code", rename_all = "camelCase")]
+#[serde(
+    tag = "code",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
 #[ts(export)]
 pub enum TranscriptionError {
     MissingKey,
+    /// ギフトコードの期限が切れた（DESIGN.md 17.1）
+    GiftExpired {
+        #[ts(type = "number")]
+        expires_at: i64,
+    },
+    /// おすそ分けした人がギフトコードを止めた
+    GiftRevoked,
+    /// ないギフトコード（おすそ分けをやめたなど）
+    GiftUnknown,
     /// マイクの入力が途切れた
     InputEnded,
     /// マイクを開けない

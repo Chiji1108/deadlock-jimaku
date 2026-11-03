@@ -6,7 +6,7 @@
   import { Input } from "$lib/components/ui/input";
   import type { Provider } from "../../generated/Provider";
   import OpenAiKeyGuide from "../parts/OpenAiKeyGuide.svelte";
-  import { panel } from "../panel.svelte";
+  import { giftStatusText, panel } from "../panel.svelte";
 
   const providers: { provider: Provider; name: string; use: string }[] = [
     {
@@ -22,6 +22,9 @@
     // 失敗したら貼り直さずにやり直せるよう、入力は残す
     if (await panel.setKey(provider, key)) inputs[provider] = "";
   }
+
+  let gift = $state("");
+  const giftSaved = $derived(panel.view?.keys.gift.state === "saved");
 </script>
 
 <div class="flex flex-col gap-6">
@@ -85,6 +88,60 @@
           </form>
         {/each}
       </Field.Group>
+    </Card.Content>
+  </Card.Root>
+
+  <Card.Root>
+    <Card.Header>
+      <Card.Title>ギフトコード</Card.Title>
+      <Card.Description>
+        デドロ字幕を使っている人から「おすそ分け」のコードをもらったら、ここに入れると自分の API
+        キーなしで使えます。使った分はおすそ分けしてくれた人に請求されます
+      </Card.Description>
+    </Card.Header>
+    <Card.Content>
+      <form
+        onsubmit={async (e) => {
+          e.preventDefault();
+          if (await panel.setGift(gift)) gift = "";
+        }}
+      >
+        <Field.Field>
+          <div class="flex items-center gap-2">
+            <Field.Label for="gift">コード</Field.Label>
+            {#if giftSaved}
+              <Badge variant={panel.gift?.state === "active" ? "secondary" : "destructive"}>
+                {panel.gift?.state === "active" ? "保存済み" : "使えません"}
+              </Badge>
+            {:else}
+              <Badge variant="outline">未設定</Badge>
+            {/if}
+          </div>
+          {#if giftSaved && panel.gift}
+            <Field.Description class={panel.gift.state === "active" ? "" : "text-destructive"}>
+              {giftStatusText(panel.gift)}
+            </Field.Description>
+          {/if}
+          {#if giftSaved && panel.view?.keys.openai.state === "saved"}
+            <Field.Description
+              >自分の API キーを保存しているあいだは、自分のキーを使います</Field.Description
+            >
+          {/if}
+          <div class="flex gap-2">
+            <Input
+              id="gift"
+              type="password"
+              autocomplete="off"
+              bind:value={gift}
+              placeholder={giftSaved ? "変えるときは新しいコードを入力" : "XXXX-XXXX-XXXX"}
+            />
+            <Button type="submit" disabled={!gift.trim()}>保存</Button>
+            {#if giftSaved}
+              <Button type="button" variant="outline" onclick={panel.removeGift}>削除</Button>
+            {/if}
+          </div>
+        </Field.Field>
+      </form>
     </Card.Content>
   </Card.Root>
 </div>

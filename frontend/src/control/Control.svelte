@@ -1,6 +1,7 @@
 <script lang="ts">
   import CaptionsIcon from "@lucide/svelte/icons/captions";
   import CircleAlertIcon from "@lucide/svelte/icons/circle-alert";
+  import GiftIcon from "@lucide/svelte/icons/gift";
   import KeyRoundIcon from "@lucide/svelte/icons/key-round";
   import MicIcon from "@lucide/svelte/icons/mic";
   import PackageIcon from "@lucide/svelte/icons/package";
@@ -21,12 +22,13 @@
   import ItemsTab from "./tabs/ItemsTab.svelte";
   import KeysTab from "./tabs/KeysTab.svelte";
   import RankTab from "./tabs/RankTab.svelte";
+  import ShareTab from "./tabs/ShareTab.svelte";
   import UsageTab from "./tabs/UsageTab.svelte";
 
   onMount(() => panel.start());
 
   const s = $derived(panel.settings);
-  const needsKey = $derived(!!panel.view && panel.view.keys.openai.state !== "saved");
+  const needsKey = $derived(!!panel.view && !panel.hasAccess);
   let tab = $state("audio");
   /** 中身の欄（広い画面ではここだけがスクロールする） */
   let content = $state<HTMLElement>();
@@ -37,6 +39,7 @@
     { value: "items", label: "アイテム説明", icon: PackageIcon, page: ItemsTab },
     { value: "rank", label: "ランク", icon: TrophyIcon, page: RankTab },
     { value: "keys", label: "API キー", icon: KeyRoundIcon, page: KeysTab },
+    { value: "share", label: "おすそ分け", icon: GiftIcon, page: ShareTab },
     { value: "usage", label: "料金", icon: WalletIcon, page: UsageTab },
   ];
   // デスクトップのウィンドウでは左のサイドバー。OBS のドックのように狭いときは上に並べる
@@ -140,7 +143,7 @@
               <Alert.Title>はじめに OpenAI の API キーを設定してください</Alert.Title>
               <Alert.Description>
                 <p>
-                  文字起こしと翻訳に使います。<button
+                  文字起こしと翻訳に使います。人からギフトコードをもらった場合は、それを入れても使えます。<button
                     class="underline"
                     onclick={() => (tab = "keys")}
                   >
