@@ -9,6 +9,8 @@
   --color-muted: #a39c8c;
   --color-gold: #ffd34d;
   --color-sky: #8fd8ff;
+  /* アイテム（スピリット）。アプリの EntityRef.svelte と同じ色 */
+  --color-spirit: #cfa2ff;
 }
 
 html {
@@ -25,11 +27,33 @@ h3 {
   text-wrap: balance;
 }
 
+/* 見本を置く舞台（ゲーム画面の暗い背景の代わり） */
+.stage {
+  border: 1px solid var(--color-line);
+  border-radius: 1rem;
+  background: radial-gradient(ellipse at top, #3a3320, #121009);
+}
+
 /* 字幕の見本。アプリのオーバーレイと同じく縁取りで読ませる */
 .caption {
   font-weight: 700;
+  word-break: auto-phrase;
   -webkit-text-stroke: 0.08em #000;
   paint-order: stroke fill;
+}
+/* 名前の前のアイコン（アプリの EntityRef.svelte と同じ置き方） */
+.caption .entity {
+  white-space: nowrap;
+}
+.caption .icon {
+  display: inline;
+  height: 1.1em;
+  /* 読み込み前から正方形の場所を取る（文字がずれない） */
+  aspect-ratio: 1;
+  margin: 0 0.16em 0 0.2em;
+  vertical-align: -0.18em;
+  border-radius: 0.18em;
+  filter: drop-shadow(0 0 0.06em rgb(0 0 0 / 0.9));
 }
 .caption rt {
   font-size: 0.45em;

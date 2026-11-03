@@ -1,0 +1,12 @@
+---
+// 字幕の見本の用語（アプリの EntityRef.svelte と同じく、名前の前にアイコンを出す）
+interface Props {
+  icon: string;
+  /** 色。アイテムはゲーム内のスロットの色 */
+  kind: "hero" | "ability" | "spirit";
+}
+const { icon, kind } = Astro.props;
+const color = { hero: "text-gold", ability: "text-sky", spirit: "text-spirit" }[kind];
+---
+
+<span class:list={["entity", color]}><img class="icon" src={icon} alt="" /><slot /></span>

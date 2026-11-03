@@ -25,6 +25,9 @@ const year = new Date().getFullYear();
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
@@ -42,7 +45,9 @@ const year = new Date().getFullYear();
   <body class="min-h-screen font-sans antialiased">
     <header class="border-b border-line">
       <nav class="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
-        <a href="/" class="font-semibold tracking-tight">{SITE}</a>
+        <a href="/" class="flex items-center gap-2 font-semibold tracking-tight">
+          <img src="/favicon.svg" alt="" width="28" height="28" />{SITE}
+        </a>
         <div class="flex items-center gap-5 text-sm whitespace-nowrap text-muted">
           <a href="/#pricing" class="hidden hover:text-white sm:inline">料金</a>
           <a href="/#faq" class="hidden hover:text-white sm:inline">よくある質問</a>
@@ -66,7 +71,10 @@ const year = new Date().getFullYear();
         </div>
         <p>
           Deadlock は Valve Corporation の商標です。本ツールは Valve とは関係のない非公式のツールです。
-          ゲームのデータとアイコンは <a href="https://deadlock-api.com" class="underline">deadlock-api</a> から取得しています。
+          ゲームのデータとアイコン（このサイトの字幕の見本のものを含む）は Valve の著作物で、<a
+            href="https://deadlock-api.com"
+            class="underline">deadlock-api</a
+          > から取得しています。
         </p>
         <p>© {year} Chiji1108</p>
       </div>

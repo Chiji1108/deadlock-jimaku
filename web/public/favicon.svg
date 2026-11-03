@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- アプリのアイコン（app/icons/icon.png）と同じ形。暗い四角に字幕の 2 行 -->
+  <rect x="32" y="32" width="448" height="448" rx="100" fill="#1c1f26"/>
+  <rect x="100" y="310" width="312" height="40" rx="12" fill="#ffd34d"/>
+  <rect x="140" y="370" width="232" height="30" rx="15" fill="#ffffff"/>
+</svg>
