@@ -219,7 +219,18 @@ impl Resampler {
         })
     }
 
+    /// 変換した音声。PCM の範囲（-1〜1）に収める（大きな音や変換のはみ出しで範囲を超えると、
+    /// VAD（earshot）が受け付けない。範囲を超えた分はマイクでも切れているので、切るのが本来の値）
     fn process(&mut self, input: &[f32]) -> Vec<f32> {
+        let mut out = self.resample(input);
+        for s in &mut out {
+            // NaN（壊れたファイルなど）は無音にする（clamp は NaN を通してしまう）
+            *s = if s.is_nan() { 0.0 } else { s.clamp(-1.0, 1.0) };
+        }
+        out
+    }
+
+    fn resample(&mut self, input: &[f32]) -> Vec<f32> {
         let Some(inner) = &mut self.inner else {
             return input.to_vec();
         };
@@ -317,6 +328,20 @@ mod tests {
         // 先頭 2 サンプルは捨てられているので、[0, 3) で残っているのは位置 2 だけ
         assert_eq!(h.slice(0, 3), vec![2.0]);
         assert_eq!(h.slice(h.end() - 2, h.end() + 10), vec![1.0, 2.0]);
+    }
+
+    #[test]
+    fn loud_input_stays_within_pcm_range() {
+        // 大きな音（範囲外の値）や、変換でのはみ出しがあっても -1〜1 に収まる
+        let mut loud: Vec<f32> = (0..48_000)
+            .map(|i| if i % 2 == 0 { 3.0 } else { -3.0 })
+            .collect();
+        loud[100] = f32::NAN;
+        for rate in [48_000, SAMPLE_RATE] {
+            let out = Resampler::new(rate).unwrap().process(&loud);
+            assert!(!out.is_empty());
+            assert!(out.iter().all(|s| (-1.0..=1.0).contains(s)), "{rate}");
+        }
     }
 
     #[test]
