@@ -412,19 +412,24 @@ async fn enrich(
 /// 用語ヒント: 話す言語での名前と略称（DESIGN.md 8.4）。
 /// 上限を超えるときはヒーロー → アイテム → スキルの順に残す
 pub fn context_bias(glossary: &Glossary, lang: &str) -> Vec<String> {
+    // 公式名をすべて先に入れ、余った枠に別名を入れる（別名は話した言葉を用語に結びつける照合の側で効く）
+    let kinds = [EntityKind::Hero, EntityKind::Item, EntityKind::Ability];
+    let of_kind = |kind| glossary.entities.values().filter(move |e| e.kind == kind);
+    let names = kinds
+        .into_iter()
+        .flat_map(of_kind)
+        .filter_map(|e| e.names.get(lang));
+    let aliases = kinds
+        .into_iter()
+        .flat_map(of_kind)
+        .flat_map(|e| e.aliases.get(lang).into_iter().flatten());
     let mut terms: Vec<String> = Vec::new();
-    for kind in [EntityKind::Hero, EntityKind::Item, EntityKind::Ability] {
-        for entity in glossary.entities.values().filter(|e| e.kind == kind) {
-            let names = entity.names.get(lang).into_iter();
-            let aliases = entity.aliases.get(lang).into_iter().flatten();
-            for term in names.chain(aliases) {
-                if terms.len() == MAX_CONTEXT_BIAS {
-                    return terms;
-                }
-                if !terms.contains(term) {
-                    terms.push(term.clone());
-                }
-            }
+    for term in names.chain(aliases) {
+        if terms.len() == MAX_CONTEXT_BIAS {
+            break;
+        }
+        if !terms.contains(term) {
+            terms.push(term.clone());
         }
     }
     terms
@@ -747,6 +752,18 @@ mod tests {
         assert_eq!(
             context_bias(&g, "ja"),
             ["ヘイズ", "基礎拡張マガジン", "拡張マガジン"]
+        );
+    }
+
+    #[test]
+    fn context_bias_puts_every_name_before_aliases() {
+        let g = glossary(serde_json::json!({
+            "hero:13": { "kind": "hero", "className": "h", "names": { "ja": "ヘイズ" }, "aliases": { "ja": ["ヘイズちゃん"] } },
+            "ability:8": { "kind": "ability", "className": "b", "names": { "ja": "バレットダンス" }, "aliases": {} }
+        }));
+        assert_eq!(
+            context_bias(&g, "ja"),
+            ["ヘイズ", "バレットダンス", "ヘイズちゃん"]
         );
     }
 

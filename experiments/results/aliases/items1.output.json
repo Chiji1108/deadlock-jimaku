@@ -1,0 +1,359 @@
+{
+ "item:1009965641": {
+  "en": "Monster Rounds",
+  "ja": "モンスターラウンド",
+  "aliases": [
+   {
+    "alias": "モンスタラウンド",
+    "source": "https://gamerch.com/deadlock/876436"
+   }
+  ]
+ },
+ "item:1047818222": {
+  "en": "Debuff Reducer",
+  "ja": "デバフリデューサー",
+  "aliases": [
+   {
+    "alias": "デバフリデューザー",
+    "source": "https://gamerch.com/deadlock/871722"
+   }
+  ]
+ },
+ "item:1055679805": {
+  "en": "Vampiric Burst",
+  "ja": "ヴァンパイアバースト",
+  "aliases": [
+   {
+    "alias": "ヴァンピリックバースト",
+    "source": "https://deadlock-jp.com/patch-notes.html"
+   }
+  ]
+ },
+ "item:1102081447": {
+  "en": "Mystic Slow",
+  "ja": "ミスティックスロウ",
+  "aliases": [
+   {
+    "alias": "ミスティックスロー",
+    "source": "https://gamerch.com/deadlock/871722"
+   }
+  ]
+ },
+ "item:1113837674": {
+  "en": "Silencer",
+  "ja": "サイレンサー",
+  "aliases": []
+ },
+ "item:112198670": {
+  "en": "Spirit Shielding",
+  "ja": "スピリットシールド",
+  "aliases": [
+   {
+    "alias": "スピリットシールディング",
+    "source": "https://deadlock-jp.com/counter-items.html"
+   }
+  ]
+ },
+ "item:1132564516": {
+  "en": "Prism Blast",
+  "ja": "プリズムブラスト",
+  "aliases": []
+ },
+ "item:1144549437": {
+  "en": "Spirit Shredder",
+  "ja": "スピリットシュレッダー",
+  "aliases": [
+   {
+    "alias": "Spirit Shredder Bullets",
+    "source": "https://curiousfull.com/item-list/"
+   },
+   {
+    "alias": "Soul Shredder Bullets",
+    "source": "https://note.com/hazimata/n/n745f0962a515"
+   }
+  ]
+ },
+ "item:1150006784": {
+  "en": "Arcane Surge",
+  "ja": "アーケインサージ",
+  "aliases": []
+ },
+ "item:1152158042": {
+  "en": "Vortex Web",
+  "ja": "ボルテックスウェブ",
+  "aliases": []
+ },
+ "item:1193964439": {
+  "en": "Greater Expansion",
+  "ja": "グレーターエクスパンダー",
+  "aliases": [
+   {
+    "alias": "Improved Reach",
+    "source": "https://deadlock.wiki/Greater_Expansion"
+   },
+   {
+    "alias": "改良リーチ",
+    "source": "https://gamerch.com/deadlock/871722"
+   },
+   {
+    "alias": "カイリョウリーチ",
+    "source": "https://gamerch.com/deadlock/871722"
+   }
+  ]
+ },
+ "item:1219329868": {
+  "en": "Spirit Sap",
+  "ja": "スピリットドレイン",
+  "aliases": [
+   {
+    "alias": "スピリットサップ",
+    "source": "https://deadlock-jp.com/patch-notes.html"
+   }
+  ]
+ },
+ "item:1235347618": {
+  "en": "Battle Vest",
+  "ja": "バトルベスト",
+  "aliases": []
+ },
+ "item:1250307611": {
+  "en": "Juggernaut",
+  "ja": "ジャガーノート",
+  "aliases": []
+ },
+ "item:1252627263": {
+  "en": "Lifestrike",
+  "ja": "ライフストライク",
+  "aliases": []
+ },
+ "item:1254091416": {
+  "en": "Knockdown",
+  "ja": "ノックダウン",
+  "aliases": []
+ },
+ "item:1282141666": {
+  "en": "Siphon Bullets",
+  "ja": "サイフォンバレット",
+  "aliases": [
+   {
+    "alias": "サイフォン弾",
+    "source": "https://gamerch.com/deadlock/871722"
+   },
+   {
+    "alias": "サイフォンダン",
+    "source": "https://gamerch.com/deadlock/871722"
+   }
+  ]
+ },
+ "item:1292979587": {
+  "en": "Surge of Power",
+  "ja": "パワーサージ",
+  "aliases": []
+ },
+ "item:1342610602": {
+  "en": "Close Quarters",
+  "ja": "クローズクォーター",
+  "aliases": [
+   {
+    "alias": "クローズクオーター",
+    "source": "https://gamerch.com/deadlock/876436"
+   },
+   {
+    "alias": "クローズクウォーター",
+    "source": "https://wikiwiki.jp/deadlockjp/Weapon"
+   }
+  ]
+ },
+ "item:1371725689": {
+  "en": "Phantom Strike",
+  "ja": "ファントムストライク",
+  "aliases": []
+ },
+ "item:1378931225": {
+  "en": "Metal Skin",
+  "ja": "メタルスキン",
+  "aliases": []
+ },
+ "item:1396247347": {
+  "en": "Lucky Shot",
+  "ja": "ラッキーショット",
+  "aliases": []
+ },
+ "item:1409190604": {
+  "en": "Fury Trance",
+  "ja": "フューリートランス",
+  "aliases": []
+ },
+ "item:1414025773": {
+  "en": "Counterspell",
+  "ja": "カウンタースペル",
+  "aliases": []
+ },
+ "item:1414319208": {
+  "en": "Berserker",
+  "ja": "バーサーカー",
+  "aliases": []
+ },
+ "item:1427630806": {
+  "en": "Healing Tempo",
+  "ja": "ヒーリングテンポ",
+  "aliases": []
+ },
+ "item:1437614329": {
+  "en": "Melee Lifesteal",
+  "ja": "メレーライフスティール",
+  "aliases": [
+   {
+    "alias": "近接ライフスティール",
+    "source": "https://gamerch.com/deadlock/871722"
+   },
+   {
+    "alias": "キンセツライフスティール",
+    "source": "https://gamerch.com/deadlock/871722"
+   }
+  ]
+ },
+ "item:1439347412": {
+  "en": "Mystic Regeneration",
+  "ja": "ミスティックリジェネ",
+  "aliases": []
+ },
+ "item:1548066885": {
+  "en": "Extended Magazine",
+  "ja": "基礎拡張マガジン",
+  "aliases": [
+   {
+    "alias": "Basic Magazine",
+    "source": "https://deadlock.wiki/Extended_Magazine"
+   },
+   {
+    "alias": "基本マガジン",
+    "source": "https://gamerch.com/deadlock/876436"
+   },
+   {
+    "alias": "キホンマガジン",
+    "source": "https://gamerch.com/deadlock/876436"
+   },
+   {
+    "alias": "拡マガ",
+    "source": "https://ciel-myworld.hatenablog.com/entry/2025/02/06/180000"
+   },
+   {
+    "alias": "カクマガ",
+    "source": "https://ciel-myworld.hatenablog.com/entry/2025/02/06/180000"
+   },
+   {
+    "alias": "拡張マガジン",
+    "source": "https://bfhl.swiki.jp/index.php?%E6%8B%A1%E5%BC%B5%E3%83%9E%E3%82%AC%E3%82%B8%E3%83%B3"
+   },
+   {
+    "alias": "カクチョウマガジン",
+    "source": "https://bfhl.swiki.jp/index.php?%E6%8B%A1%E5%BC%B5%E3%83%9E%E3%82%AC%E3%82%B8%E3%83%B3"
+   }
+  ]
+ },
+ "item:1558545403": {
+  "en": "Unstable Concoction",
+  "ja": "不安定な調合薬",
+  "aliases": []
+ },
+ "item:1644605047": {
+  "en": "Reactive Barrier",
+  "ja": "リアクティブバリア",
+  "aliases": []
+ },
+ "item:1662311306": {
+  "en": "Divine Barrier",
+  "ja": "ディバインバリア",
+  "aliases": [
+   {
+    "alias": "ディヴァインバリア",
+    "source": "https://deadlock-jp.com/patch-notes.html"
+   }
+  ]
+ },
+ "item:1672893796": {
+  "en": "Grit",
+  "ja": "不屈の心",
+  "aliases": []
+ },
+ "item:1710079648": {
+  "en": "Healing Rite",
+  "ja": "ヒーリングリチュアル",
+  "aliases": [
+   {
+    "alias": "ヒーリングライト",
+    "source": "https://gamerch.com/deadlock/871722"
+   }
+  ]
+ },
+ "item:1736094134": {
+  "en": "Seraphim Wings",
+  "ja": "セラフィムウィング",
+  "aliases": []
+ },
+ "item:1763073141": {
+  "en": "Recharging Rush",
+  "ja": "リチャージラッシュ",
+  "aliases": []
+ },
+ "item:1770441818": {
+  "en": "Weakening Headshot",
+  "ja": "イグゾーストヘッドショット",
+  "aliases": []
+ },
+ "item:1797283378": {
+  "en": "Infuser",
+  "ja": "インフューザー",
+  "aliases": [
+   {
+    "alias": "インヒューザー",
+    "source": "https://gamerch.com/deadlock/871722"
+   }
+  ]
+ },
+ "item:1798666702": {
+  "en": "Shadow Weave",
+  "ja": "シャドウウィーブ",
+  "aliases": []
+ },
+ "item:1804594021": {
+  "en": "Rescue Beam",
+  "ja": "レスキュービーム",
+  "aliases": []
+ },
+ "item:1813726886": {
+  "en": "Slowing Hex",
+  "ja": "スロウヘックス",
+  "aliases": [
+   {
+    "alias": "スロウイングヘックス",
+    "source": "https://deadlock-jp.com/counter-items.html"
+   },
+   {
+    "alias": "スロウィングヘックス",
+    "source": "https://gamerch.com/deadlock/871722"
+   }
+  ]
+ },
+ "item:1825399334": {
+  "en": "Electric Slippers",
+  "ja": "エレクトリックブーツ",
+  "aliases": []
+ },
+ "item:1925087134": {
+  "en": "Suppressor",
+  "ja": "サプレッサー",
+  "aliases": []
+ },
+ "item:1932939246": {
+  "en": "Alchemical Fire",
+  "ja": "アルケミカルファイア",
+  "aliases": [
+   {
+    "alias": "アルカミカルファイア",
+    "source": "https://gamerch.com/deadlock/876436"
+   }
+  ]
+ }
+}

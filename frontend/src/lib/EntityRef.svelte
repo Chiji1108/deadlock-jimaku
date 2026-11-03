@@ -7,10 +7,18 @@
     spoken,
     lang,
     furigana,
-  }: { ref: string; spoken?: string; lang: string; furigana: boolean } = $props();
+    asSpoken = false,
+  }: {
+    ref: string;
+    spoken?: string;
+    lang: string;
+    furigana: boolean;
+    /** 公式名ではなく話した言葉のまま出す（「ヘイズのウルト」の「ウルト」） */
+    asSpoken?: boolean;
+  } = $props();
 
   const entity = $derived(glossary.entity(ref));
-  const ruby = $derived(lang === "ja" && furigana ? entity?.ruby : undefined);
+  const ruby = $derived(lang === "ja" && furigana && !asSpoken ? entity?.ruby : undefined);
 </script>
 
 <!-- 辞書から公式名とアイコンを引く。辞書にない（まだ読み込んでいない）ときは発話された表現を出す -->
@@ -22,7 +30,7 @@
       />{/if}{#if ruby}{#each ruby as seg, i (i)}<Ruby
           text={seg.text}
           ruby={seg.ruby}
-        />{/each}{:else}{entityName(entity, lang)}{/if}</span
+        />{/each}{:else}{asSpoken && spoken ? spoken : entityName(entity, lang)}{/if}</span
   >{:else}<span class="entity">{spoken ?? ref}</span>{/if}
 
 <style>

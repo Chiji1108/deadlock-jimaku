@@ -86,15 +86,17 @@ pub fn build(client_version: u32, sources: &Sources, extras: &Extras) -> (Glossa
             icon,
         );
 
-        let abilities = (1..=4)
-            .filter_map(|n| hero.items.get(&format!("signature{n}"))?.as_deref())
-            .filter_map(|class| items_by_class.get(class));
-        for ability in abilities {
+        let abilities = (1..=4u8).filter_map(|n| {
+            let class = hero.items.get(&format!("signature{n}"))?.as_deref()?;
+            Some((n, items_by_class.get(class)?))
+        });
+        for (slot, ability) in abilities {
             let Some(names) = names_of(&item_names, ability.id) else {
                 continue;
             };
             let mut e = entity(EntityKind::Ability, &ability.class_name, names);
             e.hero = Some(format!("hero:{}", hero.id));
+            e.ability_slot = Some(slot);
             let icon = ability.image_webp.as_deref().or(ability.image.as_deref());
             add(EntityKind::Ability, ability.id, e, icon);
         }
@@ -210,6 +212,7 @@ fn entity(kind: EntityKind, class_name: &str, names: BTreeMap<LangCode, String>)
         icon: None,
         slot: None,
         hero: None,
+        ability_slot: None,
     }
 }
 

@@ -15,4 +15,8 @@ icon?: string, slot?: ItemSlot,
 /**
  * スキルの持ち主（`"hero:{id}"`）
  */
-hero?: string, };
+hero?: string, 
+/**
+ * 持ち主の何番目のスキルか（1〜4。4 がウルト）。「ヘイズのウルト」をこのスキルにする
+ */
+abilitySlot?: number, };
