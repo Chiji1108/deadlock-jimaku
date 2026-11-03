@@ -44,7 +44,7 @@ macOS 版の署名と公証には、リポジトリの Actions の Secrets に�
 
 ```bash
 mise install
-pnpm --dir frontend install
+pnpm install
 mise run dev
 ```
 

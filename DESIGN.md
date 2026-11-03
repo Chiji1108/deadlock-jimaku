@@ -207,7 +207,9 @@ Voxtral のときはリアルタイムに無音も含めて送り続けていた
 ```
 deadlock-stream-overlays/
 ├─ DESIGN.md
-├─ Cargo.toml                 # workspace
+├─ Cargo.toml                 # Rust の workspace（crates/core と app）
+├─ package.json               # pnpm の workspace（frontend。LP とサーバーもここに足す）
+├─ pnpm-workspace.yaml
 ├─ crates/
 │  └─ core/                   # Tauri に依存しない。単体でヘッドレス起動・テストできる
 │     └─ src/

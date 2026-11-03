@@ -65,7 +65,7 @@ jobs:
       - if: matrix.rust-targets
         run: rustup target add ${{ matrix.rust-targets }}
       - uses: Swatinem/rust-cache@v2
-      - run: pnpm --dir frontend install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile
       # Tauri の CLI はリポジトリのルートから動かす（app/tauri.conf.json を探す）
       - if: ${{ !(inputs.sign && runner.os == 'macOS') }}
         run: frontend/node_modules/.bin/tauri build ${{ matrix.args }}
