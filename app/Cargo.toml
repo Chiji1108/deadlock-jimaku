@@ -2,7 +2,7 @@
 name = "deadlock-stream-overlays"
 edition.workspace = true
 version.workspace = true
-license.workspace = true
+license-file.workspace = true
 
 [dependencies]
 overlays-core = { version = "0.1.0", path = "../crates/core" }
