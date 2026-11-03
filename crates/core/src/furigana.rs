@@ -1,6 +1,6 @@
 //! ふりがな（DESIGN.md 6.4）。読みは LLM（GPT-6.1 Terra）に文脈ごと決めさせる。
 //!
-//! 字幕の文は発話ごとに問い合わせる（`ask`）。辞書の漢字名は名前ごとに問い合わせてキャッシュする
+//! 字幕の文は発話ごとに、直前の発話を文脈に付けて問い合わせる（`ask`。「人気ないね」の人気(ひとけ)）。辞書の漢字名は名前ごとに問い合わせてキャッシュする
 //! （`assets::readings`）。どちらも答えを `check` で確かめ、合わなければふりがなを付けない
 //! （ふりがなは補助なので、まれに付かなくても字幕としては困らない）。
 
@@ -15,8 +15,9 @@ use crate::types::RubySegment;
 /// 1 文で 2〜3 秒。翻訳と同時に問い合わせる
 const TIMEOUT: Duration = Duration::from_secs(8);
 
-const SYSTEM: &str = "This is a Japanese subtitle of a streamer playing the video game Deadlock. \
-Split it into words and give the hiragana reading of each word that contains kanji, reading it the way it is meant in context. \
+const SYSTEM: &str = "The input is JSON from a streamer playing the video game Deadlock: \"sentence\" is a Japanese subtitle, \
+and \"context\" holds the previous subtitles (oldest first), given only to help you decide readings. \
+Split the sentence (never the context) into words and give the hiragana reading of each word that contains kanji, reading it the way it is meant in context. \
 A kanji compound is one segment with the reading of the whole word; never split a compound into single kanji. \
 Keep okurigana, kana and punctuation in their own segments with ruby null. Joining the segments' text must give the sentence exactly.";
 
@@ -26,11 +27,12 @@ pub struct Model<'a> {
     pub reasoning_effort: Option<&'a str>,
 }
 
-/// 文のふりがな。答えが `check` に通らなければ None（ふりがなを付けない）
+/// 文のふりがな。`context` は直前の確定字幕（古い順）。答えが `check` に通らなければ None（ふりがなを付けない）
 pub async fn ask(
     http: &reqwest::Client,
     model: &Model<'_>,
     text: &str,
+    context: &[String],
 ) -> anyhow::Result<Option<Vec<RubySegment>>> {
     #[derive(Deserialize)]
     struct Output {
@@ -51,7 +53,7 @@ pub async fn ask(
             model: model.model,
             reasoning_effort: model.reasoning_effort,
             system: SYSTEM,
-            user: text.to_owned(),
+            user: json!({ "context": context, "sentence": text }).to_string(),
             schema_name: "furigana",
             schema,
             timeout: TIMEOUT,

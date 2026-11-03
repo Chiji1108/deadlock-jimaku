@@ -1,0 +1,602 @@
+[
+ {
+  "case": 0,
+  "mode": "plain",
+  "grade": "ok",
+  "ruby": "かね"
+ },
+ {
+  "case": 0,
+  "mode": "plain",
+  "grade": "ok",
+  "ruby": "かね"
+ },
+ {
+  "case": 0,
+  "mode": "plain",
+  "grade": "ok",
+  "ruby": "かね"
+ },
+ {
+  "case": 0,
+  "mode": "plain",
+  "grade": "ok",
+  "ruby": "かね"
+ },
+ {
+  "case": 0,
+  "mode": "plain",
+  "grade": "ok",
+  "ruby": "かね"
+ },
+ {
+  "case": 0,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "かね"
+ },
+ {
+  "case": 0,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "かね"
+ },
+ {
+  "case": 0,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "かね"
+ },
+ {
+  "case": 0,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "かね"
+ },
+ {
+  "case": 0,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "かね"
+ },
+ {
+  "case": 1,
+  "mode": "plain",
+  "grade": "ok",
+  "ruby": "かね"
+ },
+ {
+  "case": 1,
+  "mode": "plain",
+  "grade": "ok",
+  "ruby": "かね"
+ },
+ {
+  "case": 1,
+  "mode": "plain",
+  "grade": "ok",
+  "ruby": "かね"
+ },
+ {
+  "case": 1,
+  "mode": "plain",
+  "grade": "ok",
+  "ruby": "かね"
+ },
+ {
+  "case": 1,
+  "mode": "plain",
+  "grade": "ok",
+  "ruby": "かね"
+ },
+ {
+  "case": 1,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "かね"
+ },
+ {
+  "case": 1,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "かね"
+ },
+ {
+  "case": 1,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "かね"
+ },
+ {
+  "case": 1,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "かね"
+ },
+ {
+  "case": 1,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "かね"
+ },
+ {
+  "case": 2,
+  "mode": "plain",
+  "grade": "wrong",
+  "ruby": "にんき"
+ },
+ {
+  "case": 2,
+  "mode": "plain",
+  "grade": "wrong",
+  "ruby": "にんき"
+ },
+ {
+  "case": 2,
+  "mode": "plain",
+  "grade": "wrong",
+  "ruby": "にんき"
+ },
+ {
+  "case": 2,
+  "mode": "plain",
+  "grade": "wrong",
+  "ruby": "にんき"
+ },
+ {
+  "case": 2,
+  "mode": "plain",
+  "grade": "wrong",
+  "ruby": "にんき"
+ },
+ {
+  "case": 2,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "ひとけ"
+ },
+ {
+  "case": 2,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "ひとけ"
+ },
+ {
+  "case": 2,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "ひとけ"
+ },
+ {
+  "case": 2,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "ひとけ"
+ },
+ {
+  "case": 2,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "ひとけ"
+ },
+ {
+  "case": 3,
+  "mode": "plain",
+  "grade": "ok",
+  "ruby": "ついたち"
+ },
+ {
+  "case": 3,
+  "mode": "plain",
+  "grade": "ok",
+  "ruby": "ついたち"
+ },
+ {
+  "case": 3,
+  "mode": "plain",
+  "grade": "ok",
+  "ruby": "ついたち"
+ },
+ {
+  "case": 3,
+  "mode": "plain",
+  "grade": "ok",
+  "ruby": "ついたち"
+ },
+ {
+  "case": 3,
+  "mode": "plain",
+  "grade": "ok",
+  "ruby": "ついたち"
+ },
+ {
+  "case": 3,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "ついたち"
+ },
+ {
+  "case": 3,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "ついたち"
+ },
+ {
+  "case": 3,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "ついたち"
+ },
+ {
+  "case": 3,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "ついたち"
+ },
+ {
+  "case": 3,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "ついたち"
+ },
+ {
+  "case": 4,
+  "mode": "plain",
+  "grade": "ok",
+  "ruby": "つら"
+ },
+ {
+  "case": 4,
+  "mode": "plain",
+  "grade": "ok",
+  "ruby": "つら"
+ },
+ {
+  "case": 4,
+  "mode": "plain",
+  "grade": "ok",
+  "ruby": "つら"
+ },
+ {
+  "case": 4,
+  "mode": "plain",
+  "grade": "ok",
+  "ruby": "つら"
+ },
+ {
+  "case": 4,
+  "mode": "plain",
+  "grade": "ok",
+  "ruby": "つら"
+ },
+ {
+  "case": 4,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "つら"
+ },
+ {
+  "case": 4,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "つら"
+ },
+ {
+  "case": 4,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "つら"
+ },
+ {
+  "case": 4,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "つら"
+ },
+ {
+  "case": 4,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "つら"
+ },
+ {
+  "case": 5,
+  "mode": "plain",
+  "grade": "ok",
+  "ruby": "かど"
+ },
+ {
+  "case": 5,
+  "mode": "plain",
+  "grade": "ok",
+  "ruby": "かど"
+ },
+ {
+  "case": 5,
+  "mode": "plain",
+  "grade": "ok",
+  "ruby": "かど"
+ },
+ {
+  "case": 5,
+  "mode": "plain",
+  "grade": "ok",
+  "ruby": "かど"
+ },
+ {
+  "case": 5,
+  "mode": "plain",
+  "grade": "ok",
+  "ruby": "かど"
+ },
+ {
+  "case": 5,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "かど"
+ },
+ {
+  "case": 5,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "かど"
+ },
+ {
+  "case": 5,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "かど"
+ },
+ {
+  "case": 5,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "かど"
+ },
+ {
+  "case": 5,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "かど"
+ },
+ {
+  "case": 6,
+  "mode": "plain",
+  "grade": "ok",
+  "ruby": "いちまいうわて"
+ },
+ {
+  "case": 6,
+  "mode": "plain",
+  "grade": "ok",
+  "ruby": "うわて"
+ },
+ {
+  "case": 6,
+  "mode": "plain",
+  "grade": "ok",
+  "ruby": "いちまいうわて"
+ },
+ {
+  "case": 6,
+  "mode": "plain",
+  "grade": "ok",
+  "ruby": "いちまいうわて"
+ },
+ {
+  "case": 6,
+  "mode": "plain",
+  "grade": "ok",
+  "ruby": "いちまいうわて"
+ },
+ {
+  "case": 6,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "いちまいうわて"
+ },
+ {
+  "case": 6,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "いちまいうわて"
+ },
+ {
+  "case": 6,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "いちまいうわて"
+ },
+ {
+  "case": 6,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "いちまいうわて"
+ },
+ {
+  "case": 6,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "いちまいうわて"
+ },
+ {
+  "case": 7,
+  "mode": "plain",
+  "grade": "ok",
+  "ruby": "だいぶ"
+ },
+ {
+  "case": 7,
+  "mode": "plain",
+  "grade": "ok",
+  "ruby": "だいぶ"
+ },
+ {
+  "case": 7,
+  "mode": "plain",
+  "grade": "ok",
+  "ruby": "だいぶ"
+ },
+ {
+  "case": 7,
+  "mode": "plain",
+  "grade": "ok",
+  "ruby": "だいぶ"
+ },
+ {
+  "case": 7,
+  "mode": "plain",
+  "grade": "ok",
+  "ruby": "だいぶ"
+ },
+ {
+  "case": 7,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "だいぶ"
+ },
+ {
+  "case": 7,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "だいぶ"
+ },
+ {
+  "case": 7,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "だいぶ"
+ },
+ {
+  "case": 7,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "だいぶ"
+ },
+ {
+  "case": 7,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "だいぶ"
+ },
+ {
+  "case": 8,
+  "mode": "plain",
+  "grade": "ok",
+  "ruby": "なま"
+ },
+ {
+  "case": 8,
+  "mode": "plain",
+  "grade": "ok",
+  "ruby": "なま"
+ },
+ {
+  "case": 8,
+  "mode": "plain",
+  "grade": "ok",
+  "ruby": "なま"
+ },
+ {
+  "case": 8,
+  "mode": "plain",
+  "grade": "ok",
+  "ruby": "なま"
+ },
+ {
+  "case": 8,
+  "mode": "plain",
+  "grade": "ok",
+  "ruby": "なま"
+ },
+ {
+  "case": 8,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "なま"
+ },
+ {
+  "case": 8,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "なま"
+ },
+ {
+  "case": 8,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "なま"
+ },
+ {
+  "case": 8,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "なま"
+ },
+ {
+  "case": 8,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "なま"
+ },
+ {
+  "case": 9,
+  "mode": "plain",
+  "grade": "ok",
+  "ruby": "へた"
+ },
+ {
+  "case": 9,
+  "mode": "plain",
+  "grade": "ok",
+  "ruby": "へた"
+ },
+ {
+  "case": 9,
+  "mode": "plain",
+  "grade": "ok",
+  "ruby": "へた"
+ },
+ {
+  "case": 9,
+  "mode": "plain",
+  "grade": "ok",
+  "ruby": "へた"
+ },
+ {
+  "case": 9,
+  "mode": "plain",
+  "grade": "ok",
+  "ruby": "へた"
+ },
+ {
+  "case": 9,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "へた"
+ },
+ {
+  "case": 9,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "へた"
+ },
+ {
+  "case": 9,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "へた"
+ },
+ {
+  "case": 9,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "へた"
+ },
+ {
+  "case": 9,
+  "mode": "context",
+  "grade": "ok",
+  "ruby": "へた"
+ }
+]
