@@ -4,12 +4,15 @@ import "../styles/global.css";
 interface Props {
   title?: string;
   description?: string;
+  /** 404 のように、検索に出さないページは false */
+  indexable?: boolean;
 }
 
 const SITE = "Deadlock Stream Overlays";
 const {
   title,
   description = "Deadlock の配信に、ふりがなと翻訳つきのリアルタイム字幕、ランク、アイテム説明を出す OBS 用オーバーレイ。",
+  indexable = true,
 } = Astro.props;
 const fullTitle = title ? `${title} | ${SITE}` : SITE;
 const year = new Date().getFullYear();
@@ -25,8 +28,16 @@ const year = new Date().getFullYear();
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content={new URL(Astro.url.pathname, Astro.site)} />
-    <link rel="canonical" href={new URL(Astro.url.pathname, Astro.site)} />
+    {
+      indexable ? (
+        <>
+          <meta property="og:url" content={new URL(Astro.url.pathname, Astro.site)} />
+          <link rel="canonical" href={new URL(Astro.url.pathname, Astro.site)} />
+        </>
+      ) : (
+        <meta name="robots" content="noindex" />
+      )
+    }
   </head>
   <body class="min-h-screen font-sans antialiased">
     <header class="border-b border-line">

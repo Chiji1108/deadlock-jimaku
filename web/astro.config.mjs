@@ -4,5 +4,7 @@ import { defineConfig } from "astro/config";
 
 export default defineConfig({
   site: "https://obs.deadlock.jp",
+  // /privacy を privacy.html にする（Workers の静的配信は /privacy をそのまま返し、/privacy/ に転送しない）
+  build: { format: "file" },
   vite: { plugins: [tailwindcss()] },
 });

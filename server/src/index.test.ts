@@ -11,6 +11,8 @@ describe("aliases", () => {
   });
 
   it("is 404 for a language without aliases", async () => {
-    expect((await app.request("/obs/v1/aliases/xx")).status).toBe(404);
+    for (const lang of ["xx", "__proto__", "constructor"]) {
+      expect((await app.request(`/obs/v1/aliases/${lang}`)).status).toBe(404);
+    }
   });
 });
