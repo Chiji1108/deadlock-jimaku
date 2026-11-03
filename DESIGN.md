@@ -208,7 +208,7 @@ Voxtral のときはリアルタイムに無音も含めて送り続けていた
 deadlock-stream-overlays/
 ├─ DESIGN.md
 ├─ Cargo.toml                 # Rust の workspace（crates/core と app）
-├─ package.json               # pnpm の workspace（frontend。LP とサーバーもここに足す）
+├─ package.json               # pnpm の workspace（frontend・web・server）
 ├─ pnpm-workspace.yaml
 ├─ crates/
 │  └─ core/                   # Tauri に依存しない。単体でヘッドレス起動・テストできる
@@ -712,11 +712,7 @@ Phase 2 の前に、録音した実況音声で Voxtral 3 の精度（`context_b
 - **チャット形式のバブル表示**: 上の機能を入れるときに、左右の配置と一緒に入れる。
 - **話す言語の自動判定**: 音声認識は言語を省略すると自動で判定する。ただし短い発話や英単語の多い日本語では誤判定しやすく、用語ヒントの言語も決められなくなるので、今は明示的に設定する。
 - **日本語以外の読み補助**（中国語のピンインなど）: Rich の `ruby` の仕組みをそのまま使える。
-- **LP と Web サーバー**（課金・別名の配信）: 今のリポジトリに `web/`（LP）と `server/`（API）を足し、pnpm workspace のモノレポにする（ts-rs の型や別名の一覧を共有できる）。
-  - LP は Astro（ほぼ静的。Cloudflare のアダプターで Workers の静的アセットとして配る）
-  - サーバーは Hono（最初から Cloudflare Workers 向け。OpenAPI は `@hono/zod-openapi` で Zod のスキーマから作る）。ElysiaJS も考えたが、Workers 対応が実験的で、型からの OpenAPI の自動生成が Workers では動かないので選ばない
-  - どちらも Cloudflare Workers に置く
-  - 別名の一覧（8.4）はサーバーから配る。アプリはサーバーから取れなければ同梱のものを使う
+- **課金と OpenAI の中継**: サーバー（17 章）が OpenAI を代わりに呼び、利用者に API キーを用意させない。利用者の認証と使用量の上限が要る
 
 ## 16. 未確認事項（実装前に確かめる）
 
@@ -743,3 +739,19 @@ Phase 2 の前に、録音した実況音声で Voxtral 3 の精度（`context_b
 - [ ] プロンプトキャッシュが効いているか（`usage.prompt_tokens_details.cached_tokens`）を配信の長さで確認する
 - [ ] 翻訳の質: 英語・ロシア語・中国語以外の言語で、ゲーム実況の口語がどこまで自然に訳せるか
 - [ ] ヒーローの `items` から signature スキルを引くときの対応関係
+
+## 17. LP とサーバー（`web/`, `server/`）
+
+どちらも pnpm workspace のパッケージで、Cloudflare Workers に置く。`deadlock.jp` には別の Worker がいるので、サブドメインを分け、Worker も分ける（LP の文言を直してもアプリの使う API に響かず、別々にデプロイできる）。
+
+| | ドメイン | 中身 |
+|---|---|---|
+| `web/` | `obs.deadlock.jp` | Astro の静的なページ（トップ・プライバシーポリシー・404）を Workers の静的ファイル配信で配る。サーバーで動かす処理はないので Astro のサーバー機能は使わない |
+| `server/` | `api.deadlock.jp` | Hono。パスはアプリごと（`/obs`）と版（`/v1`）で区切る（`deadlock.jp` の下でほかのものを作っても困らない） |
+
+- **日本語だけ**: ドメインと利用者が日本向けで、ふりがなのように日本語に寄せた機能なので、LP もアプリの画面も日本語だけにする（英語に対応すると、文言を足すたびに両方書く手間が続く）
+- **API**: `GET /obs/v1/aliases/{lang}` で別名（8.5）を返す（1 時間キャッシュ）。中身はリポジトリの `data/aliases.*.json` をビルド時に入れる。アプリは起動時に取りに行き、取れなければ同梱のものを使う
+- **LP**: ゲームの画像は載せない（字幕の見本は文字だけで組む）。フッターに Valve の公式ではないことと、ゲームのデータの出どころ（deadlock-api）を書く。プライバシーポリシーには、OpenAI・deadlock-api・api.deadlock.jp に送るものと、PC の中に保存するものを書く
+- **デプロイ**: 手元から `pnpm --filter ./web deploy` / `pnpm --filter ./server deploy`（先に `wrangler login`）。カスタムドメインは各 `wrangler.jsonc` の `routes`（`custom_domain: true`）で付く
+- サーバーは Hono（最初から Cloudflare Workers 向け）。ElysiaJS も考えたが、Workers 対応が実験的なので選ばない
+

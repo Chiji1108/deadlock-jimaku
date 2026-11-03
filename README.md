@@ -8,7 +8,7 @@ Deadlock の配信者向けの OBS オーバーレイ。
 
 音声認識と翻訳には OpenAI の API キーが必要です。設定はアプリの操作パネルから行います。
 
-設計は [DESIGN.md](DESIGN.md) を見てください。
+サイトは [obs.deadlock.jp](https://obs.deadlock.jp)。設計は [DESIGN.md](DESIGN.md) を見てください。
 
 ## インストール
 

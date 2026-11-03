@@ -1,0 +1,8 @@
+// LP（obs.deadlock.jp）。Astro の出力（dist）を配るだけの Worker
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "deadlock-stream-overlays-web",
+  "compatibility_date": "2026-10-01",
+  "assets": { "directory": "./dist", "not_found_handling": "404-page" },
+  "routes": [{ "pattern": "obs.deadlock.jp", "custom_domain": true }]
+}

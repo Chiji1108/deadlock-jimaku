@@ -1,0 +1,62 @@
+---
+import Layout from "../layouts/Layout.astro";
+
+const UPDATED = "2026 年 11 月 3 日";
+---
+
+<Layout title="プライバシーポリシー" description="Deadlock Stream Overlays が扱う情報と、その送り先について。">
+  <article class="mx-auto max-w-3xl px-4 pt-16 leading-relaxed [&_h2]:mt-10 [&_h2]:text-xl [&_h2]:font-bold [&_li]:mt-2 [&_p]:mt-4 [&_ul]:mt-4 [&_ul]:list-disc [&_ul]:pl-6">
+    <h1 class="text-3xl font-bold">プライバシーポリシー</h1>
+    <p class="text-sm text-muted">最終更新: {UPDATED}</p>
+
+    <p>
+      Deadlock Stream Overlays（以下「本アプリ」）は、配信者の PC
+      の中で動くアプリです。本アプリが扱う情報と、その送り先を説明します。開発者が利用者の音声や字幕を集めることはありません。
+    </p>
+
+    <h2>OpenAI に送るもの</h2>
+    <ul>
+      <li>
+        字幕を出している間、マイクの音声を OpenAI に送って文字にします。話している間の音声だけを送り、黙っている間は送りません。
+      </li>
+      <li>文字にした字幕を、翻訳とふりがなのために OpenAI に送ります。</li>
+      <li>
+        送るときは、利用者ご自身の OpenAI の API キーを使います。送った内容の扱いは
+        <a href="https://openai.com/policies/" class="underline">OpenAI のポリシー</a>に従います。
+      </li>
+    </ul>
+
+    <h2>deadlock-api に送るもの</h2>
+    <ul>
+      <li>
+        ランクを表示するために、設定した Steam のアカウント ID を
+        <a href="https://deadlock-api.com" class="underline">deadlock-api</a> に送り、公開されているランクを取得します。ランクを表示しない設定なら送りません。
+      </li>
+      <li>ヒーロー・アイテム・スキルの名前とアイコンを取得します（利用者の情報は送りません）。</li>
+    </ul>
+
+    <h2>開発者のサーバー（api.deadlock.jp）に送るもの</h2>
+    <ul>
+      <li>
+        本アプリは起動時に、用語の別名の一覧を api.deadlock.jp から取得します。このとき利用者を特定する情報は送りません。サーバーを置いている
+        Cloudflare は、通信のために IP アドレスなどを記録することがあります。
+      </li>
+    </ul>
+
+    <h2>PC の中に保存するもの</h2>
+    <ul>
+      <li>OpenAI の API キーは、OS の資格情報ストア（Windows の資格情報マネージャー、Mac のキーチェーンなど）に保存します。</li>
+      <li>設定、OpenAI の使用量の目安、ゲームのデータのキャッシュを、PC の中に保存します。</li>
+      <li>音声や字幕の履歴は保存しません。</li>
+    </ul>
+
+    <h2>このサイト（obs.deadlock.jp）</h2>
+    <p>このサイトはアクセス解析や広告のための Cookie を使いません。</p>
+
+    <h2>お問い合わせ</h2>
+    <p>
+      <a href="https://github.com/Chiji1108/deadlock-stream-overlays/issues" class="underline">GitHub の Issues</a>
+      からご連絡ください。
+    </p>
+  </article>
+</Layout>
