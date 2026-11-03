@@ -20,16 +20,20 @@ import httpx
 
 MODEL = "gpt-6.1-terra"
 OUT = Path(__file__).parent / "results" / "furigana_context.json"
-# 文脈を付ける前の crates/core/src/furigana.rs の SYSTEM。今のアプリは SYSTEM_CONTEXT と同じ
+# 文脈を付ける前の crates/core/src/furigana.rs の SYSTEM
 SYSTEM = (
     "This is a Japanese subtitle of a streamer playing the video game Deadlock. "
     "Split it into words and give the hiragana reading of each word that contains kanji, reading it the way it is meant in context. "
     "A kanji compound is one segment with the reading of the whole word; never split a compound into single kanji. "
     "Keep okurigana, kana and punctuation in their own segments with ruby null. Joining the segments' text must give the sentence exactly."
 )
-SYSTEM_CONTEXT = SYSTEM + (
-    " The input is JSON: \"context\" holds the streamer's previous subtitles (oldest first) to help you decide readings; "
-    "segment only \"sentence\"."
+# 今の crates/core/src/furigana.rs の SYSTEM と同じ
+SYSTEM_CONTEXT = (
+    "The input is JSON from a streamer playing the video game Deadlock: \"sentence\" is a Japanese subtitle, "
+    "and \"context\" holds the previous subtitles (oldest first), given only to help you decide readings. "
+    "Split the sentence (never the context) into words and give the hiragana reading of each word that contains kanji, reading it the way it is meant in context. "
+    "A kanji compound is one segment with the reading of the whole word; never split a compound into single kanji. "
+    "Keep okurigana, kana and punctuation in their own segments with ruby null. Joining the segments' text must give the sentence exactly."
 )
 SCHEMA = {
     "type": "object", "additionalProperties": False, "required": ["segments"],
@@ -39,6 +43,8 @@ SCHEMA = {
     }}},
 }
 
+# アプリと同じく前の発話は 3 つ。先頭は関係のない漢字混じりの雑談（区切りを崩さないかを見る）
+CHATTER = "昨日の大会見た？"
 # (前の発話, 字幕, 狙いの語, 正しい読み)。文だけでは読みが決まらない語と、文だけで決まる語（対照）
 CASES = [
     (["ソウル全然足りないわ", "アイテム買えないじゃん"], "金ある？", "金", {"かね"}),
@@ -89,16 +95,17 @@ def grade(segments: list[dict], sentence: str, word: str, expected: set[str]) ->
 def main() -> None:
     repeat = int(sys.argv[1]) if len(sys.argv) > 1 else 3
     key = os.environ["OPENAI_API_KEY"]
+    cases = [([CHATTER, *ctx], *rest) for ctx, *rest in CASES]
     jobs = [(i, mode) for i in range(len(CASES)) for mode in ("plain", "context") for _ in range(repeat)]
     with httpx.Client() as http, ThreadPoolExecutor(8) as pool:
         def run(job):
             i, mode = job
-            ctx, sentence, word, expected = CASES[i]
+            ctx, sentence, word, expected = cases[i]
             segments = ask(http, key, ctx if mode == "context" else None, sentence)
             ruby = next((s["ruby"] for s in segments if word in s["text"]), None)
             return {"case": i, "mode": mode, "grade": grade(segments, sentence, word, expected), "ruby": ruby}
         results = list(pool.map(run, jobs))
-    OUT.write_text(json.dumps(results, ensure_ascii=False, indent=1))
+    OUT.write_text(json.dumps(results, ensure_ascii=False, indent=1) + "\n")
     for i, (ctx, sentence, word, expected) in enumerate(CASES):
         row = []
         for mode in ("plain", "context"):

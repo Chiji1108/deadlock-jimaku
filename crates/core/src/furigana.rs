@@ -15,11 +15,11 @@ use crate::types::RubySegment;
 /// 1 文で 2〜3 秒。翻訳と同時に問い合わせる
 const TIMEOUT: Duration = Duration::from_secs(8);
 
-const SYSTEM: &str = "This is a Japanese subtitle of a streamer playing the video game Deadlock. \
-Split it into words and give the hiragana reading of each word that contains kanji, reading it the way it is meant in context. \
+const SYSTEM: &str = "The input is JSON from a streamer playing the video game Deadlock: \"sentence\" is a Japanese subtitle, \
+and \"context\" holds the previous subtitles (oldest first), given only to help you decide readings. \
+Split the sentence (never the context) into words and give the hiragana reading of each word that contains kanji, reading it the way it is meant in context. \
 A kanji compound is one segment with the reading of the whole word; never split a compound into single kanji. \
-Keep okurigana, kana and punctuation in their own segments with ruby null. Joining the segments' text must give the sentence exactly. \
-The input is JSON: \"context\" holds the streamer's previous subtitles (oldest first) to help you decide readings; segment only \"sentence\".";
+Keep okurigana, kana and punctuation in their own segments with ruby null. Joining the segments' text must give the sentence exactly.";
 
 pub struct Model<'a> {
     pub api_key: &'a str,

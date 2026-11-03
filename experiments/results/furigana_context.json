@@ -362,61 +362,61 @@
  {
   "case": 6,
   "mode": "plain",
-  "grade": "wrong",
+  "grade": "ok",
   "ruby": "いちまいうわて"
  },
  {
   "case": 6,
   "mode": "plain",
-  "grade": "wrong",
+  "grade": "ok",
+  "ruby": "うわて"
+ },
+ {
+  "case": 6,
+  "mode": "plain",
+  "grade": "ok",
   "ruby": "いちまいうわて"
  },
  {
   "case": 6,
   "mode": "plain",
-  "grade": "wrong",
+  "grade": "ok",
   "ruby": "いちまいうわて"
  },
  {
   "case": 6,
   "mode": "plain",
-  "grade": "wrong",
-  "ruby": "いちまいうわて"
- },
- {
-  "case": 6,
-  "mode": "plain",
-  "grade": "wrong",
+  "grade": "ok",
   "ruby": "いちまいうわて"
  },
  {
   "case": 6,
   "mode": "context",
-  "grade": "wrong",
+  "grade": "ok",
   "ruby": "いちまいうわて"
  },
  {
   "case": 6,
   "mode": "context",
-  "grade": "wrong",
+  "grade": "ok",
   "ruby": "いちまいうわて"
  },
  {
   "case": 6,
   "mode": "context",
-  "grade": "wrong",
+  "grade": "ok",
   "ruby": "いちまいうわて"
  },
  {
   "case": 6,
   "mode": "context",
-  "grade": "wrong",
+  "grade": "ok",
   "ruby": "いちまいうわて"
  },
  {
   "case": 6,
   "mode": "context",
-  "grade": "wrong",
+  "grade": "ok",
   "ruby": "いちまいうわて"
  },
  {
