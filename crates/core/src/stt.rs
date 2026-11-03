@@ -207,7 +207,9 @@ pub async fn realtime(
                     Some("conversation.item.input_audio_transcription.completed") => {
                         items.completed(item);
                     }
-                    // 1 つの要求の失敗ではセッションは続く。commit が断られたら、その音声を消して次に混ぜない
+                    // 1 つの要求の失敗ではセッションは続く。commit が断られたら、その発話の対応を消し、
+                    // 話していなければ音声も消す（話していれば今の発話の音声まで消えるので残す。
+                    // 混ざった数文字は final で置き換わる）
                     Some("error") => {
                         tracing::warn!("realtime error: {}", event["error"]);
                         if let Some(segment) = event["error"]["event_id"]
@@ -215,7 +217,9 @@ pub async fn realtime(
                             .and_then(|id| id.strip_prefix("commit-"))
                         {
                             items.drop_segment(segment);
-                            sink.send(clear()).await?;
+                            if speaking.current.is_none() {
+                                sink.send(clear()).await?;
+                            }
                         }
                     }
                     _ => {}
