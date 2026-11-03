@@ -1,6 +1,4 @@
 <script lang="ts">
-  import PlayIcon from "@lucide/svelte/icons/play";
-  import { Button } from "$lib/components/ui/button";
   import * as Card from "$lib/components/ui/card";
   import * as Field from "$lib/components/ui/field";
   import * as Select from "$lib/components/ui/select";
@@ -27,16 +25,11 @@
       <Card.Description>
         字幕でアイテム名が出たら、そのアイテムの説明をゲーム内と同じカードで出します
       </Card.Description>
-      <Card.Action>
-        <Button variant="outline" size="sm" onclick={panel.demo}>
-          <PlayIcon />テスト字幕を流す
-        </Button>
-      </Card.Action>
     </Card.Header>
     <Card.Content class="flex flex-col gap-6">
       <div class="mx-auto w-full max-w-xs">
         <OverlayPreview
-          src="/overlay/items.html"
+          src="/overlay/items.html?preview"
           title="アイテム説明オーバーレイのプレビュー"
           size={ITEMS_SIZE}
         />
