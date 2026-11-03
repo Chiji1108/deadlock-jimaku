@@ -2,7 +2,7 @@
 name = "overlays-core"
 edition.workspace = true
 version.workspace = true
-license.workspace = true
+license-file.workspace = true
 
 [lib]
 name = "overlays_core"
