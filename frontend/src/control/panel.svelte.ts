@@ -4,6 +4,7 @@ import type { Provider } from "../generated/Provider";
 import type { ServerMsg } from "../generated/ServerMsg";
 import type { SettingsPatch } from "../generated/SettingsPatch";
 import type { SettingsView } from "../generated/SettingsView";
+import type { MicError } from "../generated/MicError";
 import type { TranscriptionError } from "../generated/TranscriptionError";
 import type { UsageView } from "../generated/UsageView";
 import { api } from "../lib/api";
@@ -129,22 +130,38 @@ class Panel {
 
 export const panel = new Panel();
 
-/** 字幕が止まった理由を文にする（サーバーは種類だけを返す） */
-export function transcriptionErrorText(e: TranscriptionError) {
+/** 字幕が止まった理由を文にする（サーバーは種類と中身だけを返す） */
+export function transcriptionErrorText(e: TranscriptionError): string {
   switch (e.code) {
     case "missingKey":
       return "OpenAI の API キーが設定されていません";
     case "inputEnded":
       return "マイクの入力が途切れました";
-    case "noMicrophone":
-      return "マイクが見つかりません。マイクをつないでから字幕を始め直してください";
-    case "microphoneNotFound":
-      return `マイク「${e.name}」が見つかりません`;
-    case "noDefaultMicrophone":
-      return "既定のマイクがありません";
+    case "microphone":
+      return micErrorText(e);
     case "failed":
       return `エラーで止まりました: ${e.detail}`;
     case "crashed":
       return `内部エラーで止まりました: ${e.detail}`;
+    default:
+      return unknown(e);
   }
 }
+
+function micErrorText(e: MicError): string {
+  switch (e.problem) {
+    case "listFailed":
+      return `マイクの一覧を取れません（${e.detail}）`;
+    case "noDevices":
+      return "マイクが見つかりません。マイクをつないでください";
+    case "notFound":
+      return `マイク「${e.name}」が見つかりません`;
+    case "noDefault":
+      return "既定のマイクがありません";
+    default:
+      return unknown(e);
+  }
+}
+
+/** 種類を足したら、ここで型エラーになる（版の違うサーバーから届いたときは中身を出す） */
+const unknown = (e: never) => `止まりました（${JSON.stringify(e)}）`;

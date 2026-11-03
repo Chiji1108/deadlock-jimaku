@@ -9,26 +9,33 @@ use anyhow::Context;
 use audioadapter_buffers::direct::InterleavedSlice;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use rubato::{Async, FixedAsync, Indexing, PolynomialDegree, Resampler as _};
+use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 use tokio::time::MissedTickBehavior;
+use ts_rs::TS;
 
 pub const SAMPLE_RATE: u32 = 16_000;
 
-/// マイクを開けない理由。操作パネルが文にする（`TranscriptionError`）
-#[derive(Debug)]
+/// マイクを開けない理由。そのまま操作パネルに送り、操作パネルが文にする（`TranscriptionError`）
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[serde(tag = "problem", rename_all = "camelCase")]
+#[ts(export)]
 pub enum MicError {
+    /// 入力デバイスの一覧を取れない（`detail` は OS のエラー）
+    ListFailed {
+        detail: String,
+    },
     NoDevices,
-    NotFound(String),
+    NotFound {
+        name: String,
+    },
     NoDefault,
 }
 
+/// ログ用（画面には出さない）
 impl std::fmt::Display for MicError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::NoDevices => write!(f, "no input devices"),
-            Self::NotFound(name) => write!(f, "input device {name:?} not found"),
-            Self::NoDefault => write!(f, "no default input device"),
-        }
+        write!(f, "{self:?}")
     }
 }
 
@@ -100,7 +107,9 @@ fn build_mic_stream(
     // 先に一覧を見て、操作パネルで分かる理由にする
     let mut devices = host
         .input_devices()
-        .context("cannot list input devices")?
+        .map_err(|e| MicError::ListFailed {
+            detail: e.to_string(),
+        })?
         .peekable();
     if devices.peek().is_none() {
         return Err(MicError::NoDevices.into());
@@ -108,7 +117,9 @@ fn build_mic_stream(
     let device = match name {
         Some(name) => devices
             .find(|d| d.description().is_ok_and(|desc| desc.name() == name))
-            .ok_or_else(|| MicError::NotFound(name.to_owned()))?,
+            .ok_or_else(|| MicError::NotFound {
+                name: name.to_owned(),
+            })?,
         None => host.default_input_device().ok_or(MicError::NoDefault)?,
     };
     let config = device.default_input_config()?;

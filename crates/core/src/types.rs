@@ -136,11 +136,11 @@ pub enum TranscriptionError {
     MissingKey,
     /// マイクの入力が途切れた
     InputEnded,
-    NoMicrophone,
-    MicrophoneNotFound {
-        name: String,
+    /// マイクを開けない
+    Microphone {
+        #[serde(flatten)]
+        error: crate::audio::MicError,
     },
-    NoDefaultMicrophone,
     /// そのほかのエラー（通信や API のエラー。`detail` は英語の技術的な説明）
     Failed {
         detail: String,
@@ -154,11 +154,9 @@ pub enum TranscriptionError {
 impl TranscriptionError {
     pub fn from_error(e: &anyhow::Error) -> Self {
         match e.downcast_ref::<crate::audio::MicError>() {
-            Some(crate::audio::MicError::NoDevices) => Self::NoMicrophone,
-            Some(crate::audio::MicError::NotFound(name)) => {
-                Self::MicrophoneNotFound { name: name.clone() }
-            }
-            Some(crate::audio::MicError::NoDefault) => Self::NoDefaultMicrophone,
+            Some(error) => Self::Microphone {
+                error: error.clone(),
+            },
             None => Self::Failed {
                 detail: format!("{e:#}"),
             },
@@ -311,4 +309,20 @@ pub struct SettingsView {
     /// 設定ファイルを読めない理由（OS のエラー）。そのときは変更をこの起動の間だけ当て、保存しない
     #[ts(optional)]
     pub unsaved: Option<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn microphone_error_is_flat_for_the_panel() {
+        let e = TranscriptionError::Microphone {
+            error: crate::audio::MicError::NotFound { name: "USB".into() },
+        };
+        assert_eq!(
+            serde_json::to_value(&e).unwrap(),
+            serde_json::json!({ "code": "microphone", "problem": "notFound", "name": "USB" })
+        );
+    }
 }
