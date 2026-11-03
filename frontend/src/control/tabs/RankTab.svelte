@@ -11,10 +11,8 @@
   import { REGIONS } from "../../lib/regions";
   import CopyUrl from "../parts/CopyUrl.svelte";
   import OverlayPreview from "../parts/OverlayPreview.svelte";
+  import { RANK_SIZE } from "../../lib/overlay-size";
   import { overlayUrl, panel } from "../panel.svelte";
-
-  /** OBS のブラウザソースの大きさ */
-  const RANK_SIZE: [number, number] = [480, 140];
 
   const CONTENTS: { value: RankContent; label: string }[] = [
     { value: "full", label: "アイコン・名前・ポイント" },
@@ -165,7 +163,7 @@
       <Card.Title>OBS に追加する</Card.Title>
       <Card.Description>
         ソースの「＋」→「ブラウザ」で、この URL を貼り付けてください（幅 {RANK_SIZE[0]}・高さ
-        {RANK_SIZE[1]}）。大きさを変えるときは、ソースを引き伸ばさずにプロパティの幅と高さを同じ割合で変えてください。中身が幅に合わせてくっきりしたまま大きくなります
+        {RANK_SIZE[1]}）。大きさを変えるときは、ソースを引き伸ばさずにプロパティの幅と高さを同じ割合で変えてください。中身がくっきりしたまま大きくなります
       </Card.Description>
     </Card.Header>
     <Card.Content>

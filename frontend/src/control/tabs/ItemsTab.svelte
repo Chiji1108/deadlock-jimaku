@@ -8,10 +8,9 @@
   import CopyUrl from "../parts/CopyUrl.svelte";
   import ItemHoldDialog from "../parts/ItemHoldDialog.svelte";
   import OverlayPreview from "../parts/OverlayPreview.svelte";
+  import { ITEMS_SIZE } from "../../lib/overlay-size";
   import { overlayUrl, panel } from "../panel.svelte";
 
-  /** OBS のブラウザソースの大きさ（カードは幅 450。長い説明でも収まる高さ） */
-  const ITEMS_SIZE: [number, number] = [460, 560];
   const HOLDS = [5, 8, 12, 20];
   const FOLLOW = "";
 
@@ -99,7 +98,7 @@
       <Card.Title>OBS に追加する</Card.Title>
       <Card.Description>
         ソースの「＋」→「ブラウザ」で、この URL を貼り付け、幅 {ITEMS_SIZE[0]}・高さ
-        {ITEMS_SIZE[1]} にして好きな位置に置いてください。カードは箱の左上から出ます。大きさを変えるときは、ソースを引き伸ばさずにプロパティの幅と高さを同じ割合で変えてください。カードが幅に合わせてくっきりしたまま大きくなります
+        {ITEMS_SIZE[1]} にして好きな位置に置いてください。カードは箱の左上から出ます。大きさを変えるときは、ソースを引き伸ばさずにプロパティの幅と高さを同じ割合で変えてください。カードがくっきりしたまま大きくなります
       </Card.Description>
     </Card.Header>
     <Card.Content>

@@ -1,8 +1,8 @@
 import { mount } from "svelte";
-import { fitWidth } from "../../lib/fit-width";
+import { fitSource, ITEMS_SIZE } from "../../lib/overlay-size";
 import Items from "./Items.svelte";
 
-// ブラウザソースの既定の幅（操作パネルの ITEMS_SIZE）
-fitWidth(460);
+// カード（deadlock-ui）の大きさは中で決まっているので、ページごと拡大する
+fitSource(ITEMS_SIZE, (scale) => (document.documentElement.style.zoom = String(scale)));
 
 mount(Items, { target: document.getElementById("app")! });
