@@ -462,6 +462,8 @@ struct Matcher {
     by_first: HashMap<char, Vec<(Vec<char>, String)>>,
     /// (ヒーローの参照, 何番目のスキルか) → スキルの参照
     abilities: HashMap<(String, u8), String>,
+    /// ヒーローの参照 → そのヒーローのスキルの名前と別名（小文字にしたもの）とスキルの参照（日本語だけ）
+    hero_ability_names: HashMap<String, Vec<(Vec<char>, String)>>,
     heroes: HashSet<String>,
     lang: String,
 }
@@ -523,6 +525,24 @@ impl Matcher {
                 Some(((e.hero.clone()?, e.ability_slot?), reference.clone()))
             })
             .collect();
+        let mut hero_ability_names: HashMap<String, Vec<(Vec<char>, String)>> = HashMap::new();
+        for (reference, e) in &glossary.entities {
+            let (Some(hero), "ja") = (&e.hero, lang) else {
+                continue;
+            };
+            let names = e
+                .names
+                .get(lang)
+                .into_iter()
+                .chain(e.aliases.get(lang).into_iter().flatten());
+            for name in names {
+                let entry = (name.chars().map(lower).collect(), reference.clone());
+                let names = hero_ability_names.entry(hero.clone()).or_default();
+                if !names.contains(&entry) {
+                    names.push(entry);
+                }
+            }
+        }
         let heroes = glossary
             .entities
             .iter()
@@ -532,6 +552,7 @@ impl Matcher {
         Self {
             by_first,
             abilities,
+            hero_ability_names,
             heroes,
             lang: lang.to_owned(),
         }
@@ -609,12 +630,15 @@ impl Matcher {
                 _ => None,
             };
             let found = match (&span, &hero) {
-                (Span::Text(text), Some(hero)) => {
-                    slot_reference(text, &self.lang).and_then(|(prefix, phrase, slot)| {
+                (Span::Text(text), Some(hero)) => slot_reference(text, &self.lang)
+                    .and_then(|(prefix, phrase, slot)| {
                         let ability = self.abilities.get(&(hero.clone(), slot))?;
                         Some((text, prefix, phrase, ability.clone()))
                     })
-                }
+                    .or_else(|| {
+                        let (prefix, phrase, ability) = self.ability_part(text, hero)?;
+                        Some((text, prefix, phrase, ability))
+                    }),
                 _ => None,
             };
             let Some((text, prefix, phrase, ability)) = found else {
@@ -635,6 +659,36 @@ impl Matcher {
             }
         }
         out
+    }
+
+    /// 「ドアマンのカート」: ヒーロー名と「の」のすぐ後ろのカタカナの語が、そのヒーローのスキル名の
+    /// 頭か後ろの部分（2 文字以上。ぴったり同じでもよい）なら、そのスキル（キャリーカート）。
+    /// 2 つ以上のスキルに当てはまれば決めない。返すのは (「の」の長さ, 語の長さ, スキルの参照)。
+    /// 「の」がないと、カタカナどうしがつながってヒーロー名が見つからないので、ここには来ない
+    fn ability_part(&self, text: &str, hero: &str) -> Option<(usize, usize, String)> {
+        let chars: Vec<char> = text.chars().collect();
+        if chars.first() != Some(&'の') {
+            return None;
+        }
+        let len = chars[1..].iter().take_while(|c| is_katakana(**c)).count();
+        if len < Self::MIN_CHARS {
+            return None;
+        }
+        // 書き方の揺れは、比べる部分ごとに揃える（名前の途中で切ると、前の文字で揃い方が変わる）
+        let folded = |c: &[char]| fold(&c.iter().collect::<String>());
+        let word = folded(&chars[1..1 + len]);
+        let mut found: Option<&String> = None;
+        for (name, ability) in self.hero_ability_names.get(hero)? {
+            let head = name.get(..len).map(folded);
+            let tail = name.len().checked_sub(len).map(|i| folded(&name[i..]));
+            if head.as_ref() == Some(&word) || tail.as_ref() == Some(&word) {
+                if found.is_some_and(|f| f != ability) {
+                    return None;
+                }
+                found = Some(ability);
+            }
+        }
+        Some((1, len, found?.clone()))
     }
 
     /// 別の語の一部なら一致としない。
@@ -1069,6 +1123,84 @@ mod tests {
         let t = e.translations(raw, &terms);
         assert_eq!(t.len(), 1);
         assert_eq!(t["en"], [ent("hero:13"), text(" wins")]);
+    }
+
+    #[test]
+    fn part_of_an_ability_name_after_the_hero_means_that_ability() {
+        let g: Glossary = serde_json::from_value(json!({
+            "clientVersion": 1, "languages": ["ja"],
+            "entities": {
+                "hero:69": { "kind": "hero", "className": "d", "names": { "ja": "ドアマン" }, "aliases": {} },
+                "ability:1": { "kind": "ability", "className": "a", "names": { "ja": "コールベル" }, "aliases": {},
+                               "hero": "hero:69", "abilitySlot": 1 },
+                "ability:3": { "kind": "ability", "className": "c", "names": { "ja": "キャリーカート" },
+                               "aliases": { "ja": ["ラゲッジカート"] }, "hero": "hero:69", "abilitySlot": 3 },
+                "ability:4": { "kind": "ability", "className": "e", "names": { "ja": "ホテルゲスト" }, "aliases": {},
+                               "hero": "hero:69", "abilitySlot": 4 },
+                "ability:9": { "kind": "ability", "className": "f", "names": { "ja": "カートレース" }, "aliases": {},
+                               "hero": "hero:1", "abilitySlot": 1 },
+            }
+        }))
+        .unwrap();
+        let m = Matcher::new(&g, "ja");
+        assert_eq!(
+            m.split("ドアマンのカート強い"),
+            [
+                entity("hero:69", "ドアマン"),
+                Span::Text("の".into()),
+                entity("ability:3", "カート"),
+                Span::Text("強い".into()),
+            ]
+        );
+        assert_eq!(
+            m.split("ドアマンのベル"),
+            [
+                entity("hero:69", "ドアマン"),
+                Span::Text("の".into()),
+                entity("ability:1", "ベル")
+            ]
+        );
+        // ヒーロー名がなければ、ほかのヒーローのスキル（カートレース）とも取り違えない
+        assert_eq!(m.split("カート強い"), [Span::Text("カート強い".into())]);
+        // 別名の頭の部分でもよい
+        assert_eq!(
+            m.split("ドアマンのラゲッジ"),
+            [
+                entity("hero:69", "ドアマン"),
+                Span::Text("の".into()),
+                entity("ability:3", "ラゲッジ")
+            ]
+        );
+        // 長いカタカナ語の一部（カートリッジ）や 1 文字では決めない
+        for text in ["ドアマンのカートリッジ", "ドアマンのト"] {
+            assert_eq!(
+                m.split(text),
+                [
+                    entity("hero:69", "ドアマン"),
+                    Span::Text(text["ドアマン".len()..].into())
+                ],
+                "{text}"
+            );
+        }
+    }
+
+    #[test]
+    fn part_shared_by_two_abilities_is_not_decided() {
+        let g: Glossary = serde_json::from_value(json!({
+            "clientVersion": 1, "languages": ["ja"],
+            "entities": {
+                "hero:1": { "kind": "hero", "className": "h", "names": { "ja": "ヒーロー" }, "aliases": {} },
+                "ability:1": { "kind": "ability", "className": "a", "names": { "ja": "ファイアボム" }, "aliases": {},
+                               "hero": "hero:1", "abilitySlot": 1 },
+                "ability:2": { "kind": "ability", "className": "b", "names": { "ja": "アイスボム" }, "aliases": {},
+                               "hero": "hero:1", "abilitySlot": 2 },
+            }
+        }))
+        .unwrap();
+        assert_eq!(
+            Matcher::new(&g, "ja").split("ヒーローのボム"),
+            [entity("hero:1", "ヒーロー"), Span::Text("のボム".into())]
+        );
     }
 
     #[test]

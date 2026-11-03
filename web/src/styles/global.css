@@ -63,3 +63,12 @@ h3 {
 .frame-label[class*="-end"] {
   right: -2px;
 }
+
+/* ダウンロードの節で、見ている OS の欄を目立たせる */
+.download.current {
+  border-color: var(--color-gold);
+}
+.download.current .download-main {
+  background: var(--color-gold);
+  color: var(--color-ink);
+}
