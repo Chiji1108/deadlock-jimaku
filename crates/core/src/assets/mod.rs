@@ -106,6 +106,7 @@ pub async fn load_into(store: Arc<Store>, root: PathBuf, openai_key: Option<Stri
         api_key,
         model: settings.models.readings.clone(),
         reasoning_effort: settings.models.reasoning_effort.clone(),
+        meter: store.meter(),
     };
     let missing = readings::missing(&loaded.glossary, &cache, &manual);
     if missing.is_empty() {

@@ -8,6 +8,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
+use std::sync::Arc;
 use std::time::Duration;
 
 use serde::Deserialize;
@@ -16,6 +17,7 @@ use serde_json::json;
 use crate::furigana;
 use crate::llm;
 use crate::types::{Glossary, RubySegment};
+use crate::usage::{Meter, Use};
 
 /// 35 語で 20 秒ほど
 const TIMEOUT: Duration = Duration::from_secs(120);
@@ -24,6 +26,7 @@ pub struct ReadingModel {
     pub api_key: String,
     pub model: String,
     pub reasoning_effort: Option<String>,
+    pub meter: Arc<Meter>,
 }
 
 /// 名前 → 読み
@@ -151,6 +154,8 @@ pub async fn ask(
             schema_name: "readings",
             schema,
             timeout: TIMEOUT,
+            meter: &model.meter,
+            purpose: Use::Readings,
         },
     )
     .await?;

@@ -8,6 +8,8 @@ use anyhow::Context;
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 
+use crate::usage::{Meter, Tokens, Use};
+
 const CHAT_URL: &str = "https://api.openai.com/v1/chat/completions";
 
 pub struct Request<'a> {
@@ -20,6 +22,9 @@ pub struct Request<'a> {
     pub schema_name: &'a str,
     pub schema: Value,
     pub timeout: Duration,
+    /// 使ったトークンを数える
+    pub meter: &'a Meter,
+    pub purpose: Use,
 }
 
 pub async fn chat_json<T: DeserializeOwned>(
@@ -52,6 +57,8 @@ pub async fn chat_json<T: DeserializeOwned>(
         anyhow::bail!("{status}: {}", res.text().await.unwrap_or_default());
     }
     let res: Value = res.json().await?;
+    req.meter
+        .tokens(req.purpose, req.model, Tokens::from_response(&res["usage"]));
     let message = &res["choices"][0]["message"];
     if let Some(refusal) = message["refusal"].as_str() {
         anyhow::bail!("refused: {refusal}");

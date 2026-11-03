@@ -195,7 +195,10 @@ Deadlock 配信者向けの OBS オーバーレイツール。
 | Realtime（話している間だけ送る。仮に 40% + 発話ごとの前後） | 約 26 分 × $0.017 = **約 $0.44** |
 | GPT-Transcribe（発話区間のみ） | 約 26 分 × $0.0045 = **約 $0.12** |
 | 翻訳（GPT-6.1 Terra。1 時間に約 600 発話） | 翻訳先 1 言語で **約 $0.3**、1 言語増えるごとに **+約 $0.3** |
-| 合計（翻訳先が英語のみ） | **約 $0.9/時間** |
+| ふりがな（GPT-6.1 Terra。漢字を含む発話だけ） | **約 $0.3** |
+| 合計（翻訳先が英語のみ、ふりがなあり） | **約 $1.2/時間** |
+
+アプリで数えた実測（sample02、29 秒・5 発話）: 途中の字幕 $0.0058（21 秒）、確定の字幕 $0.0015（20 秒）、翻訳 $0.0024（1,771 トークン）、ふりがな $0.0026（1,333 トークン）、合計 $0.012。操作パネルの「料金」タブに出す（13 章）。
 
 Voxtral のときはリアルタイムに無音も含めて送り続けていた（delta を届いた時刻で発話に振り分けていたので、途中を抜けなかった）。OpenAI では発話ごとに commit するので、話していない間は送らない。
 
@@ -550,7 +553,7 @@ interface Enriched {
 
 ```ts
 // client → server
-type ClientMsg = { type: "subscribe"; topics: ("subtitle" | "glossary" | "rank" | "status" | "display" | "level")[] };
+type ClientMsg = { type: "subscribe"; topics: ("subtitle" | "glossary" | "rank" | "status" | "display" | "level" | "usage")[] };
 
 // server → client
 type ServerMsg =
@@ -560,13 +563,14 @@ type ServerMsg =
   | { type: "transcription.status"; error: string | null }        // 操作パネル向け。字幕を始められない・止まった理由
   | { type: "glossary.updated"; clientVersion: number }           // オーバーレイが辞書を取り直す
   | { type: "display"; subtitles: SubtitleDisplay; rankLanguage: LangCode; itemCards: { holdSeconds: number; language: string } }  // オーバーレイの見せ方（11・12 章）
-  | { type: "audio.level"; db: number };                          // 操作パネルのメーター。字幕を動かしている間、0.1 秒ごとのピーク（dBFS）
+  | { type: "audio.level"; db: number }                           // 操作パネルのメーター。字幕を動かしている間、0.1 秒ごとのピーク（dBFS）
+  | { type: "usage"; usage: UsageView };                          // 操作パネルの料金。使うたびに
 ```
 
 - 辞書は `GET /api/glossary` で取得し、オーバーレイ側で持つ（Segment には ID しか載らない）。
 - サーバーは直近の Segment を（例: 50 件）保持して、snapshot で送る。
 - WS クライアントは指数バックオフで再接続し、再接続したら snapshot で状態を置き換える。
-- 接続直後と broadcast の取りこぼし（Lagged）の後は、購読しているすべてのトピックの現在の状態（`snapshot`、辞書があれば `glossary.updated`、ランクがあれば `rank.update`、`transcription.status`、`display`）。`audio.level` は持たずに流すだけを送る。
+- 接続直後と broadcast の取りこぼし（Lagged）の後は、購読しているすべてのトピックの現在の状態（`snapshot`、辞書があれば `glossary.updated`、ランクがあれば `rank.update`、`transcription.status`、`display`、`usage`）。`audio.level` は持たずに流すだけを送る。
 
 ## 11. 字幕オーバーレイ
 
@@ -667,6 +671,9 @@ Tauri のウィンドウでも OBS のカスタムブラウザドックでも同
 | アイテム説明 | プレビュー（460×560）とテスト字幕、出しておく時間（5 / 8 / 12 / 20 秒か「数値で指定」）、説明の言語、OBS に貼る URL |
 | ランク | プレビュー（480×140）、Steam ID（SteamID64 かフレンドコード。空で非表示）、ランク名の言語、OBS に貼る URL |
 | API キー | OpenAI（文字起こし・翻訳・読み）。状態（保存済み・環境変数・未設定）、キーの作成ページへのリンク、新しいキーの保存・削除。キーそのものは表示しない |
+| 料金 | OpenAI の料金の概算を、使い道（途中の字幕・確定した字幕・翻訳・ふりがな・辞書の読み）ごとに「起動してから」と「今月（UTC）」で出す。正確な額は OpenAI の使用量のページへ |
+
+**料金の概算**（`usage.rs`）: 音声は送った長さ（途中の字幕は commit しなかった分も含む。確定の字幕は WAV の長さ）、LLM は応答の `usage` のトークン数（キャッシュから読んだ分は安い単価）を数え、モデルの単価を掛ける。単価はアプリに持つ（OpenAI の料金ページ、2026-11）。知らないモデルを設定したら、その分は合計に入れず「単価が分からない」と出す。月ごとの分は `{データディレクトリ}/usage.json` に保存し、1 発話に数回その場で書く（一時ファイルから置き換える）。変わったら `usage` を流す
 
 - プレビューの iframe は `color-scheme` を中身（ライト）に合わせる。ダークの画面に違う color-scheme の iframe を置くと、背景が白く塗られて透過しない
 - Tauri のウィンドウで外部へのリンクを開いたら、ふだんのブラウザで開く（`on_new_window`）

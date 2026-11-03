@@ -15,6 +15,7 @@ pub mod store;
 pub mod stt;
 pub mod subtitles;
 pub mod types;
+pub mod usage;
 
 use std::path::PathBuf;
 use std::sync::OnceLock;

@@ -4,6 +4,7 @@ import type { Provider } from "../generated/Provider";
 import type { ServerMsg } from "../generated/ServerMsg";
 import type { SettingsPatch } from "../generated/SettingsPatch";
 import type { SettingsView } from "../generated/SettingsView";
+import type { UsageView } from "../generated/UsageView";
 import { api } from "../lib/api";
 import { connect, type Status } from "../lib/ws";
 
@@ -31,6 +32,8 @@ class Panel {
   transcriptionError = $state<string | undefined>();
   /** 直近の入力レベル（dBFS）。字幕を動かしている間だけ届く */
   level = $state<number | undefined>();
+  /** OpenAI の使用量と概算の料金 */
+  usage = $state<UsageView | undefined>();
   /** 最後に SILENT_DB を超えた時刻 */
   private heardAt = 0;
   /** 最後にレベルが届いた時刻 */
@@ -60,7 +63,7 @@ class Panel {
     });
     void this.refreshDevices();
     const disconnect = connect(
-      ["status", "level"],
+      ["status", "level", "usage"],
       (msg) => this.onMessage(msg),
       (s) => (this.server = s),
     );
@@ -73,6 +76,8 @@ class Panel {
   private onMessage(msg: ServerMsg) {
     if (msg.type === "transcription.status") {
       this.transcriptionError = msg.error ?? undefined;
+    } else if (msg.type === "usage") {
+      this.usage = msg.usage;
     } else if (msg.type === "audio.level") {
       // 届き始めた（張り直しで途切れた後も）時点を「聞こえた」とみなし、そこから数える
       const now = Date.now();

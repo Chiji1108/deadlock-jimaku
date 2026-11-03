@@ -21,6 +21,7 @@ use crate::settings::Settings;
 use crate::store::Store;
 use crate::stt::{self, BatchRequest, Hints, RealtimeConfig};
 use crate::types::{Enriched, EntityKind, Glossary, LangCode, Segment, Stage};
+use crate::usage::Meter;
 
 /// earshot が受け取るフレームの長さ（16ms）
 const FRAME: usize = 256;
@@ -68,6 +69,7 @@ pub async fn run(store: Arc<Store>, input: audio::Input, api_key: String) -> any
         api_key: api_key.clone(),
         model: settings.models.realtime.clone(),
         delay: settings.realtime_delay.clone(),
+        meter: store.meter(),
     };
     tokio::spawn(realtime_loop(realtime, hints.clone(), rt_rx, delta_tx));
 
@@ -78,21 +80,17 @@ pub async fn run(store: Arc<Store>, input: audio::Input, api_key: String) -> any
         settings.models.reasoning_effort.clone(),
         settings.mic_language.clone(),
         settings.translate_to.clone(),
+        store.meter(),
     );
     let (done_tx, mut done_rx) = mpsc::channel(64);
-    let mut pipeline = Pipeline::new(
-        store,
-        &settings,
-        Arc::new(BatchContext {
-            http: crate::http().clone(),
-            api_key,
-            model: settings.models.batch.clone(),
-            hints,
-        }),
-        Arc::new(enricher),
-        done_tx,
-        rt_tx,
-    );
+    let batch = Arc::new(BatchContext {
+        http: crate::http().clone(),
+        api_key,
+        model: settings.models.batch.clone(),
+        hints,
+        meter: store.meter(),
+    });
+    let mut pipeline = Pipeline::new(store, &settings, batch, Arc::new(enricher), done_tx, rt_tx);
 
     let mut level = LevelMeter::default();
     loop {
@@ -267,12 +265,15 @@ impl Pipeline {
         } else {
             close.end + PADDING
         };
-        let wav = audio::wav(&self.history.slice(from, to));
+        let samples = self.history.slice(from, to);
+        let seconds = samples.len() as f64 / f64::from(audio::SAMPLE_RATE);
+        let wav = audio::wav(&samples);
         self.pending += 1;
         tokio::spawn(transcribe(
             self.batch.clone(),
             id,
             wav,
+            seconds,
             self.done_tx.clone(),
         ));
     }
@@ -387,6 +388,7 @@ struct BatchContext {
     api_key: String,
     model: String,
     hints: Arc<Hints>,
+    meter: Arc<Meter>,
 }
 
 enum Done {
@@ -396,12 +398,20 @@ enum Done {
     Enriched { id: String, enriched: Enriched },
 }
 
-async fn transcribe(ctx: Arc<BatchContext>, id: String, wav: Vec<u8>, done: mpsc::Sender<Done>) {
+async fn transcribe(
+    ctx: Arc<BatchContext>,
+    id: String,
+    wav: Vec<u8>,
+    seconds: f64,
+    done: mpsc::Sender<Done>,
+) {
     let request = BatchRequest {
         api_key: &ctx.api_key,
         model: &ctx.model,
         hints: &ctx.hints,
         wav,
+        seconds,
+        meter: &ctx.meter,
     };
     let text = match stt::transcribe(&ctx.http, request).await {
         Ok(text) => Some(text),

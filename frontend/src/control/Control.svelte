@@ -14,6 +14,7 @@
   import ItemsTab from "./tabs/ItemsTab.svelte";
   import KeysTab from "./tabs/KeysTab.svelte";
   import RankTab from "./tabs/RankTab.svelte";
+  import UsageTab from "./tabs/UsageTab.svelte";
 
   onMount(() => panel.start());
 
@@ -97,12 +98,14 @@
           <Tabs.Trigger value="items">アイテム説明</Tabs.Trigger>
           <Tabs.Trigger value="rank">ランク</Tabs.Trigger>
           <Tabs.Trigger value="keys">API キー</Tabs.Trigger>
+          <Tabs.Trigger value="usage">料金</Tabs.Trigger>
         </Tabs.List>
         <Tabs.Content value="audio" class="pt-4"><AudioTab /></Tabs.Content>
         <Tabs.Content value="display" class="pt-4"><DisplayTab /></Tabs.Content>
         <Tabs.Content value="items" class="pt-4"><ItemsTab /></Tabs.Content>
         <Tabs.Content value="rank" class="pt-4"><RankTab /></Tabs.Content>
         <Tabs.Content value="keys" class="pt-4"><KeysTab /></Tabs.Content>
+        <Tabs.Content value="usage" class="pt-4"><UsageTab /></Tabs.Content>
       </Tabs.Root>
     {/if}
   </main>
