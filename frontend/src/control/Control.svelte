@@ -1,9 +1,15 @@
 <script lang="ts">
+  import CaptionsIcon from "@lucide/svelte/icons/captions";
   import CircleAlertIcon from "@lucide/svelte/icons/circle-alert";
+  import KeyRoundIcon from "@lucide/svelte/icons/key-round";
   import MicIcon from "@lucide/svelte/icons/mic";
+  import PackageIcon from "@lucide/svelte/icons/package";
   import SquareIcon from "@lucide/svelte/icons/square";
+  import TrophyIcon from "@lucide/svelte/icons/trophy";
+  import WalletIcon from "@lucide/svelte/icons/wallet";
   import { ModeWatcher } from "mode-watcher";
   import { onMount } from "svelte";
+  import { MediaQuery } from "svelte/reactivity";
   import * as Alert from "$lib/components/ui/alert";
   import { Button } from "$lib/components/ui/button";
   import { Toaster } from "$lib/components/ui/sonner";
@@ -22,6 +28,26 @@
   const s = $derived(panel.settings);
   const needsKey = $derived(!!panel.view && panel.view.keys.openai.state !== "saved");
   let tab = $state("audio");
+  /** 中身の欄（広い画面ではここだけがスクロールする） */
+  let content = $state<HTMLElement>();
+
+  const TABS = [
+    { value: "audio", label: "マイクと翻訳", icon: MicIcon, page: AudioTab },
+    { value: "display", label: "字幕の表示", icon: CaptionsIcon, page: DisplayTab },
+    { value: "items", label: "アイテム説明", icon: PackageIcon, page: ItemsTab },
+    { value: "rank", label: "ランク", icon: TrophyIcon, page: RankTab },
+    { value: "keys", label: "API キー", icon: KeyRoundIcon, page: KeysTab },
+    { value: "usage", label: "料金", icon: WalletIcon, page: UsageTab },
+  ];
+  // デスクトップのウィンドウでは左のサイドバー。OBS のドックのように狭いときは上に並べる
+  const wide = new MediaQuery("min-width: 768px");
+
+  // タブを変えたら（サイドバーからでも、料金や注意のリンクからでも）先頭から見せる
+  $effect(() => {
+    void tab;
+    content?.scrollTo({ top: 0 });
+    window.scrollTo({ top: 0 });
+  });
 
   const status = $derived.by(() => {
     if (!s?.transcriptionEnabled) return { label: "停止中", dot: "bg-muted-foreground/50" };
@@ -36,9 +62,11 @@
 <ModeWatcher />
 <Toaster richColors position="bottom-right" />
 
-<div class="min-h-screen bg-background text-foreground">
-  <header class="sticky top-0 z-10 border-b bg-background/80 backdrop-blur">
-    <div class="mx-auto flex max-w-3xl items-center gap-4 px-4 py-3">
+<div
+  class="flex min-h-screen flex-col bg-background text-foreground has-data-[orientation=vertical]:h-screen"
+>
+  <header class="sticky top-0 z-10 shrink-0 border-b bg-background/80 backdrop-blur">
+    <div class="flex items-center gap-4 px-4 py-3">
       <!-- 名前はウィンドウ（OBS ならドックのタブ）に出ているので、状態と今回の料金を置く -->
       <h1 class="sr-only">デドロ字幕</h1>
       <div class="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -49,13 +77,7 @@
         <!-- 届く前も行の高さを取っておく（届いたときにページがずれない） -->
         <p class="h-4 text-xs text-muted-foreground tabular-nums">
           {#if s && panel.server === "open" && panel.usage}
-            <button
-              class="hover:text-foreground hover:underline"
-              onclick={() => {
-                tab = "usage";
-                window.scrollTo({ top: 0 });
-              }}
-            >
+            <button class="hover:text-foreground hover:underline" onclick={() => (tab = "usage")}>
               起動してからの料金 {usd(total(panel.usage.session))}{unpriced(panel.usage.session)
                 ? " ＋α"
                 : ""}
@@ -77,58 +99,74 @@
     </div>
   </header>
 
-  <main class="mx-auto flex max-w-3xl flex-col gap-4 px-4 py-6">
-    {#if panel.view?.unsaved}
-      <Alert.Root variant="destructive">
-        <CircleAlertIcon />
-        <Alert.Title>設定を保存できません</Alert.Title>
-        <Alert.Description>
-          設定ファイルを読めないため、変更は保存されません（{panel.view.unsaved}）
-        </Alert.Description>
-      </Alert.Root>
-    {/if}
-    {#if needsKey}
-      <Alert.Root>
-        <CircleAlertIcon />
-        <Alert.Title>はじめに OpenAI の API キーを設定してください</Alert.Title>
-        <Alert.Description>
-          <p>
-            文字起こしと翻訳に使います。<button class="underline" onclick={() => (tab = "keys")}>
-              API キーの設定へ
-            </button>
-          </p>
-        </Alert.Description>
-      </Alert.Root>
-    {/if}
-    {#if s?.transcriptionEnabled && panel.transcriptionError}
-      <Alert.Root variant="destructive">
-        <CircleAlertIcon />
-        <Alert.Title>字幕が止まっています</Alert.Title>
-        <Alert.Description>
-          {transcriptionErrorText(
-            panel.transcriptionError,
-          )}。直したら「字幕を止める」→「字幕を始める」で始め直してください
-        </Alert.Description>
-      </Alert.Root>
-    {/if}
-
-    {#if s}
-      <Tabs.Root bind:value={tab}>
-        <Tabs.List class="w-full">
-          <Tabs.Trigger value="audio">マイクと翻訳</Tabs.Trigger>
-          <Tabs.Trigger value="display">字幕の表示</Tabs.Trigger>
-          <Tabs.Trigger value="items">アイテム説明</Tabs.Trigger>
-          <Tabs.Trigger value="rank">ランク</Tabs.Trigger>
-          <Tabs.Trigger value="keys">API キー</Tabs.Trigger>
-          <Tabs.Trigger value="usage">料金</Tabs.Trigger>
+  {#if s}
+    <Tabs.Root
+      bind:value={tab}
+      orientation={wide.current ? "vertical" : "horizontal"}
+      class="min-h-0 flex-1 gap-0"
+    >
+      <!-- 縦のとき（サイドバー）は高さいっぱいに伸ばし、入りきらなければサイドバーだけスクロールする -->
+      <div
+        class="shrink-0 px-4 pt-4 group-data-vertical/tabs:w-56 group-data-vertical/tabs:overflow-y-auto group-data-vertical/tabs:border-r group-data-vertical/tabs:bg-muted/30 group-data-vertical/tabs:p-3"
+      >
+        <Tabs.List
+          class="w-full justify-start overflow-x-auto overflow-y-hidden group-data-vertical/tabs:gap-1 group-data-vertical/tabs:bg-transparent"
+        >
+          {#each TABS as t (t.value)}
+            <!-- 横に並べるときは幅が狭いので、アイコンを出さない（入りきらなければ横にスクロール） -->
+            <Tabs.Trigger
+              value={t.value}
+              class="group-data-horizontal/tabs:[&>svg]:hidden group-data-vertical/tabs:h-9 group-data-vertical/tabs:flex-none group-data-vertical/tabs:px-3"
+            >
+              <t.icon />{t.label}
+            </Tabs.Trigger>
+          {/each}
         </Tabs.List>
-        <Tabs.Content value="audio" class="pt-4"><AudioTab /></Tabs.Content>
-        <Tabs.Content value="display" class="pt-4"><DisplayTab /></Tabs.Content>
-        <Tabs.Content value="items" class="pt-4"><ItemsTab /></Tabs.Content>
-        <Tabs.Content value="rank" class="pt-4"><RankTab /></Tabs.Content>
-        <Tabs.Content value="keys" class="pt-4"><KeysTab /></Tabs.Content>
-        <Tabs.Content value="usage" class="pt-4"><UsageTab /></Tabs.Content>
-      </Tabs.Root>
-    {/if}
-  </main>
+      </div>
+      <main bind:this={content} class="min-w-0 flex-1 group-data-vertical/tabs:overflow-y-auto">
+        <div class="mx-auto flex max-w-3xl flex-col gap-4 px-4 py-6">
+          {#if panel.view?.unsaved}
+            <Alert.Root variant="destructive">
+              <CircleAlertIcon />
+              <Alert.Title>設定を保存できません</Alert.Title>
+              <Alert.Description>
+                設定ファイルを読めないため、変更は保存されません（{panel.view.unsaved}）
+              </Alert.Description>
+            </Alert.Root>
+          {/if}
+          {#if needsKey}
+            <Alert.Root>
+              <CircleAlertIcon />
+              <Alert.Title>はじめに OpenAI の API キーを設定してください</Alert.Title>
+              <Alert.Description>
+                <p>
+                  文字起こしと翻訳に使います。<button
+                    class="underline"
+                    onclick={() => (tab = "keys")}
+                  >
+                    API キーの設定へ
+                  </button>
+                </p>
+              </Alert.Description>
+            </Alert.Root>
+          {/if}
+          {#if s.transcriptionEnabled && panel.transcriptionError}
+            <Alert.Root variant="destructive">
+              <CircleAlertIcon />
+              <Alert.Title>字幕が止まっています</Alert.Title>
+              <Alert.Description>
+                {transcriptionErrorText(
+                  panel.transcriptionError,
+                )}。直したら「字幕を止める」→「字幕を始める」で始め直してください
+              </Alert.Description>
+            </Alert.Root>
+          {/if}
+
+          {#each TABS as t (t.value)}
+            <Tabs.Content value={t.value}><t.page /></Tabs.Content>
+          {/each}
+        </div>
+      </main>
+    </Tabs.Root>
+  {/if}
 </div>
