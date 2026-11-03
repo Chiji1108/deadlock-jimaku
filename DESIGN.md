@@ -164,7 +164,7 @@ Deadlock 配信者向けの OBS オーバーレイツール。
 | `conversation.item.input_audio_transcription.completed` | `transcript`（その item の全文。final はバッチで取り直すので使わない） |
 | `error` | 1 つの要求の失敗（短すぎる commit など）。セッションは続く |
 
-**commit と item**: 1 回の commit までの音声が 1 つの item になり、次の音声は新しい item になる。delta には最初から `item_id` が付くので、item と Segment を commit の順で 1 対 1 に結びつける（7.2）。対応は音声認識の接続の中だけで持ち（`stt.rs`）、字幕の流れには Segment の ID 付きで delta を返す。張り直したら対応も作り直すので、イベントが 1 つ欠けても以降がずれない。commit には `event_id` に Segment の ID を付け、断られたら（`error.event_id`）その Segment を待たない。入力が終わったら、最後の item の文字（`completed`）が届くまで待つ（上限 10 秒）。
+**commit と item**: 1 回の commit までの音声が 1 つの item になり、次の音声は新しい item になる。delta には最初から `item_id` が付くので、item と Segment を commit の順で 1 対 1 に結びつける（7.2）。対応は音声認識の接続の中だけで持ち（`stt.rs`）、字幕の流れには Segment の ID 付きで delta を返す。張り直したら対応も作り直すので、イベントが 1 つ欠けても以降がずれない。確認の前に初めて見る item は推測で付けるが、commit の確認（`input_audio_buffer.committed`）で commit した順の Segment に付け直すので、推測が違っていても直る（ずれた数文字も final で置き換わる）。commit には `event_id` に Segment の ID を付け、断られたら（`error.event_id`）その音声を消して Segment の対応も消す。文字が届き終わった item（`completed`）の対応は消す。入力が終わったら最後の発話を閉じて終わる（確定はバッチで取る）。
 
 **発話の区切り方**: 区切りはローカルの VAD（earshot）で決める。会話の「話す番」を判定するターン検出は字幕の区切りと目的が違い、話し続ける配信者では区切りがいつまでも来ない（Voxtral の検証で、間を挟みながら 22 秒話した音声が 1 ターンになった）。
 

@@ -185,7 +185,6 @@ impl Pipeline {
             detector: earshot::Detector::default(),
             segmenter: Segmenter::new(&settings.segmentation),
             realtime: Some(realtime),
-
             live: HashMap::new(),
             current: None,
             frame: Vec::with_capacity(FRAME * 2),

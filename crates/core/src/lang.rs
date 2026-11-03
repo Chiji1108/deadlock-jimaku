@@ -7,7 +7,7 @@ pub struct Language {
     pub code: &'static str,
     /// deadlock-api の `language` パラメータ
     pub api: &'static str,
-    /// Voxtral の `language`（ISO 639-1）
+    /// 音声認識の `languages`（ISO 639-1）
     pub stt: &'static str,
     pub label: &'static str,
 }

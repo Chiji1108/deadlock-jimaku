@@ -4,7 +4,7 @@
 //! 閉じたら commit する。commit までの音声が 1 つの item になり、delta には item の ID が付いて届く。
 //! item と発話の対応は 1 つの接続の中だけで持つ（張り直したら作り直す）。
 
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, VecDeque};
 use std::time::Duration;
 
 use anyhow::{Context, bail};
@@ -28,8 +28,6 @@ const MIN_COMMIT_SAMPLES: usize = REALTIME_RATE as usize / 10;
 const PREROLL_SAMPLES: usize = SAMPLE_RATE as usize * 3 / 10;
 /// 接続と設定にかける時間の上限（止まったまま音声を溜めない）
 const HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(10);
-/// 入力が終わってから、最後の発話の文字を待つ時間の上限
-const DRAIN_TIMEOUT: Duration = Duration::from_secs(10);
 
 /// リアルタイムとバッチで共通の手がかり
 pub struct Hints {
@@ -75,11 +73,20 @@ impl Speaking {
     pub fn skip(&mut self, input: Input) {
         match input {
             Input::Open(id) => self.current = Some(id),
-            Input::Audio(chunk) => self.remember(&chunk),
-            Input::Close => self.current = None,
+            Input::Audio(chunk) => {
+                if self.current.is_none() {
+                    self.remember(&chunk);
+                }
+            }
+            Input::Close => {
+                self.current = None;
+                // 閉じた発話の終わりを、次の発話の頭として送らない
+                self.preroll.clear();
+            }
         }
     }
 
+    /// 話していない間の音声だけを、発話を開く前の分として持つ
     fn remember(&mut self, chunk: &[f32]) {
         self.preroll.extend(chunk);
         let extra = self.preroll.len().saturating_sub(PREROLL_SAMPLES);
@@ -94,13 +101,11 @@ struct Items {
     by_item: HashMap<String, String>,
     /// commit したが、まだ item の ID の確認が届いていない発話（commit した順）
     committing: VecDeque<String>,
-    /// commit の確認は届いたが、文字が届き終わっていない item
-    incomplete: HashSet<String>,
 }
 
 impl Items {
     /// delta の届け先。初めて見る item は、確認待ちの commit 済みの発話（先に commit したもの）、
-    /// なければ今話している発話のもの（item は commit した順に並ぶ）
+    /// なければ今話している発話のものと見なす（item は commit した順に並ぶ）
     fn segment(&mut self, item: &str, current: Option<&String>) -> Option<String> {
         if let Some(segment) = self.by_item.get(item) {
             return Some(segment.clone());
@@ -110,24 +115,26 @@ impl Items {
         Some(segment)
     }
 
+    /// commit の確認で、item を commit した順の発話に付け直す（見なしが違っていても、ここで正しくなる）
     fn committed(&mut self, item: String) {
         if let Some(segment) = self.committing.pop_front() {
-            self.by_item.entry(item.clone()).or_insert(segment);
-            self.incomplete.insert(item);
+            self.by_item.insert(item, segment);
         }
     }
 
-    /// commit が断られた発話は、確認待ちから外す
-    fn rejected(&mut self, segment: &str) {
-        self.committing.retain(|s| s != segment);
+    /// 文字が届き終わった item は、もう delta が来ないので対応を消す
+    fn completed(&mut self, item: &str) {
+        self.by_item.remove(item);
     }
 
-    fn settled(&self) -> bool {
-        self.committing.is_empty() && self.incomplete.is_empty()
+    /// commit しなかった・断られた発話の対応を消す（サーバー側でもその音声を消す）
+    fn drop_segment(&mut self, segment: &str) {
+        self.committing.retain(|s| s != segment);
+        self.by_item.retain(|_, s| s != segment);
     }
 }
 
-/// 1 セッション分。入力が尽きたら、最後の発話の文字が届き終わるのを待って Ok、切れたら Err で返る
+/// 1 セッション分。入力が尽きたら Ok（最後の発話の確定はバッチで取る）、切れたら Err で返る
 pub async fn realtime(
     cfg: &RealtimeConfig,
     hints: &Hints,
@@ -153,15 +160,9 @@ pub async fn realtime(
         buffered += push(&mut upsampler, &mut pcm, &preroll);
     }
     let mut items = Items::default();
-    let mut input_done = false;
-    let drained = tokio::time::sleep(Duration::MAX);
-    tokio::pin!(drained);
     loop {
-        if input_done && items.settled() {
-            return Ok(());
-        }
         tokio::select! {
-            next = input.recv(), if !input_done => match next {
+            next = input.recv() => match next {
                 Some(Input::Open(id)) => {
                     speaking.current = Some(id);
                     let preroll: Vec<f32> = speaking.preroll.drain(..).collect();
@@ -183,8 +184,7 @@ pub async fn realtime(
                 }
                 None => {
                     close(&mut sink, speaking, &mut items, &mut pcm, buffered).await?;
-                    input_done = true;
-                    drained.as_mut().reset(tokio::time::Instant::now() + DRAIN_TIMEOUT);
+                    return Ok(());
                 }
             },
             msg = stream.next() => {
@@ -205,24 +205,21 @@ pub async fn realtime(
                     }
                     Some("input_audio_buffer.committed") => items.committed(item.to_owned()),
                     Some("conversation.item.input_audio_transcription.completed") => {
-                        items.incomplete.remove(item);
+                        items.completed(item);
                     }
-                    // 1 つの要求の失敗ではセッションは続く。commit が断られたら、その発話は待たない
+                    // 1 つの要求の失敗ではセッションは続く。commit が断られたら、その音声を消して次に混ぜない
                     Some("error") => {
                         tracing::warn!("realtime error: {}", event["error"]);
                         if let Some(segment) = event["error"]["event_id"]
                             .as_str()
                             .and_then(|id| id.strip_prefix("commit-"))
                         {
-                            items.rejected(segment);
+                            items.drop_segment(segment);
+                            sink.send(clear()).await?;
                         }
                     }
                     _ => {}
                 }
-            }
-            () = &mut drained => {
-                tracing::warn!("realtime: gave up waiting for the last transcription");
-                return Ok(());
             }
         }
     }
@@ -280,14 +277,20 @@ async fn close(
     if !pcm.is_empty() {
         sink.send(append(pcm)).await?;
     }
-    let event = if buffered >= MIN_COMMIT_SAMPLES {
+    if buffered >= MIN_COMMIT_SAMPLES {
         items.committing.push_back(segment.clone());
-        json!({ "type": "input_audio_buffer.commit", "event_id": format!("commit-{segment}") })
+        let commit =
+            json!({ "type": "input_audio_buffer.commit", "event_id": format!("commit-{segment}") });
+        sink.send(Message::text(commit.to_string())).await?;
     } else {
-        json!({ "type": "input_audio_buffer.clear" })
-    };
-    sink.send(Message::text(event.to_string())).await?;
+        items.drop_segment(&segment);
+        sink.send(clear()).await?;
+    }
     Ok(())
+}
+
+fn clear() -> Message {
+    Message::text(json!({ "type": "input_audio_buffer.clear" }).to_string())
 }
 
 /// 16kHz を 24kHz にして PCM に足し、足したサンプル数を返す
@@ -415,23 +418,34 @@ mod tests {
     #[test]
     fn items_follow_commit_order() {
         let mut items = Items::default();
-        let (a, c) = ("a".to_owned(), "c".to_owned());
+        let (a, b, c) = ("a".to_owned(), "b".to_owned(), "c".to_owned());
         // 話している途中の delta は今の発話へ
         assert_eq!(items.segment("i1", Some(&a)), Some(a.clone()));
-        // commit した後、確認が届く前に初めて見る item は、確認待ちの発話（先に commit したもの）
         items.committing.push_back(a.clone());
-        items.committing.push_back("b".into());
-        assert_eq!(items.segment("i1", None), Some(a.clone()));
         items.committed("i1".into());
-        assert_eq!(items.segment("i2", Some(&c)), Some("b".into()));
+        // A の item に delta がなく、確認の前に B の item の delta が来ると、いったん A と見なすが、
+        // 確認で B に付け直す
+        items.committing.push_back(a.clone());
+        items.committing.push_back(b.clone());
+        assert_eq!(items.segment("i3", None), Some(a.clone()));
         items.committed("i2".into());
-        // 断られた commit は待たない
-        items.committing.push_back(c.clone());
-        items.rejected("c");
-        assert!(items.committing.is_empty());
-        // 文字が届き終わるまでは終わらない
-        assert!(!items.settled());
-        items.incomplete.clear();
-        assert!(items.settled());
+        items.committed("i3".into());
+        assert_eq!(items.segment("i3", Some(&c)), Some(b.clone()));
+        // 文字が届き終わった item と、捨てた発話の対応は消える
+        items.completed("i3");
+        assert_eq!(items.segment("i9", Some(&c)), Some(c.clone()));
+        items.drop_segment("c");
+        assert!(!items.by_item.values().any(|s| s == "c"));
+    }
+
+    #[test]
+    fn preroll_holds_only_audio_between_utterances() {
+        let mut speaking = Speaking::default();
+        speaking.skip(Input::Audio(vec![0.1; 100]));
+        speaking.skip(Input::Open("a".into()));
+        speaking.skip(Input::Audio(vec![0.2; 100]));
+        assert_eq!(speaking.preroll.len(), 100);
+        speaking.skip(Input::Close);
+        assert!(speaking.preroll.is_empty());
     }
 }
