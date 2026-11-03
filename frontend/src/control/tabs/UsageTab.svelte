@@ -1,8 +1,8 @@
 <script lang="ts">
   import * as Card from "$lib/components/ui/card";
-  import type { Amount } from "../../generated/Amount";
   import type { Use } from "../../generated/Use";
   import { panel } from "../panel.svelte";
+  import { total, usd } from "../usage";
 
   const rows: { use: Use; name: string; audio: boolean }[] = [
     { use: "realtime", name: "話している途中の字幕", audio: true },
@@ -16,13 +16,10 @@
     { key: "month", name: "今月" },
   ] as const;
 
-  const usd = (n: number) => `$${n < 1 ? n.toFixed(3) : n.toFixed(2)}`;
   const minutes = (s: number) => (s < 60 ? `${Math.round(s)} 秒` : `${(s / 60).toFixed(1)} 分`);
   const tokens = (n: number) =>
     n < 10_000 ? `${n} トークン` : `${(n / 10_000).toFixed(1)} 万トークン`;
 
-  const total = (usage: { [key in Use]?: Amount } | undefined) =>
-    Object.values(usage ?? {}).reduce((sum, a) => sum + (a?.usd ?? 0), 0);
   const unpriced = $derived(
     columns.some((c) => Object.values(panel.usage?.[c.key] ?? {}).some((a) => a?.unpriced)),
   );
