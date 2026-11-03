@@ -28,6 +28,7 @@ h3 {
 /* 字幕の見本。アプリのオーバーレイと同じく縁取りで読ませる */
 .caption {
   font-weight: 700;
+  word-break: auto-phrase;
   -webkit-text-stroke: 0.08em #000;
   paint-order: stroke fill;
 }
@@ -37,6 +38,8 @@ h3 {
 }
 .caption .icon {
   display: inline;
+  /* 読み込み前の場所取りは img の width/height（正方形）で、表示の大きさは文字に合わせる */
+  width: auto;
   height: 1.1em;
   margin: 0 0.16em 0 0.2em;
   vertical-align: -0.18em;

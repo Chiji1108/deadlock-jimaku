@@ -1,5 +1,10 @@
 ---
+import Entity from "../components/Entity.astro";
 import Layout from "../layouts/Layout.astro";
+
+/** 字幕の見本のアイコン（アプリが deadlock-api から保存したもの） */
+const HAZE = "/sample/haze.webp";
+const BULLET_DANCE = "/sample/bullet-dance.webp";
 
 const DOWNLOAD = "https://github.com/Chiji1108/deadlock-stream-overlays/releases/latest";
 
@@ -76,16 +81,14 @@ const faqs = [
       aria-label="字幕の見本"
     >
       <p class="caption text-2xl sm:text-4xl">
-        <span class="entity text-gold"><img class="icon" src="/sample/haze.webp" alt="" />ヘイズ</span
-        >の<span class="entity text-sky"><img class="icon" src="/sample/bullet-dance.webp" alt="" />ウルト</span
-        >は<ruby
-          >最後<rt>さいご</rt></ruby
-        >まで<ruby>取<rt>と</rt></ruby>っておこう
+        <Entity kind="hero" icon={HAZE}>ヘイズ</Entity>の<Entity kind="ability" icon={BULLET_DANCE}
+          >ウルト</Entity
+        >は<ruby>強<rt>つよ</rt></ruby>い。
       </p>
       <p class="caption mt-3 text-lg text-white/90 sm:text-2xl">
-        Save{" "}<span class="entity text-gold"><img class="icon" src="/sample/haze.webp" alt="" />Haze</span
-        >'s<span class="entity text-sky"><img class="icon" src="/sample/bullet-dance.webp" alt="" />Bullet Dance</span
-        >{" "}until the end
+        <Entity kind="hero" icon={HAZE}>Haze</Entity>'s <Entity kind="ability" icon={BULLET_DANCE}
+          >Bullet Dance</Entity
+        > is strong.
       </p>
       <figcaption class="mt-8 text-xs text-muted">字幕の見本（日本語 → 英語）</figcaption>
     </figure>
@@ -102,6 +105,31 @@ const faqs = [
           </div>
         ))
       }
+    </div>
+  </section>
+
+  <section class="mx-auto max-w-5xl px-4 py-16">
+    <h2 class="text-2xl font-bold">ほかのオーバーレイ</h2>
+    <p class="mt-3 text-muted">どれも OBS のブラウザソースに URL を貼るだけで、背景は透明です。</p>
+    <div class="mt-8 grid items-start gap-6 sm:grid-cols-2">
+      <figure class="rounded-xl border border-line bg-[radial-gradient(ellipse_at_top,#3a3320,#121009)] p-6">
+        <img src="/sample/items.png" alt="アイテム説明のカード（基礎拡張マガジン）" width="460" height="286" class="mx-auto w-full max-w-sm" />
+        <figcaption class="mt-5">
+          <h3 class="font-semibold">アイテム説明</h3>
+          <p class="mt-2 text-sm leading-relaxed text-muted">
+            字幕にアイテム名が出たら、ゲーム内と同じカードで説明を出します。「拡マガ」のような略し方でも出ます。
+          </p>
+        </figcaption>
+      </figure>
+      <figure class="rounded-xl border border-line bg-[radial-gradient(ellipse_at_top,#3a3320,#121009)] p-6">
+        <img src="/sample/rank.png" alt="ランクの表示（エミッサリー III、650 / 1,000）" width="480" height="140" class="mx-auto w-full max-w-sm" />
+        <figcaption class="mt-5">
+          <h3 class="font-semibold">ランク</h3>
+          <p class="mt-2 text-sm leading-relaxed text-muted">
+            今のランクと、次のランクまでのポイントを出します。試合が終わると自動で更新します。アイコンだけ・名前までなど、出す中身も選べます。
+          </p>
+        </figcaption>
+      </figure>
     </div>
   </section>
 
