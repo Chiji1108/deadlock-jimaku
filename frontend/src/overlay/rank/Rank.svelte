@@ -4,7 +4,6 @@
   import { TextMorph } from "torph/svelte";
   import type { Anchor } from "../../generated/Anchor";
   import type { LeaderboardRank } from "../../generated/LeaderboardRank";
-  import type { Numerals } from "../../generated/Numerals";
   import type { RankContent } from "../../generated/RankContent";
   import type { RankState } from "../../generated/RankState";
   import { placeItems } from "../../lib/anchor";
@@ -15,7 +14,6 @@
   /** ランク名の言語と、出すもの。操作パネルで変え、サーバーから届く（名前がなければ英語） */
   let lang = $state("ja");
   let content = $state<RankContent>("full");
-  let numerals = $state<Numerals>("roman");
   let anchor = $state<Anchor>("top-left");
 
   onMount(() =>
@@ -24,7 +22,6 @@
       if (msg.type === "display") {
         lang = msg.rankLanguage;
         content = msg.rankContent;
-        numerals = msg.rankNumerals;
         anchor = msg.rankAnchor;
       }
     }),
@@ -42,11 +39,8 @@
     if (!rank) return "";
     const name = rank.names[shown];
     // 未ランクはサブランクを出さない。名前がまだ取れていなければ数字だけにしない。
-    // サブランクはゲームと同じローマ数字か、算用数字
-    const subrank =
-      numerals === "roman"
-        ? ["I", "II", "III", "IV", "V", "VI"][rank.subrank - 1]
-        : String(rank.subrank);
+    // サブランクはゲームと同じローマ数字
+    const subrank = ["I", "II", "III", "IV", "V", "VI"][rank.subrank - 1];
     return [name, name && rank.subrank > 0 ? subrank : undefined].filter(Boolean).join(" ");
   });
   const ratio = $derived(rank?.progress ? rank.progress.value / rank.progress.max : 0);

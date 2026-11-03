@@ -252,7 +252,6 @@ fn display(settings: &Settings) -> ServerMsg {
         subtitles: settings.subtitle_display.clone(),
         rank_language: settings.rank_language(),
         rank_content: settings.rank_content,
-        rank_numerals: settings.rank_numerals,
         rank_anchor: settings.rank_anchor,
         item_cards: ItemCardsView {
             hold_seconds: settings.item_cards.hold_seconds,

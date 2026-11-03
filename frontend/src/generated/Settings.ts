@@ -2,7 +2,6 @@
 import type { Anchor } from "./Anchor";
 import type { ItemCards } from "./ItemCards";
 import type { Models } from "./Models";
-import type { Numerals } from "./Numerals";
 import type { RankContent } from "./RankContent";
 import type { Region } from "./Region";
 import type { Segmentation } from "./Segmentation";
@@ -41,10 +40,6 @@ rankLanguage?: string,
  * ランクのオーバーレイに出すもの
  */
 rankContent: RankContent, 
-/**
- * サブランクの書き方
- */
-rankNumerals: Numerals, 
 /**
  * ランクをソースの箱のどこに寄せるか
  */
