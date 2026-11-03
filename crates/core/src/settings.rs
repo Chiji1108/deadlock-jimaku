@@ -289,6 +289,31 @@ pub enum Region {
     Oceania,
 }
 
+impl Region {
+    const ALL: [Region; 5] = [
+        Region::Europe,
+        Region::Asia,
+        Region::NAmerica,
+        Region::SAmerica,
+        Region::Oceania,
+    ];
+
+    /// API のパス（`/v1/leaderboard/{region}`）と設定での名前
+    pub fn as_api(self) -> &'static str {
+        match self {
+            Region::Europe => "Europe",
+            Region::Asia => "Asia",
+            Region::NAmerica => "NAmerica",
+            Region::SAmerica => "SAmerica",
+            Region::Oceania => "Oceania",
+        }
+    }
+
+    fn from_api(name: &str) -> Option<Region> {
+        Self::ALL.into_iter().find(|r| r.as_api() == name)
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "lowercase")]
 #[ts(export)]
@@ -486,10 +511,9 @@ impl Settings {
         if let Some(region) = patch.rank_region {
             next.rank_region = match region.as_str() {
                 "" => None,
-                _ => Some(
-                    serde_json::from_value(serde_json::Value::String(region.clone()))
-                        .map_err(|_| format!("unknown region: {region}"))?,
-                ),
+                name => {
+                    Some(Region::from_api(name).ok_or_else(|| format!("unknown region: {name}"))?)
+                }
             };
         }
         if let Some(account) = patch.rank_account {

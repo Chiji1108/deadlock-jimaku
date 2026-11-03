@@ -2,7 +2,7 @@
 
 use std::collections::BTreeMap;
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use anyhow::Context;
 use bytes::Bytes;
@@ -20,6 +20,10 @@ const SUBRANK_POINTS: u32 = 1000;
 const TIER_POINTS: u32 = SUBRANK_POINTS * 7;
 /// 最上位。上のティアがないのでゲージを出さず、リーダーボードの順位を出す
 const ETERNUS: u32 = 11;
+/// リーダーボードを取りに行く間隔（Valve の更新は 1 時間ごと）
+const LEADERBOARD_INTERVAL: Duration = Duration::from_secs(15 * 60);
+/// これより古い順位は出さない（取れない状態が続いたら、ポイントに戻す）
+const LEADERBOARD_MAX_AGE: Duration = Duration::from_secs(2 * 60 * 60);
 
 #[derive(Deserialize)]
 struct PlayerRank {
@@ -65,6 +69,9 @@ async fn run(store: Arc<Store>, account_id: u32) {
     let region = store.settings().rank_region;
     let mut tiers = Tiers::default();
     let mut last: Option<RankState> = None;
+    // 最後に取れた順位と取った時刻、最後に取りに行った時刻
+    let mut placement: Option<(Option<u32>, Instant)> = None;
+    let mut checked: Option<Instant> = None;
     // アイコンを持っているバッジ。取れなかったら次の回に取り直す
     let mut image_badge: Option<u32> = None;
     loop {
@@ -82,16 +89,18 @@ async fn run(store: Arc<Store>, account_id: u32) {
                 }
                 let mut state = state(&player, &tiers, image_badge == Some(player.badge));
                 if let (ETERNUS, Some(region)) = (player.rank, region) {
-                    match leaderboard_rank(region, account_id).await {
-                        Ok(rank) => {
-                            state.leaderboard = rank.map(|rank| LeaderboardRank { region, rank })
-                        }
-                        // 取れなければ前の順位のまま（次の回に取り直す）
-                        Err(e) => {
-                            tracing::warn!("leaderboard: {e:#}");
-                            state.leaderboard = last.as_ref().and_then(|l| l.leaderboard.clone());
+                    if checked.is_none_or(|t| t.elapsed() >= LEADERBOARD_INTERVAL) {
+                        checked = Some(Instant::now());
+                        match leaderboard_rank(region, account_id).await {
+                            Ok(rank) => placement = Some((rank, Instant::now())),
+                            // 取れなければ前の順位のまま（古くなったら出さない）
+                            Err(e) => tracing::warn!("leaderboard: {e:#}"),
                         }
                     }
+                    state.leaderboard = placement
+                        .filter(|(_, at)| at.elapsed() < LEADERBOARD_MAX_AGE)
+                        .and_then(|(rank, _)| rank)
+                        .map(|rank| LeaderboardRank { region, rank });
                 }
                 if last.as_ref() != Some(&state) {
                     tracing::info!("rank {} ({:?} points)", state.badge, state.points);
@@ -137,12 +146,8 @@ struct LeaderboardEntry {
 
 /// その地域のリーダーボードでの順位。載っていなければ None（Valve の更新は 1 時間ごと）
 async fn leaderboard_rank(region: Region, account_id: u32) -> anyhow::Result<Option<u32>> {
-    let region = serde_json::to_value(region)?;
     let board: Leaderboard = crate::http()
-        .get(format!(
-            "{API}/leaderboard/{}",
-            region.as_str().unwrap_or_default()
-        ))
+        .get(format!("{API}/leaderboard/{}", region.as_api()))
         .send()
         .await?
         .error_for_status()?
@@ -151,13 +156,12 @@ async fn leaderboard_rank(region: Region, account_id: u32) -> anyhow::Result<Opt
     Ok(find_rank(&board.entries, account_id))
 }
 
-/// 自分のアカウントだけが候補のものを先に探す（同じ名前の別人と取り違えにくい）
+/// 自分のアカウントだけが候補の行の順位。候補が何人もいる行は、同じ名前の別人かもしれないので使わない
+/// （そのときは順位ではなくポイントを出す）
 fn find_rank(entries: &[LeaderboardEntry], account_id: u32) -> Option<u32> {
-    let mine = |e: &&LeaderboardEntry| e.possible_account_ids.contains(&account_id);
     entries
         .iter()
-        .filter(mine)
-        .min_by_key(|e| e.possible_account_ids.len())
+        .find(|e| e.possible_account_ids == [account_id])
         .map(|e| e.rank)
 }
 
@@ -317,7 +321,8 @@ mod tests {
         };
         let entries = [entry(5, &[1, 2, 3]), entry(9, &[2]), entry(12, &[4])];
         assert_eq!(find_rank(&entries, 2), Some(9));
-        assert_eq!(find_rank(&entries, 1), Some(5));
+        // 候補が何人もいる行だけなら、別人かもしれないので順位を出さない
+        assert_eq!(find_rank(&entries, 1), None);
         assert_eq!(find_rank(&entries, 7), None);
     }
 

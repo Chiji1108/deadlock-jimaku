@@ -7,6 +7,7 @@
   import * as ToggleGroup from "$lib/components/ui/toggle-group";
   import type { RankContent } from "../../generated/RankContent";
   import type { Region } from "../../generated/Region";
+  import { REGIONS } from "../../lib/regions";
   import CopyUrl from "../parts/CopyUrl.svelte";
   import OverlayPreview from "../parts/OverlayPreview.svelte";
   import { overlayUrl, panel } from "../panel.svelte";
@@ -19,13 +20,7 @@
     { value: "name", label: "アイコンと名前" },
     { value: "icon", label: "アイコンだけ" },
   ];
-  const REGIONS: { value: Region; label: string }[] = [
-    { value: "Asia", label: "アジア" },
-    { value: "Europe", label: "ヨーロッパ" },
-    { value: "NAmerica", label: "北米" },
-    { value: "SAmerica", label: "南米" },
-    { value: "Oceania", label: "オセアニア" },
-  ];
+  const regions = Object.entries(REGIONS) as [Region, { ja: string }][];
   const NO_REGION = "";
 
   const s = $derived(panel.settings!);
@@ -109,18 +104,19 @@
           onValueChange={(v) => panel.update({ rankRegion: v })}
         >
           <Select.Trigger class="w-full">
-            {REGIONS.find((r) => r.value === s.rankRegion)?.label ?? "出さない"}
+            {s.rankRegion ? REGIONS[s.rankRegion].ja : "出さない"}
           </Select.Trigger>
           <Select.Content>
             <Select.Item value={NO_REGION}>出さない</Select.Item>
-            {#each REGIONS as r (r.value)}
-              <Select.Item value={r.value}>{r.label}のリーダーボード</Select.Item>
+            {#each regions as [value, name] (value)}
+              <Select.Item {value}>{name.ja}のリーダーボード</Select.Item>
             {/each}
           </Select.Content>
         </Select.Root>
         <Field.Description>
           エターナスのときだけ、ポイントの代わりにリーダーボードの順位（例: アジア
-          123位）を出します。更新は 1 時間ごとで、載っていなければポイントを出します
+          123位）を出します。更新は 1
+          時間ごとです。載っていないときや、同じ名前のプレイヤーがいて見分けられないときはポイントを出します
         </Field.Description>
       </Field.Field>
 

@@ -5,7 +5,7 @@
   import type { LeaderboardRank } from "../../generated/LeaderboardRank";
   import type { RankContent } from "../../generated/RankContent";
   import type { RankState } from "../../generated/RankState";
-  import type { Region } from "../../generated/Region";
+  import { REGIONS } from "../../lib/regions";
   import { connect } from "../../lib/ws";
 
   let rank = $state<RankState | undefined>();
@@ -23,22 +23,17 @@
     }),
   );
 
-  const REGIONS: Record<Region, { ja: string; en: string }> = {
-    Europe: { ja: "ヨーロッパ", en: "Europe" },
-    Asia: { ja: "アジア", en: "Asia" },
-    NAmerica: { ja: "北米", en: "N. America" },
-    SAmerica: { ja: "南米", en: "S. America" },
-    Oceania: { ja: "オセアニア", en: "Oceania" },
-  };
-  /** リーダーボードの順位（日本語は「アジア 12位」、ほかは「#12 Asia」） */
+  /** リーダーボードの順位。ランク名と同じ言語にそろえる（日本語は「アジア 12位」、ほかは「#12 Asia」） */
   const placement = (l: LeaderboardRank) =>
-    lang === "ja"
+    shown === "ja"
       ? `${REGIONS[l.region].ja} ${number(l.rank)}位`
       : `#${number(l.rank)} ${REGIONS[l.region].en}`;
 
+  /** ランク名を出す言語（選んだ言語の名前がなければ英語） */
+  const shown = $derived(rank?.names[lang] ? lang : "en");
   const label = $derived.by(() => {
     if (!rank) return "";
-    const name = rank.names[lang] ?? rank.names.en;
+    const name = rank.names[shown];
     // 未ランクはサブランクを出さない。名前がまだ取れていなければ数字だけにしない
     return [name, name && rank.subrank > 0 ? String(rank.subrank) : undefined]
       .filter(Boolean)
@@ -55,7 +50,7 @@
       {#if rank.image}<img class="badge" src={rank.image} alt="" />{/if}
       <!-- 1 行目: ランク名、2 行目: 太いゲージ（ポイントは中に重ねる）。出すものは操作パネルで選ぶ -->
       {#if content !== "icon"}<div class="text">
-          {#if label}<p class="name" {lang}>{label}</p>{/if}
+          {#if label}<p class="name" lang={shown}>{label}</p>{/if}
           {#if content !== "full"}
             <!-- 名前だけ -->
           {:else if rank.leaderboard}
