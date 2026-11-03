@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use tokio::task::JoinHandle;
 
-use crate::settings::{Models, Segmentation, Settings};
+use crate::settings::{Models, Region, Segmentation, Settings};
 use crate::store::Store;
 use crate::types::LangCode;
 use crate::{assets, audio, rank, secrets, subtitles};
@@ -58,6 +58,7 @@ struct RankInput {
     account: Option<u32>,
     languages: Vec<LangCode>,
     poll_seconds: u64,
+    region: Option<Region>,
 }
 
 #[derive(PartialEq)]
@@ -111,6 +112,7 @@ pub async fn run(store: Arc<Store>, options: Options) {
             account: settings.rank_account,
             languages,
             poll_seconds: settings.rank_poll_seconds,
+            region: settings.rank_region,
         };
         rank_slot
             .update(rank_input, || {

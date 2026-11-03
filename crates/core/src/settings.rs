@@ -36,6 +36,13 @@ pub struct Settings {
     /// ランク名の言語。None なら話す言語
     #[ts(optional)]
     pub rank_language: Option<LangCode>,
+    /// ランクのオーバーレイに出すもの
+    pub rank_content: RankContent,
+    /// サブランクの書き方
+    pub rank_numerals: Numerals,
+    /// エターナスの順位を調べるリーダーボードの地域。None なら調べない
+    #[ts(optional)]
+    pub rank_region: Option<Region>,
     // 以下の詳細項目は操作パネルで変えない（`ADVANCED`）
     pub models: Models,
     /// リアルタイムの音声認識の遅れ（`minimal` / `low` / `medium` / `high` / `xhigh`。
@@ -260,6 +267,66 @@ impl SubtitleDisplay {
     }
 }
 
+/// ランクのオーバーレイに出すもの
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "lowercase")]
+#[ts(export)]
+pub enum RankContent {
+    /// アイコン・名前・ポイント（ゲージ）
+    Full,
+    /// アイコンと名前
+    Name,
+    /// アイコンだけ
+    Icon,
+}
+
+/// サブランクの書き方
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "lowercase")]
+#[ts(export)]
+pub enum Numerals {
+    /// I〜VI（ゲームと同じ）
+    Roman,
+    /// 1〜6
+    Arabic,
+}
+
+/// deadlock-api のリーダーボードの地域（値は API のパスのまま）
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub enum Region {
+    Europe,
+    Asia,
+    NAmerica,
+    SAmerica,
+    Oceania,
+}
+
+impl Region {
+    const ALL: [Region; 5] = [
+        Region::Europe,
+        Region::Asia,
+        Region::NAmerica,
+        Region::SAmerica,
+        Region::Oceania,
+    ];
+
+    /// API のパス（`/v1/leaderboard/{region}`）と設定での名前
+    pub fn as_api(self) -> &'static str {
+        match self {
+            Region::Europe => "Europe",
+            Region::Asia => "Asia",
+            Region::NAmerica => "NAmerica",
+            Region::SAmerica => "SAmerica",
+            Region::Oceania => "Oceania",
+        }
+    }
+
+    fn from_api(name: &str) -> Option<Region> {
+        Self::ALL.into_iter().find(|r| r.as_api() == name)
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "lowercase")]
 #[ts(export)]
@@ -300,6 +367,9 @@ impl Default for Settings {
             subtitle_display: SubtitleDisplay::default(),
             item_cards: ItemCards::default(),
             rank_language: None,
+            rank_content: RankContent::Full,
+            rank_numerals: Numerals::Roman,
+            rank_region: None,
             models: Models::default(),
             realtime_delay: "low".into(),
             segmentation: Segmentation::default(),
@@ -449,6 +519,20 @@ impl Settings {
                 _ => Some(code),
             };
         }
+        if let Some(content) = patch.rank_content {
+            next.rank_content = content;
+        }
+        if let Some(numerals) = patch.rank_numerals {
+            next.rank_numerals = numerals;
+        }
+        if let Some(region) = patch.rank_region {
+            next.rank_region = match region.as_str() {
+                "" => None,
+                name => {
+                    Some(Region::from_api(name).ok_or_else(|| format!("unknown region: {name}"))?)
+                }
+            };
+        }
         if let Some(account) = patch.rank_account {
             next.rank_account = match account.trim() {
                 "" => None,
@@ -489,6 +573,13 @@ pub struct SettingsPatch {
     /// 空文字列なら話す言語
     #[ts(optional)]
     pub rank_language: Option<LangCode>,
+    #[ts(optional)]
+    pub rank_content: Option<RankContent>,
+    #[ts(optional)]
+    pub rank_numerals: Option<Numerals>,
+    /// 地域（`Region`）。空文字列なら順位を調べない
+    #[ts(optional)]
+    pub rank_region: Option<String>,
 }
 
 /// ファイルがなければ既定値。壊れていたら脇に退けて既定値から始める。
@@ -787,6 +878,34 @@ mod tests {
         assert_eq!(
             (s.item_cards.hold_seconds, s.item_language().as_str()),
             (12.0, "ja")
+        );
+    }
+
+    #[test]
+    fn rank_patch_sets_content_and_region() {
+        let s = Settings::default();
+        let next = s
+            .apply(SettingsPatch {
+                rank_content: Some(RankContent::Icon),
+                rank_region: Some("Asia".into()),
+                ..Default::default()
+            })
+            .unwrap();
+        assert_eq!(next.rank_content, RankContent::Icon);
+        assert_eq!(next.rank_region, Some(Region::Asia));
+        let off = next
+            .apply(SettingsPatch {
+                rank_region: Some(String::new()),
+                ..Default::default()
+            })
+            .unwrap();
+        assert_eq!(off.rank_region, None);
+        assert!(
+            s.apply(SettingsPatch {
+                rank_region: Some("Mars".into()),
+                ..Default::default()
+            })
+            .is_err()
         );
     }
 
