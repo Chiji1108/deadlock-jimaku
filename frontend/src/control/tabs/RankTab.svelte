@@ -9,7 +9,7 @@
   import type { RankContent } from "../../generated/RankContent";
   import type { Region } from "../../generated/Region";
   import { REGIONS } from "../../lib/regions";
-  import CopyUrl from "../parts/CopyUrl.svelte";
+  import AddToObs from "../parts/AddToObs.svelte";
   import OverlayPreview from "../parts/OverlayPreview.svelte";
   import { RANK_SIZE } from "../../lib/overlay-size";
   import { overlayUrl, panel } from "../panel.svelte";
@@ -162,12 +162,14 @@
     <Card.Header>
       <Card.Title>OBS に追加する</Card.Title>
       <Card.Description>
-        ソースの「＋」→「ブラウザ」で、この URL を貼り付けてください（幅 {RANK_SIZE[0]}・高さ
-        {RANK_SIZE[1]}）。大きさを変えるときは、ソースを引き伸ばさずにプロパティの幅と高さを同じ割合で変えてください。中身がくっきりしたまま大きくなります
+        下のボタンを OBS
+        のプレビューかソースの一覧にドラッグすると、大きさを合わせたブラウザソースができます（OBS
+        を管理者として起動していると使えません）。うまくいかないときは、URL
+        をコピーしてソースの「＋」→「ブラウザ」に貼り付け、幅 {RANK_SIZE[0]}・高さ {RANK_SIZE[1]} にしてください。大きさを変えるときは、ソースを引き伸ばさずにプロパティの幅と高さを同じ割合で変えてください。中身がくっきりしたまま大きくなります
       </Card.Description>
     </Card.Header>
     <Card.Content>
-      <CopyUrl url={overlayUrl("rank")} />
+      <AddToObs url={overlayUrl("rank")} name="ランク" size={RANK_SIZE} />
     </Card.Content>
   </Card.Root>
 </div>
