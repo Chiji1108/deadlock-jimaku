@@ -4,5 +4,16 @@
   "name": "dedoro-jimaku-api",
   "main": "src/index.ts",
   "compatibility_date": "2026-10-01",
-  "routes": [{ "pattern": "api.jimaku.deadlock.jp", "custom_domain": true }]
+  "routes": [{ "pattern": "api.jimaku.deadlock.jp", "custom_domain": true }],
+  // おすそ分け（キー・コード・使われた額）。表は migrations/。
+  // database_id は `wrangler d1 create dedoro-jimaku` で作ったもの（手元のテストと開発では使わない）
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "dedoro-jimaku",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ]
+  // SHARE_KEY（キーを暗号化する鍵）は `wrangler secret put SHARE_KEY` で入れる
 }
