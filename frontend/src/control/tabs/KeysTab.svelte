@@ -10,21 +10,15 @@
 
   const providers: { provider: Provider; name: string; use: string; url: string }[] = [
     {
-      provider: "mistral",
-      name: "Mistral",
-      use: "文字起こしに使います（必須）",
-      url: "https://console.mistral.ai/api-keys",
-    },
-    {
       provider: "openai",
       name: "OpenAI",
-      use: "翻訳と、漢字の名前の読みに使います",
+      use: "文字起こし・翻訳・漢字の名前の読みに使います（必須）",
       url: "https://platform.openai.com/api-keys",
     },
   ];
   const sourceLabel: Record<KeySource, string> = { keyring: "保存済み", env: "環境変数" };
 
-  let inputs = $state<Record<Provider, string>>({ mistral: "", openai: "" });
+  let inputs = $state<Record<Provider, string>>({ openai: "" });
 
   async function save(provider: Provider, key: string) {
     // 失敗したら貼り直さずにやり直せるよう、入力は残す

@@ -67,9 +67,8 @@ struct SubtitlesInput {
     mic_language: LangCode,
     translate_to: Vec<LangCode>,
     models: Models,
-    delay_ms: u32,
+    realtime_delay: String,
     segmentation: Segmentation,
-    mistral: Option<String>,
     openai: Option<String>,
 }
 
@@ -136,15 +135,14 @@ pub async fn run(store: Arc<Store>, options: Options) {
             mic_language: settings.mic_language.clone(),
             translate_to: settings.translate_to.clone(),
             models: settings.models.clone(),
-            delay_ms: settings.target_streaming_delay_ms,
+            realtime_delay: settings.realtime_delay.clone(),
             segmentation: settings.segmentation.clone(),
-            mistral: keys.mistral.clone(),
             openai: keys.openai.clone(),
         };
         subtitles_slot
             .update(input, || {
                 store.discard_unsettled();
-                start_subtitles(&store, source, keys.mistral, keys.openai)
+                start_subtitles(&store, source, keys.openai)
             })
             .await;
 
@@ -157,15 +155,14 @@ pub async fn run(store: Arc<Store>, options: Options) {
 fn start_subtitles(
     store: &Arc<Store>,
     source: Option<Source>,
-    mistral: Option<String>,
     openai: Option<String>,
 ) -> Option<JoinHandle<()>> {
     let Some(source) = source else {
         store.set_transcription_error(None);
         return None;
     };
-    let Some(api_key) = mistral else {
-        store.set_transcription_error(Some("Mistral の API キーが設定されていません".into()));
+    let Some(api_key) = openai else {
+        store.set_transcription_error(Some("OpenAI の API キーが設定されていません".into()));
         return None;
     };
     store.set_transcription_error(None);
@@ -180,7 +177,7 @@ fn start_subtitles(
     let store = store.clone();
     Some(tokio::spawn(async move {
         // 止まったら理由を出す（開始・停止を押し直すと始め直す）
-        let error = match subtitles::run(store.clone(), input, api_key, openai).await {
+        let error = match subtitles::run(store.clone(), input, api_key).await {
             Ok(()) => ended.map(String::from),
             Err(e) => Some(format!("{e:#}")),
         };

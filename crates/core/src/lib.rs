@@ -32,7 +32,7 @@ pub fn default_data_dir() -> PathBuf {
         .join(IDENTIFIER)
 }
 
-/// 外部 API（Mistral・OpenAI・deadlock-api）に使う HTTP クライアント。接続と TLS を使い回す。
+/// 外部 API（OpenAI・deadlock-api）に使う HTTP クライアント。接続と TLS を使い回す。
 /// 応答が返らないまま固まらないよう、既定のタイムアウトを付ける（長くかかるものはリクエストごとに上書きする）
 pub fn http() -> &'static reqwest::Client {
     static CLIENT: OnceLock<reqwest::Client> = OnceLock::new();

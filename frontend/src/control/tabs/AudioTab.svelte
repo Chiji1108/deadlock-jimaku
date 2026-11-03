@@ -131,11 +131,6 @@
             </ToggleGroup.Item>
           {/each}
         </ToggleGroup.Root>
-        {#if s.translateTo.length > 0 && !panel.view?.keys.openai}
-          <Field.Description class="text-amber-500">
-            翻訳するには「API キー」で OpenAI のキーを設定してください
-          </Field.Description>
-        {/if}
       </Field.Field>
     </Card.Content>
   </Card.Root>

@@ -1,5 +1,5 @@
 //! API キー。OS の資格情報ストア（Windows の資格情報マネージャー、macOS のキーチェーン）に保存する。
-//! 開発中は環境変数（`MISTRAL_API_KEY` / `OPENAI_API_KEY`）が優先する。
+//! 開発中は環境変数（`OPENAI_API_KEY`）が優先する。
 //!
 //! キーそのものは画面に返さない（どこから読んだかだけを返す）。呼び出しは同期処理なので、
 //! 非同期の文脈からは `spawn_blocking` で呼ぶ。
@@ -13,9 +13,7 @@ use crate::IDENTIFIER;
 #[serde(rename_all = "lowercase")]
 #[ts(export)]
 pub enum Provider {
-    /// 文字起こし
-    Mistral,
-    /// 翻訳と辞書の漢字名の読み
+    /// 文字起こし・翻訳・辞書の漢字名の読み
     #[serde(rename = "openai")]
     OpenAi,
 }
@@ -23,14 +21,12 @@ pub enum Provider {
 impl Provider {
     fn env(self) -> &'static str {
         match self {
-            Self::Mistral => "MISTRAL_API_KEY",
             Self::OpenAi => "OPENAI_API_KEY",
         }
     }
 
     fn account(self) -> &'static str {
         match self {
-            Self::Mistral => "mistral",
             Self::OpenAi => "openai",
         }
     }
@@ -49,14 +45,11 @@ pub enum KeySource {
 #[ts(export)]
 pub struct KeyStatus {
     #[ts(optional)]
-    pub mistral: Option<KeySource>,
-    #[ts(optional)]
     pub openai: Option<KeySource>,
 }
 
 #[derive(Clone, Debug, Default)]
 pub struct Keys {
-    pub mistral: Option<String>,
     pub openai: Option<String>,
 }
 
@@ -77,14 +70,12 @@ fn get(provider: Provider) -> Option<(String, KeySource)> {
 
 pub fn load() -> Keys {
     Keys {
-        mistral: get(Provider::Mistral).map(|(k, _)| k),
         openai: get(Provider::OpenAi).map(|(k, _)| k),
     }
 }
 
 pub fn status() -> KeyStatus {
     KeyStatus {
-        mistral: get(Provider::Mistral).map(|(_, s)| s),
         openai: get(Provider::OpenAi).map(|(_, s)| s),
     }
 }

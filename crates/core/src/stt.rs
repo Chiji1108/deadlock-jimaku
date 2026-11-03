@@ -1,4 +1,9 @@
-//! Mistral Voxtral の Realtime（WebSocket）とバッチ文字起こし（DESIGN.md 3 章）。
+//! OpenAI の音声認識（DESIGN.md 3 章）。リアルタイム（GPT-Live-Transcribe）とバッチ（GPT-Transcribe）。
+//!
+//! リアルタイムはサーバー側で発話を区切らない。こちらの VAD で発話を閉じたら commit し、
+//! そこまでの音声が 1 つの item になる。delta には最初から item の ID が付いて届く。
+
+use std::collections::VecDeque;
 
 use anyhow::{Context, bail};
 use base64::Engine;
@@ -7,29 +12,60 @@ use serde_json::{Value, json};
 use tokio::sync::mpsc;
 use tokio_tungstenite::tungstenite::{Message, client::IntoClientRequest, http::HeaderValue};
 
-use crate::audio::{SAMPLE_RATE, to_i16};
+use crate::audio::{Resampler, SAMPLE_RATE, to_i16};
 
-const REALTIME_URL: &str = "wss://api.mistral.ai/v1/audio/transcriptions/realtime";
-const BATCH_URL: &str = "https://api.mistral.ai/v1/audio/transcriptions";
-/// input_audio.append 1 回で送る長さ（100ms）
-const APPEND_SAMPLES: usize = SAMPLE_RATE as usize / 10;
+const REALTIME_URL: &str = "wss://api.openai.com/v1/realtime?intent=transcription";
+const BATCH_URL: &str = "https://api.openai.com/v1/audio/transcriptions";
+/// リアルタイムの `audio/pcm` は 24kHz
+const REALTIME_RATE: u32 = 24_000;
+/// input_audio_buffer.append 1 回で送る長さ（100ms）
+const APPEND_SAMPLES: usize = REALTIME_RATE as usize / 10;
+/// これより短い音声は commit できない（空の発話になる）
+const MIN_COMMIT_SAMPLES: usize = REALTIME_RATE as usize / 10;
+
+/// リアルタイムとバッチで共通の手がかり
+pub struct Hints {
+    /// 話す言語（ISO 639-1）
+    pub language: String,
+    /// 録音の説明
+    pub prompt: String,
+    /// 出てきそうな用語（DESIGN.md 8.4）
+    pub keywords: Vec<String>,
+}
 
 pub struct RealtimeConfig {
     pub api_key: String,
     pub model: String,
-    pub language: String,
-    pub context_bias: Vec<String>,
-    pub target_streaming_delay_ms: u32,
+    /// `minimal` / `low` / `medium` / `high` / `xhigh`（低いほど早く、高いほど正確）
+    pub delay: String,
 }
 
-/// 1 セッション分。音声を送り、届いた delta を流す。音声が尽きたら Ok、切れたら Err で返る。
-/// 設定は最初の音声より前に 1 回しか送れないので、張り直すときはこの関数を呼び直す。
+/// リアルタイムに送るもの。同じチャンネルで送り、音声と commit の順番を保つ
+pub enum Input {
+    Audio(Vec<f32>),
+    /// ここまでの音声を 1 つの発話にする
+    Commit,
+}
+
+pub enum Event {
+    Delta {
+        item: String,
+        text: String,
+    },
+    /// commit した順に 1 つずつ届く。音声が短すぎて commit しなかったものは None
+    Committed(Option<String>),
+    /// 接続が切れて張り直した。前のセッションの item や commit の確認はもう届かない
+    Reconnected,
+}
+
+/// 1 セッション分。入力が尽きたら、commit の確認を待って Ok、切れたら Err で返る
 pub async fn realtime(
     cfg: &RealtimeConfig,
-    audio: &mut mpsc::Receiver<Vec<f32>>,
-    deltas: &mpsc::Sender<String>,
+    hints: &Hints,
+    input: &mut mpsc::UnboundedReceiver<Input>,
+    events: &mpsc::Sender<Event>,
 ) -> anyhow::Result<()> {
-    let mut request = format!("{REALTIME_URL}?model={}", cfg.model).into_client_request()?;
+    let mut request = REALTIME_URL.into_client_request()?;
     request.headers_mut().insert(
         "Authorization",
         HeaderValue::from_str(&format!("Bearer {}", cfg.api_key))?,
@@ -43,36 +79,67 @@ pub async fn realtime(
     let update = json!({
         "type": "session.update",
         "session": {
-            "audio_format": { "encoding": "pcm_s16le", "sample_rate": SAMPLE_RATE },
-            "target_streaming_delay_ms": cfg.target_streaming_delay_ms,
-            "language": cfg.language,
-            "context_bias": cfg.context_bias,
+            "type": "transcription",
+            "audio": { "input": {
+                "format": { "type": "audio/pcm", "rate": REALTIME_RATE },
+                "transcription": {
+                    "model": cfg.model,
+                    "languages": [hints.language],
+                    "prompt": hints.prompt,
+                    "keywords": hints.keywords,
+                    "delay": cfg.delay,
+                },
+                "turn_detection": null,
+            }},
         }
     });
     sink.send(Message::text(update.to_string())).await?;
     expect_event(&mut stream, "session.updated").await?;
     tracing::info!("realtime session started");
 
+    let mut resampler = Resampler::new(SAMPLE_RATE, REALTIME_RATE)?;
     let mut pcm: Vec<u8> = Vec::with_capacity(APPEND_SAMPLES * 2);
-    let mut audio_done = false;
+    // 前の commit から送った音声の長さ
+    let mut buffered = 0;
+    // commit したもの（true）と、短すぎて commit しなかったもの（false）を順に並べる。
+    // 確認は commit した順に届くので、commit しなかったものはその順番で None にする
+    let mut commits: VecDeque<bool> = VecDeque::new();
+    let mut input_done = false;
     loop {
+        if input_done && commits.is_empty() {
+            return Ok(());
+        }
         tokio::select! {
-            chunk = audio.recv(), if !audio_done => match chunk {
-                Some(chunk) => {
-                    pcm.extend(chunk.iter().flat_map(|s| to_i16(*s).to_le_bytes()));
-                    if pcm.len() >= APPEND_SAMPLES * 2 {
-                        sink.send(append(&mut pcm)).await?;
+            next = input.recv(), if !input_done => {
+                let commit = match next {
+                    Some(Input::Audio(chunk)) => {
+                        let samples = resampler.process(&chunk);
+                        buffered += samples.len();
+                        pcm.extend(samples.iter().flat_map(|s| to_i16(*s).to_le_bytes()));
+                        if pcm.len() >= APPEND_SAMPLES * 2 {
+                            sink.send(append(&mut pcm)).await?;
+                        }
+                        false
                     }
-                }
-                None => {
-                    audio_done = true;
-                    // 100ms に満たない残りも送ってから終える
+                    Some(Input::Commit) => true,
+                    None => {
+                        input_done = true;
+                        buffered >= MIN_COMMIT_SAMPLES
+                    }
+                };
+                if commit {
                     if !pcm.is_empty() {
                         sink.send(append(&mut pcm)).await?;
                     }
-                    sink.send(Message::text(json!({ "type": "input_audio.end" }).to_string())).await?;
+                    let sent = buffered >= MIN_COMMIT_SAMPLES;
+                    if sent {
+                        sink.send(Message::text(json!({ "type": "input_audio_buffer.commit" }).to_string())).await?;
+                    }
+                    buffered = 0;
+                    commits.push_back(sent);
+                    flush_skipped(&mut commits, events).await;
                 }
-            },
+            }
             msg = stream.next() => {
                 let event = match msg {
                     Some(Ok(Message::Text(text))) => serde_json::from_str::<Value>(&text)?,
@@ -81,14 +148,20 @@ pub async fn realtime(
                     Some(Err(e)) => return Err(e.into()),
                     None => bail!("realtime stream ended"),
                 };
+                let item = event["item_id"].as_str().map(str::to_owned);
                 match event["type"].as_str() {
-                    Some("transcription.text.delta") => {
-                        if let Some(text) = event["text"].as_str() {
-                            let _ = deltas.send(text.to_owned()).await;
+                    Some("conversation.item.input_audio_transcription.delta") => {
+                        if let (Some(item), Some(text)) = (item, event["delta"].as_str()) {
+                            let _ = events.send(Event::Delta { item, text: text.to_owned() }).await;
                         }
                     }
-                    Some("transcription.done") => return Ok(()),
-                    Some("error") => bail!("realtime error: {}", event["error"]),
+                    Some("input_audio_buffer.committed") => {
+                        commits.pop_front();
+                        let _ = events.send(Event::Committed(item)).await;
+                        flush_skipped(&mut commits, events).await;
+                    }
+                    // 1 つの要求の失敗（短すぎる commit など）ではセッションは続く
+                    Some("error") => tracing::warn!("realtime error: {}", event["error"]),
                     _ => {}
                 }
             }
@@ -96,11 +169,19 @@ pub async fn realtime(
     }
 }
 
-/// 溜めた PCM を input_audio.append にして空にする
+/// 先頭に並んだ「commit しなかったもの」を None として知らせる
+async fn flush_skipped(commits: &mut VecDeque<bool>, events: &mpsc::Sender<Event>) {
+    while commits.front() == Some(&false) {
+        commits.pop_front();
+        let _ = events.send(Event::Committed(None)).await;
+    }
+}
+
+/// 溜めた PCM を input_audio_buffer.append にして空にする
 fn append(pcm: &mut Vec<u8>) -> Message {
     let audio = base64::engine::general_purpose::STANDARD.encode(&*pcm);
     pcm.clear();
-    Message::text(json!({ "type": "input_audio.append", "audio": audio }).to_string())
+    Message::text(json!({ "type": "input_audio_buffer.append", "audio": audio }).to_string())
 }
 
 async fn expect_event<S>(stream: &mut S, expected: &str) -> anyhow::Result<()>
@@ -122,8 +203,7 @@ where
 pub struct BatchRequest<'a> {
     pub api_key: &'a str,
     pub model: &'a str,
-    pub language: &'a str,
-    pub context_bias: &'a [String],
+    pub hints: &'a Hints,
     pub wav: Vec<u8>,
 }
 
@@ -134,10 +214,11 @@ pub async fn transcribe(http: &reqwest::Client, req: BatchRequest<'_>) -> anyhow
         .mime_str("audio/wav")?;
     let mut form = reqwest::multipart::Form::new()
         .text("model", req.model.to_owned())
-        .text("language", req.language.to_owned())
+        .text("prompt", req.hints.prompt.clone())
+        .text("languages[]", req.hints.language.clone())
         .part("file", file);
-    for term in req.context_bias {
-        form = form.text("context_bias", term.clone());
+    for keyword in &req.hints.keywords {
+        form = form.text("keywords[]", keyword.clone());
     }
     let res = http
         .post(BATCH_URL)
@@ -147,7 +228,7 @@ pub async fn transcribe(http: &reqwest::Client, req: BatchRequest<'_>) -> anyhow
         .await?;
     let status = res.status();
     if !status.is_success() {
-        // 400 の理由（context_bias が長すぎる、など）は本文にしか書かれていない
+        // 400 の理由は本文にしか書かれていない
         bail!("{status}: {}", res.text().await.unwrap_or_default());
     }
     let res: Value = res.json().await?;

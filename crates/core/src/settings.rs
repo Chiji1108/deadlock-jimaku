@@ -38,8 +38,9 @@ pub struct Settings {
     pub rank_language: Option<LangCode>,
     // 以下の詳細項目は操作パネルで変えない（`ADVANCED`）
     pub models: Models,
-    /// Realtime の streaming delay（80〜1200、または 2400）
-    pub target_streaming_delay_ms: u32,
+    /// リアルタイムの音声認識の遅れ（`minimal` / `low` / `medium` / `high` / `xhigh`。
+    /// 低いほど早く字幕が出て、高いほど正確）
+    pub realtime_delay: String,
     pub segmentation: Segmentation,
     /// ランクを表示するアカウント（Steam の 32bit アカウント ID）。None ならランクを取りに行かない
     #[ts(optional)]
@@ -50,18 +51,15 @@ pub struct Settings {
 }
 
 /// 既定値から変えたときだけ保存する項目（保存してしまうと、アプリの既定値を直しても古い値が残る）
-const ADVANCED: [&str; 4] = [
-    "models",
-    "targetStreamingDelayMs",
-    "segmentation",
-    "rankPollSeconds",
-];
+const ADVANCED: [&str; 4] = ["models", "realtimeDelay", "segmentation", "rankPollSeconds"];
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
 #[serde(default, rename_all = "camelCase")]
 #[ts(export)]
 pub struct Models {
+    /// リアルタイムの音声認識（OpenAI）
     pub realtime: String,
+    /// 確定字幕の音声認識（OpenAI）
     pub batch: String,
     /// 翻訳（OpenAI）。質を優先して選んだ（DESIGN.md 9.3）
     pub translate: String,
@@ -303,7 +301,7 @@ impl Default for Settings {
             item_cards: ItemCards::default(),
             rank_language: None,
             models: Models::default(),
-            target_streaming_delay_ms: 480,
+            realtime_delay: "low".into(),
             segmentation: Segmentation::default(),
             rank_account: None,
             rank_poll_seconds: 180,
@@ -314,8 +312,8 @@ impl Default for Settings {
 impl Default for Models {
     fn default() -> Self {
         Self {
-            realtime: "voxtral-mini-transcribe-realtime-3".into(),
-            batch: "voxtral-small-transcribe-3".into(),
+            realtime: "gpt-live-transcribe".into(),
+            batch: "gpt-transcribe".into(),
             translate: "gpt-6.1-terra".into(),
             readings: "gpt-6.1-terra".into(),
             reasoning_effort: Some("none".into()),
