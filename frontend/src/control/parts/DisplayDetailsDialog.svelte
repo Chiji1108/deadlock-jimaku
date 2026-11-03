@@ -48,9 +48,8 @@
       key: "heroColor",
       label: "ヒーロー名の色",
       swatches: [
-        { hex: "#ffd34d", label: "黄" },
-        { hex: "#ff9f5c", label: "オレンジ" },
         { hex: "#ff7ab6", label: "ピンク" },
+        { hex: "#ffd34d", label: "黄" },
         { hex: "#b48cff", label: "紫" },
       ],
     },

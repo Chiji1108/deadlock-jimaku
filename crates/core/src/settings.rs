@@ -112,7 +112,7 @@ impl Default for SubtitleDisplay {
             font_size: 40,
             translation_font_size: 26,
             text_color: "#ffffff".into(),
-            hero_color: "#ffd34d".into(),
+            hero_color: "#ff7ab6".into(),
             ability_color: "#8fd8ff".into(),
             background: Background::Outline,
             max_lines: 3,

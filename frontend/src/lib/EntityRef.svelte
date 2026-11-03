@@ -42,13 +42,14 @@
   >{:else}<span class="entity">{label}</span>{/if}
 
 <style>
-  /* 種類ごとの色。アイテムはゲーム内と同じくスロット（武器 / バイタリティ / スピリット）で分ける */
+  /* 種類ごとの色。アイテムはゲーム内と同じくスロット（武器 / バイタリティ / スピリット）で分ける。
+     ヒーローは武器のオレンジと見分けやすいピンク */
   .entity {
-    color: var(--entity-color, #ffd34d);
+    color: var(--entity-color, #ff7ab6);
     white-space: nowrap;
   }
   .hero {
-    color: var(--hero-color, #ffd34d);
+    color: var(--hero-color, #ff7ab6);
   }
   .ability {
     color: var(--ability-color, #8fd8ff);
