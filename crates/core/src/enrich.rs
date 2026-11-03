@@ -471,7 +471,7 @@ impl Matcher {
     const MIN_CHARS: usize = 2;
 
     fn new(glossary: &Glossary, lang: &str) -> Self {
-        let key = |term: &str| -> Vec<char> { term.chars().map(lower).collect() };
+        let key = |term: &str| -> Vec<char> { fold(&term.chars().collect::<Vec<_>>()) };
         // 表記 → 参照。公式名が先に決まり、別名は公式名を上書きしない。
         // 複数のエンティティが同じ表記を持つときは、公式名なら先に見つけたもの、別名なら
         // どれとも決められないので使わない（None）
@@ -539,7 +539,7 @@ impl Matcher {
 
     fn split(&self, text: &str) -> Vec<Span> {
         let original: Vec<char> = text.chars().collect();
-        let chars: Vec<char> = original.iter().copied().map(lower).collect();
+        let chars = fold(&original);
         let mut spans = Vec::new();
         let mut buf = String::new();
         let mut i = 0;
@@ -579,7 +579,7 @@ impl Matcher {
         if !self.heroes.contains(reference) {
             return false;
         }
-        let chars: Vec<char> = text.chars().map(lower).collect();
+        let chars = fold(&text.chars().collect::<Vec<_>>());
         let joined_before = i
             .checked_sub(1)
             .is_some_and(|j| is_katakana(chars[j]) && is_katakana(term[0]));
@@ -651,6 +651,34 @@ impl Matcher {
 
 fn lower(c: char) -> char {
     c.to_lowercase().next().unwrap_or(c)
+}
+
+/// 照合のために、書き方の揺れを揃える（大文字小文字、カタカナの伸ばし方と書き分け）。
+/// 音声認識や別名の書き方が公式名と少し違っても同じ用語にする（ページ → ペイジ、リコシェット → リコチェット）。
+/// 文字数は変えない（元の文字列の同じ位置を切り出す）
+fn fold(chars: &[char]) -> Vec<char> {
+    chars
+        .iter()
+        .enumerate()
+        .map(|(i, &c)| {
+            let prev = i.checked_sub(1).map(|j| chars[j]);
+            let next = chars.get(i + 1).copied();
+            match c {
+                // エイ / エー、オウ / オー（ペイジ / ページ、ゴウスト / ゴースト）
+                'イ' if prev.is_some_and(|p| "エケセテネヘメレゲゼデベペェ".contains(p)) => {
+                    'ー'
+                }
+                'ウ' if prev.is_some_and(|p| "オコソトノホモヨロゴゾドボポォョ".contains(p)) => {
+                    'ー'
+                }
+                // シェ / チェ（リコシェ / リコチェット）
+                'シ' if next == Some('ェ') => 'チ',
+                'ヂ' => 'ジ',
+                'ヅ' => 'ズ',
+                _ => lower(c),
+            }
+        })
+        .collect()
 }
 
 fn is_katakana(c: char) -> bool {
@@ -1032,6 +1060,34 @@ mod tests {
         let t = e.translations(raw, &terms);
         assert_eq!(t.len(), 1);
         assert_eq!(t["en"], [ent("hero:13"), text(" wins")]);
+    }
+
+    #[test]
+    fn spelling_variants_match_the_same_term() {
+        let g: Glossary = serde_json::from_value(json!({
+            "clientVersion": 1, "languages": ["ja"],
+            "entities": {
+                "hero:67": { "kind": "hero", "className": "p", "names": { "ja": "ペイジ" }, "aliases": {} },
+                "item:1": { "kind": "item", "className": "r", "names": { "ja": "リコシェ" },
+                            "aliases": { "ja": ["リコチェット"] } },
+            }
+        }))
+        .unwrap();
+        let m = Matcher::new(&g, "ja");
+        // 音声認識が書くよく使う言葉の形でも、話した言葉はそのまま残す
+        assert_eq!(
+            m.split("ページ強い"),
+            [entity("hero:67", "ページ"), Span::Text("強い".into())]
+        );
+        assert_eq!(
+            m.split("リコシェット買った"),
+            [
+                entity("item:1", "リコシェット"),
+                Span::Text("買った".into())
+            ]
+        );
+        // 揃えても、カタカナの語の一部では一致させない
+        assert_eq!(m.split("ページング"), [Span::Text("ページング".into())]);
     }
 
     #[test]
