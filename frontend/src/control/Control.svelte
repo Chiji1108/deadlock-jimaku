@@ -39,7 +39,7 @@
   <header class="sticky top-0 z-10 border-b bg-background/80 backdrop-blur">
     <div class="mx-auto flex max-w-3xl items-center gap-4 px-4 py-3">
       <div class="flex min-w-0 flex-1 flex-col">
-        <h1 class="text-sm font-semibold">Deadlock Stream Overlays</h1>
+        <h1 class="text-sm font-semibold">デドロ字幕</h1>
         <p class="flex items-center gap-2 text-xs text-muted-foreground">
           <span class="size-2 shrink-0 rounded-full {status.dot}"></span>
           {panel.server === "open" ? status.label : "アプリに接続しています…"}

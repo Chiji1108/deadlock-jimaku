@@ -16,8 +16,8 @@ Deadlock の配信者向けの OBS オーバーレイ（非公式）。
 
 | OS | ファイル |
 |---|---|
-| Windows 10 / 11 | `..._x64-setup.exe` |
-| macOS 11 以降（Apple シリコン・Intel） | `..._universal.dmg` |
+| Windows 10 / 11 | `dedoro-jimaku_…_x64-setup.exe` |
+| macOS 11 以降（Apple シリコン・Intel） | `dedoro-jimaku_…_universal.dmg` |
 | Linux | `.AppImage`（どのディストリビューションでも）、`.deb`（Ubuntu など）、`.rpm`（Fedora など） |
 
 macOS 版は Apple の署名と公証を済ませています。Windows 版はまだコード署名をしていないので、初回は警告が出ます。
