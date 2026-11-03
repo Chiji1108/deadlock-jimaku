@@ -141,4 +141,5 @@ async def main() -> None:
         print(f"## {name}  CER {cer(ref, r['text']):.1%}  {extra}\n{r['text']}\n")
 
 
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())

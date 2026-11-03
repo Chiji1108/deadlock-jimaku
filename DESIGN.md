@@ -119,6 +119,17 @@ Deadlock 配信者向けの OBS オーバーレイツール。
 
 （文字誤り率）。速さはアプリで同じ録音を流して測った: 話し始めから最初の partial まで OpenAI 約 0.9〜1.1 秒 / Voxtral 約 1.6 秒、最後の partial から final まで OpenAI 約 1.2〜1.7 秒 / Voxtral 約 0.7〜1.0 秒。単価は約 2 倍だが、話していない間は送らなくなったので、1 時間あたりの費用はほぼ変わらない（3.3）。
 
+**ElevenLabs Scribe v2 も比べたが、切り替えない**（2026-11、`experiments/stt_eval_elevenlabs.py`）:
+
+| | sample01 | sample02 |
+|---|---|---|
+| partial: Scribe v2 Realtime（用語なし / ヒーロー名 44 件） | 0.8% / 0.8% | 9.8% / 7.8%（「い--」「うん」など言いよどみまで書く） |
+| final: Scribe v2（用語なし / 634 件） | 0.8% / 1.6% | 3.9% / 5.9% |
+
+- final は GPT-Transcribe と同じか、用語を渡すと少し悪い（「だな」→「だなあ」、「まあ」を落とす）
+- Realtime は用語が 50 件・20 文字までで、別名（拡マガなど）を渡しきれない。言いよどみを除く `no_verbatim` にすると 6.5% / 7.8% で、今度は「えーね」を「いいね」と書いた。区切りはサーバーの VAD（0.75 秒）に任せたので、アプリの区切りとは同じでない
+- 最初の partial が出るまで（接続から）はどちらも約 2.5 秒で差がない
+
 ### 3.1 Realtime（GPT-Live-Transcribe）
 
 - URL: `wss://api.openai.com/v1/realtime?intent=transcription`。認証は `Authorization: Bearer <key>` ヘッダー（ブラウザの WebSocket では付けられないので、Rust の中核から接続する）
