@@ -338,7 +338,6 @@ impl Default for Segmentation {
 }
 
 impl Settings {
-    /// 辞書に名前を載せる言語（DESIGN.md 8.2）
     /// アイテム説明に使う言語
     pub fn item_language(&self) -> LangCode {
         self.item_cards
@@ -355,6 +354,7 @@ impl Settings {
             .unwrap_or_else(|| self.mic_language.clone())
     }
 
+    /// 辞書に名前を載せる言語（DESIGN.md 8.2）
     pub fn glossary_languages(&self) -> Vec<LangCode> {
         lang::normalize(
             [self.mic_language.clone(), "en".into()]
@@ -378,6 +378,12 @@ impl Settings {
         if self.subtitle_display.validate().is_err() {
             self.subtitle_display = SubtitleDisplay::default();
         }
+        // 範囲外の秒数や知らない言語は、変更のときと同じ規則で読み直し、通らなければ既定値
+        let cards = ItemCardsPatch {
+            hold_seconds: Some(self.item_cards.hold_seconds),
+            language: Some(self.item_cards.language.clone().unwrap_or_default()),
+        };
+        self.item_cards = ItemCards::default().apply(cards).unwrap_or_default();
         self.subtitle_display.normalize_colors();
         self
     }
@@ -737,6 +743,20 @@ mod tests {
         let s = load(&path).unwrap();
         assert_eq!(s.rank_account, Some(308_386_819));
         assert_eq!(s.subtitle_display, SubtitleDisplay::default());
+    }
+
+    #[test]
+    fn broken_item_cards_fall_back_to_defaults() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("settings.json");
+        std::fs::write(&path, r#"{ "itemCards": { "holdSeconds": 0 } }"#).unwrap();
+        assert_eq!(load(&path).unwrap().item_cards, ItemCards::default());
+        std::fs::write(
+            &path,
+            r#"{ "itemCards": { "holdSeconds": 12, "language": "en" } }"#,
+        )
+        .unwrap();
+        assert_eq!(load(&path).unwrap().item_language(), "en");
     }
 
     #[test]

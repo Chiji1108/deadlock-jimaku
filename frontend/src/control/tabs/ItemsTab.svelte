@@ -6,6 +6,7 @@
   import * as Select from "$lib/components/ui/select";
   import * as ToggleGroup from "$lib/components/ui/toggle-group";
   import CopyUrl from "../parts/CopyUrl.svelte";
+  import ItemHoldDialog from "../parts/ItemHoldDialog.svelte";
   import OverlayPreview from "../parts/OverlayPreview.svelte";
   import { overlayUrl, panel } from "../panel.svelte";
 
@@ -24,8 +25,7 @@
     <Card.Header>
       <Card.Title>アイテム説明オーバーレイ</Card.Title>
       <Card.Description>
-        字幕でアイテム名が出たら、そのアイテムの説明をゲーム内と同じカードで出します。同じアイテムは
-        1 分間は出し直しません
+        字幕でアイテム名が出たら、そのアイテムの説明をゲーム内と同じカードで出します
       </Card.Description>
       <Card.Action>
         <Button variant="outline" size="sm" onclick={panel.demo}>
@@ -44,8 +44,14 @@
 
       <Field.Group>
         <Field.Field>
-          <Field.Label>出しておく時間</Field.Label>
-          <Field.Description>続けて話したアイテムは、順番に 1 枚ずつ出します</Field.Description>
+          <div class="flex items-center justify-between">
+            <Field.Label>出しておく時間</Field.Label>
+            <ItemHoldDialog />
+          </div>
+          <Field.Description>
+            続けて話したアイテムは順番に 1
+            枚ずつ出します。出しているアイテムをもう一度話すと、最初から数え直します
+          </Field.Description>
           <ToggleGroup.Root
             type="single"
             variant="outline"
@@ -57,6 +63,9 @@
               <ToggleGroup.Item value={String(n)} class="flex-1">{n} 秒</ToggleGroup.Item>
             {/each}
           </ToggleGroup.Root>
+          {#if !HOLDS.includes(c.holdSeconds)}
+            <Field.Description>数値で指定しています（{c.holdSeconds} 秒）</Field.Description>
+          {/if}
         </Field.Field>
         <Field.Field>
           <Field.Label>説明の言語</Field.Label>
