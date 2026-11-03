@@ -1,0 +1,6 @@
+{
+  "name": "deadlock-stream-overlays",
+  "private": true,
+  "license": "SEE LICENSE IN LICENSE.md",
+  "type": "module"
+}

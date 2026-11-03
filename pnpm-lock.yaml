@@ -6,7 +6,9 @@ settings:
 
 importers:
 
-  .:
+  .: {}
+
+  frontend:
     devDependencies:
       '@deadlock-api/ui-core':
         specifier: 1.7.0
