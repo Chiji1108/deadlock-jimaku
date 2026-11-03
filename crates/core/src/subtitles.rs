@@ -1,7 +1,8 @@
 //! 字幕パイプライン（DESIGN.md 7 章）。
 //!
-//! マイク → VAD で区切る ─┬→ Voxtral Realtime の delta を Segment に追記（partial）
-//!                        └→ Segment が閉じたら区間を切り出して Small Transcribe 3（final）
+//! マイク → VAD で区切る ─┬→ GPT-Live-Transcribe の delta を Segment に追記（partial）。
+//!                        │   Segment を開いたら音声を送り始め、閉じたら commit する
+//!                        └→ Segment が閉じたら区間を切り出して GPT-Transcribe（final）
 //!                             → ふりがな・翻訳・固有名詞（enriched）
 //!
 //! Segment の状態を書き換えるのは `Pipeline` だけにする。バッチや enrich の結果もチャンネルで受け取って反映する。
@@ -14,10 +15,11 @@ use tokio::sync::mpsc;
 
 use crate::audio::{self, History, SAMPLE_RATE};
 use crate::enrich::Enricher;
+use crate::lang;
 use crate::now_ms;
 use crate::settings::Settings;
 use crate::store::Store;
-use crate::stt::{self, BatchRequest, RealtimeConfig};
+use crate::stt::{self, BatchRequest, Hints, RealtimeConfig};
 use crate::types::{Enriched, EntityKind, Glossary, LangCode, Segment, Stage};
 
 /// earshot が受け取るフレームの長さ（16ms）
@@ -29,16 +31,13 @@ const PADDING: u64 = SAMPLE_RATE as u64 * 300 / 1000;
 const MIN_SPEECH_MS: u32 = 250;
 /// enrich に文脈として渡す直前の確定字幕の数
 const CONTEXT_LINES: usize = 3;
-/// 用語ヒントの上限。音声とコンテキストを共有するので、辞書が増えても送りすぎない
-const MAX_CONTEXT_BIAS: usize = 500;
+/// 用語ヒントの上限。辞書が増えても送りすぎない
+const MAX_KEYWORDS: usize = 500;
+/// 音声認識に渡す録音の説明
+const PROMPT: &str = "Live commentary by a streamer playing the video game Deadlock (Valve).";
 
-/// `api_key` は Mistral（文字起こし）、`openai_key` は OpenAI（翻訳。なければ翻訳しない）
-pub async fn run(
-    store: Arc<Store>,
-    input: audio::Input,
-    api_key: String,
-    openai_key: Option<String>,
-) -> anyhow::Result<()> {
+/// `api_key` は OpenAI（文字起こし・翻訳）
+pub async fn run(store: Arc<Store>, input: audio::Input, api_key: String) -> anyhow::Result<()> {
     let settings = store.settings();
 
     // 用語ヒントは Realtime のセッション開始時に 1 回しか渡せないので、辞書を少し待つ。
@@ -46,30 +45,35 @@ pub async fn run(
     let glossary = store
         .wait_glossary(&settings.mic_language, Duration::from_secs(20))
         .await;
-    let context_bias = match &glossary {
-        Some(loaded) => context_bias(&loaded.glossary, &settings.mic_language),
+    let keywords = match &glossary {
+        Some(loaded) => keywords(&loaded.glossary, &settings.mic_language),
         None => {
             tracing::warn!("starting transcription without glossary");
             Vec::new()
         }
     };
-    tracing::info!("context_bias: {} terms", context_bias.len());
+    tracing::info!("keywords: {} terms", keywords.len());
+    let hints = Arc::new(Hints {
+        language: lang::find(&settings.mic_language)
+            .map_or_else(|| settings.mic_language.clone(), |l| l.stt.to_owned()),
+        prompt: PROMPT.to_owned(),
+        keywords,
+    });
     let mut audio_rx = audio::open(input).await?;
 
-    let (rt_audio_tx, rt_audio_rx) = mpsc::channel(512);
+    // 開く・音声・閉じるは同じチャンネルで順番どおりに送る
+    let (rt_tx, rt_rx) = mpsc::unbounded_channel();
     let (delta_tx, mut delta_rx) = mpsc::channel(256);
     let realtime = RealtimeConfig {
         api_key: api_key.clone(),
         model: settings.models.realtime.clone(),
-        language: settings.mic_language.clone(),
-        context_bias: context_bias.clone(),
-        target_streaming_delay_ms: settings.target_streaming_delay_ms,
+        delay: settings.realtime_delay.clone(),
     };
-    tokio::spawn(realtime_loop(realtime, rt_audio_rx, delta_tx));
+    tokio::spawn(realtime_loop(realtime, hints.clone(), rt_rx, delta_tx));
 
     // 形態素解析の辞書の読み込みは同期処理なので、非同期のワーカーを塞がない
     let enricher = {
-        let (key, model) = (openai_key, settings.models.translate.clone());
+        let (key, model) = (api_key.clone(), settings.models.translate.clone());
         let effort = settings.models.reasoning_effort.clone();
         let (lang, targets) = (settings.mic_language.clone(), settings.translate_to.clone());
         tokio::task::spawn_blocking(move || Enricher::new(key, model, effort, lang, targets))
@@ -83,11 +87,11 @@ pub async fn run(
             http: crate::http().clone(),
             api_key,
             model: settings.models.batch.clone(),
-            language: settings.mic_language.clone(),
-            context_bias,
+            hints,
         }),
         Arc::new(enricher),
         done_tx,
+        rt_tx,
     );
 
     let mut level = LevelMeter::default();
@@ -98,22 +102,19 @@ pub async fn run(
                 if let Some(db) = level.push(&chunk) {
                     pipeline.store.send_level(db);
                 }
-                // Realtime が詰まっている（張り直し中など）ときは捨てる。final はバッチで取れる
-                let _ = rt_audio_tx.try_send(chunk.clone());
                 pipeline.on_audio(&chunk);
             }
-            Some(delta) = delta_rx.recv() => pipeline.on_delta(&delta),
+            Some(delta) = delta_rx.recv() => pipeline.on_delta(delta),
             Some(done) = done_rx.recv() => pipeline.on_done(done),
         }
     }
 
     // 入力が終わったら、開いている発話を閉じ、バッチと enrich の結果がすべて届くまで待つ
-    drop(rt_audio_tx);
     pipeline.finish();
     while pipeline.pending > 0 {
         tokio::select! {
             Some(done) = done_rx.recv() => pipeline.on_done(done),
-            Some(delta) = delta_rx.recv() => pipeline.on_delta(&delta),
+            Some(delta) = delta_rx.recv() => pipeline.on_delta(delta),
         }
     }
     Ok(())
@@ -152,9 +153,8 @@ struct Pipeline {
     history: History,
     detector: earshot::Detector,
     segmenter: Segmenter,
-    router: Router,
-    /// delta はおおよそ streaming delay + 処理時間だけ遅れて届く
-    grace: Duration,
+    /// リアルタイムの音声認識へ（入力が終わったら None にして閉じる）
+    realtime: Option<mpsc::UnboundedSender<stt::Input>>,
     live: HashMap<String, Segment>,
     current: Option<String>,
     frame: Vec<f32>,
@@ -173,6 +173,7 @@ impl Pipeline {
         batch: Arc<BatchContext>,
         enricher: Arc<Enricher>,
         done_tx: mpsc::Sender<Done>,
+        realtime: mpsc::UnboundedSender<stt::Input>,
     ) -> Self {
         Self {
             store,
@@ -183,8 +184,7 @@ impl Pipeline {
             history: History::new(60),
             detector: earshot::Detector::default(),
             segmenter: Segmenter::new(&settings.segmentation),
-            router: Router::default(),
-            grace: Duration::from_millis(u64::from(settings.target_streaming_delay_ms) + 1500),
+            realtime: Some(realtime),
             live: HashMap::new(),
             current: None,
             frame: Vec::with_capacity(FRAME * 2),
@@ -196,6 +196,7 @@ impl Pipeline {
     }
 
     fn on_audio(&mut self, chunk: &[f32]) {
+        self.send_realtime(stt::Input::Audio(chunk.to_vec()));
         self.history.push(chunk);
         self.frame.extend_from_slice(chunk);
         while self.frame.len() >= FRAME {
@@ -215,13 +216,21 @@ impl Pipeline {
         if let Some(close) = self.segmenter.finish() {
             self.close(close);
         }
+        // 閉じると、リアルタイムは commit の確認を待って終わる
+        self.realtime = None;
+    }
+
+    fn send_realtime(&self, input: stt::Input) {
+        if let Some(tx) = &self.realtime {
+            let _ = tx.send(input);
+        }
     }
 
     fn open(&mut self) {
         self.seq += 1;
         let started_at = now_ms();
         let id = format!("mic-{started_at}-{}", self.seq);
-        self.router.open(id.clone());
+        self.send_realtime(stt::Input::Open(id.clone()));
         self.live.insert(
             id.clone(),
             Segment {
@@ -241,13 +250,12 @@ impl Pipeline {
         let Some(id) = self.current.take() else {
             return;
         };
+        // 捨てる発話も閉じる（閉じないと、その音声が次の発話に混ざる）
+        self.send_realtime(stt::Input::Close);
         if close.speech_ms < MIN_SPEECH_MS {
-            // delta を受け付けないので、次の発話の delta を横取りしないよう枠ごと外す
-            self.router.remove(&id);
             self.discard(&id);
             return;
         }
-        self.router.close(&id, Instant::now() + self.grace);
         // 強制的に切った境界は無音ではないので、余白を付けると隣の発話と言葉が重なる
         let from = if close.cut_start {
             close.start
@@ -279,12 +287,10 @@ impl Pipeline {
         }
     }
 
-    fn on_delta(&mut self, delta: &str) {
-        let Some(id) = self.router.assign(Instant::now()) else {
-            return;
-        };
-        if let Some(seg) = self.live.get_mut(&id).filter(|s| s.stage == Stage::Partial) {
-            seg.text.push_str(delta);
+    fn on_delta(&mut self, delta: stt::Delta) {
+        let seg = self.live.get_mut(&delta.segment);
+        if let Some(seg) = seg.filter(|s| s.stage == Stage::Partial) {
+            seg.text.push_str(&delta.text);
             self.store.upsert_segment(seg.clone());
         }
     }
@@ -342,23 +348,34 @@ impl Pipeline {
 
 async fn realtime_loop(
     cfg: RealtimeConfig,
-    mut audio: mpsc::Receiver<Vec<f32>>,
-    deltas: mpsc::Sender<String>,
+    hints: Arc<Hints>,
+    mut input: mpsc::UnboundedReceiver<stt::Input>,
+    deltas: mpsc::Sender<stt::Delta>,
 ) {
+    let mut speaking = stt::Speaking::default();
     let mut backoff = Duration::from_secs(1);
     loop {
         let started = Instant::now();
-        match stt::realtime(&cfg, &mut audio, &deltas).await {
+        match stt::realtime(&cfg, &hints, &mut speaking, &mut input, &deltas).await {
             Ok(()) => return,
             Err(e) => tracing::warn!("realtime: {e:#}"),
         }
         if started.elapsed() > Duration::from_secs(30) {
             backoff = Duration::from_secs(1);
         }
-        tokio::time::sleep(backoff).await;
+        // 切れている間の音声は送らない（今話している発話に古い言葉が混ざる）。開く・閉じるだけ追う
+        let wait = tokio::time::sleep(backoff);
+        tokio::pin!(wait);
+        loop {
+            tokio::select! {
+                () = &mut wait => break,
+                next = input.recv() => match next {
+                    Some(next) => speaking.skip(next),
+                    None => return,
+                },
+            }
+        }
         backoff = (backoff * 2).min(Duration::from_secs(30));
-        // 切れている間に溜まった古い音声は送らない（今話している発話に古い言葉が混ざる）
-        while audio.try_recv().is_ok() {}
     }
 }
 
@@ -366,8 +383,7 @@ struct BatchContext {
     http: reqwest::Client,
     api_key: String,
     model: String,
-    language: LangCode,
-    context_bias: Vec<String>,
+    hints: Arc<Hints>,
 }
 
 enum Done {
@@ -381,8 +397,7 @@ async fn transcribe(ctx: Arc<BatchContext>, id: String, wav: Vec<u8>, done: mpsc
     let request = BatchRequest {
         api_key: &ctx.api_key,
         model: &ctx.model,
-        language: &ctx.language,
-        context_bias: &ctx.context_bias,
+        hints: &ctx.hints,
         wav,
     };
     let text = match stt::transcribe(&ctx.http, request).await {
@@ -409,9 +424,9 @@ async fn enrich(
     let _ = done.send(Done::Enriched { id, enriched }).await;
 }
 
-/// 用語ヒント: 話す言語での名前と略称（DESIGN.md 8.4）。
+/// 用語ヒント: 話す言語での名前と別名（DESIGN.md 8.4）。
 /// 上限を超えるときはヒーロー → アイテム → スキルの順に残す
-pub fn context_bias(glossary: &Glossary, lang: &str) -> Vec<String> {
+pub fn keywords(glossary: &Glossary, lang: &str) -> Vec<String> {
     // 公式名をすべて先に入れ、余った枠に別名を入れる（別名は話した言葉を用語に結びつける照合の側で効く）
     let kinds = [EntityKind::Hero, EntityKind::Item, EntityKind::Ability];
     let of_kind = |kind| glossary.entities.values().filter(move |e| e.kind == kind);
@@ -425,7 +440,7 @@ pub fn context_bias(glossary: &Glossary, lang: &str) -> Vec<String> {
         .flat_map(|e| e.aliases.get(lang).into_iter().flatten());
     let mut terms: Vec<String> = Vec::new();
     for term in names.chain(aliases) {
-        if terms.len() == MAX_CONTEXT_BIAS {
+        if terms.len() == MAX_KEYWORDS {
             break;
         }
         if !terms.contains(term) {
@@ -552,39 +567,6 @@ impl Segmenter {
             cut_start: open.cut_start,
             cut_end: false,
         })
-    }
-}
-
-/// delta にはタイムスタンプがないので、まだ受け付けている Segment のうち最も古いものに割り当てる
-#[derive(Default)]
-struct Router {
-    slots: VecDeque<(String, Option<Instant>)>,
-}
-
-impl Router {
-    fn open(&mut self, id: String) {
-        self.slots.push_back((id, None));
-    }
-
-    /// 閉じた後も `until` までは delta を受け付ける
-    fn close(&mut self, id: &str, until: Instant) {
-        if let Some(slot) = self.slots.iter_mut().find(|(s, _)| s == id) {
-            slot.1 = Some(until);
-        }
-    }
-
-    fn remove(&mut self, id: &str) {
-        self.slots.retain(|(s, _)| s != id);
-    }
-
-    fn assign(&mut self, now: Instant) -> Option<String> {
-        while let Some((_, Some(until))) = self.slots.front() {
-            if *until > now {
-                break;
-            }
-            self.slots.pop_front();
-        }
-        self.slots.front().map(|(id, _)| id.clone())
     }
 }
 
@@ -715,27 +697,6 @@ mod tests {
         assert!(s.finish().is_none());
     }
 
-    #[test]
-    fn router_moves_on_after_grace() {
-        let mut r = Router::default();
-        let t0 = Instant::now();
-        r.open("a".into());
-        assert_eq!(r.assign(t0).as_deref(), Some("a"));
-        r.close("a", t0 + Duration::from_secs(1));
-        r.open("b".into());
-        assert_eq!(r.assign(t0).as_deref(), Some("a"));
-        assert_eq!(r.assign(t0 + Duration::from_secs(2)).as_deref(), Some("b"));
-    }
-
-    #[test]
-    fn removed_slot_does_not_take_deltas() {
-        let mut r = Router::default();
-        r.open("cough".into());
-        r.remove("cough");
-        r.open("speech".into());
-        assert_eq!(r.assign(Instant::now()).as_deref(), Some("speech"));
-    }
-
     fn glossary(json: serde_json::Value) -> Glossary {
         serde_json::from_value(serde_json::json!({
             "clientVersion": 1, "languages": ["ja"], "entities": json
@@ -744,33 +705,33 @@ mod tests {
     }
 
     #[test]
-    fn context_bias_collects_names_and_aliases_once() {
+    fn keywords_collects_names_and_aliases_once() {
         let g = glossary(serde_json::json!({
             "hero:13": { "kind": "hero", "className": "h", "names": { "ja": "ヘイズ", "en": "Haze" }, "aliases": { "ja": ["ヘイズ"] } },
             "item:1": { "kind": "item", "className": "i", "names": { "ja": "基礎拡張マガジン" }, "aliases": { "ja": ["拡張マガジン"] } }
         }));
         assert_eq!(
-            context_bias(&g, "ja"),
+            keywords(&g, "ja"),
             ["ヘイズ", "基礎拡張マガジン", "拡張マガジン"]
         );
     }
 
     #[test]
-    fn context_bias_puts_every_name_before_aliases() {
+    fn keywords_puts_every_name_before_aliases() {
         let g = glossary(serde_json::json!({
             "hero:13": { "kind": "hero", "className": "h", "names": { "ja": "ヘイズ" }, "aliases": { "ja": ["ヘイズちゃん"] } },
             "ability:8": { "kind": "ability", "className": "b", "names": { "ja": "バレットダンス" }, "aliases": {} }
         }));
         assert_eq!(
-            context_bias(&g, "ja"),
+            keywords(&g, "ja"),
             ["ヘイズ", "バレットダンス", "ヘイズちゃん"]
         );
     }
 
     #[test]
-    fn context_bias_keeps_heroes_and_items_first_when_capped() {
+    fn keywords_keeps_heroes_and_items_first_when_capped() {
         let mut entities = serde_json::Map::new();
-        for i in 0..MAX_CONTEXT_BIAS {
+        for i in 0..MAX_KEYWORDS {
             entities.insert(
                 format!("ability:{i}"),
                 serde_json::json!({ "kind": "ability", "className": "a", "names": { "ja": format!("スキル{i}") }, "aliases": {} }),
@@ -780,8 +741,8 @@ mod tests {
             "hero:13".into(),
             serde_json::json!({ "kind": "hero", "className": "h", "names": { "ja": "ヘイズ" }, "aliases": {} }),
         );
-        let terms = context_bias(&glossary(entities.into()), "ja");
-        assert_eq!(terms.len(), MAX_CONTEXT_BIAS);
+        let terms = keywords(&glossary(entities.into()), "ja");
+        assert_eq!(terms.len(), MAX_KEYWORDS);
         assert_eq!(terms[0], "ヘイズ");
     }
 }

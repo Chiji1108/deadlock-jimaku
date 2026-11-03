@@ -20,7 +20,7 @@ Deadlock 配信者向けの OBS オーバーレイツール。
 
 - 配信 PC は Windows（Deadlock・OBS・本ツールを同じマシンで動かす）
 - ヘッドホンを使う（マイクにゲーム音が回り込まない）
-- 音声認識: Mistral Voxtral 3（Realtime と Small Transcribe 3）
+- 音声認識: OpenAI（GPT-Live-Transcribe と GPT-Transcribe。3 章）
 - 翻訳と辞書の漢字名の読み: OpenAI GPT-6.1 Terra（推論なし。9.3）
 - ふりがな: 形態素解析（Lindera + IPADIC）、固有名詞: 辞書との照合（9 章）
 - ゲームデータ: [deadlock-api](https://api.deadlock-api.com/docs)（MIT）
@@ -64,7 +64,7 @@ Deadlock 配信者向けの OBS オーバーレイツール。
 | マイク入力 | `cpal`（WASAPI） | |
 | VAD | **earshot**（純 Rust、16ms フレーム） | 字幕の区切りを決める（3.1）。Silero と違って ONNX Runtime が要らず、exe に 100KB 程度しか足さない |
 | リサンプル | `rubato` | 16kHz mono に揃える |
-| Mistral | `reqwest` + `tokio-tungstenite` | 公式の Rust SDK がないので直接呼ぶ |
+| OpenAI | `reqwest` + `tokio-tungstenite` | 公式の Rust SDK がないので直接呼ぶ |
 | API キー | `keyring`（v1） | Windows の資格情報マネージャー / macOS のキーチェーン |
 | 設定 | JSON（アプリの設定ディレクトリ） | |
 | フロント | **Svelte 5 (runes) + Vite + TypeScript** | 下記 |
@@ -88,7 +88,7 @@ Deadlock 配信者向けの OBS オーバーレイツール。
 | `mise run dev` | Tauri アプリを開発モードで起動（Vite の HMR 付き） |
 | `mise run headless` | Tauri なしで中核だけ起動し、ダミー字幕を流し続ける（`--demo`。`http://127.0.0.1:4510/overlay/subtitles`） |
 
-開発中の API キーは、リポジトリ直下の `.env.local`（`MISTRAL_API_KEY=…` / `OPENAI_API_KEY=…`。コミットしない）に書けば、mise が `mise run …` / `mise exec` のときに環境変数として渡す（環境変数は資格情報ストアより優先する）。
+開発中の API キーは、リポジトリ直下の `.env.local`（`OPENAI_API_KEY=…`。コミットしない）に書けば、mise が `mise run …` / `mise exec` のときに環境変数として渡す（環境変数は資格情報ストアより優先する）。
 
 ヘッドレスの `overlays-headless` も Tauri アプリと同じ `settings.json` と API キーを使い、操作パネル（`http://127.0.0.1:4510/`）で設定する。引数は開発用の `--demo` と、マイクの代わりに録音を実時間で流す `--input-file PATH.wav` だけ。
 | `mise run check` | oxfmt / oxlint / svelte-check / rustfmt / clippy / cargo test |
@@ -98,82 +98,92 @@ Deadlock 配信者向けの OBS オーバーレイツール。
 - TypeScript は 6 系に固定する（svelte-check がまだ 7 系に対応していない）。
 - `frontend/src/generated/` は ts-rs の出力（`cargo test -p overlays-core` で更新）。手で編集しない。
 
-## 3. Mistral API（2026-11 時点のドキュメントで確認）
+## 3. 音声認識: OpenAI（2026-11 時点のドキュメントで確認）
 
 | 用途 | モデル ID | 料金 | 備考 |
 |---|---|---|---|
-| partial | `voxtral-mini-transcribe-realtime-3` | $0.008/分 | WebSocket。用語ヒントに対応 |
-| final | `voxtral-small-transcribe-3`（`-latest` はまだ v2 を指すので使わない） | $0.004/分 | `/v1/audio/transcriptions`。精度が最も高い |
-| （翻訳は OpenAI `gpt-6.1-terra`。9.3） | — | — | — |
-| （不採用） | `mistral-small-2603` | — | 推論なしで 1 発話 1〜2 秒と速いが、訳の質で Terra を選んだ |
-| （不採用） | `mistral-large-4` | 100 万トークンあたり 入力 $0.70 / キャッシュ済み入力 $0.07 / 出力 $2.10 | 推論を止められず 1 発話 21〜24 秒（9.3） |
+| partial | `gpt-live-transcribe` | $0.017/分 | Realtime の文字起こしセッション（WebSocket）。サーバーは発話を区切らない |
+| final | `gpt-transcribe` | $0.0045/分 | `/v1/audio/transcriptions`。精度が最も高い |
+| （翻訳・読みも OpenAI `gpt-6.1-terra`。9.3） | — | — | キーは OpenAI の 1 つで済む |
 
-モデル ID はすべて設定で持つ（enrich を Mistral Small 4 に差し替えられるように）。
+モデル ID はすべて設定で持つ（`models.realtime` / `models.batch`）。
 
-### 3.1 Realtime（WebSocket）
+**Mistral Voxtral から切り替えた理由**（2026-11、`experiments/stt_eval*.py`。用語のヒントあり）:
 
-- URL: `wss://api.mistral.ai/v1/audio/transcriptions/realtime?model=voxtral-mini-transcribe-realtime-3`
-- 認証: `Authorization: Bearer <key>` ヘッダー。ブラウザの WebSocket ではヘッダーを付けられないので、Rust の中核から接続する。
-- 流れ: 接続 → `session.created` → `session.update` → `input_audio.append`（base64）を繰り返す → `input_audio.end` → `transcription.done`
-- **`session.update` は最初の音声より前に 1 回だけ送れる**。音声を送り始めたら設定は変えられない。
+| | sample01 | sample02 |
+|---|---|---|
+| partial: Voxtral Mini Transcribe Realtime 3 | 4.8% | 12.7%（拡マガ → 隠間が） |
+| partial: GPT-Live-Transcribe | 4.0% | 4.9% |
+| final: Voxtral Small Transcribe 3 | 5.6% | 7.8%（取りたい → 撮りたい） |
+| final: GPT-Transcribe | 0.8% | 3.9% |
+
+（文字誤り率）。速さはアプリで同じ録音を流して測った: 話し始めから最初の partial まで OpenAI 約 0.9〜1.1 秒 / Voxtral 約 1.6 秒、最後の partial から final まで OpenAI 約 1.2〜1.7 秒 / Voxtral 約 0.7〜1.0 秒。費用は音声認識だけで約 2 倍になるが、精度を優先した。
+
+### 3.1 Realtime（GPT-Live-Transcribe）
+
+- URL: `wss://api.openai.com/v1/realtime?intent=transcription`。認証は `Authorization: Bearer <key>` ヘッダー（ブラウザの WebSocket では付けられないので、Rust の中核から接続する）
+- 流れ: 接続 → `session.created` → `session.update` → `session.updated` → 発話を開いたら `input_audio_buffer.append`（24kHz の PCM を base64。100ms ずつ）を送り始める → **発話を閉じたら `input_audio_buffer.commit`**（100ms 未満なら commit できないので `input_audio_buffer.clear`）
+- 話していない間の音声は送らない（リアルタイムは送った音声の長さで課金される）。発話を開く前の 0.3 秒だけ手元に持ち、開いたら先に送る（VAD が開くのは話し始めより少し遅い）
+- 16kHz → 24kHz はちょうど 3/2 倍なので、ため込まない線形補間で変換する（発話の終わりまでその場で送れる）
+- 接続と設定には 10 秒の上限を付ける。接続している間・切れている間に溜まった音声は送らず、今の発話の続きから送る
+- `turn_detection` は使わない（`null`。このモデルはサーバー側の VAD に対応していない）。区切りはローカルの VAD で決める（下記）
 
 ```json
 {
   "type": "session.update",
   "session": {
-    "audio_format": { "encoding": "pcm_s16le", "sample_rate": 16000 },
-    "target_streaming_delay_ms": 480,
-    "language": "ja",
-    "context_bias": ["インファーナス", "基礎拡張マガジン", "..."]
+    "type": "transcription",
+    "audio": { "input": {
+      "format": { "type": "audio/pcm", "rate": 24000 },
+      "transcription": {
+        "model": "gpt-live-transcribe",
+        "languages": ["ja"],
+        "prompt": "Live commentary by a streamer playing the video game Deadlock (Valve).",
+        "keywords": ["インファーナス", "基礎拡張マガジン", "..."],
+        "delay": "low"
+      },
+      "turn_detection": null
+    }}
   }
 }
 ```
 
 | フィールド | 値 |
 |---|---|
-| `target_streaming_delay_ms` | 80〜1200 の整数、または 2400。推奨の出発点は 480。短いほど速く、長いほど正確 |
-| `language` | ISO 639-1。省略すると自動判定 |
-| `context_bias` | 文字列の配列（キーフレーズ、または自由な説明文）。件数の上限はないが、音声とコンテキストを共有する |
-| `turn_detection` | 本ツールでは使わない（下記）。参考: `min_silence_ms`(500) / `end_timeout_ms`(3000) / `start_threshold`(0.5) / `eager_end_threshold`(0.5) / `end_threshold`(0.33) |
+| `delay` | `minimal` / `low` / `medium` / `high` / `xhigh`。低いほど早く、高いほど正確（設定の `realtimeDelay`。既定 `low`） |
+| `languages` | 話す言語（ISO 639-1）。単数の `language` と一緒には送らない |
+| `prompt` | 録音の説明 |
+| `keywords` | 出てきそうな用語（8.4）。`<` `>` と改行を含めない |
 
 サーバーからのイベント:
 
 | type | 内容 |
 |---|---|
-| `transcription.text.delta` | `text`。**過去のテキストは訂正されない（追記のみ）** |
-| `turn.start` / `turn.eager_end` / `turn.resume` / `turn.end` | `time_s`。`turn.end` には `end_reason`（`threshold` / `timeout`）が付く |
-| `transcription.done` | セッション終了時の全文 |
-| `error` | `error.message`, `error.code` |
+| `conversation.item.input_audio_transcription.delta` | `item_id`, `delta`。**commit の前から流れる**。過去のテキストは訂正されない（追記のみ） |
+| `input_audio_buffer.committed` | `item_id`。commit した順に届く |
+| `conversation.item.input_audio_transcription.completed` | `transcript`（その item の全文。final はバッチで取り直すので使わない） |
+| `error` | 1 つの要求の失敗（短すぎる commit など）。セッションは続く |
 
-**発話の区切り方: ターン検出は使わない**
+**commit と item**: 1 回の commit までの音声が 1 つの item になり、次の音声は新しい item になる。delta には最初から `item_id` が付くので、item と Segment を commit の順で 1 対 1 に結びつける（7.2）。対応は音声認識の接続の中だけで持ち（`stt.rs`）、字幕の流れには Segment の ID 付きで delta を返す。張り直したら対応も作り直すので、イベントが 1 つ欠けても以降がずれない。確認の前に初めて見る item は推測で付けるが、commit の確認（`input_audio_buffer.committed`）で commit した順の Segment に付け直すので、推測が違っていても直る（ずれた数文字も final で置き換わる）。commit には `event_id` に Segment の ID を付け、断られたら（`error.event_id`）その音声を消して Segment の対応も消す。文字が届き終わった item（`completed`）の対応は消す。入力が終わったら最後の発話を閉じて終わる（確定はバッチで取る）。
 
-ターン検出は「会話で誰が話す番か」を判定する機能で、字幕の区切り（文や息継ぎの単位）とは目的が違う。検証（16 章）では、0.4〜1.5 秒の間を挟みながら 22 秒話し続けた音声が、**既定値でも積極的な設定でも 1 ターン**になった。配信者は何分も話し続けるので、ターンの終わりを待つと final と翻訳がいつまでも出ない。
-
-そこで区切りはローカルの VAD（earshot）で決める。
+**発話の区切り方**: 区切りはローカルの VAD（earshot）で決める。会話の「話す番」を判定するターン検出は字幕の区切りと目的が違い、話し続ける配信者では区切りがいつまでも来ない（Voxtral の検証で、間を挟みながら 22 秒話した音声が 1 ターンになった）。
 
 - 無音が `minSilenceMs`（既定 750ms。操作パネルで すぐ 500 / ふつう 750 / つなぐ 1000 か、「数値で指定」のダイアログで 200〜2000 を選ぶ）続いたら Segment を閉じる。話している途中は partial が出続けるので、長くしても字幕が出始めるのは遅れない（確定と翻訳が遅れる）
 - 長さが `maxSegmentSeconds`（既定 8 秒）を超えたら、次の短い無音で強制的に閉じる（字幕が長くなりすぎないように）
 - 音声は手元にあるので、区切りの位置が正確にわかり、追加のコストもかからない
 
-`session.update` では `turn_detection` を送らない。
+### 3.2 GPT-Transcribe（バッチ）
 
-### 3.2 Small Transcribe 3（バッチ）
-
-- パラメータ: `model`, `file`, `language`, `context_bias`, `timestamp_granularities`（v3 では `segment` のみ。`word` を指定すると 400 エラー）
-- ターンの音声区間を切り出して送る。`context_bias` は realtime と同じものを渡す。
+- `/v1/audio/transcriptions` に multipart で `model`, `file`（Segment の区間の WAV。16kHz）, `prompt`, `languages[]`, `keywords[]`（realtime と同じもの）を送る
 
 ### 3.3 1 時間あたりのコスト見積もり
 
 | 項目 | 見積もり |
 |---|---|
-| Realtime（常時接続） | 60 分 × $0.008 = **約 $0.48** |
-| Small Transcribe 3（発話区間のみ。仮に 40%） | 24 分 × $0.004 = **約 $0.10** |
-| Large 4（1 時間に約 600 発話。辞書 8k トークンはキャッシュ、その他の入力 500 / 出力は翻訳先 1 言語につき 150 トークン） | 翻訳先 1 言語で **約 $0.6**、1 言語増えるごとに **+約 $0.2** |
-| 合計（翻訳先が英語のみ） | **約 $1.2/時間** |
-
-辞書をプロンプトの固定の先頭部分に置いてキャッシュを効かせるのが、コストに一番効く。
-
-※ この表は Large 4 で見積もったもの。翻訳は Small 4 に変え、出力も訳文だけにしたので、実際はこれより安い（料金は Mistral の価格表で確認する）。
+| Realtime（常時送る） | 60 分 × $0.017 = **約 $1.02** |
+| GPT-Transcribe（発話区間のみ。仮に 40%） | 24 分 × $0.0045 = **約 $0.11** |
+| 翻訳（GPT-6.1 Terra。1 時間に約 600 発話） | 翻訳先 1 言語で **約 $0.3**、1 言語増えるごとに **+約 $0.3** |
+| 合計（翻訳先が英語のみ） | **約 $1.4/時間** |
 
 ## 4. リポジトリ構成
 
@@ -185,8 +195,8 @@ deadlock-stream-overlays/
 │  └─ core/                   # Tauri に依存しない。単体でヘッドレス起動・テストできる
 │     └─ src/
 │        ├─ audio.rs          # マイク → 16kHz mono フレーム + リングバッファ
-│        ├─ stt/              # Voxtral の realtime / batch クライアント
-│        ├─ enrich/           # Mistral Large の呼び出し・出力の検証
+│        ├─ stt.rs            # OpenAI の realtime / batch クライアント
+│        ├─ enrich.rs         # 翻訳（OpenAI）の呼び出し・出力の検証
 │        ├─ subtitles.rs      # パイプライン（Segment の状態遷移）
 │        ├─ assets/           # deadlock-api → glossary + アイコンのキャッシュ
 │        ├─ rank.rs           # ランクのポーリング
@@ -231,7 +241,7 @@ interface Settings {
   subtitleDisplay: SubtitleDisplay; // 字幕オーバーレイの見せ方（11 章）
   rankLanguage?: LangCode;         // ランク名の言語。なければ話す言語
   models: { realtime; batch; translate; readings; reasoningEffort? };
-  targetStreamingDelayMs: number;  // 既定 480
+  realtimeDelay: string;           // 既定 "low"（3.1）
   segmentation: { minSilenceMs: number; maxSegmentMs: number };  // 既定 750 / 8000
   rankAccount?: number;            // Steam の 32bit アカウント ID
   rankPollSeconds: number;         // 既定 180
@@ -244,13 +254,13 @@ interface Settings {
 
 ### 6.1 方針
 
-- 内部の言語コードは BCP 47。deadlock-api の言語名と Voxtral の ISO 639-1 コードは対応表で変換する。
+- 内部の言語コードは BCP 47。deadlock-api の言語名と音声認識の ISO 639-1 コードは対応表で変換する。
 - **配信者が話す言語（`mic.language`）も翻訳先も、対応表のどれでも選べる**。日本語の配信者を前提にしているので既定は `ja` だが、言語ごとの分岐はコードに書かない。
 - 制約になるのは deadlock-api（公式名がある言語）と LLM の翻訳の質だけ。音声認識の対応言語が効くのは `mic.language` だけ。
 
 ### 6.2 対応表（`lang.rs` → ts-rs で TS に出す）
 
-| LangCode | deadlock-api | Voxtral | 表示名 |
+| LangCode | deadlock-api | 音声認識 | 表示名 |
 |---|---|---|---|
 | `ja` | `japanese` | `ja` | 日本語 |
 | `en` | `english` | `en` | English |
@@ -325,31 +335,31 @@ interface Segment {
 mic ─┬─▶ ローカル VAD（earshot）── 発話の開始 → Segment を開く
      │                         └─ 無音 ≥ minSilenceMs、または長さ ≥ maxSegmentSeconds → Segment を閉じる
      │
-     └─▶ Voxtral Realtime（WS。セッションを張りっぱなしにする）
-           │ transcription.text.delta → 割り当て先の Segment に upsert(stage=partial, text += delta)
+     └─▶ GPT-Live-Transcribe（WS。セッションを張りっぱなしにする。Segment を閉じたら commit）
+           │ delta（item_id 付き）→ その item の Segment に upsert(stage=partial, text += delta)
            ▼
   Segment が閉じたら、リングバッファから区間 [start-300ms, end+300ms] を切り出す
          ▼
-  Small Transcribe 3（バッチ）+ context_bias  → upsert(stage=final, text)
+  GPT-Transcribe（バッチ）+ keywords  → upsert(stage=final, text)
          │   失敗したとき: realtime で溜めたテキストを final にする
          ▼
-  Mistral Large 4（構造化出力）
+  GPT-6.1 Terra（構造化出力。9 章）
          ├─ kind=speech → upsert(stage=enriched, enriched, settledAt)
          ├─ kind=noise  → upsert(stage=discarded)
          └─ 失敗・タイムアウト → final のまま settledAt を付ける（翻訳なしで表示して消える）
 ```
 
 - **区切りはローカルの VAD で決める**（3.1 の「発話の区切り方」を参照）。
-- **delta の割り当て**: delta にはタイムスタンプがないので、「まだ partial を受け付けている Segment のうち最も古いもの」に追記する。Segment は閉じてから `targetStreamingDelayMs + 1.5 秒` の間だけ delta を受け付け、それを過ぎたら次の Segment に回す。境界で 1〜2 語ずれても、数秒後に final で置き換わるので許容する。
+- **delta と Segment の対応**: 字幕の流れは音声認識に「開いた（Segment の ID）」「音声」「閉じた」を順に送るだけ。捨てる短い発話も閉じる。item は commit した順に並ぶので、初めて見る `item_id` は「commit したが確認がまだの Segment のうち最も古いもの」、なければ「今話している Segment」のものとする（3.1）。
 - Segment ごとに独立した非同期タスクで処理する。enrich の完了順が前後しても、表示順は `startedAt` で固定する。
 - enrich には直前 2〜3 発話の final テキストを文脈として渡す（代名詞や話の流れのため）。
-- Realtime セッションが切れたら、新しいセッションを張り直す（開いている Segment はその時点の内容で final に進める）。
+- Realtime セッションが切れたら、新しいセッションを張り直す。切れている間の音声は捨て、今の Segment の続きから送る（final はバッチで取れる）。
 
 ### 7.3 遅延の目安
 
 | 段階 | 目安 |
 |---|---|
-| partial | 1 秒未満（streaming delay 480ms） |
+| partial | 話し始めから約 1 秒（`delay: low`） |
 | final | 発話終了から 1〜2 秒 |
 | enriched | さらに 2〜4 秒 |
 
@@ -438,7 +448,7 @@ mic ─┬─▶ ローカル VAD（earshot）── 発話の開始 → Segment
 
 ### 8.4 音声認識への用語ヒント
 
-`context_bias` には、`mic.language` での名前と別名を入れる（上限 500 件。音声とコンテキストを共有するので送りすぎない）。すべての公式名（ヒーロー → アイテム → スキル）を先に入れ、余った枠に別名を入れる。別名は音声認識より、話した言葉を用語に結びつける照合（9 章）の側で効く。
+`keywords` には、`mic.language` での名前と別名を入れる（上限 500 件。送りすぎない）。すべての公式名（ヒーロー → アイテム → スキル）を先に入れ、余った枠に別名を入れる。別名は音声認識より、話した言葉を用語に結びつける照合（9 章）の側で効く。
 
 ### 8.5 別名（`data/aliases.ja.json`）
 
@@ -626,7 +636,7 @@ URL: `/overlay/rank`（パラメータはない。ブラウザソースは幅 48
 Tauri のウィンドウでも OBS のカスタムブラウザドックでも同じ画面（`http://127.0.0.1:4510/`）。shadcn-svelte（Tailwind CSS v4）で作る。オーバーレイは軽さと OBS のカスタム CSS での上書きやすさを優先し、Tailwind を入れずに素の CSS のまま。
 
 - **上部に固定**: 状態（停止中 / 準備しています / 字幕を出しています / 音が届いていません / 止まっています）と、開始・停止のボタン
-- **注意はタブの上に出す**: Mistral のキーがない、字幕が止まった理由、設定を保存できない
+- **注意はタブの上に出す**: OpenAI のキーがない、字幕が止まった理由、設定を保存できない
 - **URL を手で書き換えさせない**: 見せ方はすべて画面の操作で変え、OBS に貼る URL はコピーするだけ
 
 | タブ | 内容 |
@@ -635,7 +645,7 @@ Tauri のウィンドウでも OBS のカスタムブラウザドックでも同
 | 字幕の表示 | プレビュー（オーバーレイを推奨サイズ 1000×400 で開いて縮めたもの）とテスト字幕、11 章の見せ方（揃え、文字の大きさは 小 / 中 / 大 / 特大 の組み合わせ、背景は縁取り / 半透明の帯。大きさを数値で決めるときと、色（文字・ヒーロー名・スキル名。どれも明るい色の候補、OS の色選び、#rrggbb）は「詳しく設定」のダイアログ。アイテム名はゲーム内のスロットの色で固定）。並べた選択肢で足りない値は、どの設定も見出しの横のボタンから開くダイアログで決める（変えた項目だけを送る）、OBS に貼る URL と置き方 |
 | アイテム説明 | プレビュー（460×560）とテスト字幕、出しておく時間（5 / 8 / 12 / 20 秒か「数値で指定」）、説明の言語、OBS に貼る URL |
 | ランク | プレビュー（480×140）、Steam ID（SteamID64 かフレンドコード。空で非表示）、ランク名の言語、OBS に貼る URL |
-| API キー | Mistral / OpenAI。状態（保存済み・環境変数・未設定）、キーの作成ページへのリンク、新しいキーの保存・削除。キーそのものは表示しない |
+| API キー | OpenAI（文字起こし・翻訳・読み）。状態（保存済み・環境変数・未設定）、キーの作成ページへのリンク、新しいキーの保存・削除。キーそのものは表示しない |
 
 - プレビューの iframe は `color-scheme` を中身（ライト）に合わせる。ダークの画面に違う color-scheme の iframe を置くと、背景が白く塗られて透過しない
 - Tauri のウィンドウで外部へのリンクを開いたら、ふだんのブラウザで開く（`on_new_window`）
@@ -659,7 +669,7 @@ API（すべて `/api`）:
 |---|---|---|
 | 0 | 土台: workspace、Tauri + axum + Svelte、WS upsert、ダミーの Segment ✅ | OBS にダミー字幕が流れて消える |
 | 1 | 言語の対応表、assets（glossary 生成、アイコンのキャッシュ）、Rich の描画 ✅ | ダミーの Enriched がアイコン・ルビ付きで、複数の言語で表示される |
-| 2 | mic → VAD で区切り → Voxtral Realtime（partial）→ Small Transcribe 3（final） ✅ | 自分の声が字幕になる |
+| 2 | mic → VAD で区切り → Voxtral Realtime（partial）→ Small Transcribe 3（final） ✅（2026-11 に OpenAI へ切り替え。3 章） | 自分の声が字幕になる |
 | 3 | enrich（ふりがな、翻訳、エンティティ） ✅ | 3 段階の表示が通しで動く |
 | 4 | ランクオーバーレイ ✅ | ランクバッジが表示され、更新される |
 | 5 | 仕上げ: 設定の保存と操作パネル ✅、インストーラー、自動更新、見た目（torph など） | 配布できる |
@@ -670,7 +680,7 @@ Phase 2 の前に、録音した実況音声で Voxtral 3 の精度（`context_b
 
 - **ゲーム内 VC・Discord の字幕と逆翻訳**: Windows のプロセス単位の録音（WASAPI Process Loopback）で取れる。Realtime の話者分離（`diarize`, `speaker_references`）が使える。外した理由は、チームメイトの同意、キャラのボイスや効果音の混入による精度の限界、コストと複雑さが倍になること。
 - **チャット形式のバブル表示**: 上の機能を入れるときに、左右の配置と一緒に入れる。
-- **話す言語の自動判定**: Voxtral は `language` を省略すると自動で判定する。ただし短い発話や英単語の多い日本語では誤判定しやすく、用語ヒントの言語も決められなくなるので、今は明示的に設定する。
+- **話す言語の自動判定**: 音声認識は言語を省略すると自動で判定する。ただし短い発話や英単語の多い日本語では誤判定しやすく、用語ヒントの言語も決められなくなるので、今は明示的に設定する。
 - **日本語以外の読み補助**（中国語のピンインなど）: Rich の `ruby` の仕組みをそのまま使える。
 - **LP と Web サーバー**（課金・別名の配信）: 今のリポジトリに `web/`（LP）と `server/`（API）を足し、pnpm workspace のモノレポにする（ts-rs の型や別名の一覧を共有できる）。
   - LP は Astro（ほぼ静的。Cloudflare のアダプターで Workers の静的アセットとして配る）

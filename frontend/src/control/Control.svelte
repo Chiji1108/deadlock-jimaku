@@ -18,7 +18,7 @@
   onMount(() => panel.start());
 
   const s = $derived(panel.settings);
-  const needsKey = $derived(!!panel.view && !panel.view.keys.mistral);
+  const needsKey = $derived(!!panel.view && !panel.view.keys.openai);
   let tab = $state("audio");
 
   const status = $derived.by(() => {
@@ -69,10 +69,10 @@
     {#if needsKey}
       <Alert.Root>
         <CircleAlertIcon />
-        <Alert.Title>はじめに Mistral の API キーを設定してください</Alert.Title>
+        <Alert.Title>はじめに OpenAI の API キーを設定してください</Alert.Title>
         <Alert.Description>
           <p>
-            文字起こしに使います。<button class="underline" onclick={() => (tab = "keys")}>
+            文字起こしと翻訳に使います。<button class="underline" onclick={() => (tab = "keys")}>
               API キーの設定へ
             </button>
           </p>

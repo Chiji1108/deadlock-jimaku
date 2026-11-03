@@ -34,9 +34,10 @@ itemCards: ItemCards,
  */
 rankLanguage?: string, models: Models, 
 /**
- * Realtime の streaming delay（80〜1200、または 2400）
+ * リアルタイムの音声認識の遅れ（`minimal` / `low` / `medium` / `high` / `xhigh`。
+ * 低いほど早く字幕が出て、高いほど正確）
  */
-targetStreamingDelayMs: number, segmentation: Segmentation, 
+realtimeDelay: string, segmentation: Segmentation, 
 /**
  * ランクを表示するアカウント（Steam の 32bit アカウント ID）。None ならランクを取りに行かない
  */

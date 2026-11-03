@@ -5,7 +5,7 @@
 //!   --input-file PATH    マイクの代わりに WAV ファイルを実時間で流して字幕にする（検証用）
 //!
 //! 設定は操作パネル（http://127.0.0.1:4510/）で変える（Tauri アプリと同じ settings.json）。
-//! API キーは OS の資格情報ストア（操作パネルで設定）か、環境変数 MISTRAL_API_KEY / OPENAI_API_KEY
+//! API キーは OS の資格情報ストア（操作パネルで設定）か、環境変数 OPENAI_API_KEY
 
 use std::net::{Ipv4Addr, SocketAddr};
 

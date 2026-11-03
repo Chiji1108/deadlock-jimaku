@@ -23,8 +23,8 @@ const TIMEOUT: Duration = Duration::from_secs(8);
 
 pub struct Enricher {
     http: reqwest::Client,
-    /// OpenAI の API キー。ないときは翻訳しない（固有名詞とふりがなは付ける）
-    api_key: Option<String>,
+    /// OpenAI の API キー
+    api_key: String,
     model: String,
     reasoning_effort: Option<String>,
     source_lang: LangCode,
@@ -39,16 +39,13 @@ pub struct Enricher {
 
 impl Enricher {
     pub fn new(
-        api_key: Option<String>,
+        api_key: String,
         model: String,
         reasoning_effort: Option<String>,
         source_lang: LangCode,
         targets: Vec<LangCode>,
     ) -> anyhow::Result<Self> {
         let targets = lang::normalize(targets.into_iter().filter(|t| *t != source_lang));
-        if api_key.is_none() && !targets.is_empty() {
-            tracing::warn!("OPENAI_API_KEY is not set; subtitles will not be translated");
-        }
         let furigana = (source_lang == "ja").then(Furigana::new).transpose()?;
         Ok(Self {
             http: crate::http().clone(),
@@ -76,18 +73,17 @@ impl Enricher {
             None => vec![Span::Text(text.to_owned())],
         };
         let source = self.source_tokens(&spans);
-        let translations = match &self.api_key {
-            Some(key) if !self.targets.is_empty() => {
-                let terms = Terms::new(&spans, glossary);
-                match self.translate(key, &terms, context).await {
-                    Ok(raw) => self.translations(raw, &terms),
-                    Err(e) => {
-                        tracing::warn!("translate: {e:#}");
-                        BTreeMap::new()
-                    }
+        let translations = if self.targets.is_empty() {
+            BTreeMap::new()
+        } else {
+            let terms = Terms::new(&spans, glossary);
+            match self.translate(&self.api_key, &terms, context).await {
+                Ok(raw) => self.translations(raw, &terms),
+                Err(e) => {
+                    tracing::warn!("translate: {e:#}");
+                    BTreeMap::new()
                 }
             }
-            _ => BTreeMap::new(),
         };
         Enriched {
             source,
@@ -815,7 +811,7 @@ mod tests {
 
     fn enricher(targets: &[&str]) -> Enricher {
         Enricher::new(
-            Some("key".into()),
+            "key".into(),
             "model".into(),
             None,
             "ja".into(),
