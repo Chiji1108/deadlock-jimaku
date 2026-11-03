@@ -42,11 +42,12 @@
   // デスクトップのウィンドウでは左のサイドバー。OBS のドックのように狭いときは上に並べる
   const wide = new MediaQuery("min-width: 768px");
 
-  function open(value: string) {
-    tab = value;
+  // タブを変えたら（サイドバーからでも、料金や注意のリンクからでも）先頭から見せる
+  $effect(() => {
+    void tab;
     content?.scrollTo({ top: 0 });
     window.scrollTo({ top: 0 });
-  }
+  });
 
   const status = $derived.by(() => {
     if (!s?.transcriptionEnabled) return { label: "停止中", dot: "bg-muted-foreground/50" };
@@ -61,7 +62,9 @@
 <ModeWatcher />
 <Toaster richColors position="bottom-right" />
 
-<div class="flex min-h-screen flex-col bg-background text-foreground md:h-screen">
+<div
+  class="flex min-h-screen flex-col bg-background text-foreground has-data-[orientation=vertical]:h-screen"
+>
   <header class="sticky top-0 z-10 shrink-0 border-b bg-background/80 backdrop-blur">
     <div class="flex items-center gap-4 px-4 py-3">
       <!-- 名前はウィンドウ（OBS ならドックのタブ）に出ているので、状態と今回の料金を置く -->
@@ -74,7 +77,7 @@
         <!-- 届く前も行の高さを取っておく（届いたときにページがずれない） -->
         <p class="h-4 text-xs text-muted-foreground tabular-nums">
           {#if s && panel.server === "open" && panel.usage}
-            <button class="hover:text-foreground hover:underline" onclick={() => open("usage")}>
+            <button class="hover:text-foreground hover:underline" onclick={() => (tab = "usage")}>
               起動してからの料金 {usd(total(panel.usage.session))}{unpriced(panel.usage.session)
                 ? " ＋α"
                 : ""}
@@ -102,20 +105,25 @@
       orientation={wide.current ? "vertical" : "horizontal"}
       class="min-h-0 flex-1 gap-0"
     >
-      <Tabs.List
-        variant="line"
-        class="h-auto w-full shrink-0 justify-start overflow-x-auto px-4 pt-4 md:min-h-full md:w-56 md:gap-1 md:overflow-y-auto md:border-r md:bg-muted/30 md:p-3"
+      <!-- 縦のとき（サイドバー）は高さいっぱいに伸ばし、入りきらなければサイドバーだけスクロールする -->
+      <div
+        class="shrink-0 px-4 pt-4 group-data-vertical/tabs:w-56 group-data-vertical/tabs:overflow-y-auto group-data-vertical/tabs:border-r group-data-vertical/tabs:bg-muted/30 group-data-vertical/tabs:p-3"
       >
-        {#each TABS as t (t.value)}
-          <Tabs.Trigger
-            value={t.value}
-            class="max-md:[&>svg]:hidden md:h-9 md:flex-none md:px-3 md:data-active:bg-muted md:after:hidden"
-          >
-            <t.icon />{t.label}
-          </Tabs.Trigger>
-        {/each}
-      </Tabs.List>
-      <main bind:this={content} class="min-w-0 flex-1 md:overflow-y-auto">
+        <Tabs.List
+          class="w-full justify-start overflow-x-auto overflow-y-hidden group-data-vertical/tabs:gap-1 group-data-vertical/tabs:bg-transparent"
+        >
+          {#each TABS as t (t.value)}
+            <!-- 横に並べるときは幅が狭いので、アイコンを出さない（入りきらなければ横にスクロール） -->
+            <Tabs.Trigger
+              value={t.value}
+              class="group-data-horizontal/tabs:[&>svg]:hidden group-data-vertical/tabs:h-9 group-data-vertical/tabs:flex-none group-data-vertical/tabs:px-3"
+            >
+              <t.icon />{t.label}
+            </Tabs.Trigger>
+          {/each}
+        </Tabs.List>
+      </div>
+      <main bind:this={content} class="min-w-0 flex-1 group-data-vertical/tabs:overflow-y-auto">
         <div class="mx-auto flex max-w-3xl flex-col gap-4 px-4 py-6">
           {#if panel.view?.unsaved}
             <Alert.Root variant="destructive">
@@ -134,7 +142,7 @@
                 <p>
                   文字起こしと翻訳に使います。<button
                     class="underline"
-                    onclick={() => open("keys")}
+                    onclick={() => (tab = "keys")}
                   >
                     API キーの設定へ
                   </button>
@@ -142,7 +150,7 @@
               </Alert.Description>
             </Alert.Root>
           {/if}
-          {#if s?.transcriptionEnabled && panel.transcriptionError}
+          {#if s.transcriptionEnabled && panel.transcriptionError}
             <Alert.Root variant="destructive">
               <CircleAlertIcon />
               <Alert.Title>字幕が止まっています</Alert.Title>
