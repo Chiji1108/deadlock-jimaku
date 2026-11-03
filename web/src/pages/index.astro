@@ -1,11 +1,5 @@
 ---
-import Entity from "../components/Entity.astro";
 import Layout from "../layouts/Layout.astro";
-
-/** 字幕の見本のアイコン（アプリが deadlock-api から保存したもの） */
-const HAZE = "/sample/haze.webp";
-const BULLET_DANCE = "/sample/bullet-dance.webp";
-const CURSED_RELIC = "/sample/cursed-relic.webp";
 
 const DOWNLOAD = "https://github.com/Chiji1108/deadlock-stream-overlays/releases/latest";
 
@@ -20,23 +14,36 @@ const features = [
   },
 ];
 
-/** 実際のオーバーレイを撮った見本（ランクは見本の値） */
-const overlays = [
+/**
+ * 配信画面の見本（Windows の OBS で撮った実際の配信画面、1920×1080）。
+ * 枠の位置は画面に対する割合で、下の拡大図はこの画面から切り出したもの
+ */
+const parts = [
   {
-    title: "アイテム説明",
-    body: "字幕にアイテム名が出たら、ゲーム内と同じカードで説明を出します。「拡マガ」のような略し方でも出ます。",
-    image: "/sample/items.webp",
-    alt: "アイテム説明のカード（基礎拡張マガジン）",
-    size: [460, 286],
+    name: "字幕",
+    frame: { left: 31.25, top: 62, width: 38.5, height: 22.7 },
+    image: "/sample/captions-real.webp",
+    size: [740, 245],
+    alt: "字幕（ドアマンのウルトは強い。デスチーターにはカースを買え。と、その英訳）",
+    body: "話した言葉に、アイコン・色・ふりがなを付けて出します。下の行は英訳で、「ウルト」「カース」のような呼び方も正式な名前（Hotel Guest、Cursed Relic）になります。",
   },
   {
-    title: "ランク",
-    body: "今のランクと、次のランクまでのポイントを出します。試合が終わると自動で更新します。アイコンだけ・名前までなど、出す中身も選べます。",
-    image: "/sample/rank.webp",
-    alt: "ランクの表示（エミッサリー III、650 / 1,000）",
-    size: [480, 140],
+    name: "アイテム説明",
+    frame: { left: 78.1, top: 19.4, width: 21.5, height: 40 },
+    image: "/sample/items-real.webp",
+    size: [412, 432],
+    alt: "アイテム説明のカード（デスチーター）",
+    body: "字幕にアイテム名が出たら、ゲーム内と同じカードで説明を出します。",
   },
-];
+  {
+    name: "ランク",
+    frame: { left: 0.3, top: 0.5, width: 17.5, height: 8 },
+    image: "/sample/rank-real.webp",
+    size: [340, 90],
+    alt: "ランクの表示（エミッサリー III）",
+    body: "今のランクと、次のランクまでのポイントを出します。試合が終わると自動で更新します。",
+  },
+] as const;
 
 const steps = [
   { title: "ダウンロード", body: "Windows・Mac・Linux 用のアプリを入れます。" },
@@ -86,50 +93,38 @@ const faqs = [
       <span class="text-sm text-muted">Windows 10 / 11・macOS 11 以降・Linux</span>
     </div>
 
-    <!-- 配信画面の見本: ゲーム画面に字幕・アイテム説明・ランクを重ねる（位置はアプリで自由に決められる） -->
+    <!-- 配信画面の見本: OBS で撮った実際の画面に、どれが何かを枠で示す（枠は画面の幅に合わせて縮む） -->
     <figure class="mt-14">
-      <div class="screen relative overflow-hidden rounded-xl border border-line" aria-label="配信画面の見本">
-        <img src="/sample/game.webp" alt="" width="1920" height="1080" class="block w-full" />
+      <div class="relative overflow-hidden rounded-xl border border-line">
         <img
-          src="/sample/rank.webp"
-          alt="ランクの表示"
-          width="480"
-          height="140"
-          class="absolute top-[2%] left-[1%] w-[17%]"
+          src="/sample/game.webp"
+          alt="配信画面の見本。左上にランク、右にアイテム説明のカード、下の中央に字幕"
+          width="1920"
+          height="1080"
+          fetchpriority="high"
+          class="block w-full"
         />
-        <img
-          src="/sample/items.webp"
-          alt="アイテム説明のカード"
-          width="460"
-          height="286"
-          class="absolute top-[26%] right-[2%] w-[22%]"
-        />
-        <!-- 字幕は文字で組む（画面の幅に合わせて縮む） -->
-        <div class="absolute right-[20%] bottom-[15%] left-[20%] flex flex-col gap-[0.6em] text-center">
-          <div>
-            <p class="caption screen-source">
-              <Entity kind="hero" icon={HAZE}>ヘイズ</Entity>の<Entity kind="ability" icon={BULLET_DANCE}
-                >ウルト</Entity
-              >は<ruby>強<rt>つよ</rt></ruby>い。
-            </p>
-            <p class="caption screen-translation text-white/90">
-              <Entity kind="hero" icon={HAZE}>Haze</Entity>'s <Entity kind="ability" icon={BULLET_DANCE}
-                >Bullet Dance</Entity
-              > is strong.
-            </p>
-          </div>
-          <div>
-            <p class="caption screen-source">
-              <Entity kind="spirit" icon={CURSED_RELIC}>カース</Entity>は<ruby>買<rt>か</rt></ruby>っとけ。
-            </p>
-            <p class="caption screen-translation text-white/90">
-              Buy <Entity kind="spirit" icon={CURSED_RELIC}>Cursed Relic</Entity>.
-            </p>
-          </div>
-        </div>
+        {
+          parts.map(({ name, frame }) => (
+            <div
+              class="frame"
+              style={`left:${frame.left}%;top:${frame.top}%;width:${frame.width}%;height:${frame.height}%`}
+            >
+              <span
+                class:list={[
+                  "frame-label",
+                  frame.top < 5 && "below",
+                  frame.left + frame.width > 90 && "end",
+                ]}
+              >
+                {name}
+              </span>
+            </div>
+          ))
+        }
       </div>
       <figcaption class="mt-3 text-xs text-muted">
-        配信画面の見本。字幕（日本語 → 英語）、アイテム説明、ランクを OBS で重ねたところ。「ウルト」「カース」のような呼び方も聞き分け、訳文では正式な名前にします
+        Windows の OBS で撮った実際の配信画面。字幕・アイテム説明・ランクは、どれも好きな位置と大きさに置けます
       </figcaption>
     </figure>
   </section>
@@ -149,12 +144,12 @@ const faqs = [
   </section>
 
   <section class="mx-auto max-w-5xl px-4 py-16">
-    <h2 class="text-2xl font-bold">ほかのオーバーレイ</h2>
+    <h2 class="text-2xl font-bold">オーバーレイ</h2>
     <p class="mt-3 text-muted">どれも OBS のブラウザソースに URL を貼るだけで、背景は透明です。</p>
     <div class="mt-8 grid items-start gap-6 sm:grid-cols-2">
       {
-        overlays.map((o) => (
-          <figure class="stage p-6">
+        parts.map((o, i) => (
+          <figure class:list={["stage p-6", i === 0 && "sm:col-span-2"]}>
             <img
               src={o.image}
               alt={o.alt}
@@ -162,10 +157,11 @@ const faqs = [
               height={o.size[1]}
               loading="lazy"
               decoding="async"
-              class="mx-auto w-full max-w-sm"
+              class="mx-auto w-full rounded-md"
+              style={`max-width:${o.size[0]}px`}
             />
             <figcaption class="mt-5">
-              <h3 class="font-semibold">{o.title}</h3>
+              <h3 class="font-semibold">{o.name}</h3>
               <p class="mt-2 text-sm leading-relaxed text-muted">{o.body}</p>
             </figcaption>
           </figure>
