@@ -1,88 +1,42 @@
-# v から始まるタグ（例: v0.1.0）を push すると、Mac・Windows・Linux のインストーラーを作り、
-# 下書きのリリースに載せる。中身を確かめてから GitHub で公開する。
-# 配布の設定を変えた PR と手動の実行では、作るだけ（Actions の成果物に置く）
+# v から始まるタグ（例: v0.1.0、プレリリースは v0.2.0-rc.1）を push すると、3 つの OS のインストーラーを作り、
+# 下書きのリリースに載せる。中身を確かめてから GitHub で公開する
 name: release
 
 on:
   push:
     tags: ["v*"]
-  pull_request:
-    paths: [".github/workflows/release.yml", "app/tauri.conf.json", "app/*.plist"]
-  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  draft:
-    if: github.ref_type == 'tag'
+  build:
+    uses: ./.github/workflows/build.yml
+
+  release:
+    needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - name: タグと Cargo の版が同じか確かめる
         run: |
           version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
           test "v$version" = "$GITHUB_REF_NAME" || { echo "Cargo.toml は $version、タグは $GITHUB_REF_NAME"; exit 1; }
-      - name: 下書きのリリースを作る
-        run: gh release create "$GITHUB_REF_NAME" --draft --title "$GITHUB_REF_NAME" --generate-notes
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: installers-*
+          path: dist
+          merge-multiple: true
+      # やり直したときは、作ってある下書きのファイルを置き換える
+      - name: 下書きのリリースに載せる
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" dist/* --clobber
+          else
+            prerelease=$([[ "$GITHUB_REF_NAME" == *-* ]] && echo --prerelease || true)
+            gh release create "$GITHUB_REF_NAME" dist/* --draft $prerelease --title "$GITHUB_REF_NAME" --generate-notes
+          fi
         env:
           GH_TOKEN: ${{ github.token }}
-
-  build:
-    needs: draft
-    # タグでないときは draft を飛ばすので、飛ばされても動かす
-    if: ${{ !failure() && !cancelled() }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          # Apple シリコンと Intel の両方で動く 1 つのアプリにする
-          - os: macos-latest
-            args: --target universal-apple-darwin --bundles dmg
-            rust-targets: aarch64-apple-darwin x86_64-apple-darwin
-            bundle: target/universal-apple-darwin/release/bundle
-          - os: windows-latest
-            args: --bundles nsis
-            bundle: target/release/bundle
-          # 古い glibc で作ると、新しいディストリビューションでも動く
-          - os: ubuntu-22.04
-            args: --bundles deb,rpm,appimage
-            bundle: target/release/bundle
-    runs-on: ${{ matrix.os }}
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - uses: actions/checkout@v4
-      - name: Linux のビルドに要るライブラリ（Tauri の WebView とマイク）
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev libasound2-dev patchelf
-      - uses: jdx/mise-action@v2
-        with:
-          install_args: rust node pnpm
-      - if: matrix.rust-targets
-        run: rustup target add ${{ matrix.rust-targets }}
-      - uses: Swatinem/rust-cache@v2
-      - run: pnpm --dir frontend install --frozen-lockfile
-      # Tauri の CLI はリポジトリのルートから動かす（app/tauri.conf.json を探す）
-      - run: frontend/node_modules/.bin/tauri build ${{ matrix.args }}
-      - name: インストーラーを集める
-        run: |
-          shopt -s nullglob
-          mkdir dist
-          files=(${{ matrix.bundle }}/dmg/*.dmg ${{ matrix.bundle }}/nsis/*.exe ${{ matrix.bundle }}/deb/*.deb ${{ matrix.bundle }}/rpm/*.rpm ${{ matrix.bundle }}/appimage/*.AppImage)
-          test ${#files[@]} -gt 0
-          cp "${files[@]}" dist/
-          ls -l dist
-      - name: リリースに載せる
-        if: github.ref_type == 'tag'
-        run: gh release upload "$GITHUB_REF_NAME" dist/* --clobber
-        env:
-          GH_TOKEN: ${{ github.token }}
-      - if: github.ref_type != 'tag'
-        uses: actions/upload-artifact@v4
-        with:
-          name: installers-${{ runner.os }}
-          path: dist/

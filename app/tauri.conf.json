@@ -31,6 +31,18 @@
       "signingIdentity": "-",
       "minimumSystemVersion": "11.0",
       "entitlements": "Entitlements.plist"
+    },
+    "linux": {
+      "deb": {
+        "depends": [
+          "libasound2t64 | libasound2"
+        ]
+      },
+      "rpm": {
+        "depends": [
+          "alsa-lib"
+        ]
+      }
     }
   }
 }
