@@ -525,6 +525,10 @@ mic ─┬─▶ ローカル VAD（earshot）── 発話の開始 → Segment
   - OpenAI `gpt-6.1-terra`（同）は 1.7〜3.8 秒。所有格のルールを守り、ロシア語がいちばん自然 → **採用**
   - Claude Haiku 5.5（推論なし）2.4〜3.9 秒、Claude Sonnet 5.5（推論なし）2.3〜9.2 秒。Sonnet の訳は自然
 - system: 役割とルール（名前の一覧は渡さない）
+  - 記号に語尾を付けない（ロシア語の格変化などで名前が崩れる）
+  - 英語の所有格 's だけは許す（名前の後ろに付くだけで崩れない）。以前は 's も禁じていたので「The Hotel Guest of The Doorman」のように不自然だった
+  - 英語名が冠詞から始まる用語（The Doorman）は、`terms` にそう添え、その前に冠詞を付けさせない
+  - 訳文の知らない番号の記号は捨てる（後ろの 's も）
 - user: `{ "context": [直前の確定字幕], "transcript": "⟦1⟧のウルト強い", "terms": { "⟦1⟧": "hero" } }`
 - OpenAI の API キーがなければ翻訳しない（固有名詞とふりがなは付ける）
 - 構造化出力（`response_format: json_schema`, `strict`）: `{ "translations": { "en": "...", "ru": "..." } }`。`translations` のキーは設定の翻訳先から毎回作る
