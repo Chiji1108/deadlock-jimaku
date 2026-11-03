@@ -120,6 +120,7 @@ pub enum ServerMsg {
         subtitles: crate::settings::SubtitleDisplay,
         rank_language: LangCode,
         rank_content: crate::settings::RankContent,
+        rank_numerals: crate::settings::Numerals,
         item_cards: ItemCardsView,
     },
     /// 直近のピーク（dBFS）。1 秒に 10 回ほど

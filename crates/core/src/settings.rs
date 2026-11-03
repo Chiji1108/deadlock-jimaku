@@ -38,6 +38,8 @@ pub struct Settings {
     pub rank_language: Option<LangCode>,
     /// ランクのオーバーレイに出すもの
     pub rank_content: RankContent,
+    /// サブランクの書き方
+    pub rank_numerals: Numerals,
     /// エターナスの順位を調べるリーダーボードの地域。None なら調べない
     #[ts(optional)]
     pub rank_region: Option<Region>,
@@ -278,6 +280,17 @@ pub enum RankContent {
     Icon,
 }
 
+/// サブランクの書き方
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "lowercase")]
+#[ts(export)]
+pub enum Numerals {
+    /// I〜VI（ゲームと同じ）
+    Roman,
+    /// 1〜6
+    Arabic,
+}
+
 /// deadlock-api のリーダーボードの地域（値は API のパスのまま）
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[ts(export)]
@@ -355,6 +368,7 @@ impl Default for Settings {
             item_cards: ItemCards::default(),
             rank_language: None,
             rank_content: RankContent::Full,
+            rank_numerals: Numerals::Roman,
             rank_region: None,
             models: Models::default(),
             realtime_delay: "low".into(),
@@ -508,6 +522,9 @@ impl Settings {
         if let Some(content) = patch.rank_content {
             next.rank_content = content;
         }
+        if let Some(numerals) = patch.rank_numerals {
+            next.rank_numerals = numerals;
+        }
         if let Some(region) = patch.rank_region {
             next.rank_region = match region.as_str() {
                 "" => None,
@@ -558,6 +575,8 @@ pub struct SettingsPatch {
     pub rank_language: Option<LangCode>,
     #[ts(optional)]
     pub rank_content: Option<RankContent>,
+    #[ts(optional)]
+    pub rank_numerals: Option<Numerals>,
     /// 地域（`Region`）。空文字列なら順位を調べない
     #[ts(optional)]
     pub rank_region: Option<String>,

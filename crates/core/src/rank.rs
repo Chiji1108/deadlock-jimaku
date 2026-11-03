@@ -69,9 +69,8 @@ async fn run(store: Arc<Store>, account_id: u32) {
     let region = store.settings().rank_region;
     let mut tiers = Tiers::default();
     let mut last: Option<RankState> = None;
-    // 最後に取れた順位と取った時刻、最後に取りに行った時刻
+    // 最後に取れた順位と、取った時刻
     let mut placement: Option<(Option<u32>, Instant)> = None;
-    let mut checked: Option<Instant> = None;
     // アイコンを持っているバッジ。取れなかったら次の回に取り直す
     let mut image_badge: Option<u32> = None;
     loop {
@@ -89,11 +88,11 @@ async fn run(store: Arc<Store>, account_id: u32) {
                 }
                 let mut state = state(&player, &tiers, image_badge == Some(player.badge));
                 if let (ETERNUS, Some(region)) = (player.rank, region) {
-                    if checked.is_none_or(|t| t.elapsed() >= LEADERBOARD_INTERVAL) {
-                        checked = Some(Instant::now());
+                    // 取れてから時間が経ったら取り直す。取れなければ次の回にまた取りに行き、
+                    // それまでは前の順位のまま（古くなったら出さない）
+                    if placement.is_none_or(|(_, at)| at.elapsed() >= LEADERBOARD_INTERVAL) {
                         match leaderboard_rank(region, account_id).await {
                             Ok(rank) => placement = Some((rank, Instant::now())),
-                            // 取れなければ前の順位のまま（古くなったら出さない）
                             Err(e) => tracing::warn!("leaderboard: {e:#}"),
                         }
                     }
