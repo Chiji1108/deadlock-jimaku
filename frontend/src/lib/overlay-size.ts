@@ -1,7 +1,9 @@
 /** OBS のブラウザソースの既定の大きさ（操作パネルの案内と、オーバーレイの基準を同じ値にする） */
 export const SUBTITLE_SIZE: [number, number] = [1000, 400];
-export const RANK_SIZE: [number, number] = [480, 140];
-export const ITEMS_SIZE: [number, number] = [460, 560];
+export const RANK_SIZE: [number, number] = [400, 140];
+export const ITEMS_SIZE: [number, number] = [420, 480];
+/** アイテム説明のカード（deadlock-ui）の幅。既定のソースでは、カードを縮めてソースの幅に合わせる */
+export const ITEM_CARD_WIDTH = 450;
 
 /**
  * ブラウザソースの大きさと既定の大きさの比（幅と高さの小さい方。片方だけ変えても切れない）を求め、変わるたびに渡す。

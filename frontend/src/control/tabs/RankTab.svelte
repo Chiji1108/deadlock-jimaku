@@ -10,6 +10,7 @@
   import type { Region } from "../../generated/Region";
   import { REGIONS } from "../../lib/regions";
   import AddToObs from "../parts/AddToObs.svelte";
+  import AnchorPicker from "../parts/AnchorPicker.svelte";
   import OverlayPreview from "../parts/OverlayPreview.svelte";
   import { RANK_SIZE } from "../../lib/overlay-size";
   import { overlayUrl, panel } from "../panel.svelte";
@@ -107,6 +108,16 @@
           <ToggleGroup.Item value="roman" class="flex-1">III（ゲームと同じ）</ToggleGroup.Item>
           <ToggleGroup.Item value="arabic" class="flex-1">3</ToggleGroup.Item>
         </ToggleGroup.Root>
+      </Field.Field>
+
+      <Field.Field>
+        <Field.Label>位置</Field.Label>
+        <AnchorPicker
+          label="ランクの位置"
+          value={s.rankAnchor}
+          onchange={(rankAnchor) => panel.update({ rankAnchor })}
+        />
+        <Field.Description>OBS のソースの箱の中で、ランクを寄せる位置です</Field.Description>
       </Field.Field>
 
       <Field.Field>

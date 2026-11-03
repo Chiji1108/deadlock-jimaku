@@ -119,6 +119,7 @@ pub enum ServerMsg {
         rank_language: LangCode,
         rank_content: crate::settings::RankContent,
         rank_numerals: crate::settings::Numerals,
+        rank_anchor: crate::settings::Anchor,
         item_cards: ItemCardsView,
     },
     /// 直近のピーク（dBFS）。1 秒に 10 回ほど
@@ -298,6 +299,7 @@ pub struct ItemCardsView {
     pub hold_seconds: f32,
     /// 説明の言語（deadlock-api の言語名。例: `japanese`）
     pub language: String,
+    pub anchor: crate::settings::Anchor,
 }
 
 /// 操作パネルに返す設定。API キーはどこから読んだかだけ（キーそのものは返さない）

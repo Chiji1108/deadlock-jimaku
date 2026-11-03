@@ -253,11 +253,13 @@ fn display(settings: &Settings) -> ServerMsg {
         rank_language: settings.rank_language(),
         rank_content: settings.rank_content,
         rank_numerals: settings.rank_numerals,
+        rank_anchor: settings.rank_anchor,
         item_cards: ItemCardsView {
             hold_seconds: settings.item_cards.hold_seconds,
             language: crate::lang::find(&settings.item_language())
                 .map_or("english", |l| l.api)
                 .to_owned(),
+            anchor: settings.item_cards.anchor,
         },
     }
 }
