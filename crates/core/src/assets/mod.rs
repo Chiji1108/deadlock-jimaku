@@ -19,10 +19,10 @@ use crate::furigana::Furigana;
 use crate::lang;
 use crate::store::Store;
 use crate::types::{Glossary, LangCode};
-use glossary::{Extras, Icon, Sources};
+use glossary::{Aliases, Icon, Sources};
 
 /// キャッシュの形式。Glossary の形やアイコンの置き方を変えたら上げる（古いキャッシュは読まない）
-const CACHE_FORMAT: &str = "v6";
+const CACHE_FORMAT: &str = "v7";
 
 /// LLM で付けた読みのキャッシュ。名前ごとなので、パッチやキャッシュ形式をまたいで使い回す
 const LLM_READINGS: &str = "readings-llm.ja.json";
@@ -67,10 +67,15 @@ pub async fn load_into(store: Arc<Store>, root: PathBuf, openai_key: Option<Stri
             readings::Manual::new()
         }
     };
+    let aliases = bundled_aliases().unwrap_or_else(|e| {
+        tracing::warn!("{e:#}");
+        Aliases::new()
+    });
     let cache_path = root.join(LLM_READINGS);
     let cache = readings::load_cache(&cache_path).await;
     let publish = |cache: &readings::Cache| {
         let mut glossary = (*loaded.glossary).clone();
+        glossary::apply_aliases(&mut glossary, &aliases);
         readings::apply(&mut glossary, cache, &manual);
         tracing::info!(
             "glossary {} ({} entities, {:?})",
@@ -176,11 +181,10 @@ async fn build_and_save(
         sources.items.insert(code, items);
     }
 
-    let extras = extras()?;
     // 名前の読みは形態素解析で付ける（辞書の読み込みと解析は同期処理なのでワーカーを塞がない）。
     // LLM の読みは保存せず、読み込むたびに重ねる（`load_into`）
     let (mut glossary, icons) = tokio::task::spawn_blocking(move || {
-        let (mut glossary, icons) = glossary::build(version, &sources, &extras);
+        let (mut glossary, icons) = glossary::build(version, &sources);
         let furigana = Furigana::new()?;
         glossary::fill_readings(&mut glossary, |name| furigana.annotate(name));
         anyhow::Ok((glossary, icons))
@@ -272,11 +276,10 @@ fn read_version(root: &Path, version: u32) -> Option<Loaded> {
     })
 }
 
-fn extras() -> anyhow::Result<Extras> {
-    Ok(Extras {
-        aliases_ja: serde_json::from_str(include_str!("../../../../data/aliases.ja.json"))
-            .context("data/aliases.ja.json")?,
-    })
+/// 同梱の別名。辞書には保存せず、配るたびに重ねる
+fn bundled_aliases() -> anyhow::Result<Aliases> {
+    serde_json::from_str(include_str!("../../../../data/aliases.ja.json"))
+        .context("data/aliases.ja.json")
 }
 
 /// 手で書いた読み。辞書には保存せず、読み込むたびに重ねる（名前が変わっていたら使わない）
@@ -291,7 +294,7 @@ mod tests {
 
     #[test]
     fn bundled_extras_parse() {
-        extras().unwrap();
+        bundled_aliases().unwrap();
         manual_readings().unwrap();
     }
 

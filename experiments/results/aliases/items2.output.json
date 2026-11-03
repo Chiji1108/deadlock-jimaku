@@ -1,0 +1,386 @@
+{
+ "item:1955841979": {
+  "en": "Spellbreaker",
+  "ja": "スペルブレイカー",
+  "aliases": []
+ },
+ "item:1976391348": {
+  "en": "Cold Front",
+  "ja": "コールドフロント",
+  "aliases": []
+ },
+ "item:1998374645": {
+  "en": "Mystic Burst",
+  "ja": "ミスティックバースト",
+  "aliases": []
+ },
+ "item:2010028405": {
+  "en": "Headshot Booster",
+  "ja": "ヘッドショットブースター",
+  "aliases": []
+ },
+ "item:2037039379": {
+  "en": "Inhibitor",
+  "ja": "インヒビター",
+  "aliases": []
+ },
+ "item:2054088113": {
+  "en": "Mystical Piano",
+  "ja": "ミスティカルピアノ",
+  "aliases": []
+ },
+ "item:2059712766": {
+  "en": "Restorative Locket",
+  "ja": "ヒーリングロケット",
+  "aliases": []
+ },
+ "item:2061878743": {
+  "en": "Disarming Hex",
+  "ja": "ディスアームヘックス",
+  "aliases": []
+ },
+ "item:2064029594": {
+  "en": "Opening Rounds",
+  "ja": "オープニングラウンド",
+  "aliases": [
+   {
+    "alias": "プリスティーエンブレム",
+    "source": "https://gamerch.com/deadlock/876436"
+   },
+   {
+    "alias": "Pristine Emblem",
+    "source": "https://deadlock.wiki/Special:ListRedirects?limit=2000"
+   }
+  ]
+ },
+ "item:2068250483": {
+  "en": "Frostbite Charm",
+  "ja": "凍傷のチャーム",
+  "aliases": []
+ },
+ "item:2081037738": {
+  "en": "Mystic Vulnerability",
+  "ja": "ヴァルネラビリティ",
+  "aliases": [
+   {
+    "alias": "ミスティックヴァルネラビリティ",
+    "source": "https://gamerch.com/deadlock/871722"
+   },
+   {
+    "alias": "ヴェルネラビリティ",
+    "source": "https://wikiwiki.jp/deadlockjp/Spirit"
+   }
+  ]
+ },
+ "item:2095565695": {
+  "en": "Point Blank",
+  "ja": "ポイントブランク",
+  "aliases": []
+ },
+ "item:2108215830": {
+  "en": "Heroic Aura",
+  "ja": "ヒロイックオーラ",
+  "aliases": []
+ },
+ "item:2121044373": {
+  "en": "Tankbuster",
+  "ja": "タンクバスター",
+  "aliases": [
+   {
+    "alias": "改良バースト",
+    "source": "https://gamerch.com/deadlock/871722"
+   },
+   {
+    "alias": "カイリョウバースト",
+    "source": "https://gamerch.com/deadlock/871722"
+   },
+   {
+    "alias": "Improved Burst",
+    "source": "https://deadlock.wiki/Special:ListRedirects?limit=2000"
+   }
+  ]
+ },
+ "item:2142980412": {
+  "en": "Focus Lens",
+  "ja": "フォーカスレンズ",
+  "aliases": []
+ },
+ "item:2152872419": {
+  "en": "Sharpshooter",
+  "ja": "シャープシューター",
+  "aliases": []
+ },
+ "item:2163598980": {
+  "en": "Spirit Resilience",
+  "ja": "スピリットレジリエンス",
+  "aliases": [
+   {
+    "alias": "スピリットレジエンス",
+    "source": "https://wikiwiki.jp/deadlockjp/Vitality"
+   },
+   {
+    "alias": "改良スピリットアーマー",
+    "source": "https://gamerch.com/deadlock/871722"
+   },
+   {
+    "alias": "カイリョウスピリットアーマー",
+    "source": "https://gamerch.com/deadlock/871722"
+   },
+   {
+    "alias": "Improved Spirit Armor",
+    "source": "https://deadlock.wiki/Special:ListRedirects?limit=2000"
+   }
+  ]
+ },
+ "item:2221211450": {
+  "en": "Spellslinger",
+  "ja": "スペルスリンガー",
+  "aliases": [
+   {
+    "alias": "Enchanted Holsters",
+    "source": "https://deadlock.wiki/Special:ListRedirects?limit=2000"
+   }
+  ]
+ },
+ "item:2226497419": {
+  "en": "Spiritual Overflow",
+  "ja": "スピリットオーバーフロー",
+  "aliases": [
+   {
+    "alias": "スピリチュアルオーバーフロー",
+    "source": "https://gamerch.com/deadlock/876436"
+   }
+  ]
+ },
+ "item:230297145": {
+  "en": "Eternal Gift",
+  "ja": "エターナルギフト",
+  "aliases": []
+ },
+ "item:2319629810": {
+  "en": "Shadow Strike",
+  "ja": "シャドウストライク",
+  "aliases": []
+ },
+ "item:2356412290": {
+  "en": "Titanic Magazine",
+  "ja": "巨大拡張マガジン",
+  "aliases": [
+   {
+    "alias": "タイタニックマガジン",
+    "source": "https://gamerch.com/deadlock/876436"
+   }
+  ]
+ },
+ "item:2407033488": {
+  "en": "Intensifying Magazine",
+  "ja": "連射強化マガジン",
+  "aliases": [
+   {
+    "alias": "インテンシファイマガジン",
+    "source": "https://gamerch.com/deadlock/876436"
+   }
+  ]
+ },
+ "item:2407781327": {
+  "en": "Colossus",
+  "ja": "コロッサス",
+  "aliases": []
+ },
+ "item:2417568017": {
+  "en": "Scourge",
+  "ja": "スカージ",
+  "aliases": []
+ },
+ "item:2447176615": {
+  "en": "Enduring Speed",
+  "ja": "ウィングブーツ",
+  "aliases": [
+   {
+    "alias": "持続するスピード",
+    "source": "https://gamerch.com/deadlock/871722"
+   },
+   {
+    "alias": "ジゾクスルスピード",
+    "source": "https://gamerch.com/deadlock/871722"
+   }
+  ]
+ },
+ "item:2462046703": {
+  "en": "Golden Goose Egg",
+  "ja": "ガチョウの黄金の卵",
+  "aliases": []
+ },
+ "item:2463960640": {
+  "en": "Escalating Resilience",
+  "ja": "エスカレートレジリエンス",
+  "aliases": [
+   {
+    "alias": "エスカレーティングレジリエンス",
+    "source": "https://gamerch.com/deadlock/876436"
+   },
+   {
+    "alias": "エスカレートレジエンス",
+    "source": "https://wikiwiki.jp/deadlockjp/Weapon"
+   }
+  ]
+ },
+ "item:2480592370": {
+  "en": "Ricochet",
+  "ja": "リコシェ",
+  "aliases": [
+   {
+    "alias": "リコチェット",
+    "source": "https://gamerch.com/deadlock/876436"
+   }
+  ]
+ },
+ "item:2481177645": {
+  "en": "Hunter's Aura",
+  "ja": "ハンターオーラ",
+  "aliases": [
+   {
+    "alias": "ハンターのオーラ",
+    "source": "https://gamerch.com/deadlock/876436"
+   },
+   {
+    "alias": "ハンターノオーラ",
+    "source": "https://gamerch.com/deadlock/876436"
+   }
+  ]
+ },
+ "item:2519598785": {
+  "en": "Boundless Spirit",
+  "ja": "バウンドレススピリット",
+  "aliases": [
+   {
+    "alias": "無限スピリット",
+    "source": "https://gamerch.com/deadlock/871722"
+   },
+   {
+    "alias": "ムゲンスピリット",
+    "source": "https://gamerch.com/deadlock/871722"
+   }
+  ]
+ },
+ "item:2533252781": {
+  "en": "Ethereal Shift",
+  "ja": "エーテリアルシフト",
+  "aliases": [
+   {
+    "alias": "Shifting Shroud",
+    "source": "https://deadlock.wiki/Special:ListRedirects?limit=2000"
+   }
+  ]
+ },
+ "item:2566692615": {
+  "en": "Healing Booster",
+  "ja": "ヒーリングブースター",
+  "aliases": []
+ },
+ "item:26002154": {
+  "en": "Melee Charge",
+  "ja": "メレーチャージ",
+  "aliases": []
+ },
+ "item:2603935618": {
+  "en": "Healbane",
+  "ja": "ヒールベイン",
+  "aliases": []
+ },
+ "item:2617435668": {
+  "en": "Cursed Relic",
+  "ja": "呪いの遺物",
+  "aliases": [
+   {
+    "alias": "カース",
+    "source": "https://gamerch.com/deadlock/871722"
+   },
+   {
+    "alias": "Curse",
+    "source": "https://deadlock.wiki/Special:ListRedirects?limit=2000"
+   }
+  ]
+ },
+ "item:2678489038": {
+  "en": "Hollow Point",
+  "ja": "ホロウポイント",
+  "aliases": [
+   {
+    "alias": "ホローポイントワード",
+    "source": "https://gamerch.com/deadlock/876436"
+   },
+   {
+    "alias": "ホローポイント",
+    "source": "https://gamerch.com/deadlock/876436"
+   },
+   {
+    "alias": "Hollow Point Ward",
+    "source": "https://deadlock.wiki/Special:ListRedirects?limit=2000"
+   }
+  ]
+ },
+ "item:2717651715": {
+  "en": "Superior Duration",
+  "ja": "スーパーエクステンダー",
+  "aliases": [
+   {
+    "alias": "優れたデュレーション",
+    "source": "https://gamerch.com/deadlock/871722"
+   },
+   {
+    "alias": "スグレタデュレーション",
+    "source": "https://gamerch.com/deadlock/871722"
+   }
+  ]
+ },
+ "item:2739107182": {
+  "en": "Burst Fire",
+  "ja": "バーストファイア",
+  "aliases": []
+ },
+ "item:2800629741": {
+  "en": "Magic Carpet",
+  "ja": "マジックカーペット",
+  "aliases": []
+ },
+ "item:2820116164": {
+  "en": "Diviner's Kevlar",
+  "ja": "ディバイナーズケブラー",
+  "aliases": [
+   {
+    "alias": "ディヴァイナーズケブラー",
+    "source": "https://wikiwiki.jp/deadlockjp/Vitality"
+   }
+  ]
+ },
+ "item:2829638276": {
+  "en": "Extra Regen",
+  "ja": "エクストラリジェネ",
+  "aliases": []
+ },
+ "item:2922054143": {
+  "en": "Rusted Barrel",
+  "ja": "コロッシブバレル",
+  "aliases": [
+   {
+    "alias": "ウィザリングウィップ",
+    "source": "https://gamerch.com/deadlock/871722"
+   },
+   {
+    "alias": "Withering Whip",
+    "source": "https://deadlock.wiki/Rusted_Barrel/Update_history"
+   }
+  ]
+ },
+ "item:2947183272": {
+  "en": "Radiant Regeneration",
+  "ja": "レディアントリジェネ",
+  "aliases": [
+   {
+    "alias": "ラディアントリジェネ",
+    "source": "https://wikiwiki.jp/deadlockjp/Spirit"
+   }
+  ]
+ }
+}

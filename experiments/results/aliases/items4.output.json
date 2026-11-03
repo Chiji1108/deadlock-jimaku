@@ -1,0 +1,263 @@
+{
+ "item:395867183": {
+  "en": "Mystic Shot",
+  "ja": "ミスティックショット",
+  "aliases": []
+ },
+ "item:395944548": {
+  "en": "Torment Pulse",
+  "ja": "トーメントパルス",
+  "aliases": []
+ },
+ "item:3970837787": {
+  "en": "Enchanter's Emblem",
+  "ja": "妖術師の紋章",
+  "aliases": [
+   {
+    "alias": "Enchanter's Barrier",
+    "source": "https://deadlock.wiki/Enchanter's_Emblem"
+   }
+  ]
+ },
+ "item:3977876567": {
+  "en": "Kinetic Dash",
+  "ja": "キネティックダッシュ",
+  "aliases": []
+ },
+ "item:4050602737": {
+  "en": "Mystic Conduit",
+  "ja": "ミスティックコンジット",
+  "aliases": []
+ },
+ "item:4053935515": {
+  "en": "Headhunter",
+  "ja": "ヘッドハンター",
+  "aliases": []
+ },
+ "item:4075861416": {
+  "en": "Spirit Rend",
+  "ja": "スピリットキラー",
+  "aliases": [
+   {
+    "alias": "スペルスリンガーヘッドショット",
+    "source": "https://gamerch.com/deadlock/871632"
+   },
+   {
+    "alias": "Spellslinger Headshots",
+    "source": "https://deadlock.wiki/Spirit_Rend"
+   }
+  ]
+ },
+ "item:4104549924": {
+  "en": "Swift Striker",
+  "ja": "スイフトストライカー",
+  "aliases": []
+ },
+ "item:4121584236": {
+  "en": "Shrink Ray",
+  "ja": "シュリンクレイ",
+  "aliases": []
+ },
+ "item:4139877411": {
+  "en": "Extra Stamina",
+  "ja": "エクストラスタミナ",
+  "aliases": []
+ },
+ "item:4204808176": {
+  "en": "Rebuttal",
+  "ja": "プロテスト",
+  "aliases": []
+ },
+ "item:424779525": {
+  "en": "Omnicharge Signet",
+  "ja": "オムニチャージ",
+  "aliases": []
+ },
+ "item:465043967": {
+  "en": "Spirit Strike",
+  "ja": "スピリットストライク",
+  "aliases": []
+ },
+ "item:493591231": {
+  "en": "Lightning Scroll",
+  "ja": "ライトニングスクロール",
+  "aliases": []
+ },
+ "item:499683006": {
+  "en": "Bullet Lifesteal",
+  "ja": "バレットライフスティール",
+  "aliases": []
+ },
+ "item:600033864": {
+  "en": "Majestic Leap",
+  "ja": "マジェスティックリープ",
+  "aliases": []
+ },
+ "item:619484391": {
+  "en": "Silence Wave",
+  "ja": "サイレンスウェーブ",
+  "aliases": [
+   {
+    "alias": "サイレンスグリフ",
+    "source": "https://gamerch.com/deadlock/871875"
+   },
+   {
+    "alias": "Silence Glyph",
+    "source": "https://deadlock.wiki/Silence_Wave"
+   }
+  ]
+ },
+ "item:630839635": {
+  "en": "Echo Shard",
+  "ja": "エコーシャード",
+  "aliases": []
+ },
+ "item:64550694": {
+  "en": "Runed Gauntlets",
+  "ja": "ルーンガントレット",
+  "aliases": []
+ },
+ "item:668299740": {
+  "en": "Rapid Rounds",
+  "ja": "ラピッドラウンド",
+  "aliases": []
+ },
+ "item:673001892": {
+  "en": "Armor Piercer",
+  "ja": "アーマーピアサー",
+  "aliases": [
+   {
+    "alias": "アーマーピアッサー",
+    "source": "https://wikiwiki.jp/deadlockjp/Weapon"
+   },
+   {
+    "alias": "Armor Piercing Rounds",
+    "source": "https://deadlock.wiki/Armor_Piercer"
+   }
+  ]
+ },
+ "item:677738769": {
+  "en": "Refresher",
+  "ja": "リフレッシャー",
+  "aliases": []
+ },
+ "item:690458959": {
+  "en": "Express Shot",
+  "ja": "エクスプレスショット",
+  "aliases": []
+ },
+ "item:709540378": {
+  "en": "Cultist Sacrifice",
+  "ja": "サクリファイス",
+  "aliases": []
+ },
+ "item:710436191": {
+  "en": "Capacitor",
+  "ja": "コンデンサー",
+  "aliases": []
+ },
+ "item:7409189": {
+  "en": "Improved Spirit",
+  "ja": "グレータースピリット",
+  "aliases": []
+ },
+ "item:754480263": {
+  "en": "Mystic Expansion",
+  "ja": "ミスティックエクスパンダー",
+  "aliases": [
+   {
+    "alias": "Mystic Reach",
+    "source": "https://deadlock.wiki/Mystic_Expansion"
+   }
+  ]
+ },
+ "item:787198704": {
+  "en": "Rapid Recharge",
+  "ja": "ラピッドリチャージ",
+  "aliases": []
+ },
+ "item:800008313": {
+  "en": "Crushing Fists",
+  "ja": "クラッシュフィスト",
+  "aliases": []
+ },
+ "item:805079544": {
+  "en": "Weapon Shielding",
+  "ja": "ウェポンシールド",
+  "aliases": []
+ },
+ "item:811521119": {
+  "en": "Tesla Bullets",
+  "ja": "テスラバレット",
+  "aliases": [
+   {
+    "alias": "テスラ弾",
+    "source": "https://gamerch.com/deadlock/876436"
+   },
+   {
+    "alias": "テスラダン",
+    "source": "https://gamerch.com/deadlock/876436"
+   }
+  ]
+ },
+ "item:84321454": {
+  "en": "Quicksilver Reload",
+  "ja": "クイックシルバーリロード",
+  "aliases": []
+ },
+ "item:857669956": {
+  "en": "Guardian Ward",
+  "ja": "ガーディアンワード",
+  "aliases": []
+ },
+ "item:865846625": {
+  "en": "Leech",
+  "ja": "ライフドレイン",
+  "aliases": []
+ },
+ "item:865958998": {
+  "en": "Veil Walker",
+  "ja": "ベールウォーカー",
+  "aliases": []
+ },
+ "item:876563814": {
+  "en": "Spirit Lifesteal",
+  "ja": "スピリットライフスティール",
+  "aliases": []
+ },
+ "item:915014646": {
+  "en": "Transcendent Cooldown",
+  "ja": "トランセンデント",
+  "aliases": [
+   {
+    "alias": "トランセンドクールダウン",
+    "source": "https://wikiwiki.jp/deadlockjp/Spirit"
+   }
+  ]
+ },
+ "item:951866250": {
+  "en": "Indomitable",
+  "ja": "インドミタブル",
+  "aliases": []
+ },
+ "item:968099481": {
+  "en": "Extra Spirit",
+  "ja": "エクストラスピリット",
+  "aliases": []
+ },
+ "item:98582110": {
+  "en": "Stalker",
+  "ja": "ストーカー",
+  "aliases": [
+   {
+    "alias": "Backstabber",
+    "source": "https://deadlock.wiki/Stalker"
+   }
+  ]
+ },
+ "item:989206714": {
+  "en": "Blood Tribute",
+  "ja": "ブラッドトリビュート",
+  "aliases": []
+ }
+}

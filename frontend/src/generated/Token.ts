@@ -8,4 +8,8 @@ ref: string,
 /**
  * 実際に発話された表現（略称など）
  */
-spoken?: string, };
+spoken?: string, 
+/**
+ * 公式名ではなく発話された表現のまま出す（「ヘイズのウルト」の「ウルト」）
+ */
+asSpoken?: boolean, };

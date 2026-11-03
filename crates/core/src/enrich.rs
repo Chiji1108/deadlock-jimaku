@@ -111,9 +111,14 @@ impl Enricher {
         spans
             .iter()
             .flat_map(|span| match span {
-                Span::Entity { reference, spoken } => vec![Token::Entity {
+                Span::Entity {
+                    reference,
+                    spoken,
+                    as_spoken,
+                } => vec![Token::Entity {
                     reference: reference.clone(),
                     spoken: Some(spoken.clone()),
+                    as_spoken: *as_spoken,
                 }],
                 Span::Text(text) => match &self.furigana {
                     Some(f) => f.annotate(text),
@@ -196,7 +201,78 @@ struct Output {
 #[derive(Debug, PartialEq)]
 enum Span {
     Text(String),
-    Entity { reference: String, spoken: String },
+    Entity {
+        reference: String,
+        spoken: String,
+        /// 公式名ではなく発話された表現のまま出す（「ヘイズのウルト」の「ウルト」）
+        as_spoken: bool,
+    },
+}
+
+/// ヒーロー名の直後の文字列が、スキルを番号で呼んでいるか。
+/// (つなぎの文字数, 番号の表現の文字数, 何番目か) を返す（文字数は `char` の数）。
+///
+/// - 日本語: 「の」のあとに「ウルト」「アルティメット」、または「1スキ」「1番スキル」「2番目のスキル」など。
+///   「1番強い」「一番好き」と区別できないので、番号は「スキル」「スキ」まで言ったときだけ
+/// - 英語: 「's ult」「 ultimate」
+fn slot_reference(text: &str, lang: &str) -> Option<(usize, usize, u8)> {
+    let chars: Vec<char> = text.chars().map(lower).collect();
+    let starts = |at: usize, word: &str| {
+        let w: Vec<char> = word.chars().collect();
+        chars[at..].starts_with(&w).then_some(w.len())
+    };
+    if lang == "ja" {
+        let prefix = starts(0, "の").unwrap_or(0);
+        for ult in ["アルティメット", "ウルティメット", "ウルト"] {
+            if let Some(n) = starts(prefix, ult) {
+                // 「ウルトラ」のように長いカタカナ語の一部なら違う
+                let next = chars.get(prefix + n).copied();
+                if !next.is_some_and(is_katakana) {
+                    return Some((prefix, n, 4));
+                }
+            }
+        }
+        let c = *chars.get(prefix)?;
+        let slot = match c.to_digit(10) {
+            Some(d) => d,
+            None => match ('１'..='４').position(|x| x == c) {
+                Some(d) => d as u32 + 1,
+                None => ['一', '二', '三', '四'].iter().position(|&x| x == c)? as u32 + 1,
+            },
+        };
+        if !(1..=4).contains(&slot) {
+            return None;
+        }
+        let slot = slot as u8;
+        let mut at = prefix + 1;
+        let ban = starts(at, "番目").or_else(|| starts(at, "番"));
+        at += ban.unwrap_or(0);
+        at += starts(at, "の").unwrap_or(0);
+        // 「1番強い」「一番好き」と区別できないので「スキル」「スキ」まで言ったときだけ。
+        // 「1スキン」「スキップ」のように長いカタカナ語の一部なら違う
+        let skill = starts(at, "スキル").or_else(|| starts(at, "スキ"))?;
+        at += skill;
+        if chars.get(at).copied().is_some_and(is_katakana) {
+            return None;
+        }
+        return Some((prefix, at - prefix, slot));
+    }
+    if lang == "en" {
+        let prefix = starts(0, "'s ")
+            .or_else(|| starts(0, "’s "))
+            .or_else(|| starts(0, " "))?;
+        for ult in ["ultimate", "ult"] {
+            if let Some(n) = starts(prefix, ult)
+                && !chars
+                    .get(prefix + n)
+                    .copied()
+                    .is_some_and(is_spaced_word_char)
+            {
+                return Some((prefix, n, 4));
+            }
+        }
+    }
+    None
 }
 
 /// LLM に渡す原文。固有名詞は出てきた順に `⟦1⟧`, `⟦2⟧` … にする（同じものは同じ番号）
@@ -257,6 +333,7 @@ impl Terms {
                     tokens.push(Token::Entity {
                         reference: reference.clone(),
                         spoken: None,
+                        as_spoken: false,
                     });
                 }
                 None => {
@@ -296,6 +373,10 @@ fn kind_label(kind: EntityKind) -> &'static str {
 struct Matcher {
     /// 先頭の文字（小文字にしたもの） → (語の文字列, 参照)。長い順
     by_first: HashMap<char, Vec<(Vec<char>, String)>>,
+    /// (ヒーローの参照, 何番目のスキルか) → スキルの参照
+    abilities: HashMap<(String, u8), String>,
+    heroes: HashSet<String>,
+    lang: String,
 }
 
 impl Matcher {
@@ -303,26 +384,70 @@ impl Matcher {
     const MIN_CHARS: usize = 2;
 
     fn new(glossary: &Glossary, lang: &str) -> Self {
-        let mut seen: HashSet<Vec<char>> = HashSet::new();
-        let mut by_first: HashMap<char, Vec<(Vec<char>, String)>> = HashMap::new();
+        let key = |term: &str| -> Vec<char> { term.chars().map(lower).collect() };
+        // 表記 → 参照。公式名が先に決まり、別名は公式名を上書きしない。
+        // 複数のエンティティが同じ表記を持つときは、公式名なら先に見つけたもの、別名なら
+        // どれとも決められないので使わない（None）
+        let mut terms: HashMap<Vec<char>, Option<&String>> = HashMap::new();
         for (reference, entity) in &glossary.entities {
-            let names = entity.names.get(lang).into_iter();
-            let aliases = entity.aliases.get(lang).into_iter().flatten();
-            for term in names.chain(aliases) {
-                let chars: Vec<char> = term.chars().map(lower).collect();
-                // 同じ表記を複数のエンティティが持つときは、先に見つけたものにする
-                if chars.len() >= Self::MIN_CHARS && seen.insert(chars.clone()) {
-                    by_first
-                        .entry(chars[0])
-                        .or_default()
-                        .push((chars, reference.clone()));
+            if let Some(name) = entity.names.get(lang) {
+                terms.entry(key(name)).or_insert(Some(reference));
+            }
+        }
+        let names: HashSet<Vec<char>> = terms.keys().cloned().collect();
+        for (reference, entity) in &glossary.entities {
+            for alias in entity.aliases.get(lang).into_iter().flatten() {
+                let chars = key(alias);
+                if names.contains(&chars) {
+                    continue;
                 }
+                terms
+                    .entry(chars)
+                    .and_modify(|r| {
+                        if *r != Some(reference) {
+                            *r = None;
+                        }
+                    })
+                    .or_insert(Some(reference));
+            }
+        }
+        let mut by_first: HashMap<char, Vec<(Vec<char>, String)>> = HashMap::new();
+        for (chars, reference) in terms {
+            if reference.is_none() {
+                let alias: String = chars.iter().collect();
+                tracing::warn!("alias {alias} belongs to several terms; not used");
+            }
+            if let Some(reference) = reference
+                && chars.len() >= Self::MIN_CHARS
+            {
+                by_first
+                    .entry(chars[0])
+                    .or_default()
+                    .push((chars, reference.clone()));
             }
         }
         for terms in by_first.values_mut() {
             terms.sort_by_key(|(t, _)| std::cmp::Reverse(t.len()));
         }
-        Self { by_first }
+        let abilities = glossary
+            .entities
+            .iter()
+            .filter_map(|(reference, e)| {
+                Some(((e.hero.clone()?, e.ability_slot?), reference.clone()))
+            })
+            .collect();
+        let heroes = glossary
+            .entities
+            .iter()
+            .filter(|(_, e)| e.kind == EntityKind::Hero)
+            .map(|(reference, _)| reference.clone())
+            .collect();
+        Self {
+            by_first,
+            abilities,
+            heroes,
+            lang: lang.to_owned(),
+        }
     }
 
     fn split(&self, text: &str) -> Vec<Span> {
@@ -333,9 +458,10 @@ impl Matcher {
         let mut i = 0;
         while i < chars.len() {
             let found = self.by_first.get(&chars[i]).and_then(|terms| {
-                terms
-                    .iter()
-                    .find(|(term, _)| Self::matches_at(&chars, i, term))
+                terms.iter().find(|(term, reference)| {
+                    Self::matches_at(&chars, i, term)
+                        || self.hero_before_slot(text, i, term, reference)
+                })
             });
             match found {
                 Some((term, reference)) => {
@@ -345,6 +471,7 @@ impl Matcher {
                     spans.push(Span::Entity {
                         reference: reference.clone(),
                         spoken: original[i..i + term.len()].iter().collect(),
+                        as_spoken: false,
                     });
                     i += term.len();
                 }
@@ -357,7 +484,65 @@ impl Matcher {
         if !buf.is_empty() {
             spans.push(Span::Text(buf));
         }
-        spans
+        self.resolve_ability_slots(spans)
+    }
+
+    /// 「ヘイズウルト」のように「の」なしでスキルの番号が続くと、カタカナどうしがつながって
+    /// ヒーロー名と見なせない（`matches_at`）ので、続きがスキルの番号なら認める
+    fn hero_before_slot(&self, text: &str, i: usize, term: &[char], reference: &str) -> bool {
+        if !self.heroes.contains(reference) {
+            return false;
+        }
+        let chars: Vec<char> = text.chars().map(lower).collect();
+        let joined_before = i
+            .checked_sub(1)
+            .is_some_and(|j| is_katakana(chars[j]) && is_katakana(term[0]));
+        if !chars[i..].starts_with(term) || joined_before {
+            return false;
+        }
+        let rest: String = text.chars().skip(i + term.len()).collect();
+        slot_reference(&rest, &self.lang).is_some_and(|(prefix, ..)| prefix == 0)
+    }
+
+    /// 「ヘイズのウルト」「ヘイズの1番スキル」のように、ヒーロー名のすぐ後ろでスキルを番号で
+    /// 呼んだら、そのヒーローのそのスキルにする（表示は話した言葉のまま）
+    fn resolve_ability_slots(&self, spans: Vec<Span>) -> Vec<Span> {
+        let mut out: Vec<Span> = Vec::with_capacity(spans.len());
+        for span in spans {
+            let hero = match out.last() {
+                Some(Span::Entity { reference, .. }) if self.heroes.contains(reference) => {
+                    Some(reference.clone())
+                }
+                _ => None,
+            };
+            let found = match (&span, &hero) {
+                (Span::Text(text), Some(hero)) => {
+                    slot_reference(text, &self.lang).and_then(|(prefix, phrase, slot)| {
+                        let ability = self.abilities.get(&(hero.clone(), slot))?;
+                        Some((text, prefix, phrase, ability.clone()))
+                    })
+                }
+                _ => None,
+            };
+            let Some((text, prefix, phrase, ability)) = found else {
+                out.push(span);
+                continue;
+            };
+            let chars: Vec<char> = text.chars().collect();
+            let piece = |a: usize, b: usize| chars[a..b].iter().collect::<String>();
+            if prefix > 0 {
+                out.push(Span::Text(piece(0, prefix)));
+            }
+            out.push(Span::Entity {
+                reference: ability,
+                spoken: piece(prefix, prefix + phrase),
+                as_spoken: true,
+            });
+            if prefix + phrase < chars.len() {
+                out.push(Span::Text(piece(prefix + phrase, chars.len())));
+            }
+        }
+        out
     }
 
     /// 別の語の一部なら一致としない。
@@ -426,7 +611,8 @@ mod tests {
                 "hero:2": { "kind": "hero", "className": "s", "names": { "ja": "セブン", "en": "Seven" }, "aliases": {} },
                 "item:1": { "kind": "item", "className": "i", "names": { "ja": "基礎拡張マガジン", "en": "Extended Magazine" }, "aliases": { "ja": ["拡張マガジン"] } },
                 "ability:9": { "kind": "ability", "className": "a", "names": { "ja": "ダンス", "en": "Dash" }, "aliases": {} },
-                "ability:8": { "kind": "ability", "className": "b", "names": { "ja": "バレットダンス", "en": "Bullet Dance" }, "aliases": {} }
+                "ability:8": { "kind": "ability", "className": "b", "names": { "ja": "バレットダンス", "en": "Bullet Dance" }, "aliases": {}, "hero": "hero:13", "abilitySlot": 4 },
+                "ability:7": { "kind": "ability", "className": "c", "names": { "ja": "スリープダガー", "en": "Sleep Dagger" }, "aliases": {}, "hero": "hero:13", "abilitySlot": 1 }
             }
         }))
         .unwrap()
@@ -436,7 +622,84 @@ mod tests {
         Span::Entity {
             reference: reference.into(),
             spoken: spoken.into(),
+            as_spoken: false,
         }
+    }
+
+    fn by_slot(reference: &str, spoken: &str) -> Span {
+        Span::Entity {
+            reference: reference.into(),
+            spoken: spoken.into(),
+            as_spoken: true,
+        }
+    }
+
+    #[test]
+    fn hero_followed_by_an_ability_number_means_that_ability() {
+        let m = Matcher::new(&glossary(), "ja");
+        assert_eq!(
+            m.split("ヘイズのウルトが強い"),
+            vec![
+                entity("hero:13", "ヘイズ"),
+                Span::Text("の".into()),
+                by_slot("ability:8", "ウルト"),
+                Span::Text("が強い".into()),
+            ]
+        );
+        for (text, spoken) in [
+            ("ヘイズの1番スキル", "1番スキル"),
+            ("ヘイズの一番スキル", "一番スキル"),
+            ("ヘイズの1スキ", "1スキ"),
+            ("ヘイズ１番目のスキル", "１番目のスキル"),
+        ] {
+            assert!(
+                m.split(text).contains(&by_slot("ability:7", spoken)),
+                "{text}"
+            );
+        }
+        // 「の」なし
+        assert_eq!(
+            m.split("ヘイズウルト溜まった"),
+            vec![
+                entity("hero:13", "ヘイズ"),
+                by_slot("ability:8", "ウルト"),
+                Span::Text("溜まった".into()),
+            ]
+        );
+        // 「一番好き」「1番強い」「1スキン」「ウルトラ」、持っていない番号は違う
+        for text in [
+            "ヘイズの一番好きなところ",
+            "ヘイズの1番強い",
+            "ヘイズの1スキン",
+            "ヘイズのウルトラ",
+            "ヘイズの3スキ",
+            "ウルトが強い",
+            "ヘイズウルトラマン",
+        ] {
+            assert!(
+                !m.split(text).iter().any(|s| matches!(
+                    s,
+                    Span::Entity {
+                        as_spoken: true,
+                        ..
+                    }
+                )),
+                "{text}"
+            );
+        }
+
+        let m = Matcher::new(&glossary(), "en");
+        assert!(
+            m.split("Haze's ult is up")
+                .contains(&by_slot("ability:8", "ult"))
+        );
+        assert!(!m.split("Haze's ultra").iter().any(|s| matches!(
+            s,
+            Span::Entity {
+                as_spoken: true,
+                ..
+            }
+        )));
     }
 
     fn text(t: &str) -> Token {
@@ -450,6 +713,7 @@ mod tests {
         Token::Entity {
             reference: r.into(),
             spoken: None,
+            as_spoken: false,
         }
     }
 
@@ -464,6 +728,31 @@ mod tests {
                 entity("ability:8", "バレットダンス"),
                 Span::Text("と".into()),
                 entity("item:1", "拡張マガジン"),
+            ]
+        );
+    }
+
+    #[test]
+    fn matcher_prefers_official_names_and_drops_shared_aliases() {
+        let g: Glossary = serde_json::from_value(serde_json::json!({
+            "clientVersion": 1, "languages": ["ja"],
+            "entities": {
+                "item:1": { "kind": "item", "className": "a", "names": { "ja": "基礎拡張マガジン" },
+                            "aliases": { "ja": ["カクマガ", "マガジン", "ヘイズ"] } },
+                "item:2": { "kind": "item", "className": "b", "names": { "ja": "巨大拡張マガジン" },
+                            "aliases": { "ja": ["マガジン"] } },
+                "hero:13": { "kind": "hero", "className": "h", "names": { "ja": "ヘイズ" }, "aliases": {} }
+            }
+        }))
+        .unwrap();
+        let spans = Matcher::new(&g, "ja").split("ヘイズのカクマガとマガジン");
+        assert_eq!(
+            spans,
+            vec![
+                entity("hero:13", "ヘイズ"),
+                Span::Text("の".into()),
+                entity("item:1", "カクマガ"),
+                Span::Text("とマガジン".into()),
             ]
         );
     }
@@ -544,7 +833,8 @@ mod tests {
             [
                 Token::Entity {
                     reference: "hero:13".into(),
-                    spoken: Some("ヘイズ".into())
+                    spoken: Some("ヘイズ".into()),
+                    as_spoken: false,
                 },
                 text("は"),
                 Token::Text {

@@ -11,11 +11,8 @@ pub struct Sources {
     pub items: BTreeMap<LangCode, Vec<ApiItem>>,
 }
 
-/// 手で管理する辞書データ（`data/*.ja.json`）。キーはエンティティの参照
-#[derive(Default)]
-pub struct Extras {
-    pub aliases_ja: BTreeMap<String, Vec<String>>,
-}
+/// 日本語の別名（`data/aliases.ja.json`）。キーはエンティティの参照
+pub type Aliases = BTreeMap<String, Vec<String>>;
 
 /// ダウンロードするアイコン。`path` は icons ディレクトリからの相対パス
 #[derive(Debug, PartialEq)]
@@ -26,7 +23,7 @@ pub struct Icon {
     pub path: String,
 }
 
-pub fn build(client_version: u32, sources: &Sources, extras: &Extras) -> (Glossary, Vec<Icon>) {
+pub fn build(client_version: u32, sources: &Sources) -> (Glossary, Vec<Icon>) {
     let hero_names = names_by_lang(&sources.heroes, |h| {
         (h.id, h.name.as_deref(), &h.class_name)
     });
@@ -86,15 +83,17 @@ pub fn build(client_version: u32, sources: &Sources, extras: &Extras) -> (Glossa
             icon,
         );
 
-        let abilities = (1..=4)
-            .filter_map(|n| hero.items.get(&format!("signature{n}"))?.as_deref())
-            .filter_map(|class| items_by_class.get(class));
-        for ability in abilities {
+        let abilities = (1..=4u8).filter_map(|n| {
+            let class = hero.items.get(&format!("signature{n}"))?.as_deref()?;
+            Some((n, items_by_class.get(class)?))
+        });
+        for (slot, ability) in abilities {
             let Some(names) = names_of(&item_names, ability.id) else {
                 continue;
             };
             let mut e = entity(EntityKind::Ability, &ability.class_name, names);
             e.hero = Some(format!("hero:{}", hero.id));
+            e.ability_slot = Some(slot);
             let icon = ability.image_webp.as_deref().or(ability.image.as_deref());
             add(EntityKind::Ability, ability.id, e, icon);
         }
@@ -119,8 +118,6 @@ pub fn build(client_version: u32, sources: &Sources, extras: &Extras) -> (Glossa
         .find_map(Option::as_deref);
         add(EntityKind::Item, item.id, e, icon);
     }
-
-    apply_extras(&mut entities, extras);
 
     // 実際に名前が取れた言語だけを載せる（空の応答の言語をキャッシュ済みと扱わない）
     let languages = sources
@@ -157,9 +154,11 @@ pub fn fill_readings(glossary: &mut Glossary, annotate: impl Fn(&str) -> Vec<Tok
     }
 }
 
-fn apply_extras(entities: &mut BTreeMap<String, Entity>, extras: &Extras) {
-    for (reference, aliases) in &extras.aliases_ja {
-        match entities.get_mut(reference) {
+/// 別名を重ねる。辞書には保存せず、配るたびに重ねる（アプリの更新で別名が変わっても、
+/// Deadlock の更新を待たずに効く）
+pub fn apply_aliases(glossary: &mut Glossary, aliases: &Aliases) {
+    for (reference, aliases) in aliases {
+        match glossary.entities.get_mut(reference) {
             Some(e) => {
                 e.aliases.insert("ja".into(), aliases.clone());
             }
@@ -210,6 +209,7 @@ fn entity(kind: EntityKind, class_name: &str, names: BTreeMap<LangCode, String>)
         icon: None,
         slot: None,
         hero: None,
+        ability_slot: None,
     }
 }
 
@@ -298,7 +298,7 @@ mod tests {
 
     #[test]
     fn builds_heroes_abilities_and_shop_items() {
-        let (g, icons) = build(6518, &sources(), &Extras::default());
+        let (g, icons) = build(6518, &sources());
 
         assert_eq!(
             g.entities.keys().collect::<Vec<_>>(),
@@ -321,7 +321,7 @@ mod tests {
         let mut s = sources();
         let other = hero(14, "hero_other", "Other", true);
         s.heroes.get_mut("en").unwrap().push(other);
-        let (g, icons) = build(6518, &s, &Extras::default());
+        let (g, icons) = build(6518, &s);
 
         assert_eq!(g.entities["ability:2"].hero.as_deref(), Some("hero:13"));
         assert_eq!(
@@ -335,7 +335,7 @@ mod tests {
         let mut s = sources();
         s.heroes.insert("th".into(), vec![]);
         s.items.insert("th".into(), vec![]);
-        let (g, _) = build(6518, &s, &Extras::default());
+        let (g, _) = build(6518, &s);
 
         assert_eq!(g.languages, ["en", "ja"]);
     }
@@ -346,7 +346,7 @@ mod tests {
             text: text.into(),
             ruby: (!r.is_empty()).then(|| r.into()),
         };
-        let (mut g, _) = build(6518, &sources(), &Extras::default());
+        let (mut g, _) = build(6518, &sources());
         fill_readings(&mut g, |name| match name {
             "基礎拡張マガジン" => {
                 vec![ruby("基礎拡張", "きそかくちょう"), ruby("マガジン", "")]
@@ -370,10 +370,11 @@ mod tests {
 
     #[test]
     fn applies_aliases() {
-        let extras = Extras {
-            aliases_ja: BTreeMap::from([("item:1".into(), vec!["拡張マガジン".into()])]),
-        };
-        let (g, _) = build(6518, &sources(), &extras);
+        let (mut g, _) = build(6518, &sources());
+        apply_aliases(
+            &mut g,
+            &Aliases::from([("item:1".into(), vec!["拡張マガジン".into()])]),
+        );
         assert_eq!(g.entities["item:1"].aliases["ja"], ["拡張マガジン"]);
     }
 }

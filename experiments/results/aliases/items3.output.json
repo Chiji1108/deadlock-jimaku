@@ -1,0 +1,367 @@
+{
+ "item:2951612397": {
+  "en": "Duration Extender",
+  "ja": "エクステンダー",
+  "aliases": [
+   {
+    "alias": "デュレーションエクステンダー",
+    "source": "https://gamerch.com/deadlock/871722"
+   }
+  ]
+ },
+ "item:2956256701": {
+  "en": "Healing Nova",
+  "ja": "ヒーリングノヴァ",
+  "aliases": [
+   {
+    "alias": "ヘルスノヴァ",
+    "source": "https://gamerch.com/deadlock/871722"
+   },
+   {
+    "alias": "Health Nova",
+    "source": "https://deadlock.wiki/Healing_Nova"
+   }
+  ]
+ },
+ "item:2971868509": {
+  "en": "Bullet Resist Shredder",
+  "ja": "レジストシュレッダー",
+  "aliases": [
+   {
+    "alias": "バレット耐性シュレッダー",
+    "source": "https://gamerch.com/deadlock/871722"
+   },
+   {
+    "alias": "バレットタイセイシュレッダー",
+    "source": "https://gamerch.com/deadlock/871722"
+   }
+  ]
+ },
+ "item:3005970438": {
+  "en": "Escalating Exposure",
+  "ja": "エクスポージャー",
+  "aliases": [
+   {
+    "alias": "エスカレーティングエクスポージャー",
+    "source": "https://gamerch.com/deadlock/871722"
+   }
+  ]
+ },
+ "item:3028234315": {
+  "en": "Witchmail",
+  "ja": "ウィッチメイル",
+  "aliases": []
+ },
+ "item:3074274290": {
+  "en": "Trophy Collector",
+  "ja": "トロフィーコレクター",
+  "aliases": []
+ },
+ "item:3077079169": {
+  "en": "High-Velocity Rounds",
+  "ja": "ハイスピードラウンド",
+  "aliases": [
+   {
+    "alias": "高速マガジン",
+    "source": "https://gamerch.com/deadlock/876436"
+   },
+   {
+    "alias": "コウソクマガジン",
+    "source": "https://gamerch.com/deadlock/876436"
+   },
+   {
+    "alias": "High-Velocity Mag",
+    "source": "https://deadlock.wiki/High-Velocity_Rounds"
+   }
+  ]
+ },
+ "item:3140772621": {
+  "en": "Bullet Resilience",
+  "ja": "バレットレジリエンス",
+  "aliases": [
+   {
+    "alias": "改良バレットアーマー",
+    "source": "https://gamerch.com/deadlock/871722"
+   },
+   {
+    "alias": "カイリョウバレットアーマー",
+    "source": "https://gamerch.com/deadlock/871722"
+   },
+   {
+    "alias": "Improved Bullet Armor",
+    "source": "https://deadlock.wiki/Bullet_Resilience"
+   }
+  ]
+ },
+ "item:3144988365": {
+  "en": "Decay",
+  "ja": "ディケイ",
+  "aliases": [
+   {
+    "alias": "デケイ",
+    "source": "https://gamerch.com/deadlock/871875"
+   }
+  ]
+ },
+ "item:3190916303": {
+  "en": "Spirit Snatch",
+  "ja": "スピリットスナッチ",
+  "aliases": []
+ },
+ "item:3261353684": {
+  "en": "Superior Cooldown",
+  "ja": "クールダウンブースト",
+  "aliases": [
+   {
+    "alias": "優れたクールダウン",
+    "source": "https://gamerch.com/deadlock/871722"
+   },
+   {
+    "alias": "スグレタクールダウン",
+    "source": "https://gamerch.com/deadlock/871722"
+   }
+  ]
+ },
+ "item:3269957497": {
+  "en": "Infinite Rounds",
+  "ja": "インフィニットラウンド",
+  "aliases": []
+ },
+ "item:3270001687": {
+  "en": "Warp Stone",
+  "ja": "ワープストーン",
+  "aliases": []
+ },
+ "item:3294954488": {
+  "en": "Ballistic Enchantment",
+  "ja": "バリスティックエンチャント",
+  "aliases": []
+ },
+ "item:3331811235": {
+  "en": "Long Range",
+  "ja": "ロングレンジ",
+  "aliases": []
+ },
+ "item:334300056": {
+  "en": "Stamina Mastery",
+  "ja": "スタミナマスタリー",
+  "aliases": [
+   {
+    "alias": "優れたスタミナ",
+    "source": "https://gamerch.com/deadlock/871722"
+   },
+   {
+    "alias": "スグレタスタミナ",
+    "source": "https://gamerch.com/deadlock/871722"
+   },
+   {
+    "alias": "Superior Stamina",
+    "source": "https://deadlock.wiki/Stamina_Mastery"
+   }
+  ]
+ },
+ "item:3357231760": {
+  "en": "Unstoppable",
+  "ja": "アンストッパブル",
+  "aliases": []
+ },
+ "item:3361075077": {
+  "en": "Return Fire",
+  "ja": "リターンファイア",
+  "aliases": []
+ },
+ "item:3361811174": {
+  "en": "Cheat Death",
+  "ja": "デスチーター",
+  "aliases": []
+ },
+ "item:339443430": {
+  "en": "Frenzy",
+  "ja": "フレンジー",
+  "aliases": []
+ },
+ "item:3399065363": {
+  "en": "Sprint Boots",
+  "ja": "スプリントブーツ",
+  "aliases": []
+ },
+ "item:3403085434": {
+  "en": "Fleetfoot",
+  "ja": "フリートフット",
+  "aliases": []
+ },
+ "item:343572757": {
+  "en": "Spirit Burn",
+  "ja": "スピリットバーン",
+  "aliases": []
+ },
+ "item:3491236900": {
+  "en": "Plated Armor",
+  "ja": "プレートアーマー",
+  "aliases": []
+ },
+ "item:3523480953": {
+  "en": "Cloak of Opportunity",
+  "ja": "加護のマント",
+  "aliases": []
+ },
+ "item:3568217437": {
+  "en": "Haunting Shot",
+  "ja": "ホーンテッドショット",
+  "aliases": []
+ },
+ "item:3577481646": {
+  "en": "Mystic Reverb",
+  "ja": "ミスティックリバーブ",
+  "aliases": []
+ },
+ "item:3585132399": {
+  "en": "Fortitude",
+  "ja": "フォルティチュード",
+  "aliases": []
+ },
+ "item:3633614685": {
+  "en": "Extra Health",
+  "ja": "エクストラヘルス",
+  "aliases": []
+ },
+ "item:3647584222": {
+  "en": "Split Shot",
+  "ja": "スプリットショット",
+  "aliases": []
+ },
+ "item:365620721": {
+  "en": "Glass Cannon",
+  "ja": "グラスキャノン",
+  "aliases": [
+   {
+    "alias": "ガラスキャノン",
+    "source": "https://gamerch.com/deadlock/876436"
+   }
+  ]
+ },
+ "item:3696726732": {
+  "en": "Toxic Bullets",
+  "ja": "トキシックバレット",
+  "aliases": [
+   {
+    "alias": "トキシック弾",
+    "source": "https://gamerch.com/deadlock/876436"
+   },
+   {
+    "alias": "トキシックダン",
+    "source": "https://gamerch.com/deadlock/876436"
+   }
+  ]
+ },
+ "item:3729138568": {
+  "en": "Celestial Blessing",
+  "ja": "天の祝福",
+  "aliases": []
+ },
+ "item:3731635960": {
+  "en": "Dispel Magic",
+  "ja": "ディスペルマジック",
+  "aliases": [
+   {
+    "alias": "デバフリムーバー",
+    "source": "https://gamerch.com/deadlock/871722"
+   },
+   {
+    "alias": "Debuff Remover",
+    "source": "https://deadlock.wiki/Dispel_Magic"
+   }
+  ]
+ },
+ "item:3776945997": {
+  "en": "Extra Charge",
+  "ja": "エクストラチャージ",
+  "aliases": []
+ },
+ "item:3791587546": {
+  "en": "Weighted Shots",
+  "ja": "ヘヴィショット",
+  "aliases": []
+ },
+ "item:380806748": {
+  "en": "Compress Cooldown",
+  "ja": "コンプレッサー",
+  "aliases": [
+   {
+    "alias": "改良クールダウン",
+    "source": "https://gamerch.com/deadlock/871722"
+   },
+   {
+    "alias": "カイリョウクールダウン",
+    "source": "https://gamerch.com/deadlock/871722"
+   },
+   {
+    "alias": "Improved Cooldown",
+    "source": "https://deadlock.wiki/Compress_Cooldown"
+   }
+  ]
+ },
+ "item:3812615317": {
+  "en": "Arctic Blast",
+  "ja": "アークティックブラスト",
+  "aliases": []
+ },
+ "item:381961617": {
+  "en": "Active Reload",
+  "ja": "アクティブリロード",
+  "aliases": []
+ },
+ "item:3862866912": {
+  "en": "Restorative Shot",
+  "ja": "ヒーリングショット",
+  "aliases": [
+   {
+    "alias": "治療弾",
+    "source": "https://gamerch.com/deadlock/876436"
+   },
+   {
+    "alias": "チリョウダン",
+    "source": "https://gamerch.com/deadlock/876436"
+   }
+  ]
+ },
+ "item:3884003354": {
+  "en": "Crippling Headshot",
+  "ja": "クリップリングショット",
+  "aliases": [
+   {
+    "alias": "クリッピングヘッドショット",
+    "source": "https://gamerch.com/deadlock/876436"
+   }
+  ]
+ },
+ "item:3919289022": {
+  "en": "Mercurial Magnum",
+  "ja": "マーキュリーマグナム",
+  "aliases": [
+   {
+    "alias": "マキュリーマグナム",
+    "source": "https://wikiwiki.jp/deadlockjp/Spirit"
+   }
+  ]
+ },
+ "item:393974127": {
+  "en": "Slowing Bullets",
+  "ja": "スロウバレット",
+  "aliases": [
+   {
+    "alias": "減速弾",
+    "source": "https://gamerch.com/deadlock/876436"
+   },
+   {
+    "alias": "ゲンソクダン",
+    "source": "https://gamerch.com/deadlock/876436"
+   }
+  ]
+ },
+ "item:3949773228": {
+  "en": "Nullification Burst",
+  "ja": "虚無の波動",
+  "aliases": []
+ }
+}

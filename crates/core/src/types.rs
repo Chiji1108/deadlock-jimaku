@@ -36,6 +36,14 @@ pub enum Token {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[ts(optional)]
         spoken: Option<String>,
+        /// 公式名ではなく発話された表現のまま出す（「ヘイズのウルト」の「ウルト」）
+        #[serde(
+            rename = "asSpoken",
+            default,
+            skip_serializing_if = "std::ops::Not::not"
+        )]
+        #[ts(as = "Option<bool>", optional)]
+        as_spoken: bool,
     },
 }
 
@@ -185,6 +193,10 @@ pub struct Entity {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub hero: Option<String>,
+    /// 持ち主の何番目のスキルか（1〜4。4 がウルト）。「ヘイズのウルト」をこのスキルにする
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub ability_slot: Option<u8>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]

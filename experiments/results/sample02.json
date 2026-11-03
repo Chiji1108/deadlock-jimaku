@@ -1,0 +1,1092 @@
+{
+  "realtime/no-bias": {
+    "events": [
+      {
+        "time_s": 0.56,
+        "type": "turn.start",
+        "_t": 1.385
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "隠",
+        "_t": 2.007
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "間",
+        "_t": 2.288
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "が",
+        "_t": 2.499
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "を",
+        "_t": 3.302
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ちゃん",
+        "_t": 3.402
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "と",
+        "_t": 3.686
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ね",
+        "_t": 3.8
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "撮",
+        "_t": 4.602
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "り",
+        "_t": 4.709
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "たい",
+        "_t": 4.727
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "よ",
+        "_t": 4.8
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ね",
+        "_t": 5.097
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "最初",
+        "_t": 5.282
+      },
+      {
+        "time_s": 4.56,
+        "type": "turn.eager_end",
+        "_t": 5.402
+      },
+      {
+        "time_s": 4.64,
+        "type": "turn.resume",
+        "_t": 5.499
+      },
+      {
+        "time_s": 4.8,
+        "type": "turn.eager_end",
+        "_t": 5.588
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "は",
+        "_t": 5.588
+      },
+      {
+        "time_s": 4.96,
+        "type": "turn.resume",
+        "_t": 5.782
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "エ",
+        "_t": 6.486
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "クス",
+        "_t": 6.597
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "トラ",
+        "_t": 6.8
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ス",
+        "_t": 6.9
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ピ",
+        "_t": 7.115
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "リ",
+        "_t": 7.2
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ット",
+        "_t": 7.493
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "も",
+        "_t": 7.519
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "重要",
+        "_t": 7.601
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "だけ",
+        "_t": 7.982
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ど",
+        "_t": 8.319
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "隠",
+        "_t": 8.902
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "間",
+        "_t": 9.002
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "が",
+        "_t": 9.202
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "は",
+        "_t": 9.344
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "武器",
+        "_t": 10.424
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ダメ",
+        "_t": 10.513
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ージ",
+        "_t": 10.55
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "も",
+        "_t": 10.622
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "上が",
+        "_t": 10.64
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "る",
+        "_t": 10.738
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "から",
+        "_t": 10.75
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "そこ",
+        "_t": 12.603
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "は",
+        "_t": 12.709
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ちゃん",
+        "_t": 12.884
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "と",
+        "_t": 13.12
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "撮",
+        "_t": 13.634
+      },
+      {
+        "time_s": 12.88,
+        "type": "turn.eager_end",
+        "_t": 13.818
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "り",
+        "_t": 13.818
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "たい",
+        "_t": 13.911
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "よ",
+        "_t": 13.965
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ね",
+        "_t": 14.204
+      },
+      {
+        "time_s": 13.44,
+        "type": "turn.end",
+        "end_reason": "threshold",
+        "_t": 14.22
+      },
+      {
+        "time_s": 17.28,
+        "type": "turn.start",
+        "_t": 18.083
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "あと",
+        "_t": 18.984
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "は",
+        "_t": 19.521
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "呪",
+        "_t": 21.1
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "い",
+        "_t": 21.182
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "の",
+        "_t": 21.282
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "異",
+        "_t": 21.5
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "物",
+        "_t": 21.523
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "いわゆる",
+        "_t": 22.483
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "カー",
+        "_t": 22.885
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ス",
+        "_t": 23.102
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "だ",
+        "_t": 23.185
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ね",
+        "_t": 23.5
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "カー",
+        "_t": 24.886
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ス",
+        "_t": 25.205
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "は",
+        "_t": 25.283
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "最終",
+        "_t": 25.504
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "盤",
+        "_t": 25.901
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "に",
+        "_t": 26.084
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "取",
+        "_t": 26.201
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "り",
+        "_t": 26.301
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "たい",
+        "_t": 26.318
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "よ",
+        "_t": 26.402
+      },
+      {
+        "time_s": 25.84,
+        "type": "turn.eager_end",
+        "_t": 26.7
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ね",
+        "_t": 26.7
+      },
+      {
+        "time_s": 25.92,
+        "type": "turn.resume",
+        "_t": 26.715
+      },
+      {
+        "time_s": 26.08,
+        "type": "turn.eager_end",
+        "_t": 26.883
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ちゃん",
+        "_t": 26.883
+      },
+      {
+        "time_s": 26.24,
+        "type": "turn.resume",
+        "_t": 27.083
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "と",
+        "_t": 27.117
+      },
+      {
+        "time_s": 26.4,
+        "type": "turn.eager_end",
+        "_t": 27.181
+      },
+      {
+        "time_s": 26.48,
+        "type": "turn.resume",
+        "_t": 27.282
+      },
+      {
+        "time_s": 26.64,
+        "type": "turn.eager_end",
+        "_t": 27.484
+      },
+      {
+        "time_s": 26.88,
+        "type": "turn.resume",
+        "_t": 27.686
+      },
+      {
+        "time_s": 27.04,
+        "type": "turn.eager_end",
+        "_t": 27.906
+      },
+      {
+        "time_s": 27.68,
+        "type": "turn.end",
+        "end_reason": "threshold",
+        "_t": 28.407
+      },
+      {
+        "time_s": 28.24,
+        "type": "turn.start",
+        "_t": 29.1
+      },
+      {
+        "time_s": 28.32,
+        "type": "turn.eager_end",
+        "_t": 29.12
+      },
+      {
+        "time_s": 28.88,
+        "type": "turn.end",
+        "end_reason": "threshold",
+        "_t": 29.389
+      },
+      {
+        "model": "voxtral-mini-transcribe-realtime-3-0-4",
+        "text": "隠間がをちゃんとね撮りたいよね最初はエクストラスピリットも重要だけど隠間がは武器ダメージも上がるからそこはちゃんと撮りたいよねあとは呪いの異物いわゆるカースだねカースは最終盤に取りたいよねちゃんと",
+        "language": null,
+        "segments": [],
+        "usage": {
+          "prompt_audio_seconds": 29,
+          "prompt_tokens": 40,
+          "total_tokens": 414,
+          "completion_tokens": 374
+        },
+        "type": "transcription.done",
+        "_t": 29.689
+      }
+    ],
+    "text": "隠間がをちゃんとね撮りたいよね最初はエクストラスピリットも重要だけど隠間がは武器ダメージも上がるからそこはちゃんと撮りたいよねあとは呪いの異物いわゆるカースだねカースは最終盤に取りたいよねちゃんと",
+    "turns": [
+      {
+        "start_s": 0.56,
+        "firstDeltaAt": 2.007,
+        "text": "隠間がをちゃんとね撮りたいよね最初はエクストラスピリットも重要だけど隠間がは武器ダメージも上がるからそこはちゃんと撮りたいよね",
+        "end_s": 13.44,
+        "endReason": "threshold",
+        "closeAt": 14.700000000000001
+      },
+      {
+        "start_s": 17.28,
+        "firstDeltaAt": 18.984,
+        "text": "あとは呪いの異物いわゆるカースだねカースは最終盤に取りたいよねちゃんと",
+        "end_s": 27.68,
+        "endReason": "threshold",
+        "closeAt": 28.887
+      },
+      {
+        "start_s": 28.24,
+        "firstDeltaAt": null,
+        "text": "",
+        "end_s": 28.88,
+        "endReason": "threshold",
+        "closeAt": 29.869
+      }
+    ]
+  },
+  "batch/no-bias": {
+    "text": "カクマガをちゃんとね、取りたいよね、最初は。エクストラスピリットも重要だけど、カクマガは武器ダメージも上がるから、そこはちゃんと取りたいよね。ま、あとは、呪いの遺物、いわゆるカースだね。カースは最終盤に取りたいよね、ちゃんと。",
+    "latency_s": 1.28,
+    "raw": {
+      "model": "voxtral-small-transcribe-3",
+      "text": "カクマガをちゃんとね、取りたいよね、最初は。エクストラスピリットも重要だけど、カクマガは武器ダメージも上がるから、そこはちゃんと取りたいよね。ま、あとは、呪いの遺物、いわゆるカースだね。カースは最終盤に取りたいよね、ちゃんと。",
+      "language": null,
+      "segments": [],
+      "usage": {
+        "prompt_audio_seconds": 29,
+        "prompt_tokens": 5,
+        "total_tokens": 466,
+        "completion_tokens": 86,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "audio_tokens": 375
+        },
+        "service_tier": "standard"
+      },
+      "finish_reason": null
+    }
+  },
+  "realtime/bias": {
+    "events": [
+      {
+        "time_s": 0.08,
+        "type": "turn.start",
+        "_t": 0.91
+      },
+      {
+        "time_s": 0.16,
+        "type": "turn.eager_end",
+        "_t": 0.999
+      },
+      {
+        "time_s": 0.56,
+        "type": "turn.resume",
+        "_t": 1.385
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "隠",
+        "_t": 1.997
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "間",
+        "_t": 2.305
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "が",
+        "_t": 2.503
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ちゃん",
+        "_t": 3.5
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "と",
+        "_t": 3.714
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ね",
+        "_t": 3.787
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "、",
+        "_t": 4.543
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "撮",
+        "_t": 4.951
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "り",
+        "_t": 5.005
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "たい",
+        "_t": 5.043
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "よ",
+        "_t": 5.095
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ね",
+        "_t": 5.239
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "、",
+        "_t": 5.275
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "最",
+        "_t": 5.314
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "初",
+        "_t": 5.513
+      },
+      {
+        "time_s": 4.72,
+        "type": "turn.eager_end",
+        "_t": 5.549
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "は",
+        "_t": 5.549
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "。",
+        "_t": 5.618
+      },
+      {
+        "time_s": 4.96,
+        "type": "turn.resume",
+        "_t": 5.798
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "エ",
+        "_t": 6.508
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "クス",
+        "_t": 6.598
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "トラ",
+        "_t": 6.805
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ス",
+        "_t": 6.899
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ピ",
+        "_t": 7.155
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "リ",
+        "_t": 7.227
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ット",
+        "_t": 7.314
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "も",
+        "_t": 7.538
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "重要",
+        "_t": 7.608
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "だけ",
+        "_t": 8.002
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ど",
+        "_t": 8.337
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "、",
+        "_t": 8.411
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "隠",
+        "_t": 8.91
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "間",
+        "_t": 8.998
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "が",
+        "_t": 9.202
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "は",
+        "_t": 9.311
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "武器",
+        "_t": 9.706
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ダメ",
+        "_t": 10.02
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ージ",
+        "_t": 10.112
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "も",
+        "_t": 10.352
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "上が",
+        "_t": 10.407
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "る",
+        "_t": 10.714
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "から",
+        "_t": 10.751
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "、",
+        "_t": 10.808
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "そこ",
+        "_t": 12.591
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "は",
+        "_t": 12.717
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ちゃん",
+        "_t": 12.907
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "と",
+        "_t": 13.142
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "撮",
+        "_t": 13.602
+      },
+      {
+        "time_s": 12.88,
+        "type": "turn.eager_end",
+        "_t": 13.707
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "り",
+        "_t": 13.707
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "たい",
+        "_t": 13.816
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "よ",
+        "_t": 13.887
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ね",
+        "_t": 14.099
+      },
+      {
+        "time_s": 13.44,
+        "type": "turn.end",
+        "end_reason": "threshold",
+        "_t": 14.208
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "。",
+        "_t": 14.208
+      },
+      {
+        "time_s": 15.52,
+        "type": "turn.start",
+        "_t": 16.356
+      },
+      {
+        "time_s": 15.6,
+        "type": "turn.eager_end",
+        "_t": 16.409
+      },
+      {
+        "time_s": 16.16,
+        "type": "turn.end",
+        "end_reason": "threshold",
+        "_t": 16.905
+      },
+      {
+        "time_s": 17.28,
+        "type": "turn.start",
+        "_t": 18.186
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "あと",
+        "_t": 19.006
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "は",
+        "_t": 19.539
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "呪",
+        "_t": 21.17
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "い",
+        "_t": 21.219
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "の",
+        "_t": 21.305
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "遺",
+        "_t": 21.515
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "物",
+        "_t": 21.563
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "いわゆる",
+        "_t": 22.504
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "カー",
+        "_t": 22.9
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ス",
+        "_t": 23.14
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "だ",
+        "_t": 23.212
+      },
+      {
+        "time_s": 22.64,
+        "type": "turn.eager_end",
+        "_t": 23.504
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ね",
+        "_t": 23.504
+      },
+      {
+        "time_s": 22.72,
+        "type": "turn.resume",
+        "_t": 23.552
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "カー",
+        "_t": 24.902
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ス",
+        "_t": 25.202
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "は",
+        "_t": 25.304
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "最終",
+        "_t": 25.539
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "盤",
+        "_t": 25.909
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "に",
+        "_t": 26.109
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "取",
+        "_t": 26.191
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "り",
+        "_t": 26.306
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "たい",
+        "_t": 26.338
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "よ",
+        "_t": 26.403
+      },
+      {
+        "time_s": 25.84,
+        "type": "turn.eager_end",
+        "_t": 26.687
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ね",
+        "_t": 26.687
+      },
+      {
+        "time_s": 25.92,
+        "type": "turn.resume",
+        "_t": 26.731
+      },
+      {
+        "time_s": 26.08,
+        "type": "turn.eager_end",
+        "_t": 26.898
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "ちゃん",
+        "_t": 26.898
+      },
+      {
+        "time_s": 26.24,
+        "type": "turn.resume",
+        "_t": 27.101
+      },
+      {
+        "time_s": 26.32,
+        "type": "turn.eager_end",
+        "_t": 27.132
+      },
+      {
+        "type": "transcription.text.delta",
+        "text": "と",
+        "_t": 27.132
+      },
+      {
+        "time_s": 26.48,
+        "type": "turn.resume",
+        "_t": 27.292
+      },
+      {
+        "time_s": 26.64,
+        "type": "turn.eager_end",
+        "_t": 27.51
+      },
+      {
+        "time_s": 26.72,
+        "type": "turn.resume",
+        "_t": 27.544
+      },
+      {
+        "time_s": 27.04,
+        "type": "turn.eager_end",
+        "_t": 27.908
+      },
+      {
+        "time_s": 27.6,
+        "type": "turn.end",
+        "end_reason": "threshold",
+        "_t": 28.336
+      },
+      {
+        "model": "voxtral-mini-transcribe-realtime-3-0-4",
+        "text": "隠間がちゃんとね、撮りたいよね、最初は。エクストラスピリットも重要だけど、隠間がは武器ダメージも上がるから、そこはちゃんと撮りたいよね。あとは呪いの遺物いわゆるカースだねカースは最終盤に取りたいよねちゃんと",
+        "language": null,
+        "segments": [],
+        "usage": {
+          "prompt_audio_seconds": 29,
+          "prompt_tokens": 2475,
+          "total_tokens": 2849,
+          "completion_tokens": 374
+        },
+        "type": "transcription.done",
+        "_t": 30.056
+      }
+    ],
+    "text": "隠間がちゃんとね、撮りたいよね、最初は。エクストラスピリットも重要だけど、隠間がは武器ダメージも上がるから、そこはちゃんと撮りたいよね。あとは呪いの遺物いわゆるカースだねカースは最終盤に取りたいよねちゃんと",
+    "turns": [
+      {
+        "start_s": 0.08,
+        "firstDeltaAt": 1.997,
+        "text": "隠間がちゃんとね、撮りたいよね、最初は。エクストラスピリットも重要だけど、隠間がは武器ダメージも上がるから、そこはちゃんと撮りたいよね。",
+        "end_s": 13.44,
+        "endReason": "threshold",
+        "closeAt": 14.688
+      },
+      {
+        "start_s": 15.52,
+        "firstDeltaAt": null,
+        "text": "",
+        "end_s": 16.16,
+        "endReason": "threshold",
+        "closeAt": 17.385
+      },
+      {
+        "start_s": 17.28,
+        "firstDeltaAt": 19.006,
+        "text": "あとは呪いの遺物いわゆるカースだねカースは最終盤に取りたいよねちゃんと",
+        "end_s": 27.6,
+        "endReason": "threshold",
+        "closeAt": 28.816
+      }
+    ]
+  },
+  "batch/bias": {
+    "text": "カクマガをちゃんとね、取りたいよね、最初は。エクストラスピリットも重要だけど、カクマガは武器ダメージも上がるから、そこはちゃんと取りたいよね。あとは、呪いの遺物、いわゆるカースだね。カースは最終盤に取りたいよね、ちゃんと。",
+    "latency_s": 2.11,
+    "raw": {
+      "model": "voxtral-small-transcribe-3",
+      "text": "カクマガをちゃんとね、取りたいよね、最初は。エクストラスピリットも重要だけど、カクマガは武器ダメージも上がるから、そこはちゃんと取りたいよね。あとは、呪いの遺物、いわゆるカースだね。カースは最終盤に取りたいよね、ちゃんと。",
+      "language": null,
+      "segments": [],
+      "usage": {
+        "prompt_audio_seconds": 29,
+        "prompt_tokens": 2440,
+        "total_tokens": 2899,
+        "completion_tokens": 84,
+        "prompt_tokens_details": {
+          "cached_tokens": 1,
+          "audio_tokens": 375
+        },
+        "service_tier": "standard"
+      },
+      "finish_reason": null
+    }
+  }
+}

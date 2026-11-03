@@ -1,0 +1,2837 @@
+{
+  "ability:1009029159": {
+    "en": "Ava",
+    "ja": "アヴァ",
+    "aliases": [
+      {
+        "alias": "エヴァ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:1011349580": {
+    "en": "Radiant Daggers",
+    "ja": "レディアントダガー",
+    "aliases": [
+      {
+        "alias": "レディアントダガーズ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:1020817390": {
+    "en": "Puddle Punch",
+    "ja": "パドルパンチ",
+    "aliases": []
+  },
+  "ability:1026127931": {
+    "en": "Close The Deal",
+    "ja": "商談成立",
+    "aliases": [
+      {
+        "alias": "クローズザディール",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:1033019133": {
+    "en": "Bloodscent",
+    "ja": "血への嗅覚",
+    "aliases": [
+      {
+        "alias": "ブラッドセント",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:103496908": {
+    "en": "Call Bell",
+    "ja": "コールベル",
+    "aliases": []
+  },
+  "ability:1065103387": {
+    "en": "Lightning Ball",
+    "ja": "ライトニングボール",
+    "aliases": []
+  },
+  "ability:1074714947": {
+    "en": "Static Charge",
+    "ja": "スタティックチャージ",
+    "aliases": []
+  },
+  "ability:1080948381": {
+    "en": "Fixation",
+    "ja": "フィクセーション",
+    "aliases": []
+  },
+  "ability:109766091": {
+    "en": "Doorway",
+    "ja": "ドアウェイ",
+    "aliases": []
+  },
+  "ability:11154161": {
+    "en": "Hex-Lined Snap Trap",
+    "ja": "魔呪の狩猟罠",
+    "aliases": [
+      {
+        "alias": "ヘックスラインドスナップトラップ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:1128670012": {
+    "en": "Kinetic Carbine",
+    "ja": "キネティックカービン",
+    "aliases": []
+  },
+  "ability:1142270357": {
+    "en": "Concussive Combustion",
+    "ja": "スタンバースト",
+    "aliases": [
+      {
+        "alias": "コンカッシブコンバスチョン",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:1168182161": {
+    "en": "Eternal Night",
+    "ja": "エターナルナイト",
+    "aliases": []
+  },
+  "ability:1233782561": {
+    "en": "Love Bites",
+    "ja": "ラヴファング",
+    "aliases": [
+      {
+        "alias": "ラブバイツ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:1235098866": {
+    "en": "Powder Keg",
+    "ja": "パウダーケグ",
+    "aliases": []
+  },
+  "ability:12456023": {
+    "en": "Spectral Assistant",
+    "ja": "スペクターアシスタント",
+    "aliases": [
+      {
+        "alias": "スペクトラルアシスタント",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:1247583368": {
+    "en": "Air Drop",
+    "ja": "エアドロップ",
+    "aliases": []
+  },
+  "ability:1264175662": {
+    "en": "Stalker's Mark",
+    "ja": "追跡者の刻印",
+    "aliases": [
+      {
+        "alias": "ストーカーズマーク",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:1282689113": {
+    "en": "Threadsap",
+    "ja": "スレッドサップ",
+    "aliases": []
+  },
+  "ability:1307289689": {
+    "en": "Soul Exchange",
+    "ja": "ソウルエクスチェンジ",
+    "aliases": []
+  },
+  "ability:1336069669": {
+    "en": "Dust Devil",
+    "ja": "ダストデビル",
+    "aliases": []
+  },
+  "ability:1366719170": {
+    "en": "Time Wall",
+    "ja": "タイムウォール",
+    "aliases": []
+  },
+  "ability:1385849824": {
+    "en": "Slam Fire",
+    "ja": "スラムファイア",
+    "aliases": []
+  },
+  "ability:1389230689": {
+    "en": "Develop Queen",
+    "ja": "デベロップ・クイーン",
+    "aliases": [
+      {
+        "alias": "ディベロップクイーン",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:1426567660": {
+    "en": "Leaping Slash",
+    "ja": "リーピングスラッシュ",
+    "aliases": []
+  },
+  "ability:1454278799": {
+    "en": "Scorn",
+    "ja": "スコーン",
+    "aliases": []
+  },
+  "ability:1458044103": {
+    "en": "Slice and Dice",
+    "ja": "スライス＆ダイス",
+    "aliases": [
+      {
+        "alias": "スライスアンドダイス",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:1469918191": {
+    "en": "Slither",
+    "ja": "スリザー",
+    "aliases": []
+  },
+  "ability:1472593493": {
+    "en": "Aura of Suffering",
+    "ja": "苦悶のオーラ",
+    "aliases": [
+      {
+        "alias": "オーラオブサファリング",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:147493976": {
+    "en": "Flawless Advance",
+    "ja": "フローレスアドバンス",
+    "aliases": []
+  },
+  "ability:1531378655": {
+    "en": "Kudzu Connection",
+    "ja": "イバラの絆",
+    "aliases": [
+      {
+        "alias": "クズコネクション",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:1537272748": {
+    "en": "Bloodletting",
+    "ja": "ブラッドレッティング",
+    "aliases": []
+  },
+  "ability:1568845221": {
+    "en": "Tag Along",
+    "ja": "おひるね",
+    "aliases": [
+      {
+        "alias": "タグアロング",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:1593133799": {
+    "en": "Afterburn",
+    "ja": "アフターバーン",
+    "aliases": []
+  },
+  "ability:1594727071": {
+    "en": "Petrifying Bola",
+    "ja": "ペトリファイボーラ",
+    "aliases": [
+      {
+        "alias": "ペトリファイングボーラ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:1627989937": {
+    "en": "Rule, Ratannia!",
+    "ja": "ラッタニアの王命",
+    "aliases": [
+      {
+        "alias": "ルールラタニア",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:1656913918": {
+    "en": "Binding Word",
+    "ja": "バインディングワード",
+    "aliases": []
+  },
+  "ability:1703045691": {
+    "en": "Hotel Guest",
+    "ja": "ホテルゲスト",
+    "aliases": []
+  },
+  "ability:1719512318": {
+    "en": "Luggage Cart",
+    "ja": "キャリーカート",
+    "aliases": [
+      {
+        "alias": "ラゲッジカート",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:1725685134": {
+    "en": "Spectral Wall",
+    "ja": "スペクトラル・ウォール",
+    "aliases": [
+      {
+        "alias": "スペクトラルウォール",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:1764146857": {
+    "en": "Gutshot",
+    "ja": "ガットショット",
+    "aliases": []
+  },
+  "ability:1792773251": {
+    "en": "Rising Ram",
+    "ja": "ライジング・ラム",
+    "aliases": [
+      {
+        "alias": "ライジングラム",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:1796564033": {
+    "en": "Flight",
+    "ja": "フライト",
+    "aliases": []
+  },
+  "ability:1835738020": {
+    "en": "Killing Blow",
+    "ja": "キリングブロー",
+    "aliases": []
+  },
+  "ability:1841661392": {
+    "en": "Bashdown",
+    "ja": "バッシュダウン",
+    "aliases": []
+  },
+  "ability:1841901343": {
+    "en": "Rallying Charge",
+    "ja": "ファントムチャージ",
+    "aliases": [
+      {
+        "alias": "ラリーイングチャージ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:1842576017": {
+    "en": "Full Auto",
+    "ja": "フルオート",
+    "aliases": []
+  },
+  "ability:18921423": {
+    "en": "Frost Grenade",
+    "ja": "フロストグレネード",
+    "aliases": []
+  },
+  "ability:1904698842": {
+    "en": "Chimera Mk1",
+    "ja": "キメラ・マークI",
+    "aliases": [
+      {
+        "alias": "キメラマークワン",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:191022746": {
+    "en": "Audience Participation",
+    "ja": "イミテーションマジック",
+    "aliases": [
+      {
+        "alias": "オーディエンスパーティシペーション",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:1914797280": {
+    "en": "Sand Blast",
+    "ja": "サンドブラスト",
+    "aliases": []
+  },
+  "ability:1917840730": {
+    "en": "Combo",
+    "ja": "袋叩き",
+    "aliases": [
+      {
+        "alias": "コンボ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:1928108461": {
+    "en": "Grapple Arm",
+    "ja": "グラップルアーム",
+    "aliases": []
+  },
+  "ability:193508101": {
+    "en": "Rake",
+    "ja": "レーキ",
+    "aliases": [
+      {
+        "alias": "レイク",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:1950738949": {
+    "en": "Dazzling Trick",
+    "ja": "ダズリングトリック",
+    "aliases": []
+  },
+  "ability:1963397252": {
+    "en": "Ice Path",
+    "ja": "アイスパス",
+    "aliases": []
+  },
+  "ability:1976701714": {
+    "en": "Flying Cloak",
+    "ja": "フライングクローク",
+    "aliases": []
+  },
+  "ability:1999680326": {
+    "en": "Card Trick",
+    "ja": "カードトリック",
+    "aliases": []
+  },
+  "ability:2001589780": {
+    "en": "Grasping Hands",
+    "ja": "グラスプハンド",
+    "aliases": [
+      {
+        "alias": "グラスピングハンズ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:2003165630": {
+    "en": "Baba's Brew",
+    "ja": "バーバの特製紅茶",
+    "aliases": [
+      {
+        "alias": "ババズブリュー",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:2006773718": {
+    "en": "Riposte",
+    "ja": "リポスト",
+    "aliases": []
+  },
+  "ability:2031714424": {
+    "en": "Quantum Entanglement",
+    "ja": "クアンタムブリンク",
+    "aliases": [
+      {
+        "alias": "クォンタムエンタングルメント",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:2043074967": {
+    "en": "Pain Battery",
+    "ja": "ペインバッテリー",
+    "aliases": []
+  },
+  "ability:2048438176": {
+    "en": "Crow Familiar",
+    "ja": "クロウ・ファミリア",
+    "aliases": [
+      {
+        "alias": "クロウファミリア",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:2054144742": {
+    "en": "Return to Shadows",
+    "ja": "シャドウバースト",
+    "aliases": [
+      {
+        "alias": "リターントゥシャドウズ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:2061574352": {
+    "en": "Storm Cloud",
+    "ja": "ストームクラウド",
+    "aliases": []
+  },
+  "ability:2142213586": {
+    "en": "Rabbit Hex",
+    "ja": "ラビットヘックス",
+    "aliases": []
+  },
+  "ability:2142734020": {
+    "en": "Medicinal Specter",
+    "ja": "スペクターメディック",
+    "aliases": [
+      {
+        "alias": "メディシナルスペクター",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:218284420": {
+    "en": "Life Drain",
+    "ja": "ライフドレイン",
+    "aliases": []
+  },
+  "ability:2221949202": {
+    "en": "Djinn's Mark",
+    "ja": "ジンの刻印",
+    "aliases": [
+      {
+        "alias": "ジンズマーク",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:2240607294": {
+    "en": "Bounce Pad",
+    "ja": "バウンスパッド",
+    "aliases": []
+  },
+  "ability:2351041382": {
+    "en": "Arctic Beam",
+    "ja": "アークティックビーム",
+    "aliases": []
+  },
+  "ability:2366960452": {
+    "en": "Crimson Slash",
+    "ja": "クリムゾンスラッシュ",
+    "aliases": []
+  },
+  "ability:2396527575": {
+    "en": "Naptime",
+    "ja": "おやすみのじかん",
+    "aliases": [
+      {
+        "alias": "ナップタイム",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:2398133749": {
+    "en": "Sanguine Retreat",
+    "ja": "サングインブリンク",
+    "aliases": [
+      {
+        "alias": "サンギンリトリート",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:2406758797": {
+    "en": "Burrow",
+    "ja": "穴掘り",
+    "aliases": [
+      {
+        "alias": "バロウ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:2414191464": {
+    "en": "Smoke Bomb",
+    "ja": "スモークボム",
+    "aliases": []
+  },
+  "ability:2424652896": {
+    "en": "Rook Battery",
+    "ja": "ルーク・バッテリー",
+    "aliases": [
+      {
+        "alias": "ルークバッテリー",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:2460791803": {
+    "en": "Serrated Knives",
+    "ja": "セレイテッド・ナイフ",
+    "aliases": [
+      {
+        "alias": "セレイテッドナイブズ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:249410288": {
+    "en": "Singularity",
+    "ja": "シンギュラリティ",
+    "aliases": []
+  },
+  "ability:2516700978": {
+    "en": "Abstract Landscape",
+    "ja": "アブストラクト・ランドスケープ",
+    "aliases": [
+      {
+        "alias": "アブストラクトランドスケープ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:2521902222": {
+    "en": "Sticky Bomb",
+    "ja": "スティッキーボム",
+    "aliases": []
+  },
+  "ability:2566573207": {
+    "en": "Flying Slash",
+    "ja": "フライングスラッシュ",
+    "aliases": []
+  },
+  "ability:2590796390": {
+    "en": "Shining Wonder",
+    "ja": "シャイニングワンダー",
+    "aliases": []
+  },
+  "ability:2603013853": {
+    "en": "Strix Salvo",
+    "ja": "ストリクス・サルヴォ",
+    "aliases": [
+      {
+        "alias": "ストリクスサルボ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:2604653402": {
+    "en": "Traveler",
+    "ja": "トラベラー",
+    "aliases": []
+  },
+  "ability:2656490109": {
+    "en": "Alchemical Flask",
+    "ja": "アルケミカルフラスコ",
+    "aliases": [
+      {
+        "alias": "アルケミカルフラスク",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:2670099061": {
+    "en": "Grapple",
+    "ja": "グラップル",
+    "aliases": []
+  },
+  "ability:267712790": {
+    "en": "Leech Therapy",
+    "ja": "ヒル治療",
+    "aliases": [
+      {
+        "alias": "リーチセラピー",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:2702908623": {
+    "en": "Last Stand",
+    "ja": "ラストスタンド",
+    "aliases": []
+  },
+  "ability:2717130900": {
+    "en": "Boot Kick",
+    "ja": "ブーツキック",
+    "aliases": []
+  },
+  "ability:2751689917": {
+    "en": "Willpower",
+    "ja": "ウィルパワー",
+    "aliases": []
+  },
+  "ability:2824119765": {
+    "en": "Shoulder Charge",
+    "ja": "ショルダーチャージ",
+    "aliases": []
+  },
+  "ability:2917891787": {
+    "en": "Paradoxical Swap",
+    "ja": "パラドックススワップ",
+    "aliases": [
+      {
+        "alias": "パラドキシカルスワップ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:2918874166": {
+    "en": "Ira Domini",
+    "ja": "イーラ・ドミニ",
+    "aliases": [
+      {
+        "alias": "イラドミニ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:2948410412": {
+    "en": "Sleep Dagger",
+    "ja": "スリープダガー",
+    "aliases": []
+  },
+  "ability:2954330093": {
+    "en": "Affliction",
+    "ja": "アフリクション",
+    "aliases": []
+  },
+  "ability:2981692841": {
+    "en": "Telekinesis",
+    "ja": "テレキネシス",
+    "aliases": []
+  },
+  "ability:299875845": {
+    "en": "Feed The Birds",
+    "ja": "鳥の餌付け",
+    "aliases": [
+      {
+        "alias": "フィードザバーズ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:3002308408": {
+    "en": "Scrap Grenade",
+    "ja": "スクラップグレネード",
+    "aliases": []
+  },
+  "ability:3054993162": {
+    "en": "Captivating Read",
+    "ja": "チャーミングリード",
+    "aliases": [
+      {
+        "alias": "キャプティベイティングリード",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:3089858203": {
+    "en": "Exploding Uppercut",
+    "ja": "ブラストアッパーカット",
+    "aliases": [
+      {
+        "alias": "エクスプローディングアッパーカット",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:3120550633": {
+    "en": "Rend",
+    "ja": "クロー",
+    "aliases": [
+      {
+        "alias": "レンド",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:3122124161": {
+    "en": "Granny Long Legs",
+    "ja": "おばあちゃんの長い脚",
+    "aliases": [
+      {
+        "alias": "グラニーロングレッグス",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:3133377790": {
+    "en": "Mini Turret",
+    "ja": "ミニタレット",
+    "aliases": []
+  },
+  "ability:3156905386": {
+    "en": "Vexing Bolt",
+    "ja": "ヴェックスボルト",
+    "aliases": [
+      {
+        "alias": "ベクシングボルト",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:3190606822": {
+    "en": "Spirit Lasso",
+    "ja": "スピリットラッソ",
+    "aliases": []
+  },
+  "ability:3214055642": {
+    "en": "Jar of Dead",
+    "ja": "死者の魔瓶",
+    "aliases": [
+      {
+        "alias": "ジャーオブデッド",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:3230530872": {
+    "en": "Malice",
+    "ja": "マリス",
+    "aliases": []
+  },
+  "ability:3242902780": {
+    "en": "Guided Owl",
+    "ja": "ガイドアウル",
+    "aliases": [
+      {
+        "alias": "ガイデッドアウル",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:3247040238": {
+    "en": "Splatter",
+    "ja": "スプラッター",
+    "aliases": []
+  },
+  "ability:3255651252": {
+    "en": "Power Slash",
+    "ja": "パワースラッシュ",
+    "aliases": []
+  },
+  "ability:3296031213": {
+    "en": "Blasted",
+    "ja": "ブラスト",
+    "aliases": [
+      {
+        "alias": "ブラスティッド",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:3319782965": {
+    "en": "Shadow Transformation",
+    "ja": "トランスシャドウ",
+    "aliases": [
+      {
+        "alias": "シャドウトランスフォーメーション",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:3379486147": {
+    "en": "Nox Nostra",
+    "ja": "ノックス・ノストラ",
+    "aliases": [
+      {
+        "alias": "ノックスノストラ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:3389503777": {
+    "en": "Flow State",
+    "ja": "一意専心",
+    "aliases": [
+      {
+        "alias": "フローステート",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:3427093887": {
+    "en": "Lurking Terrors",
+    "ja": "クリーピングテラー",
+    "aliases": [
+      {
+        "alias": "ラーキングテラーズ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:3428732129": {
+    "en": "Lethal Venom",
+    "ja": "リーサルポイズン",
+    "aliases": [
+      {
+        "alias": "リーサルベノム",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:3443575800": {
+    "en": "Light Eater",
+    "ja": "ライトイーター",
+    "aliases": []
+  },
+  "ability:3452399392": {
+    "en": "Rain of Arrows",
+    "ja": "レインアロー",
+    "aliases": [
+      {
+        "alias": "レインオブアローズ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:3493884851": {
+    "en": "Shocking Reanimation",
+    "ja": "ショックリバイブ",
+    "aliases": [
+      {
+        "alias": "ショッキングリアニメーション",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:3503044146": {
+    "en": "Heavy Barrage",
+    "ja": "ヘビーバラージ",
+    "aliases": []
+  },
+  "ability:3516947824": {
+    "en": "Flame Dash",
+    "ja": "フレイムダッシュ",
+    "aliases": []
+  },
+  "ability:3553292912": {
+    "en": "Plot Armor",
+    "ja": "プロットアーマー",
+    "aliases": []
+  },
+  "ability:3561817145": {
+    "en": "Ground Strike",
+    "ja": "グラウンドストライク",
+    "aliases": []
+  },
+  "ability:3612874202": {
+    "en": "Still Life",
+    "ja": "スティルライフ",
+    "aliases": []
+  },
+  "ability:3621314027": {
+    "en": "Wretched Vapors",
+    "ja": "カースドヴェイパー",
+    "aliases": [
+      {
+        "alias": "レッチドヴェイパーズ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:3642273386": {
+    "en": "Stone Form",
+    "ja": "ストーンフォーム",
+    "aliases": []
+  },
+  "ability:3681399397": {
+    "en": "Rat Swarm",
+    "ja": "ラットスウォーム",
+    "aliases": []
+  },
+  "ability:3692321247": {
+    "en": "Pillow Toss",
+    "ja": "まくらなげ",
+    "aliases": [
+      {
+        "alias": "ピロートス",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:3727084744": {
+    "en": "Jumpstart",
+    "ja": "ジャンプスタート",
+    "aliases": []
+  },
+  "ability:3733594387": {
+    "en": "Fire Scarabs",
+    "ja": "ファイアスカラベ",
+    "aliases": []
+  },
+  "ability:374042410": {
+    "en": "Jettison Fuel",
+    "ja": "燃料噴射",
+    "aliases": [
+      {
+        "alias": "ジェティソンフューエル",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:3747867012": {
+    "en": "Enchanter's Satchel",
+    "ja": "マジシャンズバッグ",
+    "aliases": [
+      {
+        "alias": "エンチャンターズサッチェル",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:3760705623": {
+    "en": "Kinetic Pulse",
+    "ja": "ストンプパルス",
+    "aliases": [
+      {
+        "alias": "キネティックパルス",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:3762861984": {
+    "en": "Chain Gang",
+    "ja": "チェーンギャング",
+    "aliases": []
+  },
+  "ability:3788152387": {
+    "en": "The Cube",
+    "ja": "ザ・キューブ",
+    "aliases": [
+      {
+        "alias": "ザキューブ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:3826390464": {
+    "en": "Frozen Shelter",
+    "ja": "フローズンシェルター",
+    "aliases": []
+  },
+  "ability:3832675871": {
+    "en": "Hyper Beam",
+    "ja": "ハイパービーム",
+    "aliases": []
+  },
+  "ability:397010810": {
+    "en": "Death Slam",
+    "ja": "デススラム",
+    "aliases": []
+  },
+  "ability:3983754897": {
+    "en": "Entangling Bola",
+    "ja": "バインドボーラ",
+    "aliases": [
+      {
+        "alias": "エンタングリングボーラ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:4011110259": {
+    "en": "Setup Bishop",
+    "ja": "セットアップ・ビショップ",
+    "aliases": [
+      {
+        "alias": "セットアップビショップ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:4072270083": {
+    "en": "Siphon Life",
+    "ja": "サイフォンライフ",
+    "aliases": []
+  },
+  "ability:4110547059": {
+    "en": "Borrowed Decree",
+    "ja": "屍鬼累々",
+    "aliases": [
+      {
+        "alias": "ボロードディクリー",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:4111222521": {
+    "en": "Entangling Thorns",
+    "ja": "絡みつくイバラ",
+    "aliases": [
+      {
+        "alias": "エンタングリングソーンズ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:4131517918": {
+    "en": "Gloom Bombs",
+    "ja": "グルームボム",
+    "aliases": [
+      {
+        "alias": "グルームボムズ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:4147641675": {
+    "en": "Project Mind",
+    "ja": "プロジェクトマインド",
+    "aliases": []
+  },
+  "ability:4179229681": {
+    "en": "Crackshot",
+    "ja": "クラックショット",
+    "aliases": []
+  },
+  "ability:4180486641": {
+    "en": "Kingside Knight",
+    "ja": "キングサイド・ナイト",
+    "aliases": [
+      {
+        "alias": "キングサイドナイト",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:4206531918": {
+    "en": "Goo Ball",
+    "ja": "スライムボール",
+    "aliases": [
+      {
+        "alias": "グーボール",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:491391007": {
+    "en": "Napalm",
+    "ja": "ナパーム",
+    "aliases": []
+  },
+  "ability:492030745": {
+    "en": "Rejuvenating Aurora",
+    "ja": "リジュビネ・オーロラ",
+    "aliases": [
+      {
+        "alias": "リジュビネイティングオーロラ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:494112189": {
+    "en": "Itani Lo Sahn",
+    "ja": "イタニ・ロー・サーン",
+    "aliases": [
+      {
+        "alias": "イタニローサーン",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:509856396": {
+    "en": "Seismic Impact",
+    "ja": "サイズミック・インパクト",
+    "aliases": [
+      {
+        "alias": "サイスミックインパクト",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:512733154": {
+    "en": "Spirit Snare",
+    "ja": "スピリットスネア",
+    "aliases": []
+  },
+  "ability:515791019": {
+    "en": "Lycan Curse",
+    "ja": "人狼の呪い",
+    "aliases": [
+      {
+        "alias": "ライカンカース",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:519124136": {
+    "en": "Flog",
+    "ja": "ウィップ",
+    "aliases": [
+      {
+        "alias": "フロッグ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:536278136": {
+    "en": "Lil Helpers",
+    "ja": "おてつだい",
+    "aliases": [
+      {
+        "alias": "リルヘルパーズ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:537527508": {
+    "en": "Stake",
+    "ja": "テザーステイク",
+    "aliases": [
+      {
+        "alias": "ステーク",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:539192269": {
+    "en": "Power Surge",
+    "ja": "パワーサージ",
+    "aliases": []
+  },
+  "ability:548943648": {
+    "en": "Charged Shot",
+    "ja": "チャージショット",
+    "aliases": [
+      {
+        "alias": "チャージドショット",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:58655583": {
+    "en": "Pulse Grenade",
+    "ja": "パルスグレネード",
+    "aliases": []
+  },
+  "ability:604448162": {
+    "en": "Bookwyrm",
+    "ja": "ブックドラゴン",
+    "aliases": [
+      {
+        "alias": "ブックワーム",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:629925354": {
+    "en": "Essence Theft",
+    "ja": "生気吸収",
+    "aliases": [
+      {
+        "alias": "エッセンスセフト",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:645773760": {
+    "en": "Screwjab Dagger",
+    "ja": "スクリュージャブダガー",
+    "aliases": []
+  },
+  "ability:683490631": {
+    "en": "Healing Needles",
+    "ja": "ヒーリングニードル",
+    "aliases": [
+      {
+        "alias": "ヒーリングニードルズ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:690412829": {
+    "en": "Royal Pestments",
+    "ja": "ジャンクアーマー",
+    "aliases": [
+      {
+        "alias": "ロイヤルペストメンツ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:715325746": {
+    "en": "Essence Bomb",
+    "ja": "エッセンスボム",
+    "aliases": []
+  },
+  "ability:715762406": {
+    "en": "Infernal Resilience",
+    "ja": "ヘル・レジリエンス",
+    "aliases": [
+      {
+        "alias": "インファーナルレジリエンス",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:725153709": {
+    "en": "Disengaging Sigil",
+    "ja": "退避の五芒星",
+    "aliases": [
+      {
+        "alias": "ディスエンゲージングシジル",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:731943444": {
+    "en": "Bullet Dance",
+    "ja": "バレットダンス",
+    "aliases": []
+  },
+  "ability:775377419": {
+    "en": "Assassinate",
+    "ja": "アサシネイト",
+    "aliases": [
+      {
+        "alias": "アサシネート",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:836615329": {
+    "en": "Living Ink",
+    "ja": "リビングインク",
+    "aliases": []
+  },
+  "ability:911307831": {
+    "en": "Consecrating Grenade",
+    "ja": "聖別手榴弾",
+    "aliases": [
+      {
+        "alias": "コンセクレイティンググレネード",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "ability:938149308": {
+    "en": "Barrage",
+    "ja": "バラージ",
+    "aliases": []
+  },
+  "hero:1": {
+    "en": "Infernus",
+    "ja": "インファーナス",
+    "aliases": [
+      {
+        "alias": "インフェルナス",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "hero:10": {
+    "en": "Paradox",
+    "ja": "パラドックス",
+    "aliases": []
+  },
+  "hero:11": {
+    "en": "Dynamo",
+    "ja": "ダイナモ",
+    "aliases": []
+  },
+  "hero:12": {
+    "en": "Kelvin",
+    "ja": "ケルビン",
+    "aliases": []
+  },
+  "hero:13": {
+    "en": "Haze",
+    "ja": "ヘイズ",
+    "aliases": []
+  },
+  "hero:14": {
+    "en": "Holliday",
+    "ja": "ホリデイ",
+    "aliases": [
+      {
+        "alias": "ホリデー",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "hero:15": {
+    "en": "Bebop",
+    "ja": "ビバップ",
+    "aliases": []
+  },
+  "hero:16": {
+    "en": "Calico",
+    "ja": "キャリコ",
+    "aliases": []
+  },
+  "hero:17": {
+    "en": "Grey Talon",
+    "ja": "グレイタロン",
+    "aliases": []
+  },
+  "hero:18": {
+    "en": "Mo & Krill",
+    "ja": "モー＆クリル",
+    "aliases": [
+      {
+        "alias": "モーアンドクリル",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "hero:19": {
+    "en": "Shiv",
+    "ja": "シヴ",
+    "aliases": []
+  },
+  "hero:2": {
+    "en": "Seven",
+    "ja": "セブン",
+    "aliases": []
+  },
+  "hero:20": {
+    "en": "Ivy",
+    "ja": "アイビー",
+    "aliases": []
+  },
+  "hero:25": {
+    "en": "Warden",
+    "ja": "ウォーデン",
+    "aliases": []
+  },
+  "hero:27": {
+    "en": "Yamato",
+    "ja": "ヤマト",
+    "aliases": []
+  },
+  "hero:3": {
+    "en": "Vindicta",
+    "ja": "ヴィンディクタ",
+    "aliases": []
+  },
+  "hero:31": {
+    "en": "Lash",
+    "ja": "ラッシュ",
+    "aliases": []
+  },
+  "hero:35": {
+    "en": "Viscous",
+    "ja": "ヴィスカス",
+    "aliases": []
+  },
+  "hero:4": {
+    "en": "Lady Geist",
+    "ja": "レディガイスト",
+    "aliases": []
+  },
+  "hero:50": {
+    "en": "Pocket",
+    "ja": "ポケット",
+    "aliases": []
+  },
+  "hero:52": {
+    "en": "Mirage",
+    "ja": "ミラージュ",
+    "aliases": []
+  },
+  "hero:58": {
+    "en": "Vyper",
+    "ja": "ヴァイパー",
+    "aliases": []
+  },
+  "hero:6": {
+    "en": "Abrams",
+    "ja": "エイブラムス",
+    "aliases": []
+  },
+  "hero:60": {
+    "en": "Sinclair",
+    "ja": "シンクレア",
+    "aliases": []
+  },
+  "hero:63": {
+    "en": "Mina",
+    "ja": "ミナ",
+    "aliases": []
+  },
+  "hero:64": {
+    "en": "Drifter",
+    "ja": "ドリフター",
+    "aliases": []
+  },
+  "hero:65": {
+    "en": "Venator",
+    "ja": "ヴェナトル",
+    "aliases": [
+      {
+        "alias": "ヴェネーター",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "hero:66": {
+    "en": "Victor",
+    "ja": "ビクター",
+    "aliases": [
+      {
+        "alias": "ヴィクター",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "hero:67": {
+    "en": "Paige",
+    "ja": "ペイジ",
+    "aliases": []
+  },
+  "hero:69": {
+    "en": "The Doorman",
+    "ja": "ドアマン",
+    "aliases": [
+      {
+        "alias": "ザドアマン",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "hero:7": {
+    "en": "Wraith",
+    "ja": "レイス",
+    "aliases": []
+  },
+  "hero:72": {
+    "en": "Billy",
+    "ja": "ビリー",
+    "aliases": []
+  },
+  "hero:76": {
+    "en": "Graves",
+    "ja": "グレイブス",
+    "aliases": [
+      {
+        "alias": "グレイヴス",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "hero:77": {
+    "en": "Apollo",
+    "ja": "アポロ",
+    "aliases": []
+  },
+  "hero:78": {
+    "en": "Deadman Danny",
+    "ja": "デッドマン・ダニー",
+    "aliases": [
+      {
+        "alias": "デッドマンダニー",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "hero:79": {
+    "en": "Rem",
+    "ja": "レム",
+    "aliases": []
+  },
+  "hero:8": {
+    "en": "McGinnis",
+    "ja": "マクギニス",
+    "aliases": []
+  },
+  "hero:80": {
+    "en": "Silver",
+    "ja": "シルバー",
+    "aliases": []
+  },
+  "hero:81": {
+    "en": "Celeste",
+    "ja": "セレステ",
+    "aliases": [
+      {
+        "alias": "セレスト",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "hero:84": {
+    "en": "Rat King",
+    "ja": "ラットキング",
+    "aliases": []
+  },
+  "hero:85": {
+    "en": "Solomon",
+    "ja": "ソロモン",
+    "aliases": []
+  },
+  "hero:86": {
+    "en": "Violet",
+    "ja": "バイオレット",
+    "aliases": []
+  },
+  "hero:87": {
+    "en": "Nurse Harrow",
+    "ja": "ナース・ハロウ",
+    "aliases": [
+      {
+        "alias": "ナースハロウ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "hero:88": {
+    "en": "Baba",
+    "ja": "バーバ",
+    "aliases": [
+      {
+        "alias": "ババ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:1009965641": {
+    "en": "Monster Rounds",
+    "ja": "モンスターラウンド",
+    "aliases": [
+      {
+        "alias": "モンスターラウンズ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:1047818222": {
+    "en": "Debuff Reducer",
+    "ja": "デバフリデューサー",
+    "aliases": []
+  },
+  "item:1055679805": {
+    "en": "Vampiric Burst",
+    "ja": "ヴァンパイアバースト",
+    "aliases": [
+      {
+        "alias": "ヴァンピリックバースト",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:1102081447": {
+    "en": "Mystic Slow",
+    "ja": "ミスティックスロウ",
+    "aliases": [
+      {
+        "alias": "ミスティックスロー",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:1113837674": {
+    "en": "Silencer",
+    "ja": "サイレンサー",
+    "aliases": []
+  },
+  "item:112198670": {
+    "en": "Spirit Shielding",
+    "ja": "スピリットシールド",
+    "aliases": [
+      {
+        "alias": "スピリットシールディング",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:1132564516": {
+    "en": "Prism Blast",
+    "ja": "プリズムブラスト",
+    "aliases": []
+  },
+  "item:1144549437": {
+    "en": "Spirit Shredder",
+    "ja": "スピリットシュレッダー",
+    "aliases": []
+  },
+  "item:1150006784": {
+    "en": "Arcane Surge",
+    "ja": "アーケインサージ",
+    "aliases": []
+  },
+  "item:1152158042": {
+    "en": "Vortex Web",
+    "ja": "ボルテックスウェブ",
+    "aliases": []
+  },
+  "item:1193964439": {
+    "en": "Greater Expansion",
+    "ja": "グレーターエクスパンダー",
+    "aliases": [
+      {
+        "alias": "グレーターエクスパンション",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:1219329868": {
+    "en": "Spirit Sap",
+    "ja": "スピリットドレイン",
+    "aliases": [
+      {
+        "alias": "スピリットサップ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:1235347618": {
+    "en": "Battle Vest",
+    "ja": "バトルベスト",
+    "aliases": []
+  },
+  "item:1250307611": {
+    "en": "Juggernaut",
+    "ja": "ジャガーノート",
+    "aliases": []
+  },
+  "item:1252627263": {
+    "en": "Lifestrike",
+    "ja": "ライフストライク",
+    "aliases": []
+  },
+  "item:1254091416": {
+    "en": "Knockdown",
+    "ja": "ノックダウン",
+    "aliases": []
+  },
+  "item:1282141666": {
+    "en": "Siphon Bullets",
+    "ja": "サイフォンバレット",
+    "aliases": [
+      {
+        "alias": "サイフォンバレッツ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:1292979587": {
+    "en": "Surge of Power",
+    "ja": "パワーサージ",
+    "aliases": [
+      {
+        "alias": "サージオブパワー",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:1342610602": {
+    "en": "Close Quarters",
+    "ja": "クローズクォーター",
+    "aliases": [
+      {
+        "alias": "クローズクォーターズ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:1371725689": {
+    "en": "Phantom Strike",
+    "ja": "ファントムストライク",
+    "aliases": []
+  },
+  "item:1378931225": {
+    "en": "Metal Skin",
+    "ja": "メタルスキン",
+    "aliases": []
+  },
+  "item:1396247347": {
+    "en": "Lucky Shot",
+    "ja": "ラッキーショット",
+    "aliases": []
+  },
+  "item:1409190604": {
+    "en": "Fury Trance",
+    "ja": "フューリートランス",
+    "aliases": []
+  },
+  "item:1414025773": {
+    "en": "Counterspell",
+    "ja": "カウンタースペル",
+    "aliases": []
+  },
+  "item:1414319208": {
+    "en": "Berserker",
+    "ja": "バーサーカー",
+    "aliases": []
+  },
+  "item:1427630806": {
+    "en": "Healing Tempo",
+    "ja": "ヒーリングテンポ",
+    "aliases": []
+  },
+  "item:1437614329": {
+    "en": "Melee Lifesteal",
+    "ja": "メレーライフスティール",
+    "aliases": []
+  },
+  "item:1439347412": {
+    "en": "Mystic Regeneration",
+    "ja": "ミスティックリジェネ",
+    "aliases": [
+      {
+        "alias": "ミスティックリジェネレーション",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:1548066885": {
+    "en": "Extended Magazine",
+    "ja": "基礎拡張マガジン",
+    "aliases": [
+      {
+        "alias": "エクステンデッドマガジン",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:1558545403": {
+    "en": "Unstable Concoction",
+    "ja": "不安定な調合薬",
+    "aliases": [
+      {
+        "alias": "アンステーブルコンコクション",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:1644605047": {
+    "en": "Reactive Barrier",
+    "ja": "リアクティブバリア",
+    "aliases": []
+  },
+  "item:1662311306": {
+    "en": "Divine Barrier",
+    "ja": "ディバインバリア",
+    "aliases": []
+  },
+  "item:1672893796": {
+    "en": "Grit",
+    "ja": "不屈の心",
+    "aliases": [
+      {
+        "alias": "グリット",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:1710079648": {
+    "en": "Healing Rite",
+    "ja": "ヒーリングリチュアル",
+    "aliases": [
+      {
+        "alias": "ヒーリングライト",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:1736094134": {
+    "en": "Seraphim Wings",
+    "ja": "セラフィムウィング",
+    "aliases": [
+      {
+        "alias": "セラフィムウィングス",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:1763073141": {
+    "en": "Recharging Rush",
+    "ja": "リチャージラッシュ",
+    "aliases": [
+      {
+        "alias": "リチャージングラッシュ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:1770441818": {
+    "en": "Weakening Headshot",
+    "ja": "イグゾーストヘッドショット",
+    "aliases": [
+      {
+        "alias": "ウィークニングヘッドショット",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:1797283378": {
+    "en": "Infuser",
+    "ja": "インフューザー",
+    "aliases": []
+  },
+  "item:1798666702": {
+    "en": "Shadow Weave",
+    "ja": "シャドウウィーブ",
+    "aliases": []
+  },
+  "item:1804594021": {
+    "en": "Rescue Beam",
+    "ja": "レスキュービーム",
+    "aliases": []
+  },
+  "item:1813726886": {
+    "en": "Slowing Hex",
+    "ja": "スロウヘックス",
+    "aliases": [
+      {
+        "alias": "スローイングヘックス",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:1825399334": {
+    "en": "Electric Slippers",
+    "ja": "エレクトリックブーツ",
+    "aliases": [
+      {
+        "alias": "エレクトリックスリッパーズ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:1925087134": {
+    "en": "Suppressor",
+    "ja": "サプレッサー",
+    "aliases": []
+  },
+  "item:1932939246": {
+    "en": "Alchemical Fire",
+    "ja": "アルケミカルファイア",
+    "aliases": []
+  },
+  "item:1955841979": {
+    "en": "Spellbreaker",
+    "ja": "スペルブレイカー",
+    "aliases": []
+  },
+  "item:1976391348": {
+    "en": "Cold Front",
+    "ja": "コールドフロント",
+    "aliases": []
+  },
+  "item:1998374645": {
+    "en": "Mystic Burst",
+    "ja": "ミスティックバースト",
+    "aliases": []
+  },
+  "item:2010028405": {
+    "en": "Headshot Booster",
+    "ja": "ヘッドショットブースター",
+    "aliases": []
+  },
+  "item:2037039379": {
+    "en": "Inhibitor",
+    "ja": "インヒビター",
+    "aliases": []
+  },
+  "item:2054088113": {
+    "en": "Mystical Piano",
+    "ja": "ミスティカルピアノ",
+    "aliases": []
+  },
+  "item:2059712766": {
+    "en": "Restorative Locket",
+    "ja": "ヒーリングロケット",
+    "aliases": [
+      {
+        "alias": "リストラティブロケット",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:2061878743": {
+    "en": "Disarming Hex",
+    "ja": "ディスアームヘックス",
+    "aliases": [
+      {
+        "alias": "ディスアーミングヘックス",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:2064029594": {
+    "en": "Opening Rounds",
+    "ja": "オープニングラウンド",
+    "aliases": [
+      {
+        "alias": "オープニングラウンズ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:2068250483": {
+    "en": "Frostbite Charm",
+    "ja": "凍傷のチャーム",
+    "aliases": [
+      {
+        "alias": "フロストバイトチャーム",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:2081037738": {
+    "en": "Mystic Vulnerability",
+    "ja": "ヴァルネラビリティ",
+    "aliases": [
+      {
+        "alias": "ミスティックバルネラビリティ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:2095565695": {
+    "en": "Point Blank",
+    "ja": "ポイントブランク",
+    "aliases": []
+  },
+  "item:2108215830": {
+    "en": "Heroic Aura",
+    "ja": "ヒロイックオーラ",
+    "aliases": []
+  },
+  "item:2121044373": {
+    "en": "Tankbuster",
+    "ja": "タンクバスター",
+    "aliases": []
+  },
+  "item:2142980412": {
+    "en": "Focus Lens",
+    "ja": "フォーカスレンズ",
+    "aliases": []
+  },
+  "item:2152872419": {
+    "en": "Sharpshooter",
+    "ja": "シャープシューター",
+    "aliases": []
+  },
+  "item:2163598980": {
+    "en": "Spirit Resilience",
+    "ja": "スピリットレジリエンス",
+    "aliases": []
+  },
+  "item:2221211450": {
+    "en": "Spellslinger",
+    "ja": "スペルスリンガー",
+    "aliases": []
+  },
+  "item:2226497419": {
+    "en": "Spiritual Overflow",
+    "ja": "スピリットオーバーフロー",
+    "aliases": [
+      {
+        "alias": "スピリチュアルオーバーフロー",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:230297145": {
+    "en": "Eternal Gift",
+    "ja": "エターナルギフト",
+    "aliases": []
+  },
+  "item:2319629810": {
+    "en": "Shadow Strike",
+    "ja": "シャドウストライク",
+    "aliases": []
+  },
+  "item:2356412290": {
+    "en": "Titanic Magazine",
+    "ja": "巨大拡張マガジン",
+    "aliases": [
+      {
+        "alias": "タイタニックマガジン",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:2407033488": {
+    "en": "Intensifying Magazine",
+    "ja": "連射強化マガジン",
+    "aliases": [
+      {
+        "alias": "インテンシファイングマガジン",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:2407781327": {
+    "en": "Colossus",
+    "ja": "コロッサス",
+    "aliases": []
+  },
+  "item:2417568017": {
+    "en": "Scourge",
+    "ja": "スカージ",
+    "aliases": []
+  },
+  "item:2447176615": {
+    "en": "Enduring Speed",
+    "ja": "ウィングブーツ",
+    "aliases": [
+      {
+        "alias": "エンデュアリングスピード",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:2462046703": {
+    "en": "Golden Goose Egg",
+    "ja": "ガチョウの黄金の卵",
+    "aliases": [
+      {
+        "alias": "ゴールデングースエッグ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:2463960640": {
+    "en": "Escalating Resilience",
+    "ja": "エスカレートレジリエンス",
+    "aliases": [
+      {
+        "alias": "エスカレーティングレジリエンス",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:2480592370": {
+    "en": "Ricochet",
+    "ja": "リコシェ",
+    "aliases": []
+  },
+  "item:2481177645": {
+    "en": "Hunter's Aura",
+    "ja": "ハンターオーラ",
+    "aliases": [
+      {
+        "alias": "ハンターズオーラ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:2519598785": {
+    "en": "Boundless Spirit",
+    "ja": "バウンドレススピリット",
+    "aliases": []
+  },
+  "item:2533252781": {
+    "en": "Ethereal Shift",
+    "ja": "エーテリアルシフト",
+    "aliases": [
+      {
+        "alias": "エセリアルシフト",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:2566692615": {
+    "en": "Healing Booster",
+    "ja": "ヒーリングブースター",
+    "aliases": []
+  },
+  "item:26002154": {
+    "en": "Melee Charge",
+    "ja": "メレーチャージ",
+    "aliases": []
+  },
+  "item:2603935618": {
+    "en": "Healbane",
+    "ja": "ヒールベイン",
+    "aliases": []
+  },
+  "item:2617435668": {
+    "en": "Cursed Relic",
+    "ja": "呪いの遺物",
+    "aliases": [
+      {
+        "alias": "カースドレリック",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:2678489038": {
+    "en": "Hollow Point",
+    "ja": "ホロウポイント",
+    "aliases": [
+      {
+        "alias": "ホローポイント",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:2717651715": {
+    "en": "Superior Duration",
+    "ja": "スーパーエクステンダー",
+    "aliases": [
+      {
+        "alias": "スペリオルデュレーション",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:2739107182": {
+    "en": "Burst Fire",
+    "ja": "バーストファイア",
+    "aliases": []
+  },
+  "item:2800629741": {
+    "en": "Magic Carpet",
+    "ja": "マジックカーペット",
+    "aliases": []
+  },
+  "item:2820116164": {
+    "en": "Diviner's Kevlar",
+    "ja": "ディバイナーズケブラー",
+    "aliases": []
+  },
+  "item:2829638276": {
+    "en": "Extra Regen",
+    "ja": "エクストラリジェネ",
+    "aliases": [
+      {
+        "alias": "エクストラリジェン",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:2922054143": {
+    "en": "Rusted Barrel",
+    "ja": "コロッシブバレル",
+    "aliases": [
+      {
+        "alias": "ラスティッドバレル",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:2947183272": {
+    "en": "Radiant Regeneration",
+    "ja": "レディアントリジェネ",
+    "aliases": [
+      {
+        "alias": "レイディアントリジェネレーション",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:2951612397": {
+    "en": "Duration Extender",
+    "ja": "エクステンダー",
+    "aliases": [
+      {
+        "alias": "デュレーションエクステンダー",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:2956256701": {
+    "en": "Healing Nova",
+    "ja": "ヒーリングノヴァ",
+    "aliases": []
+  },
+  "item:2971868509": {
+    "en": "Bullet Resist Shredder",
+    "ja": "レジストシュレッダー",
+    "aliases": [
+      {
+        "alias": "バレットレジストシュレッダー",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:3005970438": {
+    "en": "Escalating Exposure",
+    "ja": "エクスポージャー",
+    "aliases": [
+      {
+        "alias": "エスカレーティングエクスポージャー",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:3028234315": {
+    "en": "Witchmail",
+    "ja": "ウィッチメイル",
+    "aliases": []
+  },
+  "item:3074274290": {
+    "en": "Trophy Collector",
+    "ja": "トロフィーコレクター",
+    "aliases": []
+  },
+  "item:3077079169": {
+    "en": "High-Velocity Rounds",
+    "ja": "ハイスピードラウンド",
+    "aliases": [
+      {
+        "alias": "ハイベロシティラウンズ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:3140772621": {
+    "en": "Bullet Resilience",
+    "ja": "バレットレジリエンス",
+    "aliases": []
+  },
+  "item:3144988365": {
+    "en": "Decay",
+    "ja": "ディケイ",
+    "aliases": []
+  },
+  "item:3190916303": {
+    "en": "Spirit Snatch",
+    "ja": "スピリットスナッチ",
+    "aliases": []
+  },
+  "item:3261353684": {
+    "en": "Superior Cooldown",
+    "ja": "クールダウンブースト",
+    "aliases": [
+      {
+        "alias": "スペリオルクールダウン",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:3269957497": {
+    "en": "Infinite Rounds",
+    "ja": "インフィニットラウンド",
+    "aliases": [
+      {
+        "alias": "インフィニットラウンズ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:3270001687": {
+    "en": "Warp Stone",
+    "ja": "ワープストーン",
+    "aliases": []
+  },
+  "item:3294954488": {
+    "en": "Ballistic Enchantment",
+    "ja": "バリスティックエンチャント",
+    "aliases": [
+      {
+        "alias": "バリスティックエンチャントメント",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:3331811235": {
+    "en": "Long Range",
+    "ja": "ロングレンジ",
+    "aliases": []
+  },
+  "item:334300056": {
+    "en": "Stamina Mastery",
+    "ja": "スタミナマスタリー",
+    "aliases": []
+  },
+  "item:3357231760": {
+    "en": "Unstoppable",
+    "ja": "アンストッパブル",
+    "aliases": []
+  },
+  "item:3361075077": {
+    "en": "Return Fire",
+    "ja": "リターンファイア",
+    "aliases": []
+  },
+  "item:3361811174": {
+    "en": "Cheat Death",
+    "ja": "デスチーター",
+    "aliases": [
+      {
+        "alias": "チートデス",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:339443430": {
+    "en": "Frenzy",
+    "ja": "フレンジー",
+    "aliases": []
+  },
+  "item:3399065363": {
+    "en": "Sprint Boots",
+    "ja": "スプリントブーツ",
+    "aliases": []
+  },
+  "item:3403085434": {
+    "en": "Fleetfoot",
+    "ja": "フリートフット",
+    "aliases": []
+  },
+  "item:343572757": {
+    "en": "Spirit Burn",
+    "ja": "スピリットバーン",
+    "aliases": []
+  },
+  "item:3491236900": {
+    "en": "Plated Armor",
+    "ja": "プレートアーマー",
+    "aliases": [
+      {
+        "alias": "プレーテッドアーマー",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:3523480953": {
+    "en": "Cloak of Opportunity",
+    "ja": "加護のマント",
+    "aliases": [
+      {
+        "alias": "クロークオブオポチュニティ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:3568217437": {
+    "en": "Haunting Shot",
+    "ja": "ホーンテッドショット",
+    "aliases": [
+      {
+        "alias": "ホーンティングショット",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:3577481646": {
+    "en": "Mystic Reverb",
+    "ja": "ミスティックリバーブ",
+    "aliases": []
+  },
+  "item:3585132399": {
+    "en": "Fortitude",
+    "ja": "フォルティチュード",
+    "aliases": [
+      {
+        "alias": "フォーティチュード",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:3633614685": {
+    "en": "Extra Health",
+    "ja": "エクストラヘルス",
+    "aliases": []
+  },
+  "item:3647584222": {
+    "en": "Split Shot",
+    "ja": "スプリットショット",
+    "aliases": []
+  },
+  "item:365620721": {
+    "en": "Glass Cannon",
+    "ja": "グラスキャノン",
+    "aliases": []
+  },
+  "item:3696726732": {
+    "en": "Toxic Bullets",
+    "ja": "トキシックバレット",
+    "aliases": []
+  },
+  "item:3729138568": {
+    "en": "Celestial Blessing",
+    "ja": "天の祝福",
+    "aliases": [
+      {
+        "alias": "セレスティアルブレッシング",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:3731635960": {
+    "en": "Dispel Magic",
+    "ja": "ディスペルマジック",
+    "aliases": []
+  },
+  "item:3776945997": {
+    "en": "Extra Charge",
+    "ja": "エクストラチャージ",
+    "aliases": []
+  },
+  "item:3791587546": {
+    "en": "Weighted Shots",
+    "ja": "ヘヴィショット",
+    "aliases": [
+      {
+        "alias": "ウェイテッドショット",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:380806748": {
+    "en": "Compress Cooldown",
+    "ja": "コンプレッサー",
+    "aliases": [
+      {
+        "alias": "コンプレスクールダウン",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:3812615317": {
+    "en": "Arctic Blast",
+    "ja": "アークティックブラスト",
+    "aliases": []
+  },
+  "item:381961617": {
+    "en": "Active Reload",
+    "ja": "アクティブリロード",
+    "aliases": []
+  },
+  "item:3862866912": {
+    "en": "Restorative Shot",
+    "ja": "ヒーリングショット",
+    "aliases": [
+      {
+        "alias": "レストラティブショット",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:3884003354": {
+    "en": "Crippling Headshot",
+    "ja": "クリップリングショット",
+    "aliases": [
+      {
+        "alias": "クリップリングヘッドショット",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:3919289022": {
+    "en": "Mercurial Magnum",
+    "ja": "マーキュリーマグナム",
+    "aliases": [
+      {
+        "alias": "マーキュリアルマグナム",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:393974127": {
+    "en": "Slowing Bullets",
+    "ja": "スロウバレット",
+    "aliases": [
+      {
+        "alias": "スローイングバレット",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:3949773228": {
+    "en": "Nullification Burst",
+    "ja": "虚無の波動",
+    "aliases": [
+      {
+        "alias": "ナリフィケーションバースト",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:395867183": {
+    "en": "Mystic Shot",
+    "ja": "ミスティックショット",
+    "aliases": []
+  },
+  "item:395944548": {
+    "en": "Torment Pulse",
+    "ja": "トーメントパルス",
+    "aliases": []
+  },
+  "item:3970837787": {
+    "en": "Enchanter's Emblem",
+    "ja": "妖術師の紋章",
+    "aliases": [
+      {
+        "alias": "エンチャンターズエンブレム",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:3977876567": {
+    "en": "Kinetic Dash",
+    "ja": "キネティックダッシュ",
+    "aliases": []
+  },
+  "item:4050602737": {
+    "en": "Mystic Conduit",
+    "ja": "ミスティックコンジット",
+    "aliases": [
+      {
+        "alias": "ミスティックコンデュイット",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:4053935515": {
+    "en": "Headhunter",
+    "ja": "ヘッドハンター",
+    "aliases": []
+  },
+  "item:4075861416": {
+    "en": "Spirit Rend",
+    "ja": "スピリットキラー",
+    "aliases": [
+      {
+        "alias": "スピリットレンド",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:4104549924": {
+    "en": "Swift Striker",
+    "ja": "スイフトストライカー",
+    "aliases": []
+  },
+  "item:4121584236": {
+    "en": "Shrink Ray",
+    "ja": "シュリンクレイ",
+    "aliases": []
+  },
+  "item:4139877411": {
+    "en": "Extra Stamina",
+    "ja": "エクストラスタミナ",
+    "aliases": []
+  },
+  "item:4204808176": {
+    "en": "Rebuttal",
+    "ja": "プロテスト",
+    "aliases": [
+      {
+        "alias": "リバッタル",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:424779525": {
+    "en": "Omnicharge Signet",
+    "ja": "オムニチャージ",
+    "aliases": [
+      {
+        "alias": "オムニチャージシグネット",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:465043967": {
+    "en": "Spirit Strike",
+    "ja": "スピリットストライク",
+    "aliases": []
+  },
+  "item:493591231": {
+    "en": "Lightning Scroll",
+    "ja": "ライトニングスクロール",
+    "aliases": []
+  },
+  "item:499683006": {
+    "en": "Bullet Lifesteal",
+    "ja": "バレットライフスティール",
+    "aliases": []
+  },
+  "item:600033864": {
+    "en": "Majestic Leap",
+    "ja": "マジェスティックリープ",
+    "aliases": []
+  },
+  "item:619484391": {
+    "en": "Silence Wave",
+    "ja": "サイレンスウェーブ",
+    "aliases": []
+  },
+  "item:630839635": {
+    "en": "Echo Shard",
+    "ja": "エコーシャード",
+    "aliases": []
+  },
+  "item:64550694": {
+    "en": "Runed Gauntlets",
+    "ja": "ルーンガントレット",
+    "aliases": [
+      {
+        "alias": "ルーンドガントレッツ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:668299740": {
+    "en": "Rapid Rounds",
+    "ja": "ラピッドラウンド",
+    "aliases": [
+      {
+        "alias": "ラピッドラウンズ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:673001892": {
+    "en": "Armor Piercer",
+    "ja": "アーマーピアサー",
+    "aliases": []
+  },
+  "item:677738769": {
+    "en": "Refresher",
+    "ja": "リフレッシャー",
+    "aliases": []
+  },
+  "item:690458959": {
+    "en": "Express Shot",
+    "ja": "エクスプレスショット",
+    "aliases": []
+  },
+  "item:709540378": {
+    "en": "Cultist Sacrifice",
+    "ja": "サクリファイス",
+    "aliases": [
+      {
+        "alias": "カルトサクリファイス",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:710436191": {
+    "en": "Capacitor",
+    "ja": "コンデンサー",
+    "aliases": [
+      {
+        "alias": "キャパシター",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:7409189": {
+    "en": "Improved Spirit",
+    "ja": "グレータースピリット",
+    "aliases": [
+      {
+        "alias": "インプルーブドスピリット",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:754480263": {
+    "en": "Mystic Expansion",
+    "ja": "ミスティックエクスパンダー",
+    "aliases": [
+      {
+        "alias": "ミスティックエクスパンション",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:787198704": {
+    "en": "Rapid Recharge",
+    "ja": "ラピッドリチャージ",
+    "aliases": []
+  },
+  "item:800008313": {
+    "en": "Crushing Fists",
+    "ja": "クラッシュフィスト",
+    "aliases": [
+      {
+        "alias": "クラッシングフィスツ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:805079544": {
+    "en": "Weapon Shielding",
+    "ja": "ウェポンシールド",
+    "aliases": [
+      {
+        "alias": "ウェポンシールディング",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:811521119": {
+    "en": "Tesla Bullets",
+    "ja": "テスラバレット",
+    "aliases": [
+      {
+        "alias": "テスラバレッツ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:84321454": {
+    "en": "Quicksilver Reload",
+    "ja": "クイックシルバーリロード",
+    "aliases": []
+  },
+  "item:857669956": {
+    "en": "Guardian Ward",
+    "ja": "ガーディアンワード",
+    "aliases": [
+      {
+        "alias": "ガーディアンウォード",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:865846625": {
+    "en": "Leech",
+    "ja": "ライフドレイン",
+    "aliases": [
+      {
+        "alias": "リーチ",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:865958998": {
+    "en": "Veil Walker",
+    "ja": "ベールウォーカー",
+    "aliases": [
+      {
+        "alias": "ヴェイルウォーカー",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:876563814": {
+    "en": "Spirit Lifesteal",
+    "ja": "スピリットライフスティール",
+    "aliases": []
+  },
+  "item:915014646": {
+    "en": "Transcendent Cooldown",
+    "ja": "トランセンデント",
+    "aliases": [
+      {
+        "alias": "トランセンデントクールダウン",
+        "source": "katakana of the English name"
+      }
+    ]
+  },
+  "item:951866250": {
+    "en": "Indomitable",
+    "ja": "インドミタブル",
+    "aliases": []
+  },
+  "item:968099481": {
+    "en": "Extra Spirit",
+    "ja": "エクストラスピリット",
+    "aliases": []
+  },
+  "item:98582110": {
+    "en": "Stalker",
+    "ja": "ストーカー",
+    "aliases": []
+  },
+  "item:989206714": {
+    "en": "Blood Tribute",
+    "ja": "ブラッドトリビュート",
+    "aliases": []
+  }
+}

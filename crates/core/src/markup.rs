@@ -36,6 +36,7 @@ pub fn parse(markup: &str) -> Vec<Token> {
             tokens.push(Token::Entity {
                 reference: head.trim().into(),
                 spoken: tail.map(Into::into),
+                as_spoken: false,
             });
         }
         rest = &rest[end + 1..];
@@ -60,7 +61,9 @@ pub fn plain(tokens: &[Token]) -> String {
         .iter()
         .map(|t| match t {
             Token::Text { text, .. } => text.as_str(),
-            Token::Entity { spoken, reference } => spoken.as_deref().unwrap_or(reference),
+            Token::Entity {
+                spoken, reference, ..
+            } => spoken.as_deref().unwrap_or(reference),
         })
         .collect()
 }
@@ -86,12 +89,14 @@ mod tests {
                 text("は", None),
                 Token::Entity {
                     reference: "hero:13".into(),
-                    spoken: Some("ヘイズ".into())
+                    spoken: Some("ヘイズ".into()),
+                    as_spoken: false,
                 },
                 text("と", None),
                 Token::Entity {
                     reference: "item:1".into(),
-                    spoken: None
+                    spoken: None,
+                    as_spoken: false,
                 },
                 text("。", None),
             ]
@@ -107,7 +112,8 @@ mod tests {
                 text("lol {wow ", None),
                 Token::Entity {
                     reference: "hero:13".into(),
-                    spoken: None
+                    spoken: None,
+                    as_spoken: false,
                 },
                 text(" wins {oops", None),
             ]
