@@ -4,11 +4,13 @@
   import CheckIcon from "@lucide/svelte/icons/check";
   import CopyIcon from "@lucide/svelte/icons/copy";
   import GripIcon from "@lucide/svelte/icons/grip-vertical";
+  import { toast } from "svelte-sonner";
   import { Button } from "$lib/components/ui/button";
   import { Input } from "$lib/components/ui/input";
 
   let { url, name, size }: { url: string; name: string; size: [number, number] } = $props();
   let copied = $state(false);
+  let reset: ReturnType<typeof setTimeout> | undefined;
 
   const dragUrl = $derived.by(() => {
     const u = new URL(url);
@@ -19,28 +21,43 @@
     return u.toString();
   });
 
+  // リンクではなくドラッグだけの部品にし、渡すのも URL だけにする
+  // （ブラウザが付けるショートカットのファイルなどを OBS が先に読むと、ソースができない）
   function drag(e: DragEvent) {
-    e.dataTransfer?.setData("text/uri-list", dragUrl);
-    e.dataTransfer?.setData("text/plain", dragUrl);
+    if (!e.dataTransfer) return;
+    e.dataTransfer.clearData();
+    e.dataTransfer.setData("text/uri-list", dragUrl);
+    e.dataTransfer.setData("text/plain", dragUrl);
+    e.dataTransfer.effectAllowed = "copy";
   }
 
   async function copy() {
-    await navigator.clipboard.writeText(url);
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      toast.error("コピーできませんでした。URL を選んでコピーしてください");
+      return;
+    }
     copied = true;
-    setTimeout(() => (copied = false), 1500);
+    clearTimeout(reset);
+    reset = setTimeout(() => (copied = false), 1500);
   }
 </script>
 
 <div class="flex flex-col gap-3">
-  <a
-    href={dragUrl}
+  <div
     draggable="true"
     ondragstart={drag}
-    onclick={(e) => e.preventDefault()}
-    class="flex cursor-grab items-center justify-center gap-2 rounded-md border-2 border-dashed border-primary/50 bg-primary/5 px-4 py-3 text-sm font-medium active:cursor-grabbing"
+    role="note"
+    class="flex cursor-grab items-center justify-center gap-2 rounded-md border-2 border-dashed border-primary/50 bg-primary/5 px-4 py-3 text-sm font-medium select-none active:cursor-grabbing"
   >
-    <GripIcon class="size-4" />このボタンを OBS にドラッグして追加（{name}）
-  </a>
+    <GripIcon class="size-4" />ここを OBS にドラッグして追加（{name}）
+  </div>
+  <p class="text-sm text-muted-foreground">
+    OBS のプレビューかソースの一覧に落とすと、大きさを合わせたブラウザソースができます（OBS
+    を管理者として起動していると使えません）。うまくいかないときは、下の URL
+    をコピーしてソースの「＋」→「ブラウザ」に貼り付け、幅 {size[0]}・高さ {size[1]} にしてください
+  </p>
   <div class="flex gap-2">
     <Input
       value={url}

@@ -34,6 +34,9 @@ fn main() {
 
             WebviewWindowBuilder::new(app, "main", control_url()?)
                 .title("デドロ字幕")
+                // Windows ではファイルを落とす処理があるとページの中のドラッグが働かない。
+                // 「OBS にドラッグして追加」を使うので切る（このアプリはファイルを落として使わない）
+                .disable_drag_drop_handler()
                 .inner_size(960.0, 720.0)
                 // 外部へのリンク（API キーの作成ページなど）はふだんのブラウザで開く
                 .on_new_window(|url, _| {
