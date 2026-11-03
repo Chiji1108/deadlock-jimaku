@@ -88,6 +88,8 @@ Deadlock 配信者向けの OBS オーバーレイツール。
 | `mise run dev` | Tauri アプリを開発モードで起動（Vite の HMR 付き） |
 | `mise run headless` | Tauri なしで中核だけ起動し、ダミー字幕を流し続ける（`--demo`。`http://127.0.0.1:4510/overlay/subtitles`） |
 
+開発中の API キーは、リポジトリ直下の `.env.local`（`MISTRAL_API_KEY=…` / `OPENAI_API_KEY=…`。コミットしない）に書けば、mise が `mise run …` / `mise exec` のときに環境変数として渡す（環境変数は資格情報ストアより優先する）。
+
 ヘッドレスの `overlays-headless` も Tauri アプリと同じ `settings.json` と API キーを使い、操作パネル（`http://127.0.0.1:4510/`）で設定する。引数は開発用の `--demo` と、マイクの代わりに録音を実時間で流す `--input-file PATH.wav` だけ。
 | `mise run check` | oxfmt / oxlint / svelte-check / rustfmt / clippy / cargo test |
 
