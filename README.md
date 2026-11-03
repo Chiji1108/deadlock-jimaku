@@ -1,6 +1,6 @@
-# Deadlock Stream Overlays
+# デドロ字幕
 
-Deadlock の配信者向けの OBS オーバーレイ。
+Deadlock の配信者向けの OBS オーバーレイ（非公式）。
 
 - **字幕**: マイクの声をリアルタイムに字幕にし、ふりがなと翻訳（最大 4 言語）を付ける。ヒーロー・アイテム・スキルの名前はアイコン付きで強調する
 - **ランク**: ランクのアイコン・名前・ポイントのゲージ
@@ -8,7 +8,7 @@ Deadlock の配信者向けの OBS オーバーレイ。
 
 音声認識と翻訳には OpenAI の API キーが必要です。設定はアプリの操作パネルから行います。
 
-設計は [DESIGN.md](DESIGN.md) を見てください。
+サイトは [jimaku.deadlock.jp](https://jimaku.deadlock.jp)。設計は [DESIGN.md](DESIGN.md) を見てください。
 
 ## インストール
 

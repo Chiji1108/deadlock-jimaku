@@ -1,2 +1,9 @@
 packages:
   - frontend
+  - server
+  - web
+
+# インストール時のスクリプトを許す依存（esbuild はバイナリの確認、workerd は wrangler のローカル実行環境）
+allowBuilds:
+  esbuild: true
+  workerd: true

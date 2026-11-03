@@ -5,10 +5,10 @@ name: build
 
 on:
   pull_request:
-    paths-ignore: ["**.md", "experiments/**"]
+    paths-ignore: ["**.md", "experiments/**", "web/**", "server/**"]
   push:
     branches: [main]
-    paths-ignore: ["**.md", "experiments/**"]
+    paths-ignore: ["**.md", "experiments/**", "web/**", "server/**"]
   # 手動の実行では、署名と公証をリリースの前に試せる
   workflow_dispatch:
     inputs:

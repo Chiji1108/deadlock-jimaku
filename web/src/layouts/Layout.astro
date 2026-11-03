@@ -1,0 +1,75 @@
+---
+import "../styles/global.css";
+
+interface Props {
+  title?: string;
+  description?: string;
+  /** 404 のように、検索に出さないページは false */
+  indexable?: boolean;
+}
+
+const SITE = "デドロ字幕";
+const {
+  title,
+  description = "Deadlock の配信に、ふりがなと翻訳つきのリアルタイム字幕、ランク、アイテム説明を出す OBS 用オーバーレイ。",
+  indexable = true,
+} = Astro.props;
+const fullTitle = title ? `${title} | ${SITE}` : SITE;
+const year = new Date().getFullYear();
+---
+
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    {
+      indexable ? (
+        <>
+          <meta property="og:url" content={new URL(Astro.url.pathname, Astro.site)} />
+          <link rel="canonical" href={new URL(Astro.url.pathname, Astro.site)} />
+        </>
+      ) : (
+        <meta name="robots" content="noindex" />
+      )
+    }
+  </head>
+  <body class="min-h-screen font-sans antialiased">
+    <header class="border-b border-line">
+      <nav class="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
+        <a href="/" class="font-semibold tracking-tight">{SITE}</a>
+        <div class="flex items-center gap-5 text-sm whitespace-nowrap text-muted">
+          <a href="/#pricing" class="hidden hover:text-white sm:inline">料金</a>
+          <a href="/#faq" class="hidden hover:text-white sm:inline">よくある質問</a>
+          <a href="https://github.com/Chiji1108/deadlock-stream-overlays" class="hover:text-white">GitHub</a>
+        </div>
+      </nav>
+    </header>
+    <main>
+      <slot />
+    </main>
+    <footer class="mt-24 border-t border-line">
+      <div class="mx-auto flex max-w-5xl flex-col gap-3 px-4 py-8 text-sm text-muted">
+        <div class="flex flex-wrap gap-5">
+          <a href="/privacy" class="hover:text-white">プライバシーポリシー</a>
+          <a href="https://github.com/Chiji1108/deadlock-stream-overlays/issues" class="hover:text-white">
+            不具合・要望
+          </a>
+          <a href="https://github.com/Chiji1108/deadlock-stream-overlays/blob/main/LICENSE.md" class="hover:text-white">
+            ライセンス
+          </a>
+        </div>
+        <p>
+          Deadlock は Valve Corporation の商標です。本ツールは Valve とは関係のない非公式のツールです。
+          ゲームのデータとアイコンは <a href="https://deadlock-api.com" class="underline">deadlock-api</a> から取得しています。
+        </p>
+        <p>© {year} Chiji1108</p>
+      </div>
+    </footer>
+  </body>
+</html>

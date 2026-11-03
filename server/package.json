@@ -1,0 +1,21 @@
+{
+  "name": "deadlock-stream-overlays-server",
+  "private": true,
+  "license": "SEE LICENSE IN ../LICENSE.md",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "check": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "hono": "^4.13.16"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261102.1",
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.5",
+    "wrangler": "^4.156.1"
+  }
+}

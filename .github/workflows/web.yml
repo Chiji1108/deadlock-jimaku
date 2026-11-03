@@ -1,0 +1,26 @@
+# LP（web/）と API（server/）の型チェックとテスト。アプリのビルド（build.yml）とは別に、軽く回す
+name: web
+
+on:
+  pull_request:
+    paths: ["web/**", "server/**", "data/**", "pnpm-lock.yaml", ".github/workflows/web.yml"]
+  push:
+    branches: [main]
+    paths: ["web/**", "server/**", "data/**", "pnpm-lock.yaml", ".github/workflows/web.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v2
+        with:
+          install_args: node pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --dir web check
+      - run: pnpm --dir web build
+      - run: pnpm --dir server check
+      - run: pnpm --dir server test

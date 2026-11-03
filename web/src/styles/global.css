@@ -1,0 +1,37 @@
+@import "tailwindcss";
+@import "@fontsource-variable/noto-sans-jp";
+
+@theme {
+  --font-sans: "Noto Sans JP Variable", "Hiragino Sans", "Yu Gothic UI", sans-serif;
+  --color-ink: #0e0d0b;
+  --color-panel: #17150f;
+  --color-line: #2c281f;
+  --color-muted: #a39c8c;
+  --color-gold: #ffd34d;
+  --color-sky: #8fd8ff;
+}
+
+html {
+  background: var(--color-ink);
+  color: #f3efe6;
+  color-scheme: dark;
+}
+
+/* 日本語の見出しを文節で折り返す（「そのま / ま」にしない） */
+h1,
+h2,
+h3 {
+  word-break: auto-phrase;
+  text-wrap: balance;
+}
+
+/* 字幕の見本。アプリのオーバーレイと同じく縁取りで読ませる */
+.caption {
+  font-weight: 700;
+  -webkit-text-stroke: 0.08em #000;
+  paint-order: stroke fill;
+}
+.caption rt {
+  font-size: 0.45em;
+  font-weight: 600;
+}

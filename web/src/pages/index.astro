@@ -1,0 +1,148 @@
+---
+import Layout from "../layouts/Layout.astro";
+
+const DOWNLOAD = "https://github.com/Chiji1108/deadlock-stream-overlays/releases/latest";
+
+const features = [
+  {
+    title: "リアルタイム字幕",
+    body: "話している途中から字幕が出て、話し終えると精度の高い文に置き換わります。ヒーロー・アイテム・スキルの名前は色付きで強調し、「拡マガ」「ウルト」のような略し方も聞き分けます。",
+  },
+  {
+    title: "ふりがなと翻訳",
+    body: "漢字にはふりがなを付け、英語や韓国語など最大 4 つの言語に同時に翻訳します。翻訳ではゲーム内の正式な名前に置き換わるので、海外の視聴者にも伝わります。",
+  },
+  {
+    title: "ランクとアイテム説明",
+    body: "今のランクとポイントのゲージを常に表示できます。字幕でアイテム名が出たら、そのアイテムの説明をゲーム内と同じカードで出します。",
+  },
+];
+
+const steps = [
+  { title: "ダウンロード", body: "Windows・Mac・Linux 用のアプリを入れます。" },
+  {
+    title: "OpenAI の API キーを設定",
+    body: "文字起こしと翻訳に使います。キーは PC の資格情報ストアに保存します。",
+  },
+  {
+    title: "OBS に URL を貼る",
+    body: "アプリの画面でコピーした URL を、OBS のブラウザソースに貼るだけです。見せ方はアプリの画面で変えられます。",
+  },
+];
+
+const faqs = [
+  {
+    q: "2 PC 配信でも使えますか？",
+    a: "使えます。マイクと OBS がある配信用の PC にアプリを入れてください。ゲーム用の PC には何も入れなくて大丈夫です。",
+  },
+  {
+    q: "ゲームの PC に何か入れたり、ゲームのファイルを触ったりしますか？",
+    a: "しません。マイクの声と、公開されているランクの情報だけを使います。",
+  },
+  {
+    q: "日本語以外で話しても使えますか？",
+    a: "使えます。話す言語は操作画面で選べます。ふりがなは日本語のときだけ付きます。",
+  },
+  {
+    q: "OpenAI の料金が心配です",
+    a: "アプリの「料金」タブに、使った分の目安がその場で出ます。OpenAI のダッシュボードで上限を決めておくと安心です。",
+  },
+];
+---
+
+<Layout>
+  <section class="mx-auto max-w-5xl px-4 pt-20 pb-16">
+    <p class="text-sm font-medium text-gold">デドロ字幕 ─ Deadlock 配信者のための OBS オーバーレイ</p>
+    <h1 class="mt-3 text-3xl leading-tight font-bold tracking-tight sm:text-5xl">
+      話した言葉が、そのまま<br />読める字幕になる。
+    </h1>
+    <p class="mt-5 max-w-2xl text-lg text-muted">
+      ふりがなと翻訳つきのリアルタイム字幕、ランク、アイテム説明を、OBS
+      にそのまま重ねられます。アプリは無料です。
+    </p>
+    <div class="mt-8 flex flex-wrap items-center gap-4">
+      <a
+        href={DOWNLOAD}
+        class="rounded-lg bg-gold px-5 py-3 font-semibold text-ink transition hover:brightness-110"
+      >
+        ダウンロード
+      </a>
+      <span class="text-sm text-muted">Windows 10 / 11・macOS 11 以降・Linux</span>
+    </div>
+
+    <!-- 字幕の見本（アプリのオーバーレイと同じ組み方） -->
+    <figure
+      class="mt-14 rounded-2xl border border-line bg-[radial-gradient(ellipse_at_top,#3a3320,#121009)] px-6 py-12 text-center"
+      aria-label="字幕の見本"
+    >
+      <p class="caption text-2xl sm:text-4xl">
+        <span class="text-gold">ヘイズ</span>の<span class="text-sky">ウルト</span>は<ruby
+          >最後<rt>さいご</rt></ruby
+        >まで<ruby>取<rt>と</rt></ruby>っておこう
+      </p>
+      <p class="caption mt-3 text-lg text-white/90 sm:text-2xl">
+        Save <span class="text-gold">Haze</span>'s <span class="text-sky">Bullet Dance</span> until the
+        end
+      </p>
+      <figcaption class="mt-8 text-xs text-muted">字幕の見本（日本語 → 英語）</figcaption>
+    </figure>
+  </section>
+
+  <section class="mx-auto max-w-5xl px-4 py-16">
+    <h2 class="text-2xl font-bold">できること</h2>
+    <div class="mt-8 grid gap-6 sm:grid-cols-3">
+      {
+        features.map((f) => (
+          <div class="rounded-xl border border-line bg-panel p-6">
+            <h3 class="font-semibold">{f.title}</h3>
+            <p class="mt-3 text-sm leading-relaxed text-muted">{f.body}</p>
+          </div>
+        ))
+      }
+    </div>
+  </section>
+
+  <section class="mx-auto max-w-5xl px-4 py-16">
+    <h2 class="text-2xl font-bold">はじめかた</h2>
+    <ol class="mt-8 grid gap-6 sm:grid-cols-3">
+      {
+        steps.map((s, i) => (
+          <li class="rounded-xl border border-line p-6">
+            <span class="text-sm font-semibold text-gold">{i + 1}</span>
+            <h3 class="mt-2 font-semibold">{s.title}</h3>
+            <p class="mt-3 text-sm leading-relaxed text-muted">{s.body}</p>
+          </li>
+        ))
+      }
+    </ol>
+  </section>
+
+  <section id="pricing" class="mx-auto max-w-5xl px-4 py-16">
+    <h2 class="text-2xl font-bold">料金</h2>
+    <div class="mt-8 rounded-xl border border-line bg-panel p-6 sm:p-8">
+      <p class="text-lg">
+        アプリは<strong class="text-gold">無料</strong>です。文字起こしと翻訳には、ご自身の OpenAI
+        の API キーを使います。
+      </p>
+      <p class="mt-4 text-muted">
+        OpenAI への支払いの目安は、ずっと話し続けて <strong class="text-white">1 時間あたり約 $2</strong>（翻訳
+        1 言語・ふりがなあり）です。話していない間は音声を送らないので、黙っている時間が長いほど少なくなります。翻訳先を
+        1 つ増やすと、話し続けて 1 時間あたり約 $0.3 増えます。
+      </p>
+    </div>
+  </section>
+
+  <section id="faq" class="mx-auto max-w-5xl px-4 py-16">
+    <h2 class="text-2xl font-bold">よくある質問</h2>
+    <dl class="mt-8 divide-y divide-line border-y border-line">
+      {
+        faqs.map((f) => (
+          <div class="py-6">
+            <dt class="font-semibold">{f.q}</dt>
+            <dd class="mt-2 text-sm leading-relaxed text-muted">{f.a}</dd>
+          </div>
+        ))
+      }
+    </dl>
+  </section>
+</Layout>
