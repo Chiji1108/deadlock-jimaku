@@ -5,6 +5,7 @@ import Layout from "../layouts/Layout.astro";
 /** 字幕の見本のアイコン（アプリが deadlock-api から保存したもの） */
 const HAZE = "/sample/haze.webp";
 const BULLET_DANCE = "/sample/bullet-dance.webp";
+const CURSED_RELIC = "/sample/cursed-relic.webp";
 
 const DOWNLOAD = "https://github.com/Chiji1108/deadlock-stream-overlays/releases/latest";
 
@@ -17,9 +18,23 @@ const features = [
     title: "ふりがなと翻訳",
     body: "漢字にはふりがなを付け、英語や韓国語など最大 4 つの言語に同時に翻訳します。翻訳ではゲーム内の正式な名前に置き換わるので、海外の視聴者にも伝わります。",
   },
+];
+
+/** 実際のオーバーレイを撮った見本（ランクは見本の値） */
+const overlays = [
   {
-    title: "ランクとアイテム説明",
-    body: "今のランクとポイントのゲージを常に表示できます。字幕でアイテム名が出たら、そのアイテムの説明をゲーム内と同じカードで出します。",
+    title: "アイテム説明",
+    body: "字幕にアイテム名が出たら、ゲーム内と同じカードで説明を出します。「拡マガ」のような略し方でも出ます。",
+    image: "/sample/items.webp",
+    alt: "アイテム説明のカード（基礎拡張マガジン）",
+    size: [460, 286],
+  },
+  {
+    title: "ランク",
+    body: "今のランクと、次のランクまでのポイントを出します。試合が終わると自動で更新します。アイコンだけ・名前までなど、出す中身も選べます。",
+    image: "/sample/rank.webp",
+    alt: "ランクの表示（エミッサリー III、650 / 1,000）",
+    size: [480, 140],
   },
 ];
 
@@ -75,28 +90,37 @@ const faqs = [
       <span class="text-sm text-muted">Windows 10 / 11・macOS 11 以降・Linux</span>
     </div>
 
-    <!-- 字幕の見本（アプリのオーバーレイと同じ組み方） -->
-    <figure
-      class="mt-14 rounded-2xl border border-line bg-[radial-gradient(ellipse_at_top,#3a3320,#121009)] px-6 py-12 text-center"
-      aria-label="字幕の見本"
-    >
-      <p class="caption text-2xl sm:text-4xl">
-        <Entity kind="hero" icon={HAZE}>ヘイズ</Entity>の<Entity kind="ability" icon={BULLET_DANCE}
-          >ウルト</Entity
-        >は<ruby>強<rt>つよ</rt></ruby>い。
-      </p>
-      <p class="caption mt-3 text-lg text-white/90 sm:text-2xl">
-        <Entity kind="hero" icon={HAZE}>Haze</Entity>'s <Entity kind="ability" icon={BULLET_DANCE}
-          >Bullet Dance</Entity
-        > is strong.
-      </p>
-      <figcaption class="mt-8 text-xs text-muted">字幕の見本（日本語 → 英語）</figcaption>
+    <!-- 字幕の見本（アプリのオーバーレイと同じ組み方。発話ごとに原文と訳文） -->
+    <figure class="stage mt-14 flex flex-col gap-8 px-6 py-12 text-center" aria-label="字幕の見本">
+      <div>
+        <p class="caption text-2xl sm:text-4xl">
+          <Entity kind="hero" icon={HAZE}>ヘイズ</Entity>の<Entity kind="ability" icon={BULLET_DANCE}
+            >ウルト</Entity
+          >は<ruby>強<rt>つよ</rt></ruby>い。
+        </p>
+        <p class="caption mt-2 text-lg text-white/90 sm:text-2xl">
+          <Entity kind="hero" icon={HAZE}>Haze</Entity>'s <Entity kind="ability" icon={BULLET_DANCE}
+            >Bullet Dance</Entity
+          > is strong.
+        </p>
+      </div>
+      <div>
+        <p class="caption text-2xl sm:text-4xl">
+          <Entity kind="spirit" icon={CURSED_RELIC}>カース</Entity>は<ruby>買<rt>か</rt></ruby>っとけ。
+        </p>
+        <p class="caption mt-2 text-lg text-white/90 sm:text-2xl">
+          Buy <Entity kind="spirit" icon={CURSED_RELIC}>Cursed Relic</Entity>.
+        </p>
+      </div>
+      <figcaption class="text-xs text-muted">
+        字幕の見本（日本語 → 英語）。「ウルト」「カース」のような呼び方も聞き分け、訳文では正式な名前にします
+      </figcaption>
     </figure>
   </section>
 
   <section class="mx-auto max-w-5xl px-4 py-16">
     <h2 class="text-2xl font-bold">できること</h2>
-    <div class="mt-8 grid gap-6 sm:grid-cols-3">
+    <div class="mt-8 grid gap-6 sm:grid-cols-2">
       {
         features.map((f) => (
           <div class="rounded-xl border border-line bg-panel p-6">
@@ -112,24 +136,25 @@ const faqs = [
     <h2 class="text-2xl font-bold">ほかのオーバーレイ</h2>
     <p class="mt-3 text-muted">どれも OBS のブラウザソースに URL を貼るだけで、背景は透明です。</p>
     <div class="mt-8 grid items-start gap-6 sm:grid-cols-2">
-      <figure class="rounded-xl border border-line bg-[radial-gradient(ellipse_at_top,#3a3320,#121009)] p-6">
-        <img src="/sample/items.png" alt="アイテム説明のカード（基礎拡張マガジン）" width="460" height="286" class="mx-auto w-full max-w-sm" />
-        <figcaption class="mt-5">
-          <h3 class="font-semibold">アイテム説明</h3>
-          <p class="mt-2 text-sm leading-relaxed text-muted">
-            字幕にアイテム名が出たら、ゲーム内と同じカードで説明を出します。「拡マガ」のような略し方でも出ます。
-          </p>
-        </figcaption>
-      </figure>
-      <figure class="rounded-xl border border-line bg-[radial-gradient(ellipse_at_top,#3a3320,#121009)] p-6">
-        <img src="/sample/rank.png" alt="ランクの表示（エミッサリー III、650 / 1,000）" width="480" height="140" class="mx-auto w-full max-w-sm" />
-        <figcaption class="mt-5">
-          <h3 class="font-semibold">ランク</h3>
-          <p class="mt-2 text-sm leading-relaxed text-muted">
-            今のランクと、次のランクまでのポイントを出します。試合が終わると自動で更新します。アイコンだけ・名前までなど、出す中身も選べます。
-          </p>
-        </figcaption>
-      </figure>
+      {
+        overlays.map((o) => (
+          <figure class="stage p-6">
+            <img
+              src={o.image}
+              alt={o.alt}
+              width={o.size[0]}
+              height={o.size[1]}
+              loading="lazy"
+              decoding="async"
+              class="mx-auto w-full max-w-sm"
+            />
+            <figcaption class="mt-5">
+              <h3 class="font-semibold">{o.title}</h3>
+              <p class="mt-2 text-sm leading-relaxed text-muted">{o.body}</p>
+            </figcaption>
+          </figure>
+        ))
+      }
     </div>
   </section>
 
