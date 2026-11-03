@@ -760,6 +760,7 @@ Phase 2 の前に、録音した実況音声で Voxtral 3 の精度（`context_b
 | `web/` | `jimaku.deadlock.jp` | Astro の静的なページ（トップ・プライバシーポリシー・404）を Workers の静的ファイル配信で配る。サーバーで動かす処理はないので Astro のサーバー機能は使わない |
 | `server/` | `api.deadlock.jp` | Hono。パスはアプリごと（`/jimaku`）と版（`/v1`）で区切る（`deadlock.jp` の下でほかのものを作っても困らない） |
 
+- **リリースのファイル名**: 版の番号を付けない（`deadlock-jimaku_x64-setup.exe`、`deadlock-jimaku_universal.dmg`、`deadlock-jimaku_amd64.AppImage` / `.deb`、`deadlock-jimaku.x86_64.rpm`）。LP は `releases/latest/download/<ファイル名>` で最新版を直接落とすので、名前が変わらないようにする。版はリリースの名前で分かる（v0.1.2 から）
 - **名前**: 表示名は「デドロ字幕」（画面・ウィンドウ・インストーラー。Linux だけはパッケージ名に日本語を使えないので、アプリ一覧の名前も `deadlock-jimaku`）。英数字の名前は `deadlock-jimaku`（実行ファイル・インストーラーのファイル名・Linux のパッケージ名。日本語の「デドロ」を知らない人にも Deadlock の道具だと分かり、ドメインとも揃う）。Worker の名前（`dedoro-jimaku-api` / `dedoro-jimaku-web`）は利用者に見えないので、作り直しを避けてそのままにする。v0.1.0〜v0.1.1 の英数字の名前は `dedoro-jimaku` だったので、Linux のパッケージはそれを置き換える（deb の replaces / conflicts、rpm の obsoletes）
 - **日本語だけ**: ドメインと利用者が日本向けで、ふりがなのように日本語に寄せた機能なので、LP もアプリの画面も日本語だけにする（英語に対応すると、文言を足すたびに両方書く手間が続く）
 - **API**: `GET /jimaku/v1/aliases/{lang}` で別名（8.5）を返す（1 時間キャッシュ）。中身はリポジトリの `data/aliases.*.json` をビルド時に入れる。アプリは起動時に取りに行き、取れなければ同梱のものを使う
