@@ -5,7 +5,6 @@
   import { Input } from "$lib/components/ui/input";
   import * as Select from "$lib/components/ui/select";
   import * as ToggleGroup from "$lib/components/ui/toggle-group";
-  import type { Numerals } from "../../generated/Numerals";
   import type { RankContent } from "../../generated/RankContent";
   import type { Region } from "../../generated/Region";
   import { REGIONS } from "../../lib/regions";
@@ -93,20 +92,6 @@
           {#each CONTENTS as c (c.value)}
             <ToggleGroup.Item value={c.value} class="flex-1">{c.label}</ToggleGroup.Item>
           {/each}
-        </ToggleGroup.Root>
-      </Field.Field>
-
-      <Field.Field>
-        <Field.Label>サブランクの書き方</Field.Label>
-        <ToggleGroup.Root
-          type="single"
-          variant="outline"
-          class="w-full"
-          value={s.rankNumerals}
-          onValueChange={(v) => v && panel.update({ rankNumerals: v as Numerals })}
-        >
-          <ToggleGroup.Item value="roman" class="flex-1">III（ゲームと同じ）</ToggleGroup.Item>
-          <ToggleGroup.Item value="arabic" class="flex-1">3</ToggleGroup.Item>
         </ToggleGroup.Root>
       </Field.Field>
 

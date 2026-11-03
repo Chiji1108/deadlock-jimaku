@@ -118,7 +118,6 @@ pub enum ServerMsg {
         subtitles: crate::settings::SubtitleDisplay,
         rank_language: LangCode,
         rank_content: crate::settings::RankContent,
-        rank_numerals: crate::settings::Numerals,
         rank_anchor: crate::settings::Anchor,
         item_cards: ItemCardsView,
     },
