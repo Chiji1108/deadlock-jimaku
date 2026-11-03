@@ -99,7 +99,7 @@ jobs:
         run: |
           shopt -s nullglob
           for f in ${{ matrix.bundle }}/dmg/*.dmg ${{ matrix.bundle }}/nsis/*.exe; do
-            mv "$f" "${f/デドロ字幕/dedoro-jimaku}"
+            mv "$f" "${f/デドロ字幕/deadlock-jimaku}"
           done
           # 書き換えられなかった（文字の表し方が違うなど）ら止める
           if ls ${{ matrix.bundle }}/{dmg,nsis,deb,rpm,appimage} 2>/dev/null | LC_ALL=C grep '[^ -~]'; then

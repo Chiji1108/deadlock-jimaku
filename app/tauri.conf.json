@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "デドロ字幕",
-  "mainBinaryName": "dedoro-jimaku",
+  "mainBinaryName": "deadlock-jimaku",
   "identifier": "dev.deadlock-stream-overlays.app",
   "build": {
     "frontendDist": "../frontend/dist",
