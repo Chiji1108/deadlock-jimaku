@@ -15,35 +15,44 @@ const features = [
 ];
 
 /**
- * 配信画面の見本（Windows の OBS で撮った実際の配信画面、1920×1080）。
- * 枠の位置は画面に対する割合で、下の拡大図はこの画面から切り出したもの
+ * 配信画面の見本（Windows の OBS で撮った実際の配信画面。試合 ID とキルログの名前はぼかしてある）。
+ * 各オーバーレイの位置（画面の px）から、上の枠と下の拡大図の両方を作る
  */
+const SCREEN = { src: "/sample/game.webp", width: 1920, height: 1080 };
 const parts = [
   {
     name: "字幕",
-    frame: { left: 31.25, top: 62, width: 38.5, height: 22.7 },
-    image: "/sample/captions-real.webp",
-    size: [740, 245],
+    rect: { x: 600, y: 670, w: 740, h: 245 },
+    label: "top-start",
     alt: "字幕（ドアマンのウルトは強い。デスチーターにはカースを買え。と、その英訳）",
     body: "話した言葉に、アイコン・色・ふりがなを付けて出します。下の行は英訳で、「ウルト」「カース」のような呼び方も正式な名前（Hotel Guest、Cursed Relic）になります。",
   },
   {
     name: "アイテム説明",
-    frame: { left: 78.1, top: 19.4, width: 21.5, height: 40 },
-    image: "/sample/items-real.webp",
-    size: [412, 432],
+    rect: { x: 1500, y: 210, w: 412, h: 432 },
+    label: "top-end",
     alt: "アイテム説明のカード（デスチーター）",
     body: "字幕にアイテム名が出たら、ゲーム内と同じカードで説明を出します。",
   },
   {
     name: "ランク",
-    frame: { left: 0.3, top: 0.5, width: 17.5, height: 8 },
-    image: "/sample/rank-real.webp",
-    size: [340, 90],
+    rect: { x: 6, y: 5, w: 336, h: 86 },
+    label: "bottom-start",
     alt: "ランクの表示（エミッサリー III）",
     body: "今のランクと、次のランクまでのポイントを出します。試合が終わると自動で更新します。",
   },
 ] as const;
+
+type Rect = (typeof parts)[number]["rect"];
+/** 上の画面の上の枠の位置（画面に対する %） */
+const frameStyle = ({ x, y, w, h }: Rect) =>
+  `left:${(x / SCREEN.width) * 100}%;top:${(y / SCREEN.height) * 100}%;` +
+  `width:${(w / SCREEN.width) * 100}%;height:${(h / SCREEN.height) * 100}%`;
+/** 拡大図: 同じ画面を背景にして、その部分だけを見せる（切り出した画像を別に持たない） */
+const zoomStyle = ({ x, y, w, h }: Rect) =>
+  `max-width:${w}px;aspect-ratio:${w}/${h};background-image:url(${SCREEN.src});` +
+  `background-size:${(SCREEN.width / w) * 100}% auto;` +
+  `background-position:${(x / (SCREEN.width - w)) * 100}% ${(y / (SCREEN.height - h)) * 100}%`;
 
 const steps = [
   { title: "ダウンロード", body: "Windows・Mac・Linux 用のアプリを入れます。" },
@@ -97,31 +106,23 @@ const faqs = [
     <figure class="mt-14">
       <div class="relative overflow-hidden rounded-xl border border-line">
         <img
-          src="/sample/game.webp"
+          src={SCREEN.src}
           alt="配信画面の見本。左上にランク、右にアイテム説明のカード、下の中央に字幕"
-          width="1920"
-          height="1080"
+          width={SCREEN.width}
+          height={SCREEN.height}
           fetchpriority="high"
           class="block w-full"
         />
-        {
-          parts.map(({ name, frame }) => (
-            <div
-              class="frame"
-              style={`left:${frame.left}%;top:${frame.top}%;width:${frame.width}%;height:${frame.height}%`}
-            >
-              <span
-                class:list={[
-                  "frame-label",
-                  frame.top < 5 && "below",
-                  frame.left + frame.width > 90 && "end",
-                ]}
-              >
-                {name}
-              </span>
-            </div>
-          ))
-        }
+        <!-- 名札は画像の説明（alt）と同じことなので読み上げない -->
+        <div aria-hidden="true">
+          {
+            parts.map(({ name, rect, label }) => (
+              <div class="frame" style={frameStyle(rect)}>
+                <span class={`frame-label ${label}`}>{name}</span>
+              </div>
+            ))
+          }
+        </div>
       </div>
       <figcaption class="mt-3 text-xs text-muted">
         Windows の OBS で撮った実際の配信画面。字幕・アイテム説明・ランクは、どれも好きな位置と大きさに置けます
@@ -145,20 +146,18 @@ const faqs = [
 
   <section class="mx-auto max-w-5xl px-4 py-16">
     <h2 class="text-2xl font-bold">オーバーレイ</h2>
-    <p class="mt-3 text-muted">どれも OBS のブラウザソースに URL を貼るだけで、背景は透明です。</p>
+    <p class="mt-3 text-muted">
+      上の配信画面を拡大したところです。どれも OBS のブラウザソースに URL を貼るだけで、背景は透明なのでゲーム画面にそのまま重なります。
+    </p>
     <div class="mt-8 grid items-start gap-6 sm:grid-cols-2">
       {
         parts.map((o, i) => (
           <figure class:list={["stage p-6", i === 0 && "sm:col-span-2"]}>
-            <img
-              src={o.image}
-              alt={o.alt}
-              width={o.size[0]}
-              height={o.size[1]}
-              loading="lazy"
-              decoding="async"
-              class="mx-auto w-full rounded-md"
-              style={`max-width:${o.size[0]}px`}
+            <div
+              role="img"
+              aria-label={o.alt}
+              class="mx-auto w-full rounded-md bg-no-repeat"
+              style={zoomStyle(o.rect)}
             />
             <figcaption class="mt-5">
               <h3 class="font-semibold">{o.name}</h3>

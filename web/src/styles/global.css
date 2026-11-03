@@ -24,7 +24,7 @@ h3 {
   text-wrap: balance;
 }
 
-/* 見本を置く舞台（ゲーム画面の暗い背景の代わり） */
+/* 見本の拡大図の台 */
 .stage {
   border: 1px solid var(--color-line);
   border-radius: 1rem;
@@ -38,11 +38,9 @@ h3 {
   border-radius: 6px;
   box-shadow: 0 0 0 1px rgb(0 0 0 / 0.5);
 }
+/* 名札の位置（top/bottom は枠の外の上・下、start/end は左揃え・右揃え）。画面の端で切れない側を選ぶ */
 .frame-label {
   position: absolute;
-  bottom: 100%;
-  left: -2px;
-  margin-bottom: 4px;
   padding: 1px 8px;
   border-radius: 4px;
   background: #ff4d4d;
@@ -51,15 +49,17 @@ h3 {
   font-weight: 700;
   white-space: nowrap;
 }
-/* 画面の上端にある枠は、名札を枠の下に出す */
-.frame-label.below {
-  top: 100%;
-  bottom: auto;
-  margin-top: 4px;
-  margin-bottom: 0;
+.frame-label[class*="top-"] {
+  bottom: 100%;
+  margin-bottom: 4px;
 }
-/* 画面の右端にある枠は、名札を枠の右に揃える（はみ出して切れない） */
-.frame-label.end {
+.frame-label[class*="bottom-"] {
+  top: 100%;
+  margin-top: 4px;
+}
+.frame-label[class*="-start"] {
+  left: -2px;
+}
+.frame-label[class*="-end"] {
   right: -2px;
-  left: auto;
 }
