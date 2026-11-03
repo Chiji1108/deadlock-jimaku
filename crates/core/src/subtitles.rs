@@ -74,6 +74,7 @@ pub async fn run(store: Arc<Store>, input: audio::Input, api_key: String) -> any
     let enricher = Enricher::new(
         api_key.clone(),
         settings.models.translate.clone(),
+        settings.models.readings.clone(),
         settings.models.reasoning_effort.clone(),
         settings.mic_language.clone(),
         settings.translate_to.clone(),

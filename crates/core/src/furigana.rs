@@ -68,9 +68,10 @@ pub async fn ask(
 /// LLM の答えを確かめ、読みを漢字の部分ごとに割り当てる。どれかに合わなければ None
 /// - つなげると元の文字列になる
 /// - 読みはひらがな（カタカナはひらがなにする）
-/// - 読みは漢字の部分ごとに割り当てる（「取り扱い / とりあつかい」→ 取(と)り扱(あつか)い、
-///   「魔呪の罠 / まじゅのわな」→ 魔呪(まじゅ)の罠(わな)）。割り当てられなければ受け取らない
-/// - 漢字には必ず読みがある
+/// - 読みはかな以外の部分ごとに割り当てる（「取り扱い / とりあつかい」→ 取(と)り扱(あつか)い、
+///   「魔呪の罠 / まじゅのわな」→ 魔呪(まじゅ)の罠(わな)、「1番 / いちばん」はまとめて）。
+///   割り当てられなければ受け取らない
+/// - 漢字には必ず読みがある。漢字のない部分の読み（「OK / おーけー」）は付けない
 pub fn check(text: &str, segments: Vec<RubySegment>) -> Option<Vec<RubySegment>> {
     let joined: String = segments.iter().map(|s| s.text.as_str()).collect();
     if joined != text {
@@ -81,6 +82,10 @@ pub fn check(text: &str, segments: Vec<RubySegment>) -> Option<Vec<RubySegment>>
         match s.ruby.as_deref().map(to_hiragana) {
             None if s.text.chars().any(is_kanji) => return None,
             None => out.push(s),
+            Some(_) if !s.text.chars().any(is_kanji) => out.push(RubySegment {
+                text: s.text,
+                ruby: None,
+            }),
             Some(r) if !r.chars().all(|c| matches!(c, 'ぁ'..='ゟ' | 'ー')) => return None,
             Some(r) => out.extend(align(&s.text, &r)?),
         }
@@ -88,21 +93,22 @@ pub fn check(text: &str, segments: Vec<RubySegment>) -> Option<Vec<RubySegment>>
     Some(out)
 }
 
-/// 漢字の続く部分と、それ以外（かななど）の部分に分け、かなの部分を読みの中で探して区切る。
-/// 読みとかなの部分が合わなければ None
+/// かなの続く部分と、それ以外（漢字・数字など、読みの要る部分）に分け、かなの部分を読みの中で
+/// 探して区切る。読みとかなの部分が合わなければ None
 pub fn align(text: &str, reading: &str) -> Option<Vec<RubySegment>> {
     let mut runs: Vec<(bool, String)> = Vec::new();
     for c in text.chars() {
+        let read = !is_kana(c);
         match runs.last_mut() {
-            Some((kanji, run)) if *kanji == is_kanji(c) => run.push(c),
-            _ => runs.push((is_kanji(c), c.to_string())),
+            Some((r, run)) if *r == read => run.push(c),
+            _ => runs.push((read, c.to_string())),
         }
     }
     let r: Vec<char> = reading.chars().collect();
     let mut pos = 0;
     let mut out = Vec::new();
-    for (i, (kanji, run)) in runs.iter().enumerate() {
-        if !kanji {
+    for (i, (read, run)) in runs.iter().enumerate() {
+        if !read {
             let kana: Vec<char> = to_hiragana(run).chars().collect();
             if r.get(pos..pos + kana.len())? != kana.as_slice() {
                 return None;
@@ -114,7 +120,7 @@ pub fn align(text: &str, reading: &str) -> Option<Vec<RubySegment>> {
             pos += kana.len();
             continue;
         }
-        // 漢字の読みは、次のかなの部分が読みに現れるところまで（漢字 1 文字に少なくとも 1 文字）
+        // 読みは、次のかなの部分が読みに現れるところまで（少なくとも 1 文字）
         let end = match runs.get(i + 1) {
             None => r.len(),
             Some((_, next)) => {
@@ -143,6 +149,11 @@ pub fn to_hiragana(s: &str) -> String {
             _ => c,
         })
         .collect()
+}
+
+/// 読みをそのまま書ける文字。「ヶ」「ヵ」（3ヶ月）は「か」「が」と読むので含めない
+fn is_kana(c: char) -> bool {
+    matches!(c, 'ぁ'..='ゖ' | 'ァ'..='ヴ' | 'ー')
 }
 
 pub fn is_kanji(c: char) -> bool {
@@ -177,6 +188,15 @@ mod tests {
         );
         // かなの部分が読みに現れない
         assert_eq!(align("取り扱い", "とあつかい"), None);
+        // 数字やヶは漢字と一緒に読む
+        assert_eq!(
+            align("1番", "いちばん"),
+            Some(vec![seg("1番", Some("いちばん"))])
+        );
+        assert_eq!(
+            align("3ヶ月", "さんかげつ"),
+            Some(vec![seg("3ヶ月", Some("さんかげつ"))])
+        );
     }
 
     #[test]
@@ -214,6 +234,17 @@ mod tests {
                 seg("く", None),
                 seg("。", None)
             ])
+        );
+    }
+
+    #[test]
+    fn check_drops_readings_of_kanji_free_parts() {
+        assert_eq!(
+            check(
+                "OKだね",
+                vec![seg("OK", Some("おーけー")), seg("だね", None)]
+            ),
+            Some(vec![seg("OK", None), seg("だね", None)])
         );
     }
 

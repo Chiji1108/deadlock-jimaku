@@ -26,6 +26,8 @@ pub struct Enricher {
     /// OpenAI の API キー
     api_key: String,
     model: String,
+    /// ふりがなのモデル（辞書の名前の読みと同じ。DESIGN.md 8.2）
+    readings_model: String,
     reasoning_effort: Option<String>,
     source_lang: LangCode,
     targets: Vec<LangCode>,
@@ -39,6 +41,7 @@ impl Enricher {
     pub fn new(
         api_key: String,
         model: String,
+        readings_model: String,
         reasoning_effort: Option<String>,
         source_lang: LangCode,
         targets: Vec<LangCode>,
@@ -48,6 +51,7 @@ impl Enricher {
             http: crate::http().clone(),
             api_key,
             model,
+            readings_model,
             reasoning_effort,
             system: system_prompt(&source_lang),
             source_lang,
@@ -94,7 +98,7 @@ impl Enricher {
         }
         let model = furigana::Model {
             api_key: &self.api_key,
-            model: &self.model,
+            model: &self.readings_model,
             reasoning_effort: self.reasoning_effort.as_deref(),
         };
         furigana::ask(&self.http, &model, text)
@@ -197,7 +201,7 @@ fn source_tokens(spans: &[Span], ruby: &[RubySegment]) -> Vec<Token> {
     let mut start = 0;
     spans
         .iter()
-        .map(|span| {
+        .flat_map(|span| {
             let text = match span {
                 Span::Text(text) => text,
                 Span::Entity { spoken, .. } => spoken,
@@ -223,8 +227,7 @@ fn source_tokens(spans: &[Span], ruby: &[RubySegment]) -> Vec<Token> {
                 }],
             }
         })
-        .collect::<Vec<Vec<Token>>>()
-        .concat()
+        .collect()
 }
 
 /// `text`（原文の `offset` 文字目から）を、中に収まるふりがなの部分と、読みのない部分に分ける
@@ -855,6 +858,7 @@ mod tests {
         Enricher::new(
             "key".into(),
             "model".into(),
+            "model".into(),
             None,
             "ja".into(),
             targets.iter().map(|t| (*t).to_owned()).collect(),
@@ -968,7 +972,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn no_targets_means_no_llm_call() {
+    async fn no_targets_and_no_kanji_means_no_llm_call() {
         // API キーもモデルも偽物なので、呼べばエラーになって warn が出るだけ。呼ばずに返ることを確かめる
         // （翻訳先がなく、漢字もないので、翻訳もふりがなも聞かない）
         let e = enricher(&["ja"]);

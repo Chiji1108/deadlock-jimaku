@@ -21,11 +21,11 @@
 
   const entity = $derived(glossary.entity(ref));
   const label = $derived(spoken ?? (entity ? entityName(entity, lang) : ref));
-  // 文のふりがなが取れなかったときも、公式名をそのまま話したなら辞書の読みを使う
+  // 公式名どおりなら、名前ごとに確かめた辞書の読み（造語に強い）。別名なら文の読み
   const ruby = $derived.by(() => {
     if (lang !== "ja" || !furigana) return undefined;
-    if (spokenRuby) return spokenRuby;
-    return entity && label === entityName(entity, "ja") ? entity.ruby : undefined;
+    if (entity?.ruby && label === entityName(entity, "ja")) return entity.ruby;
+    return spokenRuby;
   });
 </script>
 
