@@ -19,7 +19,7 @@
   onMount(() => panel.start());
 
   const s = $derived(panel.settings);
-  const needsKey = $derived(!!panel.view && !panel.view.keys.openai);
+  const needsKey = $derived(!!panel.view && panel.view.keys.openai.state !== "saved");
   let tab = $state("audio");
 
   const status = $derived.by(() => {

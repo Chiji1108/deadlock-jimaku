@@ -26,11 +26,22 @@ impl Provider {
     }
 }
 
-/// 保存してあるか
+#[derive(Clone, Debug, Serialize, TS)]
+#[serde(tag = "state", rename_all = "lowercase")]
+#[ts(export)]
+pub enum KeyState {
+    Saved,
+    Missing,
+    /// 資格情報ストアを読めない（アクセスを拒否した、ロックされている、Secret Service がないなど）
+    Unreadable {
+        reason: String,
+    },
+}
+
 #[derive(Clone, Debug, Serialize, TS)]
 #[ts(export)]
 pub struct KeyStatus {
-    pub openai: bool,
+    pub openai: KeyState,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -38,27 +49,34 @@ pub struct Keys {
     pub openai: Option<String>,
 }
 
-fn get(provider: Provider) -> Option<String> {
-    let entry = keyring::Entry::new(IDENTIFIER, provider.account()).ok()?;
+/// 空のキーは保存していないものとして扱う
+fn get(provider: Provider) -> Result<Option<String>, keyring::Error> {
+    let entry = keyring::Entry::new(IDENTIFIER, provider.account())?;
     match entry.get_password() {
-        Ok(key) => Some(key),
-        Err(keyring::Error::NoEntry) => None,
-        Err(e) => {
-            tracing::warn!("keyring ({}): {e}", provider.account());
-            None
-        }
+        Ok(key) => Ok(Some(key).filter(|k| !k.trim().is_empty())),
+        Err(keyring::Error::NoEntry) => Ok(None),
+        Err(e) => Err(e),
     }
 }
 
 pub fn load() -> Keys {
     Keys {
-        openai: get(Provider::OpenAi),
+        openai: get(Provider::OpenAi).unwrap_or_else(|e| {
+            tracing::warn!("keyring ({}): {e}", Provider::OpenAi.account());
+            None
+        }),
     }
 }
 
 pub fn status() -> KeyStatus {
     KeyStatus {
-        openai: get(Provider::OpenAi).is_some(),
+        openai: match get(Provider::OpenAi) {
+            Ok(Some(_)) => KeyState::Saved,
+            Ok(None) => KeyState::Missing,
+            Err(e) => KeyState::Unreadable {
+                reason: e.to_string(),
+            },
+        },
     }
 }
 
