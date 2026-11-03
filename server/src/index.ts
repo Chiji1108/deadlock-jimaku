@@ -1,11 +1,11 @@
-// API（api.deadlock.jp）。パスはアプリごと（/obs）と版（/v1）で区切る（deadlock.jp の下でほかのものを作っても困らない）
+// API（api.deadlock.jp）。パスはアプリごと（/jimaku）と版（/v1）で区切る（deadlock.jp の下でほかのものを作っても困らない）
 import { Hono } from "hono";
 import aliasesJa from "../../data/aliases.ja.json" with { type: "json" };
 
 /** 別名はリポジトリの data/ から作る。言語を足したらここに足す */
 const ALIASES = new Map<string, Record<string, string[]>>([["ja", aliasesJa]]);
 
-export const app = new Hono().basePath("/obs/v1");
+export const app = new Hono().basePath("/jimaku/v1");
 
 // 別名（話した言葉 → 用語）。アプリは起動時に取りに来て、取れなければ同梱の別名を使う
 app.get("/aliases/:lang", (c) => {

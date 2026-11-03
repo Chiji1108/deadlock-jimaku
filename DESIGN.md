@@ -1,6 +1,6 @@
 # deadlock-stream-overlays 設計書
 
-Deadlock 配信者向けの OBS オーバーレイツール。
+デドロ字幕。Deadlock 配信者向けの OBS オーバーレイツール。
 
 - **字幕**: 配信者の声をリアルタイムで字幕にする。ふりがな付きの日本語と、翻訳を表示する。ヒーロー・アイテム・スキル名はゲームアイコン付きで強調する。
 - **ランク**: 配信者の現在のランクを表示する。
@@ -746,11 +746,11 @@ Phase 2 の前に、録音した実況音声で Voxtral 3 の精度（`context_b
 
 | | ドメイン | 中身 |
 |---|---|---|
-| `web/` | `obs.deadlock.jp` | Astro の静的なページ（トップ・プライバシーポリシー・404）を Workers の静的ファイル配信で配る。サーバーで動かす処理はないので Astro のサーバー機能は使わない |
-| `server/` | `api.deadlock.jp` | Hono。パスはアプリごと（`/obs`）と版（`/v1`）で区切る（`deadlock.jp` の下でほかのものを作っても困らない） |
+| `web/` | `jimaku.deadlock.jp` | Astro の静的なページ（トップ・プライバシーポリシー・404）を Workers の静的ファイル配信で配る。サーバーで動かす処理はないので Astro のサーバー機能は使わない |
+| `server/` | `api.deadlock.jp` | Hono。パスはアプリごと（`/jimaku`）と版（`/v1`）で区切る（`deadlock.jp` の下でほかのものを作っても困らない） |
 
 - **日本語だけ**: ドメインと利用者が日本向けで、ふりがなのように日本語に寄せた機能なので、LP もアプリの画面も日本語だけにする（英語に対応すると、文言を足すたびに両方書く手間が続く）
-- **API**: `GET /obs/v1/aliases/{lang}` で別名（8.5）を返す（1 時間キャッシュ）。中身はリポジトリの `data/aliases.*.json` をビルド時に入れる。アプリは起動時に取りに行き、取れなければ同梱のものを使う
+- **API**: `GET /jimaku/v1/aliases/{lang}` で別名（8.5）を返す（1 時間キャッシュ）。中身はリポジトリの `data/aliases.*.json` をビルド時に入れる。アプリは起動時に取りに行き、取れなければ同梱のものを使う
 - **LP**: ゲームの画像は載せない（字幕の見本は文字だけで組む）。フッターに Valve の公式ではないことと、ゲームのデータの出どころ（deadlock-api）を書く。プライバシーポリシーには、OpenAI・deadlock-api・api.deadlock.jp に送るものと、PC の中に保存するものを書く
 - **デプロイ**: 手元から `pnpm --filter ./web deploy` / `pnpm --filter ./server deploy`（先に `wrangler login`）。カスタムドメインは各 `wrangler.jsonc` の `routes`（`custom_domain: true`）で付く
 - サーバーは Hono（最初から Cloudflare Workers 向け）。ElysiaJS も考えたが、Workers 対応が実験的なので選ばない
