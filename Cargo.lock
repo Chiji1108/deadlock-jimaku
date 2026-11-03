@@ -1029,6 +1029,7 @@ name = "deadlock-stream-overlays"
 version = "0.1.2"
 dependencies = [
  "overlays-core",
+ "serde_json",
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",
