@@ -31,6 +31,18 @@ h3 {
   -webkit-text-stroke: 0.08em #000;
   paint-order: stroke fill;
 }
+/* 名前の前のアイコン（アプリの EntityRef.svelte と同じ置き方） */
+.caption .entity {
+  white-space: nowrap;
+}
+.caption .icon {
+  display: inline;
+  height: 1.1em;
+  margin: 0 0.16em 0 0.2em;
+  vertical-align: -0.18em;
+  border-radius: 0.18em;
+  filter: drop-shadow(0 0 0.06em rgb(0 0 0 / 0.9));
+}
 .caption rt {
   font-size: 0.45em;
   font-weight: 600;
