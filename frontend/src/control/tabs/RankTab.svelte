@@ -4,12 +4,29 @@
   import * as Field from "$lib/components/ui/field";
   import { Input } from "$lib/components/ui/input";
   import * as Select from "$lib/components/ui/select";
+  import * as ToggleGroup from "$lib/components/ui/toggle-group";
+  import type { RankContent } from "../../generated/RankContent";
+  import type { Region } from "../../generated/Region";
   import CopyUrl from "../parts/CopyUrl.svelte";
   import OverlayPreview from "../parts/OverlayPreview.svelte";
   import { overlayUrl, panel } from "../panel.svelte";
 
   /** OBS のブラウザソースの大きさ */
   const RANK_SIZE: [number, number] = [480, 140];
+
+  const CONTENTS: { value: RankContent; label: string }[] = [
+    { value: "full", label: "アイコン・名前・ポイント" },
+    { value: "name", label: "アイコンと名前" },
+    { value: "icon", label: "アイコンだけ" },
+  ];
+  const REGIONS: { value: Region; label: string }[] = [
+    { value: "Asia", label: "アジア" },
+    { value: "Europe", label: "ヨーロッパ" },
+    { value: "NAmerica", label: "北米" },
+    { value: "SAmerica", label: "南米" },
+    { value: "Oceania", label: "オセアニア" },
+  ];
+  const NO_REGION = "";
 
   const s = $derived(panel.settings!);
   // ランク名を取ってくる言語（話す言語・英語・翻訳先）から選ぶ
@@ -68,6 +85,44 @@
           </Field.Description>
         </Field.Field>
       </form>
+
+      <Field.Field>
+        <Field.Label>出すもの</Field.Label>
+        <ToggleGroup.Root
+          type="single"
+          variant="outline"
+          class="w-full"
+          value={s.rankContent}
+          onValueChange={(v) => v && panel.update({ rankContent: v as RankContent })}
+        >
+          {#each CONTENTS as c (c.value)}
+            <ToggleGroup.Item value={c.value} class="flex-1">{c.label}</ToggleGroup.Item>
+          {/each}
+        </ToggleGroup.Root>
+      </Field.Field>
+
+      <Field.Field>
+        <Field.Label>エターナスの順位</Field.Label>
+        <Select.Root
+          type="single"
+          value={s.rankRegion ?? NO_REGION}
+          onValueChange={(v) => panel.update({ rankRegion: v })}
+        >
+          <Select.Trigger class="w-full">
+            {REGIONS.find((r) => r.value === s.rankRegion)?.label ?? "出さない"}
+          </Select.Trigger>
+          <Select.Content>
+            <Select.Item value={NO_REGION}>出さない</Select.Item>
+            {#each REGIONS as r (r.value)}
+              <Select.Item value={r.value}>{r.label}のリーダーボード</Select.Item>
+            {/each}
+          </Select.Content>
+        </Select.Root>
+        <Field.Description>
+          エターナスのときだけ、ポイントの代わりにリーダーボードの順位（例: アジア
+          123位）を出します。更新は 1 時間ごとで、載っていなければポイントを出します
+        </Field.Description>
+      </Field.Field>
 
       <Field.Field>
         <Field.Label>ランク名の言語</Field.Label>

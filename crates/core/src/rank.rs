@@ -9,15 +9,16 @@ use bytes::Bytes;
 use serde::Deserialize;
 
 use crate::lang;
+use crate::settings::Region;
 use crate::store::Store;
-use crate::types::{LangCode, RankProgress, RankState};
+use crate::types::{LangCode, LeaderboardRank, RankProgress, RankState};
 
 const API: &str = "https://api.deadlock-api.com/v1";
 
 /// サブランク 1 つ分のポイント。6 番目だけ 2 倍（1 ティア = 1000 × 5 + 2000）
 const SUBRANK_POINTS: u32 = 1000;
 const TIER_POINTS: u32 = SUBRANK_POINTS * 7;
-/// 最上位。サブランクはポイントではなく上位何 % かで決まるのでゲージを出さない
+/// 最上位。上のティアがないのでゲージを出さず、リーダーボードの順位を出す
 const ETERNUS: u32 = 11;
 
 #[derive(Deserialize)]
@@ -39,15 +40,13 @@ struct LastMatch {
 struct Tier {
     tier: u32,
     name: String,
-    color: String,
     images: BTreeMap<String, Option<String>>,
 }
 
-/// ティアごとの名前（言語ごと）と色、サブランクのないティアのアイコン
+/// ティアごとの名前（言語ごと）と、サブランクのないティアのアイコン
 #[derive(Default)]
 struct Tiers {
     names: BTreeMap<u32, BTreeMap<LangCode, String>>,
-    colors: BTreeMap<u32, String>,
     plain_images: BTreeMap<u32, String>,
     /// 名前を取れた言語。取れなかった言語は次の回に取り直す
     loaded: Vec<LangCode>,
@@ -63,6 +62,7 @@ pub async fn run_configured(store: Arc<Store>) {
 async fn run(store: Arc<Store>, account_id: u32) {
     let languages = store.settings().glossary_languages();
     let interval = Duration::from_secs(store.settings().rank_poll_seconds);
+    let region = store.settings().rank_region;
     let mut tiers = Tiers::default();
     let mut last: Option<RankState> = None;
     // アイコンを持っているバッジ。取れなかったら次の回に取り直す
@@ -80,7 +80,19 @@ async fn run(store: Arc<Store>, account_id: u32) {
                         Err(e) => tracing::warn!("rank image: {e:#}"),
                     }
                 }
-                let state = state(&player, &tiers, image_badge == Some(player.badge));
+                let mut state = state(&player, &tiers, image_badge == Some(player.badge));
+                if let (ETERNUS, Some(region)) = (player.rank, region) {
+                    match leaderboard_rank(region, account_id).await {
+                        Ok(rank) => {
+                            state.leaderboard = rank.map(|rank| LeaderboardRank { region, rank })
+                        }
+                        // 取れなければ前の順位のまま（次の回に取り直す）
+                        Err(e) => {
+                            tracing::warn!("leaderboard: {e:#}");
+                            state.leaderboard = last.as_ref().and_then(|l| l.leaderboard.clone());
+                        }
+                    }
+                }
                 if last.as_ref() != Some(&state) {
                     tracing::info!("rank {} ({:?} points)", state.badge, state.points);
                     store.set_rank(state.clone());
@@ -104,10 +116,49 @@ fn state(player: &PlayerRank, tiers: &Tiers, has_image: bool) -> RankState {
         subrank: player.subrank,
         points,
         names: tiers.names.get(&player.rank).cloned().unwrap_or_default(),
-        color: tiers.colors.get(&player.rank).cloned().unwrap_or_default(),
         image: has_image.then(|| format!("/assets/rank/{}.webp", player.badge)),
         progress: points.and_then(|p| progress(player.rank, player.subrank, p)),
+        leaderboard: None,
     }
+}
+
+#[derive(Deserialize)]
+struct Leaderboard {
+    entries: Vec<LeaderboardEntry>,
+}
+
+#[derive(Deserialize)]
+struct LeaderboardEntry {
+    rank: u32,
+    /// 表示名から推定したアカウント（同じ名前の人がいると複数になる）
+    #[serde(default)]
+    possible_account_ids: Vec<u32>,
+}
+
+/// その地域のリーダーボードでの順位。載っていなければ None（Valve の更新は 1 時間ごと）
+async fn leaderboard_rank(region: Region, account_id: u32) -> anyhow::Result<Option<u32>> {
+    let region = serde_json::to_value(region)?;
+    let board: Leaderboard = crate::http()
+        .get(format!(
+            "{API}/leaderboard/{}",
+            region.as_str().unwrap_or_default()
+        ))
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    Ok(find_rank(&board.entries, account_id))
+}
+
+/// 自分のアカウントだけが候補のものを先に探す（同じ名前の別人と取り違えにくい）
+fn find_rank(entries: &[LeaderboardEntry], account_id: u32) -> Option<u32> {
+    let mine = |e: &&LeaderboardEntry| e.possible_account_ids.contains(&account_id);
+    entries
+        .iter()
+        .filter(mine)
+        .min_by_key(|e| e.possible_account_ids.len())
+        .map(|e| e.rank)
 }
 
 /// 累積ポイントから、今のサブランクの中での進み具合を出す
@@ -151,7 +202,6 @@ async fn load_tiers(tiers: &mut Tiers, languages: &[LangCode]) {
                         .entry(t.tier)
                         .or_default()
                         .insert(code.clone(), t.name);
-                    tiers.colors.insert(t.tier, t.color);
                     if let Some(Some(url)) = t.images.get("large_webp") {
                         tiers.plain_images.insert(t.tier, url.clone());
                     }
@@ -213,7 +263,6 @@ mod tests {
     fn state_uses_tier_names_and_final_progress() {
         let tiers = Tiers {
             names: BTreeMap::from([(7, BTreeMap::from([("ja".into(), "エミッサリー".into())]))]),
-            colors: BTreeMap::from([(7, "#B47FEB".into())]),
             ..Tiers::default()
         };
         let s = state(&player(73, Some(44000)), &tiers, true);
@@ -258,6 +307,18 @@ mod tests {
         assert_eq!(progress(0, 0, 0), None);
         // 計算と合わないポイントは出さない
         assert_eq!(progress(7, 3, 1_000), None);
+    }
+
+    #[test]
+    fn leaderboard_prefers_entries_that_only_match_this_account() {
+        let entry = |rank, ids: &[u32]| LeaderboardEntry {
+            rank,
+            possible_account_ids: ids.to_vec(),
+        };
+        let entries = [entry(5, &[1, 2, 3]), entry(9, &[2]), entry(12, &[4])];
+        assert_eq!(find_rank(&entries, 2), Some(9));
+        assert_eq!(find_rank(&entries, 1), Some(5));
+        assert_eq!(find_rank(&entries, 7), None);
     }
 
     #[test]

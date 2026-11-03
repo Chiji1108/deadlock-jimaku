@@ -119,6 +119,7 @@ pub enum ServerMsg {
     Display {
         subtitles: crate::settings::SubtitleDisplay,
         rank_language: LangCode,
+        rank_content: crate::settings::RankContent,
         item_cards: ItemCardsView,
     },
     /// 直近のピーク（dBFS）。1 秒に 10 回ほど
@@ -223,8 +224,6 @@ pub struct RankState {
     pub points: Option<u32>,
     /// ティアの名前（言語ごと）
     pub names: BTreeMap<LangCode, String>,
-    /// ティアの色（`#B47FEB` など）
-    pub color: String,
     /// `/assets/rank/{badge}.webp`。アイコンをまだ取れていなければ None
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
@@ -233,6 +232,17 @@ pub struct RankState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub progress: Option<RankProgress>,
+    /// エターナスのリーダーボードでの順位（地域を選んでいて、載っているときだけ）
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub leaderboard: Option<LeaderboardRank>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct LeaderboardRank {
+    pub region: crate::settings::Region,
+    pub rank: u32,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]

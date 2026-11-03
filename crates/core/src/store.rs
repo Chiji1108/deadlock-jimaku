@@ -244,6 +244,7 @@ fn display(settings: &Settings) -> ServerMsg {
     ServerMsg::Display {
         subtitles: settings.subtitle_display.clone(),
         rank_language: settings.rank_language(),
+        rank_content: settings.rank_content,
         item_cards: ItemCardsView {
             hold_seconds: settings.item_cards.hold_seconds,
             language: crate::lang::find(&settings.item_language())
