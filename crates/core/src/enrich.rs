@@ -349,8 +349,8 @@ fn slot_reference(text: &str, lang: &str) -> Option<(usize, usize, u8)> {
 /// LLM に渡す原文。固有名詞は出てきた順に `⟦1⟧`, `⟦2⟧` … にする（同じものは同じ番号）
 struct Terms {
     transcript: String,
-    /// `⟦n⟧` → 種類（hero / item / ability）
-    kinds: BTreeMap<String, &'static str>,
+    /// `⟦n⟧` → 種類（hero / item / ability）。英語名が冠詞から始まる（The Doorman）ならそう添える
+    kinds: BTreeMap<String, String>,
     refs: Vec<String>,
 }
 
@@ -371,9 +371,17 @@ impl Terms {
                         }
                     };
                     let marker = marker(n);
-                    let kind = glossary
-                        .and_then(|g| g.entities.get(reference))
-                        .map_or("game term", |e| kind_label(e.kind));
+                    let entity = glossary.and_then(|g| g.entities.get(reference));
+                    let mut kind = entity
+                        .map_or("game term", |e| kind_label(e.kind))
+                        .to_owned();
+                    // 冠詞ごとの名前の前に、LLM が冠詞を足さないように（「the The Doorman」にしない）
+                    if entity
+                        .and_then(|e| e.names.get("en"))
+                        .is_some_and(|name| name.starts_with("The "))
+                    {
+                        kind.push_str(", its name already starts with \"The\"");
+                    }
                     transcript.push_str(&marker);
                     kinds.insert(marker, kind);
                 }
@@ -408,9 +416,17 @@ impl Terms {
                     });
                 }
                 None => {
-                    if buf.ends_with(' ') && rest[end + '⟧'.len_utf8()..].starts_with(' ') {
+                    // 捨てた記号の所有格（⟦9⟧'s）も残さない
+                    let after = &rest[end + '⟧'.len_utf8()..];
+                    let after = ["'s", "’s"]
+                        .iter()
+                        .find_map(|s| after.strip_prefix(s))
+                        .unwrap_or(after);
+                    if buf.ends_with(' ') && after.starts_with(' ') {
                         buf.pop();
                     }
+                    rest = after;
+                    continue;
                 }
             }
             rest = &rest[end + '⟧'.len_utf8()..];
@@ -663,8 +679,7 @@ fn system_prompt(source_lang: &str) -> String {
          Rules:\n\
          1. \"translations\": translate only the transcript into each requested language, naturally and casually, like gamers talk.\n\
          2. Copy every marker such as ⟦1⟧ unchanged into each translation, where that term belongs. \
-         Never replace a marker with a name. A marker stands for the whole name, sometimes with its own article (\"The Doorman\"), \
-         so do not put an article right before it.\n\
+         Never replace a marker with a name. When \"terms\" says a name already starts with \"The\", do not put an article right before it.\n\
          3. Do not attach inflectional endings to a marker; rephrase instead (Russian: \"ульта ⟦1⟧\", not \"⟦1⟧а\"). \
          The only exception is the English possessive 's, which reads naturally: \"⟦1⟧'s ⟦2⟧\".\n\
          4. Keep common gamer words natural (ult, farm, push, gank).\n"
@@ -849,7 +864,10 @@ mod tests {
         assert_eq!(terms.transcript, "⟦1⟧の⟦2⟧と⟦1⟧");
         assert_eq!(
             terms.kinds,
-            BTreeMap::from([("⟦1⟧".into(), "hero"), ("⟦2⟧".into(), "ability")])
+            BTreeMap::from([
+                ("⟦1⟧".into(), "hero".into()),
+                ("⟦2⟧".into(), "ability".into())
+            ])
         );
     }
 
@@ -859,13 +877,12 @@ mod tests {
         let spans = Matcher::new(&g, "ja").split("ヘイズのバレットダンス");
         let terms = Terms::new(&spans, Some(&g));
         assert_eq!(
-            terms.resolve("The ⟦2⟧ of ⟦1⟧ beat ⟦9⟧ easily ⟦oops"),
+            terms.resolve("⟦1⟧'s ⟦2⟧ beat ⟦9⟧ easily, ask ⟦9⟧'s team ⟦oops"),
             [
-                text("The "),
-                ent("ability:8"),
-                text(" of "),
                 ent("hero:13"),
-                text(" beat easily ⟦oops"),
+                text("'s "),
+                ent("ability:8"),
+                text(" beat easily, ask team ⟦oops"),
             ]
         );
     }
@@ -1018,23 +1035,22 @@ mod tests {
     }
 
     #[test]
-    fn english_possessive_follows_the_entity() {
-        // 「ドアマンのウルト」→「⟦1⟧'s ⟦2⟧」。's は名前の後ろの文字として残る（The Doorman's Hotel Guest）
-        let e = enricher(&["en"]);
+    fn terms_tell_when_the_english_name_has_an_article() {
+        let mut g = glossary();
+        g.entities
+            .get_mut("hero:13")
+            .unwrap()
+            .names
+            .insert("en".into(), "The Doorman".into());
         let terms = Terms::new(
-            &[entity("hero:13", "ヘイズ"), entity("ability:8", "ウルト")],
-            Some(&glossary()),
+            &[entity("hero:13", "ドアマン"), entity("ability:8", "ウルト")],
+            Some(&g),
         );
-        let raw = BTreeMap::from([("en".to_owned(), "⟦1⟧'s ⟦2⟧ is strong.".to_owned())]);
         assert_eq!(
-            e.translations(raw, &terms)["en"],
-            [
-                ent("hero:13"),
-                text("'s "),
-                ent("ability:8"),
-                text(" is strong.")
-            ]
+            terms.kinds["⟦1⟧"],
+            "hero, its name already starts with \"The\""
         );
+        assert_eq!(terms.kinds["⟦2⟧"], "ability");
     }
 
     #[test]
