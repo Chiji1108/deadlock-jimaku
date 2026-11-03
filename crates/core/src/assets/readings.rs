@@ -1,7 +1,7 @@
 //! 辞書の漢字名の読み（DESIGN.md 8.2）。
 //!
-//! 辞書は形態素解析の読みで保存し、読み込むたびに重ねる。優先順は
-//! 手で書いた読み（`data/readings.ja.json`）→ LLM の読み（名前ごとのキャッシュ）→ 形態素解析。
+//! 辞書には読みを保存せず、読み込むたびに重ねる。優先順は
+//! 手で書いた読み（`data/readings.ja.json`）→ LLM の読み（名前ごとのキャッシュ）。どちらもなければ読みなし。
 //! キャッシュにない名前は辞書を配信した後に問い合わせ、届いたら配信し直す。
 //! 答えが検証に通らなかった名前はキャッシュせず、次の起動で問い直す（答えは揺れるので、たいてい次は通る）。
 //! 辞書の保存と切り離しているので、キーが無効でも辞書は保存され、キーを後から設定しても次の起動で効く。
@@ -15,7 +15,7 @@ use serde_json::json;
 
 use crate::furigana;
 use crate::llm;
-use crate::types::{Glossary, RubySegment, Token};
+use crate::types::{Glossary, RubySegment};
 
 /// 35 語で 20 秒ほど
 const TIMEOUT: Duration = Duration::from_secs(120);
@@ -167,7 +167,7 @@ pub async fn ask(
                 return None;
             };
             let answer = serde_json::to_string(&segments).unwrap_or_default();
-            let checked = validate(name, segments);
+            let checked = furigana::check(name, segments);
             if checked.is_none() {
                 tracing::warn!("readings: rejected {name}: {answer}");
             }
@@ -182,35 +182,6 @@ A kanji compound is one segment with the reading of the whole word (退避 → �
 Keep okurigana and kana in their own segments with ruby null. Joining the segments' text must give the name exactly. \
 Many names are coined compounds; read them the way a Japanese gamer would read them aloud.";
 
-/// - つなげると名前になる
-/// - 読みはひらがな（カタカナはひらがなにする）
-/// - 読みは漢字の部分ごとに割り当てる（「取り扱い / とりあつかい」→ 取(と)り扱(あつか)い、
-///   「魔呪の罠 / まじゅのわな」→ 魔呪(まじゅ)の罠(わな)）。割り当てられなければ受け取らない
-/// - 漢字には必ず読みがある
-fn validate(name: &str, segments: Vec<RubySegment>) -> Option<Vec<RubySegment>> {
-    let joined: String = segments.iter().map(|s| s.text.as_str()).collect();
-    if joined != name {
-        return None;
-    }
-    let mut out = Vec::new();
-    for s in segments {
-        let tokens = match s.ruby.as_deref().map(furigana::to_hiragana) {
-            None if s.text.chars().any(furigana::is_kanji) => return None,
-            None => vec![Token::Text {
-                text: s.text,
-                ruby: None,
-            }],
-            Some(r) if !r.chars().all(|c| matches!(c, 'ぁ'..='ゟ' | 'ー')) => return None,
-            Some(r) => furigana::align(&s.text, &r)?,
-        };
-        out.extend(tokens.into_iter().filter_map(|t| match t {
-            Token::Text { text, ruby } => Some(RubySegment { text, ruby }),
-            Token::Entity { .. } => None,
-        }));
-    }
-    Some(out)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -220,67 +191,6 @@ mod tests {
             text: text.into(),
             ruby: ruby.map(Into::into),
         }
-    }
-
-    #[test]
-    fn validate_splits_okurigana_and_normalizes_katakana() {
-        assert_eq!(
-            validate(
-                "人狼の呪い",
-                vec![
-                    seg("人狼", Some("ジンロウ")),
-                    seg("の", None),
-                    seg("呪い", Some("のろい"))
-                ]
-            ),
-            Some(vec![
-                seg("人狼", Some("じんろう")),
-                seg("の", None),
-                seg("呪", Some("のろ")),
-                seg("い", None)
-            ])
-        );
-    }
-
-    #[test]
-    fn validate_rejects_bad_answers() {
-        // つなげても名前にならない（LLM が別の文を作った）
-        assert_eq!(validate("人狼", vec![seg("斧", Some("おの"))]), None);
-        // 読みがかなでない、区切り記号が入っている
-        assert_eq!(validate("人狼", vec![seg("人狼", Some("jinrou"))]), None);
-        assert_eq!(
-            validate("人狼", vec![seg("人狼", Some("じん・ろう"))]),
-            None
-        );
-        // 漢字に読みがない
-        assert_eq!(
-            validate(
-                "狩猟罠",
-                vec![seg("狩猟", Some("しゅりょう")), seg("罠", None)]
-            ),
-            None
-        );
-        // 読みのかなの部分が名前と合わない
-        assert_eq!(
-            validate("魔呪の罠", vec![seg("魔呪の罠", Some("まじゅがわな"))]),
-            None
-        );
-    }
-
-    #[test]
-    fn validate_aligns_readings_across_kana() {
-        assert_eq!(
-            validate("魔呪の罠", vec![seg("魔呪の罠", Some("まじゅのわな"))]),
-            Some(vec![
-                seg("魔呪", Some("まじゅ")),
-                seg("の", None),
-                seg("罠", Some("わな"))
-            ])
-        );
-        assert_eq!(
-            validate("いすゞ", vec![seg("いすゞ", None)]),
-            Some(vec![seg("いすゞ", None)])
-        );
     }
 
     fn glossary() -> Glossary {

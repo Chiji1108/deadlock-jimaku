@@ -1,27 +1,35 @@
 <script lang="ts">
+  import type { RubySegment } from "../generated/RubySegment";
   import { entityName, glossary } from "./glossary.svelte";
   import Ruby from "./Ruby.svelte";
 
   let {
     ref,
     spoken,
+    ruby: spokenRuby,
     lang,
     furigana,
-    asSpoken = false,
   }: {
     ref: string;
+    /** 話した言葉（原文）。あればそのまま出す。翻訳では無く、公式名を出す */
     spoken?: string;
+    /** 話した言葉のふりがな */
+    ruby?: RubySegment[];
     lang: string;
     furigana: boolean;
-    /** 公式名ではなく話した言葉のまま出す（「ヘイズのウルト」の「ウルト」） */
-    asSpoken?: boolean;
   } = $props();
 
   const entity = $derived(glossary.entity(ref));
-  const ruby = $derived(lang === "ja" && furigana && !asSpoken ? entity?.ruby : undefined);
+  const label = $derived(spoken ?? (entity ? entityName(entity, lang) : ref));
+  // 文のふりがなが取れなかったときも、公式名をそのまま話したなら辞書の読みを使う
+  const ruby = $derived.by(() => {
+    if (lang !== "ja" || !furigana) return undefined;
+    if (spokenRuby) return spokenRuby;
+    return entity && label === entityName(entity, "ja") ? entity.ruby : undefined;
+  });
 </script>
 
-<!-- 辞書から公式名とアイコンを引く。辞書にない（まだ読み込んでいない）ときは発話された表現を出す -->
+<!-- 辞書からアイコンと色（と翻訳での公式名）を引く。辞書にない（まだ読み込んでいない）ときは文字だけ -->
 {#if entity}<span class="entity {entity.kind} {entity.slot ?? ''}"
     >{#if entity.icon}<img
         class="icon"
@@ -30,8 +38,8 @@
       />{/if}{#if ruby}{#each ruby as seg, i (i)}<Ruby
           text={seg.text}
           ruby={seg.ruby}
-        />{/each}{:else}{asSpoken && spoken ? spoken : entityName(entity, lang)}{/if}</span
-  >{:else}<span class="entity">{spoken ?? ref}</span>{/if}
+        />{/each}{:else}{label}{/if}</span
+  >{:else}<span class="entity">{label}</span>{/if}
 
 <style>
   /* 種類ごとの色。アイテムはゲーム内と同じくスロット（武器 / バイタリティ / スピリット）で分ける */

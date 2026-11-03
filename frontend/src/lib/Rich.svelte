@@ -14,7 +14,7 @@
 {#each tokens as token, i (i)}{#if token.t === "entity"}<EntityRef
       ref={token.ref}
       spoken={token.spoken}
-      asSpoken={token.asSpoken}
+      ruby={token.ruby}
       {lang}
       {furigana}
     />{:else}<Ruby text={token.text} ruby={furigana ? token.ruby : undefined} />{/if}{/each}

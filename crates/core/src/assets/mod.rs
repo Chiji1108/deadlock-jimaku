@@ -15,14 +15,13 @@ use std::sync::Arc;
 use anyhow::Context;
 use futures_util::{StreamExt, future::try_join_all, stream};
 
-use crate::furigana::Furigana;
 use crate::lang;
 use crate::store::Store;
 use crate::types::{Glossary, LangCode};
 use glossary::{Aliases, Icon, Sources};
 
 /// キャッシュの形式。Glossary の形やアイコンの置き方を変えたら上げる（古いキャッシュは読まない）
-const CACHE_FORMAT: &str = "v7";
+const CACHE_FORMAT: &str = "v8";
 
 /// LLM で付けた読みのキャッシュ。名前ごとなので、パッチやキャッシュ形式をまたいで使い回す
 const LLM_READINGS: &str = "readings-llm.ja.json";
@@ -50,7 +49,7 @@ impl Loaded {
 
 /// 辞書を用意して store に載せる。失敗してもアプリは辞書なしで動き続ける。
 /// 漢字名の読みは手書きの読みと、キャッシュ済みの LLM の読みを重ねて配信し、
-/// 足りない名前は配信した後に問い合わせて配信し直す（`openai_key` がなければ形態素解析の読みのまま）
+/// 足りない名前は配信した後に問い合わせて配信し直す（`openai_key` がなければ手書きとキャッシュの読みだけ）
 pub async fn load_into(store: Arc<Store>, root: PathBuf, openai_key: Option<String>) {
     let settings = store.settings();
     let loaded = match load(&root, &settings.glossary_languages()).await {
@@ -181,15 +180,8 @@ async fn build_and_save(
         sources.items.insert(code, items);
     }
 
-    // 名前の読みは形態素解析で付ける（辞書の読み込みと解析は同期処理なのでワーカーを塞がない）。
-    // LLM の読みは保存せず、読み込むたびに重ねる（`load_into`）
-    let (mut glossary, icons) = tokio::task::spawn_blocking(move || {
-        let (mut glossary, icons) = glossary::build(version, &sources);
-        let furigana = Furigana::new()?;
-        glossary::fill_readings(&mut glossary, |name| furigana.annotate(name));
-        anyhow::Ok((glossary, icons))
-    })
-    .await??;
+    // 名前の読みは保存せず、読み込むたびに重ねる（`load_into`）
+    let (mut glossary, icons) = glossary::build(version, &sources);
     let dir = version_dir(root, version);
     let failed = download_icons(client, &dir.join("icons"), icons).await;
     // 取れなかったアイコンは表示しない（404 を出さない）

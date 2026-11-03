@@ -1,91 +1,96 @@
-//! ふりがな（DESIGN.md 6.4）。読みは形態素解析（Lindera + IPADIC）で決める。
+//! ふりがな（DESIGN.md 6.4）。読みは LLM（GPT-6.1 Terra）に文脈ごと決めさせる。
 //!
-//! 字幕の文は毎回ここで読む（LLM は読みがずれたり、別の文を作ったりするので使わない）。
-//! 辞書の漢字名は造語が多いので、LLM の読みを重ねる（`assets::readings`。検証にはここの関数を使う）。
+//! 字幕の文は発話ごとに問い合わせる（`ask`）。辞書の漢字名は名前ごとに問い合わせてキャッシュする
+//! （`assets::readings`）。どちらも答えを `check` で確かめ、合わなければふりがなを付けない
+//! （ふりがなは補助なので、まれに付かなくても字幕としては困らない）。
 
-use std::borrow::Cow;
+use std::time::Duration;
 
-use lindera::dictionary::load_dictionary;
-use lindera::mode::Mode;
-use lindera::segmenter::Segmenter;
+use serde::Deserialize;
+use serde_json::json;
 
-use crate::types::Token;
+use crate::llm;
+use crate::types::RubySegment;
 
-/// IPADIC の素性のうち「読み」の位置
-const READING: usize = 7;
+/// 1 文で 2〜3 秒。翻訳と同時に問い合わせる
+const TIMEOUT: Duration = Duration::from_secs(8);
 
-pub struct Furigana {
-    segmenter: Segmenter,
+const SYSTEM: &str = "This is a Japanese subtitle of a streamer playing the video game Deadlock. \
+Split it into words and give the hiragana reading of each word that contains kanji, reading it the way it is meant in context. \
+A kanji compound is one segment with the reading of the whole word; never split a compound into single kanji. \
+Keep okurigana, kana and punctuation in their own segments with ruby null. Joining the segments' text must give the sentence exactly.";
+
+pub struct Model<'a> {
+    pub api_key: &'a str,
+    pub model: &'a str,
+    pub reasoning_effort: Option<&'a str>,
 }
 
-impl Furigana {
-    /// 辞書の読み込みに少し時間がかかるので、起動時に 1 回だけ作る
-    pub fn new() -> anyhow::Result<Self> {
-        let dictionary = load_dictionary("embedded://ipadic")?;
-        Ok(Self {
-            segmenter: Segmenter::new(Mode::Normal, dictionary, None),
-        })
+/// 文のふりがな。答えが `check` に通らなければ None（ふりがなを付けない）
+pub async fn ask(
+    http: &reqwest::Client,
+    model: &Model<'_>,
+    text: &str,
+) -> anyhow::Result<Option<Vec<RubySegment>>> {
+    #[derive(Deserialize)]
+    struct Output {
+        segments: Vec<RubySegment>,
     }
+    let segment = json!({
+        "type": "object", "additionalProperties": false, "required": ["text", "ruby"],
+        "properties": { "text": { "type": "string" }, "ruby": { "type": ["string", "null"] } },
+    });
+    let schema = json!({
+        "type": "object", "additionalProperties": false, "required": ["segments"],
+        "properties": { "segments": { "type": "array", "items": segment } },
+    });
+    let out: Output = llm::chat_json(
+        http,
+        llm::Request {
+            api_key: model.api_key,
+            model: model.model,
+            reasoning_effort: model.reasoning_effort,
+            system: SYSTEM,
+            user: text.to_owned(),
+            schema_name: "furigana",
+            schema,
+            timeout: TIMEOUT,
+        },
+    )
+    .await?;
+    let checked = check(text, out.segments);
+    if checked.is_none() {
+        tracing::warn!("furigana: rejected the answer for {text}");
+    }
+    Ok(checked)
+}
 
-    /// 漢字を含む語にルビを付けたトークン列にする（かなだけの部分はまとめる）
-    pub fn annotate(&self, text: &str) -> Vec<Token> {
-        let mut out: Vec<Token> = Vec::new();
-        let Ok(mut morphemes) = self.segmenter.segment(Cow::Borrowed(text)) else {
-            return vec![plain(text)];
-        };
-        for m in morphemes.iter_mut() {
-            let surface = m.surface.to_string();
-            let reading = m
-                .details()
-                .get(READING)
-                .filter(|r| **r != "*")
-                .map(|r| to_hiragana(r));
-            for token in ruby_tokens(&surface, reading.as_deref()) {
-                push(&mut out, token);
-            }
+/// LLM の答えを確かめ、読みを漢字の部分ごとに割り当てる。どれかに合わなければ None
+/// - つなげると元の文字列になる
+/// - 読みはひらがな（カタカナはひらがなにする）
+/// - 読みは漢字の部分ごとに割り当てる（「取り扱い / とりあつかい」→ 取(と)り扱(あつか)い、
+///   「魔呪の罠 / まじゅのわな」→ 魔呪(まじゅ)の罠(わな)）。割り当てられなければ受け取らない
+/// - 漢字には必ず読みがある
+pub fn check(text: &str, segments: Vec<RubySegment>) -> Option<Vec<RubySegment>> {
+    let joined: String = segments.iter().map(|s| s.text.as_str()).collect();
+    if joined != text {
+        return None;
+    }
+    let mut out = Vec::new();
+    for s in segments {
+        match s.ruby.as_deref().map(to_hiragana) {
+            None if s.text.chars().any(is_kanji) => return None,
+            None => out.push(s),
+            Some(r) if !r.chars().all(|c| matches!(c, 'ぁ'..='ゟ' | 'ー')) => return None,
+            Some(r) => out.extend(align(&s.text, &r)?),
         }
-        out
     }
-}
-
-/// ルビのない文字は前のトークンにつなげる
-fn push(out: &mut Vec<Token>, token: Token) {
-    if let (
-        Some(Token::Text {
-            text: prev,
-            ruby: None,
-        }),
-        Token::Text { text, ruby: None },
-    ) = (out.last_mut(), &token)
-    {
-        prev.push_str(text);
-        return;
-    }
-    out.push(token);
-}
-
-fn plain(text: &str) -> Token {
-    Token::Text {
-        text: text.into(),
-        ruby: None,
-    }
-}
-
-/// 語の読みを漢字の部分ごとに割り当てる。漢字のない語や、かな以外の読みにはルビを付けない。
-/// 「強い / つよい」→「強(つよ)」「い」、「取り扱い / とりあつかい」→「取(と)」「り」「扱(あつか)」「い」
-pub fn ruby_tokens(text: &str, ruby: Option<&str>) -> Vec<Token> {
-    let Some(ruby) = ruby.filter(|r| !r.is_empty() && r.chars().all(is_kana)) else {
-        return vec![plain(text)];
-    };
-    if !text.chars().any(is_kanji) {
-        return vec![plain(text)];
-    }
-    align(text, &to_hiragana(ruby)).unwrap_or_else(|| vec![plain(text)])
+    Some(out)
 }
 
 /// 漢字の続く部分と、それ以外（かななど）の部分に分け、かなの部分を読みの中で探して区切る。
 /// 読みとかなの部分が合わなければ None
-pub fn align(text: &str, reading: &str) -> Option<Vec<Token>> {
+pub fn align(text: &str, reading: &str) -> Option<Vec<RubySegment>> {
     let mut runs: Vec<(bool, String)> = Vec::new();
     for c in text.chars() {
         match runs.last_mut() {
@@ -102,7 +107,10 @@ pub fn align(text: &str, reading: &str) -> Option<Vec<Token>> {
             if r.get(pos..pos + kana.len())? != kana.as_slice() {
                 return None;
             }
-            out.push(plain(run));
+            out.push(RubySegment {
+                text: run.clone(),
+                ruby: None,
+            });
             pos += kana.len();
             continue;
         }
@@ -118,7 +126,7 @@ pub fn align(text: &str, reading: &str) -> Option<Vec<Token>> {
         if end <= pos {
             return None;
         }
-        out.push(Token::Text {
+        out.push(RubySegment {
             text: run.clone(),
             ruby: Some(r[pos..end].iter().collect()),
         });
@@ -137,10 +145,6 @@ pub fn to_hiragana(s: &str) -> String {
         .collect()
 }
 
-fn is_kana(c: char) -> bool {
-    matches!(c, '\u{3041}'..='\u{309F}' | '\u{30A0}'..='\u{30FF}')
-}
-
 pub fn is_kanji(c: char) -> bool {
     matches!(c, '\u{4E00}'..='\u{9FFF}' | '\u{3400}'..='\u{4DBF}' | '々')
 }
@@ -149,46 +153,26 @@ pub fn is_kanji(c: char) -> bool {
 mod tests {
     use super::*;
 
-    fn t(text: &str, ruby: Option<&str>) -> Token {
-        Token::Text {
+    fn seg(text: &str, ruby: Option<&str>) -> RubySegment {
+        RubySegment {
             text: text.into(),
             ruby: ruby.map(Into::into),
         }
     }
 
     #[test]
-    fn ruby_moves_okurigana_and_prefix_out() {
+    fn align_moves_okurigana_and_kana_out() {
         assert_eq!(
-            ruby_tokens("強い", Some("つよい")),
-            [t("強", Some("つよ")), t("い", None)]
+            align("強い", "つよい"),
+            Some(vec![seg("強", Some("つよ")), seg("い", None)])
         );
         assert_eq!(
-            ruby_tokens("お金", Some("おかね")),
-            [t("お", None), t("金", Some("かね"))]
-        );
-        assert_eq!(
-            ruby_tokens("実況", Some("じっきょう")),
-            [t("実況", Some("じっきょう"))]
-        );
-    }
-
-    #[test]
-    fn ruby_is_split_around_kana_inside_a_word() {
-        assert_eq!(
-            ruby_tokens("取り扱い", Some("とりあつかい")),
-            [
-                t("取", Some("と")),
-                t("り", None),
-                t("扱", Some("あつか")),
-                t("い", None)
-            ]
-        );
-        assert_eq!(
-            align("魔呪の罠", "まじゅのわな"),
+            align("取り扱い", "とりあつかい"),
             Some(vec![
-                t("魔呪", Some("まじゅ")),
-                t("の", None),
-                t("罠", Some("わな"))
+                seg("取", Some("と")),
+                seg("り", None),
+                seg("扱", Some("あつか")),
+                seg("い", None)
             ])
         );
         // かなの部分が読みに現れない
@@ -196,32 +180,78 @@ mod tests {
     }
 
     #[test]
-    fn ruby_is_dropped_when_wrong() {
-        assert_eq!(ruby_tokens("ヘイズ", Some("へいず")), [t("ヘイズ", None)]);
-        assert_eq!(ruby_tokens("強い", Some("tsuyoi")), [t("強い", None)]);
-        assert_eq!(ruby_tokens("つよい", Some("つよい")), [t("つよい", None)]);
+    fn check_splits_okurigana_and_normalizes_katakana() {
+        assert_eq!(
+            check(
+                "人狼の呪い",
+                vec![
+                    seg("人狼", Some("ジンロウ")),
+                    seg("の", None),
+                    seg("呪い", Some("のろい"))
+                ]
+            ),
+            Some(vec![
+                seg("人狼", Some("じんろう")),
+                seg("の", None),
+                seg("呪", Some("のろ")),
+                seg("い", None)
+            ])
+        );
+        assert_eq!(
+            check(
+                "一人で行く。",
+                vec![
+                    seg("一人", Some("ひとり")),
+                    seg("で", None),
+                    seg("行く", Some("いく")),
+                    seg("。", None)
+                ]
+            ),
+            Some(vec![
+                seg("一人", Some("ひとり")),
+                seg("で", None),
+                seg("行", Some("い")),
+                seg("く", None),
+                seg("。", None)
+            ])
+        );
     }
 
     #[test]
-    fn annotates_sentence_with_readings() {
-        let f = Furigana::new().unwrap();
+    fn check_rejects_bad_answers() {
+        // つなげても元にならない（LLM が別の文を作った）
+        assert_eq!(check("人狼", vec![seg("斧", Some("おの"))]), None);
+        // 読みがかなでない、区切り記号が入っている
+        assert_eq!(check("人狼", vec![seg("人狼", Some("jinrou"))]), None);
+        assert_eq!(check("人狼", vec![seg("人狼", Some("じん・ろう"))]), None);
+        // 漢字に読みがない
         assert_eq!(
-            f.annotate("僕の一番好きなキャラ"),
-            [
-                t("僕", Some("ぼく")),
-                t("の", None),
-                t("一番", Some("いちばん")),
-                t("好", Some("す")),
-                t("きなキャラ", None),
-            ]
+            check(
+                "狩猟罠",
+                vec![seg("狩猟", Some("しゅりょう")), seg("罠", None)]
+            ),
+            None
+        );
+        // 読みのかなの部分が合わない
+        assert_eq!(
+            check("魔呪の罠", vec![seg("魔呪の罠", Some("まじゅがわな"))]),
+            None
+        );
+    }
+
+    #[test]
+    fn check_aligns_readings_across_kana() {
+        assert_eq!(
+            check("魔呪の罠", vec![seg("魔呪の罠", Some("まじゅのわな"))]),
+            Some(vec![
+                seg("魔呪", Some("まじゅ")),
+                seg("の", None),
+                seg("罠", Some("わな"))
+            ])
         );
         assert_eq!(
-            f.annotate("いや、楽しみだな。"),
-            [
-                t("いや、", None),
-                t("楽", Some("たの")),
-                t("しみだな。", None)
-            ]
+            check("いすゞ", vec![seg("いすゞ", None)]),
+            Some(vec![seg("いすゞ", None)])
         );
     }
 }

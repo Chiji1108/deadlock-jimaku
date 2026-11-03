@@ -71,14 +71,13 @@ pub async fn run(store: Arc<Store>, input: audio::Input, api_key: String) -> any
     };
     tokio::spawn(realtime_loop(realtime, hints.clone(), rt_rx, delta_tx));
 
-    // 形態素解析の辞書の読み込みは同期処理なので、非同期のワーカーを塞がない
-    let enricher = {
-        let (key, model) = (api_key.clone(), settings.models.translate.clone());
-        let effort = settings.models.reasoning_effort.clone();
-        let (lang, targets) = (settings.mic_language.clone(), settings.translate_to.clone());
-        tokio::task::spawn_blocking(move || Enricher::new(key, model, effort, lang, targets))
-            .await??
-    };
+    let enricher = Enricher::new(
+        api_key.clone(),
+        settings.models.translate.clone(),
+        settings.models.reasoning_effort.clone(),
+        settings.mic_language.clone(),
+        settings.translate_to.clone(),
+    );
     let (done_tx, mut done_rx) = mpsc::channel(64);
     let mut pipeline = Pipeline::new(
         store,

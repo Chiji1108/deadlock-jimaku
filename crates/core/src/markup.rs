@@ -36,7 +36,7 @@ pub fn parse(markup: &str) -> Vec<Token> {
             tokens.push(Token::Entity {
                 reference: head.trim().into(),
                 spoken: tail.map(Into::into),
-                as_spoken: false,
+                ruby: None,
             });
         }
         rest = &rest[end + 1..];
@@ -90,13 +90,13 @@ mod tests {
                 Token::Entity {
                     reference: "hero:13".into(),
                     spoken: Some("ヘイズ".into()),
-                    as_spoken: false,
+                    ruby: None,
                 },
                 text("と", None),
                 Token::Entity {
                     reference: "item:1".into(),
                     spoken: None,
-                    as_spoken: false,
+                    ruby: None,
                 },
                 text("。", None),
             ]
@@ -113,7 +113,7 @@ mod tests {
                 Token::Entity {
                     reference: "hero:13".into(),
                     spoken: None,
-                    as_spoken: false,
+                    ruby: None,
                 },
                 text(" wins {oops", None),
             ]
