@@ -9,7 +9,12 @@ on:
   push:
     branches: [main]
     paths-ignore: ["**.md", "experiments/**"]
+  # 手動の実行では、署名と公証をリリースの前に試せる
   workflow_dispatch:
+    inputs:
+      sign:
+        type: boolean
+        default: false
   workflow_call:
     inputs:
       sign:
