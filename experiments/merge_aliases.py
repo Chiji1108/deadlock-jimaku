@@ -1,4 +1,4 @@
-"""調べた別名の候補をまとめて data/aliases.ja.json を作る（DESIGN.md 8.4）。
+"""調べた別名の候補をまとめて data/aliases.ja.json を作る（DESIGN.md 8.5）。
 
 入力は results/aliases/*.output.json（aliases_research.py やサブエージェントの調査、katakana_names.py の出力。
 どれも { ref: { en, ja, aliases: [{ alias, source }] } }）と、今の data/aliases.ja.json（手で足したもの）。
@@ -25,9 +25,20 @@ TYPOS = {
 MIN_KATAKANA_READING = 5
 
 
+def usable(alias: str, reading: bool) -> bool:
+    return not (
+        len(alias) < 2
+        or alias.isascii()  # 英語の旧名は日本語の音声認識ではまず出てこない
+        or alias in TYPOS
+        or (reading and len(alias) < MIN_KATAKANA_READING)
+    )
+
+
 def main() -> None:
+    # 手で足した別名（今のファイル）も、同じ規則で選び直す（規則を変えたら前に入れたものも外れる）
     merged: dict[str, list[str]] = {
-        ref: list(aliases) for ref, aliases in json.loads(OUT.read_text()).items()
+        ref: [a for a in aliases if usable(a, reading=False)]
+        for ref, aliases in json.loads(OUT.read_text()).items()
     }
     names: dict[str, str] = {}
     for path in sorted(CANDIDATES.glob("*.output.json")):
@@ -35,15 +46,8 @@ def main() -> None:
             names[ref] = entry["ja"]
             for a in entry["aliases"]:
                 alias = a["alias"].strip()
-                reading = a["source"] == "katakana of the English name"
-                if (
-                    len(alias) < 2
-                    or alias.isascii()  # 英語の旧名は日本語の音声認識ではまず出てこない
-                    or alias in TYPOS
-                    or (reading and len(alias) < MIN_KATAKANA_READING)
-                ):
-                    continue
-                merged.setdefault(ref, []).append(alias)
+                if usable(alias, reading=a["source"] == "katakana of the English name"):
+                    merged.setdefault(ref, []).append(alias)
 
     official = set(names.values())
     out: dict[str, list[str]] = {}
@@ -59,6 +63,14 @@ def main() -> None:
             keep.append(alias)
         if keep:
             out[ref] = keep
+    # 2 つの用語に付いた別名は照合で使われない（どちらとも決められない）ので知らせる
+    owners: dict[str, list[str]] = {}
+    for ref, aliases in out.items():
+        for alias in aliases:
+            owners.setdefault(alias, []).append(ref)
+    for alias, refs in owners.items():
+        if len(refs) > 1:
+            print(f"warning: {alias} belongs to {refs}; the app will not use it")
     OUT.write_text(json.dumps(out, ensure_ascii=False, indent=2) + "\n")
     print(f"{len(out)} terms, {sum(len(v) for v in out.values())} aliases -> {OUT.relative_to(ROOT)}")
 

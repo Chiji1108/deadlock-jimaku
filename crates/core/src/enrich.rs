@@ -212,8 +212,8 @@ enum Span {
 /// ヒーロー名の直後の文字列が、スキルを番号で呼んでいるか。
 /// (つなぎの文字数, 番号の表現の文字数, 何番目か) を返す（文字数は `char` の数）。
 ///
-/// - 日本語: 「の」のあとに「ウルト」「アルティメット」、または「1番」「1スキ」「2番目のスキル」など。
-///   漢数字は「一番好き」と区別できないので、後ろに「スキル」「スキ」が続くときだけ
+/// - 日本語: 「の」のあとに「ウルト」「アルティメット」、または「1スキ」「1番スキル」「2番目のスキル」など。
+///   「1番強い」「一番好き」と区別できないので、番号は「スキル」「スキ」まで言ったときだけ
 /// - 英語: 「's ult」「 ultimate」
 fn slot_reference(text: &str, lang: &str) -> Option<(usize, usize, u8)> {
     let chars: Vec<char> = text.chars().map(lower).collect();
@@ -233,12 +233,11 @@ fn slot_reference(text: &str, lang: &str) -> Option<(usize, usize, u8)> {
             }
         }
         let c = *chars.get(prefix)?;
-        let kanji = ['一', '二', '三', '四'];
-        let (slot, kanji) = match c.to_digit(10) {
-            Some(d) => (d, false),
+        let slot = match c.to_digit(10) {
+            Some(d) => d,
             None => match ('１'..='４').position(|x| x == c) {
-                Some(d) => (d as u32 + 1, false),
-                None => (kanji.iter().position(|&x| x == c)? as u32 + 1, true),
+                Some(d) => d as u32 + 1,
+                None => ['一', '二', '三', '四'].iter().position(|&x| x == c)? as u32 + 1,
             },
         };
         if !(1..=4).contains(&slot) {
@@ -249,10 +248,14 @@ fn slot_reference(text: &str, lang: &str) -> Option<(usize, usize, u8)> {
         let ban = starts(at, "番目").or_else(|| starts(at, "番"));
         at += ban.unwrap_or(0);
         at += starts(at, "の").unwrap_or(0);
-        let skill = starts(at, "スキル").or_else(|| starts(at, "スキ"));
-        at += skill.unwrap_or(0);
-        let ok = skill.is_some() || (ban.is_some() && !kanji);
-        return ok.then_some((prefix, at - prefix, slot));
+        // 「1番強い」「一番好き」と区別できないので「スキル」「スキ」まで言ったときだけ。
+        // 「1スキン」「スキップ」のように長いカタカナ語の一部なら違う
+        let skill = starts(at, "スキル").or_else(|| starts(at, "スキ"))?;
+        at += skill;
+        if chars.get(at).copied().is_some_and(is_katakana) {
+            return None;
+        }
+        return Some((prefix, at - prefix, slot));
     }
     if lang == "en" {
         let prefix = starts(0, "'s ")
@@ -372,6 +375,7 @@ struct Matcher {
     by_first: HashMap<char, Vec<(Vec<char>, String)>>,
     /// (ヒーローの参照, 何番目のスキルか) → スキルの参照
     abilities: HashMap<(String, u8), String>,
+    heroes: HashSet<String>,
     lang: String,
 }
 
@@ -401,7 +405,6 @@ impl Matcher {
                     .entry(chars)
                     .and_modify(|r| {
                         if *r != Some(reference) {
-                            tracing::warn!("ambiguous alias {alias}; not used");
                             *r = None;
                         }
                     })
@@ -410,6 +413,10 @@ impl Matcher {
         }
         let mut by_first: HashMap<char, Vec<(Vec<char>, String)>> = HashMap::new();
         for (chars, reference) in terms {
+            if reference.is_none() {
+                let alias: String = chars.iter().collect();
+                tracing::warn!("alias {alias} belongs to several terms; not used");
+            }
             if let Some(reference) = reference
                 && chars.len() >= Self::MIN_CHARS
             {
@@ -429,9 +436,16 @@ impl Matcher {
                 Some(((e.hero.clone()?, e.ability_slot?), reference.clone()))
             })
             .collect();
+        let heroes = glossary
+            .entities
+            .iter()
+            .filter(|(_, e)| e.kind == EntityKind::Hero)
+            .map(|(reference, _)| reference.clone())
+            .collect();
         Self {
             by_first,
             abilities,
+            heroes,
             lang: lang.to_owned(),
         }
     }
@@ -444,9 +458,10 @@ impl Matcher {
         let mut i = 0;
         while i < chars.len() {
             let found = self.by_first.get(&chars[i]).and_then(|terms| {
-                terms
-                    .iter()
-                    .find(|(term, _)| Self::matches_at(&chars, i, term))
+                terms.iter().find(|(term, reference)| {
+                    Self::matches_at(&chars, i, term)
+                        || self.hero_before_slot(text, i, term, reference)
+                })
             });
             match found {
                 Some((term, reference)) => {
@@ -472,13 +487,30 @@ impl Matcher {
         self.resolve_ability_slots(spans)
     }
 
+    /// 「ヘイズウルト」のように「の」なしでスキルの番号が続くと、カタカナどうしがつながって
+    /// ヒーロー名と見なせない（`matches_at`）ので、続きがスキルの番号なら認める
+    fn hero_before_slot(&self, text: &str, i: usize, term: &[char], reference: &str) -> bool {
+        if !self.heroes.contains(reference) {
+            return false;
+        }
+        let chars: Vec<char> = text.chars().map(lower).collect();
+        let joined_before = i
+            .checked_sub(1)
+            .is_some_and(|j| is_katakana(chars[j]) && is_katakana(term[0]));
+        if !chars[i..].starts_with(term) || joined_before {
+            return false;
+        }
+        let rest: String = text.chars().skip(i + term.len()).collect();
+        slot_reference(&rest, &self.lang).is_some_and(|(prefix, ..)| prefix == 0)
+    }
+
     /// 「ヘイズのウルト」「ヘイズの1番スキル」のように、ヒーロー名のすぐ後ろでスキルを番号で
     /// 呼んだら、そのヒーローのそのスキルにする（表示は話した言葉のまま）
     fn resolve_ability_slots(&self, spans: Vec<Span>) -> Vec<Span> {
         let mut out: Vec<Span> = Vec::with_capacity(spans.len());
         for span in spans {
             let hero = match out.last() {
-                Some(Span::Entity { reference, .. }) if reference.starts_with("hero:") => {
+                Some(Span::Entity { reference, .. }) if self.heroes.contains(reference) => {
                     Some(reference.clone())
                 }
                 _ => None,
@@ -625,12 +657,24 @@ mod tests {
                 "{text}"
             );
         }
-        // 「一番好き」や「ウルトラ」、持っていない番号は違う
+        // 「の」なし
+        assert_eq!(
+            m.split("ヘイズウルト溜まった"),
+            vec![
+                entity("hero:13", "ヘイズ"),
+                by_slot("ability:8", "ウルト"),
+                Span::Text("溜まった".into()),
+            ]
+        );
+        // 「一番好き」「1番強い」「1スキン」「ウルトラ」、持っていない番号は違う
         for text in [
             "ヘイズの一番好きなところ",
+            "ヘイズの1番強い",
+            "ヘイズの1スキン",
             "ヘイズのウルトラ",
             "ヘイズの3スキ",
             "ウルトが強い",
+            "ヘイズウルトラマン",
         ] {
             assert!(
                 !m.split(text).iter().any(|s| matches!(

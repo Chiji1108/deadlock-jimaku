@@ -2,7 +2,7 @@
 # requires-python = ">=3.12"
 # dependencies = ["httpx"]
 # ///
-"""英語名を日本のプレイヤーが英語のまま読んだときのカタカナ表記を作る（DESIGN.md 8.4）。
+"""英語名を日本のプレイヤーが英語のまま読んだときのカタカナ表記を作る（DESIGN.md 8.5）。
 音声認識は英語名で言われるとカタカナで書くので、公式の日本語名と違うものを別名の候補にする。
 
 usage: uv run katakana_names.py GLOSSARY_JSON

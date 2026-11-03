@@ -3,14 +3,14 @@
 # dependencies = ["anthropic"]
 # ///
 """日本のプレイヤーが Deadlock の用語を口でどう呼ぶか（通称・略称・昔の名前・英語名のカタカナ読み）を、
-Claude と Web 検索で調べて候補を出典付きで書き出す（DESIGN.md 8.4）。
+Claude と Web 検索で調べて候補を出典付きで書き出す（DESIGN.md 8.5）。
 
-候補は人が出典を見て確かめてから data/aliases.ja.json に入れる。書き出しは追記なので、
+候補は merge_aliases.py で data/aliases.ja.json にまとめる（その前に出典を見て確かめる）。書き出しは追記なので、
 止めても続きから調べられる（調べ終えた参照は飛ばす）。
 
 usage: uv run aliases_research.py GLOSSARY_JSON [--only REF,REF] [--limit N]
-  GLOSSARY_JSON  アプリのデータディレクトリの assets/v6/{clientVersion}/glossary.json
-  出力           results/aliases-candidates.ja.json
+  GLOSSARY_JSON  アプリのデータディレクトリの assets/v7/{clientVersion}/glossary.json
+  出力           results/aliases/research.output.json
 """
 
 import argparse
@@ -22,7 +22,7 @@ import anthropic
 MODEL = "claude-opus-5-5"
 # 1 回の問い合わせで調べる用語の数（検索が多くなりすぎない大きさ）
 PER_REQUEST = 8
-OUT = Path(__file__).parent / "results" / "aliases-candidates.ja.json"
+OUT = Path(__file__).parent / "results" / "aliases" / "research.output.json"
 
 SYSTEM = """You are researching how Japanese players of Valve's game Deadlock actually say game terms out loud, \
 for a live-caption tool that turns spoken nicknames into the official term.
