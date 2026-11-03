@@ -8,9 +8,6 @@
   --color-line: #2c281f;
   --color-muted: #a39c8c;
   --color-gold: #ffd34d;
-  --color-sky: #8fd8ff;
-  /* アイテム（スピリット）。アプリの EntityRef.svelte と同じ色 */
-  --color-spirit: #cfa2ff;
 }
 
 html {
@@ -27,35 +24,42 @@ h3 {
   text-wrap: balance;
 }
 
-/* 見本を置く舞台（ゲーム画面の暗い背景の代わり） */
+/* 見本の拡大図の台 */
 .stage {
   border: 1px solid var(--color-line);
   border-radius: 1rem;
   background: radial-gradient(ellipse at top, #3a3320, #121009);
 }
 
-/* 字幕の見本。アプリのオーバーレイと同じく縁取りで読ませる */
-.caption {
-  font-weight: 700;
-  word-break: auto-phrase;
-  -webkit-text-stroke: 0.08em #000;
-  paint-order: stroke fill;
+/* 配信画面の見本で、オーバーレイを囲む枠と名札 */
+.frame {
+  position: absolute;
+  border: 2px solid #ff4d4d;
+  border-radius: 6px;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.5);
 }
-/* 名前の前のアイコン（アプリの EntityRef.svelte と同じ置き方） */
-.caption .entity {
+/* 名札の位置（top/bottom は枠の外の上・下、start/end は左揃え・右揃え）。画面の端で切れない側を選ぶ */
+.frame-label {
+  position: absolute;
+  padding: 1px 8px;
+  border-radius: 4px;
+  background: #ff4d4d;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
   white-space: nowrap;
 }
-.caption .icon {
-  display: inline;
-  height: 1.1em;
-  /* 読み込み前から正方形の場所を取る（文字がずれない） */
-  aspect-ratio: 1;
-  margin: 0 0.16em 0 0.2em;
-  vertical-align: -0.18em;
-  border-radius: 0.18em;
-  filter: drop-shadow(0 0 0.06em rgb(0 0 0 / 0.9));
+.frame-label[class*="top-"] {
+  bottom: 100%;
+  margin-bottom: 4px;
 }
-.caption rt {
-  font-size: 0.45em;
-  font-weight: 600;
+.frame-label[class*="bottom-"] {
+  top: 100%;
+  margin-top: 4px;
+}
+.frame-label[class*="-start"] {
+  left: -2px;
+}
+.frame-label[class*="-end"] {
+  right: -2px;
 }
