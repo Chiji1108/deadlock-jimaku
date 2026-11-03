@@ -44,8 +44,9 @@
 <style>
   /* 種類ごとの色。アイテムはゲーム内と同じくスロット（武器 / バイタリティ / スピリット）で分ける。
      ヒーローは武器のオレンジと見分けやすいピンク */
+  /* 種類の分からない用語（辞書を読む前など）は、どれかの種類に見えないよう文字の色のまま */
   .entity {
-    color: var(--entity-color, #ff7ab6);
+    color: var(--entity-color, inherit);
     white-space: nowrap;
   }
   .hero {
