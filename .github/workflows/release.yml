@@ -44,7 +44,12 @@ jobs:
       - name: 自動更新の情報を作る
         run: |
           url="https://github.com/$GITHUB_REPOSITORY/releases/download/$GITHUB_REF_NAME"
-          entry() { jq -n --arg url "$url/$1" --arg sig "$(cat "$(find dist -name "$1.sig")")" '{url: $url, signature: $sig}'; }
+          # ファイルか署名が見つからなければ止める（$(...) の中では set -e が効かないので exit で抜ける）
+          entry() {
+            file=$(find dist -name "$1"); sig=$(find dist -name "$1.sig")
+            [ -s "$file" ] && [ -s "$sig" ] || { echo "$1 か $1.sig がない" >&2; exit 1; }
+            jq -n --arg url "$url/$1" --arg sig "$(cat "$sig")" '{url: $url, signature: $sig}'
+          }
           mac=$(entry deadlock-jimaku_universal.app.tar.gz)
           win=$(entry deadlock-jimaku_x64-setup.exe)
           linux=$(entry deadlock-jimaku_amd64.AppImage)

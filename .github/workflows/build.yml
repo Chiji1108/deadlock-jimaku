@@ -73,7 +73,7 @@ jobs:
         run: frontend/node_modules/.bin/tauri build ${{ matrix.args }}
       # リリースのとき: 自動更新のファイル（署名つき）も作る。Mac は Developer ID で署名して公証する
       # （証明書は Tauri が一時的なキーチェーンに読み込み、App Store Connect の API キーで公証する）。
-      # 鍵はこの手順にだけ渡す
+      # 鍵はこの手順にだけ渡す（Apple の鍵は Mac にだけ）
       - name: 署名して作る
         if: ${{ inputs.sign }}
         run: |
@@ -98,11 +98,11 @@ jobs:
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
-          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
-          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+          APPLE_CERTIFICATE: ${{ runner.os == 'macOS' && secrets.APPLE_CERTIFICATE || '' }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ runner.os == 'macOS' && secrets.APPLE_CERTIFICATE_PASSWORD || '' }}
+          APPLE_API_ISSUER: ${{ runner.os == 'macOS' && secrets.APPLE_API_ISSUER || '' }}
+          APPLE_API_KEY: ${{ runner.os == 'macOS' && secrets.APPLE_API_KEY || '' }}
+          APPLE_API_KEY_P8: ${{ runner.os == 'macOS' && secrets.APPLE_API_KEY_P8 || '' }}
       # インストーラーのファイル名は productName（デドロ字幕）から付く。GitHub のリリースは日本語のファイル名を
       # 書き換えるので、英数字にする（Linux は tauri.linux.conf.json で英数字の名前にしてある）
       - name: ファイル名を英数字にし、版の番号を外す

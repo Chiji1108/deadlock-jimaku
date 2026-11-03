@@ -66,7 +66,7 @@ fn main() {
         .expect("error while running tauri application");
 }
 
-/// 新しい版があれば聞いて、入れ替えて再起動する（DESIGN.md 14 章）。
+/// 新しい版があれば聞いて、入れ替えて再起動する（DESIGN.md 13.5）。
 /// 更新情報は GitHub の最新のリリースの latest.json で、署名を公開鍵（tauri.conf.json）で確かめる
 async fn update(app: AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     let Some(update) = app.updater()?.check().await? else {
@@ -80,6 +80,8 @@ async fn update(app: AppHandle) -> Result<(), Box<dyn std::error::Error>> {
             update.version, update.current_version
         ))
         .title("デドロ字幕の更新")
+        // 操作パネルの前に出す（親がないと、Windows ではウィンドウの裏に隠れることがある）
+        .parent(&app.get_webview_window("main").ok_or("no main window")?)
         .buttons(MessageDialogButtons::OkCancelCustom(
             "更新する".into(),
             "あとで".into(),
