@@ -458,7 +458,7 @@ fn kind_label(kind: EntityKind) -> &'static str {
 /// 辞書の名前と略称を最長一致で探す
 #[derive(Default)]
 struct Matcher {
-    /// 先頭の文字（小文字にしたもの） → (語の文字列, 参照)。長い順
+    /// 先頭の文字（`fold` で揃えたもの） → (揃えた語の文字列, 参照)。長い順
     by_first: HashMap<char, Vec<(Vec<char>, String)>>,
     /// (ヒーローの参照, 何番目のスキルか) → スキルの参照
     abilities: HashMap<(String, u8), String>,
@@ -471,27 +471,31 @@ impl Matcher {
     const MIN_CHARS: usize = 2;
 
     fn new(glossary: &Glossary, lang: &str) -> Self {
-        let key = |term: &str| -> Vec<char> { fold(&term.chars().collect::<Vec<_>>()) };
         // 表記 → 参照。公式名が先に決まり、別名は公式名を上書きしない。
         // 複数のエンティティが同じ表記を持つときは、公式名なら先に見つけたもの、別名なら
         // どれとも決められないので使わない（None）
         let mut terms: HashMap<Vec<char>, Option<&String>> = HashMap::new();
         for (reference, entity) in &glossary.entities {
             if let Some(name) = entity.names.get(lang) {
-                terms.entry(key(name)).or_insert(Some(reference));
+                let found = *terms.entry(fold(name)).or_insert(Some(reference));
+                // 書き方を揃えたら別の用語の公式名と同じになった（先に見つけたものを使う）
+                if found != Some(reference) {
+                    tracing::warn!("name {name} is spelled like another term's name");
+                }
             }
         }
         let names: HashSet<Vec<char>> = terms.keys().cloned().collect();
         for (reference, entity) in &glossary.entities {
             for alias in entity.aliases.get(lang).into_iter().flatten() {
-                let chars = key(alias);
+                let chars = fold(alias);
                 if names.contains(&chars) {
                     continue;
                 }
                 terms
                     .entry(chars)
                     .and_modify(|r| {
-                        if *r != Some(reference) {
+                        if r.is_some_and(|r| r != reference) {
+                            tracing::warn!("alias {alias} belongs to several terms; not used");
                             *r = None;
                         }
                     })
@@ -500,10 +504,6 @@ impl Matcher {
         }
         let mut by_first: HashMap<char, Vec<(Vec<char>, String)>> = HashMap::new();
         for (chars, reference) in terms {
-            if reference.is_none() {
-                let alias: String = chars.iter().collect();
-                tracing::warn!("alias {alias} belongs to several terms; not used");
-            }
             if let Some(reference) = reference
                 && chars.len() >= Self::MIN_CHARS
             {
@@ -539,7 +539,7 @@ impl Matcher {
 
     fn split(&self, text: &str) -> Vec<Span> {
         let original: Vec<char> = text.chars().collect();
-        let chars = fold(&original);
+        let chars = fold(text);
         let mut spans = Vec::new();
         let mut buf = String::new();
         let mut i = 0;
@@ -547,7 +547,7 @@ impl Matcher {
             let found = self.by_first.get(&chars[i]).and_then(|terms| {
                 terms.iter().find(|(term, reference)| {
                     Self::matches_at(&chars, i, term)
-                        || self.hero_before_slot(text, i, term, reference)
+                        || self.hero_before_slot(text, &chars, i, term, reference)
                 })
             });
             match found {
@@ -575,11 +575,18 @@ impl Matcher {
 
     /// 「ヘイズウルト」のように「の」なしでスキルの番号が続くと、カタカナどうしがつながって
     /// ヒーロー名と見なせない（`matches_at`）ので、続きがスキルの番号なら認める
-    fn hero_before_slot(&self, text: &str, i: usize, term: &[char], reference: &str) -> bool {
+    /// `chars` は `text` を `fold` したもの
+    fn hero_before_slot(
+        &self,
+        text: &str,
+        chars: &[char],
+        i: usize,
+        term: &[char],
+        reference: &str,
+    ) -> bool {
         if !self.heroes.contains(reference) {
             return false;
         }
-        let chars = fold(&text.chars().collect::<Vec<_>>());
         let joined_before = i
             .checked_sub(1)
             .is_some_and(|j| is_katakana(chars[j]) && is_katakana(term[0]));
@@ -655,8 +662,10 @@ fn lower(c: char) -> char {
 
 /// 照合のために、書き方の揺れを揃える（大文字小文字、カタカナの伸ばし方と書き分け）。
 /// 音声認識や別名の書き方が公式名と少し違っても同じ用語にする（ページ → ペイジ、リコシェット → リコチェット）。
-/// 文字数は変えない（元の文字列の同じ位置を切り出す）
-fn fold(chars: &[char]) -> Vec<char> {
+/// 文字数は変えない（元の文字列の同じ位置を切り出す）。イ・ウは前の文字で決まるので、語の先頭の
+/// イ・ウは文の中ではカタカナの後ろだと揃い方が変わるが、そこはカタカナの語の途中なので元から一致させない
+fn fold(text: &str) -> Vec<char> {
+    let chars: Vec<char> = text.chars().collect();
     chars
         .iter()
         .enumerate()
@@ -1088,6 +1097,25 @@ mod tests {
         );
         // 揃えても、カタカナの語の一部では一致させない
         assert_eq!(m.split("ページング"), [Span::Text("ページング".into())]);
+    }
+
+    #[test]
+    fn aliases_that_fold_to_the_same_spelling_are_not_used() {
+        let g: Glossary = serde_json::from_value(json!({
+            "clientVersion": 1, "languages": ["ja"],
+            "entities": {
+                "item:1": { "kind": "item", "className": "a", "names": { "ja": "アイテムA" },
+                            "aliases": { "ja": ["リコシェット"] } },
+                "item:2": { "kind": "item", "className": "b", "names": { "ja": "アイテムB" },
+                            "aliases": { "ja": ["リコチェット"] } },
+            }
+        }))
+        .unwrap();
+        // 書き方を揃えると同じになるので、どちらとも決められない
+        assert_eq!(
+            Matcher::new(&g, "ja").split("リコシェット"),
+            [Span::Text("リコシェット".into())]
+        );
     }
 
     #[test]
