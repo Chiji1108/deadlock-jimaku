@@ -38,9 +38,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Apple シリコンと Intel の両方で動く 1 つのアプリにする
+          # Apple シリコンと Intel の両方で動く 1 つのアプリにする。自動更新のファイル（.app.tar.gz）はアプリの包み（app）から作る
           - os: macos-latest
-            args: --target universal-apple-darwin --bundles dmg
+            args: --target universal-apple-darwin --bundles app,dmg
             rust-targets: aarch64-apple-darwin x86_64-apple-darwin
             bundle: target/universal-apple-darwin/release/bundle
           - os: windows-latest
