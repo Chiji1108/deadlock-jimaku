@@ -37,11 +37,20 @@
       "deb": {
         "depends": [
           "libasound2t64 | libasound2"
+        ],
+        "replaces": [
+          "dedoro-jimaku"
+        ],
+        "conflicts": [
+          "dedoro-jimaku"
         ]
       },
       "rpm": {
         "depends": [
           "alsa-lib"
+        ],
+        "obsoletes": [
+          "dedoro-jimaku"
         ]
       }
     }
