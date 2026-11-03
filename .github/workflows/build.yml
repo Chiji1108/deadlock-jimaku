@@ -1,0 +1,64 @@
+# Mac・Windows・Linux のインストーラーを作り、Actions の成果物に置く。
+# PR と main で壊れていないかを確かめ（main のキャッシュはタグのビルドでも使える）、リリースでは release.yml から呼ぶ
+name: build
+
+on:
+  pull_request:
+    paths-ignore: ["**.md", "experiments/**"]
+  push:
+    branches: [main]
+    paths-ignore: ["**.md", "experiments/**"]
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Apple シリコンと Intel の両方で動く 1 つのアプリにする
+          - os: macos-latest
+            args: --target universal-apple-darwin --bundles dmg
+            rust-targets: aarch64-apple-darwin x86_64-apple-darwin
+            bundle: target/universal-apple-darwin/release/bundle
+          - os: windows-latest
+            args: --bundles nsis
+            bundle: target/release/bundle
+          # 古い glibc で作ると、新しいディストリビューションでも動く
+          - os: ubuntu-22.04
+            args: --bundles deb,rpm,appimage
+            bundle: target/release/bundle
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - name: Linux のビルドに要るライブラリ（Tauri の WebView とマイク）
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev libasound2-dev patchelf
+      - uses: jdx/mise-action@v2
+        with:
+          install_args: rust node pnpm
+      - if: matrix.rust-targets
+        run: rustup target add ${{ matrix.rust-targets }}
+      - uses: Swatinem/rust-cache@v2
+      - run: pnpm --dir frontend install --frozen-lockfile
+      # Tauri の CLI はリポジトリのルートから動かす（app/tauri.conf.json を探す）
+      - run: frontend/node_modules/.bin/tauri build ${{ matrix.args }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installers-${{ runner.os }}
+          if-no-files-found: error
+          path: |
+            ${{ matrix.bundle }}/dmg/*.dmg
+            ${{ matrix.bundle }}/nsis/*.exe
+            ${{ matrix.bundle }}/deb/*.deb
+            ${{ matrix.bundle }}/rpm/*.rpm
+            ${{ matrix.bundle }}/appimage/*.AppImage

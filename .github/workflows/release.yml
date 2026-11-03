@@ -1,0 +1,42 @@
+# v から始まるタグ（例: v0.1.0、プレリリースは v0.2.0-rc.1）を push すると、3 つの OS のインストーラーを作り、
+# 下書きのリリースに載せる。中身を確かめてから GitHub で公開する
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    uses: ./.github/workflows/build.yml
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: タグと Cargo の版が同じか確かめる
+        run: |
+          version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
+          test "v$version" = "$GITHUB_REF_NAME" || { echo "Cargo.toml は $version、タグは $GITHUB_REF_NAME"; exit 1; }
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: installers-*
+          path: dist
+          merge-multiple: true
+      # やり直したときは、作ってある下書きのファイルを置き換える
+      - name: 下書きのリリースに載せる
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" dist/* --clobber
+          else
+            prerelease=$([[ "$GITHUB_REF_NAME" == *-* ]] && echo --prerelease || true)
+            gh release create "$GITHUB_REF_NAME" dist/* --draft $prerelease --title "$GITHUB_REF_NAME" --generate-notes
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
