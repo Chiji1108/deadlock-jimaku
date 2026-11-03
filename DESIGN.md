@@ -582,7 +582,7 @@ URL: `/overlay/subtitles`（**パラメータはない**。OBS に一度貼れ�
 | `fontSize` | 話した言葉の文字の大きさ（px。16〜96） | `40` |
 | `translationFontSize` | 翻訳の文字の大きさ（px。16〜96） | `26` |
 | `textColor` | 確定した字幕の文字色（`#rrggbb`） | `#ffffff` |
-| `heroColor` | ヒーロー名の色（ゲームに決まった色がないので選べる） | `#ffd34d` |
+| `heroColor` | ヒーロー名の色（ゲームに決まった色がないので選べる。武器のアイテムのオレンジと見分けやすいピンク） | `#ff7ab6` |
 | `abilityColor` | スキル名の色 | `#8fd8ff` |
 | `background` | 文字の後ろ（`outline` = 縁取りだけ / `band` = 行ごとに半透明の黒い帯。明るい場面でも読める） | `outline` |
 | `maxLines` | 同時に出す字幕の数（1〜5） | `3` |

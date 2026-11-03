@@ -112,7 +112,7 @@ impl Default for SubtitleDisplay {
             font_size: 40,
             translation_font_size: 26,
             text_color: "#ffffff".into(),
-            hero_color: "#ffd34d".into(),
+            hero_color: "#ff7ab6".into(),
             ability_color: "#8fd8ff".into(),
             background: Background::Outline,
             max_lines: 3,
@@ -966,7 +966,7 @@ mod tests {
         let next = s
             .apply(SettingsPatch {
                 subtitle_display: Some(SubtitleDisplayPatch {
-                    hero_color: Some("#FF7AB6".into()),
+                    hero_color: Some("#B48CFF".into()),
                     ability_color: Some("#00AAFF".into()),
                     background: Some(Background::Band),
                     ..Default::default()
@@ -977,7 +977,7 @@ mod tests {
         let d = &next.subtitle_display;
         assert_eq!(
             (d.hero_color.as_str(), d.ability_color.as_str()),
-            ("#ff7ab6", "#00aaff")
+            ("#b48cff", "#00aaff")
         );
         assert_eq!(d.background, Background::Band);
         for bad in [
