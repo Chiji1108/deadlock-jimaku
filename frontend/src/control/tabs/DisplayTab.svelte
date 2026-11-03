@@ -11,7 +11,7 @@
   import type { Align } from "../../generated/Align";
   import type { Background } from "../../generated/Background";
   import type { SubtitleDisplayPatch } from "../../generated/SubtitleDisplayPatch";
-  import CopyUrl from "../parts/CopyUrl.svelte";
+  import AddToObs from "../parts/AddToObs.svelte";
   import OverlayPreview from "../parts/OverlayPreview.svelte";
   import DisplayDetailsDialog from "../parts/DisplayDetailsDialog.svelte";
   import { SUBTITLE_SIZE } from "../../lib/overlay-size";
@@ -189,14 +189,11 @@
     <Card.Header>
       <Card.Title>OBS に追加する</Card.Title>
       <Card.Description>
-        ソースの「＋」→「ブラウザ」で、この URL を貼り付け、幅 {SUBTITLE_SIZE[0]}・高さ
-        {SUBTITLE_SIZE[1]} にして好きな位置に置いてください。字幕は箱の下から積み上がり、箱の幅で折り返します。
-        大きさを変えるときは、ソースを引き伸ばさずにプロパティの幅と高さを変えてください（引き伸ばすと文字ごと伸びます）。
-        一度追加すれば、見せ方を変えても貼り直す必要はありません
+        字幕は箱の下から積み上がり、箱の幅で折り返します。大きさを変えるときは、ソースを引き伸ばさずにプロパティの幅と高さを変えてください（引き伸ばすと文字ごと伸びます）。一度追加すれば、見せ方を変えても貼り直す必要はありません
       </Card.Description>
     </Card.Header>
     <Card.Content>
-      <CopyUrl url={overlayUrl("subtitles")} />
+      <AddToObs url={overlayUrl("subtitles")} name="字幕" size={SUBTITLE_SIZE} />
     </Card.Content>
   </Card.Root>
 </div>

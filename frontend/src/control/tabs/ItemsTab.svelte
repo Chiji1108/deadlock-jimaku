@@ -5,7 +5,7 @@
   import * as Field from "$lib/components/ui/field";
   import * as Select from "$lib/components/ui/select";
   import * as ToggleGroup from "$lib/components/ui/toggle-group";
-  import CopyUrl from "../parts/CopyUrl.svelte";
+  import AddToObs from "../parts/AddToObs.svelte";
   import ItemHoldDialog from "../parts/ItemHoldDialog.svelte";
   import OverlayPreview from "../parts/OverlayPreview.svelte";
   import { ITEMS_SIZE } from "../../lib/overlay-size";
@@ -97,12 +97,11 @@
     <Card.Header>
       <Card.Title>OBS に追加する</Card.Title>
       <Card.Description>
-        ソースの「＋」→「ブラウザ」で、この URL を貼り付け、幅 {ITEMS_SIZE[0]}・高さ
-        {ITEMS_SIZE[1]} にして好きな位置に置いてください。カードは箱の左上から出ます。大きさを変えるときは、ソースを引き伸ばさずにプロパティの幅と高さを同じ割合で変えてください。カードがくっきりしたまま大きくなります
+        カードは箱の左上から出ます。大きさを変えるときは、ソースを引き伸ばさずにプロパティの幅と高さを同じ割合で変えてください。カードがくっきりしたまま大きくなります
       </Card.Description>
     </Card.Header>
     <Card.Content>
-      <CopyUrl url={overlayUrl("items")} />
+      <AddToObs url={overlayUrl("items")} name="アイテム説明" size={ITEMS_SIZE} />
     </Card.Content>
   </Card.Root>
 </div>
