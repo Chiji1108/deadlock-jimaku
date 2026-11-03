@@ -11,6 +11,7 @@ use tokio::sync::{broadcast, watch};
 use crate::assets::Loaded;
 use crate::settings::{self, Settings, SettingsPatch};
 use crate::types::{ItemCardsView, RankState, Segment, ServerMsg, Stage};
+use crate::usage::Meter;
 
 /// snapshot で送る直近の Segment の数
 const KEEP_SEGMENTS: usize = 50;
@@ -34,6 +35,7 @@ pub struct Store {
     /// マイクの入力レベル（dBFS）。1 秒に 10 回届くので、字幕などと同じ broadcast には流さない
     /// （購読していないオーバーレイを起こさず、取りこぼしの原因にもしない）
     level: watch::Sender<f32>,
+    meter: Arc<Meter>,
 }
 
 impl Store {
@@ -51,6 +53,7 @@ impl Store {
                 )
             }
         };
+        let meter = Arc::new(Meter::new(data_dir.join("usage.json")));
         Arc::new(Self {
             settings: watch::Sender::new(settings),
             data_dir,
@@ -62,6 +65,7 @@ impl Store {
             rank_image: Mutex::new(None),
             tx: broadcast::channel(256).0,
             level: watch::Sender::new(f32::NEG_INFINITY),
+            meter,
         })
     }
 
@@ -166,7 +170,15 @@ impl Store {
             error: self.transcription_error(),
         });
         msgs.push(display(&self.settings()));
+        msgs.push(ServerMsg::Usage {
+            usage: self.meter.watch().borrow().clone(),
+        });
         msgs
+    }
+
+    /// OpenAI の使用量を数える
+    pub fn meter(&self) -> Arc<Meter> {
+        self.meter.clone()
     }
 
     pub fn send_level(&self, db: f32) {

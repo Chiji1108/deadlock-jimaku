@@ -18,6 +18,7 @@ use crate::furigana;
 use crate::lang;
 use crate::llm;
 use crate::types::{Enriched, EntityKind, Glossary, LangCode, RubySegment, Token};
+use crate::usage::{Meter, Use};
 
 const TIMEOUT: Duration = Duration::from_secs(8);
 
@@ -33,6 +34,7 @@ pub struct Enricher {
     targets: Vec<LangCode>,
     /// 固定の先頭部分（プロンプトキャッシュが効く）
     system: String,
+    meter: Arc<Meter>,
     /// 辞書の版ごとに作り直す（辞書が後から届いたり、作り直されたりする）
     matcher: Mutex<Option<(u32, Arc<Matcher>)>>,
 }
@@ -45,6 +47,7 @@ impl Enricher {
         reasoning_effort: Option<String>,
         source_lang: LangCode,
         targets: Vec<LangCode>,
+        meter: Arc<Meter>,
     ) -> Self {
         let targets = lang::normalize(targets.into_iter().filter(|t| *t != source_lang));
         Self {
@@ -57,6 +60,7 @@ impl Enricher {
             source_lang,
             targets,
             matcher: Mutex::new(None),
+            meter,
         }
     }
 
@@ -106,6 +110,7 @@ impl Enricher {
             api_key: &self.api_key,
             model: &self.readings_model,
             reasoning_effort: self.reasoning_effort.as_deref(),
+            meter: &self.meter,
         };
         furigana::ask(&self.http, &model, text, context)
             .await
@@ -149,6 +154,8 @@ impl Enricher {
                 schema_name: "translation",
                 schema: self.schema(),
                 timeout: TIMEOUT,
+                meter: &self.meter,
+                purpose: Use::Translate,
             },
         )
         .await?;
@@ -868,6 +875,8 @@ mod tests {
             None,
             "ja".into(),
             targets.iter().map(|t| (*t).to_owned()).collect(),
+            // 保存しない（persist を動かさない）ので、ファイルは作られない
+            Arc::new(Meter::new("usage.json".into())),
         )
     }
 

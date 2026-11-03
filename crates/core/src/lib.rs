@@ -15,8 +15,9 @@ pub mod store;
 pub mod stt;
 pub mod subtitles;
 pub mod types;
+pub mod usage;
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -50,4 +51,14 @@ pub fn now_ms() -> u64 {
         .duration_since(UNIX_EPOCH)
         .expect("clock after 1970")
         .as_millis() as u64
+}
+
+/// 途中で止まっても壊れたファイルが残らないよう、一時ファイルに書いてから置き換える
+pub async fn write_atomic(path: &Path, bytes: &[u8]) -> anyhow::Result<()> {
+    tokio::fs::create_dir_all(path.parent().expect("has parent")).await?;
+    let mut tmp = path.as_os_str().to_owned();
+    tmp.push(".tmp");
+    tokio::fs::write(&tmp, bytes).await?;
+    tokio::fs::rename(&tmp, path).await?;
+    Ok(())
 }

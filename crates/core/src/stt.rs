@@ -5,6 +5,7 @@
 //! item と発話の対応は 1 つの接続の中だけで持つ（張り直したら作り直す）。
 
 use std::collections::{HashMap, VecDeque};
+use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{Context, bail};
@@ -15,6 +16,7 @@ use tokio::sync::mpsc;
 use tokio_tungstenite::tungstenite::{Message, client::IntoClientRequest, http::HeaderValue};
 
 use crate::audio::{SAMPLE_RATE, to_i16};
+use crate::usage::{Meter, Use};
 
 const REALTIME_URL: &str = "wss://api.openai.com/v1/realtime?intent=transcription";
 const BATCH_URL: &str = "https://api.openai.com/v1/audio/transcriptions";
@@ -44,6 +46,8 @@ pub struct RealtimeConfig {
     pub model: String,
     /// `minimal` / `low` / `medium` / `high` / `xhigh`（低いほど早く、高いほど正確）
     pub delay: String,
+    /// 送った音声の長さを数える
+    pub meter: Arc<Meter>,
 }
 
 /// リアルタイムに送るもの。同じチャンネルで送り、順番を保つ
@@ -172,18 +176,18 @@ pub async fn realtime(
                     if speaking.current.is_some() {
                         buffered += push(&mut upsampler, &mut pcm, &chunk);
                         if pcm.len() >= APPEND_SAMPLES * 2 {
-                            sink.send(append(&mut pcm)).await?;
+                            sink.send(append(cfg, &mut pcm)).await?;
                         }
                     } else {
                         speaking.remember(&chunk);
                     }
                 }
                 Some(Input::Close) => {
-                    close(&mut sink, speaking, &mut items, &mut pcm, buffered).await?;
+                    close(cfg, &mut sink, speaking, &mut items, &mut pcm, buffered).await?;
                     buffered = 0;
                 }
                 None => {
-                    close(&mut sink, speaking, &mut items, &mut pcm, buffered).await?;
+                    close(cfg, &mut sink, speaking, &mut items, &mut pcm, buffered).await?;
                     return Ok(());
                 }
             },
@@ -269,6 +273,7 @@ async fn connect(cfg: &RealtimeConfig, hints: &Hints) -> anyhow::Result<(Sink, S
 
 /// 今の発話を閉じる。短すぎれば commit せず、サーバーに溜まった音声を消す（次の発話に混ぜない）
 async fn close(
+    cfg: &RealtimeConfig,
     sink: &mut Sink,
     speaking: &mut Speaking,
     items: &mut Items,
@@ -279,7 +284,7 @@ async fn close(
         return Ok(());
     };
     if !pcm.is_empty() {
-        sink.send(append(pcm)).await?;
+        sink.send(append(cfg, pcm)).await?;
     }
     if buffered >= MIN_COMMIT_SAMPLES {
         items.committing.push_back(segment.clone());
@@ -343,8 +348,15 @@ impl Upsampler {
     }
 }
 
-/// 溜めた PCM を input_audio_buffer.append にして空にする
-fn append(pcm: &mut Vec<u8>) -> Message {
+/// 溜めた PCM を input_audio_buffer.append にして空にする。送った長さを数える
+/// （commit しなくても、送った音声には料金がかかる）
+fn append(cfg: &RealtimeConfig, pcm: &mut Vec<u8>) -> Message {
+    let samples = pcm.len() / 2;
+    cfg.meter.audio(
+        Use::Realtime,
+        &cfg.model,
+        samples as f64 / f64::from(REALTIME_RATE),
+    );
     let audio = base64::engine::general_purpose::STANDARD.encode(&*pcm);
     pcm.clear();
     Message::text(json!({ "type": "input_audio_buffer.append", "audio": audio }).to_string())
@@ -368,6 +380,9 @@ pub struct BatchRequest<'a> {
     pub model: &'a str,
     pub hints: &'a Hints,
     pub wav: Vec<u8>,
+    /// WAV の長さ（秒。料金を数える）
+    pub seconds: f64,
+    pub meter: &'a Meter,
 }
 
 /// 発話区間の WAV を文字起こしする
@@ -394,6 +409,7 @@ pub async fn transcribe(http: &reqwest::Client, req: BatchRequest<'_>) -> anyhow
         // 400 の理由は本文にしか書かれていない
         bail!("{status}: {}", res.text().await.unwrap_or_default());
     }
+    req.meter.audio(Use::Batch, req.model, req.seconds);
     let res: Value = res.json().await?;
     res["text"]
         .as_str()

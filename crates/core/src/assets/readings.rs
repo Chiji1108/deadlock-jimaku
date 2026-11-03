@@ -8,6 +8,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
+use std::sync::Arc;
 use std::time::Duration;
 
 use serde::Deserialize;
@@ -16,6 +17,7 @@ use serde_json::json;
 use crate::furigana;
 use crate::llm;
 use crate::types::{Glossary, RubySegment};
+use crate::usage::{Meter, Use};
 
 /// 35 語で 20 秒ほど
 const TIMEOUT: Duration = Duration::from_secs(120);
@@ -24,6 +26,7 @@ pub struct ReadingModel {
     pub api_key: String,
     pub model: String,
     pub reasoning_effort: Option<String>,
+    pub meter: Arc<Meter>,
 }
 
 /// 名前 → 読み
@@ -55,11 +58,7 @@ pub async fn load_cache(path: &Path) -> anyhow::Result<Cache> {
 }
 
 pub async fn save_cache(path: &Path, cache: &Cache) -> anyhow::Result<()> {
-    tokio::fs::create_dir_all(path.parent().expect("has parent")).await?;
-    let tmp = path.with_extension("json.tmp");
-    tokio::fs::write(&tmp, serde_json::to_vec_pretty(cache)?).await?;
-    tokio::fs::rename(&tmp, path).await?;
-    Ok(())
+    crate::write_atomic(path, &serde_json::to_vec_pretty(cache)?).await
 }
 
 /// その名前に使える手書きの読み（パッチで名前が変わっていたら使わない）
@@ -151,6 +150,8 @@ pub async fn ask(
             schema_name: "readings",
             schema,
             timeout: TIMEOUT,
+            meter: &model.meter,
+            purpose: Use::Readings,
         },
     )
     .await?;

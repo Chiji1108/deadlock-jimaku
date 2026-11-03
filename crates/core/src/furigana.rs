@@ -11,6 +11,7 @@ use serde_json::json;
 
 use crate::llm;
 use crate::types::RubySegment;
+use crate::usage::{Meter, Use};
 
 /// 1 文で 2〜3 秒。翻訳と同時に問い合わせる
 const TIMEOUT: Duration = Duration::from_secs(8);
@@ -25,6 +26,7 @@ pub struct Model<'a> {
     pub api_key: &'a str,
     pub model: &'a str,
     pub reasoning_effort: Option<&'a str>,
+    pub meter: &'a Meter,
 }
 
 /// 文のふりがな。`context` は直前の確定字幕（古い順）。答えが `check` に通らなければ None（ふりがなを付けない）
@@ -57,6 +59,8 @@ pub async fn ask(
             schema_name: "furigana",
             schema,
             timeout: TIMEOUT,
+            meter: model.meter,
+            purpose: Use::Furigana,
         },
     )
     .await?;

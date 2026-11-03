@@ -85,6 +85,8 @@ pub enum Topic {
     Display,
     /// マイクの入力レベル（操作パネル用。字幕を動かしている間だけ流れる）
     Level,
+    /// OpenAI の使用量と概算の料金（操作パネル用）
+    Usage,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
@@ -122,6 +124,8 @@ pub enum ServerMsg {
     /// 直近のピーク（dBFS）。1 秒に 10 回ほど
     #[serde(rename = "audio.level")]
     AudioLevel { db: f32 },
+    #[serde(rename = "usage")]
+    Usage { usage: crate::usage::UsageView },
 }
 
 impl ServerMsg {
@@ -133,6 +137,7 @@ impl ServerMsg {
             Self::TranscriptionStatus { .. } => Topic::Status,
             Self::Display { .. } => Topic::Display,
             Self::AudioLevel { .. } => Topic::Level,
+            Self::Usage { .. } => Topic::Usage,
         }
     }
 }
