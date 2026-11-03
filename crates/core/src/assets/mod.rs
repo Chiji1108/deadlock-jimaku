@@ -11,6 +11,7 @@ mod readings;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::Context;
 use futures_util::{StreamExt, future::try_join_all, stream};
@@ -32,6 +33,11 @@ const READINGS_PER_REQUEST: usize = 40;
 /// 同時にダウンロードするアイコンの数
 const ICON_CONCURRENCY: usize = 8;
 
+/// 別名を配るサーバー（DESIGN.md 17 章）。アプリの更新を待たずに別名を足せる
+const ALIASES_URL: &str = "https://api.deadlock.jp/obs/v1/aliases/ja";
+/// 辞書の読み込みと同時に取りに行く。届かなければ同梱の別名で始める（起動を待たせすぎない）
+const ALIASES_TIMEOUT: Duration = Duration::from_secs(3);
+
 #[derive(Clone)]
 pub struct Loaded {
     pub glossary: Arc<Glossary>,
@@ -52,7 +58,9 @@ impl Loaded {
 /// 足りない名前は配信した後に問い合わせて配信し直す（`openai_key` がなければ手書きとキャッシュの読みだけ）
 pub async fn load_into(store: Arc<Store>, root: PathBuf, openai_key: Option<String>) {
     let settings = store.settings();
-    let loaded = match load(&root, &settings.glossary_languages()).await {
+    let languages = settings.glossary_languages();
+    let (loaded, aliases) = tokio::join!(load(&root, &languages), aliases());
+    let loaded = match loaded {
         Ok(loaded) => loaded,
         Err(e) => {
             tracing::error!("glossary unavailable: {e:#}");
@@ -66,10 +74,6 @@ pub async fn load_into(store: Arc<Store>, root: PathBuf, openai_key: Option<Stri
             readings::Manual::new()
         }
     };
-    let aliases = bundled_aliases().unwrap_or_else(|e| {
-        tracing::warn!("{e:#}");
-        Aliases::new()
-    });
     let cache_path = root.join(LLM_READINGS);
     let cache = readings::load_cache(&cache_path).await;
     let publish = |cache: &readings::Cache| {
@@ -260,7 +264,30 @@ fn read_version(root: &Path, version: u32) -> Option<Loaded> {
     })
 }
 
-/// 同梱の別名。辞書には保存せず、配るたびに重ねる
+/// サーバーの別名。取れなければ同梱の別名。どちらも辞書には保存せず、配るたびに重ねる
+async fn aliases() -> Aliases {
+    let fetched = async {
+        let res = crate::http()
+            .get(ALIASES_URL)
+            .timeout(ALIASES_TIMEOUT)
+            .send()
+            .await?
+            .error_for_status()?;
+        anyhow::Ok(res.json::<Aliases>().await?)
+    };
+    match fetched.await {
+        Ok(aliases) => aliases,
+        Err(e) => {
+            tracing::warn!("aliases from server: {e:#}; using the bundled ones");
+            bundled_aliases().unwrap_or_else(|e| {
+                tracing::warn!("{e:#}");
+                Aliases::new()
+            })
+        }
+    }
+}
+
+/// アプリに同梱の別名（サーバーに届かないとき）
 fn bundled_aliases() -> anyhow::Result<Aliases> {
     serde_json::from_str(include_str!("../../../../data/aliases.ja.json"))
         .context("data/aliases.ja.json")
