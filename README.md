@@ -24,7 +24,7 @@ macOS 版は Apple の署名と公証を済ませています。Windows 版は�
 
 - **Windows**: 「Windows によって PC が保護されました」と出たら、「詳細情報」→「実行」
 - **macOS**: 初回にマイクの使用を許可する
-- **Linux**: API キーの保存に Secret Service（GNOME キーリングや KWallet）を使う。ない環境では環境変数 `OPENAI_API_KEY` で渡す
+- **Linux**: API キーの保存に Secret Service（GNOME キーリングや KWallet）を使う
 
 ## リリースの作り方
 
