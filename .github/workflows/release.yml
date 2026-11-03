@@ -12,6 +12,9 @@ permissions:
 jobs:
   build:
     uses: ./.github/workflows/build.yml
+    with:
+      sign: true
+    secrets: inherit
 
   release:
     needs: build

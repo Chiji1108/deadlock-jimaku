@@ -1,5 +1,6 @@
 # Mac・Windows・Linux のインストーラーを作り、Actions の成果物に置く。
-# PR と main で壊れていないかを確かめ（main のキャッシュはタグのビルドでも使える）、リリースでは release.yml から呼ぶ
+# PR と main で壊れていないかを確かめ（main のキャッシュはタグのビルドでも使える）、リリースでは release.yml から呼ぶ。
+# Mac はリリースのときだけ Developer ID で署名して公証する（数分かかる）。それ以外はアドホック署名
 name: build
 
 on:
@@ -10,6 +11,10 @@ on:
     paths-ignore: ["**.md", "experiments/**"]
   workflow_dispatch:
   workflow_call:
+    inputs:
+      sign:
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -38,6 +43,30 @@ jobs:
         shell: bash
     steps:
       - uses: actions/checkout@v4
+      - name: Mac の署名の準備
+        if: runner.os == 'macOS'
+        run: |
+          if [ "$SIGN" = true ]; then
+            # 証明書は Tauri が一時的なキーチェーンに読み込む。公証には App Store Connect の API キーを使う
+            printf '%s' "$APPLE_API_KEY_P8" > "$RUNNER_TEMP/AuthKey.p8"
+            {
+              echo "APPLE_SIGNING_IDENTITY=Developer ID Application"
+              echo "APPLE_CERTIFICATE=$APPLE_CERTIFICATE"
+              echo "APPLE_CERTIFICATE_PASSWORD=$APPLE_CERTIFICATE_PASSWORD"
+              echo "APPLE_API_ISSUER=$APPLE_API_ISSUER"
+              echo "APPLE_API_KEY=$APPLE_API_KEY"
+              echo "APPLE_API_KEY_PATH=$RUNNER_TEMP/AuthKey.p8"
+            } >> "$GITHUB_ENV"
+          else
+            echo "APPLE_SIGNING_IDENTITY=-" >> "$GITHUB_ENV"
+          fi
+        env:
+          SIGN: ${{ inputs.sign }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
       - name: Linux のビルドに要るライブラリ（Tauri の WebView とマイク）
         if: runner.os == 'Linux'
         run: |

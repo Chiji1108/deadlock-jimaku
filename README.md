@@ -20,15 +20,25 @@ Deadlock の配信者向けの OBS オーバーレイ。
 | macOS 11 以降（Apple シリコン・Intel） | `..._universal.dmg` |
 | Linux | `.AppImage`（どのディストリビューションでも）、`.deb`（Ubuntu など）、`.rpm`（Fedora など） |
 
-まだコード署名をしていないので、初回は OS の警告が出ます。
+macOS 版は Apple の署名と公証を済ませています。Windows 版はまだコード署名をしていないので、初回は警告が出ます。
 
 - **Windows**: 「Windows によって PC が保護されました」と出たら、「詳細情報」→「実行」
-- **macOS**: 開けないと出たら、「システム設定」→「プライバシーとセキュリティ」の下にある「このまま開く」。初回にマイクの使用を許可する。署名していないので、更新するたびにマイクの許可と、キーチェーン（保存した API キー）へのアクセスの許可を聞き直される
+- **macOS**: 初回にマイクの使用を許可する
 - **Linux**: API キーの保存に Secret Service（GNOME キーリングや KWallet）を使う。ない環境では環境変数 `OPENAI_API_KEY` で渡す
 
 ## リリースの作り方
 
 `Cargo.toml` の `version` を上げてコミットし、同じ版のタグ（例: `v0.2.0`。`-` の付いた `v0.2.0-rc.1` はプレリリース）を push すると、GitHub Actions が 3 つの OS のインストーラーを作って下書きのリリースに載せます（`.github/workflows/release.yml`）。中身を確かめてから GitHub で公開します。PR と main でも同じビルドが走り（`build.yml`）、作ったインストーラーは Actions の成果物から落とせます。
+
+macOS 版の署名と公証には、リポジトリの Actions の Secrets に次を入れておきます（リリースのときだけ使い、PR と main ではアドホック署名）。
+
+| Secret | 中身 |
+|---|---|
+| `APPLE_CERTIFICATE` | Developer ID Application 証明書の `.p12` を base64 にしたもの |
+| `APPLE_CERTIFICATE_PASSWORD` | `.p12` を書き出したときのパスワード |
+| `APPLE_API_ISSUER` | App Store Connect の API キーの Issuer ID |
+| `APPLE_API_KEY` | 同じく Key ID |
+| `APPLE_API_KEY_P8` | 同じく `.p8` ファイルの中身 |
 
 ## 開発
 
