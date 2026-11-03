@@ -36,11 +36,16 @@ def load_pcm(path: Path) -> bytes:
     ).stdout
 
 
-def load_keywords() -> list[str]:
-    """アプリの辞書（最新の版）から、日本語の公式名と別名"""
+def load_glossary() -> dict:
+    """アプリの辞書（最新の形式・版）のエンティティ"""
     root = Path.home() / "Library/Application Support/dev.deadlock-stream-overlays.app/assets"
-    path = max(root.glob("v*/*/glossary.json"), key=lambda p: (p.parent.parent.name, int(p.parent.name)))
-    entities = json.loads(path.read_text())["entities"]
+    path = max(root.glob("v*/*/glossary.json"), key=lambda p: (int(p.parent.parent.name[1:]), int(p.parent.name)))
+    return json.loads(path.read_text())["entities"]
+
+
+def load_keywords() -> list[str]:
+    """アプリの辞書から、日本語の公式名と別名"""
+    entities = load_glossary()
     aliases = json.loads((Path(__file__).parent.parent / "data" / "aliases.ja.json").read_text())
     words = [e["names"]["ja"] for e in entities.values() if e["names"].get("ja")]
     words += [a for xs in aliases.values() for a in xs]
