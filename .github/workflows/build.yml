@@ -101,6 +101,10 @@ jobs:
           for f in ${{ matrix.bundle }}/dmg/*.dmg ${{ matrix.bundle }}/nsis/*.exe; do
             mv "$f" "${f/デドロ字幕/dedoro-jimaku}"
           done
+          # 書き換えられなかった（文字の表し方が違うなど）ら止める
+          if ls ${{ matrix.bundle }}/{dmg,nsis,deb,rpm,appimage} 2>/dev/null | LC_ALL=C grep '[^ -~]'; then
+            echo "英数字でないファイル名が残っている"; exit 1
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: installers-${{ runner.os }}
