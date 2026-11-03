@@ -2,7 +2,7 @@
   import * as Card from "$lib/components/ui/card";
   import type { Use } from "../../generated/Use";
   import { panel } from "../panel.svelte";
-  import { total, usd } from "../usage";
+  import { total, unpriced as hasUnpriced, usd } from "../usage";
 
   const rows: { use: Use; name: string; audio: boolean }[] = [
     { use: "realtime", name: "話している途中の字幕", audio: true },
@@ -20,9 +20,7 @@
   const tokens = (n: number) =>
     n < 10_000 ? `${n} トークン` : `${(n / 10_000).toFixed(1)} 万トークン`;
 
-  const unpriced = $derived(
-    columns.some((c) => Object.values(panel.usage?.[c.key] ?? {}).some((a) => a?.unpriced)),
-  );
+  const unpriced = $derived(columns.some((c) => hasUnpriced(panel.usage?.[c.key])));
 </script>
 
 <Card.Root>
