@@ -4,6 +4,7 @@ import type { Provider } from "../generated/Provider";
 import type { ServerMsg } from "../generated/ServerMsg";
 import type { SettingsPatch } from "../generated/SettingsPatch";
 import type { SettingsView } from "../generated/SettingsView";
+import type { TranscriptionError } from "../generated/TranscriptionError";
 import type { UsageView } from "../generated/UsageView";
 import { api } from "../lib/api";
 import { connect, type Status } from "../lib/ws";
@@ -29,7 +30,7 @@ class Panel {
   devices = $state<string[] | undefined>();
   server = $state<Status>("connecting");
   /** 字幕を始められなかった・止まった理由 */
-  transcriptionError = $state<string | undefined>();
+  transcriptionError = $state<TranscriptionError | undefined>();
   /** 直近の入力レベル（dBFS）。字幕を動かしている間だけ届く */
   level = $state<number | undefined>();
   /** OpenAI の使用量と概算の料金 */
@@ -127,3 +128,23 @@ class Panel {
 }
 
 export const panel = new Panel();
+
+/** 字幕が止まった理由を文にする（サーバーは種類だけを返す） */
+export function transcriptionErrorText(e: TranscriptionError) {
+  switch (e.code) {
+    case "missingKey":
+      return "OpenAI の API キーが設定されていません";
+    case "inputEnded":
+      return "マイクの入力が途切れました";
+    case "noMicrophone":
+      return "マイクが見つかりません。マイクをつないでから字幕を始め直してください";
+    case "microphoneNotFound":
+      return `マイク「${e.name}」が見つかりません`;
+    case "noDefaultMicrophone":
+      return "既定のマイクがありません";
+    case "failed":
+      return `エラーで止まりました: ${e.detail}`;
+    case "crashed":
+      return `内部エラーで止まりました: ${e.detail}`;
+  }
+}

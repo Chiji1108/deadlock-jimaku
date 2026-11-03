@@ -5,6 +5,7 @@ import type { RankContent } from "./RankContent";
 import type { RankState } from "./RankState";
 import type { Segment } from "./Segment";
 import type { SubtitleDisplay } from "./SubtitleDisplay";
+import type { TranscriptionError } from "./TranscriptionError";
 import type { UsageView } from "./UsageView";
 
-export type ServerMsg = { "type": "snapshot", segments: Array<Segment>, } | { "type": "segment.upsert", segment: Segment, } | { "type": "glossary.updated", clientVersion: number, } | { "type": "rank.update", rank: RankState | null, } | { "type": "transcription.status", error: string | null, } | { "type": "display", subtitles: SubtitleDisplay, rankLanguage: string, rankContent: RankContent, rankNumerals: Numerals, itemCards: ItemCardsView, } | { "type": "audio.level", db: number, } | { "type": "usage", usage: UsageView, };
+export type ServerMsg = { "type": "snapshot", segments: Array<Segment>, } | { "type": "segment.upsert", segment: Segment, } | { "type": "glossary.updated", clientVersion: number, } | { "type": "rank.update", rank: RankState | null, } | { "type": "transcription.status", error: TranscriptionError | null, } | { "type": "display", subtitles: SubtitleDisplay, rankLanguage: string, rankContent: RankContent, rankNumerals: Numerals, itemCards: ItemCardsView, } | { "type": "audio.level", db: number, } | { "type": "usage", usage: UsageView, };

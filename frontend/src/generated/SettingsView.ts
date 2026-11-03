@@ -7,6 +7,6 @@ import type { Settings } from "./Settings";
  */
 export type SettingsView = { settings: Settings, keys: KeyStatus, 
 /**
- * 設定を保存できない理由（変更はこの起動の間だけ効く）
+ * 設定ファイルを読めない理由（OS のエラー）。そのときは変更をこの起動の間だけ当て、保存しない
  */
 unsaved?: string, };

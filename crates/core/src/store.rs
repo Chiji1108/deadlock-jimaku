@@ -10,7 +10,7 @@ use tokio::sync::{broadcast, watch};
 
 use crate::assets::Loaded;
 use crate::settings::{self, Settings, SettingsPatch};
-use crate::types::{ItemCardsView, RankState, Segment, ServerMsg, Stage};
+use crate::types::{ItemCardsView, RankState, Segment, ServerMsg, Stage, TranscriptionError};
 use crate::usage::Meter;
 
 /// snapshot で送る直近の Segment の数
@@ -25,7 +25,7 @@ pub struct Store {
     /// 保存の読み込み〜書き込みをまとめて排他し、同時の変更が消えないようにする
     unsaved: Mutex<Option<String>>,
     /// 字幕を始められなかった理由（操作パネルに出す）
-    transcription_error: Mutex<Option<String>>,
+    transcription_error: Mutex<Option<TranscriptionError>>,
     segments: Mutex<VecDeque<Segment>>,
     glossary: watch::Sender<Option<Loaded>>,
     rank: Mutex<Option<RankState>>,
@@ -45,12 +45,7 @@ impl Store {
             Ok(settings) => (settings, None),
             Err(e) => {
                 tracing::error!("cannot read settings: {e}; using defaults without saving");
-                (
-                    Settings::default(),
-                    Some(format!(
-                        "設定ファイルを読めないため、変更は保存されません（{e}）"
-                    )),
-                )
+                (Settings::default(), Some(e.to_string()))
             }
         };
         let meter = Arc::new(Meter::new(data_dir.join("usage.json")));
@@ -107,12 +102,12 @@ impl Store {
         self.unsaved.lock().unwrap().clone()
     }
 
-    pub fn set_transcription_error(&self, error: Option<String>) {
+    pub fn set_transcription_error(&self, error: Option<TranscriptionError>) {
         *self.transcription_error.lock().unwrap() = error.clone();
         let _ = self.tx.send(ServerMsg::TranscriptionStatus { error });
     }
 
-    pub fn transcription_error(&self) -> Option<String> {
+    pub fn transcription_error(&self) -> Option<TranscriptionError> {
         self.transcription_error.lock().unwrap().clone()
     }
 

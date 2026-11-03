@@ -110,9 +110,9 @@ pub enum ServerMsg {
     /// None はランクを表示しない（アカウントが外された）
     #[serde(rename = "rank.update")]
     RankUpdate { rank: Option<RankState> },
-    /// 字幕を始められなかった理由。None なら問題なし
+    /// 字幕を始められなかった・止まった理由。None なら問題なし
     #[serde(rename = "transcription.status")]
-    TranscriptionStatus { error: Option<String> },
+    TranscriptionStatus { error: Option<TranscriptionError> },
     #[serde(rename = "display", rename_all = "camelCase")]
     Display {
         subtitles: crate::settings::SubtitleDisplay,
@@ -126,6 +126,44 @@ pub enum ServerMsg {
     AudioLevel { db: f32 },
     #[serde(rename = "usage")]
     Usage { usage: crate::usage::UsageView },
+}
+
+/// 字幕を始められなかった・止まった理由。文は操作パネルが作る（サーバーは中身だけを返す）
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[serde(tag = "code", rename_all = "camelCase")]
+#[ts(export)]
+pub enum TranscriptionError {
+    MissingKey,
+    /// マイクの入力が途切れた
+    InputEnded,
+    NoMicrophone,
+    MicrophoneNotFound {
+        name: String,
+    },
+    NoDefaultMicrophone,
+    /// そのほかのエラー（通信や API のエラー。`detail` は英語の技術的な説明）
+    Failed {
+        detail: String,
+    },
+    /// 想定外のエラー（panic）
+    Crashed {
+        detail: String,
+    },
+}
+
+impl TranscriptionError {
+    pub fn from_error(e: &anyhow::Error) -> Self {
+        match e.downcast_ref::<crate::audio::MicError>() {
+            Some(crate::audio::MicError::NoDevices) => Self::NoMicrophone,
+            Some(crate::audio::MicError::NotFound(name)) => {
+                Self::MicrophoneNotFound { name: name.clone() }
+            }
+            Some(crate::audio::MicError::NoDefault) => Self::NoDefaultMicrophone,
+            None => Self::Failed {
+                detail: format!("{e:#}"),
+            },
+        }
+    }
 }
 
 impl ServerMsg {
@@ -270,7 +308,7 @@ pub struct ItemCardsView {
 pub struct SettingsView {
     pub settings: crate::settings::Settings,
     pub keys: crate::secrets::KeyStatus,
-    /// 設定を保存できない理由（変更はこの起動の間だけ効く）
+    /// 設定ファイルを読めない理由（OS のエラー）。そのときは変更をこの起動の間だけ当て、保存しない
     #[ts(optional)]
     pub unsaved: Option<String>,
 }

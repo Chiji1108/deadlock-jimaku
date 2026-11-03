@@ -14,6 +14,26 @@ use tokio::time::MissedTickBehavior;
 
 pub const SAMPLE_RATE: u32 = 16_000;
 
+/// マイクを開けない理由。操作パネルが文にする（`TranscriptionError`）
+#[derive(Debug)]
+pub enum MicError {
+    NoDevices,
+    NotFound(String),
+    NoDefault,
+}
+
+impl std::fmt::Display for MicError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::NoDevices => write!(f, "no input devices"),
+            Self::NotFound(name) => write!(f, "input device {name:?} not found"),
+            Self::NoDefault => write!(f, "no default input device"),
+        }
+    }
+}
+
+impl std::error::Error for MicError {}
+
 pub enum Input {
     /// None なら OS の既定の入力デバイス
     Mic(Option<String>),
@@ -80,19 +100,16 @@ fn build_mic_stream(
     // 先に一覧を見て、操作パネルで分かる理由にする
     let mut devices = host
         .input_devices()
-        .context("マイクの一覧を取れません")?
+        .context("cannot list input devices")?
         .peekable();
-    anyhow::ensure!(
-        devices.peek().is_some(),
-        "マイクが見つかりません。マイクをつないでから字幕を始め直してください"
-    );
+    if devices.peek().is_none() {
+        return Err(MicError::NoDevices.into());
+    }
     let device = match name {
         Some(name) => devices
             .find(|d| d.description().is_ok_and(|desc| desc.name() == name))
-            .with_context(|| format!("マイク「{name}」が見つかりません"))?,
-        None => host
-            .default_input_device()
-            .context("既定のマイクがありません")?,
+            .ok_or_else(|| MicError::NotFound(name.to_owned()))?,
+        None => host.default_input_device().ok_or(MicError::NoDefault)?,
     };
     let config = device.default_input_config()?;
     tracing::info!(
