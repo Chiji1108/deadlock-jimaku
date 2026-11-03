@@ -663,8 +663,11 @@ fn system_prompt(source_lang: &str) -> String {
          Rules:\n\
          1. \"translations\": translate only the transcript into each requested language, naturally and casually, like gamers talk.\n\
          2. Copy every marker such as ⟦1⟧ unchanged into each translation, where that term belongs. \
-         Never replace a marker with a name, and do not attach possessive endings to it (write \"the ult of ⟦1⟧\", not \"⟦1⟧'s ult\").\n\
-         3. Keep common gamer words natural (ult, farm, push, gank).\n"
+         Never replace a marker with a name. A marker stands for the whole name, sometimes with its own article (\"The Doorman\"), \
+         so do not put an article right before it.\n\
+         3. Do not attach inflectional endings to a marker; rephrase instead (Russian: \"ульта ⟦1⟧\", not \"⟦1⟧а\"). \
+         The only exception is the English possessive 's, which reads naturally: \"⟦1⟧'s ⟦2⟧\".\n\
+         4. Keep common gamer words natural (ult, farm, push, gank).\n"
     )
 }
 
@@ -1012,6 +1015,26 @@ mod tests {
         let t = e.translations(raw, &terms);
         assert_eq!(t.len(), 1);
         assert_eq!(t["en"], [ent("hero:13"), text(" wins")]);
+    }
+
+    #[test]
+    fn english_possessive_follows_the_entity() {
+        // 「ドアマンのウルト」→「⟦1⟧'s ⟦2⟧」。's は名前の後ろの文字として残る（The Doorman's Hotel Guest）
+        let e = enricher(&["en"]);
+        let terms = Terms::new(
+            &[entity("hero:13", "ヘイズ"), entity("ability:8", "ウルト")],
+            Some(&glossary()),
+        );
+        let raw = BTreeMap::from([("en".to_owned(), "⟦1⟧'s ⟦2⟧ is strong.".to_owned())]);
+        assert_eq!(
+            e.translations(raw, &terms)["en"],
+            [
+                ent("hero:13"),
+                text("'s "),
+                ent("ability:8"),
+                text(" is strong.")
+            ]
+        );
     }
 
     #[test]
