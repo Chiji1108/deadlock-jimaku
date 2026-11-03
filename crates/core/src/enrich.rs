@@ -35,7 +35,7 @@ pub struct Enricher {
     targets: Vec<LangCode>,
     meter: Arc<Meter>,
     /// 辞書の版ごとに作り直す system（用語の一覧を含む固定の先頭部分なので、プロンプトキャッシュが効く）
-    system: Mutex<Option<(Option<u32>, Arc<str>)>>,
+    system: Mutex<Option<(Option<GlossaryKey>, Arc<str>)>>,
 }
 
 impl Enricher {
@@ -144,7 +144,8 @@ impl Enricher {
     }
 
     fn system(&self, glossary: Option<&Glossary>) -> Arc<str> {
-        let version = glossary.map(|g| g.client_version);
+        // 同じ版でも、言語を足して作り直した辞書は名前が違う
+        let version = glossary.map(|g| (g.client_version, g.languages.clone()));
         let mut cached = self.system.lock().unwrap();
         match &*cached {
             Some((v, system)) if *v == version => system.clone(),
@@ -199,6 +200,9 @@ impl Enricher {
     }
 }
 
+/// どの辞書から作った system か（版と、名前のある言語）
+type GlossaryKey = (u32, Vec<LangCode>);
+
 /// LLM の答え
 #[derive(Debug, Deserialize)]
 struct Analysis {
@@ -217,7 +221,7 @@ struct Segment {
 }
 
 impl Analysis {
-    /// 原文の区切り。辞書にない参照はふつうの文字にして、隣の文字とまとめる。
+    /// 原文の区切り。辞書にない参照はふつうの文字にして、隣の文字とまとめる。同じ用語が続けば 1 つにする。
     /// つなげても字幕にならなければ、どこが用語か分からないので用語を付けない
     fn spans(&self, text: &str, glossary: Option<&Glossary>) -> Vec<Span> {
         let joined: String = self.segments.iter().map(|s| s.text.as_str()).collect();
@@ -227,30 +231,41 @@ impl Analysis {
         }
         let mut spans = Vec::new();
         for s in self.segments.iter().filter(|s| !s.text.is_empty()) {
-            match s.reference.as_ref().filter(|r| known(glossary, r)) {
-                Some(reference) => spans.push(Span::Entity {
-                    reference: reference.clone(),
+            match (
+                s.reference.as_ref().filter(|r| known(glossary, r)),
+                spans.last_mut(),
+            ) {
+                (Some(r), Some(Span::Entity { reference, spoken })) if reference == r => {
+                    spoken.push_str(&s.text);
+                }
+                (Some(r), _) => spans.push(Span::Entity {
+                    reference: r.clone(),
                     spoken: s.text.clone(),
                 }),
-                None => match spans.last_mut() {
-                    Some(Span::Text(t)) => t.push_str(&s.text),
-                    _ => spans.push(Span::Text(s.text.clone())),
-                },
+                (None, Some(Span::Text(t))) => t.push_str(&s.text),
+                (None, _) => spans.push(Span::Text(s.text.clone())),
             }
         }
         spans
     }
 
-    /// 頼んでいない言語は捨て、訳文の `⟦参照⟧` をエンティティに戻す
+    /// 頼んでいない言語は捨て、訳文の `⟦参照⟧` をエンティティに戻す。
+    /// 戻すのは原文の区切りで見つけた用語だけ（原文にない用語を訳文にだけ出さない）
     fn translations(
         self,
         targets: &[LangCode],
         glossary: Option<&Glossary>,
     ) -> BTreeMap<LangCode, Vec<Token>> {
+        let terms: Vec<&str> = self
+            .segments
+            .iter()
+            .filter_map(|s| s.reference.as_deref())
+            .filter(|r| known(glossary, r))
+            .collect();
         self.translations
-            .into_iter()
+            .iter()
             .filter(|(lang, _)| targets.contains(lang))
-            .map(|(lang, text)| (lang, resolve(&text, glossary)))
+            .map(|(lang, text)| (lang.clone(), resolve(text, &terms)))
             .collect()
     }
 }
@@ -259,8 +274,8 @@ fn known(glossary: Option<&Glossary>, reference: &str) -> bool {
     glossary.is_some_and(|g| g.entities.contains_key(reference))
 }
 
-/// 訳文の `⟦参照⟧` をエンティティにする。辞書にない参照は捨て、そのために空いた空白を詰める
-fn resolve(text: &str, glossary: Option<&Glossary>) -> Vec<Token> {
+/// 訳文の `⟦参照⟧` をエンティティにする。`terms` にない参照は捨て、そのために空いた空白を詰める
+fn resolve(text: &str, terms: &[&str]) -> Vec<Token> {
     let mut tokens: Vec<Token> = Vec::new();
     let mut buf = String::new();
     let mut rest = text;
@@ -272,7 +287,7 @@ fn resolve(text: &str, glossary: Option<&Glossary>) -> Vec<Token> {
         buf.push_str(&rest[..start]);
         let reference = rest[start + '⟦'.len_utf8()..end].trim();
         let after = &rest[end + '⟧'.len_utf8()..];
-        if known(glossary, reference) {
+        if terms.contains(&reference) {
             push_text(&mut tokens, std::mem::take(&mut buf));
             tokens.push(Token::Entity {
                 reference: reference.to_owned(),
@@ -392,12 +407,10 @@ fn system_prompt(source_lang: &str, glossary: Option<&Glossary>) -> String {
             EntityKind::Item => "item",
             EntityKind::Ability => "ability",
         };
+        // 列を揃える（名前がなければ英語名）
         let en = e.names.get("en").map_or("", String::as_str);
-        let mut line = format!("{reference} | {kind} | ");
-        match e.names.get(source_lang).filter(|name| *name != en) {
-            Some(name) => line += &format!("{name} | {en}"),
-            None => line += en,
-        }
+        let name = e.names.get(source_lang).map_or(en, String::as_str);
+        let mut line = format!("{reference} | {kind} | {name} | {en}");
         if let (Some(hero), Some(slot)) = (&e.hero, e.ability_slot) {
             let owner = glossary
                 .and_then(|g| g.entities.get(hero))
@@ -500,16 +513,19 @@ mod tests {
                 ("と", None),
                 ("謎", Some("item:999")),
                 ("", Some("hero:13")),
+                ("基礎", Some("item:1")),
+                ("拡張マガジン", Some("item:1")),
             ],
             &[],
         );
         assert_eq!(
-            a.spans("ヘイズのウルトと謎", Some(&g)),
+            a.spans("ヘイズのウルトと謎基礎拡張マガジン", Some(&g)),
             [
                 entity("hero:13", "ヘイズ"),
                 Span::Text("の".into()),
                 entity("ability:8", "ウルト"),
                 Span::Text("と謎".into()),
+                entity("item:1", "基礎拡張マガジン"),
             ]
         );
     }
@@ -527,8 +543,8 @@ mod tests {
     fn resolve_turns_ids_into_entities_and_drops_unknown_ones() {
         assert_eq!(
             resolve(
-                "⟦hero:13⟧'s ⟦ ability:8 ⟧ beat ⟦item:9⟧ easily, ask ⟦hero:2⟧'s team ⟦oops",
-                Some(&glossary())
+                "⟦hero:13⟧'s ⟦ ability:8 ⟧ beat ⟦item:1⟧ easily, ask ⟦hero:2⟧'s team ⟦oops",
+                &["hero:13", "ability:8"]
             ),
             [
                 ent("hero:13"),
@@ -542,11 +558,12 @@ mod tests {
     #[test]
     fn translations_drop_unrequested_languages() {
         let a = analysis(
-            &[("ヘイズ", Some("hero:13"))],
-            &[("en", "⟦hero:13⟧ wins"), ("ru", "ignored")],
+            &[("ヘイズ", Some("hero:13")), ("勝ち", None)],
+            &[("en", "⟦hero:13⟧ wins⟦ability:8⟧"), ("ru", "ignored")],
         );
         let t = a.translations(&["en".into()], Some(&glossary()));
         assert_eq!(t.len(), 1);
+        // 原文で見つけていない用語（ability:8）は訳文にも出さない
         assert_eq!(t["en"], [ent("hero:13"), text(" wins")]);
     }
 
@@ -571,7 +588,10 @@ mod tests {
             "\nability:8 | ability | バレットダンス | Bullet Dance | ability 4 of Haze (hero:13)\n"
         ));
         // 話す言語が英語なら、名前は 1 つ
-        assert!(system_prompt("en", Some(&glossary())).contains("\nhero:13 | hero | Haze\n"));
+        // 話す言語が英語でも列は揃える
+        assert!(
+            system_prompt("en", Some(&glossary())).contains("\nhero:13 | hero | Haze | Haze\n")
+        );
     }
 
     #[test]
@@ -581,7 +601,10 @@ mod tests {
         let first = e.system(Some(&g));
         assert!(Arc::ptr_eq(&first, &e.system(Some(&g))));
         g.client_version = 2;
-        assert!(!Arc::ptr_eq(&first, &e.system(Some(&g))));
+        let second = e.system(Some(&g));
+        assert!(!Arc::ptr_eq(&first, &second));
+        g.languages.push("ru".into());
+        assert!(!Arc::ptr_eq(&second, &e.system(Some(&g))));
     }
 
     #[test]
