@@ -67,13 +67,21 @@ impl Enricher {
         text: &str,
         context: &[String],
         glossary: Option<&Glossary>,
+        furigana: bool,
     ) -> Enriched {
         let spans = match glossary {
             Some(g) => self.matcher(g).split(text),
             None => vec![Span::Text(text.to_owned())],
         };
         let terms = Terms::new(&spans, glossary);
-        let (ruby, translations) = tokio::join!(self.furigana(text, context), async {
+        let ruby = async {
+            if furigana {
+                self.furigana(text, context).await
+            } else {
+                None
+            }
+        };
+        let (ruby, translations) = tokio::join!(ruby, async {
             if self.targets.is_empty() {
                 return BTreeMap::new();
             }
@@ -972,13 +980,16 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn no_targets_and_no_kanji_means_no_llm_call() {
+    async fn no_llm_call_without_targets_and_furigana() {
         // API キーもモデルも偽物なので、呼べばエラーになって warn が出るだけ。呼ばずに返ることを確かめる
         // （翻訳先がなく、漢字もないので、翻訳もふりがなも聞かない）
         let e = enricher(&["ja"]);
         let started = std::time::Instant::now();
-        let out = e.enrich("ヘイズつよい", &[], Some(&glossary())).await;
+        let out = e.enrich("ヘイズつよい", &[], Some(&glossary()), true).await;
         assert!(out.translations.is_empty());
+        assert_eq!(out.source.len(), 2);
+        // ふりがなを出さない設定なら、漢字があっても聞かない
+        let out = e.enrich("ヘイズ強い", &[], Some(&glossary()), false).await;
         assert_eq!(out.source.len(), 2);
         assert!(started.elapsed() < Duration::from_secs(1));
     }

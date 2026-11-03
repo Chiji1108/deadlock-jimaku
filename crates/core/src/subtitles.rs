@@ -323,14 +323,17 @@ impl Pipeline {
             self.context.pop_front();
         }
         self.pending += 1;
-        // 辞書は enrich のたびに store から取る（後から届いたり、作り直されたりする）
+        // 辞書は enrich のたびに store から取る（後から届いたり、作り直されたりする）。
+        // ふりがなは出さない設定なら聞かない（字幕を止めずに切り替えられるので、そのときの設定を見る）
         let glossary = self.store.glossary().map(|l| l.glossary);
+        let furigana = self.store.settings().subtitle_display.furigana;
         tokio::spawn(enrich(
             self.enricher.clone(),
             id.to_owned(),
             text,
             context,
             glossary,
+            furigana,
             self.done_tx.clone(),
         ));
     }
@@ -416,10 +419,13 @@ async fn enrich(
     text: String,
     context: Vec<String>,
     glossary: Option<Arc<Glossary>>,
+    furigana: bool,
     done: mpsc::Sender<Done>,
 ) {
     let started = Instant::now();
-    let enriched = enricher.enrich(&text, &context, glossary.as_deref()).await;
+    let enriched = enricher
+        .enrich(&text, &context, glossary.as_deref(), furigana)
+        .await;
     tracing::debug!("enriched in {:?}", started.elapsed());
     let _ = done.send(Done::Enriched { id, enriched }).await;
 }
