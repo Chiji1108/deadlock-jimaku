@@ -1,9 +1,11 @@
 <script lang="ts">
   // OpenAI の API キーの作り方。OpenAI を使ったことのない配信者向けに、支払いの登録まで順に書く。
-  // キーがまだないときは開いておく
+  // キーがまだないときは開いておく（開くかどうかは最初に決めるだけ。保存したとたんに閉じない）
+  import { untrack } from "svelte";
   import * as Card from "$lib/components/ui/card";
 
   let { open }: { open: boolean } = $props();
+  const initiallyOpen = untrack(() => open);
 
   const steps: { title: string; body: string; link?: { href: string; label: string } }[] = [
     {
@@ -15,7 +17,7 @@
       title: "クレジットカードを登録して、前払いでチャージする",
       body: "設定の「Billing」で「Add payment method」からカードを登録し、「Add to credit balance」で 5〜10 ドルほどチャージします。使った分だけ残高から引かれます。使いすぎが心配なら、自動チャージ（Auto recharge）はオフのままにしてください",
       link: {
-        href: "https://platform.openai.com/settings/organization/billing",
+        href: "https://platform.openai.com/settings/organization/billing/overview",
         label: "Billing を開く",
       },
     },
@@ -32,12 +34,15 @@
 </script>
 
 <Card.Root>
-  <details {open} class="group">
-    <summary class="cursor-pointer list-none px-6 py-4 font-semibold select-none">
-      <span class="mr-2 inline-block transition group-open:rotate-90">›</span>OpenAI の API
-      キーの作り方
+  <details open={initiallyOpen} class="group">
+    <!-- 標準の三角は消して（WebKit は ::-webkit-details-marker）、自前の › だけにする -->
+    <summary
+      class="cursor-pointer list-none px-6 font-semibold select-none [&::-webkit-details-marker]:hidden"
+    >
+      <span aria-hidden="true" class="mr-2 inline-block transition group-open:rotate-90">›</span
+      >OpenAI の API キーの作り方
     </summary>
-    <Card.Content class="flex flex-col gap-5 pb-6">
+    <Card.Content class="mt-5 flex flex-col gap-5">
       <p class="text-sm text-muted-foreground">
         文字起こしと翻訳は OpenAI に頼むので、OpenAI の API
         キーが必要です。料金は使った分だけで、話し続けて 1 時間あたり約 2 ドル（翻訳 1

@@ -8,12 +8,11 @@
   import OpenAiKeyGuide from "../parts/OpenAiKeyGuide.svelte";
   import { panel } from "../panel.svelte";
 
-  const providers: { provider: Provider; name: string; use: string; url: string }[] = [
+  const providers: { provider: Provider; name: string; use: string }[] = [
     {
       provider: "openai",
       name: "OpenAI",
-      use: "文字起こし・翻訳・漢字の名前の読みに使います（必須）",
-      url: "https://platform.openai.com/api-keys",
+      use: "文字起こし・翻訳・漢字の名前の読みに使います（必須）。作り方は上にあります",
     },
   ];
 
@@ -26,7 +25,7 @@
 </script>
 
 <div class="flex flex-col gap-6">
-  <OpenAiKeyGuide open={panel.view?.keys.openai.state !== "saved"} />
+  <OpenAiKeyGuide open={panel.keyMissing} />
 
   <Card.Root>
     <Card.Header>
@@ -60,9 +59,7 @@
                 {/if}
               </div>
               <Field.Description>
-                {p.use}。<a class="underline" href={p.url} target="_blank" rel="noreferrer"
-                  >キーを作る</a
-                >
+                {p.use}
               </Field.Description>
               {#if key?.state === "unreadable"}
                 <Field.Description class="text-destructive">
