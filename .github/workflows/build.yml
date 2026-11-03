@@ -80,6 +80,11 @@ jobs:
           export APPLE_API_KEY_PATH="$RUNNER_TEMP/AuthKey.p8"
           printf '%s' "$APPLE_API_KEY_P8" > "$APPLE_API_KEY_PATH"
           frontend/node_modules/.bin/tauri build ${{ matrix.args }}
+          # Tauri が公証するのは中のアプリだけなので、ダウンロードして開く dmg も公証して印を付ける
+          for dmg in ${{ matrix.bundle }}/dmg/*.dmg; do
+            xcrun notarytool submit "$dmg" --key "$APPLE_API_KEY_PATH" --key-id "$APPLE_API_KEY" --issuer "$APPLE_API_ISSUER" --wait
+            xcrun stapler staple "$dmg"
+          done
         env:
           # tauri.conf.json のアドホック署名（"-"）より優先される
           APPLE_SIGNING_IDENTITY: Developer ID Application
