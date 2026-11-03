@@ -142,7 +142,7 @@ pub fn apply_aliases(glossary: &mut Glossary, aliases: &Aliases) {
             Some(e) => {
                 e.aliases.insert("ja".into(), aliases.clone());
             }
-            None => tracing::warn!("aliases.ja.json: unknown entity {reference}"),
+            None => tracing::warn!("aliases: unknown entity {reference}"),
         }
     }
 }
