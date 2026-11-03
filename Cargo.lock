@@ -1026,7 +1026,7 @@ dependencies = [
 
 [[package]]
 name = "deadlock-stream-overlays"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "overlays-core",
  "serde_json",
@@ -3188,7 +3188,7 @@ dependencies = [
 
 [[package]]
 name = "overlays-core"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "anyhow",
  "audioadapter-buffers",
