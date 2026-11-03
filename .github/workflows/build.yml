@@ -95,17 +95,31 @@ jobs:
           APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
       # インストーラーのファイル名は productName（デドロ字幕）から付く。GitHub のリリースは日本語のファイル名を
       # 書き換えるので、英数字にする（Linux は tauri.linux.conf.json で英数字の名前にしてある）
-      - name: ファイル名を英数字にする
+      - name: ファイル名を英数字にし、版の番号を外す
         run: |
           shopt -s nullglob
           # 英数字の名前は実行ファイルの名前（mainBinaryName）と同じにする
           name=$(jq -r .mainBinaryName app/tauri.conf.json)
-          for f in ${{ matrix.bundle }}/dmg/*.dmg ${{ matrix.bundle }}/nsis/*.exe; do
-            mv "$f" "${f/デドロ字幕/$name}"
+          # 版の番号を外す（LP は releases/latest/download/<ファイル名> で最新版を直接落とすので、名前を変えない）。
+          # 版はリリースの名前で分かる
+          version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
+          b=${{ matrix.bundle }}
+          # インストーラーだけ（中間のフォルダは触らない）
+          for f in $b/dmg/*.dmg $b/nsis/*.exe $b/deb/*.deb $b/rpm/*.rpm $b/appimage/*.AppImage; do
+            base=$(basename "$f")
+            base=${base/デドロ字幕/$name}
+            base=${base/_${version}_/_}
+            base=${base/-${version}-1./.}
+            [ "$base" = "$(basename "$f")" ] || mv "$f" "$(dirname "$f")/$base"
           done
+          files=$(basename -a $b/dmg/*.dmg $b/nsis/*.exe $b/deb/*.deb $b/rpm/*.rpm $b/appimage/*.AppImage)
+          echo "$files"
           # 書き換えられなかった（文字の表し方が違うなど）ら止める
-          if ls ${{ matrix.bundle }}/{dmg,nsis,deb,rpm,appimage} 2>/dev/null | LC_ALL=C grep '[^ -~]'; then
+          if echo "$files" | LC_ALL=C grep '[^ -~]'; then
             echo "英数字でないファイル名が残っている"; exit 1
+          fi
+          if echo "$files" | grep -F "$version"; then
+            echo "版の番号が残っている"; exit 1
           fi
       - uses: actions/upload-artifact@v4
         with:
