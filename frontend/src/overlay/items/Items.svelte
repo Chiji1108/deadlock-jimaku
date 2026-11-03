@@ -16,6 +16,11 @@
   defineProvider();
   defineTooltip();
 
+  /** 操作パネルのプレビュー（`?preview`）では、アイテム名を話さなくても見本のカードを出しておく。OBS には出さない */
+  const SAMPLE = new URLSearchParams(location.search).has("preview")
+    ? "upgrade_clip_size"
+    : undefined;
+
   /** 待っているカードの上限。話から大きく遅れないよう、古いものは捨てる */
   const MAX_QUEUE = 3;
   /** 説明を出し終えた字幕として覚えておく数（サーバーが持つ直近の字幕より多ければよい） */
@@ -105,7 +110,7 @@
   <!-- ソースの箱の中で、操作パネルで選んだ位置に寄せる。右に寄せたら右から出す -->
   <dl-provider {language} class="stage" style:place-items={placeItems(view.anchor)}>
     <!-- 1 枚ずつ。入れ替わるときは前のカードと重ねて入れ替える -->
-    {#each current ? [current] : [] as item (item)}
+    {#each [current ?? SAMPLE].filter(Boolean) as item (item)}
       <div
         class="card"
         in:fly={{ x: view.anchor.endsWith("right") ? 24 : -24, duration: 250 }}
