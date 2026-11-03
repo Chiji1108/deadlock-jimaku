@@ -1,7 +1,7 @@
 //! API キー。OS の資格情報ストア（Windows の資格情報マネージャー、macOS のキーチェーン、Linux の Secret Service）に保存する。
-//! 開発中は環境変数（`OPENAI_API_KEY`）が優先する。
+//! 環境変数は読まない（ほかのツールのために設定した `OPENAI_API_KEY` を黙って使い、思わぬキーに請求しない）。
 //!
-//! キーそのものは画面に返さない（どこから読んだかだけを返す）。呼び出しは同期処理なので、
+//! キーそのものは画面に返さない（保存してあるかだけを返す）。呼び出しは同期処理なので、
 //! 非同期の文脈からは `spawn_blocking` で呼ぶ。
 
 use serde::{Deserialize, Serialize};
@@ -19,12 +19,6 @@ pub enum Provider {
 }
 
 impl Provider {
-    fn env(self) -> &'static str {
-        match self {
-            Self::OpenAi => "OPENAI_API_KEY",
-        }
-    }
-
     fn account(self) -> &'static str {
         match self {
             Self::OpenAi => "openai",
@@ -32,20 +26,22 @@ impl Provider {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, TS)]
-#[serde(rename_all = "lowercase")]
+#[derive(Clone, Debug, Serialize, TS)]
+#[serde(tag = "state", rename_all = "lowercase")]
 #[ts(export)]
-pub enum KeySource {
-    /// 環境変数（操作パネルからは変えられない）
-    Env,
-    Keyring,
+pub enum KeyState {
+    Saved,
+    Missing,
+    /// 資格情報ストアを読めない（アクセスを拒否した、ロックされている、Secret Service がないなど）
+    Unreadable {
+        reason: String,
+    },
 }
 
 #[derive(Clone, Debug, Serialize, TS)]
 #[ts(export)]
 pub struct KeyStatus {
-    #[ts(optional)]
-    pub openai: Option<KeySource>,
+    pub openai: KeyState,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -53,30 +49,34 @@ pub struct Keys {
     pub openai: Option<String>,
 }
 
-fn get(provider: Provider) -> Option<(String, KeySource)> {
-    if let Some(key) = std::env::var(provider.env()).ok().filter(|k| !k.is_empty()) {
-        return Some((key, KeySource::Env));
-    }
-    let entry = keyring::Entry::new(IDENTIFIER, provider.account()).ok()?;
+/// 空のキーは保存していないものとして扱う
+fn get(provider: Provider) -> Result<Option<String>, keyring::Error> {
+    let entry = keyring::Entry::new(IDENTIFIER, provider.account())?;
     match entry.get_password() {
-        Ok(key) => Some((key, KeySource::Keyring)),
-        Err(keyring::Error::NoEntry) => None,
-        Err(e) => {
-            tracing::warn!("keyring ({}): {e}", provider.account());
-            None
-        }
+        Ok(key) => Ok(Some(key).filter(|k| !k.trim().is_empty())),
+        Err(keyring::Error::NoEntry) => Ok(None),
+        Err(e) => Err(e),
     }
 }
 
 pub fn load() -> Keys {
     Keys {
-        openai: get(Provider::OpenAi).map(|(k, _)| k),
+        openai: get(Provider::OpenAi).unwrap_or_else(|e| {
+            tracing::warn!("keyring ({}): {e}", Provider::OpenAi.account());
+            None
+        }),
     }
 }
 
 pub fn status() -> KeyStatus {
     KeyStatus {
-        openai: get(Provider::OpenAi).map(|(_, s)| s),
+        openai: match get(Provider::OpenAi) {
+            Ok(Some(_)) => KeyState::Saved,
+            Ok(None) => KeyState::Missing,
+            Err(e) => KeyState::Unreadable {
+                reason: e.to_string(),
+            },
+        },
     }
 }
 

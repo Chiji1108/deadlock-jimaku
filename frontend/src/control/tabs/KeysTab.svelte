@@ -4,7 +4,6 @@
   import * as Card from "$lib/components/ui/card";
   import * as Field from "$lib/components/ui/field";
   import { Input } from "$lib/components/ui/input";
-  import type { KeySource } from "../../generated/KeySource";
   import type { Provider } from "../../generated/Provider";
   import { panel } from "../panel.svelte";
 
@@ -16,7 +15,6 @@
       url: "https://platform.openai.com/api-keys",
     },
   ];
-  const sourceLabel: Record<KeySource, string> = { keyring: "保存済み", env: "環境変数" };
 
   let inputs = $state<Record<Provider, string>>({ openai: "" });
 
@@ -30,14 +28,15 @@
   <Card.Header>
     <Card.Title>API キー</Card.Title>
     <Card.Description>
-      OS の資格情報ストア（Windows の資格情報マネージャー、Mac のキーチェーン）に保存します。
-      保存したキーは画面に表示しません
+      OS の資格情報ストア（Windows の資格情報マネージャー、Mac のキーチェーン、Linux の Secret
+      Service）に保存します。 保存したキーは画面に表示しません
     </Card.Description>
   </Card.Header>
   <Card.Content>
     <Field.Group>
       {#each providers as p, i (p.provider)}
-        {@const source = panel.view?.keys[p.provider]}
+        {@const key = panel.view?.keys[p.provider]}
+        {@const saved = key?.state === "saved"}
         {#if i > 0}<Field.Separator />{/if}
         <form
           onsubmit={(e) => {
@@ -48,8 +47,10 @@
           <Field.Field>
             <div class="flex items-center gap-2">
               <Field.Label for={p.provider}>{p.name}</Field.Label>
-              {#if source}
-                <Badge variant="secondary">{sourceLabel[source]}</Badge>
+              {#if saved}
+                <Badge variant="secondary">保存済み</Badge>
+              {:else if key?.state === "unreadable"}
+                <Badge variant="destructive">読めません</Badge>
               {:else}
                 <Badge variant="outline">未設定</Badge>
               {/if}
@@ -59,21 +60,21 @@
                 >キーを作る</a
               >
             </Field.Description>
+            {#if key?.state === "unreadable"}
+              <Field.Description class="text-destructive">
+                OS の資格情報ストアを読めません（{key.reason}）。アクセスを許可するか、ロックを解除してください
+              </Field.Description>
+            {/if}
             <div class="flex gap-2">
               <Input
                 id={p.provider}
                 type="password"
                 autocomplete="off"
                 bind:value={inputs[p.provider]}
-                disabled={source === "env"}
-                placeholder={source === "env"
-                  ? "環境変数のキーを使っています"
-                  : source
-                    ? "変えるときは新しいキーを貼り付け"
-                    : "キーを貼り付け"}
+                placeholder={saved ? "変えるときは新しいキーを貼り付け" : "キーを貼り付け"}
               />
               <Button type="submit" disabled={!inputs[p.provider]}>保存</Button>
-              {#if source === "keyring"}
+              {#if saved}
                 <Button type="button" variant="outline" onclick={() => save(p.provider, "")}>
                   削除
                 </Button>
