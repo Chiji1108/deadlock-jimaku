@@ -3,9 +3,11 @@
 //! 設定や API キーが変わったら、**入力が変わった処理だけ**を張り直す（ランクの ID を変えても
 //! 字幕は止めない）。字幕を止めたときは、確定していない字幕を画面から消す。
 
+use std::panic::AssertUnwindSafe;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use futures_util::FutureExt;
 use tokio::task::JoinHandle;
 
 use crate::settings::{Models, Region, Segmentation, Settings};
@@ -178,10 +180,13 @@ fn start_subtitles(
     };
     let store = store.clone();
     Some(tokio::spawn(async move {
-        // 止まったら理由を出す（開始・停止を押し直すと始め直す）
-        let error = match subtitles::run(store.clone(), input, api_key).await {
-            Ok(()) => ended.map(String::from),
-            Err(e) => Some(format!("{e:#}")),
+        // 止まったら理由を出す（開始・停止を押し直すと始め直す）。想定外のエラー（panic）でも
+        // 黙って止まらないよう、捕まえて知らせる
+        let run = AssertUnwindSafe(subtitles::run(store.clone(), input, api_key));
+        let error = match run.catch_unwind().await {
+            Ok(Ok(())) => ended.map(String::from),
+            Ok(Err(e)) => Some(format!("{e:#}")),
+            Err(_) => Some("内部エラーで止まりました（ログを確認してください）".to_owned()),
         };
         tracing::info!("transcription ended: {error:?}");
         store.set_transcription_error(error);
