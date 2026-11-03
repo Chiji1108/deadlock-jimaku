@@ -93,6 +93,14 @@ jobs:
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
           APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
           APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+      # インストーラーのファイル名は productName（デドロ字幕）から付く。GitHub のリリースは日本語のファイル名を
+      # 書き換えるので、英数字にする（Linux は tauri.linux.conf.json で英数字の名前にしてある）
+      - name: ファイル名を英数字にする
+        run: |
+          shopt -s nullglob
+          for f in ${{ matrix.bundle }}/dmg/*.dmg ${{ matrix.bundle }}/nsis/*.exe; do
+            mv "$f" "${f/デドロ字幕/dedoro-jimaku}"
+          done
       - uses: actions/upload-artifact@v4
         with:
           name: installers-${{ runner.os }}

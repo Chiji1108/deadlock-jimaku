@@ -1,7 +1,7 @@
 // API（api.deadlock.jp）。アプリが起動時に別名を取りに来る（DESIGN.md 17 章）
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "deadlock-stream-overlays-api",
+  "name": "dedoro-jimaku-api",
   "main": "src/index.ts",
   "compatibility_date": "2026-10-01",
   "routes": [{ "pattern": "api.deadlock.jp", "custom_domain": true }]

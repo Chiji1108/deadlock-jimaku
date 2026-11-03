@@ -33,7 +33,7 @@ fn main() {
             });
 
             WebviewWindowBuilder::new(app, "main", control_url()?)
-                .title("Deadlock Stream Overlays")
+                .title("デドロ字幕")
                 .inner_size(960.0, 720.0)
                 // 外部へのリンク（API キーの作成ページなど）はふだんのブラウザで開く
                 .on_new_window(|url, _| {

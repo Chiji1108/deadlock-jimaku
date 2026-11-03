@@ -1,4 +1,4 @@
-# deadlock-stream-overlays 設計書
+# デドロ字幕 設計書
 
 デドロ字幕。Deadlock 配信者向けの OBS オーバーレイツール。
 
