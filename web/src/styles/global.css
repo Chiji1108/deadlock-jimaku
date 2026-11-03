@@ -59,3 +59,14 @@ h3 {
   font-size: 0.45em;
   font-weight: 600;
 }
+
+/* 配信画面の見本。1920×1080 の画面で、字幕を 40px（翻訳 26px）で出したときの大きさにそろえる */
+.screen {
+  container-type: inline-size;
+}
+.screen-source {
+  font-size: calc(40 / 1920 * 100cqw);
+}
+.screen-translation {
+  font-size: calc(26 / 1920 * 100cqw);
+}
