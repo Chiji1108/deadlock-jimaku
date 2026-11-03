@@ -88,13 +88,15 @@
 {/if}
 
 <style>
-  /* OBS の「カスタム CSS」で上書きできるよう、見た目は変数にまとめる */
+  /* OBS の「カスタム CSS」で上書きできるよう、見た目は変数にまとめる。
+     大きさは既定のソース（480×140）での px に、ソースの大きさとの比（--scale。main.ts）を掛ける */
   :global(:root) {
-    --badge-size: 96px;
-    --name-size: 34px;
-    --points-size: 20px;
-    --gauge-width: 260px;
-    --gauge-height: 30px;
+    --scale: 1;
+    --badge-size: calc(96px * var(--scale));
+    --name-size: calc(34px * var(--scale));
+    --points-size: calc(20px * var(--scale));
+    --gauge-width: calc(260px * var(--scale));
+    --gauge-height: calc(30px * var(--scale));
     --text-color: #fff;
     --gauge-color: rgb(255 255 255 / 0.9);
     --outline-color: rgb(0 0 0 / 0.85);
@@ -107,18 +109,18 @@
   .rank {
     display: inline-flex;
     align-items: center;
-    gap: 14px;
-    padding: 8px;
+    gap: calc(14px * var(--scale));
+    padding: calc(8px * var(--scale));
     color: var(--text-color);
     -webkit-text-stroke: 0.16em var(--outline-color);
     paint-order: stroke fill;
-    text-shadow: 0 2px 6px rgb(0 0 0 / 0.6);
+    text-shadow: 0 calc(2px * var(--scale)) calc(6px * var(--scale)) rgb(0 0 0 / 0.6);
   }
   .badge {
     width: var(--badge-size);
     height: var(--badge-size);
     object-fit: contain;
-    filter: drop-shadow(0 2px 6px rgb(0 0 0 / 0.6));
+    filter: drop-shadow(0 calc(2px * var(--scale)) calc(6px * var(--scale)) rgb(0 0 0 / 0.6));
   }
   p {
     margin: 0;
@@ -132,7 +134,7 @@
   .text {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: calc(6px * var(--scale));
   }
   .bar {
     position: relative;
@@ -142,7 +144,7 @@
     height: var(--gauge-height);
     border-radius: 999px;
     background: rgb(0 0 0 / 0.55);
-    box-shadow: 0 0 0 2px rgb(0 0 0 / 0.6);
+    box-shadow: 0 0 0 calc(2px * var(--scale)) rgb(0 0 0 / 0.6);
     overflow: hidden;
   }
   .fill {

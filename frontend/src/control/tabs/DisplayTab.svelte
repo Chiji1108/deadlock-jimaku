@@ -14,10 +14,8 @@
   import CopyUrl from "../parts/CopyUrl.svelte";
   import OverlayPreview from "../parts/OverlayPreview.svelte";
   import DisplayDetailsDialog from "../parts/DisplayDetailsDialog.svelte";
+  import { SUBTITLE_SIZE } from "../../lib/overlay-size";
   import { overlayUrl, panel } from "../panel.svelte";
-
-  /** OBS のブラウザソースの大きさ（目安。幅と高さを変えれば中身が合わせる） */
-  const SUBTITLE_SIZE: [number, number] = [1000, 400];
 
   const ALIGNS: { value: Align; label: string; icon: typeof AlignStartIcon }[] = [
     { value: "left", label: "左寄せ", icon: AlignStartIcon },
