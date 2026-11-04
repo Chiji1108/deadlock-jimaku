@@ -1,7 +1,7 @@
 // LP（jimaku.deadlock.jp）。Astro の出力（dist）を配るだけの Worker
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "dedoro-jimaku-web",
+  "name": "deadlock-jimaku-web",
   "compatibility_date": "2026-10-01",
   "assets": { "directory": "./dist", "not_found_handling": "404-page" },
   "routes": [{ "pattern": "jimaku.deadlock.jp", "custom_domain": true }]

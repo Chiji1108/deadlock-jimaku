@@ -205,7 +205,7 @@ Voxtral のときはリアルタイムに無音も含めて送り続けていた
 ## 4. リポジトリ構成
 
 ```
-deadlock-stream-overlays/
+deadlock-jimaku/
 ├─ DESIGN.md
 ├─ Cargo.toml                 # Rust の workspace（crates/core と app）
 ├─ package.json               # pnpm の workspace（frontend・web・server）
@@ -764,11 +764,13 @@ Phase 2 の前に、録音した実況音声で Voxtral 3 の精度（`context_b
 | `server/` | `api.jimaku.deadlock.jp` | Hono。パスは版（`/v1`）で区切る。アプリ専用なので `jimaku` の下に置く（`deadlock.jp` 全体の API に見えないように） |
 
 - **リリースのファイル名**: 版の番号を付けない（`deadlock-jimaku_x64-setup.exe`、`deadlock-jimaku_universal.dmg`、`deadlock-jimaku_amd64.AppImage` / `.deb`、`deadlock-jimaku.x86_64.rpm`）。LP は `releases/latest/download/<ファイル名>` で最新版を直接落とすので、名前が変わらないようにする。版はリリースの名前で分かる（v0.1.2 から）
-- **名前**: 表示名は「デドロ字幕」（画面・ウィンドウ・インストーラー。Linux だけはパッケージ名に日本語を使えないので、アプリ一覧の名前も `deadlock-jimaku`）。英数字の名前は `deadlock-jimaku`（実行ファイル・インストーラーのファイル名・Linux のパッケージ名。日本語の「デドロ」を知らない人にも Deadlock の道具だと分かり、ドメインとも揃う）。Worker の名前（`dedoro-jimaku-api` / `dedoro-jimaku-web`）は利用者に見えないので、作り直しを避けてそのままにする。v0.1.0〜v0.1.1 の英数字の名前は `dedoro-jimaku` だったので、Linux のパッケージはそれを置き換える（deb の replaces / conflicts、rpm の obsoletes）
+- **名前**: 表示名は「デドロ字幕」（画面・ウィンドウ・インストーラー。Linux だけはパッケージ名に日本語を使えないので、アプリ一覧の名前も `deadlock-jimaku`）。英数字の名前は `deadlock-jimaku`（実行ファイル・インストーラーのファイル名・Linux のパッケージ名。日本語の「デドロ」を知らない人にも Deadlock の道具だと分かり、ドメインとも揃う）。Worker（`deadlock-jimaku-api` / `deadlock-jimaku-web`）とリポジトリ、D1 も同じ名前にする。アプリの識別子（`dev.deadlock-stream-overlays.app`）だけは、データの置き場所と資格情報ストアの名前になっていて、変えると設定とキーが消えるので残す。v0.1.0〜v0.1.1 の英数字の名前は `dedoro-jimaku` だったので、Linux のパッケージはそれを置き換える（deb の replaces / conflicts、rpm の obsoletes）
 - **日本語だけ**: ドメインと利用者が日本向けで、ふりがなのように日本語に寄せた機能なので、LP もアプリの画面も日本語だけにする（英語に対応すると、文言を足すたびに両方書く手間が続く）
 - **API**: おすそ分け（17.1）。以前は別名を配っていたが、用語の判定を LLM に任せたのでやめた（9.1）。前のドメインは `api.deadlock.jp`
 - **ダウンロード**: LP の「ダウンロード」の節に OS ごとのボタンを置き、`releases/latest/download/<ファイル名>` で最新版を直接落とす（GitHub のページに飛ばさない）。見ている OS の欄を目立たせる（iPad は Mac と同じ UA を名乗るのでタッチで見分け、Linux は x86_64 だけ）。一番上の「ダウンロード」は節へ移るだけにする（いきなり落とすと、すぐ下の「初めて開くときの警告の進め方」を見ずに止まってしまう）。警告の進め方や AppImage の実行の許可も欄に書く
 - **LP**: 一番上に、配信者が Windows の OBS で撮った実際の配信画面（`web/public/sample/game.webp`、1920×1080）を置き、字幕・アイテム説明・ランクを赤い枠と名札で示す（枠は LP の側で重ね、画面に対する割合で置くので幅に合わせて縮む）。その下に、同じ画面の字幕・カード・ランクの部分の拡大図を並べる（スマホでも字幕が読める）。枠と拡大図は、オーバーレイごとの位置（画面の px）1 つから作る（拡大図は同じ画像を背景にして一部だけ見せ、切り出した画像を別に持たない）。試合 ID とキルログの名前はぼかす（試合の記録から参加者のアカウントをたどれる）。見本の作り方をこの 1 枚にそろえ、作り直した見本（文字で組んだ字幕、撮り直したカードとランク）は使わない。フッターに Valve の公式ではないことと、ゲームの画面・データ・アイコンが Valve の著作物で、データとアイコンは deadlock-api から取っていることを書く。プライバシーポリシーには、OpenAI・deadlock-api・開発者のサーバー（おすそ分けのときだけ。何を保存するかは 17.1 の「保存の仕方」と「表」に合わせる）に送るものと、PC の中に保存するものを書く。サイトのアイコン（favicon）は `favicon.svg`（アプリのアイコンと同じ形を手で描いたもの）と `favicon.ico`・`apple-touch-icon.png`（アプリのアイコンから作ったもの）。アプリのアイコンを作り直すときは、元の SVG を 1 つにして両方を作る。
+- **D1 の表を変えたとき**: `server/migrations/` に足し、デプロイの前に `wrangler d1 migrations apply deadlock-jimaku --remote` を実行する（手元は `--local`）。`deploy` のスクリプトは表を変えない
+- **リポジトリの旧名**: `Chiji1108/deadlock-stream-overlays` は v0.1.3 の自動更新の参照先として GitHub のリダイレクトに頼っているので、同じ名前のリポジトリを作らない（作るとリダイレクトが消え、v0.1.3 が更新を受け取れなくなる）
 - **デプロイ**: 手元から `pnpm --filter ./web deploy` / `pnpm --filter ./server deploy`（先に `wrangler login`）。カスタムドメインは各 `wrangler.jsonc` の `routes`（`custom_domain: true`）で付く
 - サーバーは Hono（最初から Cloudflare Workers 向け）。ElysiaJS も考えたが、Workers 対応が実験的なので選ばない
 

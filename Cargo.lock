@@ -1025,7 +1025,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "deadlock-stream-overlays"
+name = "deadlock-jimaku"
 version = "0.1.3"
 dependencies = [
  "overlays-core",
