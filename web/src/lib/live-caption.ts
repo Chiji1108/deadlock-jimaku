@@ -6,7 +6,10 @@ const NAMES = {
   doorman: { kind: "hero", icon: "doorman_sm", en: "The Doorman", ru: "Швейцар", zh: "门侍" },
   cart: { kind: "ability", icon: "doorman_luggagetrolley", en: "Luggage Cart", ru: "Багажная тележка", zh: "行李车" },
   dispel: { kind: "vitality", icon: "debuff_remover", en: "Dispel Magic", ru: "Развеивание магии", zh: "驱散魔法" },
-  unstoppable: { kind: "vitality", icon: "unstoppable", en: "Unstoppable", ru: "Неудержимость", zh: "势不可挡" },
+  vortex: { kind: "spirit", icon: "vortex_web", en: "Vortex Web", ru: "Паутинный вихрь", zh: "雷织漩涡" },
+  indomitable: { kind: "vitality", icon: "indomitable", en: "Indomitable", ru: "Непреклонность", zh: "不屈之志" },
+  bebop: { kind: "hero", icon: "bebop_sm", en: "Bebop", ru: "Бибоп", zh: "比波普" },
+  krill: { kind: "hero", icon: "digger_sm", en: "Mo & Krill", ru: "Мо и Мелкий", zh: "莫克双雄" },
 } as const;
 
 export const LANGS = [
@@ -32,7 +35,7 @@ export const LINES: Line[] = [
     card: true,
   },
   {
-    source: [{ name: "doorman", spoken: ["ドアマン"] }, "の", { name: "cart", spoken: ["カート"] }, "は", { name: "dispel", spoken: ["ディスペル"] }, "で", ["対策", "たいさく"], "できます"],
+    source: [{ name: "doorman", spoken: ["ドアマン"] }, "の", { name: "cart", spoken: ["カート"] }, "は", { name: "dispel", spoken: ["ディスペル"] }, "で", ["対策", "たいさく"], "できます。"],
     translations: {
       en: [{ name: "doorman" }, "'s ", { name: "cart" }, " can be countered with ", { name: "dispel" }, "."],
       ru: [{ name: "doorman" }, ": ", { name: "cart" }, " контрится предметом ", { name: "dispel" }, "."],
@@ -40,11 +43,19 @@ export const LINES: Line[] = [
     },
   },
   {
-    source: [["次", "つぎ"], "は", { name: "unstoppable", spoken: ["アンストッパブル"] }, "を", ["買", "か"], "います！"],
+    source: ["ただし、", { name: "vortex", spoken: ["ボルテックスウェブ"] }, "には", { name: "indomitable", spoken: ["インドミ"] }, "が", ["必要", "ひつよう"], "です。"],
     translations: {
-      en: ["Next I'm buying ", { name: "unstoppable" }, "!"],
-      ru: ["Дальше покупаю ", { name: "unstoppable" }, "!"],
-      zh: ["接下来买", { name: "unstoppable" }, "！"],
+      en: ["However, you'll need ", { name: "indomitable" }, " for ", { name: "vortex" }, "."],
+      ru: ["Но против предмета ", { name: "vortex" }, " нужна ", { name: "indomitable" }, "."],
+      zh: ["不过，", { name: "vortex" }, "需要用", { name: "indomitable" }, "来应对。"],
+    },
+  },
+  {
+    source: [{ name: "bebop", spoken: ["ビバップ"] }, "や", { name: "krill", spoken: ["モークリ"] }, "もいるなら", ["絶対", "ぜったい"], "に", ["買", "か"], "いましょう。"],
+    translations: {
+      en: ["If there's also a ", { name: "bebop" }, " or ", { name: "krill" }, ", definitely buy it."],
+      ru: ["Если есть ещё ", { name: "bebop" }, " или ", { name: "krill" }, ", обязательно покупайте."],
+      zh: ["如果还有", { name: "bebop" }, "或", { name: "krill" }, "，一定要买。"],
     },
   },
 ];

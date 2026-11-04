@@ -166,6 +166,9 @@ h3 {
 .entity.vitality {
   color: #98e36b;
 }
+.entity.spirit {
+  color: #cfa2ff;
+}
 .stream .caption {
   position: absolute;
   right: 18cqw;
