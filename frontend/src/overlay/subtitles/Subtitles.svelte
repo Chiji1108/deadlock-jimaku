@@ -38,6 +38,9 @@
       : [],
   );
 
+  /** 1 行だけのとき、次の字幕に入れ替わるなら、古い行をフェードさせない（2 行に見える） */
+  const replacing = () => display?.maxLines === 1 && visible.length > 0;
+
   onMount(() => {
     // OBS の中で開かれたか（はじめかたのチェックに使う）。OBS のドックの操作パネルのプレビューも
     // obsstudio を持つかもしれないので、iframe の中は除く
@@ -86,7 +89,7 @@
       class="caption {s.stage}"
       animate:slide={{ duration: 200 }}
       in:fly={{ y: 16, duration: 200 }}
-      out:fade={{ duration: 400 }}
+      out:fade={{ duration: replacing() ? 0 : 400 }}
     >
       <p class="source" lang={s.lang}>
         <!-- partial / final は文字単位で変化させ、enriched ではふりがなとアイコンを足す -->
