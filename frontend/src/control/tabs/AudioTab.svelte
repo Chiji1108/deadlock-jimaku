@@ -111,7 +111,7 @@
         <Field.Label>翻訳先</Field.Label>
         <Field.Description>
           最大 {MAX_TRANSLATE_TO} つ（{s.translateTo.length} / {MAX_TRANSLATE_TO}）。1
-          つ増えるごとに 1 時間あたり約 $0.3
+          つ増えるごとに、話し続けて 1 時間あたり約 $0.3
         </Field.Description>
         <ToggleGroup.Root
           type="multiple"
