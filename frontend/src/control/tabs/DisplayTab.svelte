@@ -22,10 +22,10 @@
     { value: "center", label: "中央", icon: AlignCenterIcon },
     { value: "right", label: "右寄せ", icon: AlignEndIcon },
   ];
-  /** 文字の大きさ（px）。細かく決めたいときは「数値で指定」 */
+  /** 文字の大きさ（px）。既定を一番大きくする。もっと大きくしたいときは「数値で指定」 */
   const SIZES = [
-    { field: "fontSize", label: "話した言葉の大きさ", presets: [16, 24, 32, 40, 48, 56] },
-    { field: "translationFontSize", label: "翻訳の大きさ", presets: [16, 20, 26, 32, 36] },
+    { field: "fontSize", label: "話した言葉の大きさ", presets: [16, 24, 32, 40] },
+    { field: "translationFontSize", label: "翻訳の大きさ", presets: [16, 20, 26] },
   ] as const;
   const BACKGROUNDS: { value: Background; label: string; hint: string }[] = [
     { value: "outline", label: "縁取り", hint: "文字に黒い縁取りを付けます" },

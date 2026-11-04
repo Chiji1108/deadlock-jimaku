@@ -812,6 +812,36 @@ mod tests {
     }
 
     #[test]
+    fn display_patch_changes_only_what_it_names() {
+        let next = Settings::default()
+            .apply(SettingsPatch {
+                subtitle_display: Some(SubtitleDisplayPatch {
+                    background: Some(Background::Band),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            })
+            .unwrap();
+        assert_eq!(next.subtitle_display.background, Background::Band);
+        assert_eq!(
+            next.subtitle_display.font_size,
+            SubtitleDisplay::default().font_size
+        );
+    }
+
+    #[test]
+    fn unknown_display_fields_do_not_reset_the_rest() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("settings.json");
+        std::fs::write(
+            &path,
+            r##"{ "subtitleDisplay": { "textColor": "#ffe066", "fontSize": 32 } }"##,
+        )
+        .unwrap();
+        assert_eq!(load(&path).unwrap().subtitle_display.font_size, 32);
+    }
+
+    #[test]
     fn unreadable_display_keeps_the_other_settings() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("settings.json");

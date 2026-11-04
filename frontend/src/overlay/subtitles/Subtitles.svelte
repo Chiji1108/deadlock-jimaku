@@ -107,6 +107,8 @@
     --source-size: 40px;
     --translation-size: 26px;
     --text-color: #fff;
+    --hero-color: #ff7ab6;
+    --ability-color: #8fd8ff;
     --pending-color: #c8c8c8;
     --outline-color: rgb(0 0 0 / 0.85);
     --gap: 12px;
@@ -159,7 +161,7 @@
     font-weight: 700;
     -webkit-text-stroke: 0.18em var(--outline-color);
     paint-order: stroke fill;
-    text-shadow: 0 2px 6px rgb(0 0 0 / 0.6);
+    text-shadow: 0 0.05em 0.15em rgb(0 0 0 / 0.6);
   }
   .source {
     font-size: var(--source-size);
