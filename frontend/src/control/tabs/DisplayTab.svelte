@@ -13,6 +13,7 @@
   import type { SubtitleDisplayPatch } from "../../generated/SubtitleDisplayPatch";
   import AddToObs from "../parts/AddToObs.svelte";
   import OverlayPreview from "../parts/OverlayPreview.svelte";
+  import DisplayTimingDialog from "../parts/DisplayTimingDialog.svelte";
   import FontSizeDialog from "../parts/FontSizeDialog.svelte";
   import { SUBTITLE_SIZE } from "../../lib/overlay-size";
   import { overlayUrl, panel } from "../panel.svelte";
@@ -157,7 +158,10 @@
           </ToggleGroup.Root>
         </Field.Field>
         <Field.Field>
-          <Field.Label>消すまでの時間</Field.Label>
+          <div class="flex items-center justify-between">
+            <Field.Label>消すまでの時間</Field.Label>
+            <DisplayTimingDialog />
+          </div>
           <Field.Description>長い文は、そのぶん長く出します</Field.Description>
           <ToggleGroup.Root
             type="single"
@@ -170,6 +174,9 @@
               <ToggleGroup.Item value={String(n)} class="flex-1">{n} 秒</ToggleGroup.Item>
             {/each}
           </ToggleGroup.Root>
+          {#if !HOLDS.includes(d.holdSeconds)}
+            <Field.Description>数値で指定しています（{d.holdSeconds} 秒）</Field.Description>
+          {/if}
         </Field.Field>
       </Field.Group>
     </Card.Content>

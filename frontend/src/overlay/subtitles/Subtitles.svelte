@@ -15,9 +15,6 @@
   /** partial が伸びる・final で直るときの文字の動き（DESIGN.md 11 章） */
   const MORPH = { duration: 220, ease: "cubic-bezier(0.19, 1, 0.22, 1)" };
 
-  /** 長い文ほど長く出す（1 文字あたりの秒数） */
-  const PER_CHAR_SECONDS = 0.15;
-
   const segments = new SvelteMap<string, Segment>();
   let now = $state(Date.now());
   /** 見せ方は操作パネルで変え、サーバーから届く（接続直後にも届く） */
@@ -27,7 +24,7 @@
   const expiresAt = (s: Segment) =>
     s.settledAt === undefined || !display
       ? Infinity
-      : s.settledAt + (display.holdSeconds + [...s.text].length * PER_CHAR_SECONDS) * 1000;
+      : s.settledAt + (display.holdSeconds + [...s.text].length * display.perCharSeconds) * 1000;
 
   const isLive = (s: Segment) => s.stage !== "discarded" && expiresAt(s) > now;
 
@@ -35,8 +32,8 @@
     display
       ? visibleLines(
           [...segments.values()].filter(isLive).toSorted((a, b) => a.startedAt - b.startedAt),
-          display.maxLines,
           now,
+          display,
         )
       : [],
   );

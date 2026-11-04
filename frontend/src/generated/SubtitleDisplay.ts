@@ -27,6 +27,18 @@ translationFontSize: number,
  */
 background: Background, 
 /**
+ * 長い文に足す秒数（1 文字あたり）
+ */
+perCharSeconds: number, 
+/**
+ * 翻訳が届いてから、次の字幕に押し出すまでの秒数（DESIGN.md 11 章）
+ */
+minReadSeconds: number, 
+/**
+ * 新しい字幕を待たせる最長の秒数。0 なら待たせず、すぐ入れ替える
+ */
+maxWaitSeconds: number, 
+/**
  * 同時に出す字幕の数
  */
 maxLines: number, 

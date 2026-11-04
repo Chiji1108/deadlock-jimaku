@@ -3,6 +3,7 @@ import type { Segment } from "../generated/Segment";
 import { visibleLines } from "./subtitle-lines";
 
 const NOW = 100_000;
+const TIMING = { minReadSeconds: 3, maxWaitSeconds: 6 };
 /** 何ミリ秒前に翻訳が届いたか（なければ翻訳待ち）。話し始めは何ミリ秒前か */
 const line = (id: string, settledAgo?: number, startedAgo = 1000) =>
   ({
@@ -10,8 +11,8 @@ const line = (id: string, settledAgo?: number, startedAgo = 1000) =>
     startedAt: NOW - startedAgo,
     settledAt: settledAgo === undefined ? undefined : NOW - settledAgo,
   }) as Segment;
-const shown = (lines: Segment[], max: number) =>
-  visibleLines(lines, max, NOW)
+const shown = (lines: Segment[], maxLines: number, timing = TIMING) =>
+  visibleLines(lines, NOW, { maxLines, ...timing })
     .map((s) => s.id)
     .join("");
 
@@ -35,12 +36,28 @@ describe("visibleLines", () => {
     expect(shown([line("a", 1000), line("b"), line("c", 100)], 2)).toBe("ab");
   });
 
-  it("removes a read line first, wherever it is", () => {
-    expect(shown([line("a"), line("b", 5000), line("c", 5000), line("d")], 3)).toBe("acd");
+  it("looks at the oldest line only", () => {
+    expect(shown([line("a"), line("b", 5000), line("c", 5000), line("d")], 3)).toBe("abc");
   });
 
   it("replaces read lines at once with the default of three", () => {
     expect(shown([line("a", 9000), line("b", 8000), line("c", 7000), line("d")], 3)).toBe("bcd");
+  });
+
+  it("replaces at once when waiting is turned off, even before the clock ticks", () => {
+    const timing = { minReadSeconds: 3, maxWaitSeconds: 0 };
+    expect(shown([line("a", 1000), line("b")], 1, timing)).toBe("b");
+    expect(shown([line("a", 1000), line("b", undefined, -200)], 1, timing)).toBe("b");
+  });
+
+  it("does not bring a pushed out line back", () => {
+    const timing = { minReadSeconds: 3, maxWaitSeconds: 0 };
+    expect(shown([line("a"), line("b", 5000)], 1, timing)).toBe("b");
+  });
+
+  it("uses the configured reading time", () => {
+    const timing = { minReadSeconds: 1, maxWaitSeconds: 6 };
+    expect(shown([line("a", 1000), line("b")], 1, timing)).toBe("b");
   });
 
   it("stops holding the newest line when translations take too long", () => {
