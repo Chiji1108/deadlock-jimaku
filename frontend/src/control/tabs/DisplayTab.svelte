@@ -37,7 +37,7 @@
     },
   ];
   const LINES = [1, 2, 3, 4, 5];
-  const HOLDS = [4, 6, 10, 15];
+  const HOLDS = [2, 4, 6, 8];
 
   const s = $derived(panel.settings!);
   const d = $derived(s.subtitleDisplay);
