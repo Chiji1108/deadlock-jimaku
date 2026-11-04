@@ -1,6 +1,6 @@
 ---
 import "../styles/global.css";
-import { REPO } from "../site";
+import { DISCORD, REPO } from "../site";
 
 interface Props {
   title?: string;
@@ -63,10 +63,9 @@ const year = new Date().getFullYear();
     <footer class="mt-24 border-t border-line">
       <div class="mx-auto flex max-w-5xl flex-col gap-3 px-4 py-8 text-sm text-muted">
         <div class="flex flex-wrap gap-5">
+          <a href={DISCORD} class="hover:text-white">Discord（不具合・要望）</a>
+          <a href="/terms" class="hover:text-white">利用規約</a>
           <a href="/privacy" class="hover:text-white">プライバシーポリシー</a>
-          <a href={`${REPO}/issues`} class="hover:text-white">
-            不具合・要望
-          </a>
           <a href={`${REPO}/blob/main/LICENSE.md`} class="hover:text-white">
             ライセンス
           </a>
