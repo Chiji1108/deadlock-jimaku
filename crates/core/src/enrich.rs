@@ -199,7 +199,7 @@ impl Enricher {
             .iter()
             .map(|t| (t.clone(), json!({ "type": "string" })))
             .collect();
-        let mut required = vec!["translations"];
+        let mut required = Vec::new();
         let mut properties = serde_json::Map::new();
         properties.insert(
             "translations".into(),
@@ -214,6 +214,7 @@ impl Enricher {
             required.push("segments");
             properties.insert("segments".into(), segments);
         }
+        required.push("translations");
         json!({
             "type": "object",
             "additionalProperties": false,
@@ -657,6 +658,13 @@ mod tests {
             json!(["en"])
         );
         assert_eq!(enricher(&[]).schema()["required"], json!(["segments"]));
+    }
+
+    #[test]
+    fn schema_asks_only_translations_when_the_mode_is_off() {
+        let mut e = enricher(&["en"]);
+        e.deadlock_mode = false;
+        assert_eq!(e.schema()["required"], json!(["translations"]));
     }
 
     #[tokio::test]
