@@ -1,5 +1,6 @@
 <script lang="ts">
-  // おすそ分け（DESIGN.md 17.1）。自分のキーを預けてコードを作り、知り合いに使ってもらう
+  // おすそ分け（DESIGN.md 17.1）。ギフトコードを作って、知り合いに使ってもらう。
+  // 自分のキーをサーバーに預けるのは、初めてギフトコードを作るときに確かめてから
   import { Badge } from "$lib/components/ui/badge";
   import { Button } from "$lib/components/ui/button";
   import * as Card from "$lib/components/ui/card";
@@ -7,6 +8,7 @@
   import { Input } from "$lib/components/ui/input";
   import type { SharedCode } from "../../generated/SharedCode";
   import { api } from "../../lib/api";
+  import ConfirmDialog from "../parts/ConfirmDialog.svelte";
   import ExpiryPicker from "../parts/ExpiryPicker.svelte";
   import MaskedCode from "../parts/MaskedCode.svelte";
   import SettingsDialog from "../parts/SettingsDialog.svelte";
@@ -22,13 +24,25 @@
   let expiresAt = $state<number | null>(threeDays());
   const past = $derived(expiresAt !== null && expiresAt <= panel.now);
 
+  let creating = $state(false);
+
   async function create() {
+    creating = true;
     const body = { memo: memo.trim(), expiresAt };
-    if (await panel.shareAction(() => api.createCode(body), "ギフトコードを作りました")) {
+    const created = await panel.shareAction(() => api.createCode(body), "ギフトコードを作りました");
+    creating = false;
+    if (created) {
       memo = "";
       expiresAt = threeDays();
     }
+    return created;
   }
+
+  /** 預けてから作る。分けておくと、作るのに失敗しても預けた状態が画面に出て、やめられる */
+  const consent = async () => (await panel.shareAction(api.enableShare)) && create();
+
+  let consenting = $state(false);
+  let stopping = $state(false);
 
   // 期限を変えるダイアログ
   let editing = $state<number | null>(null);
@@ -57,25 +71,22 @@
             ? `おすそ分けの状態を取れません（${panel.shareError}）`
             : "読み込んでいます…"}
         </p>
+        {#if panel.shareError}
+          <Button variant="outline" class="w-fit" onclick={() => (stopping = true)}>
+            おすそ分けをやめる
+          </Button>
+        {/if}
       {:else if !share.enabled && !ownKey}
         <p class="text-sm text-muted-foreground">
           おすそ分けするには、先に「API キー」で自分の OpenAI のキーを保存してください
         </p>
-      {:else if !share.enabled}
-        <p class="text-sm text-muted-foreground">
-          有効にすると、API
-          キーを暗号化して開発者のサーバー（api.jimaku.deadlock.jp）に預けます。コードを持つ人の字幕は、サーバーがこのキーで
-          OpenAI に送ります（音声と文字は保存しません）。無効にすると、預けたキーとコードを消します
-        </p>
-        <Button class="w-fit" onclick={() => panel.shareAction(api.enableShare, "有効にしました")}>
-          おすそ分けを有効にする
-        </Button>
       {:else}
         <form
           class="flex flex-col gap-4"
           onsubmit={(e) => {
             e.preventDefault();
-            void create();
+            if (share.enabled) void create();
+            else consenting = true;
           }}
         >
           <Field.Field>
@@ -100,7 +111,8 @@
               {/if}
             </Field.Description>
           </Field.Field>
-          <Button type="submit" class="w-fit" disabled={past}>ギフトコードを作る</Button>
+          <Button type="submit" class="w-fit" disabled={past || creating}>ギフトコードを作る</Button
+          >
         </form>
       {/if}
     </Card.Content>
@@ -164,17 +176,34 @@
         {/each}
       </Card.Content>
       <Card.Footer>
-        <Button
-          variant="outline"
-          onclick={() => {
-            if (confirm("おすそ分けを無効にしますか？預けたキーと、作ったコードがすべて消えます")) {
-              void panel.shareAction(api.disableShare, "無効にしました");
-            }
-          }}
-        >
-          おすそ分けを無効にする
-        </Button>
+        <Button variant="outline" onclick={() => (stopping = true)}>おすそ分けをやめる</Button>
       </Card.Footer>
     </Card.Root>
   {/if}
 </div>
+
+<ConfirmDialog
+  bind:open={consenting}
+  title="API キーをサーバーに預けます"
+  action="預けてギフトコードを作る"
+  disabled={past}
+  onconfirm={consent}
+>
+  <p>
+    ギフトコードを使う人の字幕は、開発者のサーバー（api.jimaku.deadlock.jp）があなたの API キーで
+    OpenAI に送ります。使われた分はあなたに請求されます。
+  </p>
+  <p>キーは暗号化して保存します。音声と文字は保存しません。</p>
+  <p>「おすそ分けをやめる」で、いつでもキーを消せます。</p>
+  <p>同じキーで別の PC からおすそ分けしている場合、その PC では管理できなくなります。</p>
+</ConfirmDialog>
+
+<ConfirmDialog
+  bind:open={stopping}
+  title="おすそ分けをやめますか？"
+  action="おすそ分けをやめる"
+  destructive
+  onconfirm={() => panel.shareAction(api.disableShare, "おすそ分けをやめました")}
+>
+  <p>預けたキーと、作ったギフトコードがすべて消えます。配ったギフトコードは使えなくなります。</p>
+</ConfirmDialog>
