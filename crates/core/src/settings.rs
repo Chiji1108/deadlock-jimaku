@@ -98,12 +98,6 @@ pub struct SubtitleDisplay {
     pub font_size: u32,
     /// 訳文の文字の大きさ（px）
     pub translation_font_size: u32,
-    /// 確定した字幕の文字色（`#rrggbb`）
-    pub text_color: String,
-    /// ヒーロー名の色。ゲームに決まった色がないので選べる（アイテムはスロットの色で固定）
-    pub hero_color: String,
-    /// スキル名の色
-    pub ability_color: String,
     /// 文字の後ろ。明るい場面でも読めるよう、半透明の帯も選べる
     pub background: Background,
     /// 同時に出す字幕の数
@@ -119,9 +113,6 @@ impl Default for SubtitleDisplay {
             align: Align::Center,
             font_size: 40,
             translation_font_size: 26,
-            text_color: "#ffffff".into(),
-            hero_color: "#ff7ab6".into(),
-            ability_color: "#8fd8ff".into(),
             background: Background::Outline,
             max_lines: 3,
             hold_seconds: 6.0,
@@ -134,25 +125,11 @@ impl SubtitleDisplay {
     pub const HOLD_SECONDS: std::ops::RangeInclusive<f32> = 2.0..=30.0;
     pub const FONT_SIZE: std::ops::RangeInclusive<u32> = 16..=96;
 
-    /// 色の項目。検証と小文字への統一はここに並べたものにかける
-    fn colors_mut(&mut self) -> [&mut String; 3] {
-        [
-            &mut self.text_color,
-            &mut self.hero_color,
-            &mut self.ability_color,
-        ]
-    }
-
     fn validate(&self) -> Result<(), String> {
-        let is_hex = |c: &str| {
-            c.strip_prefix('#')
-                .is_some_and(|h| h.len() == 6 && h.chars().all(|c| c.is_ascii_hexdigit()))
-        };
         if !Self::MAX_LINES.contains(&self.max_lines)
             || !Self::HOLD_SECONDS.contains(&self.hold_seconds)
             || !Self::FONT_SIZE.contains(&self.font_size)
             || !Self::FONT_SIZE.contains(&self.translation_font_size)
-            || !self.clone().colors_mut().iter().all(|c| is_hex(c))
         {
             return Err("subtitleDisplay is out of range".into());
         }
@@ -239,12 +216,6 @@ pub struct SubtitleDisplayPatch {
     #[ts(optional)]
     pub translation_font_size: Option<u32>,
     #[ts(optional)]
-    pub text_color: Option<String>,
-    #[ts(optional)]
-    pub hero_color: Option<String>,
-    #[ts(optional)]
-    pub ability_color: Option<String>,
-    #[ts(optional)]
     pub background: Option<Background>,
     #[ts(optional)]
     pub max_lines: Option<u32>,
@@ -254,32 +225,19 @@ pub struct SubtitleDisplayPatch {
 
 impl SubtitleDisplay {
     fn apply(&self, patch: SubtitleDisplayPatch) -> Result<Self, String> {
-        let mut next = Self {
+        let next = Self {
             furigana: patch.furigana.unwrap_or(self.furigana),
             align: patch.align.unwrap_or(self.align),
             font_size: patch.font_size.unwrap_or(self.font_size),
             translation_font_size: patch
                 .translation_font_size
                 .unwrap_or(self.translation_font_size),
-            text_color: patch.text_color.unwrap_or_else(|| self.text_color.clone()),
-            hero_color: patch.hero_color.unwrap_or_else(|| self.hero_color.clone()),
-            ability_color: patch
-                .ability_color
-                .unwrap_or_else(|| self.ability_color.clone()),
             background: patch.background.unwrap_or(self.background),
             max_lines: patch.max_lines.unwrap_or(self.max_lines),
             hold_seconds: patch.hold_seconds.unwrap_or(self.hold_seconds),
         };
-        next.normalize_colors();
         next.validate()?;
         Ok(next)
-    }
-
-    /// 操作パネルで既定の色と比べられるよう、小文字に揃える
-    fn normalize_colors(&mut self) {
-        for color in self.colors_mut() {
-            color.make_ascii_lowercase();
-        }
     }
 }
 
@@ -485,7 +443,6 @@ impl Settings {
             anchor: Some(self.item_cards.anchor),
         };
         self.item_cards = ItemCards::default().apply(cards).unwrap_or_default();
-        self.subtitle_display.normalize_colors();
         self
     }
 
@@ -760,13 +717,6 @@ mod tests {
             },
             SettingsPatch {
                 subtitle_display: Some(SubtitleDisplayPatch {
-                    text_color: Some("white".into()),
-                    ..Default::default()
-                }),
-                ..Default::default()
-            },
-            SettingsPatch {
-                subtitle_display: Some(SubtitleDisplayPatch {
                     max_lines: Some(0),
                     ..Default::default()
                 }),
@@ -859,13 +809,6 @@ mod tests {
             load(&path).unwrap().subtitle_display,
             SubtitleDisplay::default()
         );
-
-        std::fs::write(
-            &path,
-            r##"{ "subtitleDisplay": { "textColor": "#FFE066" } }"##,
-        )
-        .unwrap();
-        assert_eq!(load(&path).unwrap().subtitle_display.text_color, "#ffe066");
     }
 
     #[test]
@@ -962,46 +905,6 @@ mod tests {
             assert!(
                 s.apply(SettingsPatch {
                     item_cards: Some(bad),
-                    ..Default::default()
-                })
-                .is_err()
-            );
-        }
-    }
-
-    #[test]
-    fn display_patch_checks_and_lowercases_every_color() {
-        let s = Settings::default();
-        let next = s
-            .apply(SettingsPatch {
-                subtitle_display: Some(SubtitleDisplayPatch {
-                    hero_color: Some("#B48CFF".into()),
-                    ability_color: Some("#00AAFF".into()),
-                    background: Some(Background::Band),
-                    ..Default::default()
-                }),
-                ..Default::default()
-            })
-            .unwrap();
-        let d = &next.subtitle_display;
-        assert_eq!(
-            (d.hero_color.as_str(), d.ability_color.as_str()),
-            ("#b48cff", "#00aaff")
-        );
-        assert_eq!(d.background, Background::Band);
-        for bad in [
-            SubtitleDisplayPatch {
-                hero_color: Some("pink".into()),
-                ..Default::default()
-            },
-            SubtitleDisplayPatch {
-                ability_color: Some("#12345".into()),
-                ..Default::default()
-            },
-        ] {
-            assert!(
-                s.apply(SettingsPatch {
-                    subtitle_display: Some(bad),
                     ..Default::default()
                 })
                 .is_err()
