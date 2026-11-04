@@ -1,18 +1,17 @@
 // LP の見本の字幕。アプリのオーバーレイと同じ流れ（途中の字幕 → ふりがな・色・アイコン → 翻訳）を、用意した台詞で見せる
 const NAMES = {
-  graves: { kind: "hero", icon: "necro_sm", en: "Graves", ko: "그레이브즈", zh: "格瑞墓", es: "Graves" },
-  theft: { kind: "ability", icon: "necro_siphon", en: "Essence Theft", ko: "정수 강탈", zh: "精华转移", es: "Robo de Esencia" },
-  split: { kind: "weapon", icon: "titanic_magazine", en: "Split Shot", ko: "분할탄", zh: "裂光射击", es: "Disparo Dividido" },
-  doorman: { kind: "hero", icon: "doorman_sm", en: "The Doorman", ko: "도어맨", zh: "门侍", es: "El Portero" },
-  cart: { kind: "ability", icon: "doorman_luggagetrolley", en: "Luggage Cart", ko: "수하물 카트", zh: "行李车", es: "Carrito de Equipaje" },
-  unstoppable: { kind: "vitality", icon: "unstoppable", en: "Unstoppable", ko: "절대 저항", zh: "势不可挡", es: "Imparable" },
+  graves: { kind: "hero", icon: "necro_sm", en: "Graves", ru: "Грейвс", zh: "格瑞墓" },
+  theft: { kind: "ability", icon: "necro_siphon", en: "Essence Theft", ru: "Хищение эссенции", zh: "精华转移" },
+  split: { kind: "weapon", icon: "titanic_magazine", en: "Split Shot", ru: "Веерный выстрел", zh: "裂光射击" },
+  doorman: { kind: "hero", icon: "doorman_sm", en: "The Doorman", ru: "Швейцар", zh: "门侍" },
+  cart: { kind: "ability", icon: "doorman_luggagetrolley", en: "Luggage Cart", ru: "Багажная тележка", zh: "行李车" },
+  unstoppable: { kind: "vitality", icon: "unstoppable", en: "Unstoppable", ru: "Неудержимость", zh: "势不可挡" },
 } as const;
 
 export const LANGS = [
   { value: "en", label: "English" },
-  { value: "ko", label: "한국어" },
+  { value: "ru", label: "Русский" },
   { value: "zh", label: "中文" },
-  { value: "es", label: "Español" },
 ] as const;
 type Lang = (typeof LANGS)[number]["value"];
 type Name = keyof typeof NAMES;
@@ -26,9 +25,8 @@ export const LINES: Line[] = [
     source: [{ name: "graves", spoken: ["グレイブス"] }, "の", { name: "theft", spoken: ["3", ["番", "ばん"], "スキル"] }, "は", { name: "split", spoken: ["スプリットショット"] }, "で", ["強", "つよ"], "くなる。"],
     translations: {
       en: [{ name: "graves" }, "'s ", { name: "theft" }, " gets stronger with ", { name: "split" }, "."],
-      ko: [{ name: "graves" }, "의 ", { name: "theft" }, "은 ", { name: "split" }, "으로 강해집니다."],
+      ru: [{ name: "graves" }, ": ", { name: "theft" }, " усиливается предметом ", { name: "split" }, "."],
       zh: [{ name: "graves" }, "的", { name: "theft" }, "会因", { name: "split" }, "而变强。"],
-      es: [{ name: "theft" }, " de ", { name: "graves" }, " se potencia con ", { name: "split" }, "."],
     },
     card: true,
   },
@@ -36,18 +34,16 @@ export const LINES: Line[] = [
     source: [{ name: "doorman", spoken: ["ドアマン"] }, "の", { name: "cart", spoken: ["カート"] }, "が", ["来", "き"], "た！", ["一回", "いっかい"], ["下", "さ"], "がろう！"],
     translations: {
       en: [{ name: "doorman" }, "'s ", { name: "cart" }, " is coming! Let's fall back!"],
-      ko: [{ name: "doorman" }, "의 ", { name: "cart" }, "가 온다! 일단 물러나자!"],
+      ru: [{ name: "doorman" }, " — едет ", { name: "cart" }, "! Отступаем!"],
       zh: [{ name: "doorman" }, "的", { name: "cart" }, "来了！先撤一下！"],
-      es: ["¡Viene el ", { name: "cart" }, " de ", { name: "doorman" }, "! ¡Retrocedamos!"],
     },
   },
   {
     source: [["次", "つぎ"], "は", { name: "unstoppable", spoken: ["アンストッパブル"] }, "を", ["買", "か"], "います！"],
     translations: {
       en: ["Next I'm buying ", { name: "unstoppable" }, "!"],
-      ko: ["다음은 ", { name: "unstoppable" }, "을 살게요!"],
+      ru: ["Дальше покупаю ", { name: "unstoppable" }, "!"],
       zh: ["接下来买", { name: "unstoppable" }, "！"],
-      es: ["¡Ahora voy a comprar ", { name: "unstoppable" }, "!"],
     },
   },
 ];
