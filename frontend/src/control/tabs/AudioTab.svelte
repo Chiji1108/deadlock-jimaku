@@ -7,6 +7,7 @@
   import * as Select from "$lib/components/ui/select";
   import { Switch } from "$lib/components/ui/switch";
   import * as ToggleGroup from "$lib/components/ui/toggle-group";
+  import DeadlockModeDialog from "../parts/DeadlockModeDialog.svelte";
   import LevelMeter from "../parts/LevelMeter.svelte";
   import PauseDialog from "../parts/PauseDialog.svelte";
   import { panel } from "../panel.svelte";
@@ -112,7 +113,8 @@
         <Field.Content>
           <Field.Label for="deadlock-mode">デッドロックモード</Field.Label>
           <Field.Description>
-            ヒーロー・スキル・アイテムを強調し、アイテム説明を出します。雑談の配信ならオフにできます
+            ヒーロー・スキル・アイテムを強調し、アイテム説明を出します。雑談の配信や、ほかのゲームの配信ではオフにしてください
+            <DeadlockModeDialog />
           </Field.Description>
         </Field.Content>
         <Switch
