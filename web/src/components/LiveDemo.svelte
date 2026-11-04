@@ -3,7 +3,10 @@
   import { onMount } from "svelte";
   import Captions from "../../../frontend/src/lib/Captions.svelte";
   import RankBadge from "../../../frontend/src/lib/RankBadge.svelte";
+  import { defineCards, type Cards } from "../lib/cards";
   import { display, enriched, LANGS, LINES, partial, RANK, spokenText } from "../lib/demo";
+
+  let { cards }: { cards: Cards } = $props();
 
   /** 配信画面の幅。部品の大きさは OBS の 1920px の画面に置いたときの比で決める */
   const SCREEN = 1920;
@@ -17,6 +20,7 @@
   let cycle = $state(0);
   let card = $state(LINES[0]!.card);
   let cardShown = $state(false);
+  let cardsReady = $state(false);
   let inView = true;
   let settled = $state(true);
 
@@ -37,14 +41,7 @@
   const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
   onMount(() => {
-    // カードの部品は重いので、ページが出てから読み込む
-    void Promise.all([
-      import("@deadlock-api/ui-core/dist/components/dl-provider.js"),
-      import("@deadlock-api/ui-core/dist/components/dl-item-tooltip.js"),
-    ]).then(([provider, tooltip]) => {
-      provider.defineCustomElement();
-      tooltip.defineCustomElement();
-    });
+    void defineCards().then(() => (cardsReady = true));
 
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
       text = spokenText(line);
@@ -101,7 +98,13 @@
     </div>
     <dl-provider language="japanese">
       <div class="stream-card" class:show={cardShown} style:zoom={scale * (narrow ? 0.9 : 1)}>
-        <dl-item-tooltip class-name={card}></dl-item-tooltip>
+        {#if cardsReady}
+          <dl-item-tooltip
+            itemData={cards[card]?.item}
+            componentItemsData={cards[card]?.components}
+            parentItemsData={cards[card]?.parents}
+          ></dl-item-tooltip>
+        {/if}
       </div>
     </dl-provider>
     <div class="stream-captions"><Captions {segments} display={subtitle} /></div>
