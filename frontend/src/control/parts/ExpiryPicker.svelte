@@ -10,6 +10,7 @@
     { label: "1 日後", days: 1 },
     { label: "3 日後", days: 3 },
     { label: "1 週間後", days: 7 },
+    { label: "30 日後", days: 30 },
   ];
 
   /** `<input type="datetime-local">` の値（その PC の時刻）とミリ秒の変換 */
