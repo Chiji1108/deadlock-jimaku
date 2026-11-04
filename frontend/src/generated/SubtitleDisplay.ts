@@ -23,18 +23,6 @@ fontSize: number,
  */
 translationFontSize: number, 
 /**
- * 確定した字幕の文字色（`#rrggbb`）
- */
-textColor: string, 
-/**
- * ヒーロー名の色。ゲームに決まった色がないので選べる（アイテムはスロットの色で固定）
- */
-heroColor: string, 
-/**
- * スキル名の色
- */
-abilityColor: string, 
-/**
  * 文字の後ろ。明るい場面でも読めるよう、半透明の帯も選べる
  */
 background: Background, 

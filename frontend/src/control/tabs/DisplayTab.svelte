@@ -13,7 +13,6 @@
   import type { SubtitleDisplayPatch } from "../../generated/SubtitleDisplayPatch";
   import AddToObs from "../parts/AddToObs.svelte";
   import OverlayPreview from "../parts/OverlayPreview.svelte";
-  import ColorInput from "../parts/ColorInput.svelte";
   import FontSizeDialog from "../parts/FontSizeDialog.svelte";
   import { SUBTITLE_SIZE } from "../../lib/overlay-size";
   import { overlayUrl, panel } from "../panel.svelte";
@@ -23,10 +22,10 @@
     { value: "center", label: "中央", icon: AlignCenterIcon },
     { value: "right", label: "右寄せ", icon: AlignEndIcon },
   ];
-  /** 文字の大きさ（px）。細かく決めたいときは「数値で指定」 */
+  /** 文字の大きさ（px）。既定を一番大きくする。もっと大きくしたいときは「数値で指定」 */
   const SIZES = [
-    { field: "fontSize", label: "話した言葉の大きさ", presets: [32, 40, 48, 56] },
-    { field: "translationFontSize", label: "翻訳の大きさ", presets: [22, 26, 32, 36] },
+    { field: "fontSize", label: "話した言葉の大きさ", presets: [16, 24, 32, 40] },
+    { field: "translationFontSize", label: "翻訳の大きさ", presets: [16, 20, 26] },
   ] as const;
   const BACKGROUNDS: { value: Background; label: string; hint: string }[] = [
     { value: "outline", label: "縁取り", hint: "文字に黒い縁取りを付けます" },
@@ -36,12 +35,6 @@
       hint: "明るい場面でも読めるよう、行の後ろに黒い帯を敷きます",
     },
   ];
-  /** 既定の色はサーバーの既定（settings.rs）と同じ */
-  const COLORS = [
-    { key: "textColor", label: "文字", initial: "#ffffff" },
-    { key: "heroColor", label: "ヒーロー名", initial: "#ff7ab6" },
-    { key: "abilityColor", label: "スキル名", initial: "#8fd8ff" },
-  ] as const;
   const LINES = [1, 2, 3, 4, 5];
   const HOLDS = [4, 6, 10, 15];
 
@@ -178,36 +171,6 @@
             {/each}
           </ToggleGroup.Root>
         </Field.Field>
-      </Field.Group>
-    </Card.Content>
-  </Card.Root>
-
-  <Card.Root>
-    <Card.Header>
-      <Card.Title>文字の色</Card.Title>
-      <Card.Description>
-        縁取りや帯の黒の上に出るので、明るい色が読みやすいです。アイテム名の色はゲームのスロットの色のままです
-      </Card.Description>
-      <Card.Action>
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={COLORS.every((c) => d[c.key] === c.initial)}
-          onclick={() =>
-            set(Object.fromEntries(COLORS.map((c) => [c.key, c.initial])) as SubtitleDisplayPatch)}
-        >
-          既定の色に戻す
-        </Button>
-      </Card.Action>
-    </Card.Header>
-    <Card.Content>
-      <Field.Group>
-        {#each COLORS as c (c.key)}
-          <Field.Field orientation="horizontal">
-            <Field.Label for={c.key} class="flex-1">{c.label}</Field.Label>
-            <ColorInput id={c.key} value={d[c.key]} onchange={(hex) => set({ [c.key]: hex })} />
-          </Field.Field>
-        {/each}
       </Field.Group>
     </Card.Content>
   </Card.Root>

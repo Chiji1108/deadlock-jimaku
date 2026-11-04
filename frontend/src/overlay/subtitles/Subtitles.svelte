@@ -69,16 +69,13 @@
 </script>
 
 <!-- 見せ方は操作パネルから届く値を CSS 変数で当てる（操作パネルの値が優先。OBS のカスタム CSS で
-     大きさや色を変えるときは .captions に !important で書く） -->
+     大きさを変えるときは .captions に !important で書く。色は :root の変数を上書きする） -->
 <ol
   class="captions"
   data-align={display?.align ?? "center"}
   data-background={display?.background ?? "outline"}
   style:--source-size={display && `${display.fontSize}px`}
   style:--translation-size={display && `${display.translationFontSize}px`}
-  style:--text-color={display?.textColor}
-  style:--hero-color={display?.heroColor}
-  style:--ability-color={display?.abilityColor}
 >
   {#each visible as s (s.id)}
     <li
@@ -110,6 +107,8 @@
     --source-size: 40px;
     --translation-size: 26px;
     --text-color: #fff;
+    --hero-color: #ff7ab6;
+    --ability-color: #8fd8ff;
     --pending-color: #c8c8c8;
     --outline-color: rgb(0 0 0 / 0.85);
     --gap: 12px;
@@ -162,7 +161,7 @@
     font-weight: 700;
     -webkit-text-stroke: 0.18em var(--outline-color);
     paint-order: stroke fill;
-    text-shadow: 0 2px 6px rgb(0 0 0 / 0.6);
+    text-shadow: 0 0.05em 0.15em rgb(0 0 0 / 0.6);
   }
   .source {
     font-size: var(--source-size);
