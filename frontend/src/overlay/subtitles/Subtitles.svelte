@@ -6,6 +6,7 @@
   import type { Segment } from "../../generated/Segment";
   import type { SubtitleDisplay } from "../../generated/SubtitleDisplay";
   import Rich from "../../lib/Rich.svelte";
+  import { api } from "../../lib/api";
   import { loadGlossary } from "../../lib/glossary.svelte";
   import { slide } from "../../lib/slide";
   import { connect } from "../../lib/ws";
@@ -39,6 +40,8 @@
   );
 
   onMount(() => {
+    // OBS のブラウザソースにだけある。操作パネルのプレビューと見分ける（はじめかたのチェックに使う）
+    if ("obsstudio" in window) void api.updateSettings({ obsSeen: true }).catch(() => {});
     const tick = setInterval(() => {
       now = Date.now();
       for (const [id, s] of segments) if (!isLive(s)) segments.delete(id);

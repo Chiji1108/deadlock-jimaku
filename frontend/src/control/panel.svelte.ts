@@ -48,6 +48,7 @@ class Panel {
   private updates = 0;
   /** 最後に SILENT_DB を超えた時刻 */
   private heardAt = 0;
+  private spoke = $state(false);
   /** 最後にレベルが届いた時刻 */
   private levelAt = 0;
   now = $state(Date.now());
@@ -71,6 +72,11 @@ class Panel {
     return !!this.settings?.transcriptionEnabled && !this.transcriptionError;
   }
 
+  /** 起動してから、マイクの音が届いたことがある */
+  get heard() {
+    return this.spoke;
+  }
+
   /** 動いているのに、しばらく音が来ていない */
   get silent() {
     return this.running && this.level !== undefined && this.now - this.heardAt > SILENT_MS;
@@ -92,11 +98,7 @@ class Panel {
       (s) => {
         this.server = s;
         // アプリを更新して開き直したときなど、つなぎ直したら最新の状態（版など）にする
-        if (s === "open")
-          void api.settings().then(
-            (view) => (this.view = view),
-            () => {},
-          );
+        if (s === "open") void this.refreshSettings();
       },
     );
     return () => {
@@ -113,6 +115,7 @@ class Panel {
     } else if (msg.type === "audio.level") {
       // 届き始めた（張り直しで途切れた後も）時点を「聞こえた」とみなし、そこから数える
       const now = Date.now();
+      if (msg.db > SILENT_DB) this.spoke = true;
       if (now - this.levelAt > 1000 || msg.db > SILENT_DB) this.heardAt = now;
       this.levelAt = now;
       this.level = msg.db;
@@ -124,6 +127,10 @@ class Panel {
   }
 
   /** 続けて変えたとき、古い応答で新しい設定を上書きしない */
+  refreshSettings = async () => {
+    this.view = await api.settings().catch(() => this.view);
+  };
+
   update = (patch: SettingsPatch) =>
     this.run(async () => {
       const id = ++this.updates;

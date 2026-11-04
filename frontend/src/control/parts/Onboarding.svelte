@@ -1,0 +1,95 @@
+<script lang="ts">
+  // はじめかたのチェックリスト（DESIGN.md 13 章）。今の状態からチェックを付けるので、「完了」の操作はない。
+  // 全部終わるか閉じたら、次からは出さない
+  import CheckIcon from "@lucide/svelte/icons/check";
+  import XIcon from "@lucide/svelte/icons/x";
+  import { Button } from "$lib/components/ui/button";
+  import * as Card from "$lib/components/ui/card";
+  import { panel } from "../panel.svelte";
+
+  let { open }: { open: (tab: string) => void } = $props();
+
+  /** OBS がつないだかは、オーバーレイが設定に書く。ここからは見えないので取り直す */
+  const REFRESH_MS = 3000;
+
+  const s = $derived(panel.settings!);
+  const steps = $derived([
+    {
+      title: "API キーかギフトコードを入れる",
+      done: panel.hasAccess,
+      tab: "keys",
+      go: "API キーへ",
+    },
+    {
+      title: "OBS に字幕を追加する",
+      done: s.obsSeen,
+      tab: "display",
+      go: "字幕の表示へ",
+    },
+    { title: "右上の「字幕を始める」を押す", done: s.transcriptionEnabled },
+    { title: "話してみて、音が届くのを確かめる", done: panel.heard },
+  ]);
+  const finished = $derived(steps.every((step) => step.done));
+  /** 全部終わった画面は、この起動の間だけ出しておく */
+  let celebrating = $state(false);
+
+  $effect(() => {
+    if (!finished || s.onboardingClosed) return;
+    celebrating = true;
+    void panel.update({ onboardingClosed: true });
+  });
+
+  $effect(() => {
+    if (s.obsSeen || s.onboardingClosed) return;
+    const timer = setInterval(() => void panel.refreshSettings(), REFRESH_MS);
+    return () => clearInterval(timer);
+  });
+
+  function close() {
+    celebrating = false;
+    void panel.update({ onboardingClosed: true });
+  }
+</script>
+
+{#if !s.onboardingClosed || celebrating}
+  <Card.Root>
+    <Card.Header>
+      <Card.Title>はじめかた</Card.Title>
+      {#if finished}
+        <Card.Description>
+          準備できました。アイテム説明やランクも、それぞれのタブから OBS に追加できます
+        </Card.Description>
+      {/if}
+      <Card.Action>
+        <Button variant="ghost" size="icon-sm" aria-label="閉じる" onclick={close}><XIcon /></Button
+        >
+      </Card.Action>
+    </Card.Header>
+    <Card.Content>
+      <ol class="flex flex-col gap-2">
+        {#each steps as step, i (step.title)}
+          <li class="flex min-h-8 items-center gap-3 text-sm">
+            <span
+              class="flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold {step.done
+                ? 'bg-primary text-primary-foreground'
+                : 'border text-muted-foreground'}"
+            >
+              {#if step.done}<CheckIcon class="size-3.5" />{:else}{i + 1}{/if}
+            </span>
+            <span class={step.done ? "text-muted-foreground" : ""}>{step.title}</span>
+            {#if step.tab && !step.done}
+              <Button
+                variant="link"
+                size="sm"
+                class="ml-auto h-auto p-0"
+                onclick={() => open(step.tab!)}
+              >
+                {step.go}
+              </Button>
+            {/if}
+          </li>
+        {/each}
+      </ol>
+    </Card.Content>
+  </Card.Root>
+{/if}

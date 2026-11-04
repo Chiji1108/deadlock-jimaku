@@ -23,7 +23,7 @@ minSilenceMs?: number,
 /**
  * 空文字列なら話す言語
  */
-rankLanguage?: string, rankContent?: RankContent, rankAnchor?: Anchor, 
+rankLanguage?: string, rankContent?: RankContent, rankAnchor?: Anchor, obsSeen?: boolean, onboardingClosed?: boolean, 
 /**
  * 地域（`Region`）。空文字列なら順位を調べない
  */

@@ -43,6 +43,10 @@ pub struct Settings {
     /// エターナスの順位を調べるリーダーボードの地域。None なら調べない
     #[ts(optional)]
     pub rank_region: Option<Region>,
+    /// OBS のブラウザソースで字幕オーバーレイが開かれたことがある（はじめかたのチェックに使う）
+    pub obs_seen: bool,
+    /// はじめかたを閉じた、または全部終えた
+    pub onboarding_closed: bool,
     // 以下の詳細項目は操作パネルで変えない（`ADVANCED`）
     pub models: Models,
     /// リアルタイムの音声認識の遅れ（`minimal` / `low` / `medium` / `high` / `xhigh`。
@@ -348,6 +352,8 @@ impl Default for Settings {
             rank_language: None,
             rank_content: RankContent::Full,
             rank_anchor: Anchor::TopLeft,
+            obs_seen: false,
+            onboarding_closed: false,
             rank_region: None,
             models: Models::default(),
             realtime_delay: "low".into(),
@@ -505,6 +511,8 @@ impl Settings {
         if let Some(anchor) = patch.rank_anchor {
             next.rank_anchor = anchor;
         }
+        next.obs_seen = patch.obs_seen.unwrap_or(next.obs_seen);
+        next.onboarding_closed = patch.onboarding_closed.unwrap_or(next.onboarding_closed);
         if let Some(region) = patch.rank_region {
             next.rank_region = match region.as_str() {
                 "" => None,
@@ -557,6 +565,10 @@ pub struct SettingsPatch {
     pub rank_content: Option<RankContent>,
     #[ts(optional)]
     pub rank_anchor: Option<Anchor>,
+    #[ts(optional)]
+    pub obs_seen: Option<bool>,
+    #[ts(optional)]
+    pub onboarding_closed: Option<bool>,
     /// 地域（`Region`）。空文字列なら順位を調べない
     #[ts(optional)]
     pub rank_region: Option<String>,
