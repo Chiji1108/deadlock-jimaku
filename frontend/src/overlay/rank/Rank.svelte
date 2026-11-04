@@ -7,6 +7,7 @@
   import type { RankContent } from "../../generated/RankContent";
   import type { RankState } from "../../generated/RankState";
   import { placeItems } from "../../lib/anchor";
+  import { fitSource, rankSize } from "../../lib/overlay-size";
   import { REGIONS } from "../../lib/regions";
   import { connect } from "../../lib/ws";
 
@@ -15,6 +16,13 @@
   let lang = $state("ja");
   let content = $state<RankContent>("full");
   let anchor = $state<Anchor>("top-left");
+
+  // 大きさは --scale で描く（zoom だとポイントの数字のアニメーションの位置がずれる）
+  $effect(() =>
+    fitSource(rankSize(content), (factor) =>
+      document.documentElement.style.setProperty("--scale", String(factor)),
+    ),
+  );
 
   onMount(() =>
     connect(["rank", "display"], (msg) => {
@@ -90,7 +98,7 @@
 
 <style>
   /* OBS の「カスタム CSS」で上書きできるよう、見た目は変数にまとめる。
-     大きさは既定のソース（400×140）での px に、ソースの大きさとの比（--scale。main.ts）を掛ける */
+     大きさは既定のソース（rankSize）での px に、ソースの大きさとの比（--scale）を掛ける */
   :global(:root) {
     --scale: 1;
     --badge-size: calc(96px * var(--scale));
