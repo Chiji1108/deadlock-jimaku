@@ -111,7 +111,7 @@
     >
       <!-- 縦のとき（サイドバー）は高さいっぱいに伸ばし、入りきらなければサイドバーだけスクロールする -->
       <div
-        class="shrink-0 px-4 pt-4 group-data-vertical/tabs:w-56 group-data-vertical/tabs:overflow-y-auto group-data-vertical/tabs:border-r group-data-vertical/tabs:bg-muted/30 group-data-vertical/tabs:p-3"
+        class="flex shrink-0 flex-col px-4 pt-4 group-data-vertical/tabs:w-56 group-data-vertical/tabs:overflow-y-auto group-data-vertical/tabs:border-r group-data-vertical/tabs:bg-muted/30 group-data-vertical/tabs:p-3"
       >
         <Tabs.List
           class="w-full justify-start overflow-x-auto overflow-y-hidden group-data-vertical/tabs:gap-1 group-data-vertical/tabs:bg-transparent"
@@ -126,6 +126,12 @@
             </Tabs.Trigger>
           {/each}
         </Tabs.List>
+        <!-- 不具合の報告や、更新できたかの確認に使う。狭いときは場所を取らないよう出さない -->
+        <p
+          class="mt-auto px-3 pt-3 text-xs text-muted-foreground tabular-nums group-data-horizontal/tabs:hidden"
+        >
+          v{panel.view?.version}
+        </p>
       </div>
       <main bind:this={content} class="min-w-0 flex-1 group-data-vertical/tabs:overflow-y-auto">
         <div class="mx-auto flex max-w-3xl flex-col gap-4 px-4 py-6">
