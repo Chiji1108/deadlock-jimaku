@@ -1,7 +1,7 @@
 ---
 import Layout from "../layouts/Layout.astro";
 
-import { REPO } from "../site";
+import { DISCORD, REPO, TWITCH } from "../site";
 /** 最新のリリースのファイルを直接落とす（ファイル名に版の番号を付けないので、いつも最新版になる） */
 const file = (name: string) => `${REPO}/releases/latest/download/${name}`;
 const downloads = [
@@ -136,6 +136,31 @@ const faqs = [
   {
     q: "OpenAI の料金が心配です",
     a: "アプリの「料金」タブに、使った分の目安がその場で出ます。前払いのチャージで使い、自動チャージをオフにしておけば、残高より多くは使われません。",
+  },
+  {
+    q: "どんな情報が送信されますか？",
+    a: "字幕を出している間の話し声と字幕の文字を OpenAI に送ります。ランクを出すときは、Steam のアカウント ID を deadlock-api に送ります。デドロ字幕のサーバーを通るのはおすそ分けのときだけで、音声や字幕の文字は保存しません。",
+    link: { href: "/privacy", label: "プライバシーポリシーを見る" },
+  },
+  {
+    q: "OpenAI の API キーの作り方がよくわかりません",
+    a: "このページに手順をまとめています。アプリの中でも同じ手順を案内します。",
+    link: { href: "#openai-key", label: "作り方を見る" },
+  },
+  {
+    q: "OpenAI の API キーは安全ですか？",
+    a: "キーは PC の OS の資格情報ストア（Windows の資格情報マネージャー、Mac のキーチェーン）に保存し、ふだんは OpenAI との通信にだけ使います。おすそ分けを始めるときだけ、確認のうえでデドロ字幕のサーバーに暗号化して預けます。",
+    link: { href: "/privacy", label: "プライバシーポリシーを見る" },
+  },
+  {
+    q: "どんな人が開発したんですか？",
+    a: "Twitch で Deadlock を配信しているミリちゃんねるが、配信者目線で開発しました。",
+    link: { href: TWITCH, label: "Twitch のチャンネルを見る" },
+  },
+  {
+    q: "わからないことは、どこで聞けますか？",
+    a: "Discord のサーバーで、質問などを受け付けています。",
+    link: { href: DISCORD, label: "Discord のサーバーに参加する" },
   },
 ];
 ---
@@ -343,7 +368,14 @@ const faqs = [
         faqs.map((f) => (
           <div class="py-6">
             <dt class="font-semibold">{f.q}</dt>
-            <dd class="mt-2 text-sm leading-relaxed text-muted">{f.a}</dd>
+            <dd class="mt-2 text-sm leading-relaxed text-muted">
+              {f.a}
+              {f.link && (
+                <a class="mt-2 block underline hover:text-white" href={f.link.href}>
+                  {f.link.label}
+                </a>
+              )}
+            </dd>
           </div>
         ))
       }
