@@ -5,6 +5,7 @@
   import * as Card from "$lib/components/ui/card";
   import * as Field from "$lib/components/ui/field";
   import * as Select from "$lib/components/ui/select";
+  import { Switch } from "$lib/components/ui/switch";
   import * as ToggleGroup from "$lib/components/ui/toggle-group";
   import LevelMeter from "../parts/LevelMeter.svelte";
   import PauseDialog from "../parts/PauseDialog.svelte";
@@ -105,6 +106,20 @@
             {/each}
           </Select.Content>
         </Select.Root>
+      </Field.Field>
+
+      <Field.Field orientation="horizontal">
+        <Field.Content>
+          <Field.Label for="deadlock-mode">デッドロックモード</Field.Label>
+          <Field.Description>
+            ヒーロー・スキル・アイテムを強調し、アイテム説明を出します。雑談の配信ならオフにできます
+          </Field.Description>
+        </Field.Content>
+        <Switch
+          id="deadlock-mode"
+          checked={s.deadlockMode}
+          onCheckedChange={(v) => panel.update({ deadlockMode: v })}
+        />
       </Field.Field>
 
       <Field.Field>

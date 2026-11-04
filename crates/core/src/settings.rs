@@ -29,6 +29,8 @@ pub struct Settings {
     pub mic_device: Option<String>,
     /// 翻訳先（最大 4 言語。mic_language は除く）
     pub translate_to: Vec<LangCode>,
+    /// ヒーロー・スキル・アイテムを判定して強調し、アイテム説明を出す。雑談の配信ならオフにする
+    pub deadlock_mode: bool,
     /// 字幕オーバーレイの見せ方。変えると表示中のオーバーレイにそのまま届く
     pub subtitle_display: SubtitleDisplay,
     /// アイテム説明のオーバーレイ（字幕でアイテム名が出たら説明のカードを出す）
@@ -372,6 +374,7 @@ impl Default for Settings {
             mic_language: "ja".into(),
             mic_device: None,
             translate_to: vec!["en".into()],
+            deadlock_mode: true,
             subtitle_display: SubtitleDisplay::default(),
             item_cards: ItemCards::default(),
             rank_language: None,
@@ -530,6 +533,9 @@ impl Settings {
                 _ => Some(code),
             };
         }
+        if let Some(enabled) = patch.deadlock_mode {
+            next.deadlock_mode = enabled;
+        }
         if let Some(content) = patch.rank_content {
             next.rank_content = content;
         }
@@ -573,6 +579,8 @@ pub struct SettingsPatch {
     pub mic_language: Option<LangCode>,
     #[ts(optional)]
     pub translate_to: Option<Vec<LangCode>>,
+    #[ts(optional)]
+    pub deadlock_mode: Option<bool>,
     /// SteamID64 か 32bit のアカウント ID。空文字列ならランクを表示しない
     #[ts(optional)]
     pub rank_account: Option<String>,
