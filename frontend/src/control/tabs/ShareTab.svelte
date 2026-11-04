@@ -107,7 +107,7 @@
               {:else}
                 {expiresAt === null
                   ? "期限なしで使えます。あとから変えられます"
-                  : `${dateTime(expiresAt)} まで使えます。あとから変えられます。期限が過ぎても、始めていた配信は止まりません`}
+                  : `${dateTime(expiresAt)} まで使えます。あとから変えられます。期限が過ぎても、出している字幕は止まりません`}
               {/if}
             </Field.Description>
           </Field.Field>
