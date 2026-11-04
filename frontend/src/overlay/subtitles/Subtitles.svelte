@@ -9,6 +9,7 @@
   import { api } from "../../lib/api";
   import { loadGlossary } from "../../lib/glossary.svelte";
   import { slide } from "../../lib/slide";
+  import { visibleLines } from "../../lib/subtitle-lines";
   import { connect } from "../../lib/ws";
 
   /** partial が伸びる・final で直るときの文字の動き（DESIGN.md 11 章） */
@@ -32,10 +33,11 @@
 
   const visible = $derived(
     display
-      ? [...segments.values()]
-          .filter(isLive)
-          .toSorted((a, b) => a.startedAt - b.startedAt)
-          .slice(-display.maxLines)
+      ? visibleLines(
+          [...segments.values()].filter(isLive).toSorted((a, b) => a.startedAt - b.startedAt),
+          display.maxLines,
+          now,
+        )
       : [],
   );
 
