@@ -21,6 +21,10 @@ describe("visibleLines", () => {
     expect(shown([line("a")], 1)).toBe("a");
   });
 
+  it("shows everything without a limit", () => {
+    expect(shown([line("a"), line("b"), line("c"), line("d")], 0)).toBe("abcd");
+  });
+
   it("keeps a line for the reading time, even when the next one is translated", () => {
     expect(shown([line("a", 1000), line("b")], 1)).toBe("a");
     expect(shown([line("a", 1000), line("b", 500)], 1)).toBe("a");

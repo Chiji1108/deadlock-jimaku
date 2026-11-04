@@ -6,13 +6,15 @@ type Timing = Pick<SubtitleDisplay, "maxLines" | "minReadSeconds" | "maxWaitSeco
 /**
  * 同時に出す数に収める。一番古い行を読み終えていれば消し、まだなら一番新しい行を待たせる。
  * 新しい行が待ちすぎたら、読み終えていなくても古い行を押し出す。`live` は話した順。
- * どちらの条件も時間がたつほど成り立つ方にしか変わらないので、消えた行は戻らない
+ * どちらの条件も時間がたつほど成り立つ方にしか変わらないので、消えた行は戻らない。
+ * `maxLines` が 0 なら制限なし
  */
 export function visibleLines(
   live: Segment[],
   now: number,
   { maxLines, minReadSeconds, maxWaitSeconds }: Timing,
 ): Segment[] {
+  if (maxLines === 0) return live;
   const lines = [...live];
   while (lines.length > maxLines) {
     const { settledAt } = lines[0]!;
