@@ -36,10 +36,16 @@
 
   const TABS = [
     { value: "audio", label: "マイクと翻訳", icon: MicIcon, page: AudioTab },
-    { value: "display", label: "字幕の表示", icon: CaptionsIcon, page: DisplayTab },
+    {
+      value: "display",
+      label: "字幕",
+      icon: CaptionsIcon,
+      page: DisplayTab,
+      heading: "オーバーレイ",
+    },
     { value: "items", label: "アイテム説明", icon: PackageIcon, page: ItemsTab },
     { value: "rank", label: "ランク", icon: TrophyIcon, page: RankTab },
-    { value: "keys", label: "API キー", icon: KeyRoundIcon, page: KeysTab },
+    { value: "keys", label: "API キー", icon: KeyRoundIcon, page: KeysTab, heading: "" },
     { value: "share", label: "おすそ分け", icon: GiftIcon, page: ShareTab },
     { value: "usage", label: "料金", icon: WalletIcon, page: UsageTab },
   ];
@@ -118,6 +124,15 @@
           class="w-full shrink-0 justify-start overflow-x-auto overflow-y-hidden group-data-vertical/tabs:gap-1 group-data-vertical/tabs:bg-transparent"
         >
           {#each TABS as t (t.value)}
+            <!-- サイドバーでは種類ごとに分ける（heading が空なら区切りの余白だけ） -->
+            {#if t.heading !== undefined}
+              <p
+                role="presentation"
+                class="self-stretch px-[15px] pt-3 text-xs text-muted-foreground group-data-horizontal/tabs:hidden"
+              >
+                {t.heading}
+              </p>
+            {/if}
             <!-- 横に並べるときは幅が狭いので、アイコンを出さない（入りきらなければ横にスクロール） -->
             <Tabs.Trigger
               value={t.value}
