@@ -115,7 +115,8 @@ const steps = [
   { title: "ダウンロード", body: "Windows・Mac・Linux 用のアプリを入れます。" },
   {
     title: "OpenAI の API キーを設定",
-    body: "文字起こしと翻訳に使います。作り方はこのページの下と、アプリの中で案内します。",
+    body: "文字起こしと翻訳に使います。作り方はアプリの中でも案内します。",
+    link: { href: "#openai-key", label: "作り方を見る" },
   },
   {
     title: "OBS に追加",
@@ -134,7 +135,7 @@ const faqs = [
   },
   {
     q: "OpenAI の料金が心配です",
-    a: "アプリの「料金」タブに、使った分の目安がその場で出ます。OpenAI のダッシュボードで上限を決めておくと安心です。",
+    a: "アプリの「料金」タブに、使った分の目安がその場で出ます。前払いのチャージで使い、自動チャージをオフにしておけば、残高より多くは使われません。",
   },
 ];
 ---
@@ -232,6 +233,11 @@ const faqs = [
             <span class="text-sm font-semibold text-gold">{i + 1}</span>
             <h3 class="mt-2 font-semibold">{s.title}</h3>
             <p class="mt-3 text-sm leading-relaxed text-muted">{s.body}</p>
+            {s.link && (
+              <a class="mt-3 inline-block text-sm underline hover:text-white" href={s.link.href}>
+                {s.link.label}
+              </a>
+            )}
           </li>
         ))
       }
@@ -291,7 +297,7 @@ const faqs = [
     <div class="mt-8 rounded-xl border border-line bg-panel p-6 sm:p-8">
       <p class="text-lg">
         アプリは<strong class="text-gold">無料</strong>です。文字起こしと翻訳には、ご自身の
-        <a href="#openai-key" class="underline">OpenAI の API キー</a>を使います。
+        <a href="#openai-key" class="underline hover:text-white">OpenAI の API キー</a>を使います。
       </p>
       <p class="mt-4 text-muted">
         OpenAI への支払いの目安は、ずっと話し続けて <strong class="text-white">1 時間あたり約 $2</strong>（翻訳
@@ -304,8 +310,11 @@ const faqs = [
   <section id="openai-key" class="mx-auto max-w-5xl px-4 py-16">
     <h2 class="text-2xl font-bold">OpenAI の API キーの作り方</h2>
     <p class="mt-4 text-muted">
-      字幕を使っている人から「おすそ分け」のコードをもらった場合は、キーがなくても使えます。アプリの「API
-      キー」のタブにコードを入れてください。
+      文字起こしと翻訳は OpenAI に頼むので、OpenAI の API キーが必要です。支払いは使った分だけです。
+    </p>
+    <p class="mt-2 text-muted">
+      デドロ字幕を使っている人からコードをもらった場合は、キーがなくても使えます。アプリの「API
+      キー」のタブの「ギフトコード」に入れてください。
     </p>
     <ol class="mt-8 flex flex-col gap-6">
       {
@@ -316,7 +325,7 @@ const faqs = [
               <h3 class="font-semibold">{s.title}</h3>
               <p class="mt-2 text-sm leading-relaxed text-muted">{s.body}</p>
               {s.link && (
-                <a class="mt-2 inline-block text-sm underline" href={s.link.href} target="_blank" rel="noreferrer">
+                <a class="mt-2 inline-block text-sm underline hover:text-white" href={s.link.href} target="_blank" rel="noreferrer">
                   {s.link.label}
                 </a>
               )}
