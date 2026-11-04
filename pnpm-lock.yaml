@@ -108,6 +108,9 @@ importers:
       '@astrojs/check':
         specifier: ^0.9.12
         version: 0.9.12(@emnapi/runtime@1.11.3)(prettier@3.9.10)(typescript@6.0.3)
+      '@deadlock-api/ui-core':
+        specifier: 1.7.0
+        version: 1.7.0(@stencil/core@4.45.2)
       '@fontsource-variable/noto-sans-jp':
         specifier: ^5.3.1
         version: 5.3.1

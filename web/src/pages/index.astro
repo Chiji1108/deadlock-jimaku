@@ -148,7 +148,9 @@ const official = [
           aria-label="Deadlock の配信画面。左上にランク、右にアイテム説明、下の中央に字幕が重なる見本"
         ></video>
         <img class="stream-rank" src="/media/rank.webp" alt="" width="316" height="82" />
-        <img data-card class="stream-card" src="/media/card.webp" alt="" width="402" height="440" />
+        <dl-provider language="japanese">
+          <div data-card class="stream-card"><dl-item-tooltip class-name={line.card}></dl-item-tooltip></div>
+        </dl-provider>
         <div data-caption class="caption">
           <p data-source class="source" lang="ja" set:html={sourceHtml(line)} />
           <p data-translation class="translation static" lang="en" set:html={translationHtml(line, "en")} />
@@ -183,7 +185,7 @@ const official = [
       <li class="reveal flex flex-col">
         <p class="mb-3 text-sm font-bold">話している途中</p>
         <div class="plate flex min-h-56 flex-1 items-center justify-center">
-          <div class="caption"><p class="source pending-line">{spokenText(line).slice(0, 15)}</p></div>
+          <div class="caption"><p class="source pending-line">{spokenText(line).slice(0, 12)}</p></div>
         </div>
       </li>
       <li class="reveal flex flex-col">
@@ -235,8 +237,10 @@ const official = [
     </h2>
     <div class="mt-10 grid gap-4 md:grid-cols-2">
       <figure class="reveal">
-        <div class="plate flex min-h-96 items-center justify-center p-8">
-          <img src="/media/card.webp" alt="アイテム説明のカード（スプリットショット）" width="402" height="440" class="w-64" loading="lazy" />
+        <div class="plate flex min-h-[26rem] items-center justify-center p-6">
+          <dl-provider language="japanese" role="img" aria-label="アイテム説明のカード（ディスペルマジック）">
+            <dl-item-tooltip class-name={line.card}></dl-item-tooltip>
+          </dl-provider>
         </div>
         <figcaption class="mt-4">
           <h3 class="text-xl font-bold">アイテム説明</h3>
@@ -244,7 +248,7 @@ const official = [
         </figcaption>
       </figure>
       <figure class="reveal">
-        <div class="plate flex min-h-96 items-center justify-center p-8">
+        <div class="plate flex min-h-[26rem] items-center justify-center p-6">
           <img src="/media/rank.webp" alt="ランクの表示（エミッサリー III）" width="316" height="82" class="w-80" loading="lazy" />
         </div>
         <figcaption class="mt-4">
@@ -414,6 +418,16 @@ const official = [
     import { startLiveCaption } from "../lib/live-caption";
 
     startLiveCaption(document.querySelector<HTMLElement>("#live")!);
+
+    // カードの部品は重いので、ページが出てから読み込む
+    addEventListener("load", async () => {
+      const [provider, tooltip] = await Promise.all([
+        import("@deadlock-api/ui-core/dist/components/dl-provider.js"),
+        import("@deadlock-api/ui-core/dist/components/dl-item-tooltip.js"),
+      ]);
+      provider.defineCustomElement();
+      tooltip.defineCustomElement();
+    });
 
     // 「作り方を見る」のリンクから来たら、閉じている節を開く
     const openKeyGuide = () => {

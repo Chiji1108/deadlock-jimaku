@@ -1,8 +1,5 @@
 // LP の見本の字幕。アプリのオーバーレイと同じ流れ（途中の字幕 → ふりがな・色・アイコン → 翻訳）を、用意した台詞で見せる
 const NAMES = {
-  graves: { kind: "hero", icon: "necro_sm", en: "Graves", ru: "Грейвс", zh: "格瑞墓" },
-  theft: { kind: "ability", icon: "necro_siphon", en: "Essence Theft", ru: "Хищение эссенции", zh: "精华转移" },
-  split: { kind: "weapon", icon: "split_shot", en: "Split Shot", ru: "Веерный выстрел", zh: "裂光射击" },
   doorman: { kind: "hero", icon: "doorman_sm", en: "The Doorman", ru: "Швейцар", zh: "门侍" },
   cart: { kind: "ability", icon: "doorman_luggagetrolley", en: "Luggage Cart", ru: "Багажная тележка", zh: "行李车" },
   dispel: { kind: "vitality", icon: "debuff_remover", en: "Dispel Magic", ru: "Развеивание магии", zh: "驱散魔法" },
@@ -22,18 +19,10 @@ type Name = keyof typeof NAMES;
 
 /** 文字列はそのまま、[文字, 読み] はふりがな付き、{ name } は用語（spoken があれば話した言葉で出す） */
 type Piece = string | [string, string] | { name: Name; spoken?: Piece[] };
-type Line = { source: Piece[]; translations: Record<Lang, Piece[]>; card?: boolean };
+/** card は deadlock-ui のカードに出すアイテムの class_name */
+type Line = { source: Piece[]; translations: Record<Lang, Piece[]>; card: string };
 
 export const LINES: Line[] = [
-  {
-    source: [{ name: "graves", spoken: ["グレイブス"] }, "の", { name: "theft", spoken: ["3", ["番", "ばん"], "スキル"] }, "は", { name: "split", spoken: ["スプリットショット"] }, "で", ["強", "つよ"], "くなる。"],
-    translations: {
-      en: [{ name: "graves" }, "'s ", { name: "theft" }, " gets stronger with ", { name: "split" }, "."],
-      ru: [{ name: "graves" }, ": ", { name: "theft" }, " усиливается предметом ", { name: "split" }, "."],
-      zh: [{ name: "graves" }, "的", { name: "theft" }, "会因", { name: "split" }, "而变强。"],
-    },
-    card: true,
-  },
   {
     source: [{ name: "doorman", spoken: ["ドアマン"] }, "の", { name: "cart", spoken: ["カート"] }, "は", { name: "dispel", spoken: ["ディスペル"] }, "で", ["対策", "たいさく"], "できます。"],
     translations: {
@@ -41,6 +30,7 @@ export const LINES: Line[] = [
       ru: [{ name: "doorman" }, ": ", { name: "cart" }, " контрится предметом ", { name: "dispel" }, "."],
       zh: [{ name: "doorman" }, "的", { name: "cart" }, "可以用", { name: "dispel" }, "应对。"],
     },
+    card: "upgrade_reduce_debuff_duration",
   },
   {
     source: ["ただし、", { name: "vortex", spoken: ["ボルテックスウェブ"] }, "には", { name: "indomitable", spoken: ["インドミ"] }, "が", ["必要", "ひつよう"], "です。"],
@@ -49,14 +39,16 @@ export const LINES: Line[] = [
       ru: ["Но против предмета ", { name: "vortex" }, " нужна ", { name: "indomitable" }, "."],
       zh: ["不过，", { name: "vortex" }, "需要用", { name: "indomitable" }, "来应对。"],
     },
+    card: "upgrade_auto_cleanse",
   },
   {
-    source: [{ name: "bebop", spoken: ["ビバップ"] }, "や", { name: "krill", spoken: ["モークリ"] }, "もいるなら", ["絶対", "ぜったい"], "に", ["買", "か"], "いましょう。"],
+    source: [["敵", "てき"], "に", { name: "bebop", spoken: ["ビバップ"] }, "や", { name: "krill", spoken: ["モークリ"] }, "もいるなら", ["絶対", "ぜったい"], "に", ["買", "か"], "いましょう。"],
     translations: {
-      en: ["If there's also a ", { name: "bebop" }, " or ", { name: "krill" }, ", definitely buy it."],
-      ru: ["Если есть ещё ", { name: "bebop" }, " или ", { name: "krill" }, ", обязательно покупайте."],
-      zh: ["如果还有", { name: "bebop" }, "或", { name: "krill" }, "，一定要买。"],
+      en: ["If the enemy team also has ", { name: "bebop" }, " or ", { name: "krill" }, ", definitely buy it."],
+      ru: ["Если у врагов есть ещё ", { name: "bebop" }, " или ", { name: "krill" }, ", обязательно покупайте."],
+      zh: ["如果敌方还有", { name: "bebop" }, "或", { name: "krill" }, "，一定要买。"],
     },
+    card: "upgrade_auto_cleanse",
   },
 ];
 
@@ -86,6 +78,9 @@ export const sourceHtml = (line: Line) => html(line.source, "ja");
 export const translationHtml = (line: Line, lang: Lang) => html(line.translations[lang], lang);
 export const spokenText = (line: Line) => plain(line.source);
 
+/** deadlock-ui のカードの幅 */
+const CARD_WIDTH = 450;
+
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** 画面の外にいる間は進めない */
@@ -103,11 +98,17 @@ export function startLiveCaption(root: HTMLElement) {
   const caption = root.querySelector<HTMLElement>("[data-caption]")!;
   const source = root.querySelector<HTMLElement>("[data-source]")!;
   const translation = root.querySelector<HTMLElement>("[data-translation]")!;
-  const card = root.querySelector<HTMLElement>("[data-card]");
+  const card = root.querySelector<HTMLElement>("[data-card]")!;
+  const tooltip = card.querySelector("dl-item-tooltip")!;
   const chips = [...document.querySelectorAll<HTMLButtonElement>("[data-lang]")];
   let lang: Lang = "en";
   let current = LINES[0]!;
   let settled = true;
+
+  // カードは幅の決まった部品なので、枠の幅に合わせて縮める
+  new ResizeObserver(() => {
+    tooltip.style.setProperty("zoom", String(card.clientWidth / CARD_WIDTH));
+  }).observe(card);
 
   const showTranslation = () => {
     translation.innerHTML = translationHtml(current, lang);
@@ -146,9 +147,10 @@ export function startLiveCaption(root: HTMLElement) {
       await sleep(360);
       settled = true;
       showTranslation();
-      if (current.card) card?.classList.add("show");
+      tooltip.setAttribute("class-name", current.card);
+      card.classList.add("show");
       await sleep(4600);
-      card?.classList.remove("show");
+      if (LINES[(i + 1) % LINES.length]!.card !== current.card) card.classList.remove("show");
       caption.classList.add("leaving");
       await sleep(600);
     }
