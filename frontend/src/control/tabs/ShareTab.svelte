@@ -106,8 +106,8 @@
                 <span class="text-destructive">この期限はもう過ぎています。選び直してください</span>
               {:else}
                 {expiresAt === null
-                  ? "期限なしで使えます"
-                  : `${dateTime(expiresAt)} まで使えます`}。あとから変えられます。期限が過ぎても、始めていた配信は止まりません
+                  ? "期限なしで使えます。あとから変えられます"
+                  : `${dateTime(expiresAt)} まで使えます。あとから変えられます。期限が過ぎても、始めていた配信は止まりません`}
               {/if}
             </Field.Description>
           </Field.Field>
