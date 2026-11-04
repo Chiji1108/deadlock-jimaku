@@ -2,7 +2,7 @@
 const NAMES = {
   graves: { kind: "hero", icon: "necro_sm", en: "Graves", ru: "Грейвс", zh: "格瑞墓" },
   theft: { kind: "ability", icon: "necro_siphon", en: "Essence Theft", ru: "Хищение эссенции", zh: "精华转移" },
-  split: { kind: "weapon", icon: "titanic_magazine", en: "Split Shot", ru: "Веерный выстрел", zh: "裂光射击" },
+  split: { kind: "weapon", icon: "split_shot", en: "Split Shot", ru: "Веерный выстрел", zh: "裂光射击" },
   doorman: { kind: "hero", icon: "doorman_sm", en: "The Doorman", ru: "Швейцар", zh: "门侍" },
   cart: { kind: "ability", icon: "doorman_luggagetrolley", en: "Luggage Cart", ru: "Багажная тележка", zh: "行李车" },
   dispel: { kind: "vitality", icon: "debuff_remover", en: "Dispel Magic", ru: "Развеивание магии", zh: "驱散魔法" },
