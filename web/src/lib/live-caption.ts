@@ -5,6 +5,7 @@ const NAMES = {
   split: { kind: "weapon", icon: "titanic_magazine", en: "Split Shot", ru: "Веерный выстрел", zh: "裂光射击" },
   doorman: { kind: "hero", icon: "doorman_sm", en: "The Doorman", ru: "Швейцар", zh: "门侍" },
   cart: { kind: "ability", icon: "doorman_luggagetrolley", en: "Luggage Cart", ru: "Багажная тележка", zh: "行李车" },
+  dispel: { kind: "vitality", icon: "debuff_remover", en: "Dispel Magic", ru: "Развеивание магии", zh: "驱散魔法" },
   unstoppable: { kind: "vitality", icon: "unstoppable", en: "Unstoppable", ru: "Неудержимость", zh: "势不可挡" },
 } as const;
 
@@ -31,11 +32,11 @@ export const LINES: Line[] = [
     card: true,
   },
   {
-    source: [{ name: "doorman", spoken: ["ドアマン"] }, "の", { name: "cart", spoken: ["カート"] }, "が", ["来", "き"], "た！", ["一回", "いっかい"], ["下", "さ"], "がろう！"],
+    source: [{ name: "doorman", spoken: ["ドアマン"] }, "の", { name: "cart", spoken: ["カート"] }, "は", { name: "dispel", spoken: ["ディスペル"] }, "で", ["対策", "たいさく"], "できます"],
     translations: {
-      en: [{ name: "doorman" }, "'s ", { name: "cart" }, " is coming! Let's fall back!"],
-      ru: [{ name: "doorman" }, " — едет ", { name: "cart" }, "! Отступаем!"],
-      zh: [{ name: "doorman" }, "的", { name: "cart" }, "来了！先撤一下！"],
+      en: [{ name: "doorman" }, "'s ", { name: "cart" }, " can be countered with ", { name: "dispel" }, "."],
+      ru: [{ name: "doorman" }, ": ", { name: "cart" }, " контрится предметом ", { name: "dispel" }, "."],
+      zh: [{ name: "doorman" }, "的", { name: "cart" }, "可以用", { name: "dispel" }, "应对。"],
     },
   },
   {
