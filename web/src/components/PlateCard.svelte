@@ -9,7 +9,7 @@
   onMount(() => void defineCards().then(() => (ready = true)));
 </script>
 
-<dl-provider language="japanese" role="img" aria-label="アイテム説明のカード（ディスペルマジック）">
+<dl-provider language="japanese" role="img" aria-label="アイテム説明のカード（{card.item.name}）">
   {#if ready}
     <dl-item-tooltip
       itemData={card.item}

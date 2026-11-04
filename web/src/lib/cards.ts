@@ -8,7 +8,9 @@ export type Card = { item: Item; components: Linked[]; parents: Linked[] };
 export type Cards = Record<string, Card>;
 
 export async function fetchCards(): Promise<Cards> {
-  const res = await fetch("https://api.deadlock-api.com/v1/assets/items?language=japanese");
+  const res = await fetch("https://api.deadlock-api.com/v1/assets/items?language=japanese", {
+    signal: AbortSignal.timeout(30_000),
+  });
   if (!res.ok) throw new Error(`failed to fetch items: ${res.status}`);
   const items = (await res.json()) as Item[];
   const linked = (item: Item): Linked => ({
@@ -20,9 +22,13 @@ export async function fetchCards(): Promise<Cards> {
     components: items.filter((i) => item.component_items?.includes(i.class_name)).map(linked),
     parents: items.filter((i) => i.component_items?.includes(item.class_name)).map(linked),
   });
-  const names = new Set(LINES.map((line) => line.card));
+  // パッチで見本のアイテムが消えたら、空のカードを出さないようビルドで止める
   return Object.fromEntries(
-    items.filter((i) => names.has(i.class_name)).map((i) => [i.class_name, card(i)]),
+    LINES.map(({ card: name }) => {
+      const item = items.find((i) => i.class_name === name);
+      if (!item) throw new Error(`item not found: ${name}`);
+      return [name, card(item)];
+    }),
   );
 }
 
