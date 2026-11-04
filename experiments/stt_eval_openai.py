@@ -38,7 +38,7 @@ def load_pcm(path: Path) -> bytes:
 
 def load_glossary() -> dict:
     """アプリの辞書（最新の形式・版）のエンティティ"""
-    root = Path.home() / "Library/Application Support/dev.deadlock-stream-overlays.app/assets"
+    root = Path.home() / "Library/Application Support/jp.deadlock.jimaku/assets"
     path = max(root.glob("v*/*/glossary.json"), key=lambda p: (int(p.parent.parent.name[1:]), int(p.parent.name)))
     return json.loads(path.read_text())["entities"]
 
