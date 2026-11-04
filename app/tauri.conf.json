@@ -35,8 +35,8 @@
       "dmg": {
         "background": "dmg/background.tiff",
         "windowSize": { "width": 660, "height": 400 },
-        "appPosition": { "x": 170, "y": 200 },
-        "applicationFolderPosition": { "x": 490, "y": 200 }
+        "appPosition": { "x": 170, "y": 186 },
+        "applicationFolderPosition": { "x": 490, "y": 186 }
       }
     },
     "linux": {
