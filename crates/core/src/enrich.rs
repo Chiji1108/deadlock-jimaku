@@ -84,7 +84,7 @@ impl Enricher {
             None => (vec![Span::Text(text.to_owned())], BTreeMap::new()),
         };
         Enriched {
-            source: source_tokens(&spans, ruby.as_deref().unwrap_or_default()),
+            source: source_tokens(&spans, ruby.as_deref().unwrap_or_default(), furigana),
             translations,
         }
     }
@@ -164,10 +164,22 @@ impl Enricher {
             "items": {
                 "type": "object",
                 "additionalProperties": false,
-                "required": ["text", "ref"],
+                "required": ["text", "ref", "written"],
                 "properties": {
                     "text": { "type": "string" },
                     "ref": { "type": ["string", "null"] },
+                    "written": {
+                        "type": ["array", "null"],
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": ["text", "ruby"],
+                            "properties": {
+                                "text": { "type": "string" },
+                                "ruby": { "type": ["string", "null"] },
+                            },
+                        },
+                    },
                 },
             },
         });
@@ -219,6 +231,9 @@ struct Segment {
     text: String,
     #[serde(rename = "ref")]
     reference: Option<String>,
+    /// カナで聞き取った略称の、ふだんの書き方（カクマガ → 拡マガ）。読みは話したとおり
+    #[serde(default)]
+    written: Option<Vec<RubySegment>>,
 }
 
 impl Analysis {
@@ -236,12 +251,21 @@ impl Analysis {
                 s.reference.as_ref().filter(|r| known(glossary, r)),
                 spans.last_mut(),
             ) {
-                (Some(r), Some(Span::Entity { reference, spoken })) if reference == r => {
+                (
+                    Some(r),
+                    Some(Span::Entity {
+                        reference,
+                        spoken,
+                        written,
+                    }),
+                ) if reference == r => {
                     spoken.push_str(&s.text);
+                    *written = None;
                 }
                 (Some(r), _) => spans.push(Span::Entity {
                     reference: r.clone(),
                     spoken: s.text.clone(),
+                    written: s.written.clone().filter(|w| reads_as(w, &s.text)),
                 }),
                 (None, Some(Span::Text(t))) => t.push_str(&s.text),
                 (None, _) => spans.push(Span::Text(s.text.clone())),
@@ -269,6 +293,33 @@ impl Analysis {
             .map(|(lang, text)| (lang.clone(), resolve(text, &terms)))
             .collect()
     }
+}
+
+/// 書き換えてよいのは、カナの言葉を、漢字を含む同じ読みの書き方にするときだけ（言っていないことを字幕に出さない）
+fn reads_as(written: &[RubySegment], spoken: &str) -> bool {
+    let reading: String = written
+        .iter()
+        .map(|s| s.ruby.as_deref().unwrap_or(&s.text))
+        .collect();
+    !has_kanji(spoken)
+        && written
+            .iter()
+            .any(|s| s.ruby.is_some() && has_kanji(&s.text))
+        && hiragana(&reading) == hiragana(spoken)
+}
+
+fn has_kanji(text: &str) -> bool {
+    text.chars().any(furigana::is_kanji)
+}
+
+/// カタカナをひらがなにする（読みを比べるため）
+fn hiragana(text: &str) -> String {
+    text.chars()
+        .map(|c| match c {
+            'ァ'..='ヶ' => char::from_u32(c as u32 - 0x60).unwrap_or(c),
+            _ => c,
+        })
+        .collect()
 }
 
 fn known(glossary: Option<&Glossary>, reference: &str) -> bool {
@@ -320,8 +371,8 @@ fn push_text(tokens: &mut Vec<Token>, text: String) {
 }
 
 /// 原文のトークン。文のふりがな（`ruby`、つなげると原文になる）を、文字の位置で区切りに当てはめる。
-/// 区切りをまたぐ部分はふりがなを付けない
-fn source_tokens(spans: &[Span], ruby: &[RubySegment]) -> Vec<Token> {
+/// 区切りをまたぐ部分はふりがなを付けない。書き方を直した用語は、その書き方と読みを出す
+fn source_tokens(spans: &[Span], ruby: &[RubySegment], furigana: bool) -> Vec<Token> {
     let mut placed = Vec::new();
     let mut pos = 0;
     for seg in ruby {
@@ -348,7 +399,18 @@ fn source_tokens(spans: &[Span], ruby: &[RubySegment]) -> Vec<Token> {
                         ruby: s.ruby,
                     })
                     .collect(),
-                Span::Entity { reference, spoken } => vec![Token::Entity {
+                Span::Entity {
+                    reference,
+                    written: Some(written),
+                    ..
+                } => vec![Token::Entity {
+                    reference: reference.clone(),
+                    spoken: Some(written.iter().map(|s| s.text.as_str()).collect()),
+                    ruby: furigana.then(|| written.clone()),
+                }],
+                Span::Entity {
+                    reference, spoken, ..
+                } => vec![Token::Entity {
                     reference: reference.clone(),
                     spoken: Some(spoken.clone()),
                     ruby: segments
@@ -395,7 +457,11 @@ fn cover(text: &str, offset: usize, placed: &[(usize, usize, &RubySegment)]) -> 
 #[derive(Debug, PartialEq)]
 enum Span {
     Text(String),
-    Entity { reference: String, spoken: String },
+    Entity {
+        reference: String,
+        spoken: String,
+        written: Option<Vec<RubySegment>>,
+    },
 }
 
 /// 役割とルールと用語の一覧。用語は 1 行ずつ「参照 | 種類 | 話す言語の名前 | 英語名 | スキルの持ち主と番号」
@@ -442,6 +508,10 @@ fn system_prompt(source_lang: &str, glossary: Option<&Glossary>) -> String {
          3. Do not attach inflectional endings to a term; rephrase instead (Russian: \"ульта ⟦hero:13⟧\", not \"⟦hero:13⟧а\"). \
          The only exception is the English possessive 's, which reads naturally: \"⟦hero:13⟧'s ⟦ability:1⟧\".\n\
          4. Keep common gamer words natural (ult, farm, push, gank).\n\
+         5. \"written\": speech recognition often writes a gamer abbreviation in kana. When a term's segment is entirely kana \
+         and players normally write that word with kanji, give it as parts with the kanji's reading in \"ruby\": for \"カクマガ\", \
+         [{{\"text\":\"拡\",\"ruby\":\"かく\"}},{{\"text\":\"マガ\",\"ruby\":null}}]. The reading must be exactly what was said; \
+         never replace it with the official name. Otherwise written is null (plain segments, names written in kana, anything else).\n\
          \n\
          Glossary (id | kind | name | English name | owner of an ability):\n{}\n",
         lines.join("\n")
@@ -484,6 +554,7 @@ mod tests {
         Span::Entity {
             reference: reference.into(),
             spoken: spoken.into(),
+            written: None,
         }
     }
 
@@ -494,6 +565,7 @@ mod tests {
                 .map(|(text, reference)| Segment {
                     text: (*text).into(),
                     reference: reference.map(Into::into),
+                    written: None,
                 })
                 .collect(),
             translations: translations
@@ -651,7 +723,7 @@ mod tests {
             seg("い", None),
         ];
         assert_eq!(
-            source_tokens(&spans, &ruby),
+            source_tokens(&spans, &ruby, true),
             [
                 Token::Entity {
                     reference: "hero:13".into(),
@@ -668,7 +740,7 @@ mod tests {
         );
         // ふりがながなければ、区切りだけ
         assert_eq!(
-            source_tokens(&spans, &[]),
+            source_tokens(&spans, &[], true),
             [
                 Token::Entity {
                     reference: "hero:13".into(),
@@ -688,6 +760,7 @@ mod tests {
             Span::Entity {
                 reference: "ability:7".into(),
                 spoken: "一番スキル".into(),
+                written: None,
             },
         ];
         let ruby = [
@@ -697,7 +770,7 @@ mod tests {
             seg("スキル", None),
         ];
         assert_eq!(
-            source_tokens(&spans, &ruby),
+            source_tokens(&spans, &ruby, true),
             [
                 Token::Text {
                     text: "見".into(),
@@ -713,7 +786,7 @@ mod tests {
         );
         let straddling = [seg("見て一", Some("みていち")), seg("番スキル", None)];
         assert_eq!(
-            source_tokens(&spans, &straddling),
+            source_tokens(&spans, &straddling, true),
             [
                 text("見て"),
                 Token::Entity {
@@ -723,5 +796,59 @@ mod tests {
                 },
             ]
         );
+    }
+
+    fn kakumaga() -> Vec<RubySegment> {
+        vec![
+            RubySegment {
+                text: "拡".into(),
+                ruby: Some("かく".into()),
+            },
+            RubySegment {
+                text: "マガ".into(),
+                ruby: None,
+            },
+        ]
+    }
+
+    #[test]
+    fn written_form_keeps_what_was_said_as_its_reading() {
+        let g = glossary();
+        let mut a = analysis(&[("カクマガ", Some("item:1")), ("を買う", None)], &[]);
+        a.segments[0].written = Some(kakumaga());
+        let spans = a.spans("カクマガを買う", Some(&g));
+        assert_eq!(
+            source_tokens(&spans, &[], true)[0],
+            Token::Entity {
+                reference: "item:1".into(),
+                spoken: Some("拡マガ".into()),
+                ruby: Some(kakumaga()),
+            }
+        );
+        // ふりがなを出さない設定では読みを付けない
+        assert_eq!(
+            source_tokens(&spans, &[], false)[0],
+            Token::Entity {
+                reference: "item:1".into(),
+                spoken: Some("拡マガ".into()),
+                ruby: None,
+            }
+        );
+    }
+
+    #[test]
+    fn written_form_is_dropped_unless_it_reads_the_same() {
+        assert!(reads_as(&kakumaga(), "カクマガ"));
+        assert!(reads_as(&kakumaga(), "かくまが"));
+        // 別の読み、漢字のない書き方、もとから漢字のある言葉は直さない
+        assert!(!reads_as(&kakumaga(), "カクチョウ"));
+        assert!(!reads_as(
+            &[RubySegment {
+                text: "カクマガ".into(),
+                ruby: None
+            }],
+            "カクマガ"
+        ));
+        assert!(!reads_as(&kakumaga(), "拡マガ"));
     }
 }
