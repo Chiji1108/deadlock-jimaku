@@ -5,7 +5,11 @@ import type { Settings } from "./Settings";
 /**
  * 操作パネルに返す設定。API キーはどこから読んだかだけ（キーそのものは返さない）
  */
-export type SettingsView = { settings: Settings, keys: KeyStatus, 
+export type SettingsView = { 
+/**
+ * アプリの版（操作パネルに出す）
+ */
+version: string, settings: Settings, keys: KeyStatus, 
 /**
  * 設定ファイルを読めない理由（OS のエラー）。そのときは変更をこの起動の間だけ当て、保存しない
  */

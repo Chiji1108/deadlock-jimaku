@@ -316,6 +316,8 @@ pub struct ItemCardsView {
 #[derive(Clone, Debug, Serialize, TS)]
 #[ts(export)]
 pub struct SettingsView {
+    /// アプリの版（操作パネルに出す）
+    pub version: &'static str,
     pub settings: crate::settings::Settings,
     pub keys: crate::secrets::KeyStatus,
     /// 設定ファイルを読めない理由（OS のエラー）。そのときは変更をこの起動の間だけ当て、保存しない
