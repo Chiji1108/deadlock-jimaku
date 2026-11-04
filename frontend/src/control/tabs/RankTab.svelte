@@ -63,19 +63,21 @@
         }}
       >
         <Field.Field>
-          <Field.Label for="account">Steam ID</Field.Label>
+          <Field.Label for="account">Steam のフレンドコード</Field.Label>
           <div class="flex gap-2">
             <Input
               id="account"
               bind:value={account}
-              placeholder="76561198…"
+              placeholder="フレンドコード"
               inputmode="numeric"
               autocomplete="off"
             />
             <Button type="submit" disabled={account === saved()}>保存</Button>
           </div>
           <Field.Description>
-            SteamID64（7656… で始まる 17 桁）か、フレンドコード。空にすると表示しません
+            Steam
+            の「フレンド」→「フレンドを追加」に出ている、あなたのフレンドコード（数字）を入れてください。SteamID64（7656…
+            で始まる 17 桁）でも使えます。空にすると表示しません
           </Field.Description>
         </Field.Field>
       </form>
