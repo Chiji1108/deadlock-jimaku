@@ -87,11 +87,10 @@ pub async fn run(store: Arc<Store>, input: audio::Input, access: Access) -> anyh
 
     let enricher = Enricher::new(
         access.clone(),
-        settings.models.translate.clone(),
-        settings.models.readings.clone(),
-        settings.models.reasoning_effort.clone(),
+        &settings.models,
         settings.mic_language.clone(),
         settings.translate_to.clone(),
+        settings.deadlock_mode,
         store.meter(),
     );
     let (done_tx, mut done_rx) = mpsc::channel(64);
@@ -338,13 +337,8 @@ impl Pipeline {
         self.pending += 1;
         // 辞書は enrich のたびに store から取る（後から届いたり、作り直されたりする）。
         // ふりがなは出さない設定なら聞かない（字幕を止めずに切り替えられるので、そのときの設定を見る）
-        let settings = self.store.settings();
-        let glossary = self
-            .store
-            .glossary()
-            .map(|l| l.glossary)
-            .filter(|_| settings.deadlock_mode);
-        let furigana = settings.subtitle_display.furigana;
+        let glossary = self.store.glossary().map(|l| l.glossary);
+        let furigana = self.store.settings().subtitle_display.furigana;
         tokio::spawn(enrich(
             self.enricher.clone(),
             id.to_owned(),
