@@ -14,8 +14,9 @@ export function visibleLines(
   now: number,
   { maxLines, minReadSeconds, maxWaitSeconds }: Timing,
 ): Segment[] {
+  if (maxLines === 0) return live;
   const lines = [...live];
-  while (maxLines > 0 && lines.length > maxLines) {
+  while (lines.length > maxLines) {
     const { settledAt } = lines[0]!;
     const read = settledAt !== undefined && now - settledAt >= minReadSeconds * 1000;
     const waited = Math.max(0, now - lines.at(-1)!.startedAt) >= maxWaitSeconds * 1000;
