@@ -134,7 +134,7 @@ h3 {
 }
 .plate-caption {
   position: absolute;
-  inset: auto 0 2.75rem 0;
+  inset: auto 0 calc(50% - 3.75rem) 0;
 }
 .plate-rank {
   --scale: 1;

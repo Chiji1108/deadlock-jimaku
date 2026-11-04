@@ -130,8 +130,6 @@ const promises = [
   { title: "アプリは無料", body: "支払いは、OpenAI に使った分だけです。" },
   { title: "音声は残しません", body: "アプリは音声や字幕の履歴を保存しません。" },
 ];
-const STAGES = ["partial", "enriched", "translated"] as const;
-const TITLES = { partial: "話している途中", enriched: "話し終えたら", translated: "翻訳が届いたら" };
 /** 「カート」と話しても、翻訳では正式名になる例 */
 const official = [
   { lang: "English", name: "Luggage Cart" },
@@ -169,56 +167,41 @@ const official = [
     </ul>
   </section>
 
-  <section class="mx-auto mt-24 max-w-6xl px-4 sm:mt-32">
-    <h2 class="display reveal max-w-3xl text-[clamp(2.1rem,5.4vw,4.25rem)]">
-      話している途中から、<br /><span class="band">字幕になる。</span>
-    </h2>
-    <p class="reveal mt-5 max-w-2xl text-lg leading-relaxed text-muted">
-      話し終えると精度の高い文に置き換わり、ヒーロー・アイテム・スキルの名前に色とアイコンが付きます。「拡マガ」「ウルト」のような略し方も聞き分けます。
-    </p>
-    <ol class="mt-10 grid gap-4 md:grid-cols-3">
-      {
-        STAGES.map((stage) => (
-          <li class="reveal flex flex-col">
-            <p class="mb-3 text-sm font-bold">{TITLES[stage]}</p>
-            <div class="plate relative h-56 overflow-hidden">
-              <div class="plate-caption"><PlateCaption client:visible stage={stage} /></div>
-            </div>
-          </li>
-        ))
-      }
-    </ol>
+  <section class="mx-auto mt-24 grid max-w-6xl items-center gap-10 px-4 sm:mt-32 md:grid-cols-2">
+    <div>
+      <h2 class="display reveal text-[clamp(2.1rem,4.5vw,3.6rem)]">
+        聞き取りの<br /><span class="band">精度が違う。</span>
+      </h2>
+      <p class="reveal mt-5 text-lg leading-relaxed text-muted">
+        OpenAI の最新モデルで文字起こしします。「拡マガ」「ウルト」のような略し方も聞き分けます。
+      </p>
+    </div>
+    <div class="reveal plate relative h-64 overflow-hidden">
+      <div class="plate-caption"><PlateCaption client:visible stage="enriched" line={1} /></div>
+    </div>
   </section>
 
   <section class="mx-auto mt-28 grid max-w-6xl items-center gap-10 px-4 sm:mt-40 md:grid-cols-2">
-    <div>
-      <h2 class="display reveal text-[clamp(2.1rem,5.4vw,4.25rem)]">
-        略して話しても、<br />翻訳は<span class="band">正式名で。</span>
+    <div class="reveal plate relative h-64 overflow-hidden md:order-first">
+      <div class="plate-caption"><PlateCaption client:visible stage="translated" line={0} /></div>
+    </div>
+    <div class="order-first md:order-none">
+      <h2 class="display reveal text-[clamp(2.1rem,4.5vw,3.6rem)]">
+        <span class="band">ふりがな</span>付きで、<br />海外の学習者にも。
       </h2>
       <p class="reveal mt-5 text-lg leading-relaxed text-muted">
-        英語やロシア語など、最大 4 つの言語に同時に翻訳します。ゲーム内の正式な名前に置き換わるので、海外の視聴者にも伝わります。漢字にはふりがなも付きます。
+        漢字に読みが付くので、日本語を学んでいる海外の視聴者にも読みやすい字幕になります。英語やロシア語など、最大 4 つの言語への翻訳も同時に出せます。
       </p>
-    </div>
-    <div class="reveal rounded-[20px] bg-panel p-6 sm:p-8">
-      <p class="text-sm font-bold text-muted">話した言葉</p>
-      <p class="display mt-1 text-4xl">「カート」</p>
-      <dl class="mt-6 divide-y divide-line border-t border-line">
-        {
-          official.map((o) => (
-            <div class="flex items-baseline justify-between gap-4 py-3">
-              <dt class="text-sm text-muted">{o.lang}</dt>
-              <dd class="text-right text-lg font-bold">{o.name}</dd>
-            </div>
-          ))
-        }
-      </dl>
     </div>
   </section>
 
   <section class="mx-auto mt-28 max-w-6xl px-4 sm:mt-40">
-    <h2 class="display reveal text-[clamp(2.1rem,5.4vw,4.25rem)]">
-      配信に、<span class="band">そのまま重ねる。</span>
+    <h2 class="display reveal max-w-4xl text-[clamp(2.1rem,5.4vw,4.25rem)]">
+      デッドロックの言葉を、<br /><span class="band">分かっている。</span>
     </h2>
+    <p class="reveal mt-5 max-w-2xl text-lg leading-relaxed text-muted">
+      ヒーロー・スキル・アイテムの名前は色とアイコンで強調します。アイテムの名前が出たら、ゲーム内と同じカードで説明も出します。略して話しても、翻訳はゲーム内の正式な名前になります。
+    </p>
     <div class="mt-10 grid gap-4 md:grid-cols-2">
       <figure class="reveal">
         <div class="plate flex min-h-[26rem] items-center justify-center p-6">
@@ -226,20 +209,43 @@ const official = [
         </div>
         <figcaption class="mt-4">
           <h3 class="text-xl font-bold">アイテム説明</h3>
-          <p class="mt-1 leading-relaxed text-muted">字幕にアイテム名が出たら、ゲーム内と同じカードで説明を出します。</p>
+          <p class="mt-1 leading-relaxed text-muted">話したアイテムの説明が、そのまま配信に出ます。</p>
         </figcaption>
       </figure>
       <figure class="reveal">
-        <div class="plate flex min-h-[26rem] items-center justify-center p-6">
-          <div class="plate-rank" role="img" aria-label="ランクの表示（エミッサリー III、640 / 1,000 ポイント）">
-            <RankBadge client:visible rank={RANK} lang="ja" content="full" />
-          </div>
+        <div class="flex min-h-[26rem] flex-col justify-center rounded-[20px] bg-panel p-6 sm:p-8">
+          <p class="text-sm font-bold text-muted">話した言葉</p>
+          <p class="display mt-1 text-4xl">「カート」</p>
+          <dl class="mt-6 divide-y divide-line border-t border-line">
+            {
+              official.map((o) => (
+                <div class="flex items-baseline justify-between gap-4 py-3">
+                  <dt class="text-sm text-muted">{o.lang}</dt>
+                  <dd class="text-right text-lg font-bold">{o.name}</dd>
+                </div>
+              ))
+            }
+          </dl>
         </div>
         <figcaption class="mt-4">
-          <h3 class="text-xl font-bold">ランク</h3>
-          <p class="mt-1 leading-relaxed text-muted">今のランクと、次のランクまでのポイントを出します。試合が終わると自動で更新します。</p>
+          <h3 class="text-xl font-bold">正式名への翻訳</h3>
+          <p class="mt-1 leading-relaxed text-muted">海外の視聴者にも、何の話か伝わります。</p>
         </figcaption>
       </figure>
+    </div>
+  </section>
+
+  <section class="mx-auto mt-28 grid max-w-6xl items-center gap-10 px-4 sm:mt-40 md:grid-cols-[1fr_1.2fr]">
+    <div>
+      <h2 class="display reveal text-[clamp(2.1rem,5.4vw,3.25rem)]">おまけに、<span class="band">ランクも。</span></h2>
+      <p class="reveal mt-4 text-lg leading-relaxed text-muted">
+        今のランクと、次のランクまでのポイントを出します。試合が終わると自動で更新します。
+      </p>
+    </div>
+    <div class="reveal plate flex min-h-52 items-center justify-center p-6">
+      <div class="plate-rank" role="img" aria-label="ランクの表示（エミッサリー III、640 / 1,000 ポイント）">
+        <RankBadge client:visible rank={RANK} lang="ja" content="full" />
+      </div>
     </div>
   </section>
 
