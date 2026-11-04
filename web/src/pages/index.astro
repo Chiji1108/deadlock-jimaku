@@ -1,6 +1,8 @@
 ---
+import { siDiscord, siTwitch } from "simple-icons";
+import BrandIcon from "../components/BrandIcon.astro";
 import Layout from "../layouts/Layout.astro";
-
+import { LANGS, LINES, sourceHtml, spokenText, translationHtml } from "../lib/live-caption";
 import { DISCORD, REPO, TWITCH } from "../site";
 /** 最新のリリースのファイルを直接落とす（ファイル名に版の番号を付けないので、いつも最新版になる） */
 const file = (name: string) => `${REPO}/releases/latest/download/${name}`;
@@ -34,57 +36,6 @@ const downloads = [
     ],
   },
 ] as const;
-
-const features = [
-  {
-    title: "リアルタイム字幕",
-    body: "話している途中から字幕が出て、話し終えると精度の高い文に置き換わります。ヒーロー・アイテム・スキルの名前は色付きで強調し、「拡マガ」「ウルト」のような略し方も聞き分けます。",
-  },
-  {
-    title: "ふりがなと翻訳",
-    body: "漢字にはふりがなを付け、英語や韓国語など最大 4 つの言語に同時に翻訳します。翻訳ではゲーム内の正式な名前に置き換わるので、海外の視聴者にも伝わります。",
-  },
-];
-
-/**
- * 配信画面の見本（Windows の OBS で撮った実際の配信画面。ゲームのトップ画面で撮った）。
- * 各オーバーレイの位置（画面の px）から、上の枠と下の拡大図の両方を作る
- */
-const SCREEN = { src: "/sample/game.webp", width: 1920, height: 1080 };
-const parts = [
-  {
-    name: "字幕",
-    rect: { x: 600, y: 765, w: 780, h: 185 },
-    label: "top-start",
-    alt: "字幕（グレイブスの3番スキルはスプリットショットで強くなる。と、その英訳）",
-    body: "話した言葉に、アイコン・色・ふりがなを付けて出します。下の行は英訳で、「3番スキル」のような呼び方も正式な名前（Essence Theft）になります。",
-  },
-  {
-    name: "アイテム説明",
-    rect: { x: 1505, y: 190, w: 400, h: 438 },
-    label: "top-end",
-    alt: "アイテム説明のカード（スプリットショット）",
-    body: "字幕にアイテム名が出たら、ゲーム内と同じカードで説明を出します。",
-  },
-  {
-    name: "ランク",
-    rect: { x: 8, y: 6, w: 316, h: 82 },
-    label: "bottom-start",
-    alt: "ランクの表示（エミッサリー III）",
-    body: "今のランクと、次のランクまでのポイントを出します。試合が終わると自動で更新します。",
-  },
-] as const;
-
-type Rect = (typeof parts)[number]["rect"];
-/** 上の画面の上の枠の位置（画面に対する %） */
-const frameStyle = ({ x, y, w, h }: Rect) =>
-  `left:${(x / SCREEN.width) * 100}%;top:${(y / SCREEN.height) * 100}%;` +
-  `width:${(w / SCREEN.width) * 100}%;height:${(h / SCREEN.height) * 100}%`;
-/** 拡大図: 同じ画面を背景にして、その部分だけを見せる（切り出した画像を別に持たない） */
-const zoomStyle = ({ x, y, w, h }: Rect) =>
-  `max-width:${w}px;aspect-ratio:${w}/${h};background-image:url(${SCREEN.src});` +
-  `background-size:${(SCREEN.width / w) * 100}% auto;` +
-  `background-position:${(x / (SCREEN.width - w)) * 100}% ${(y / (SCREEN.height - h)) * 100}%`;
 
 const keySteps = [
   {
@@ -163,103 +114,205 @@ const faqs = [
     link: { href: DISCORD, label: "Discord のサーバーに参加する" },
   },
 ];
+
+const line = LINES[0]!;
+/** 「カート」と話しても、翻訳では正式名になる例 */
+const official = [
+  { lang: "English", name: "Luggage Cart" },
+  { lang: "한국어", name: "수하물 카트" },
+  { lang: "中文", name: "行李车" },
+  { lang: "Español", name: "Carrito de Equipaje" },
+];
 ---
 
 <Layout>
-  <section class="mx-auto max-w-5xl px-4 pt-20 pb-16">
-    <h1 class="text-4xl leading-tight font-bold tracking-tight sm:text-6xl">日本のデドロ配信を世界に。</h1>
-    <p class="mt-5 max-w-2xl text-lg text-muted sm:text-xl">
-      デッドロックに特化した、日本語字幕＆翻訳字幕アプリ。ランクやアイテム説明も OBS
-      にそのまま重ねられます。アプリは無料です。
-    </p>
-    <div class="mt-8 flex flex-wrap items-center gap-4">
-      <!-- ダウンロードの節へ（初めて開くときの警告の進め方を見てから落としてもらう） -->
-      <a
-        href="#download"
-        class="rounded-lg bg-gold px-5 py-3 font-semibold text-ink transition hover:brightness-110"
-      >
-        ダウンロード
-      </a>
+  <section class="px-4 pt-8 sm:pt-7">
+    <div class="mx-auto max-w-6xl text-center">
+      <h1 class="display text-[clamp(2.5rem,5.6vw,4.5rem)]">デドロ配信を、<wbr /><span class="band">世界に。</span></h1>
+      <div class="mt-5 flex flex-col items-center justify-center gap-5 sm:flex-row sm:gap-8">
+        <p class="max-w-xl text-muted sm:text-left">
+          デッドロックに特化した、日本語字幕＆翻訳字幕アプリ。ランクやアイテム説明も OBS
+          にそのまま重ねられます。アプリは無料です。
+        </p>
+        <a href="#download" class="pill shrink-0 px-7 py-3.5 text-base">無料でダウンロード</a>
+      </div>
     </div>
 
-    <!-- 配信画面の見本: OBS で撮った実際の画面に、どれが何かを枠で示す（枠は画面の幅に合わせて縮む） -->
-    <figure class="mt-14">
-      <div class="relative overflow-hidden rounded-xl border border-line">
-        <img
-          src={SCREEN.src}
-          alt="配信画面の見本。左上にランク、右にアイテム説明のカード、下の中央に字幕"
-          width={SCREEN.width}
-          height={SCREEN.height}
-          fetchpriority="high"
-          class="block w-full"
-        />
-        <!-- 名札は画像の説明（alt）と同じことなので読み上げない -->
-        <div aria-hidden="true">
-          {
-            parts.map(({ name, rect, label }) => (
-              <div class="frame" style={frameStyle(rect)}>
-                <span class={`frame-label ${label}`}>{name}</span>
-              </div>
-            ))
-          }
+    <figure class="hero-stage mx-auto mt-8">
+      <div id="live" class="stream">
+        <video
+          src="/media/hero.mp4"
+          poster="/media/hero.webp"
+          autoplay
+          muted
+          loop
+          playsinline
+          aria-label="Deadlock の配信画面。左上にランク、右にアイテム説明、下の中央に字幕が重なる見本"
+        ></video>
+        <img class="stream-rank" src="/media/rank.webp" alt="" width="316" height="82" />
+        <img data-card class="stream-card" src="/media/card.webp" alt="" width="402" height="440" />
+        <div data-caption class="caption">
+          <p data-source class="source" lang="ja" set:html={sourceHtml(line)} />
+          <p data-translation class="translation static" lang="en" set:html={translationHtml(line, "en")} />
         </div>
       </div>
-      <figcaption class="mt-3 text-xs text-muted">
-        実際の配信画面。字幕・アイテム説明・ランクは、好きな位置と大きさに置けます
+      <figcaption class="mt-5 flex flex-wrap items-center justify-center gap-2">
+        <span class="mr-1 text-sm text-muted">押すと翻訳が変わります</span>
+        {
+          LANGS.map((l, i) => (
+            <button
+              type="button"
+              data-lang={l.value}
+              aria-pressed={i === 0 ? "true" : "false"}
+              class="rounded-full border border-line px-4 py-1.5 text-sm font-semibold transition hover:border-ink aria-pressed:border-ink aria-pressed:bg-ink aria-pressed:text-paper"
+            >
+              {l.label}
+            </button>
+          ))
+        }
       </figcaption>
     </figure>
   </section>
 
-  <section class="mx-auto max-w-5xl px-4 py-16">
-    <h2 class="text-2xl font-bold">できること</h2>
-    <div class="mt-8 grid gap-6 sm:grid-cols-2">
-      {
-        features.map((f) => (
-          <div class="rounded-xl border border-line bg-panel p-6">
-            <h3 class="font-semibold">{f.title}</h3>
-            <p class="mt-3 text-sm leading-relaxed text-muted">{f.body}</p>
-          </div>
-        ))
-      }
-    </div>
-  </section>
-
-  <section class="mx-auto max-w-5xl px-4 py-16">
-    <h2 class="text-2xl font-bold">オーバーレイ</h2>
-    <p class="mt-3 text-muted">
-      上の配信画面を拡大したところです。
+  <section class="mx-auto mt-28 max-w-6xl px-4 sm:mt-40">
+    <h2 class="display reveal max-w-3xl text-[clamp(2.1rem,5.4vw,4.25rem)]">
+      話している途中から、<br /><span class="band">字幕になる。</span>
+    </h2>
+    <p class="reveal mt-5 max-w-2xl text-lg leading-relaxed text-muted">
+      話し終えると精度の高い文に置き換わり、ヒーロー・アイテム・スキルの名前に色とアイコンが付きます。「拡マガ」「ウルト」のような略し方も聞き分けます。
     </p>
-    <div class="mt-8 grid items-start gap-6 sm:grid-cols-2">
-      {
-        parts.map((o, i) => (
-          <figure class:list={["stage p-6", i === 0 && "sm:col-span-2"]}>
-            <div
-              role="img"
-              aria-label={o.alt}
-              class="mx-auto w-full rounded-md bg-no-repeat"
-              style={zoomStyle(o.rect)}
-            />
-            <figcaption class="mt-5">
-              <h3 class="font-semibold">{o.name}</h3>
-              <p class="mt-2 text-sm leading-relaxed text-muted">{o.body}</p>
-            </figcaption>
-          </figure>
-        ))
-      }
+    <ol class="mt-10 grid gap-4 md:grid-cols-3">
+      <li class="reveal flex flex-col">
+        <p class="mb-3 text-sm font-bold">話している途中</p>
+        <div class="plate flex min-h-56 flex-1 items-center justify-center">
+          <div class="caption"><p class="source pending-line">{spokenText(line).slice(0, 15)}</p></div>
+        </div>
+      </li>
+      <li class="reveal flex flex-col">
+        <p class="mb-3 text-sm font-bold">話し終えたら</p>
+        <div class="plate flex min-h-56 flex-1 items-center justify-center">
+          <div class="caption"><p class="source" lang="ja" set:html={sourceHtml(line)} /></div>
+        </div>
+      </li>
+      <li class="reveal flex flex-col">
+        <p class="mb-3 text-sm font-bold">翻訳が届いたら</p>
+        <div class="plate flex min-h-56 flex-1 items-center justify-center">
+          <div class="caption">
+            <p class="source" lang="ja" set:html={sourceHtml(line)} />
+            <p class="translation static" lang="en" set:html={translationHtml(line, "en")} />
+          </div>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <section class="mx-auto mt-28 grid max-w-6xl items-center gap-10 px-4 sm:mt-40 md:grid-cols-2">
+    <div>
+      <h2 class="display reveal text-[clamp(2.1rem,5.4vw,4.25rem)]">
+        略して話しても、<br />翻訳は<span class="band">正式名で。</span>
+      </h2>
+      <p class="reveal mt-5 text-lg leading-relaxed text-muted">
+        英語や韓国語など、最大 4 つの言語に同時に翻訳します。ゲーム内の正式な名前に置き換わるので、海外の視聴者にも伝わります。漢字にはふりがなも付きます。
+      </p>
+    </div>
+    <div class="reveal rounded-[20px] bg-panel p-6 sm:p-8">
+      <p class="text-sm font-bold text-muted">話した言葉</p>
+      <p class="display mt-1 text-4xl">「カート」</p>
+      <dl class="mt-6 divide-y divide-line border-t border-line">
+        {
+          official.map((o) => (
+            <div class="flex items-baseline justify-between gap-4 py-3">
+              <dt class="text-sm text-muted">{o.lang}</dt>
+              <dd class="text-right text-lg font-bold">{o.name}</dd>
+            </div>
+          ))
+        }
+      </dl>
     </div>
   </section>
 
-  <section class="mx-auto max-w-5xl px-4 py-16">
-    <h2 class="text-2xl font-bold">はじめかた</h2>
-    <ol class="mt-8 grid gap-6 sm:grid-cols-3">
+  <section class="mx-auto mt-28 max-w-6xl px-4 sm:mt-40">
+    <h2 class="display reveal text-[clamp(2.1rem,5.4vw,4.25rem)]">
+      配信に、<span class="band">そのまま重ねる。</span>
+    </h2>
+    <div class="mt-10 grid gap-4 md:grid-cols-2">
+      <figure class="reveal">
+        <div class="plate flex min-h-96 items-center justify-center p-8">
+          <img src="/media/card.webp" alt="アイテム説明のカード（スプリットショット）" width="402" height="440" class="w-64" loading="lazy" />
+        </div>
+        <figcaption class="mt-4">
+          <h3 class="text-xl font-bold">アイテム説明</h3>
+          <p class="mt-1 leading-relaxed text-muted">字幕にアイテム名が出たら、ゲーム内と同じカードで説明を出します。</p>
+        </figcaption>
+      </figure>
+      <figure class="reveal">
+        <div class="plate flex min-h-96 items-center justify-center p-8">
+          <img src="/media/rank.webp" alt="ランクの表示（エミッサリー III）" width="316" height="82" class="w-80" loading="lazy" />
+        </div>
+        <figcaption class="mt-4">
+          <h3 class="text-xl font-bold">ランク</h3>
+          <p class="mt-1 leading-relaxed text-muted">今のランクと、次のランクまでのポイントを出します。試合が終わると自動で更新します。</p>
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="mx-auto mt-28 max-w-6xl px-4 text-center sm:mt-40">
+    <h2 class="display reveal text-[clamp(2.1rem,5.4vw,4.25rem)]">
+      OBS に<span class="band">ドラッグするだけ。</span>
+    </h2>
+    <p class="reveal mx-auto mt-5 max-w-2xl text-lg text-muted">
+      見せ方はアプリの画面で変えられます。一度追加すれば、貼り直す必要はありません。
+    </p>
+    <video
+      data-play-in-view
+      class="reveal mx-auto mt-10 w-full rounded-[clamp(14px,2.2vw,28px)]"
+      src="/media/obs.mp4"
+      poster="/media/obs.webp"
+      width="1280"
+      height="658"
+      muted
+      loop
+      playsinline
+      preload="none"
+      aria-label="アプリのボタンを OBS にドラッグすると、字幕のソースができる画面録画"
+    ></video>
+  </section>
+
+  <section id="pricing" class="mt-28 bg-ink text-paper sm:mt-40">
+    <div class="mx-auto grid max-w-6xl gap-10 px-4 py-20 sm:py-28 md:grid-cols-2">
+      <div>
+        <h2 class="text-sm font-bold text-gold">料金</h2>
+        <p class="display mt-3 text-[clamp(2.6rem,7vw,5.5rem)]">アプリは無料。</p>
+        <p class="mt-5 text-lg leading-relaxed text-paper/70">
+          文字起こしと翻訳には、ご自身の
+          <a href="#openai-key" class="underline hover:text-paper">OpenAI の API キー</a>を使います。
+        </p>
+      </div>
+      <div class="md:pt-9">
+        <p class="display text-[clamp(2.6rem,7vw,5.5rem)] text-gold">約 $2<span class="text-2xl text-paper">／時間</span></p>
+        <p class="mt-5 leading-relaxed text-paper/70">
+          OpenAI への支払いの目安です。ずっと話し続けたとき（翻訳 1
+          言語・ふりがなあり）の額で、話していない間は音声を送らないので、黙っている時間が長いほど少なくなります。翻訳先を 1 つ増やすと、話し続けて 1 時間あたり約 $0.3 増えます。
+        </p>
+        <p class="mt-3 leading-relaxed text-paper/70">
+          ギフトコードで使うときは、自分には請求されません。使った分は、コードをくれた人の OpenAI アカウントに請求されます。
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="mx-auto mt-28 max-w-6xl px-4 sm:mt-40">
+    <h2 class="display reveal text-[clamp(2.1rem,5.4vw,4.25rem)]">はじめかた</h2>
+    <ol class="mt-10 grid gap-8 md:grid-cols-3">
       {
         steps.map((s, i) => (
-          <li class="rounded-xl border border-line p-6">
-            <span class="text-sm font-semibold text-gold">{i + 1}</span>
-            <h3 class="mt-2 font-semibold">{s.title}</h3>
-            <p class="mt-3 text-sm leading-relaxed text-muted">{s.body}</p>
+          <li class="reveal border-t-2 border-ink pt-4">
+            <span class="display text-5xl">{i + 1}</span>
+            <h3 class="mt-3 text-xl font-bold">{s.title}</h3>
+            <p class="mt-2 leading-relaxed text-muted">{s.body}</p>
             {s.link && (
-              <a class="mt-3 inline-block text-sm underline hover:text-white" href={s.link.href}>
+              <a class="mt-2 inline-block underline" href={s.link.href}>
                 {s.link.label}
               </a>
             )}
@@ -269,40 +322,119 @@ const faqs = [
     </ol>
   </section>
 
-  <section id="download" class="mx-auto max-w-5xl px-4 py-16">
-    <h2 class="text-2xl font-bold">ダウンロード</h2>
-    <div class="mt-8 grid gap-6 sm:grid-cols-3">
+  <section id="download" class="mx-auto mt-28 max-w-6xl px-4 sm:mt-40">
+    <h2 class="display reveal text-[clamp(2.1rem,5.4vw,4.25rem)]">ダウンロード</h2>
+    <div class="mt-10 grid gap-4 md:grid-cols-3">
       {
         downloads.map((d) => (
-          <div class="download rounded-xl border border-line bg-panel p-6" data-os={d.os}>
-            <h3 class="font-semibold">{d.name}</h3>
-            <p class="mt-1 text-xs text-muted">{d.note}</p>
-            <a
-              href={d.href}
-              class="download-main mt-5 block rounded-lg border border-gold/60 px-4 py-2.5 text-center text-sm font-semibold text-gold transition hover:bg-gold hover:text-ink"
-            >
+          <div class="download reveal rounded-[20px] border border-line bg-panel p-6" data-os={d.os}>
+            <h3 class="text-2xl font-black">{d.name}</h3>
+            <p class="mt-1 text-sm text-muted">{d.note}</p>
+            <a href={d.href} class="pill mt-5 w-full px-4 py-3 text-sm">
               {d.label}
             </a>
             {"more" in d && (
               <p class="mt-3 flex gap-4 text-sm">
                 {d.more.map((m) => (
-                  <a href={m.href} class="text-muted underline hover:text-white">
+                  <a href={m.href} class="text-muted underline hover:text-ink">
                     {m.label}
                   </a>
                 ))}
               </p>
             )}
-            <p class="mt-4 text-xs leading-relaxed text-muted">{d.help}</p>
+            <p class="mt-4 text-sm leading-relaxed text-muted">{d.help}</p>
           </div>
         ))
       }
     </div>
     <p class="mt-6 text-sm text-muted">
-      ほかの版や変更点は <a href={`${REPO}/releases`} class="underline hover:text-white">GitHub のリリース</a> にあります。
+      ほかの版や変更点は <a href={`${REPO}/releases`} class="underline hover:text-ink">GitHub のリリース</a> にあります。
     </p>
+
+    <details id="openai-key" class="mt-12 border-y border-line py-6">
+      <summary class="cursor-pointer text-xl font-bold">OpenAI の API キーの作り方</summary>
+      <p class="mt-4 text-muted">
+        文字起こしと翻訳は OpenAI に頼むので、OpenAI の API キーが必要です。支払いは使った分だけです。デドロ字幕を使っている人からコードをもらった場合は、キーがなくても使えます。アプリの「API
+        キー」のタブの「ギフトコード」に入れてください。
+      </p>
+      <ol class="mt-6 flex flex-col gap-5">
+        {
+          keySteps.map((s, i) => (
+            <li class="flex gap-4">
+              <span class="display w-6 shrink-0 text-2xl">{i + 1}</span>
+              <div>
+                <h3 class="font-bold">{s.title}</h3>
+                <p class="mt-1 text-sm leading-relaxed text-muted">{s.body}</p>
+                {s.link && (
+                  <a class="mt-1 inline-block text-sm underline" href={s.link.href} target="_blank" rel="noreferrer">
+                    {s.link.label}
+                  </a>
+                )}
+              </div>
+            </li>
+          ))
+        }
+      </ol>
+    </details>
+  </section>
+
+  <section class="mx-auto mt-28 grid max-w-6xl items-center gap-8 px-4 sm:mt-40 md:grid-cols-[auto_1fr]">
+    <img src="/media/miri.webp" alt="ミリちゃんねる" width="480" height="480" loading="lazy" class="reveal size-40 rounded-full object-cover sm:size-56" />
+    <div class="reveal">
+      <p class="text-sm font-bold text-muted">つくった人</p>
+      <h2 class="display mt-1 text-[clamp(2.1rem,5.4vw,4.25rem)]">ミリちゃんねる</h2>
+      <p class="mt-3 max-w-2xl text-lg leading-relaxed text-muted">
+        Twitch で Deadlock を配信しながら、配信者目線で開発しています。質問などは Discord のサーバーで受け付けています。
+      </p>
+      <div class="mt-5 flex flex-wrap gap-3">
+        <a href={TWITCH} class="pill px-5 py-2.5 text-sm"><BrandIcon icon={siTwitch} class="size-4" />Twitch</a>
+        <a href={DISCORD} class="pill px-5 py-2.5 text-sm"><BrandIcon icon={siDiscord} class="size-4" />Discord</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq" class="mx-auto mt-28 max-w-6xl px-4 sm:mt-40">
+    <h2 class="display reveal text-[clamp(2.1rem,5.4vw,4.25rem)]">よくある質問</h2>
+    <div class="mt-10 border-b border-line">
+      {
+        faqs.map((f) => (
+          <details class="border-t border-line py-5">
+            <summary class="cursor-pointer text-lg font-bold">{f.q}</summary>
+            <p class="mt-3 leading-relaxed text-muted">{f.a}</p>
+            {f.link && (
+              <a class="mt-2 inline-block underline" href={f.link.href}>
+                {f.link.label}
+              </a>
+            )}
+          </details>
+        ))
+      }
+    </div>
   </section>
 
   <script>
+    import { startLiveCaption } from "../lib/live-caption";
+
+    startLiveCaption(document.querySelector<HTMLElement>("#live")!);
+
+    // 「作り方を見る」のリンクから来たら、閉じている節を開く
+    const openKeyGuide = () => {
+      const guide = document.querySelector("details#openai-key") as HTMLDetailsElement;
+      if (location.hash === "#openai-key") guide.open = true;
+    };
+    addEventListener("hashchange", openKeyGuide);
+    openKeyGuide();
+
+    // 動画は見えてから読み込んで再生する
+    const videos = new IntersectionObserver((entries) => {
+      for (const { isIntersecting, target } of entries) {
+        const video = target as HTMLVideoElement;
+        if (isIntersecting) void video.play().catch(() => {});
+        else video.pause();
+      }
+    });
+    for (const video of document.querySelectorAll("[data-play-in-view]")) videos.observe(video);
+
     // 見ている OS の欄を目立たせる。iPad は Mac と同じ UA を名乗るので、タッチで見分ける。
     // Linux の AppImage は x86_64 用なので、ほかの CPU では目立たせない
     const ua = navigator.userAgent;
@@ -316,72 +448,4 @@ const faqs = [
     const os = rules.find(([match]) => match)?.[1];
     if (os) document.querySelector(`.download[data-os="${os}"]`)?.classList.add("current");
   </script>
-
-  <section id="pricing" class="mx-auto max-w-5xl px-4 py-16">
-    <h2 class="text-2xl font-bold">料金</h2>
-    <div class="mt-8 rounded-xl border border-line bg-panel p-6 sm:p-8">
-      <p class="text-lg">
-        アプリは<strong class="text-gold">無料</strong>です。文字起こしと翻訳には、ご自身の
-        <a href="#openai-key" class="underline hover:text-white">OpenAI の API キー</a>を使います。
-      </p>
-      <p class="mt-4 text-muted">
-        OpenAI への支払いの目安は、ずっと話し続けて <strong class="text-white">1 時間あたり約 $2</strong>（翻訳
-        1 言語・ふりがなあり）です。話していない間は音声を送らないので、黙っている時間が長いほど少なくなります。翻訳先を
-        1 つ増やすと、話し続けて 1 時間あたり約 $0.3 増えます。
-      </p>
-      <p class="mt-2 text-muted">
-        ギフトコードで使うときは、自分には請求されません。使った分は、コードをくれた人の OpenAI アカウントに請求されます。
-      </p>
-    </div>
-  </section>
-
-  <section id="openai-key" class="mx-auto max-w-5xl px-4 py-16">
-    <h2 class="text-2xl font-bold">OpenAI の API キーの作り方</h2>
-    <p class="mt-4 text-muted">
-      文字起こしと翻訳は OpenAI に頼むので、OpenAI の API キーが必要です。支払いは使った分だけです。
-    </p>
-    <p class="mt-2 text-muted">
-      デドロ字幕を使っている人からコードをもらった場合は、キーがなくても使えます。アプリの「API
-      キー」のタブの「ギフトコード」に入れてください。
-    </p>
-    <ol class="mt-8 flex flex-col gap-6">
-      {
-        keySteps.map((s, i) => (
-          <li class="flex gap-4">
-            <span class="text-sm font-semibold text-gold">{i + 1}</span>
-            <div>
-              <h3 class="font-semibold">{s.title}</h3>
-              <p class="mt-2 text-sm leading-relaxed text-muted">{s.body}</p>
-              {s.link && (
-                <a class="mt-2 inline-block text-sm underline hover:text-white" href={s.link.href} target="_blank" rel="noreferrer">
-                  {s.link.label}
-                </a>
-              )}
-            </div>
-          </li>
-        ))
-      }
-    </ol>
-  </section>
-
-  <section id="faq" class="mx-auto max-w-5xl px-4 py-16">
-    <h2 class="text-2xl font-bold">よくある質問</h2>
-    <dl class="mt-8 divide-y divide-line border-y border-line">
-      {
-        faqs.map((f) => (
-          <div class="py-6">
-            <dt class="font-semibold">{f.q}</dt>
-            <dd class="mt-2 text-sm leading-relaxed text-muted">
-              {f.a}
-              {f.link && (
-                <a class="mt-2 block underline hover:text-white" href={f.link.href}>
-                  {f.link.label}
-                </a>
-              )}
-            </dd>
-          </div>
-        ))
-      }
-    </dl>
-  </section>
 </Layout>

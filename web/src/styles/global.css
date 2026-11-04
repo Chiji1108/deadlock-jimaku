@@ -3,17 +3,19 @@
 
 @theme {
   --font-sans: "Noto Sans JP Variable", "Hiragino Sans", "Yu Gothic UI", sans-serif;
-  --color-ink: #0e0d0b;
-  --color-panel: #17150f;
-  --color-line: #2c281f;
-  --color-muted: #a39c8c;
-  --color-gold: #ffd34d;
+  --color-ink: #12110e;
+  --color-paper: #f1efe9;
+  --color-panel: #fbfaf7;
+  --color-line: #dcd8cd;
+  --color-muted: #6d695f;
+  --color-gold: #ffcf33;
 }
 
 html {
-  background: var(--color-ink);
-  color: #f3efe6;
-  color-scheme: dark;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
 }
 
 /* 日本語を文節で折り返す（「アイテ / ム」にしない）。狭い画面で 1 文節が収まらなければ途中でも折る */
@@ -28,51 +30,257 @@ h3 {
   text-wrap: balance;
 }
 
-/* 見本の拡大図の台 */
-.stage {
-  border: 1px solid var(--color-line);
-  border-radius: 1rem;
-  background: radial-gradient(ellipse at top, #3a3320, #121009);
+/* 大きい見出し。詰めて組み、1 語に字幕の帯を敷く */
+.display {
+  font-feature-settings: "palt";
+  font-weight: 900;
+  letter-spacing: -0.035em;
+  line-height: 1.12;
+}
+.band {
+  padding: 0 0.08em;
+  background: linear-gradient(var(--color-gold), var(--color-gold)) no-repeat 0 88% / 100% 0.34em;
 }
 
-/* 配信画面の見本で、オーバーレイを囲む枠と名札 */
-.frame {
-  position: absolute;
-  border: 2px solid #ff4d4d;
-  border-radius: 6px;
-  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.5);
-}
-/* 名札の位置（top/bottom は枠の外の上・下、start/end は左揃え・右揃え）。画面の端で切れない側を選ぶ */
-.frame-label {
-  position: absolute;
-  padding: 1px 8px;
-  border-radius: 4px;
-  background: #ff4d4d;
-  color: #fff;
-  font-size: 12px;
+.pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  background: var(--color-ink);
+  color: var(--color-paper);
   font-weight: 700;
-  white-space: nowrap;
+  transition: transform 180ms cubic-bezier(0.19, 1, 0.22, 1);
 }
-.frame-label[class*="top-"] {
-  bottom: 100%;
-  margin-bottom: 4px;
+.pill:hover {
+  transform: scale(1.04);
 }
-.frame-label[class*="bottom-"] {
-  top: 100%;
-  margin-top: 4px;
-}
-.frame-label[class*="-start"] {
-  left: -2px;
-}
-.frame-label[class*="-end"] {
-  right: -2px;
+.pill:active {
+  transform: scale(0.97);
 }
 
-/* ダウンロードの節で、見ている OS の欄を目立たせる */
-.download.current {
-  border-color: var(--color-gold);
+/* 開いた画面の中に、見本の全体（下の字幕まで）が収まる大きさにする */
+.hero-stage {
+  max-width: min(72rem, max(44rem, (100svh - 21rem) * 16 / 9));
 }
-.download.current .download-main {
-  background: var(--color-gold);
-  color: var(--color-ink);
+
+/* 配信画面の見本。文字の大きさは画面の幅に合わせる */
+.stream {
+  position: relative;
+  container-type: inline-size;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  border-radius: clamp(14px, 2.2vw, 28px);
+  background: #000;
+  box-shadow: 0 40px 80px -40px rgb(18 17 14 / 0.65);
+}
+.stream video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 38% 50%;
+}
+.stream-rank {
+  position: absolute;
+  top: 0.8%;
+  left: 0.5%;
+  width: 16.4%;
+}
+.stream-card {
+  position: absolute;
+  top: 17.5%;
+  right: 0.7%;
+  width: 20.9%;
+  opacity: 0;
+  transform: translateX(6%);
+  transition:
+    opacity 300ms ease-out,
+    transform 420ms cubic-bezier(0.19, 1, 0.22, 1);
+}
+.stream-card.show {
+  opacity: 1;
+  transform: none;
+}
+
+/* 字幕はアプリのオーバーレイと同じ見た目にする */
+.caption {
+  --pending: #c8c8c8;
+  color: #fff;
+  font-weight: 700;
+  line-height: 1.5;
+  text-align: center;
+  transition: opacity 400ms ease-out;
+}
+.caption > p {
+  -webkit-text-stroke: 0.18em rgb(0 0 0 / 0.85);
+  paint-order: stroke fill;
+  text-shadow: 0 0.05em 0.15em rgb(0 0 0 / 0.6);
+}
+.caption.pending [data-source],
+.caption .pending-line {
+  color: var(--pending);
+}
+.caption.leaving {
+  opacity: 0;
+}
+.caption .translation {
+  opacity: 0;
+}
+.caption .translation.show,
+.caption .translation.static {
+  opacity: 1;
+  animation: rise 250ms ease-out;
+}
+.caption rt {
+  font-size: 0.5em;
+  animation: reveal 300ms ease-out;
+}
+.caption ruby {
+  ruby-align: center;
+}
+.caption img {
+  display: inline;
+  height: 1.1em;
+  margin: 0 0.16em 0 0.2em;
+  vertical-align: -0.18em;
+  border-radius: 0.18em;
+  filter: drop-shadow(0 0 0.06em rgb(0 0 0 / 0.9));
+  animation: reveal 300ms ease-out;
+}
+.entity {
+  white-space: nowrap;
+  animation: tint 400ms ease-out;
+}
+.entity.hero {
+  color: #ff7ab6;
+}
+.entity.ability {
+  color: #8fd8ff;
+}
+.entity.weapon {
+  color: #ffb35c;
+}
+.entity.vitality {
+  color: #98e36b;
+}
+.stream .caption {
+  position: absolute;
+  right: 18cqw;
+  bottom: 13%;
+  left: 18cqw;
+}
+.stream .source {
+  font-size: 2.55cqw;
+}
+.stream .translation {
+  font-size: 1.65cqw;
+}
+
+/* 字幕の見本の台（画面の外の節） */
+.plate {
+  container-type: inline-size;
+  border-radius: 20px;
+  background: radial-gradient(ellipse at 50% 0, #2b2a24, #12110e 72%);
+}
+.plate .caption {
+  padding: 2.5rem 1.25rem;
+}
+.plate .source {
+  font-size: clamp(1.05rem, 5.4cqw, 1.6rem);
+}
+.plate .translation {
+  font-size: clamp(0.85rem, 4.2cqw, 1.15rem);
+}
+
+@media (max-width: 700px) {
+  .stream {
+    aspect-ratio: 1;
+  }
+  .stream-rank {
+    top: 2.5%;
+    left: 2.5%;
+    width: 42%;
+  }
+  .stream-card {
+    top: 2.5%;
+    right: 2.5%;
+    width: 42%;
+  }
+  .stream .caption {
+    right: 4cqw;
+    bottom: 13%;
+    left: 4cqw;
+  }
+  .stream .source {
+    font-size: 5.4cqw;
+  }
+  .stream .translation {
+    font-size: 3.6cqw;
+  }
+}
+
+@keyframes reveal {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes tint {
+  from {
+    color: #fff;
+  }
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(0.4em);
+  }
+}
+
+/* スクロールに合わせて現れる。対応していないブラウザではそのまま出す */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal {
+      animation: lift linear both;
+      animation-timeline: view();
+      animation-range: entry 5% entry 45%;
+    }
+    .band {
+      animation: sweep linear both;
+      animation-timeline: view();
+      animation-range: entry 45% entry 85%;
+    }
+  }
+}
+@keyframes lift {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+}
+@keyframes sweep {
+  from {
+    background-size: 0 0.34em;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .caption,
+  .caption *,
+  .stream-card,
+  .pill {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* 見ている OS の欄を目立たせる */
+.download.current {
+  border-color: var(--color-ink);
+  box-shadow: 0 0 0 1px var(--color-ink);
 }
