@@ -125,10 +125,13 @@ const cards = await fetchCards();
 const promises = [
   {
     title: "ゲームには触りません",
-    body: "ゲームのファイルは変えません。使うのはマイクの声と、公開されているランクの情報だけです。",
+    body: "ゲームのファイルは変えません。ランクは公開されている情報を使います。",
   },
   { title: "アプリは無料", body: "支払いは、OpenAI に使った分だけです。" },
-  { title: "音声は残しません", body: "アプリは音声や字幕の履歴を保存しません。" },
+  {
+    title: "音声は残しません",
+    body: "字幕を作るときは OpenAI に送りますが、アプリは音声や字幕の履歴を保存しません。",
+  },
 ];
 /** 「カート」と話しても、翻訳では正式名になる例 */
 const official = [
@@ -142,13 +145,8 @@ const official = [
   <section class="dots px-4 pt-8 sm:pt-7">
     <div class="mx-auto max-w-6xl text-center">
       <h1 class="display text-[clamp(2.5rem,5.6vw,4.5rem)]">デドロ配信を、<wbr /><span class="band">世界に。</span></h1>
-      <div class="mt-5 flex flex-col items-center justify-center gap-5 sm:flex-row sm:gap-8">
-        <p class="max-w-xl text-muted sm:text-left">
-          デッドロックに特化した、日本語字幕＆翻訳字幕アプリ。ランクやアイテム説明も出せます。アプリは無料です。
-        </p>
-        <a href="#download" class="pill shrink-0 px-7 py-3.5 text-base">無料でダウンロード</a>
-      </div>
-      <p class="mt-3 text-sm text-muted">Windows 10 / 11・macOS 11 以降・Linux</p>
+      <p class="mt-4 text-lg text-muted">デッドロックに特化した、日本語字幕＆翻訳字幕アプリ</p>
+      <p class="mt-1 text-sm text-muted">Windows 10 / 11・macOS 11 以降・Linux</p>
     </div>
 
     <LiveDemo client:load cards={cards} />
@@ -235,16 +233,24 @@ const official = [
     </div>
   </section>
 
-  <section class="mx-auto mt-28 grid max-w-6xl items-center gap-10 px-4 sm:mt-40 md:grid-cols-[1fr_1.2fr]">
+  <section class="mx-auto mt-28 grid max-w-6xl items-center gap-10 px-4 sm:mt-40 md:grid-cols-2">
     <div>
-      <h2 class="display reveal text-[clamp(2.1rem,5.4vw,3.25rem)]">おまけに、<span class="band">ランクも。</span></h2>
-      <p class="reveal mt-4 text-lg leading-relaxed text-muted">
-        今のランクと、次のランクまでのポイントを出します。試合が終わると自動で更新します。
+      <h2 class="display reveal text-[clamp(2.1rem,4.5vw,3.6rem)]">ランクは、<br /><span class="band">シンプルに。</span></h2>
+      <p class="reveal mt-5 text-lg leading-relaxed text-muted">
+        配信にはランクだけを、すっきり出せます。アイコンだけにもできて、ランク名は英語にもできます。試合が終わると自動で更新します。
       </p>
     </div>
-    <div class="reveal plate flex min-h-52 items-center justify-center p-6">
-      <div class="plate-rank" role="img" aria-label="ランクの表示（エミッサリー III、640 / 1,000 ポイント）">
+    <div class="reveal plate plate-rank flex flex-col items-center justify-center gap-5 p-6 sm:p-8">
+      <div role="img" aria-label="ランクの表示（エミッサリー III、640 / 1,000 ポイント）">
         <RankBadge client:visible rank={RANK} lang="ja" content="full" />
+      </div>
+      <div class="flex flex-wrap items-center justify-center gap-6">
+        <div role="img" aria-label="英語の名前のランクの表示（Emissary III）">
+          <RankBadge rank={RANK} lang="en" content="name" />
+        </div>
+        <div role="img" aria-label="アイコンだけのランクの表示">
+          <RankBadge rank={RANK} lang="ja" content="icon" />
+        </div>
       </div>
     </div>
   </section>

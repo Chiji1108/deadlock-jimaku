@@ -111,7 +111,7 @@ export const RANK: RankState = {
   badge: 73,
   tier: 7,
   subrank: 3,
-  names: { ja: "エミッサリー" },
+  names: { ja: "エミッサリー", en: "Emissary" },
   image: "/media/rank-badge.webp",
   progress: { value: 640, max: 1000 },
 };
