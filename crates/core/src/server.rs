@@ -75,7 +75,7 @@ async fn get_settings(State(store): State<Arc<Store>>) -> Json<SettingsView> {
         .await
         .expect("keyring task");
     Json(SettingsView {
-        version: env!("CARGO_PKG_VERSION").to_owned(),
+        version: env!("CARGO_PKG_VERSION"),
         settings: store.settings(),
         keys,
         unsaved: store.unsaved(),

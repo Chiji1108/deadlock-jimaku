@@ -114,7 +114,7 @@
         class="flex shrink-0 flex-col px-4 pt-4 group-data-vertical/tabs:w-56 group-data-vertical/tabs:overflow-y-auto group-data-vertical/tabs:border-r group-data-vertical/tabs:bg-muted/30 group-data-vertical/tabs:p-3"
       >
         <Tabs.List
-          class="w-full justify-start overflow-x-auto overflow-y-hidden group-data-vertical/tabs:gap-1 group-data-vertical/tabs:bg-transparent"
+          class="w-full shrink-0 justify-start overflow-x-auto overflow-y-hidden group-data-vertical/tabs:gap-1 group-data-vertical/tabs:bg-transparent"
         >
           {#each TABS as t (t.value)}
             <!-- 横に並べるときは幅が狭いので、アイコンを出さない（入りきらなければ横にスクロール） -->
@@ -128,7 +128,7 @@
         </Tabs.List>
         <!-- 不具合の報告や、更新できたかの確認に使う。狭いときは場所を取らないよう出さない -->
         <p
-          class="mt-auto px-3 pt-3 text-xs text-muted-foreground tabular-nums group-data-horizontal/tabs:hidden"
+          class="mt-auto px-[15px] pt-3 text-xs text-muted-foreground tabular-nums group-data-horizontal/tabs:hidden"
         >
           v{panel.view?.version}
         </p>

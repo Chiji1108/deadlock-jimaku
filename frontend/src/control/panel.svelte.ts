@@ -89,7 +89,15 @@ class Panel {
     const disconnect = connect(
       ["status", "level", "usage"],
       (msg) => this.onMessage(msg),
-      (s) => (this.server = s),
+      (s) => {
+        this.server = s;
+        // アプリを更新して開き直したときなど、つなぎ直したら最新の状態（版など）にする
+        if (s === "open")
+          void api.settings().then(
+            (view) => (this.view = view),
+            () => {},
+          );
+      },
     );
     return () => {
       clearInterval(tick);
