@@ -76,7 +76,7 @@ h3 {
 
 /* 開いた画面の中に、見本の全体（下の字幕まで）が収まる大きさにする */
 .hero-stage {
-  max-width: min(72rem, max(44rem, (100svh - 23rem) * 16 / 9));
+  max-width: min(72rem, max(44rem, (100svh - 20rem) * 16 / 9));
 }
 
 /* 配信画面の見本。文字の大きさは画面の幅に合わせる */
