@@ -40,8 +40,10 @@
   );
 
   onMount(() => {
-    // OBS のブラウザソースにだけある。操作パネルのプレビューと見分ける（はじめかたのチェックに使う）
-    if ("obsstudio" in window) void api.updateSettings({ obsSeen: true }).catch(() => {});
+    // OBS の中で開かれたか（はじめかたのチェックに使う）。OBS のドックの操作パネルのプレビューも
+    // obsstudio を持つかもしれないので、iframe の中は除く
+    if ("obsstudio" in window && window.parent === window)
+      void api.updateSettings({ obsSeen: true }).catch(() => {});
     const tick = setInterval(() => {
       now = Date.now();
       for (const [id, s] of segments) if (!isLive(s)) segments.delete(id);

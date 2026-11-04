@@ -79,13 +79,17 @@ impl Store {
     /// 操作パネルからの変更を当てて保存する。読めない値なら何も変えずにエラー
     pub fn update_settings(&self, patch: SettingsPatch) -> Result<Settings, String> {
         let unsaved = self.unsaved.lock().unwrap();
-        let next = self.settings().apply(patch)?;
+        let current = self.settings();
+        let next = current.apply(patch)?;
+        if next == current {
+            return Ok(next);
+        }
         if unsaved.is_none() {
             settings::save(&self.data_dir.join(settings::FILE), &next)
                 .map_err(|e| e.to_string())?;
         }
         let display = display(&next);
-        let display_changed = display != self::display(&self.settings());
+        let display_changed = display != self::display(&current);
         self.settings.send_if_modified(|current| {
             let changed = *current != next;
             *current = next.clone();
@@ -93,6 +97,9 @@ impl Store {
         });
         if display_changed {
             let _ = self.tx.send(display);
+        }
+        if next.obs_seen && !current.obs_seen {
+            let _ = self.tx.send(ServerMsg::ObsSeen);
         }
         Ok(next)
     }
@@ -311,5 +318,23 @@ mod tests {
         let segments = snapshot_segments(&store);
         assert_eq!(segments.len(), KEEP_SEGMENTS);
         assert_eq!(segments[0].id, "5");
+    }
+
+    #[test]
+    fn first_obs_seen_is_announced_once_and_only_changes_are_saved() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = Store::new(Ok(Settings::default()), dir.path().to_owned());
+        let mut rx = store.subscribe();
+        let seen = || crate::settings::SettingsPatch {
+            obs_seen: Some(true),
+            ..Default::default()
+        };
+        store.update_settings(seen()).unwrap();
+        assert!(matches!(rx.try_recv(), Ok(ServerMsg::ObsSeen)));
+        let file = dir.path().join(settings::FILE);
+        std::fs::remove_file(&file).unwrap();
+        store.update_settings(seen()).unwrap();
+        assert!(rx.try_recv().is_err());
+        assert!(!file.exists());
     }
 }

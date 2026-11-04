@@ -38,6 +38,8 @@ class Panel {
   level = $state<number | undefined>();
   /** OpenAI の使用量と概算の料金 */
   usage = $state<UsageView | undefined>();
+  /** 起動してから、字幕を動かして字幕が出た（テスト字幕は数えない） */
+  subtitled = $state(false);
   /** もらったギフトコードの状態（保存していれば開いたときに確かめる） */
   gift = $state<GiftStatus | undefined>();
   /** おすそ分け。起動したとき・キーを変えたとき・おすそ分けか料金のタブを開いたときに取り直す */
@@ -48,7 +50,7 @@ class Panel {
   private updates = 0;
   /** 最後に SILENT_DB を超えた時刻 */
   private heardAt = 0;
-  private spoke = $state(false);
+
   /** 最後にレベルが届いた時刻 */
   private levelAt = 0;
   now = $state(Date.now());
@@ -72,11 +74,6 @@ class Panel {
     return !!this.settings?.transcriptionEnabled && !this.transcriptionError;
   }
 
-  /** 起動してから、マイクの音が届いたことがある */
-  get heard() {
-    return this.spoke;
-  }
-
   /** 動いているのに、しばらく音が来ていない */
   get silent() {
     return this.running && this.level !== undefined && this.now - this.heardAt > SILENT_MS;
@@ -93,7 +90,7 @@ class Panel {
     void this.refreshGift();
     void this.refreshShare();
     const disconnect = connect(
-      ["status", "level", "usage"],
+      ["status", "level", "usage", "subtitle"],
       (msg) => this.onMessage(msg),
       (s) => {
         this.server = s;
@@ -112,10 +109,13 @@ class Panel {
       this.transcriptionError = msg.error ?? undefined;
     } else if (msg.type === "usage") {
       this.usage = msg.usage;
+    } else if (msg.type === "obs.seen") {
+      void this.refreshSettings();
+    } else if (msg.type === "segment.upsert") {
+      if (this.running) this.subtitled = true;
     } else if (msg.type === "audio.level") {
       // 届き始めた（張り直しで途切れた後も）時点を「聞こえた」とみなし、そこから数える
       const now = Date.now();
-      if (msg.db > SILENT_DB) this.spoke = true;
       if (now - this.levelAt > 1000 || msg.db > SILENT_DB) this.heardAt = now;
       this.levelAt = now;
       this.level = msg.db;
@@ -127,8 +127,11 @@ class Panel {
   }
 
   /** 続けて変えたとき、古い応答で新しい設定を上書きしない */
+  /** 取っている間に設定を変えたら、古い応答で上書きしない */
   refreshSettings = async () => {
-    this.view = await api.settings().catch(() => this.view);
+    const id = this.updates;
+    const view = await api.settings().catch(() => undefined);
+    if (view && id === this.updates) this.view = view;
   };
 
   update = (patch: SettingsPatch) =>

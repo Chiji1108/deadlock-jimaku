@@ -9,40 +9,31 @@
 
   let { open }: { open: (tab: string) => void } = $props();
 
-  /** OBS がつないだかは、オーバーレイが設定に書く。ここからは見えないので取り直す */
-  const REFRESH_MS = 3000;
-
   const s = $derived(panel.settings!);
+  /** 全部終わった画面は、この起動の間だけ出しておく（そのあと字幕を止めても崩さない） */
+  let celebrating = $state(false);
   const steps = $derived([
     {
       title: "API キーかギフトコードを入れる",
-      done: panel.hasAccess,
+      done: celebrating || panel.hasAccess,
       tab: "keys",
       go: "API キーへ",
     },
     {
       title: "OBS に字幕を追加する",
-      done: s.obsSeen,
+      done: celebrating || s.obsSeen,
       tab: "display",
       go: "字幕の表示へ",
     },
-    { title: "右上の「字幕を始める」を押す", done: s.transcriptionEnabled },
-    { title: "話してみて、音が届くのを確かめる", done: panel.heard },
+    { title: "右上の「字幕を始める」を押す", done: celebrating || panel.running },
+    { title: "話してみて、字幕が出るのを確かめる", done: celebrating || panel.subtitled },
   ]);
   const finished = $derived(steps.every((step) => step.done));
-  /** 全部終わった画面は、この起動の間だけ出しておく */
-  let celebrating = $state(false);
 
   $effect(() => {
     if (!finished || s.onboardingClosed) return;
     celebrating = true;
     void panel.update({ onboardingClosed: true });
-  });
-
-  $effect(() => {
-    if (s.obsSeen || s.onboardingClosed) return;
-    const timer = setInterval(() => void panel.refreshSettings(), REFRESH_MS);
-    return () => clearInterval(timer);
   });
 
   function close() {
