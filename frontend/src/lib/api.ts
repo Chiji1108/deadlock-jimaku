@@ -1,6 +1,8 @@
+import type { GiftStatus } from "../generated/GiftStatus";
 import type { Provider } from "../generated/Provider";
 import type { SettingsPatch } from "../generated/SettingsPatch";
 import type { SettingsView } from "../generated/SettingsView";
+import type { ShareView } from "../generated/ShareView";
 
 /** エラーのときは本文（サーバーの説明）を投げる */
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -26,4 +28,34 @@ export const api = {
   /** 対応している言語のコード */
   languages: () => request<string[]>("/api/languages"),
   demo: () => fetch("/api/demo", { method: "POST" }),
+
+  /** もらったギフトコードの状態 */
+  gift: () => request<GiftStatus>("/api/gift"),
+  /** 使えるコードだけ保存される。使えなければその状態を返す（投げない） */
+  setGift: async (code: string): Promise<GiftStatus> => {
+    const res = await fetch("/api/gift", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ code }),
+    });
+    if (res.ok || res.status === 400) return (await res.json()) as GiftStatus;
+    throw new Error((await res.text()) || res.statusText);
+  },
+  removeGift: async () => {
+    const res = await fetch("/api/gift", { method: "DELETE" });
+    if (!res.ok) throw new Error((await res.text()) || res.statusText);
+  },
+
+  /** おすそ分け（自分のキーで人に使ってもらう） */
+  share: () => request<ShareView>("/api/share"),
+  enableShare: () => request<ShareView>("/api/share", { method: "POST" }),
+  disableShare: () => request<ShareView>("/api/share", { method: "DELETE" }),
+  /** `expiresAt` はミリ秒。null は期限なし */
+  createCode: (body: { memo: string; expiresAt: number | null }) =>
+    request<ShareView>("/api/share/codes", { method: "POST", body: JSON.stringify(body) }),
+  updateCode: (id: string, body: { memo?: string; expiresAt?: number | null; revoked?: boolean }) =>
+    request<ShareView>(`/api/share/codes/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
 };

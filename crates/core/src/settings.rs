@@ -55,10 +55,18 @@ pub struct Settings {
     /// ランクを取りに行く間隔（試合後すぐには反映されないので短くしない）
     #[ts(type = "number")]
     pub rank_poll_seconds: u64,
+    /// 開発者のサーバー（おすそ分け。DESIGN.md 17.1）の根元。手元で試すときに `wrangler dev` に向ける
+    pub api_base: String,
 }
 
 /// 既定値から変えたときだけ保存する項目（保存してしまうと、アプリの既定値を直しても古い値が残る）
-const ADVANCED: [&str; 4] = ["models", "realtimeDelay", "segmentation", "rankPollSeconds"];
+const ADVANCED: [&str; 5] = [
+    "models",
+    "realtimeDelay",
+    "segmentation",
+    "rankPollSeconds",
+    "apiBase",
+];
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
 #[serde(default, rename_all = "camelCase")]
@@ -388,6 +396,7 @@ impl Default for Settings {
             segmentation: Segmentation::default(),
             rank_account: None,
             rank_poll_seconds: 180,
+            api_base: "https://api.jimaku.deadlock.jp/v1".into(),
         }
     }
 }

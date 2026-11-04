@@ -16,10 +16,9 @@ use tokio::sync::mpsc;
 use tokio_tungstenite::tungstenite::{Message, client::IntoClientRequest, http::HeaderValue};
 
 use crate::audio::{SAMPLE_RATE, to_i16};
+use crate::openai::Access;
 use crate::usage::{Meter, Use};
 
-const REALTIME_URL: &str = "wss://api.openai.com/v1/realtime?intent=transcription";
-const BATCH_URL: &str = "https://api.openai.com/v1/audio/transcriptions";
 /// リアルタイムの `audio/pcm` は 24kHz（入力の 16kHz からちょうど 3/2 倍）
 const REALTIME_RATE: u32 = 24_000;
 /// input_audio_buffer.append 1 回で送る長さ（100ms）
@@ -42,7 +41,7 @@ pub struct Hints {
 }
 
 pub struct RealtimeConfig {
-    pub api_key: String,
+    pub access: Access,
     pub model: String,
     /// `minimal` / `low` / `medium` / `high` / `xhigh`（低いほど早く、高いほど正確）
     pub delay: String,
@@ -239,10 +238,10 @@ type Sink = futures_util::stream::SplitSink<Socket, Message>;
 type Stream = futures_util::stream::SplitStream<Socket>;
 
 async fn connect(cfg: &RealtimeConfig, hints: &Hints) -> anyhow::Result<(Sink, Stream)> {
-    let mut request = REALTIME_URL.into_client_request()?;
+    let mut request = cfg.access.realtime_url().into_client_request()?;
     request.headers_mut().insert(
         "Authorization",
-        HeaderValue::from_str(&format!("Bearer {}", cfg.api_key))?,
+        HeaderValue::from_str(&format!("Bearer {}", cfg.access.token()))?,
     );
     let (ws, _) = tokio_tungstenite::connect_async(request)
         .await
@@ -376,7 +375,7 @@ async fn expect_event(stream: &mut Stream, expected: &str) -> anyhow::Result<()>
 }
 
 pub struct BatchRequest<'a> {
-    pub api_key: &'a str,
+    pub access: &'a Access,
     pub model: &'a str,
     pub hints: &'a Hints,
     pub wav: Vec<u8>,
@@ -399,8 +398,8 @@ pub async fn transcribe(http: &reqwest::Client, req: BatchRequest<'_>) -> anyhow
         form = form.text("keywords[]", keyword.clone());
     }
     let res = http
-        .post(BATCH_URL)
-        .bearer_auth(req.api_key)
+        .post(req.access.url("/audio/transcriptions"))
+        .bearer_auth(req.access.token())
         .multipart(form)
         .send()
         .await?;

@@ -70,9 +70,9 @@ impl Tokens {
     pub fn from_response(usage: &serde_json::Value) -> Self {
         let n = |v: &serde_json::Value| v.as_u64().unwrap_or(0);
         Self {
-            input: n(&usage["prompt_tokens"]),
-            cached: n(&usage["prompt_tokens_details"]["cached_tokens"]),
-            output: n(&usage["completion_tokens"]),
+            input: n(&usage["input_tokens"]),
+            cached: n(&usage["input_tokens_details"]["cached_tokens"]),
+            output: n(&usage["output_tokens"]),
         }
     }
 }
@@ -311,8 +311,8 @@ mod tests {
     #[test]
     fn response_usage_counts_cached_tokens() {
         let usage = serde_json::json!({
-            "prompt_tokens": 900, "completion_tokens": 50,
-            "prompt_tokens_details": { "cached_tokens": 512 },
+            "input_tokens": 900, "output_tokens": 50,
+            "input_tokens_details": { "cached_tokens": 512 },
         });
         assert_eq!(
             Tokens::from_response(&usage),

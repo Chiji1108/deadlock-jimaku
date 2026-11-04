@@ -16,6 +16,7 @@ use anyhow::Context;
 use futures_util::{StreamExt, future::try_join_all, stream};
 
 use crate::lang;
+use crate::openai::Access;
 use crate::store::Store;
 use crate::types::{Glossary, LangCode};
 use glossary::{Icon, Sources};
@@ -49,8 +50,8 @@ impl Loaded {
 
 /// 辞書を用意して store に載せる。失敗してもアプリは辞書なしで動き続ける。
 /// 漢字名の読みは手書きの読みと、キャッシュ済みの LLM の読みを重ねて配信し、
-/// 足りない名前は配信した後に問い合わせて配信し直す（`openai_key` がなければ手書きとキャッシュの読みだけ）
-pub async fn load_into(store: Arc<Store>, root: PathBuf, openai_key: Option<String>) {
+/// 足りない名前は配信した後に問い合わせて配信し直す（`access` がなければ手書きとキャッシュの読みだけ）
+pub async fn load_into(store: Arc<Store>, root: PathBuf, access: Option<Access>) {
     let settings = store.settings();
     let loaded = match load(&root, &settings.glossary_languages()).await {
         Ok(loaded) => loaded,
@@ -93,11 +94,11 @@ pub async fn load_into(store: Arc<Store>, root: PathBuf, openai_key: Option<Stri
     };
     publish(&cache);
 
-    let (true, Some(api_key)) = (readable, openai_key) else {
+    let (true, Some(access)) = (readable, access) else {
         return;
     };
     let model = readings::ReadingModel {
-        api_key,
+        access,
         model: settings.models.readings.clone(),
         reasoning_effort: settings.models.reasoning_effort.clone(),
         meter: store.meter(),
