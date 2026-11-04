@@ -173,7 +173,7 @@ pub struct ItemCards {
 impl Default for ItemCards {
     fn default() -> Self {
         Self {
-            hold_seconds: 8.0,
+            hold_seconds: 6.0,
             language: None,
             anchor: Anchor::TopLeft,
         }
