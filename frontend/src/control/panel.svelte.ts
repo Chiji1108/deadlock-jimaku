@@ -44,6 +44,8 @@ class Panel {
   share = $state<ShareView | undefined>();
   /** おすそ分けの状態を取れなかった理由 */
   shareError = $state<string | undefined>();
+  /** 送った設定の変更の数 */
+  private updates = 0;
   /** 最後に SILENT_DB を超えた時刻 */
   private heardAt = 0;
   /** 最後にレベルが届いた時刻 */
@@ -113,9 +115,12 @@ class Panel {
     this.devices = await api.devices().catch(() => []);
   }
 
+  /** 続けて変えたとき、古い応答で新しい設定を上書きしない */
   update = (patch: SettingsPatch) =>
     this.run(async () => {
-      this.view = await api.updateSettings(patch);
+      const id = ++this.updates;
+      const view = await api.updateSettings(patch);
+      if (id === this.updates) this.view = view;
     });
 
   setTranscription(enabled: boolean) {

@@ -28,7 +28,6 @@
     { field: "fontSize", label: "話した言葉の大きさ", presets: [32, 40, 48, 56] },
     { field: "translationFontSize", label: "翻訳の大きさ", presets: [22, 26, 32, 36] },
   ] as const;
-  const SIZE_NAMES = ["小", "中", "大", "特大"];
   const BACKGROUNDS: { value: Background; label: string; hint: string }[] = [
     { value: "outline", label: "縁取り", hint: "文字に黒い縁取りを付けます" },
     {
@@ -105,10 +104,8 @@
               value={String(d[f.field])}
               onValueChange={(v) => v && set({ [f.field]: Number(v) })}
             >
-              {#each f.presets as px, i (px)}
-                <ToggleGroup.Item value={String(px)} class="flex-1">
-                  {SIZE_NAMES[i]}
-                </ToggleGroup.Item>
+              {#each f.presets as px (px)}
+                <ToggleGroup.Item value={String(px)} class="flex-1">{px}px</ToggleGroup.Item>
               {/each}
             </ToggleGroup.Root>
             {#if !(f.presets as readonly number[]).includes(d[f.field])}
@@ -189,7 +186,7 @@
     <Card.Header>
       <Card.Title>文字の色</Card.Title>
       <Card.Description>
-        黒い縁取りの上に出るので、明るい色が読みやすいです。アイテム名の色はゲームのスロットの色のままです
+        縁取りや帯の黒の上に出るので、明るい色が読みやすいです。アイテム名の色はゲームのスロットの色のままです
       </Card.Description>
       <Card.Action>
         <Button

@@ -10,6 +10,8 @@
   let { field, label }: { field: "fontSize" | "translationFontSize"; label: string } = $props();
 
   let size = $state(0);
+  /** 開いたときの値。変えていなければ送らない（ほかの画面で変えた値を戻さない） */
+  let opened = 0;
   const valid = $derived(Number.isInteger(size) && size >= RANGE.min && size <= RANGE.max);
 </script>
 
@@ -18,8 +20,8 @@
   title={label}
   description="OBS のブラウザソースの中での px です（{RANGE.min}〜{RANGE.max}）"
   {valid}
-  onopen={() => (size = panel.settings!.subtitleDisplay[field])}
-  onsave={() => panel.update({ subtitleDisplay: { [field]: size } })}
+  onopen={() => (size = opened = panel.settings!.subtitleDisplay[field])}
+  onsave={async () => size === opened || panel.update({ subtitleDisplay: { [field]: size } })}
 >
   <Field.Field orientation="horizontal">
     <Field.Label for={field} class="flex-1">大きさ（px）</Field.Label>
