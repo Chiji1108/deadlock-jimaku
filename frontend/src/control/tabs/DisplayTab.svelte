@@ -13,7 +13,8 @@
   import type { SubtitleDisplayPatch } from "../../generated/SubtitleDisplayPatch";
   import AddToObs from "../parts/AddToObs.svelte";
   import OverlayPreview from "../parts/OverlayPreview.svelte";
-  import DisplayDetailsDialog from "../parts/DisplayDetailsDialog.svelte";
+  import ColorInput from "../parts/ColorInput.svelte";
+  import FontSizeDialog from "../parts/FontSizeDialog.svelte";
   import { SUBTITLE_SIZE } from "../../lib/overlay-size";
   import { overlayUrl, panel } from "../panel.svelte";
 
@@ -37,6 +38,12 @@
       hint: "明るい場面でも読めるよう、行の後ろに黒い帯を敷きます",
     },
   ];
+  /** 既定の色はサーバーの既定（settings.rs）と同じ */
+  const COLORS = [
+    { key: "textColor", label: "文字", initial: "#ffffff" },
+    { key: "heroColor", label: "ヒーロー名", initial: "#ff7ab6" },
+    { key: "abilityColor", label: "スキル名", initial: "#8fd8ff" },
+  ] as const;
   const LINES = [1, 2, 3, 4, 5];
   const HOLDS = [4, 6, 10, 15];
 
@@ -58,8 +65,7 @@
       <Card.Description
         >ここで変えた見せ方は、OBS に表示中の字幕にもそのまま反映されます</Card.Description
       >
-      <Card.Action class="flex gap-1">
-        <DisplayDetailsDialog />
+      <Card.Action>
         <Button variant="outline" size="sm" onclick={panel.demo}>
           <PlayIcon />テスト字幕を流す
         </Button>
@@ -92,7 +98,10 @@
           </ToggleGroup.Root>
         </Field.Field>
         <Field.Field>
-          <Field.Label>文字の大きさ</Field.Label>
+          <div class="flex items-center justify-between">
+            <Field.Label>文字の大きさ</Field.Label>
+            <FontSizeDialog />
+          </div>
           <ToggleGroup.Root
             type="single"
             variant="outline"
@@ -112,7 +121,7 @@
           </ToggleGroup.Root>
           {#if !size}
             <Field.Description>
-              「詳しく設定」で指定しています（話した言葉 {d.fontSize}px・翻訳 {d.translationFontSize}px）
+              数値で指定しています（話した言葉 {d.fontSize}px・翻訳 {d.translationFontSize}px）
             </Field.Description>
           {/if}
         </Field.Field>
@@ -181,6 +190,36 @@
             {/each}
           </ToggleGroup.Root>
         </Field.Field>
+      </Field.Group>
+    </Card.Content>
+  </Card.Root>
+
+  <Card.Root>
+    <Card.Header>
+      <Card.Title>文字の色</Card.Title>
+      <Card.Description>
+        黒い縁取りの上に出るので、明るい色が読みやすいです。アイテム名の色はゲームのスロットの色のままです
+      </Card.Description>
+      <Card.Action>
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={COLORS.every((c) => d[c.key] === c.initial)}
+          onclick={() =>
+            set(Object.fromEntries(COLORS.map((c) => [c.key, c.initial])) as SubtitleDisplayPatch)}
+        >
+          既定の色に戻す
+        </Button>
+      </Card.Action>
+    </Card.Header>
+    <Card.Content>
+      <Field.Group>
+        {#each COLORS as c (c.key)}
+          <Field.Field orientation="horizontal">
+            <Field.Label for={c.key} class="flex-1">{c.label}</Field.Label>
+            <ColorInput id={c.key} value={d[c.key]} onchange={(hex) => set({ [c.key]: hex })} />
+          </Field.Field>
+        {/each}
       </Field.Group>
     </Card.Content>
   </Card.Root>
