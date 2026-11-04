@@ -27,7 +27,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 pub const DEFAULT_PORT: u16 = 4510;
 
 /// app/tauri.conf.json の identifier と揃える（Tauri の app_data_dir と同じ場所になる）
-pub const IDENTIFIER: &str = "dev.deadlock-stream-overlays.app";
+pub const IDENTIFIER: &str = "jp.deadlock.jimaku";
 
 pub fn default_data_dir() -> PathBuf {
     dirs::data_dir()
