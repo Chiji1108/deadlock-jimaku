@@ -1,6 +1,8 @@
 ---
 import "../styles/global.css";
-import { DISCORD, REPO } from "../site";
+import { siDiscord, siGithub, siTwitch } from "simple-icons";
+import BrandIcon from "../components/BrandIcon.astro";
+import { DISCORD, REPO, TWITCH } from "../site";
 
 interface Props {
   title?: string;
@@ -53,7 +55,12 @@ const year = new Date().getFullYear();
           <a href="/#download" class="hidden hover:text-white sm:inline">ダウンロード</a>
           <a href="/#pricing" class="hidden hover:text-white sm:inline">料金</a>
           <a href="/#faq" class="hidden hover:text-white sm:inline">よくある質問</a>
-          <a href={REPO} class="hover:text-white">GitHub</a>
+          <a href={DISCORD} aria-label="Discord のサーバー" title="Discord のサーバー" class="hover:text-white">
+            <BrandIcon icon={siDiscord} />
+          </a>
+          <a href={REPO} aria-label="GitHub のリポジトリ" title="GitHub のリポジトリ" class="hover:text-white">
+            <BrandIcon icon={siGithub} />
+          </a>
         </div>
       </nav>
     </header>
@@ -77,7 +84,12 @@ const year = new Date().getFullYear();
             class="underline">deadlock-api</a
           > から取得しています。
         </p>
-        <p>© {year} Chiji1108</p>
+        <p class="flex items-center gap-2">
+          © {year} ミリちゃんねる
+          <a href={TWITCH} aria-label="ミリちゃんねるの Twitch" title="ミリちゃんねるの Twitch" class="hover:text-white">
+            <BrandIcon icon={siTwitch} class="size-4" />
+          </a>
+        </p>
       </div>
     </footer>
   </body>

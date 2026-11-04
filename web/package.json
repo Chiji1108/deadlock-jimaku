@@ -16,6 +16,7 @@
     "@astrojs/check": "^0.9.12",
     "@fontsource-variable/noto-sans-jp": "^5.3.1",
     "@tailwindcss/vite": "^4.3.3",
+    "simple-icons": "^16.36.0",
     "tailwindcss": "^4.3.3",
     "typescript": "^6.0.3",
     "wrangler": "^4.156.1"

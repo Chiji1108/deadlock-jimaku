@@ -143,7 +143,7 @@
             </Tabs.Trigger>
           {/each}
         </Tabs.List>
-        <!-- 不具合の報告や、更新できたかの確認に使う。狭いときは場所を取らないよう出さない -->
+        <!-- 不具合の報告や、更新できたかの確認に使う。狭いときはページの一番下に出す -->
         <div
           class="mt-auto self-start px-[15px] pt-3 tabular-nums group-data-horizontal/tabs:hidden"
         >
@@ -193,6 +193,7 @@
           {#each TABS as t (t.value)}
             <Tabs.Content value={t.value}><t.page /></Tabs.Content>
           {/each}
+          <div class="hidden tabular-nums group-data-horizontal/tabs:block"><AboutDialog /></div>
         </div>
       </main>
     </Tabs.Root>
