@@ -86,11 +86,36 @@ const zoomStyle = ({ x, y, w, h }: Rect) =>
   `background-size:${(SCREEN.width / w) * 100}% auto;` +
   `background-position:${(x / (SCREEN.width - w)) * 100}% ${(y / (SCREEN.height - h)) * 100}%`;
 
+const keySteps = [
+  {
+    title: "OpenAI の開発者向けサイトに登録する",
+    body: "メールアドレスか Google アカウントで登録します。ChatGPT のアカウントがあれば、それでログインできます。ChatGPT の有料プランとは別の支払いになります。",
+    link: { href: "https://platform.openai.com/signup", label: "登録ページを開く" },
+  },
+  {
+    title: "クレジットカードを登録して、前払いでチャージする",
+    body: "設定の「Billing」で「Add payment method」からカードを登録し、「Add to credit balance」で 5〜10 ドルほどチャージします。使った分だけ残高から引かれます。使いすぎが心配なら、自動チャージ（Auto recharge）はオフのままにしてください。",
+    link: {
+      href: "https://platform.openai.com/settings/organization/billing/overview",
+      label: "Billing を開く",
+    },
+  },
+  {
+    title: "API キーを作る",
+    body: "「API keys」で「Create new secret key」を押し、名前（例: デドロ字幕）を付けて作ります。キーは作ったときに一度しか表示されないので、すぐにコピーしてください。",
+    link: { href: "https://platform.openai.com/api-keys", label: "API keys を開く" },
+  },
+  {
+    title: "アプリに貼り付けて保存する",
+    body: "アプリの「API キー」のタブに貼り付けます。キーは PC の資格情報ストアに保存します。キーは他の人に見せないでください（使われると、あなたの残高から引かれます）。",
+  },
+];
+
 const steps = [
   { title: "ダウンロード", body: "Windows・Mac・Linux 用のアプリを入れます。" },
   {
     title: "OpenAI の API キーを設定",
-    body: "文字起こしと翻訳に使います。作り方はアプリの中で案内します。",
+    body: "文字起こしと翻訳に使います。作り方はこのページの下と、アプリの中で案内します。",
   },
   {
     title: "OBS に追加",
@@ -265,8 +290,8 @@ const faqs = [
     <h2 class="text-2xl font-bold">料金</h2>
     <div class="mt-8 rounded-xl border border-line bg-panel p-6 sm:p-8">
       <p class="text-lg">
-        アプリは<strong class="text-gold">無料</strong>です。文字起こしと翻訳には、ご自身の OpenAI
-        の API キーを使います。
+        アプリは<strong class="text-gold">無料</strong>です。文字起こしと翻訳には、ご自身の
+        <a href="#openai-key" class="underline">OpenAI の API キー</a>を使います。
       </p>
       <p class="mt-4 text-muted">
         OpenAI への支払いの目安は、ずっと話し続けて <strong class="text-white">1 時間あたり約 $2</strong>（翻訳
@@ -274,6 +299,32 @@ const faqs = [
         1 つ増やすと、話し続けて 1 時間あたり約 $0.3 増えます。
       </p>
     </div>
+  </section>
+
+  <section id="openai-key" class="mx-auto max-w-5xl px-4 py-16">
+    <h2 class="text-2xl font-bold">OpenAI の API キーの作り方</h2>
+    <p class="mt-4 text-muted">
+      字幕を使っている人から「おすそ分け」のコードをもらった場合は、キーがなくても使えます。アプリの「API
+      キー」のタブにコードを入れてください。
+    </p>
+    <ol class="mt-8 flex flex-col gap-6">
+      {
+        keySteps.map((s, i) => (
+          <li class="flex gap-4">
+            <span class="text-sm font-semibold text-gold">{i + 1}</span>
+            <div>
+              <h3 class="font-semibold">{s.title}</h3>
+              <p class="mt-2 text-sm leading-relaxed text-muted">{s.body}</p>
+              {s.link && (
+                <a class="mt-2 inline-block text-sm underline" href={s.link.href} target="_blank" rel="noreferrer">
+                  {s.link.label}
+                </a>
+              )}
+            </div>
+          </li>
+        ))
+      }
+    </ol>
   </section>
 
   <section id="faq" class="mx-auto max-w-5xl px-4 py-16">
