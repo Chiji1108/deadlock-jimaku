@@ -75,7 +75,7 @@
 
   function hold() {
     clearTimeout(timer);
-    timer = setTimeout(next, (view?.holdSeconds ?? 8) * 1000);
+    timer = setTimeout(next, (view?.holdSeconds ?? 6) * 1000);
   }
 
   onMount(() => {

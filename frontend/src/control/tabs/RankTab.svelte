@@ -11,7 +11,7 @@
   import AddToObs from "../parts/AddToObs.svelte";
   import AnchorPicker from "../parts/AnchorPicker.svelte";
   import OverlayPreview from "../parts/OverlayPreview.svelte";
-  import { RANK_SIZE } from "../../lib/overlay-size";
+  import { rankSize } from "../../lib/overlay-size";
   import { overlayUrl, panel } from "../panel.svelte";
 
   const CONTENTS: { value: RankContent; label: string }[] = [
@@ -23,6 +23,7 @@
   const NO_REGION = "";
 
   const s = $derived(panel.settings!);
+  const size = $derived(rankSize(s.rankContent));
   // ランク名を取ってくる言語（話す言語・英語・翻訳先）から選ぶ
   const languages = $derived([...new Set([s.micLanguage, "en", ...s.translateTo])]);
   /** 選べる言語にないもの（翻訳先から外した）は、サーバーと同じく話す言語に合わせる */
@@ -50,11 +51,7 @@
       </Card.Description>
     </Card.Header>
     <Card.Content class="flex flex-col gap-6">
-      <OverlayPreview
-        src="/overlay/rank.html"
-        title="ランクオーバーレイのプレビュー"
-        size={RANK_SIZE}
-      />
+      <OverlayPreview src="/overlay/rank.html" title="ランクオーバーレイのプレビュー" {size} />
 
       <form
         onsubmit={(e) => {
@@ -160,11 +157,12 @@
     <Card.Header>
       <Card.Title>OBS に追加する</Card.Title>
       <Card.Description>
-        大きさを変えるときは、ソースを引き伸ばさずにプロパティの幅と高さを同じ割合で変えてください。中身がくっきりしたまま大きくなります
+        大きさを変えるときは、ソースを引き伸ばさずにプロパティの幅と高さを同じ割合で変えてください。中身がくっきりしたまま大きくなります。出すものを変えたときは、プロパティの幅と高さを
+        {size[0]}×{size[1]} に合わせ直してください
       </Card.Description>
     </Card.Header>
     <Card.Content>
-      <AddToObs url={overlayUrl("rank")} name="ランク" size={RANK_SIZE} />
+      <AddToObs url={overlayUrl("rank")} name="ランク" {size} />
     </Card.Content>
   </Card.Root>
 </div>

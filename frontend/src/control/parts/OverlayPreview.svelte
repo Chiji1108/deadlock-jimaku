@@ -11,6 +11,7 @@
 
 <div
   style:aspect-ratio="{size[0]} / {size[1]}"
+  style:max-width="{size[0]}px"
   class="relative w-full overflow-hidden rounded-lg border bg-[radial-gradient(ellipse_at_30%_20%,#3b4a5e,#11151c_70%)]"
   bind:clientWidth={width}
 >

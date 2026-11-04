@@ -106,8 +106,8 @@
                 <span class="text-destructive">この期限はもう過ぎています。選び直してください</span>
               {:else}
                 {expiresAt === null
-                  ? "期限なしで使えます"
-                  : `${dateTime(expiresAt)} まで使えます`}。あとから変えられます。期限が過ぎても、始めていた配信は止まりません
+                  ? "期限なしで使えます。あとから変えられます"
+                  : `${dateTime(expiresAt)} まで使えます。あとから変えられます。期限が過ぎても、出している字幕は止まりません`}
               {/if}
             </Field.Description>
           </Field.Field>
@@ -184,18 +184,21 @@
 
 <ConfirmDialog
   bind:open={consenting}
-  title="API キーをサーバーに預けます"
+  title="あなたの API キーをサーバーに預けます"
   action="預けてギフトコードを作る"
   disabled={past}
   onconfirm={consent}
 >
   <p>
-    ギフトコードを使う人の字幕は、開発者のサーバー（api.jimaku.deadlock.jp）があなたの API キーで
-    OpenAI に送ります。使われた分はあなたに請求されます。
+    ギフトコードをもらった人は、自分の API キーを持っていません。そこで、あなたの API
+    キーをデドロ字幕のサーバーに預けて、その人の字幕に使います。
   </p>
-  <p>キーは暗号化して保存します。音声と文字は保存しません。</p>
-  <p>「おすそ分けをやめる」で、いつでもキーを消せます。</p>
-  <p>同じキーで別の PC からおすそ分けしている場合、その PC では管理できなくなります。</p>
+  <ul class="list-disc pl-5">
+    <li>料金: その人が使った分は、あなたの OpenAI に請求されます</li>
+    <li>保存: キーは暗号化して保存します。その人の声や字幕は保存しません</li>
+    <li>やめるとき: 「おすそ分けをやめる」で、いつでもキーを消せます</li>
+  </ul>
+  <p>別の PC でも同じキーを預けている場合、その PC では管理できなくなります</p>
 </ConfirmDialog>
 
 <ConfirmDialog

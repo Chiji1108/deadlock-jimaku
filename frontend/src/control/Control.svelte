@@ -15,6 +15,7 @@
   import { Button } from "$lib/components/ui/button";
   import { Toaster } from "$lib/components/ui/sonner";
   import * as Tabs from "$lib/components/ui/tabs";
+  import AboutDialog from "./parts/AboutDialog.svelte";
   import Onboarding from "./parts/Onboarding.svelte";
   import { panel, transcriptionErrorText } from "./panel.svelte";
   import { total, unpriced, usd } from "./usage";
@@ -36,10 +37,16 @@
 
   const TABS = [
     { value: "audio", label: "マイクと翻訳", icon: MicIcon, page: AudioTab },
-    { value: "display", label: "字幕の表示", icon: CaptionsIcon, page: DisplayTab },
+    {
+      value: "display",
+      label: "字幕",
+      icon: CaptionsIcon,
+      page: DisplayTab,
+      heading: "オーバーレイ",
+    },
     { value: "items", label: "アイテム説明", icon: PackageIcon, page: ItemsTab },
     { value: "rank", label: "ランク", icon: TrophyIcon, page: RankTab },
-    { value: "keys", label: "API キー", icon: KeyRoundIcon, page: KeysTab },
+    { value: "keys", label: "API キー", icon: KeyRoundIcon, page: KeysTab, heading: "" },
     { value: "share", label: "おすそ分け", icon: GiftIcon, page: ShareTab },
     { value: "usage", label: "料金", icon: WalletIcon, page: UsageTab },
   ];
@@ -118,6 +125,15 @@
           class="w-full shrink-0 justify-start overflow-x-auto overflow-y-hidden group-data-vertical/tabs:gap-1 group-data-vertical/tabs:bg-transparent"
         >
           {#each TABS as t (t.value)}
+            <!-- サイドバーでは種類ごとに分ける（heading が空なら区切りの余白だけ） -->
+            {#if t.heading !== undefined}
+              <p
+                role="presentation"
+                class="self-stretch px-[15px] pt-3 text-xs text-muted-foreground group-data-horizontal/tabs:hidden"
+              >
+                {t.heading}
+              </p>
+            {/if}
             <!-- 横に並べるときは幅が狭いので、アイコンを出さない（入りきらなければ横にスクロール） -->
             <Tabs.Trigger
               value={t.value}
@@ -127,12 +143,12 @@
             </Tabs.Trigger>
           {/each}
         </Tabs.List>
-        <!-- 不具合の報告や、更新できたかの確認に使う。狭いときは場所を取らないよう出さない -->
-        <p
-          class="mt-auto px-[15px] pt-3 text-xs text-muted-foreground tabular-nums group-data-horizontal/tabs:hidden"
+        <!-- 不具合の報告や、更新できたかの確認に使う。狭いときはページの一番下に出す -->
+        <div
+          class="mt-auto self-start px-[15px] pt-3 tabular-nums group-data-horizontal/tabs:hidden"
         >
-          v{panel.view?.version}
-        </p>
+          <AboutDialog />
+        </div>
       </div>
       <main bind:this={content} class="min-w-0 flex-1 group-data-vertical/tabs:overflow-y-auto">
         <div class="mx-auto flex max-w-3xl flex-col gap-4 px-4 py-6">
@@ -177,6 +193,7 @@
           {#each TABS as t (t.value)}
             <Tabs.Content value={t.value}><t.page /></Tabs.Content>
           {/each}
+          <div class="hidden tabular-nums group-data-horizontal/tabs:block"><AboutDialog /></div>
         </div>
       </main>
     </Tabs.Root>

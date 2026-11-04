@@ -10,7 +10,7 @@
   import { ITEMS_SIZE } from "../../lib/overlay-size";
   import { overlayUrl, panel } from "../panel.svelte";
 
-  const HOLDS = [5, 8, 12, 20];
+  const HOLDS = [4, 6, 8, 12];
   const FOLLOW = "";
 
   const s = $derived(panel.settings!);

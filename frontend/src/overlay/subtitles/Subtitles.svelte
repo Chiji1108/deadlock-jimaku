@@ -38,6 +38,9 @@
       : [],
   );
 
+  /** 1 行だけのとき、次の字幕に入れ替わるなら、古い行をフェードさせない（2 行に見える） */
+  const replacing = () => display?.maxLines === 1 && visible.length > 0;
+
   onMount(() => {
     // OBS の中で開かれたか（はじめかたのチェックに使う）。OBS のドックの操作パネルのプレビューも
     // obsstudio を持つかもしれないので、iframe の中は除く
@@ -86,7 +89,7 @@
       class="caption {s.stage}"
       animate:slide={{ duration: 200 }}
       in:fly={{ y: 16, duration: 200 }}
-      out:fade={{ duration: 400 }}
+      out:fade={{ duration: replacing() ? 0 : 400 }}
     >
       <p class="source" lang={s.lang}>
         <!-- partial / final は文字単位で変化させ、enriched ではふりがなとアイコンを足す -->
@@ -149,6 +152,7 @@
     display: flex;
     flex-direction: column;
     align-items: inherit;
+    max-width: 100%;
   }
   .captions[data-align="left"] {
     align-items: flex-start;
@@ -163,12 +167,20 @@
     margin: 0;
     line-height: 1.5;
     font-weight: 700;
+    /* 文節で折り返す。ふりがなの付いた文は長い 1 文節に見えることがあるので、箱に収まらなければ途中でも折る */
+    word-break: auto-phrase;
+    overflow-wrap: anywhere;
     -webkit-text-stroke: 0.18em var(--outline-color);
     paint-order: stroke fill;
     text-shadow: 0 0.05em 0.15em rgb(0 0 0 / 0.6);
   }
   .source {
     font-size: var(--source-size);
+  }
+  /* TextMorph は既定で折り返さないので、partial / final が長いと箱からはみ出す */
+  .source :global([torph-root]) {
+    max-width: 100%;
+    white-space: normal;
   }
   .translation {
     font-size: var(--translation-size);

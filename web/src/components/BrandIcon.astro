@@ -1,0 +1,7 @@
+---
+import type { SimpleIcon } from "simple-icons";
+
+const { icon, class: className = "size-5" } = Astro.props as { icon: SimpleIcon; class?: string };
+---
+
+<svg class={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d={icon.path}></path></svg>

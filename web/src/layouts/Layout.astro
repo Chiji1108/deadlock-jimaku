@@ -1,6 +1,8 @@
 ---
 import "../styles/global.css";
-import { REPO } from "../site";
+import { siDiscord, siGithub, siTwitch } from "simple-icons";
+import BrandIcon from "../components/BrandIcon.astro";
+import { DISCORD, REPO, TWITCH } from "../site";
 
 interface Props {
   title?: string;
@@ -53,7 +55,12 @@ const year = new Date().getFullYear();
           <a href="/#download" class="hidden hover:text-white sm:inline">ダウンロード</a>
           <a href="/#pricing" class="hidden hover:text-white sm:inline">料金</a>
           <a href="/#faq" class="hidden hover:text-white sm:inline">よくある質問</a>
-          <a href={REPO} class="hover:text-white">GitHub</a>
+          <a href={DISCORD} aria-label="Discord のサーバー" title="Discord のサーバー" class="hover:text-white">
+            <BrandIcon icon={siDiscord} />
+          </a>
+          <a href={REPO} aria-label="GitHub のリポジトリ" title="GitHub のリポジトリ" class="hover:text-white">
+            <BrandIcon icon={siGithub} />
+          </a>
         </div>
       </nav>
     </header>
@@ -63,10 +70,9 @@ const year = new Date().getFullYear();
     <footer class="mt-24 border-t border-line">
       <div class="mx-auto flex max-w-5xl flex-col gap-3 px-4 py-8 text-sm text-muted">
         <div class="flex flex-wrap gap-5">
+          <a href={DISCORD} class="hover:text-white">Discord（不具合・要望）</a>
+          <a href="/terms" class="hover:text-white">利用規約</a>
           <a href="/privacy" class="hover:text-white">プライバシーポリシー</a>
-          <a href={`${REPO}/issues`} class="hover:text-white">
-            不具合・要望
-          </a>
           <a href={`${REPO}/blob/main/LICENSE.md`} class="hover:text-white">
             ライセンス
           </a>
@@ -78,7 +84,12 @@ const year = new Date().getFullYear();
             class="underline">deadlock-api</a
           > から取得しています。
         </p>
-        <p>© {year} Chiji1108</p>
+        <p class="flex items-center gap-2">
+          © {year} ミリちゃんねる
+          <a href={TWITCH} aria-label="ミリちゃんねるの Twitch" title="ミリちゃんねるの Twitch" class="hover:text-white">
+            <BrandIcon icon={siTwitch} class="size-4" />
+          </a>
+        </p>
       </div>
     </footer>
   </body>

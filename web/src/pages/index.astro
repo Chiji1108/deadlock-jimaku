@@ -1,7 +1,7 @@
 ---
 import Layout from "../layouts/Layout.astro";
 
-import { REPO } from "../site";
+import { DISCORD, REPO, TWITCH } from "../site";
 /** 最新のリリースのファイルを直接落とす（ファイル名に版の番号を付けないので、いつも最新版になる） */
 const file = (name: string) => `${REPO}/releases/latest/download/${name}`;
 const downloads = [
@@ -114,8 +114,8 @@ const keySteps = [
 const steps = [
   { title: "ダウンロード", body: "Windows・Mac・Linux 用のアプリを入れます。" },
   {
-    title: "OpenAI の API キーを設定",
-    body: "文字起こしと翻訳に使います。作り方はアプリの中でも案内します。",
+    title: "API キーかギフトコードを設定",
+    body: "文字起こしと翻訳に OpenAI を使います。キーの作り方はアプリの中でも案内します。知り合いからギフトコードをもらった場合は、キーは要りません。",
     link: { href: "#openai-key", label: "作り方を見る" },
   },
   {
@@ -126,16 +126,41 @@ const steps = [
 
 const faqs = [
   {
-    q: "ゲームの PC に何か入れたり、ゲームのファイルを触ったりしますか？",
-    a: "しません。マイクの声と、公開されているランクの情報だけを使います。",
-  },
-  {
     q: "日本語以外で話しても使えますか？",
     a: "使えます。話す言語は操作画面で選べます。ふりがなは日本語のときだけ付きます。",
   },
   {
     q: "OpenAI の料金が心配です",
     a: "アプリの「料金」タブに、使った分の目安がその場で出ます。前払いのチャージで使い、自動チャージをオフにしておけば、残高より多くは使われません。",
+  },
+  {
+    q: "OpenAI の API キーを作らずに使えますか？",
+    a: "使えます。デドロ字幕を使っている知り合いからギフトコードをもらえば、アプリの「API キー」のタブに入れるだけで使えます。使った分の料金は、コードをくれた人の OpenAI アカウントに請求されます。API キーを持っている人は、アプリの「おすそ分け」のタブでコードを作れます。",
+  },
+  {
+    q: "どんな情報が送信されますか？",
+    a: "字幕を出している間の話し声と字幕の文字を OpenAI に送ります。ランクを出すときは、Steam のアカウント ID を deadlock-api に送ります。デドロ字幕のサーバーを通るのはおすそ分けのときだけで、音声や字幕の文字は保存しません。",
+    link: { href: "/privacy", label: "プライバシーポリシーを見る" },
+  },
+  {
+    q: "OpenAI の API キーはどこに保存されますか？",
+    a: "キーは PC の OS の資格情報ストア（Windows の資格情報マネージャー、Mac のキーチェーン）に保存し、ふだんは OpenAI との通信にだけ使います。おすそ分けを始めるときだけ、確認のうえでデドロ字幕のサーバーに暗号化して預けます。",
+    link: { href: "/privacy", label: "プライバシーポリシーを見る" },
+  },
+  {
+    q: "ウイルスが入っていないか心配です",
+    a: "ソースコードは GitHub で公開していて、配布するファイルは GitHub Actions でそのコードから作っています。Windows で「PC が保護されました」と出ることがありますが、Windows 用のコード署名をしていないためで、ウイルスが見つかったという意味ではありません。",
+    link: { href: REPO, label: "GitHub でソースコードを見る" },
+  },
+  {
+    q: "どんな人が開発したんですか？",
+    a: "Twitch で Deadlock を配信しているミリちゃんねるが、配信者目線で開発しました。",
+    link: { href: TWITCH, label: "Twitch のチャンネルを見る" },
+  },
+  {
+    q: "わからないことは、どこで聞けますか？",
+    a: "Discord のサーバーで、質問などを受け付けています。",
+    link: { href: DISCORD, label: "Discord のサーバーに参加する" },
   },
 ];
 ---
@@ -304,6 +329,9 @@ const faqs = [
         1 言語・ふりがなあり）です。話していない間は音声を送らないので、黙っている時間が長いほど少なくなります。翻訳先を
         1 つ増やすと、話し続けて 1 時間あたり約 $0.3 増えます。
       </p>
+      <p class="mt-2 text-muted">
+        ギフトコードで使うときは、自分には請求されません。使った分は、コードをくれた人の OpenAI アカウントに請求されます。
+      </p>
     </div>
   </section>
 
@@ -343,7 +371,14 @@ const faqs = [
         faqs.map((f) => (
           <div class="py-6">
             <dt class="font-semibold">{f.q}</dt>
-            <dd class="mt-2 text-sm leading-relaxed text-muted">{f.a}</dd>
+            <dd class="mt-2 text-sm leading-relaxed text-muted">
+              {f.a}
+              {f.link && (
+                <a class="mt-2 block underline hover:text-white" href={f.link.href}>
+                  {f.link.label}
+                </a>
+              )}
+            </dd>
           </div>
         ))
       }

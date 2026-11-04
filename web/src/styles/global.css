@@ -16,11 +16,15 @@ html {
   color-scheme: dark;
 }
 
-/* 日本語の見出しを文節で折り返す（「そのま / ま」にしない） */
+/* 日本語を文節で折り返す（「アイテ / ム」にしない）。狭い画面で 1 文節が収まらなければ途中でも折る */
+body {
+  word-break: auto-phrase;
+  overflow-wrap: anywhere;
+}
+
 h1,
 h2,
 h3 {
-  word-break: auto-phrase;
   text-wrap: balance;
 }
 
