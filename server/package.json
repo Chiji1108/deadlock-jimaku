@@ -1,5 +1,5 @@
 {
-  "name": "deadlock-stream-overlays-server",
+  "name": "deadlock-jimaku-server",
   "private": true,
   "license": "SEE LICENSE IN ../LICENSE.md",
   "type": "module",

@@ -1,7 +1,7 @@
 // API（api.jimaku.deadlock.jp。DESIGN.md 17 章）
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "dedoro-jimaku-api",
+  "name": "deadlock-jimaku-api",
   "main": "src/index.ts",
   "compatibility_date": "2026-10-01",
   "routes": [{ "pattern": "api.jimaku.deadlock.jp", "custom_domain": true }],
@@ -11,7 +11,7 @@
     {
       "binding": "DB",
       "database_name": "deadlock-jimaku",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "946da22e-8b7f-4caa-93e2-f4a0bf37508c",
       "migrations_dir": "migrations"
     }
   ]

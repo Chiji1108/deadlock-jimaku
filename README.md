@@ -12,7 +12,7 @@ Deadlock の配信者向けの OBS オーバーレイ（非公式）。
 
 ## インストール
 
-[Releases](https://github.com/Chiji1108/deadlock-stream-overlays/releases) から、使う PC に合ったものをダウンロードします。2 PC 配信なら、配信用の PC（マイクと OBS がある方）に入れます。
+[Releases](https://github.com/Chiji1108/deadlock-jimaku/releases) から、使う PC に合ったものをダウンロードします。2 PC 配信なら、配信用の PC（マイクと OBS がある方）に入れます。
 
 | OS | ファイル |
 |---|---|
