@@ -31,7 +31,13 @@
     "macOS": {
       "signingIdentity": "-",
       "minimumSystemVersion": "11.0",
-      "entitlements": "Entitlements.plist"
+      "entitlements": "Entitlements.plist",
+      "dmg": {
+        "background": "dmg/background.tiff",
+        "windowSize": { "width": 660, "height": 400 },
+        "appPosition": { "x": 170, "y": 186 },
+        "applicationFolderPosition": { "x": 490, "y": 186 }
+      }
     },
     "linux": {
       "deb": {

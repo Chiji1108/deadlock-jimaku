@@ -54,6 +54,9 @@ jobs:
     defaults:
       run:
         shell: bash
+    env:
+      # CI では Tauri が dmg の見た目（背景・アイコンの位置）を付ける Finder の処理を飛ばすので、飛ばさせない
+      TAURI_BUNDLER_DMG_IGNORE_CI: "true"
     steps:
       - uses: actions/checkout@v4
       - name: Linux のビルドに要るライブラリ（Tauri の WebView とマイク）
