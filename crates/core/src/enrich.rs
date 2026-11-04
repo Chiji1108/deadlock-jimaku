@@ -18,6 +18,7 @@ use serde_json::{Value, json};
 use crate::furigana;
 use crate::lang;
 use crate::llm;
+use crate::openai::Access;
 use crate::types::{Enriched, EntityKind, Glossary, LangCode, RubySegment, Token};
 use crate::usage::{Meter, Use};
 
@@ -25,8 +26,8 @@ const TIMEOUT: Duration = Duration::from_secs(8);
 
 pub struct Enricher {
     http: reqwest::Client,
-    /// OpenAI の API キー
-    api_key: String,
+    /// OpenAI への送り先と鍵
+    access: Access,
     model: String,
     /// ふりがなのモデル（辞書の名前の読みと同じ。DESIGN.md 8.2）
     readings_model: String,
@@ -40,7 +41,7 @@ pub struct Enricher {
 
 impl Enricher {
     pub fn new(
-        api_key: String,
+        access: Access,
         model: String,
         readings_model: String,
         reasoning_effort: Option<String>,
@@ -51,7 +52,7 @@ impl Enricher {
         let targets = lang::normalize(targets.into_iter().filter(|t| *t != source_lang));
         Self {
             http: crate::http().clone(),
-            api_key,
+            access,
             model,
             readings_model,
             reasoning_effort,
@@ -99,7 +100,7 @@ impl Enricher {
             return None;
         }
         let model = furigana::Model {
-            api_key: &self.api_key,
+            access: &self.access,
             model: &self.readings_model,
             reasoning_effort: self.reasoning_effort.as_deref(),
             meter: &self.meter,
@@ -126,7 +127,7 @@ impl Enricher {
         llm::chat_json(
             &self.http,
             llm::Request {
-                api_key: &self.api_key,
+                access: &self.access,
                 model: &self.model,
                 reasoning_effort: self.reasoning_effort.as_deref(),
                 system: &self.system(glossary),
@@ -569,7 +570,7 @@ mod tests {
 
     fn enricher(targets: &[&str]) -> Enricher {
         Enricher::new(
-            "key".into(),
+            Access::key("key".into()),
             "model".into(),
             "model".into(),
             None,

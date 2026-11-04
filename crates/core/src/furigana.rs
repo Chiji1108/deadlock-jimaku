@@ -10,6 +10,7 @@ use serde::Deserialize;
 use serde_json::json;
 
 use crate::llm;
+use crate::openai::Access;
 use crate::types::RubySegment;
 use crate::usage::{Meter, Use};
 
@@ -23,7 +24,7 @@ A kanji compound is one segment with the reading of the whole word; never split 
 Keep okurigana, kana and punctuation in their own segments with ruby null. Joining the segments' text must give the sentence exactly.";
 
 pub struct Model<'a> {
-    pub api_key: &'a str,
+    pub access: &'a Access,
     pub model: &'a str,
     pub reasoning_effort: Option<&'a str>,
     pub meter: &'a Meter,
@@ -51,7 +52,7 @@ pub async fn ask(
     let out: Output = llm::chat_json(
         http,
         llm::Request {
-            api_key: model.api_key,
+            access: model.access,
             model: model.model,
             reasoning_effort: model.reasoning_effort,
             system: SYSTEM,

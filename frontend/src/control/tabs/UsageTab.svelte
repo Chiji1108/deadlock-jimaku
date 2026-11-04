@@ -21,6 +21,14 @@
     n < 10_000 ? `${n} トークン` : `${(n / 10_000).toFixed(1)} 万トークン`;
 
   const unpriced = $derived(columns.some((c) => hasUnpriced(panel.usage?.[c.key])));
+
+  // おすそ分けで使われた分も、預けたキーに請求される（今月の分だけ。コードごとはおすそ分けタブ）
+  const shared = $derived(
+    panel.share?.enabled ? panel.share.codes.reduce((sum, c) => sum + c.monthUsd, 0) : undefined,
+  );
+  const gift = $derived(
+    panel.view?.keys.openai.state !== "saved" && panel.view?.keys.gift.state === "saved",
+  );
 </script>
 
 <Card.Root>
@@ -52,13 +60,23 @@
           </div>
         {/each}
       {/each}
+      {#if shared !== undefined}
+        <div>おすそ分けで使われた分</div>
+        <div class="text-right text-muted-foreground">—</div>
+        <div class="text-right tabular-nums">{usd(shared)}</div>
+      {/if}
       <div class="border-t pt-2 font-medium">合計</div>
       {#each columns as c (c.key)}
         <div class="border-t pt-2 text-right font-medium tabular-nums">
-          {usd(total(panel.usage?.[c.key]))}
+          {usd(total(panel.usage?.[c.key]) + (c.key === "month" ? (shared ?? 0) : 0))}
         </div>
       {/each}
     </div>
+    {#if gift}
+      <p class="mt-4 text-xs text-muted-foreground">
+        ギフトコードで使っているので、この料金はおすそ分けしてくれた人に請求されます
+      </p>
+    {/if}
     {#if unpriced}
       <p class="mt-4 text-xs text-muted-foreground">
         単価の分からないモデルを使った分は、合計に入っていません

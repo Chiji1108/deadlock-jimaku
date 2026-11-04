@@ -10,10 +10,11 @@ use std::sync::Arc;
 use futures_util::FutureExt;
 use tokio::task::JoinHandle;
 
+use crate::openai::Access;
 use crate::settings::{Models, Region, Segmentation, Settings};
 use crate::store::Store;
 use crate::types::{LangCode, TranscriptionError};
-use crate::{assets, audio, rank, secrets, subtitles};
+use crate::{assets, audio, rank, secrets, share, subtitles};
 
 pub struct Options {
     /// 開発・検証用: マイクの代わりに WAV ファイルを流す（設定の開始・停止に関係なく流す）
@@ -52,7 +53,7 @@ impl<K: PartialEq> Slot<K> {
 #[derive(PartialEq)]
 struct AssetsInput {
     languages: Vec<LangCode>,
-    openai: Option<String>,
+    access: Option<Access>,
 }
 
 #[derive(PartialEq)]
@@ -72,7 +73,7 @@ struct SubtitlesInput {
     models: Models,
     realtime_delay: String,
     segmentation: Segmentation,
-    openai: Option<String>,
+    access: Option<Access>,
 }
 
 #[derive(Clone, PartialEq)]
@@ -89,24 +90,27 @@ pub async fn run(store: Arc<Store>, options: Options) {
     let mut rank_slot = Slot::new();
     let mut subtitles_slot = Slot::new();
     let mut rank_account = None;
+    // 字幕を出していたか（止めた状態から始めるときだけギフトコードの期限を確かめる）
+    let mut running = false;
     loop {
         let settings: Settings = settings_rx.borrow_and_update().clone();
         let keys = tokio::task::spawn_blocking(secrets::load)
             .await
             .unwrap_or_default();
         let languages = settings.glossary_languages();
+        let access = keys.access(&settings.api_base);
 
         assets_slot
             .update(
                 AssetsInput {
                     languages: languages.clone(),
-                    openai: keys.openai.clone(),
+                    access: access.clone(),
                 },
                 || {
                     Some(tokio::spawn(assets::load_into(
                         store.clone(),
                         store.data_dir().join("assets"),
-                        keys.openai.clone(),
+                        access.clone(),
                     )))
                 },
             )
@@ -143,12 +147,15 @@ pub async fn run(store: Arc<Store>, options: Options) {
             models: settings.models.clone(),
             realtime_delay: settings.realtime_delay.clone(),
             segmentation: settings.segmentation.clone(),
-            openai: keys.openai.clone(),
+            access: access.clone(),
         };
+        let starting = !running;
+        running = source.is_some();
         subtitles_slot
             .update(input, || {
                 store.discard_unsettled();
-                start_subtitles(&store, source, keys.openai)
+                let check = starting.then(|| settings.api_base.clone());
+                start_subtitles(&store, source, access, check)
             })
             .await;
 
@@ -161,13 +168,15 @@ pub async fn run(store: Arc<Store>, options: Options) {
 fn start_subtitles(
     store: &Arc<Store>,
     source: Option<Source>,
-    openai: Option<String>,
+    access: Option<Access>,
+    // Some なら、始める前にギフトコードの期限を確かめる（その API の根元）
+    check_gift: Option<String>,
 ) -> Option<JoinHandle<()>> {
     let Some(source) = source else {
         store.set_transcription_error(None);
         return None;
     };
-    let Some(api_key) = openai else {
+    let Some(access) = access else {
         store.set_transcription_error(Some(TranscriptionError::MissingKey));
         return None;
     };
@@ -184,7 +193,15 @@ fn start_subtitles(
     Some(tokio::spawn(async move {
         // 止まったら理由を出す（開始・停止を押し直すと始め直す）。想定外のエラー（panic）でも
         // 黙って止まらないよう、捕まえて知らせる
-        let run = AssertUnwindSafe(subtitles::run(store.clone(), input, api_key));
+        // ギフトコードの期限は始めるときだけ確かめる（配信の途中で設定を変えて作り直すときは
+        // 確かめない。止めない。DESIGN.md 17.1）
+        if let (true, Some(api)) = (access.is_gift(), &check_gift)
+            && let Err(e) = share::check_gift(api, access.token()).await
+        {
+            store.set_transcription_error(Some(e));
+            return;
+        }
+        let run = AssertUnwindSafe(subtitles::run(store.clone(), input, access));
         let error = match run.catch_unwind().await {
             Ok(Ok(())) => ended,
             Ok(Err(e)) => Some(TranscriptionError::from_error(&e)),

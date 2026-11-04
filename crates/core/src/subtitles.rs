@@ -17,6 +17,7 @@ use crate::audio::{self, History, SAMPLE_RATE};
 use crate::enrich::Enricher;
 use crate::lang;
 use crate::now_ms;
+use crate::openai::Access;
 use crate::settings::Settings;
 use crate::store::Store;
 use crate::stt::{self, BatchRequest, Hints, RealtimeConfig};
@@ -37,8 +38,8 @@ const MAX_KEYWORDS: usize = 500;
 /// 音声認識に渡す録音の説明
 const PROMPT: &str = "Live commentary by a streamer playing the video game Deadlock (Valve).";
 
-/// `api_key` は OpenAI（文字起こし・翻訳）
-pub async fn run(store: Arc<Store>, input: audio::Input, api_key: String) -> anyhow::Result<()> {
+/// `access` は OpenAI（文字起こし・翻訳）の送り先と鍵
+pub async fn run(store: Arc<Store>, input: audio::Input, access: Access) -> anyhow::Result<()> {
     let settings = store.settings();
 
     // 用語ヒントは Realtime のセッション開始時に 1 回しか渡せないので、辞書を少し待つ。
@@ -66,7 +67,7 @@ pub async fn run(store: Arc<Store>, input: audio::Input, api_key: String) -> any
     let (rt_tx, rt_rx) = mpsc::unbounded_channel();
     let (delta_tx, mut delta_rx) = mpsc::channel(256);
     let realtime = RealtimeConfig {
-        api_key: api_key.clone(),
+        access: access.clone(),
         model: settings.models.realtime.clone(),
         delay: settings.realtime_delay.clone(),
         meter: store.meter(),
@@ -74,7 +75,7 @@ pub async fn run(store: Arc<Store>, input: audio::Input, api_key: String) -> any
     tokio::spawn(realtime_loop(realtime, hints.clone(), rt_rx, delta_tx));
 
     let enricher = Enricher::new(
-        api_key.clone(),
+        access.clone(),
         settings.models.translate.clone(),
         settings.models.readings.clone(),
         settings.models.reasoning_effort.clone(),
@@ -85,7 +86,7 @@ pub async fn run(store: Arc<Store>, input: audio::Input, api_key: String) -> any
     let (done_tx, mut done_rx) = mpsc::channel(64);
     let batch = Arc::new(BatchContext {
         http: crate::http().clone(),
-        api_key,
+        access,
         model: settings.models.batch.clone(),
         hints,
         meter: store.meter(),
@@ -385,7 +386,7 @@ async fn realtime_loop(
 
 struct BatchContext {
     http: reqwest::Client,
-    api_key: String,
+    access: Access,
     model: String,
     hints: Arc<Hints>,
     meter: Arc<Meter>,
@@ -406,7 +407,7 @@ async fn transcribe(
     done: mpsc::Sender<Done>,
 ) {
     let request = BatchRequest {
-        api_key: &ctx.api_key,
+        access: &ctx.access,
         model: &ctx.model,
         hints: &ctx.hints,
         wav,

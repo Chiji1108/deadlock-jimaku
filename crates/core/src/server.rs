@@ -9,17 +9,20 @@ use axum::extract::{Path, Request, State};
 use axum::http::{HeaderMap, StatusCode, Uri, header};
 use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Response};
-use axum::routing::{get, post, put};
+use axum::routing::{get, patch, post, put};
 use rust_embed::RustEmbed;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use tokio::net::TcpListener;
 use tokio::sync::broadcast::error::RecvError;
 
 use crate::secrets::{self, Provider};
 use crate::settings::SettingsPatch;
+use crate::share::{self, GiftStatus, Refused, SharedCode};
 use crate::store::Store;
 use crate::types::{ClientMsg, LangCode, ServerMsg, SettingsView, Topic};
 use crate::{audio, lang};
+use ts_rs::TS;
 
 #[derive(RustEmbed)]
 #[folder = "../../frontend/dist"]
@@ -32,6 +35,13 @@ pub fn router(store: Arc<Store>) -> Router {
         .route("/glossary", get(glossary))
         .route("/settings", get(get_settings).patch(patch_settings))
         .route("/keys/{provider}", put(put_key))
+        .route("/gift", get(get_gift).put(put_gift).delete(delete_gift))
+        .route(
+            "/share",
+            get(get_share).post(enable_share).delete(disable_share),
+        )
+        .route("/share/codes", post(create_code))
+        .route("/share/codes/{id}", patch(update_code))
         .route("/devices", get(devices))
         .route("/languages", get(languages))
         .layer(middleware::from_fn(local_only));
@@ -92,16 +102,210 @@ async fn put_key(
     Path(provider): Path<Provider>,
     Json(body): Json<KeyBody>,
 ) -> Response {
-    let saved = tokio::task::spawn_blocking(move || secrets::set(provider, &body.key))
-        .await
-        .expect("keyring task");
-    match saved {
-        Ok(()) => {
-            store.restart();
-            get_settings(State(store)).await.into_response()
-        }
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, format!("{e:#}")).into_response(),
+    let key = body.key.trim().to_owned();
+    let saved = {
+        let key = key.clone();
+        blocking(move || secrets::set(provider, &key)).await
+    };
+    if let Err(e) = saved {
+        return (StatusCode::INTERNAL_SERVER_ERROR, format!("{e:#}")).into_response();
     }
+    store.restart();
+    // おすそ分けしていれば、預けたキーも新しいキーにする（消したときは預けたまま。無効にすれば消える）
+    if let (Provider::OpenAi, false, Some(token)) = (
+        provider,
+        key.is_empty(),
+        blocking(secrets::share_token).await,
+    ) && let Err(refused) = share::update_key(&store.settings().api_base, &token, &key).await
+    {
+        let message = format!(
+            "キーは保存しましたが、おすそ分けに預けたキーを替えられませんでした（{}）",
+            refused.message
+        );
+        return (StatusCode::BAD_GATEWAY, message).into_response();
+    }
+    get_settings(State(store)).await.into_response()
+}
+
+async fn blocking<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'static) -> T {
+    tokio::task::spawn_blocking(f).await.expect("keyring task")
+}
+
+// ---- ギフトコード（人からもらったもの。DESIGN.md 17.1） ----
+
+async fn get_gift(State(store): State<Arc<Store>>) -> Json<GiftStatus> {
+    Json(match blocking(secrets::gift).await {
+        Some(code) => share::gift_status(&store.settings().api_base, &code).await,
+        None => GiftStatus::None,
+    })
+}
+
+#[derive(Deserialize)]
+struct GiftBody {
+    code: String,
+}
+
+/// 使えるコードだけ保存する
+async fn put_gift(State(store): State<Arc<Store>>, Json(body): Json<GiftBody>) -> Response {
+    let code = body.code.trim().to_owned();
+    let status = share::gift_status(&store.settings().api_base, &code).await;
+    if !matches!(status, GiftStatus::Active { .. }) {
+        return (StatusCode::BAD_REQUEST, Json(status)).into_response();
+    }
+    if let Err(e) = blocking(move || secrets::set_gift(&code)).await {
+        return (StatusCode::INTERNAL_SERVER_ERROR, format!("{e:#}")).into_response();
+    }
+    store.restart();
+    Json(status).into_response()
+}
+
+async fn delete_gift(State(store): State<Arc<Store>>) -> Response {
+    if let Err(e) = blocking(|| secrets::set_gift("")).await {
+        return (StatusCode::INTERNAL_SERVER_ERROR, format!("{e:#}")).into_response();
+    }
+    store.restart();
+    StatusCode::NO_CONTENT.into_response()
+}
+
+// ---- おすそ分け（自分のキーで人に使ってもらう） ----
+
+#[derive(Serialize, TS)]
+#[ts(export)]
+pub struct ShareView {
+    pub enabled: bool,
+    pub codes: Vec<SharedCode>,
+}
+
+impl IntoResponse for Refused {
+    fn into_response(self) -> Response {
+        let status = if self.status.is_server_error() {
+            StatusCode::BAD_GATEWAY
+        } else {
+            StatusCode::BAD_REQUEST
+        };
+        (status, self.message).into_response()
+    }
+}
+
+async fn get_share(State(store): State<Arc<Store>>) -> Response {
+    let Some(token) = blocking(secrets::share_token).await else {
+        return Json(ShareView {
+            enabled: false,
+            codes: Vec::new(),
+        })
+        .into_response();
+    };
+    match share::codes(&store.settings().api_base, &token).await {
+        Ok(codes) => {
+            let codes = blocking(move || {
+                codes
+                    .into_iter()
+                    .map(|c| SharedCode {
+                        code: secrets::share_code(&c.id),
+                        ..c
+                    })
+                    .collect()
+            })
+            .await;
+            Json(ShareView {
+                enabled: true,
+                codes,
+            })
+            .into_response()
+        }
+        Err(refused) => refused.into_response(),
+    }
+}
+
+/// 自分のキーを預けて有効にする
+async fn enable_share(State(store): State<Arc<Store>>) -> Response {
+    let Some(key) = blocking(secrets::openai).await else {
+        let message = "先に自分の OpenAI の API キーを保存してください";
+        return (StatusCode::BAD_REQUEST, message).into_response();
+    };
+    let token = match share::enable(&store.settings().api_base, &key).await {
+        Ok(token) => token,
+        Err(refused) => return refused.into_response(),
+    };
+    if let Err(e) = blocking(move || secrets::set_share_token(&token)).await {
+        return (StatusCode::INTERNAL_SERVER_ERROR, format!("{e:#}")).into_response();
+    }
+    get_share(State(store)).await
+}
+
+/// 預けたキーとコードを消す。サーバーに登録が残っていなくても、こちらの合言葉とコードは消す
+async fn disable_share(State(store): State<Arc<Store>>) -> Response {
+    let api = store.settings().api_base;
+    let mut ids = Vec::new();
+    if let Some(token) = blocking(secrets::share_token).await {
+        // 消す前に、この PC に覚えたコードの ID を聞いておく
+        if let Ok(codes) = share::codes(&api, &token).await {
+            ids = codes.into_iter().map(|c| c.id).collect();
+        }
+        if let Err(refused) = share::disable(&api, &token).await
+            && refused.status != StatusCode::UNAUTHORIZED
+        {
+            return refused.into_response();
+        }
+    }
+    let cleared = blocking(move || {
+        for id in &ids {
+            secrets::set_share_code(id, "")?;
+        }
+        secrets::set_share_token("")
+    })
+    .await;
+    if let Err(e) = cleared {
+        return (StatusCode::INTERNAL_SERVER_ERROR, format!("{e:#}")).into_response();
+    }
+    get_share(State(store)).await
+}
+
+async fn share_token() -> Result<String, (StatusCode, &'static str)> {
+    blocking(secrets::share_token)
+        .await
+        .ok_or((StatusCode::BAD_REQUEST, "おすそ分けが有効になっていません"))
+}
+
+/// コードを作り、この PC に覚えておく（あとでコピーできるように）
+async fn create_code(State(store): State<Arc<Store>>, Json(body): Json<Value>) -> Response {
+    let token = match share_token().await {
+        Ok(token) => token,
+        Err(res) => return res.into_response(),
+    };
+    let (id, code) = match share::create(&store.settings().api_base, &token, body).await {
+        Ok(created) => created,
+        Err(refused) => return refused.into_response(),
+    };
+    let saved = {
+        let code = code.clone();
+        blocking(move || secrets::set_share_code(&id, &code)).await
+    };
+    // サーバーはハッシュしか持たないので、ここで覚えられなければ二度と出せない。今だけ見せる
+    if let Err(e) = saved {
+        tracing::warn!("share code: {e:#}");
+        let message = format!(
+            "コードは作りましたが、この PC に保存できませんでした。今のうちに控えてください: {code}"
+        );
+        return (StatusCode::INTERNAL_SERVER_ERROR, message).into_response();
+    }
+    get_share(State(store)).await
+}
+
+/// メモ・期限を変える、止める・戻す
+async fn update_code(
+    State(store): State<Arc<Store>>,
+    Path(id): Path<String>,
+    Json(body): Json<Value>,
+) -> Response {
+    let token = match share_token().await {
+        Ok(token) => token,
+        Err(res) => return res.into_response(),
+    };
+    if let Err(refused) = share::update(&store.settings().api_base, &token, &id, body).await {
+        return refused.into_response();
+    }
+    get_share(State(store)).await
 }
 
 async fn devices() -> Response {

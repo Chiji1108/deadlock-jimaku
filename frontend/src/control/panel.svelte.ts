@@ -1,9 +1,11 @@
 // 操作パネルの状態。各タブはこれを読み、変更は api 経由でサーバーに送る（サーバーの返す設定で置き換える）
 import { toast } from "svelte-sonner";
+import type { GiftStatus } from "../generated/GiftStatus";
 import type { Provider } from "../generated/Provider";
 import type { ServerMsg } from "../generated/ServerMsg";
 import type { SettingsPatch } from "../generated/SettingsPatch";
 import type { SettingsView } from "../generated/SettingsView";
+import type { ShareView } from "../generated/ShareView";
 import type { MicError } from "../generated/MicError";
 import type { TranscriptionError } from "../generated/TranscriptionError";
 import type { UsageView } from "../generated/UsageView";
@@ -36,6 +38,12 @@ class Panel {
   level = $state<number | undefined>();
   /** OpenAI の使用量と概算の料金 */
   usage = $state<UsageView | undefined>();
+  /** もらったギフトコードの状態（保存していれば開いたときに確かめる） */
+  gift = $state<GiftStatus | undefined>();
+  /** おすそ分け。起動したとき・キーを変えたとき・おすそ分けか料金のタブを開いたときに取り直す */
+  share = $state<ShareView | undefined>();
+  /** おすそ分けの状態を取れなかった理由 */
+  shareError = $state<string | undefined>();
   /** 最後に SILENT_DB を超えた時刻 */
   private heardAt = 0;
   /** 最後にレベルが届いた時刻 */
@@ -46,9 +54,14 @@ class Panel {
     return this.view?.settings;
   }
 
-  /** OpenAI の API キーがまだ保存されていない（読めないだけのときは含めない） */
+  /** OpenAI の API キーもギフトコードも保存されていない（読めないだけのときは含めない） */
   get keyMissing() {
-    return this.view?.keys.openai.state === "missing";
+    return this.view?.keys.openai.state === "missing" && this.view.keys.gift.state === "missing";
+  }
+
+  /** 字幕を始められる鍵（自分のキーかギフトコード）がある */
+  get hasAccess() {
+    return this.view?.keys.openai.state === "saved" || this.view?.keys.gift.state === "saved";
   }
 
   /** 字幕を始める操作をしていて、止まった理由もない */
@@ -69,6 +82,8 @@ class Panel {
       [this.view, this.languages] = await Promise.all([api.settings(), api.languages()]);
     });
     void this.refreshDevices();
+    void this.refreshGift();
+    void this.refreshShare();
     const disconnect = connect(
       ["status", "level", "usage"],
       (msg) => this.onMessage(msg),
@@ -108,11 +123,54 @@ class Panel {
     return this.update({ transcriptionEnabled: enabled });
   }
 
-  /** 保存できたら true */
-  setKey = (provider: Provider, key: string) =>
-    this.run(async () => {
+  /** 保存できたら true。預けたキーの差し替えに失敗しても、画面は今の状態にする */
+  setKey = async (provider: Provider, key: string) => {
+    const saved = await this.run(async () => {
       this.view = await api.setKey(provider, key);
       toast.success(key ? "保存しました" : "削除しました");
+    });
+    if (!saved) this.view = await api.settings().catch(() => this.view);
+    void this.refreshShare();
+    return saved;
+  };
+
+  refreshGift = async () => {
+    this.gift = await api.gift().catch(() => undefined);
+  };
+
+  /** 使えるコードなら保存する。保存できたら true */
+  setGift = (code: string) =>
+    this.run(async () => {
+      const status = await api.setGift(code);
+      if (status.state !== "active") throw new Error(giftStatusText(status));
+      this.gift = status;
+      this.view = await api.settings();
+      toast.success("ギフトコードを保存しました");
+    });
+
+  removeGift = () =>
+    this.run(async () => {
+      await api.removeGift();
+      this.gift = { state: "none" };
+      this.view = await api.settings();
+      toast.success("ギフトコードを削除しました");
+    });
+
+  /** 自動で取り直すので、失敗してもトーストは出さない（おすそ分けタブに理由を出す） */
+  refreshShare = async () => {
+    try {
+      this.share = await api.share();
+      this.shareError = undefined;
+    } catch (e) {
+      this.shareError = e instanceof Error ? e.message : String(e);
+    }
+  };
+
+  /** 失敗したら理由を出す。成功したら true */
+  shareAction = (action: () => Promise<ShareView>, done?: string) =>
+    this.run(async () => {
+      this.share = await action();
+      if (done) toast.success(done);
     });
 
   demo = () =>
@@ -139,7 +197,13 @@ export const panel = new Panel();
 export function transcriptionErrorText(e: TranscriptionError): string {
   switch (e.code) {
     case "missingKey":
-      return "OpenAI の API キーが設定されていません";
+      return "OpenAI の API キーかギフトコードが設定されていません";
+    case "giftExpired":
+      return `ギフトコードの期限が切れました（${dateTime(e.expiresAt)} まで）`;
+    case "giftRevoked":
+      return "ギフトコードが止められています。おすそ分けしてくれた人に確かめてください";
+    case "giftUnknown":
+      return "ギフトコードが見つかりません。おすそ分けしてくれた人に確かめてください";
     case "inputEnded":
       return "マイクの入力が途切れました";
     case "microphone":
@@ -170,3 +234,34 @@ function micErrorText(e: MicError): string {
 
 /** 種類を足したら、ここで型エラーになる（版の違うサーバーから届いたときは中身を出す） */
 const unknown = (e: never) => `止まりました（${JSON.stringify(e)}）`;
+
+/** ギフトコードの状態を文にする（使えるときは期限） */
+export function giftStatusText(s: GiftStatus): string {
+  switch (s.state) {
+    case "none":
+      return "ギフトコードがありません";
+    case "active":
+      return s.expiresAt === null ? "期限なしで使えます" : `${dateTime(s.expiresAt)} まで使えます`;
+    case "expired":
+      return `期限が切れています（${dateTime(s.expiresAt)} まで）`;
+    case "revoked":
+      return "おすそ分けした人が止めています";
+    case "unknown":
+      return "このコードは見つかりません。打ち間違いがないか確かめてください";
+    case "unreachable":
+      return `サーバーにつながりません（${s.detail}）`;
+    default:
+      return unknown(s);
+  }
+}
+
+/** 「11/10（月）12:00」 */
+export function dateTime(ms: number): string {
+  return new Intl.DateTimeFormat("ja", {
+    month: "numeric",
+    day: "numeric",
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(ms);
+}

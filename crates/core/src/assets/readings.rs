@@ -16,6 +16,7 @@ use serde_json::json;
 
 use crate::furigana;
 use crate::llm;
+use crate::openai::Access;
 use crate::types::{Glossary, RubySegment};
 use crate::usage::{Meter, Use};
 
@@ -23,7 +24,7 @@ use crate::usage::{Meter, Use};
 const TIMEOUT: Duration = Duration::from_secs(120);
 
 pub struct ReadingModel {
-    pub api_key: String,
+    pub access: Access,
     pub model: String,
     pub reasoning_effort: Option<String>,
     pub meter: Arc<Meter>,
@@ -142,7 +143,7 @@ pub async fn ask(
     let out: Output = llm::chat_json(
         http,
         llm::Request {
-            api_key: &model.api_key,
+            access: &model.access,
             model: &model.model,
             reasoning_effort: model.reasoning_effort.as_deref(),
             system: SYSTEM,
