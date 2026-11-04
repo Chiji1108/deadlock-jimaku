@@ -122,17 +122,6 @@ const faqs = [
 
 const line = LINES[0]!;
 const cards = await fetchCards();
-const promises = [
-  {
-    title: "ゲームには触りません",
-    body: "ゲームのファイルは変えません。ランクは公開されている情報を使います。",
-  },
-  { title: "アプリは無料", body: "支払いは、OpenAI に使った分だけです。" },
-  {
-    title: "音声は残しません",
-    body: "字幕を作るときは OpenAI に送りますが、アプリは音声や字幕の履歴を保存しません。",
-  },
-];
 /** 「カート」と話しても、翻訳では正式名になる例 */
 const official = [
   { lang: "English", name: "Luggage Cart" },
@@ -150,19 +139,6 @@ const official = [
     </div>
 
     <LiveDemo client:load cards={cards} />
-  </section>
-
-  <section class="mx-auto mt-20 max-w-6xl px-4">
-    <ul class="grid gap-6 border-y border-line py-8 md:grid-cols-3 md:gap-10">
-      {
-        promises.map((p) => (
-          <li class="reveal">
-            <h2 class="text-lg font-bold">{p.title}</h2>
-            <p class="mt-1 leading-relaxed text-muted">{p.body}</p>
-          </li>
-        ))
-      }
-    </ul>
   </section>
 
   <section class="mx-auto mt-24 grid max-w-6xl items-center gap-10 px-4 sm:mt-32 md:grid-cols-2">
