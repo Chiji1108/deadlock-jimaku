@@ -87,13 +87,12 @@ h3 {
   position: absolute;
   top: 0.8%;
   left: 0.5%;
-  width: 16.4%;
 }
 .stream-card {
   position: absolute;
   top: 12%;
   right: 1%;
-  width: 22%;
+  width: 450px;
   opacity: 0;
   transform: translateX(6%);
   transition:
@@ -102,92 +101,15 @@ h3 {
 }
 .stream-card dl-item-tooltip {
   display: block;
-  width: 450px;
-}
-.plate dl-item-tooltip {
-  display: block;
-  zoom: 0.72;
 }
 .stream-card.show {
   opacity: 1;
   transform: none;
 }
 
-/* 字幕はアプリのオーバーレイと同じ見た目にする */
-.caption {
-  --pending: #c8c8c8;
-  color: #fff;
-  font-weight: 700;
-  line-height: 1.5;
-  text-align: center;
-  transition: opacity 400ms ease-out;
-}
-.caption > p {
-  -webkit-text-stroke: 0.18em rgb(0 0 0 / 0.85);
-  paint-order: stroke fill;
-  text-shadow: 0 0.05em 0.15em rgb(0 0 0 / 0.6);
-}
-.caption.pending [data-source],
-.caption .pending-line {
-  color: var(--pending);
-}
-.caption.leaving {
-  opacity: 0;
-}
-.caption .translation {
-  opacity: 0;
-}
-.caption .translation.show,
-.caption .translation.static {
-  opacity: 1;
-  animation: rise 250ms ease-out;
-}
-.caption rt {
-  font-size: 0.5em;
-  animation: reveal 300ms ease-out;
-}
-.caption ruby {
-  ruby-align: center;
-}
-.caption img {
-  display: inline;
-  height: 1.1em;
-  margin: 0 0.16em 0 0.2em;
-  vertical-align: -0.18em;
-  border-radius: 0.18em;
-  filter: drop-shadow(0 0 0.06em rgb(0 0 0 / 0.9));
-  animation: reveal 300ms ease-out;
-}
-.entity {
-  white-space: nowrap;
-  animation: tint 400ms ease-out;
-}
-.entity.hero {
-  color: #ff7ab6;
-}
-.entity.ability {
-  color: #8fd8ff;
-}
-.entity.weapon {
-  color: #ffb35c;
-}
-.entity.vitality {
-  color: #98e36b;
-}
-.entity.spirit {
-  color: #cfa2ff;
-}
-.stream .caption {
+.stream-captions {
   position: absolute;
-  right: 18cqw;
-  bottom: 13%;
-  left: 18cqw;
-}
-.stream .source {
-  font-size: 2.55cqw;
-}
-.stream .translation {
-  font-size: 1.65cqw;
+  inset: auto 18cqw 11% 18cqw;
 }
 
 /* 字幕の見本の台（画面の外の節） */
@@ -196,14 +118,16 @@ h3 {
   border-radius: 20px;
   background: radial-gradient(ellipse at 50% 0, #2b2a24, #12110e 72%);
 }
-.plate .caption {
-  padding: 2.5rem 1.25rem;
+.plate-caption {
+  position: absolute;
+  inset: auto 0 2.75rem 0;
 }
-.plate .source {
-  font-size: clamp(1.05rem, 5.4cqw, 1.6rem);
+.plate-rank {
+  --scale: 1;
 }
-.plate .translation {
-  font-size: clamp(0.85rem, 4.2cqw, 1.15rem);
+.plate dl-item-tooltip {
+  display: block;
+  zoom: 0.72;
 }
 
 @media (max-width: 700px) {
@@ -212,44 +136,20 @@ h3 {
   }
   .stream-rank {
     top: 2.5%;
-    left: 2.5%;
-    width: 42%;
+    left: 1.5%;
   }
   .stream-card {
     top: 2.5%;
     right: 2.5%;
-    width: 40%;
+  }
+  .stream-captions {
+    inset: auto 2cqw 12% 2cqw;
+  }
+  .plate-rank {
+    --scale: 0.75;
   }
   .plate dl-item-tooltip {
     zoom: 0.6;
-  }
-  .stream .caption {
-    right: 4cqw;
-    bottom: 13%;
-    left: 4cqw;
-  }
-  .stream .source {
-    font-size: 5.4cqw;
-  }
-  .stream .translation {
-    font-size: 3.6cqw;
-  }
-}
-
-@keyframes reveal {
-  from {
-    opacity: 0;
-  }
-}
-@keyframes tint {
-  from {
-    color: #fff;
-  }
-}
-@keyframes rise {
-  from {
-    opacity: 0;
-    transform: translateY(0.4em);
   }
 }
 
@@ -284,8 +184,6 @@ h3 {
   html {
     scroll-behavior: auto;
   }
-  .caption,
-  .caption *,
   .stream-card,
   .pill {
     animation: none;

@@ -2,7 +2,10 @@
 import { siDiscord, siTwitch } from "simple-icons";
 import BrandIcon from "../components/BrandIcon.astro";
 import Layout from "../layouts/Layout.astro";
-import { LANGS, LINES, sourceHtml, spokenText, translationHtml } from "../lib/live-caption";
+import RankBadge from "../../../frontend/src/lib/RankBadge.svelte";
+import LiveDemo from "../components/LiveDemo.svelte";
+import PlateCaption from "../components/PlateCaption.svelte";
+import { LINES, RANK } from "../lib/demo";
 import { DISCORD, REPO, TWITCH } from "../site";
 /** 最新のリリースのファイルを直接落とす（ファイル名に版の番号を付けないので、いつも最新版になる） */
 const file = (name: string) => `${REPO}/releases/latest/download/${name}`;
@@ -116,6 +119,8 @@ const faqs = [
 ];
 
 const line = LINES[0]!;
+const STAGES = ["partial", "enriched", "translated"] as const;
+const TITLES = { partial: "話している途中", enriched: "話し終えたら", translated: "翻訳が届いたら" };
 /** 「カート」と話しても、翻訳では正式名になる例 */
 const official = [
   { lang: "English", name: "Luggage Cart" },
@@ -136,42 +141,7 @@ const official = [
       </div>
     </div>
 
-    <figure class="hero-stage mx-auto mt-8">
-      <div id="live" class="stream">
-        <video
-          src="/media/hero.mp4"
-          poster="/media/hero.webp"
-          autoplay
-          muted
-          loop
-          playsinline
-          aria-label="Deadlock の配信画面。左上にランク、右にアイテム説明、下の中央に字幕が重なる見本"
-        ></video>
-        <img class="stream-rank" src="/media/rank.webp" alt="" width="316" height="82" />
-        <dl-provider language="japanese">
-          <div data-card class="stream-card"><dl-item-tooltip class-name={line.card}></dl-item-tooltip></div>
-        </dl-provider>
-        <div data-caption class="caption">
-          <p data-source class="source" lang="ja" set:html={sourceHtml(line)} />
-          <p data-translation class="translation static" lang="en" set:html={translationHtml(line, "en")} />
-        </div>
-      </div>
-      <figcaption class="mt-5 flex flex-wrap items-center justify-center gap-2">
-        <span class="mr-1 text-sm text-muted">押すと翻訳が変わります</span>
-        {
-          LANGS.map((l, i) => (
-            <button
-              type="button"
-              data-lang={l.value}
-              aria-pressed={i === 0 ? "true" : "false"}
-              class="rounded-full border border-line px-4 py-1.5 text-sm font-semibold transition hover:border-ink aria-pressed:border-ink aria-pressed:bg-ink aria-pressed:text-paper"
-            >
-              {l.label}
-            </button>
-          ))
-        }
-      </figcaption>
-    </figure>
+    <LiveDemo client:load />
   </section>
 
   <section class="mx-auto mt-28 max-w-6xl px-4 sm:mt-40">
@@ -182,27 +152,16 @@ const official = [
       話し終えると精度の高い文に置き換わり、ヒーロー・アイテム・スキルの名前に色とアイコンが付きます。「拡マガ」「ウルト」のような略し方も聞き分けます。
     </p>
     <ol class="mt-10 grid gap-4 md:grid-cols-3">
-      <li class="reveal flex flex-col">
-        <p class="mb-3 text-sm font-bold">話している途中</p>
-        <div class="plate flex min-h-56 flex-1 items-center justify-center">
-          <div class="caption"><p class="source pending-line">{spokenText(line).slice(0, 12)}</p></div>
-        </div>
-      </li>
-      <li class="reveal flex flex-col">
-        <p class="mb-3 text-sm font-bold">話し終えたら</p>
-        <div class="plate flex min-h-56 flex-1 items-center justify-center">
-          <div class="caption"><p class="source" lang="ja" set:html={sourceHtml(line)} /></div>
-        </div>
-      </li>
-      <li class="reveal flex flex-col">
-        <p class="mb-3 text-sm font-bold">翻訳が届いたら</p>
-        <div class="plate flex min-h-56 flex-1 items-center justify-center">
-          <div class="caption">
-            <p class="source" lang="ja" set:html={sourceHtml(line)} />
-            <p class="translation static" lang="en" set:html={translationHtml(line, "en")} />
-          </div>
-        </div>
-      </li>
+      {
+        STAGES.map((stage) => (
+          <li class="reveal flex flex-col">
+            <p class="mb-3 text-sm font-bold">{TITLES[stage]}</p>
+            <div class="plate relative h-56 overflow-hidden">
+              <div class="plate-caption"><PlateCaption client:visible stage={stage} /></div>
+            </div>
+          </li>
+        ))
+      }
     </ol>
   </section>
 
@@ -249,7 +208,9 @@ const official = [
       </figure>
       <figure class="reveal">
         <div class="plate flex min-h-[26rem] items-center justify-center p-6">
-          <img src="/media/rank.webp" alt="ランクの表示（エミッサリー III）" width="316" height="82" class="w-80" loading="lazy" />
+          <div class="plate-rank" role="img" aria-label="ランクの表示（エミッサリー III、640 / 1,000 ポイント）">
+            <RankBadge client:visible rank={RANK} lang="ja" content="full" />
+          </div>
         </div>
         <figcaption class="mt-4">
           <h3 class="text-xl font-bold">ランク</h3>
@@ -414,20 +375,6 @@ const official = [
   </section>
 
   <script>
-    import { startLiveCaption } from "../lib/live-caption";
-
-    startLiveCaption(document.querySelector<HTMLElement>("#live")!);
-
-    // カードの部品は重いので、ページが出てから読み込む
-    addEventListener("load", async () => {
-      const [provider, tooltip] = await Promise.all([
-        import("@deadlock-api/ui-core/dist/components/dl-provider.js"),
-        import("@deadlock-api/ui-core/dist/components/dl-item-tooltip.js"),
-      ]);
-      provider.defineCustomElement();
-      tooltip.defineCustomElement();
-    });
-
     // 「作り方を見る」のリンクから来たら、閉じている節を開く
     const openKeyGuide = () => {
       const guide = document.querySelector("details#openai-key") as HTMLDetailsElement;
