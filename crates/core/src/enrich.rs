@@ -19,6 +19,7 @@ use crate::furigana;
 use crate::lang;
 use crate::llm;
 use crate::openai::Access;
+use crate::settings::Models;
 use crate::types::{Enriched, EntityKind, Glossary, LangCode, RubySegment, Token};
 use crate::usage::{Meter, Use};
 
@@ -44,9 +45,7 @@ pub struct Enricher {
 impl Enricher {
     pub fn new(
         access: Access,
-        model: String,
-        readings_model: String,
-        reasoning_effort: Option<String>,
+        models: &Models,
         source_lang: LangCode,
         targets: Vec<LangCode>,
         deadlock_mode: bool,
@@ -56,9 +55,9 @@ impl Enricher {
         Self {
             http: crate::http().clone(),
             access,
-            model,
-            readings_model,
-            reasoning_effort,
+            model: models.translate.clone(),
+            readings_model: models.readings.clone(),
+            reasoning_effort: models.reasoning_effort.clone(),
             source_lang,
             targets,
             deadlock_mode,
@@ -130,7 +129,7 @@ impl Enricher {
         context: &[String],
         glossary: Option<&Glossary>,
     ) -> Option<Analysis> {
-        if self.targets.is_empty() && (glossary.is_none() || !self.deadlock_mode) {
+        if glossary.is_none() && self.targets.is_empty() {
             return None;
         }
         let user = json!({ "context": context, "transcript": text });
@@ -606,9 +605,7 @@ mod tests {
     fn enricher(targets: &[&str]) -> Enricher {
         Enricher::new(
             Access::key("key".into()),
-            "model".into(),
-            "model".into(),
-            None,
+            &Models::default(),
             "ja".into(),
             targets.iter().map(|t| (*t).to_owned()).collect(),
             true,

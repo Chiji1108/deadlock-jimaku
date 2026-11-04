@@ -87,9 +87,7 @@ pub async fn run(store: Arc<Store>, input: audio::Input, access: Access) -> anyh
 
     let enricher = Enricher::new(
         access.clone(),
-        settings.models.translate.clone(),
-        settings.models.readings.clone(),
-        settings.models.reasoning_effort.clone(),
+        &settings.models,
         settings.mic_language.clone(),
         settings.translate_to.clone(),
         settings.deadlock_mode,
