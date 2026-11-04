@@ -175,7 +175,7 @@ impl Default for ItemCards {
         Self {
             hold_seconds: 6.0,
             language: None,
-            anchor: Anchor::TopLeft,
+            anchor: Anchor::BottomRight,
         }
     }
 }
