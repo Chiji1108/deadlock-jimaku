@@ -34,6 +34,7 @@ run = [
   "pnpm --dir frontend check",
   "pnpm --dir web check",
   "pnpm --dir server check",
+  "pnpm --dir frontend test",
   "pnpm --dir server test",
   "cargo fmt --all --check",
   "cargo clippy --workspace --all-targets -- -D warnings",

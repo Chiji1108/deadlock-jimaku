@@ -1,21 +1,23 @@
 import type { Segment } from "../generated/Segment";
 
-/** 翻訳が届いてから、この間は次の字幕に押し出さない（読む時間） */
-export const MIN_READ_MS = 3000;
+/** 翻訳が届いてから、この間は押し出さない（読む時間） */
+const MIN_READ_MS = 3000;
+/** 新しい字幕を待たせる上限（翻訳が遅くても、今話している字幕を出し続ける） */
+const MAX_WAIT_MS = 6000;
 
 /**
- * 同時に出す数に収める。ふつうは古いものから押し出すが、一番古い字幕がまだ読めていない
- * （翻訳が届いていない・届いたばかり）ときは、代わりに新しい途中の字幕を待たせる。
- * `live` は話した順
+ * 同時に出す数に収める。読み終えた行があればそれを消し、なければ一番新しい行を待たせる。
+ * 新しい行が待ちすぎたら、読み終えていなくても古い行を押し出す。`live` は話した順
  */
 export function visibleLines(live: Segment[], max: number, now: number): Segment[] {
   const lines = [...live];
   while (lines.length > max) {
-    const oldest = lines[0]!;
-    const read = oldest.settledAt !== undefined && now - oldest.settledAt >= MIN_READ_MS;
-    const waiting = lines.findLastIndex((s) => s.settledAt === undefined);
-    if (read || waiting <= 0) lines.shift();
-    else lines.splice(waiting, 1);
+    const read = lines.findIndex(
+      (s) => s.settledAt !== undefined && now - s.settledAt >= MIN_READ_MS,
+    );
+    if (read >= 0) lines.splice(read, 1);
+    else if (now - lines.at(-1)!.startedAt >= MAX_WAIT_MS) lines.shift();
+    else lines.pop();
   }
   return lines;
 }
