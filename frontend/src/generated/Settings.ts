@@ -25,6 +25,10 @@ micDevice?: string,
  */
 translateTo: Array<string>, 
 /**
+ * ヒーロー・スキル・アイテムを判定して強調し、アイテム説明を出す。雑談の配信ならオフにする
+ */
+deadlockMode: boolean, 
+/**
  * 字幕オーバーレイの見せ方。変えると表示中のオーバーレイにそのまま届く
  */
 subtitleDisplay: SubtitleDisplay, 

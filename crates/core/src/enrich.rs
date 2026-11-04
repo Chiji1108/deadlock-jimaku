@@ -401,6 +401,18 @@ enum Span {
 /// 役割とルールと用語の一覧。用語は 1 行ずつ「参照 | 種類 | 話す言語の名前 | 英語名 | スキルの持ち主と番号」
 fn system_prompt(source_lang: &str, glossary: Option<&Glossary>) -> String {
     let lang_label = lang::find(source_lang).map_or(source_lang, |l| l.label);
+    // デッドロックモードを切ったときは、ゲームの話として扱わない
+    if glossary.is_none() {
+        return format!(
+            "You process live commentary from a streamer who speaks {lang_label}. Each request has \"transcript\" \
+             (one utterance from speech recognition, which may mishear words) and \"context\" \
+             (the previous utterances, for reference only; do not split or translate them).\n\
+             \n\
+             Rules:\n\
+             1. \"segments\": return the whole transcript as a single segment, exactly as given, with ref null.\n\
+             2. \"translations\": translate only the transcript into each requested language, naturally and casually.\n"
+        );
+    }
     let mut lines = Vec::new();
     for (reference, e) in glossary.map(|g| &g.entities).into_iter().flatten() {
         let kind = match e.kind {
@@ -723,5 +735,11 @@ mod tests {
                 },
             ]
         );
+    }
+
+    #[test]
+    fn without_a_glossary_the_prompt_is_not_about_the_game() {
+        assert!(!system_prompt("ja", None).contains("Deadlock"));
+        assert!(system_prompt("ja", Some(&glossary())).contains("Deadlock"));
     }
 }

@@ -11,7 +11,7 @@ export type SettingsPatch = { transcriptionEnabled?: boolean,
 /**
  * 空文字列なら OS の既定の入力デバイス
  */
-micDevice?: string, micLanguage?: string, translateTo?: Array<string>, 
+micDevice?: string, micLanguage?: string, translateTo?: Array<string>, deadlockMode?: boolean, 
 /**
  * SteamID64 か 32bit のアカウント ID。空文字列ならランクを表示しない
  */

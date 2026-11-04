@@ -37,6 +37,8 @@ const CONTEXT_LINES: usize = 3;
 const MAX_KEYWORDS: usize = 500;
 /// 音声認識に渡す録音の説明
 const PROMPT: &str = "Live commentary by a streamer playing the video game Deadlock (Valve).";
+/// デッドロックモードを切ったとき（雑談の配信など）
+const PLAIN_PROMPT: &str = "Live commentary by a streamer.";
 
 /// `access` は OpenAI（文字起こし・翻訳）の送り先と鍵
 pub async fn run(store: Arc<Store>, input: audio::Input, access: Access) -> anyhow::Result<()> {
@@ -44,21 +46,30 @@ pub async fn run(store: Arc<Store>, input: audio::Input, access: Access) -> anyh
 
     // 用語ヒントは Realtime のセッション開始時に 1 回しか渡せないので、辞書を少し待つ。
     // 入力は待ち終わってから開く（待っている間の音声を溜めない）
-    let glossary = store
-        .wait_glossary(&settings.mic_language, Duration::from_secs(20))
-        .await;
-    let keywords = match &glossary {
-        Some(loaded) => keywords(&loaded.glossary, &settings.mic_language),
-        None => {
-            tracing::warn!("starting transcription without glossary");
-            Vec::new()
+    let keywords = if settings.deadlock_mode {
+        let glossary = store
+            .wait_glossary(&settings.mic_language, Duration::from_secs(20))
+            .await;
+        match &glossary {
+            Some(loaded) => keywords(&loaded.glossary, &settings.mic_language),
+            None => {
+                tracing::warn!("starting transcription without glossary");
+                Vec::new()
+            }
         }
+    } else {
+        Vec::new()
     };
     tracing::info!("keywords: {} terms", keywords.len());
     let hints = Arc::new(Hints {
         language: lang::find(&settings.mic_language)
             .map_or_else(|| settings.mic_language.clone(), |l| l.stt.to_owned()),
-        prompt: PROMPT.to_owned(),
+        prompt: if settings.deadlock_mode {
+            PROMPT
+        } else {
+            PLAIN_PROMPT
+        }
+        .to_owned(),
         keywords,
     });
     let mut audio_rx = audio::open(input).await?;
@@ -327,8 +338,13 @@ impl Pipeline {
         self.pending += 1;
         // 辞書は enrich のたびに store から取る（後から届いたり、作り直されたりする）。
         // ふりがなは出さない設定なら聞かない（字幕を止めずに切り替えられるので、そのときの設定を見る）
-        let glossary = self.store.glossary().map(|l| l.glossary);
-        let furigana = self.store.settings().subtitle_display.furigana;
+        let settings = self.store.settings();
+        let glossary = self
+            .store
+            .glossary()
+            .map(|l| l.glossary)
+            .filter(|_| settings.deadlock_mode);
+        let furigana = settings.subtitle_display.furigana;
         tokio::spawn(enrich(
             self.enricher.clone(),
             id.to_owned(),
