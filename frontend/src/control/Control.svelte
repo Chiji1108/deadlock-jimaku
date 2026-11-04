@@ -15,6 +15,7 @@
   import { Button } from "$lib/components/ui/button";
   import { Toaster } from "$lib/components/ui/sonner";
   import * as Tabs from "$lib/components/ui/tabs";
+  import AboutDialog from "./parts/AboutDialog.svelte";
   import Onboarding from "./parts/Onboarding.svelte";
   import { panel, transcriptionErrorText } from "./panel.svelte";
   import { total, unpriced, usd } from "./usage";
@@ -143,11 +144,11 @@
           {/each}
         </Tabs.List>
         <!-- 不具合の報告や、更新できたかの確認に使う。狭いときは場所を取らないよう出さない -->
-        <p
-          class="mt-auto px-[15px] pt-3 text-xs text-muted-foreground tabular-nums group-data-horizontal/tabs:hidden"
+        <div
+          class="mt-auto self-start px-[15px] pt-3 tabular-nums group-data-horizontal/tabs:hidden"
         >
-          v{panel.view?.version}
-        </p>
+          <AboutDialog />
+        </div>
       </div>
       <main bind:this={content} class="min-w-0 flex-1 group-data-vertical/tabs:overflow-y-auto">
         <div class="mx-auto flex max-w-3xl flex-col gap-4 px-4 py-6">
