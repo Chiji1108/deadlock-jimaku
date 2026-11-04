@@ -275,7 +275,7 @@ impl SubtitleDisplay {
         Ok(next)
     }
 
-    /// 操作パネルの色の候補と比べられるよう、小文字に揃える
+    /// 操作パネルで既定の色と比べられるよう、小文字に揃える
     fn normalize_colors(&mut self) {
         for color in self.colors_mut() {
             color.make_ascii_lowercase();
