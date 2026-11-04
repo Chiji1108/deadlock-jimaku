@@ -36,7 +36,13 @@
       hint: "明るい場面でも読めるよう、行の後ろに黒い帯を敷きます",
     },
   ];
-  const LINES = [1, 2, 3, 4, 5];
+  /** 同時に出す字幕の数。0 は制限なし */
+  const LINES = [
+    { value: 1, label: "1" },
+    { value: 2, label: "2" },
+    { value: 3, label: "3" },
+    { value: 0, label: "制限なし" },
+  ];
   const HOLDS = [4, 6, 10, 15];
 
   const s = $derived(panel.settings!);
@@ -152,8 +158,8 @@
             value={String(d.maxLines)}
             onValueChange={(v) => v && set({ maxLines: Number(v) })}
           >
-            {#each LINES as n (n)}
-              <ToggleGroup.Item value={String(n)} class="flex-1">{n}</ToggleGroup.Item>
+            {#each LINES as n (n.value)}
+              <ToggleGroup.Item value={String(n.value)} class="flex-1">{n.label}</ToggleGroup.Item>
             {/each}
           </ToggleGroup.Root>
         </Field.Field>

@@ -134,7 +134,8 @@ impl Default for SubtitleDisplay {
 }
 
 impl SubtitleDisplay {
-    pub const MAX_LINES: std::ops::RangeInclusive<u32> = 1..=5;
+    /// 0 は制限なし
+    pub const MAX_LINES: std::ops::RangeInclusive<u32> = 0..=5;
     pub const HOLD_SECONDS: std::ops::RangeInclusive<f32> = 2.0..=30.0;
     pub const FONT_SIZE: std::ops::RangeInclusive<u32> = 16..=96;
     pub const PER_CHAR_SECONDS: std::ops::RangeInclusive<f32> = 0.0..=1.0;
@@ -753,7 +754,7 @@ mod tests {
             },
             SettingsPatch {
                 subtitle_display: Some(SubtitleDisplayPatch {
-                    max_lines: Some(0),
+                    max_lines: Some(6),
                     ..Default::default()
                 }),
                 ..Default::default()
