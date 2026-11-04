@@ -47,7 +47,15 @@ rankAnchor: Anchor,
 /**
  * エターナスの順位を調べるリーダーボードの地域。None なら調べない
  */
-rankRegion?: Region, models: Models, 
+rankRegion?: Region, 
+/**
+ * OBS のブラウザソースで字幕オーバーレイが開かれたことがある（はじめかたのチェックに使う）
+ */
+obsSeen: boolean, 
+/**
+ * はじめかたを閉じた、または全部終えた
+ */
+onboardingClosed: boolean, models: Models, 
 /**
  * リアルタイムの音声認識の遅れ（`minimal` / `low` / `medium` / `high` / `xhigh`。
  * 低いほど早く字幕が出て、高いほど正確）

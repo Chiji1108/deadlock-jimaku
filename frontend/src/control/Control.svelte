@@ -15,6 +15,7 @@
   import { Button } from "$lib/components/ui/button";
   import { Toaster } from "$lib/components/ui/sonner";
   import * as Tabs from "$lib/components/ui/tabs";
+  import Onboarding from "./parts/Onboarding.svelte";
   import { panel, transcriptionErrorText } from "./panel.svelte";
   import { total, unpriced, usd } from "./usage";
   import AudioTab from "./tabs/AudioTab.svelte";
@@ -144,7 +145,8 @@
               </Alert.Description>
             </Alert.Root>
           {/if}
-          {#if needsKey}
+          <Onboarding open={(value) => (tab = value)} />
+          {#if needsKey && s.onboardingClosed}
             <Alert.Root>
               <CircleAlertIcon />
               <Alert.Title>はじめに OpenAI の API キーを設定してください</Alert.Title>
