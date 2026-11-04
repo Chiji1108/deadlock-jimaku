@@ -27,7 +27,11 @@ translationFontSize: number,
  */
 background: Background, 
 /**
- * 翻訳が届いてから、次の字幕に押し出すまでの最短の秒数（DESIGN.md 11 章）
+ * 長い文に足す秒数（1 文字あたり）
+ */
+perCharSeconds: number, 
+/**
+ * 翻訳が届いてから、次の字幕に押し出すまでの秒数（DESIGN.md 11 章）
  */
 minReadSeconds: number, 
 /**

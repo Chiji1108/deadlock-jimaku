@@ -104,7 +104,9 @@ pub struct SubtitleDisplay {
     pub translation_font_size: u32,
     /// 文字の後ろ。明るい場面でも読めるよう、半透明の帯も選べる
     pub background: Background,
-    /// 翻訳が届いてから、次の字幕に押し出すまでの最短の秒数（DESIGN.md 11 章）
+    /// 長い文に足す秒数（1 文字あたり）
+    pub per_char_seconds: f32,
+    /// 翻訳が届いてから、次の字幕に押し出すまでの秒数（DESIGN.md 11 章）
     pub min_read_seconds: f32,
     /// 新しい字幕を待たせる最長の秒数。0 なら待たせず、すぐ入れ替える
     pub max_wait_seconds: f32,
@@ -122,6 +124,7 @@ impl Default for SubtitleDisplay {
             font_size: 40,
             translation_font_size: 26,
             background: Background::Outline,
+            per_char_seconds: 0.15,
             min_read_seconds: 3.0,
             max_wait_seconds: 6.0,
             max_lines: 3,
@@ -134,15 +137,18 @@ impl SubtitleDisplay {
     pub const MAX_LINES: std::ops::RangeInclusive<u32> = 1..=5;
     pub const HOLD_SECONDS: std::ops::RangeInclusive<f32> = 2.0..=30.0;
     pub const FONT_SIZE: std::ops::RangeInclusive<u32> = 16..=96;
-    pub const LINE_SECONDS: std::ops::RangeInclusive<f32> = 0.0..=30.0;
+    pub const PER_CHAR_SECONDS: std::ops::RangeInclusive<f32> = 0.0..=1.0;
+    pub const MIN_READ_SECONDS: std::ops::RangeInclusive<f32> = 1.0..=30.0;
+    pub const MAX_WAIT_SECONDS: std::ops::RangeInclusive<f32> = 0.0..=30.0;
 
     fn validate(&self) -> Result<(), String> {
         if !Self::MAX_LINES.contains(&self.max_lines)
             || !Self::HOLD_SECONDS.contains(&self.hold_seconds)
             || !Self::FONT_SIZE.contains(&self.font_size)
             || !Self::FONT_SIZE.contains(&self.translation_font_size)
-            || !Self::LINE_SECONDS.contains(&self.min_read_seconds)
-            || !Self::LINE_SECONDS.contains(&self.max_wait_seconds)
+            || !Self::PER_CHAR_SECONDS.contains(&self.per_char_seconds)
+            || !Self::MIN_READ_SECONDS.contains(&self.min_read_seconds)
+            || !Self::MAX_WAIT_SECONDS.contains(&self.max_wait_seconds)
         {
             return Err("subtitleDisplay is out of range".into());
         }
@@ -231,6 +237,8 @@ pub struct SubtitleDisplayPatch {
     #[ts(optional)]
     pub background: Option<Background>,
     #[ts(optional)]
+    pub per_char_seconds: Option<f32>,
+    #[ts(optional)]
     pub min_read_seconds: Option<f32>,
     #[ts(optional)]
     pub max_wait_seconds: Option<f32>,
@@ -250,6 +258,7 @@ impl SubtitleDisplay {
                 .translation_font_size
                 .unwrap_or(self.translation_font_size),
             background: patch.background.unwrap_or(self.background),
+            per_char_seconds: patch.per_char_seconds.unwrap_or(self.per_char_seconds),
             min_read_seconds: patch.min_read_seconds.unwrap_or(self.min_read_seconds),
             max_wait_seconds: patch.max_wait_seconds.unwrap_or(self.max_wait_seconds),
             max_lines: patch.max_lines.unwrap_or(self.max_lines),
@@ -857,24 +866,31 @@ mod tests {
     }
 
     #[test]
-    fn line_seconds_stay_in_range() {
-        let patch = |seconds| SettingsPatch {
-            subtitle_display: Some(SubtitleDisplayPatch {
-                max_wait_seconds: Some(seconds),
+    fn display_seconds_stay_in_range() {
+        let apply = |patch| {
+            Settings::default().apply(SettingsPatch {
+                subtitle_display: Some(patch),
                 ..Default::default()
-            }),
+            })
+        };
+        let wait = |s| SubtitleDisplayPatch {
+            max_wait_seconds: Some(s),
             ..Default::default()
         };
-        let s = Settings::default();
-        assert_eq!(
-            s.apply(patch(0.0))
-                .unwrap()
-                .subtitle_display
-                .max_wait_seconds,
-            0.0
-        );
-        assert!(s.apply(patch(31.0)).is_err());
-        assert!(s.apply(patch(-1.0)).is_err());
+        let read = |s| SubtitleDisplayPatch {
+            min_read_seconds: Some(s),
+            ..Default::default()
+        };
+        let per_char = |s| SubtitleDisplayPatch {
+            per_char_seconds: Some(s),
+            ..Default::default()
+        };
+        assert!(apply(wait(0.0)).is_ok());
+        assert!(apply(wait(31.0)).is_err());
+        assert!(apply(read(1.0)).is_ok());
+        assert!(apply(read(0.5)).is_err());
+        assert!(apply(per_char(1.0)).is_ok());
+        assert!(apply(per_char(1.5)).is_err());
     }
 
     #[test]

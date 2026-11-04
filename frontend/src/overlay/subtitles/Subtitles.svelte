@@ -15,32 +15,39 @@
   /** partial が伸びる・final で直るときの文字の動き（DESIGN.md 11 章） */
   const MORPH = { duration: 220, ease: "cubic-bezier(0.19, 1, 0.22, 1)" };
 
-  /** 長い文ほど長く出す（1 文字あたりの秒数） */
-  const PER_CHAR_SECONDS = 0.15;
-
   const segments = new SvelteMap<string, Segment>();
   let now = $state(Date.now());
   /** 見せ方は操作パネルで変え、サーバーから届く（接続直後にも届く） */
   let display = $state<SubtitleDisplay | undefined>();
 
-  /** 表示時間は settledAt から数える。partial / final の間は消さない */
-  const expiresAt = (s: Segment) =>
-    s.settledAt === undefined || !display
-      ? Infinity
-      : s.settledAt + (display.holdSeconds + [...s.text].length * PER_CHAR_SECONDS) * 1000;
+  /** 画面に初めて出た時刻。待たされている行は、出るまで消えない */
+  const shownAt = new Map<string, number>();
+
+  /** 表示時間は翻訳が届いて画面に出てから数える。partial / final の間は消さない */
+  const expiresAt = (s: Segment) => {
+    const seen = shownAt.get(s.id);
+    if (s.settledAt === undefined || seen === undefined || !display) return Infinity;
+    const seconds = display.holdSeconds + [...s.text].length * display.perCharSeconds;
+    return Math.max(s.settledAt, seen) + seconds * 1000;
+  };
 
   const isLive = (s: Segment) => s.stage !== "discarded" && expiresAt(s) > now;
 
-  const visible = $derived(
+  const lines = $derived(
     display
       ? visibleLines(
           [...segments.values()].filter(isLive).toSorted((a, b) => a.startedAt - b.startedAt),
-          display.maxLines,
           now,
           display,
         )
-      : [],
+      : { shown: [], gone: [] },
   );
+  const visible = $derived(lines.shown);
+
+  function forget(id: string) {
+    segments.delete(id);
+    shownAt.delete(id);
+  }
 
   onMount(() => {
     // OBS の中で開かれたか（はじめかたのチェックに使う）。OBS のドックの操作パネルのプレビューも
@@ -49,7 +56,9 @@
       void api.updateSettings({ obsSeen: true }).catch(() => {});
     const tick = setInterval(() => {
       now = Date.now();
-      for (const [id, s] of segments) if (!isLive(s)) segments.delete(id);
+      for (const s of lines.shown) if (!shownAt.has(s.id)) shownAt.set(s.id, now);
+      for (const s of lines.gone) forget(s.id);
+      for (const [id, s] of segments) if (!isLive(s)) forget(id);
     }, 250);
     const disconnect = connect(["subtitle", "glossary", "display"], (msg) => {
       switch (msg.type) {

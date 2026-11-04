@@ -3,6 +3,7 @@ import type { Segment } from "../generated/Segment";
 import { visibleLines } from "./subtitle-lines";
 
 const NOW = 100_000;
+const TIMING = { minReadSeconds: 3, maxWaitSeconds: 6 };
 /** 何ミリ秒前に翻訳が届いたか（なければ翻訳待ち）。話し始めは何ミリ秒前か */
 const line = (id: string, settledAgo?: number, startedAgo = 1000) =>
   ({
@@ -10,10 +11,13 @@ const line = (id: string, settledAgo?: number, startedAgo = 1000) =>
     startedAt: NOW - startedAgo,
     settledAt: settledAgo === undefined ? undefined : NOW - settledAgo,
   }) as Segment;
-const shown = (lines: Segment[], max: number, timing = { minReadSeconds: 3, maxWaitSeconds: 6 }) =>
-  visibleLines(lines, max, NOW, timing)
-    .map((s) => s.id)
+const shown = (lines: Segment[], maxLines: number, timing = TIMING) =>
+  visibleLines(lines, NOW, { maxLines, ...timing })
+    .shown.map((s) => s.id)
     .join("");
+
+const gone = (lines: Segment[], timing = TIMING) =>
+  visibleLines(lines, NOW, { maxLines: 1, ...timing }).gone.map((s) => s.id);
 
 describe("visibleLines", () => {
   it("shows everything while there is room", () => {
@@ -43,8 +47,19 @@ describe("visibleLines", () => {
     expect(shown([line("a", 9000), line("b", 8000), line("c", 7000), line("d")], 3)).toBe("bcd");
   });
 
-  it("replaces at once when waiting is turned off", () => {
+  it("replaces at once when waiting is turned off, even before the clock ticks", () => {
     const timing = { minReadSeconds: 3, maxWaitSeconds: 0 };
+    expect(shown([line("a", 1000), line("b")], 1, timing)).toBe("b");
+    expect(shown([line("a", 1000), line("b", undefined, -200)], 1, timing)).toBe("b");
+  });
+
+  it("reports pushed out lines so they do not come back, but not the waiting ones", () => {
+    expect(gone([line("a"), line("b")], { minReadSeconds: 3, maxWaitSeconds: 0 })).toEqual(["a"]);
+    expect(gone([line("a", 1000), line("b")])).toEqual([]);
+  });
+
+  it("uses the configured reading time", () => {
+    const timing = { minReadSeconds: 1, maxWaitSeconds: 6 };
     expect(shown([line("a", 1000), line("b")], 1, timing)).toBe("b");
   });
 
