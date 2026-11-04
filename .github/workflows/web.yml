@@ -3,10 +3,10 @@ name: web
 
 on:
   pull_request:
-    paths: ["web/**", "server/**", "frontend/src/lib/**", "pnpm-lock.yaml", ".github/workflows/web.yml"]
+    paths: ["web/**", "server/**", "frontend/src/lib/**", "frontend/src/generated/**", "pnpm-lock.yaml", ".github/workflows/web.yml"]
   push:
     branches: [main]
-    paths: ["web/**", "server/**", "frontend/src/lib/**", "pnpm-lock.yaml", ".github/workflows/web.yml"]
+    paths: ["web/**", "server/**", "frontend/src/lib/**", "frontend/src/generated/**", "pnpm-lock.yaml", ".github/workflows/web.yml"]
 
 permissions:
   contents: read

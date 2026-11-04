@@ -7,15 +7,17 @@
 
   /** 配信画面の幅。部品の大きさは OBS の 1920px の画面に置いたときの比で決める */
   const SCREEN = 1920;
-  /** deadlock-ui のカードの幅 */
   const CARD_WIDTH = 450;
 
+  let stream: HTMLElement;
   let width = $state(1152);
   let lang = $state<(typeof LANGS)[number]["value"]>("en");
   let index = $state(0);
   let text = $state<string | undefined>();
   let cycle = $state(0);
-  let card = $state<string | undefined>();
+  let card = $state(LINES[0]!.card);
+  let cardShown = $state(false);
+  let inView = true;
   let settled = $state(true);
 
   const narrow = $derived(width < 640);
@@ -46,11 +48,18 @@
 
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
       text = spokenText(line);
+      cardShown = true;
       return;
     }
+    // 画面の外にいる間は字幕を進めない
+    const observer = new IntersectionObserver(([entry]) => {
+      inView = entry?.isIntersecting ?? false;
+    });
+    observer.observe(stream);
     let stopped = false;
     void (async () => {
       for (let i = 0; !stopped; i = (i + 1) % LINES.length) {
+        while (!inView && !stopped) await sleep(300);
         index = i;
         cycle += 1;
         settled = false;
@@ -62,24 +71,26 @@
         await sleep(420);
         settled = true;
         card = LINES[i]!.card;
+        cardShown = true;
         await sleep(5000);
-        if (LINES[(i + 1) % LINES.length]!.card !== card) card = undefined;
+        if (LINES[(i + 1) % LINES.length]!.card !== card) cardShown = false;
         text = undefined;
         await sleep(600);
       }
     })();
     return () => {
       stopped = true;
+      observer.disconnect();
     };
   });
 </script>
 
 <figure class="hero-stage mx-auto mt-8">
-  <div class="stream" bind:clientWidth={width}>
+  <div class="stream" class:narrow bind:this={stream} bind:clientWidth={width}>
     <video
+      data-play-in-view
       src="/media/hero.mp4"
       poster="/media/hero.webp"
-      autoplay
       muted
       loop
       playsinline
@@ -89,8 +100,8 @@
       <RankBadge rank={RANK} lang="ja" content="full" />
     </div>
     <dl-provider language="japanese">
-      <div class="stream-card" class:show={card} style:zoom={scale * (narrow ? 0.9 : 1)}>
-        {#if card}<dl-item-tooltip class-name={card}></dl-item-tooltip>{/if}
+      <div class="stream-card" class:show={cardShown} style:zoom={scale * (narrow ? 0.9 : 1)}>
+        <dl-item-tooltip class-name={card}></dl-item-tooltip>
       </div>
     </dl-provider>
     <div class="stream-captions"><Captions {segments} display={subtitle} /></div>

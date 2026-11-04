@@ -376,14 +376,12 @@ const official = [
 
   <script>
     // 「作り方を見る」のリンクから来たら、閉じている節を開く
-    const openKeyGuide = () => {
-      const guide = document.querySelector("details#openai-key") as HTMLDetailsElement;
-      if (location.hash === "#openai-key") guide.open = true;
-    };
-    addEventListener("hashchange", openKeyGuide);
-    openKeyGuide();
+    const guide = document.querySelector("details#openai-key") as HTMLDetailsElement;
+    if (location.hash === "#openai-key") guide.open = true;
+    for (const link of document.querySelectorAll('a[href="#openai-key"]'))
+      link.addEventListener("click", () => (guide.open = true));
 
-    // 動画は見えてから読み込んで再生する
+    // 動画は見えている間だけ再生する（OS の「動きを減らす」では再生しない）
     const videos = new IntersectionObserver((entries) => {
       for (const { isIntersecting, target } of entries) {
         const video = target as HTMLVideoElement;
@@ -391,7 +389,8 @@ const official = [
         else video.pause();
       }
     });
-    for (const video of document.querySelectorAll("[data-play-in-view]")) videos.observe(video);
+    if (!matchMedia("(prefers-reduced-motion: reduce)").matches)
+      for (const video of document.querySelectorAll("[data-play-in-view]")) videos.observe(video);
 
     // 見ている OS の欄を目立たせる。iPad は Mac と同じ UA を名乗るので、タッチで見分ける。
     // Linux の AppImage は x86_64 用なので、ほかの CPU では目立たせない

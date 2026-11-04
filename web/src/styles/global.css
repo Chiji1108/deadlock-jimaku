@@ -130,21 +130,22 @@ h3 {
   zoom: 0.72;
 }
 
+.stream.narrow {
+  aspect-ratio: 1;
+}
+.narrow .stream-rank {
+  top: 2.5%;
+  left: 1.5%;
+}
+.narrow .stream-card {
+  top: 2.5%;
+  right: 2.5%;
+}
+.narrow .stream-captions {
+  inset: auto 2cqw 12% 2cqw;
+}
+
 @media (max-width: 700px) {
-  .stream {
-    aspect-ratio: 1;
-  }
-  .stream-rank {
-    top: 2.5%;
-    left: 1.5%;
-  }
-  .stream-card {
-    top: 2.5%;
-    right: 2.5%;
-  }
-  .stream-captions {
-    inset: auto 2cqw 12% 2cqw;
-  }
   .plate-rank {
     --scale: 0.75;
   }

@@ -9,5 +9,5 @@ export default defineConfig({
   build: { format: "file" },
   // 字幕とランクは、アプリの部品（frontend/src/lib）をそのまま使う
   integrations: [svelte()],
-  vite: { plugins: [tailwindcss()], server: { fs: { allow: [".."] } } },
+  vite: { plugins: [tailwindcss()] },
 });

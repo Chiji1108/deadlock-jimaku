@@ -37,7 +37,7 @@ const ENTITIES: Record<string, Entity> = {
   bebop: hero("bebop_sm", "ビバップ", "Bebop", "Бибоп", "比波普"),
   krill: hero("digger_sm", "モー＆クリル", "Mo & Krill", "Мо и Мелкий", "莫克双雄"),
 };
-setGlossary({ entities: ENTITIES } as never);
+setGlossary({ clientVersion: 0, languages: [], entities: ENTITIES });
 
 const t = (text: string, ruby?: string): Token => ({ t: "text", text, ruby });
 const e = (ref: string, spoken?: string): Token => ({ t: "entity", ref, spoken });
