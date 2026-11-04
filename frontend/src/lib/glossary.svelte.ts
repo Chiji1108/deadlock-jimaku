@@ -14,6 +14,11 @@ export const glossary = {
   },
 };
 
+/** サーバーのない LP の見本は、用意した辞書を渡す */
+export function setGlossary(next: Glossary) {
+  current = next;
+}
+
 /**
  * サーバーが glossary.updated を送ってきたら呼ぶ（接続直後にも届く）。
  * 呼び出しが重なったら最後のものだけを反映し、失敗したら今の辞書のまま次の通知を待つ。

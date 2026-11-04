@@ -14,7 +14,7 @@ interface Props {
 const SITE = "デドロ字幕";
 const {
   title,
-  description = "日本のデドロ配信を世界に。デッドロックに特化した、日本語字幕＆翻訳字幕アプリ。ランクやアイテム説明も OBS に重ねられます。",
+  description = "デドロ配信を、世界に。デッドロックに特化した、日本語字幕＆翻訳字幕アプリ。ランクやアイテム説明も出せます。",
   indexable = true,
 } = Astro.props;
 const fullTitle = title ? `${title} | ${SITE}` : SITE;
@@ -46,21 +46,21 @@ const year = new Date().getFullYear();
     }
   </head>
   <body class="min-h-screen font-sans antialiased">
-    <header class="border-b border-line">
+    <header class="sticky top-0 z-20 bg-paper/85 backdrop-blur">
       <nav class="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
         <a href="/" class="flex items-center gap-2 font-semibold tracking-tight">
           <img src="/favicon.svg" alt="" width="28" height="28" />{SITE}
         </a>
         <div class="flex items-center gap-5 text-sm whitespace-nowrap text-muted">
-          <a href="/#download" class="hidden hover:text-white sm:inline">ダウンロード</a>
-          <a href="/#pricing" class="hidden hover:text-white sm:inline">料金</a>
-          <a href="/#faq" class="hidden hover:text-white sm:inline">よくある質問</a>
-          <a href={DISCORD} aria-label="Discord のサーバー" title="Discord のサーバー" class="hover:text-white">
+                    <a href="/#pricing" class="hidden hover:text-ink sm:inline">料金</a>
+          <a href="/#faq" class="hidden hover:text-ink sm:inline">よくある質問</a>
+          <a href={DISCORD} aria-label="Discord のサーバー" title="Discord のサーバー" class="hover:text-ink">
             <BrandIcon icon={siDiscord} />
           </a>
-          <a href={REPO} aria-label="GitHub のリポジトリ" title="GitHub のリポジトリ" class="hover:text-white">
+          <a href={REPO} aria-label="GitHub のリポジトリ" title="GitHub のリポジトリ" class="hover:text-ink">
             <BrandIcon icon={siGithub} />
           </a>
+          <a href="/#download" class="pill px-4 py-2 text-sm text-paper!">無料で入手</a>
         </div>
       </nav>
     </header>
@@ -68,12 +68,12 @@ const year = new Date().getFullYear();
       <slot />
     </main>
     <footer class="mt-24 border-t border-line">
-      <div class="mx-auto flex max-w-5xl flex-col gap-3 px-4 py-8 text-sm text-muted">
+      <div class="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-8 text-sm text-muted">
         <div class="flex flex-wrap gap-5">
-          <a href={DISCORD} class="hover:text-white">Discord（不具合・要望）</a>
-          <a href="/terms" class="hover:text-white">利用規約</a>
-          <a href="/privacy" class="hover:text-white">プライバシーポリシー</a>
-          <a href={`${REPO}/blob/main/LICENSE.md`} class="hover:text-white">
+          <a href={DISCORD} class="hover:text-ink">Discord（不具合・要望）</a>
+          <a href="/terms" class="hover:text-ink">利用規約</a>
+          <a href="/privacy" class="hover:text-ink">プライバシーポリシー</a>
+          <a href={`${REPO}/blob/main/LICENSE.md`} class="hover:text-ink">
             ライセンス
           </a>
         </div>
@@ -86,7 +86,7 @@ const year = new Date().getFullYear();
         </p>
         <p class="flex items-center gap-2">
           © {year} ミリちゃんねる
-          <a href={TWITCH} aria-label="ミリちゃんねるの Twitch" title="ミリちゃんねるの Twitch" class="hover:text-white">
+          <a href={TWITCH} aria-label="ミリちゃんねるの Twitch" title="ミリちゃんねるの Twitch" class="hover:text-ink">
             <BrandIcon icon={siTwitch} class="size-4" />
           </a>
         </p>

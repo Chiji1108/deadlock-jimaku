@@ -1,12 +1,12 @@
-# LP（web/）と API（server/）の型チェックとテスト。アプリのビルド（build.yml）とは別に、軽く回す
+# LP（web/。字幕とランクは frontend/src/lib の部品を使う）と API（server/）の型チェックとテスト。アプリのビルド（build.yml）とは別に、軽く回す
 name: web
 
 on:
   pull_request:
-    paths: ["web/**", "server/**", "pnpm-lock.yaml", ".github/workflows/web.yml"]
+    paths: ["web/**", "server/**", "frontend/src/lib/**", "frontend/src/generated/**", "pnpm-lock.yaml", ".github/workflows/web.yml"]
   push:
     branches: [main]
-    paths: ["web/**", "server/**", "pnpm-lock.yaml", ".github/workflows/web.yml"]
+    paths: ["web/**", "server/**", "frontend/src/lib/**", "frontend/src/generated/**", "pnpm-lock.yaml", ".github/workflows/web.yml"]
 
 permissions:
   contents: read

@@ -65,6 +65,7 @@
     color: var(--spirit-color, #cfa2ff);
   }
   .icon {
+    display: inline;
     height: 1.1em;
     /* アイテムのアイコンは色付きの四角なので、前の文字にくっつかないよう左右に空ける */
     margin: 0 0.16em 0 0.2em;
