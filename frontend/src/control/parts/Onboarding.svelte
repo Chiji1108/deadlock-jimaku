@@ -23,7 +23,7 @@
       title: "OBS に字幕を追加する",
       done: celebrating || s.obsSeen,
       tab: "display",
-      go: "字幕の表示へ",
+      go: "字幕へ",
     },
     { title: "右上の「字幕を始める」を押す", done: celebrating || panel.running },
     { title: "話してみて、字幕が出るのを確かめる", done: celebrating || panel.subtitled },
