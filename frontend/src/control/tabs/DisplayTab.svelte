@@ -23,13 +23,12 @@
     { value: "center", label: "中央", icon: AlignCenterIcon },
     { value: "right", label: "右寄せ", icon: AlignEndIcon },
   ];
-  /** 話した言葉と翻訳の大きさの組み合わせ。細かく決めたいときは「数値で指定」 */
+  /** 文字の大きさ（px）。細かく決めたいときは「数値で指定」 */
   const SIZES = [
-    { label: "小", fontSize: 32, translationFontSize: 22 },
-    { label: "中", fontSize: 40, translationFontSize: 26 },
-    { label: "大", fontSize: 48, translationFontSize: 32 },
-    { label: "特大", fontSize: 56, translationFontSize: 36 },
-  ];
+    { field: "fontSize", label: "話した言葉の大きさ", presets: [32, 40, 48, 56] },
+    { field: "translationFontSize", label: "翻訳の大きさ", presets: [22, 26, 32, 36] },
+  ] as const;
+  const SIZE_NAMES = ["小", "中", "大", "特大"];
   const BACKGROUNDS: { value: Background; label: string; hint: string }[] = [
     { value: "outline", label: "縁取り", hint: "文字に黒い縁取りを付けます" },
     {
@@ -51,11 +50,6 @@
   const d = $derived(s.subtitleDisplay);
   /** 変えた項目だけを送る（続けて変えても、前の変更を古い値で戻さない） */
   const set = (patch: SubtitleDisplayPatch) => panel.update({ subtitleDisplay: patch });
-  /** 数値で指定して組み合わせから外れたら、どれも選ばない */
-  const size = $derived(
-    SIZES.find((p) => p.fontSize === d.fontSize && p.translationFontSize === d.translationFontSize)
-      ?.label ?? "",
-  );
 </script>
 
 <div class="flex flex-col gap-6">
@@ -97,34 +91,31 @@
             {/each}
           </ToggleGroup.Root>
         </Field.Field>
-        <Field.Field>
-          <div class="flex items-center justify-between">
-            <Field.Label>文字の大きさ</Field.Label>
-            <FontSizeDialog />
-          </div>
-          <ToggleGroup.Root
-            type="single"
-            variant="outline"
-            class="w-full"
-            value={size}
-            onValueChange={(v) => {
-              const preset = SIZES.find((p) => p.label === v);
-              if (preset) {
-                const { fontSize, translationFontSize } = preset;
-                void set({ fontSize, translationFontSize });
-              }
-            }}
-          >
-            {#each SIZES as p (p.label)}
-              <ToggleGroup.Item value={p.label} class="flex-1">{p.label}</ToggleGroup.Item>
-            {/each}
-          </ToggleGroup.Root>
-          {#if !size}
-            <Field.Description>
-              数値で指定しています（話した言葉 {d.fontSize}px・翻訳 {d.translationFontSize}px）
-            </Field.Description>
-          {/if}
-        </Field.Field>
+        {#each SIZES as f (f.field)}
+          <Field.Field>
+            <div class="flex items-center justify-between">
+              <Field.Label>{f.label}</Field.Label>
+              <FontSizeDialog field={f.field} label={f.label} />
+            </div>
+            <!-- 数値で指定して選択肢から外れたら、どれも選ばない -->
+            <ToggleGroup.Root
+              type="single"
+              variant="outline"
+              class="w-full"
+              value={String(d[f.field])}
+              onValueChange={(v) => v && set({ [f.field]: Number(v) })}
+            >
+              {#each f.presets as px, i (px)}
+                <ToggleGroup.Item value={String(px)} class="flex-1">
+                  {SIZE_NAMES[i]}
+                </ToggleGroup.Item>
+              {/each}
+            </ToggleGroup.Root>
+            {#if !(f.presets as readonly number[]).includes(d[f.field])}
+              <Field.Description>数値で指定しています（{d[f.field]}px）</Field.Description>
+            {/if}
+          </Field.Field>
+        {/each}
         <Field.Field>
           <Field.Label>背景</Field.Label>
           <ToggleGroup.Root

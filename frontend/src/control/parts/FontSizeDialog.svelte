@@ -7,35 +7,22 @@
   // 文字の大きさを数値で決める（範囲はサーバーと同じ）
   const RANGE = { min: 16, max: 96 };
 
-  let fontSize = $state(0);
-  let translationFontSize = $state(0);
-  const fits = (n: number) => Number.isInteger(n) && n >= RANGE.min && n <= RANGE.max;
+  let { field, label }: { field: "fontSize" | "translationFontSize"; label: string } = $props();
+
+  let size = $state(0);
+  const valid = $derived(Number.isInteger(size) && size >= RANGE.min && size <= RANGE.max);
 </script>
 
 <SettingsDialog
   trigger="数値で指定"
-  title="文字の大きさ"
+  title={label}
   description="OBS のブラウザソースの中での px です（{RANGE.min}〜{RANGE.max}）"
-  valid={fits(fontSize) && fits(translationFontSize)}
-  onopen={() => {
-    ({ fontSize, translationFontSize } = panel.settings!.subtitleDisplay);
-  }}
-  onsave={() => panel.update({ subtitleDisplay: { fontSize, translationFontSize } })}
+  {valid}
+  onopen={() => (size = panel.settings!.subtitleDisplay[field])}
+  onsave={() => panel.update({ subtitleDisplay: { [field]: size } })}
 >
-  <Field.Group>
-    <Field.Field orientation="horizontal">
-      <Field.Label for="font-size" class="flex-1">話した言葉（px）</Field.Label>
-      <Input id="font-size" type="number" class="w-24" {...RANGE} bind:value={fontSize} />
-    </Field.Field>
-    <Field.Field orientation="horizontal">
-      <Field.Label for="translation-font-size" class="flex-1">翻訳（px）</Field.Label>
-      <Input
-        id="translation-font-size"
-        type="number"
-        class="w-24"
-        {...RANGE}
-        bind:value={translationFontSize}
-      />
-    </Field.Field>
-  </Field.Group>
+  <Field.Field orientation="horizontal">
+    <Field.Label for={field} class="flex-1">大きさ（px）</Field.Label>
+    <Input id={field} type="number" class="w-24" {...RANGE} bind:value={size} />
+  </Field.Field>
 </SettingsDialog>
