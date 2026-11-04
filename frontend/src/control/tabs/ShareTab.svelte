@@ -24,17 +24,22 @@
   let expiresAt = $state<number | null>(threeDays());
   const past = $derived(expiresAt !== null && expiresAt <= panel.now);
 
+  let creating = $state(false);
+
   async function create() {
+    creating = true;
     const body = { memo: memo.trim(), expiresAt };
-    const created = await panel.shareAction(async () => {
-      if (!share?.enabled) await api.enableShare();
-      return api.createCode(body);
-    }, "ギフトコードを作りました");
+    const created = await panel.shareAction(() => api.createCode(body), "ギフトコードを作りました");
+    creating = false;
     if (created) {
       memo = "";
       expiresAt = threeDays();
     }
+    return created;
   }
+
+  /** 預けてから作る。分けておくと、作るのに失敗しても預けた状態が画面に出て、やめられる */
+  const consent = async () => (await panel.shareAction(api.enableShare)) && create();
 
   let consenting = $state(false);
   let stopping = $state(false);
@@ -66,6 +71,11 @@
             ? `おすそ分けの状態を取れません（${panel.shareError}）`
             : "読み込んでいます…"}
         </p>
+        {#if panel.shareError}
+          <Button variant="outline" class="w-fit" onclick={() => (stopping = true)}>
+            おすそ分けをやめる
+          </Button>
+        {/if}
       {:else if !share.enabled && !ownKey}
         <p class="text-sm text-muted-foreground">
           おすそ分けするには、先に「API キー」で自分の OpenAI のキーを保存してください
@@ -101,7 +111,8 @@
               {/if}
             </Field.Description>
           </Field.Field>
-          <Button type="submit" class="w-fit" disabled={past}>ギフトコードを作る</Button>
+          <Button type="submit" class="w-fit" disabled={past || creating}>ギフトコードを作る</Button
+          >
         </form>
       {/if}
     </Card.Content>
@@ -175,7 +186,8 @@
   bind:open={consenting}
   title="API キーをサーバーに預けます"
   action="預けてギフトコードを作る"
-  onconfirm={create}
+  disabled={past}
+  onconfirm={consent}
 >
   <p>
     ギフトコードを使う人の字幕は、開発者のサーバー（api.jimaku.deadlock.jp）があなたの API キーで
@@ -183,6 +195,7 @@
   </p>
   <p>キーは暗号化して保存します。音声と文字は保存しません。</p>
   <p>「おすそ分けをやめる」で、いつでもキーを消せます。</p>
+  <p>同じキーで別の PC からおすそ分けしている場合、その PC では管理できなくなります。</p>
 </ConfirmDialog>
 
 <ConfirmDialog

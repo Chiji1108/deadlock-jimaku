@@ -136,7 +136,7 @@ impl Refused {
     }
 }
 
-/// サーバーを呼ぶ。断られたら日本語の理由にする。`token` は管理の合言葉（有効にするときはまだない）
+/// サーバーを呼ぶ。断られたら日本語の理由にする。`token` は管理の合言葉（キーを預けるときはまだない）
 async fn call(
     api: &str,
     method: reqwest::Method,
@@ -162,9 +162,9 @@ async fn call(
     }
     let message = match value["error"].as_str() {
         Some("invalidKey" | "noKey") => "OpenAI の API キーが使えません".to_owned(),
-        Some("keyInUse") => "そのキーでは、別におすそ分けを有効にしています".to_owned(),
+        Some("keyInUse") => "そのキーは、別の PC でおすそ分けに使っています".to_owned(),
         Some("unauthorized") => {
-            "おすそ分けの登録が見つかりません。無効にしてから、もう一度有効にしてください"
+            "おすそ分けの登録が見つかりません。「おすそ分けをやめる」を押してから、ギフトコードを作り直してください"
                 .to_owned()
         }
         Some("notFound") => "コードが見つかりません".to_owned(),
@@ -173,7 +173,7 @@ async fn call(
     Err(Refused { status, message })
 }
 
-/// おすそ分けを有効にする（キーを預ける）。管理の合言葉を返す
+/// キーを預ける。管理の合言葉を返す
 pub async fn enable(api: &str, key: &str) -> Result<String, Refused> {
     let body = json!({ "key": key });
     let value = call(api, reqwest::Method::POST, "/share", None, Some(body)).await?;

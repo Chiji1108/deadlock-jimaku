@@ -3,12 +3,13 @@
   import { Button } from "$lib/components/ui/button";
   import * as Dialog from "$lib/components/ui/dialog";
 
-  // 取り返しのつかない操作や、確かめてから進めたい操作の確認。やる処理が終わるまで閉じない
+  // 取り返しのつかない操作や、確かめてから進めたい操作の確認。処理中は閉じられず、成功したら閉じる
   let {
     open = $bindable(),
     title,
     action,
     destructive = false,
+    disabled = false,
     onconfirm,
     children,
   }: {
@@ -17,7 +18,9 @@
     /** 進めるボタンの文 */
     action: string;
     destructive?: boolean;
-    onconfirm: () => Promise<unknown>;
+    disabled?: boolean;
+    /** 成功したら true */
+    onconfirm: () => Promise<boolean>;
     children: Snippet;
   } = $props();
 
@@ -25,13 +28,15 @@
 
   async function confirm() {
     busy = true;
-    await onconfirm();
-    busy = false;
-    open = false;
+    try {
+      open = !(await onconfirm());
+    } finally {
+      busy = false;
+    }
   }
 </script>
 
-<Dialog.Root bind:open>
+<Dialog.Root {open} onOpenChange={(next) => !busy && (open = next)}>
   <Dialog.Content class="sm:max-w-md">
     <Dialog.Header>
       <Dialog.Title>{title}</Dialog.Title>
@@ -40,10 +45,14 @@
     <Dialog.Footer>
       <Dialog.Close>
         {#snippet child({ props })}
-          <Button variant="outline" {...props}>閉じる</Button>
+          <Button variant="outline" disabled={busy} {...props}>閉じる</Button>
         {/snippet}
       </Dialog.Close>
-      <Button variant={destructive ? "destructive" : "default"} disabled={busy} onclick={confirm}>
+      <Button
+        variant={destructive ? "destructive" : "default"}
+        disabled={busy || disabled}
+        onclick={confirm}
+      >
         {action}
       </Button>
     </Dialog.Footer>

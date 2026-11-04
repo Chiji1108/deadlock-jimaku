@@ -218,7 +218,7 @@ async fn get_share(State(store): State<Arc<Store>>) -> Response {
     }
 }
 
-/// 自分のキーを預けて有効にする
+/// 自分のキーを預ける（初めてギフトコードを作るとき）
 async fn enable_share(State(store): State<Arc<Store>>) -> Response {
     let Some(key) = blocking(secrets::openai).await else {
         let message = "先に自分の OpenAI の API キーを保存してください";
@@ -265,7 +265,7 @@ async fn disable_share(State(store): State<Arc<Store>>) -> Response {
 async fn share_token() -> Result<String, (StatusCode, &'static str)> {
     blocking(secrets::share_token)
         .await
-        .ok_or((StatusCode::BAD_REQUEST, "おすそ分けが有効になっていません"))
+        .ok_or((StatusCode::BAD_REQUEST, "おすそ分けを使っていません"))
 }
 
 /// コードを作り、この PC に覚えておく（あとでコピーできるように）

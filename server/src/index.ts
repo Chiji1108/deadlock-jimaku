@@ -25,7 +25,7 @@ const RESPONSES_FIELDS = ["model", "instructions", "input", "text", "reasoning",
 
 // ---- おすそ分けする人（合言葉で見分ける） ----
 
-/** おすそ分けを有効にする。同じキーで有効にし直したら、合言葉だけ作り直す（コードは残る） */
+/** キーを預ける。同じキーで預け直したら、合言葉だけ作り直す（コードは残る） */
 app.post("/share", async (c) => {
   const key = (await json<{ key?: unknown }>(c))?.key;
   if (typeof key !== "string" || !key) return c.json({ error: "noKey" }, 400);
@@ -60,7 +60,7 @@ app.put("/share/key", async (c) => {
   return c.body(null, 204);
 });
 
-/** おすそ分けを無効にする。預けたキーとコードを消す */
+/** おすそ分けをやめる。預けたキーとコードを消す */
 app.delete("/share", async (c) => {
   const issuer = await admin(c);
   if (!issuer) return c.json({ error: "unauthorized" }, 401);
