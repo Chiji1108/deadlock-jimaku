@@ -10,8 +10,8 @@ const line = (id: string, settledAgo?: number, startedAgo = 1000) =>
     startedAt: NOW - startedAgo,
     settledAt: settledAgo === undefined ? undefined : NOW - settledAgo,
   }) as Segment;
-const shown = (lines: Segment[], max: number) =>
-  visibleLines(lines, max, NOW)
+const shown = (lines: Segment[], max: number, timing = { minReadSeconds: 3, maxWaitSeconds: 6 }) =>
+  visibleLines(lines, max, NOW, timing)
     .map((s) => s.id)
     .join("");
 
@@ -41,6 +41,11 @@ describe("visibleLines", () => {
 
   it("replaces read lines at once with the default of three", () => {
     expect(shown([line("a", 9000), line("b", 8000), line("c", 7000), line("d")], 3)).toBe("bcd");
+  });
+
+  it("replaces at once when waiting is turned off", () => {
+    const timing = { minReadSeconds: 3, maxWaitSeconds: 0 };
+    expect(shown([line("a", 1000), line("b")], 1, timing)).toBe("b");
   });
 
   it("stops holding the newest line when translations take too long", () => {

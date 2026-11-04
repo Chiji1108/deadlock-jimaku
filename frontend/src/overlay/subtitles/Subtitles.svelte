@@ -37,6 +37,7 @@
           [...segments.values()].filter(isLive).toSorted((a, b) => a.startedAt - b.startedAt),
           display.maxLines,
           now,
+          display,
         )
       : [],
   );

@@ -13,6 +13,7 @@
   import type { SubtitleDisplayPatch } from "../../generated/SubtitleDisplayPatch";
   import AddToObs from "../parts/AddToObs.svelte";
   import OverlayPreview from "../parts/OverlayPreview.svelte";
+  import AdvancedDisplayDialog from "../parts/AdvancedDisplayDialog.svelte";
   import FontSizeDialog from "../parts/FontSizeDialog.svelte";
   import { SUBTITLE_SIZE } from "../../lib/overlay-size";
   import { overlayUrl, panel } from "../panel.svelte";
@@ -51,7 +52,8 @@
       <Card.Description
         >ここで変えた見せ方は、OBS に表示中の字幕にもそのまま反映されます</Card.Description
       >
-      <Card.Action>
+      <Card.Action class="flex gap-1">
+        <AdvancedDisplayDialog />
         <Button variant="outline" size="sm" onclick={panel.demo}>
           <PlayIcon />テスト字幕を流す
         </Button>
