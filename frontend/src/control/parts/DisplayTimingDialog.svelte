@@ -1,7 +1,6 @@
 <script lang="ts">
   import * as Field from "$lib/components/ui/field";
   import { Input } from "$lib/components/ui/input";
-  import type { SubtitleDisplay } from "../../generated/SubtitleDisplay";
   import type { SubtitleDisplayPatch } from "../../generated/SubtitleDisplayPatch";
   import { panel } from "../panel.svelte";
   import SettingsDialog from "./SettingsDialog.svelte";
@@ -37,18 +36,15 @@
       max: 30,
     },
   ] as const;
-  type Values = Pick<SubtitleDisplay, (typeof FIELDS)[number]["key"]>;
+  type Key = (typeof FIELDS)[number]["key"];
+  const read = () =>
+    Object.fromEntries(
+      FIELDS.map(({ key }) => [key, panel.settings!.subtitleDisplay[key]]),
+    ) as Record<Key, number>;
 
-  const read = (): Values => {
-    const { holdSeconds, perCharSeconds, minReadSeconds, maxWaitSeconds } =
-      panel.settings!.subtitleDisplay;
-    return { holdSeconds, perCharSeconds, minReadSeconds, maxWaitSeconds };
-  };
-
-  /** 開くたびに open で今の設定から始める */
-  let values = $state<Values>(read());
+  let values = $state({} as Record<Key, number>);
   /** 開いたときの値。変えた項目だけを送る（ほかの画面で変えた値を戻さない） */
-  let opened = read();
+  let opened = {} as Record<Key, number>;
   const valid = $derived(
     FIELDS.every(({ key, min, max }) => {
       const n = values[key];

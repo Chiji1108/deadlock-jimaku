@@ -174,6 +174,9 @@
               <ToggleGroup.Item value={String(n)} class="flex-1">{n} 秒</ToggleGroup.Item>
             {/each}
           </ToggleGroup.Root>
+          {#if !HOLDS.includes(d.holdSeconds)}
+            <Field.Description>数値で指定しています（{d.holdSeconds} 秒）</Field.Description>
+          {/if}
         </Field.Field>
       </Field.Group>
     </Card.Content>

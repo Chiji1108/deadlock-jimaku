@@ -13,11 +13,8 @@ const line = (id: string, settledAgo?: number, startedAgo = 1000) =>
   }) as Segment;
 const shown = (lines: Segment[], maxLines: number, timing = TIMING) =>
   visibleLines(lines, NOW, { maxLines, ...timing })
-    .shown.map((s) => s.id)
+    .map((s) => s.id)
     .join("");
-
-const gone = (lines: Segment[], timing = TIMING) =>
-  visibleLines(lines, NOW, { maxLines: 1, ...timing }).gone.map((s) => s.id);
 
 describe("visibleLines", () => {
   it("shows everything while there is room", () => {
@@ -39,8 +36,8 @@ describe("visibleLines", () => {
     expect(shown([line("a", 1000), line("b"), line("c", 100)], 2)).toBe("ab");
   });
 
-  it("removes a read line first, wherever it is", () => {
-    expect(shown([line("a"), line("b", 5000), line("c", 5000), line("d")], 3)).toBe("acd");
+  it("looks at the oldest line only", () => {
+    expect(shown([line("a"), line("b", 5000), line("c", 5000), line("d")], 3)).toBe("abc");
   });
 
   it("replaces read lines at once with the default of three", () => {
@@ -53,9 +50,9 @@ describe("visibleLines", () => {
     expect(shown([line("a", 1000), line("b", undefined, -200)], 1, timing)).toBe("b");
   });
 
-  it("reports pushed out lines so they do not come back, but not the waiting ones", () => {
-    expect(gone([line("a"), line("b")], { minReadSeconds: 3, maxWaitSeconds: 0 })).toEqual(["a"]);
-    expect(gone([line("a", 1000), line("b")])).toEqual([]);
+  it("does not bring a pushed out line back", () => {
+    const timing = { minReadSeconds: 3, maxWaitSeconds: 0 };
+    expect(shown([line("a"), line("b", 5000)], 1, timing)).toBe("b");
   });
 
   it("uses the configured reading time", () => {
