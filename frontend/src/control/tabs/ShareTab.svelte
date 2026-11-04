@@ -24,7 +24,7 @@
 
   async function create() {
     const body = { memo: memo.trim(), expiresAt };
-    if (await panel.shareAction(() => api.createCode(body), "コードを作りました")) {
+    if (await panel.shareAction(() => api.createCode(body), "ギフトコードを作りました")) {
       memo = "";
       expiresAt = threeDays();
     }
@@ -47,7 +47,7 @@
       <Card.Title>おすそ分け</Card.Title>
       <Card.Description>
         自分の OpenAI の API
-        キーで、知り合いにデドロ字幕を試してもらえます。コードを渡すと、その人はキーなしで字幕を出せます。使われた分は自分のキーに請求されます
+        キーで、知り合いにデドロ字幕を試してもらえます。ギフトコードを渡すと、その人はキーなしで字幕を出せます。使われた分は自分のキーに請求されます
       </Card.Description>
     </Card.Header>
     <Card.Content class="flex flex-col gap-4">
@@ -100,7 +100,7 @@
               {/if}
             </Field.Description>
           </Field.Field>
-          <Button type="submit" class="w-fit" disabled={past}>コードを作る</Button>
+          <Button type="submit" class="w-fit" disabled={past}>ギフトコードを作る</Button>
         </form>
       {/if}
     </Card.Content>
@@ -109,7 +109,7 @@
   {#if share?.enabled}
     <Card.Root>
       <Card.Header>
-        <Card.Title>作ったコード</Card.Title>
+        <Card.Title>作ったギフトコード</Card.Title>
         <Card.Description>
           同じコードを何人に渡しても使えます。配信に映っても大丈夫なよう、コードは伏せてあります
         </Card.Description>
@@ -160,7 +160,7 @@
             </div>
           </div>
         {:else}
-          <p class="text-sm text-muted-foreground">まだコードがありません</p>
+          <p class="text-sm text-muted-foreground">まだギフトコードがありません</p>
         {/each}
       </Card.Content>
       <Card.Footer>
