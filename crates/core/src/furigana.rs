@@ -17,13 +17,15 @@ use crate::usage::{Meter, Use};
 /// 1 文で 2〜3 秒。翻訳と同時に問い合わせる
 const TIMEOUT: Duration = Duration::from_secs(8);
 
-const SYSTEM: &str = "The input is JSON from a streamer playing the video game Deadlock: \"sentence\" is a Japanese subtitle, \
+const RULES: &str = "\"sentence\" is a Japanese subtitle, \
 and \"context\" holds the previous subtitles (oldest first), given only to help you decide readings. \
 Split the sentence (never the context) into words and give the hiragana reading of each word that contains kanji, reading it the way it is meant in context. \
 A kanji compound is one segment with the reading of the whole word; never split a compound into single kanji. \
 Keep okurigana, kana and punctuation in their own segments with ruby null. Joining the segments' text must give the sentence exactly.";
 
 pub struct Model<'a> {
+    /// デッドロックの配信として読むか
+    pub deadlock: bool,
     pub access: &'a Access,
     pub model: &'a str,
     pub reasoning_effort: Option<&'a str>,
@@ -49,13 +51,18 @@ pub async fn ask(
         "type": "object", "additionalProperties": false, "required": ["segments"],
         "properties": { "segments": { "type": "array", "items": segment } },
     });
+    let speaker = if model.deadlock {
+        "a streamer playing the video game Deadlock"
+    } else {
+        "a streamer"
+    };
     let out: Output = llm::chat_json(
         http,
         llm::Request {
             access: model.access,
             model: model.model,
             reasoning_effort: model.reasoning_effort,
-            system: SYSTEM,
+            system: &format!("The input is JSON from {speaker}: {RULES}"),
             user: json!({ "context": context, "sentence": text }).to_string(),
             schema_name: "furigana",
             schema,

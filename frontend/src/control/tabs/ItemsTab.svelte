@@ -1,4 +1,6 @@
 <script lang="ts">
+  import CircleAlertIcon from "@lucide/svelte/icons/circle-alert";
+  import * as Alert from "$lib/components/ui/alert";
   import * as Card from "$lib/components/ui/card";
   import * as Field from "$lib/components/ui/field";
   import * as Select from "$lib/components/ui/select";
@@ -27,6 +29,12 @@
       </Card.Description>
     </Card.Header>
     <Card.Content class="flex flex-col gap-6">
+      {#if !s.deadlockMode}
+        <Alert.Root>
+          <CircleAlertIcon />
+          <Alert.Title>デッドロックモードがオフなので、アイテム説明は出ません</Alert.Title>
+        </Alert.Root>
+      {/if}
       <div class="mx-auto w-full max-w-xs">
         <OverlayPreview
           src="/overlay/items.html?preview"

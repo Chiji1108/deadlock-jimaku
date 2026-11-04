@@ -34,6 +34,8 @@ pub struct Enricher {
     reasoning_effort: Option<String>,
     source_lang: LangCode,
     targets: Vec<LangCode>,
+    /// オフなら用語を判定せず、ゲームの話としても扱わない
+    deadlock_mode: bool,
     meter: Arc<Meter>,
     /// 辞書の版ごとに作り直す system（用語の一覧を含む固定の先頭部分なので、プロンプトキャッシュが効く）
     system: Mutex<Option<(Option<GlossaryKey>, Arc<str>)>>,
@@ -47,6 +49,7 @@ impl Enricher {
         reasoning_effort: Option<String>,
         source_lang: LangCode,
         targets: Vec<LangCode>,
+        deadlock_mode: bool,
         meter: Arc<Meter>,
     ) -> Self {
         let targets = lang::normalize(targets.into_iter().filter(|t| *t != source_lang));
@@ -58,6 +61,7 @@ impl Enricher {
             reasoning_effort,
             source_lang,
             targets,
+            deadlock_mode,
             meter,
             system: Mutex::new(None),
         }
@@ -72,14 +76,19 @@ impl Enricher {
         glossary: Option<&Glossary>,
         furigana: bool,
     ) -> Enriched {
+        let glossary = glossary.filter(|_| self.deadlock_mode);
         let (ruby, analysis) = tokio::join!(
             self.furigana(text, context, furigana),
             self.analyze(text, context, glossary)
         );
         let (spans, translations) = match analysis {
-            Some(a) => (
+            Some(a) if self.deadlock_mode => (
                 a.spans(text, glossary),
                 a.translations(&self.targets, glossary),
+            ),
+            Some(a) => (
+                vec![Span::Text(text.to_owned())],
+                a.translations(&self.targets, None),
             ),
             None => (vec![Span::Text(text.to_owned())], BTreeMap::new()),
         };
@@ -100,6 +109,7 @@ impl Enricher {
             return None;
         }
         let model = furigana::Model {
+            deadlock: self.deadlock_mode,
             access: &self.access,
             model: &self.readings_model,
             reasoning_effort: self.reasoning_effort.as_deref(),
@@ -120,7 +130,7 @@ impl Enricher {
         context: &[String],
         glossary: Option<&Glossary>,
     ) -> Option<Analysis> {
-        if glossary.is_none() && self.targets.is_empty() {
+        if self.targets.is_empty() && (glossary.is_none() || !self.deadlock_mode) {
             return None;
         }
         let user = json!({ "context": context, "transcript": text });
@@ -151,7 +161,12 @@ impl Enricher {
         match &*cached {
             Some((v, system)) if *v == version => system.clone(),
             _ => {
-                let system: Arc<str> = system_prompt(&self.source_lang, glossary).into();
+                let system: Arc<str> = if self.deadlock_mode {
+                    system_prompt(&self.source_lang, glossary)
+                } else {
+                    plain_prompt(&self.source_lang)
+                }
+                .into();
                 *cached = Some((version, system.clone()));
                 system
             }
@@ -184,19 +199,26 @@ impl Enricher {
             .iter()
             .map(|t| (t.clone(), json!({ "type": "string" })))
             .collect();
+        let mut required = vec!["translations"];
+        let mut properties = serde_json::Map::new();
+        properties.insert(
+            "translations".into(),
+            json!({
+                "type": "object",
+                "additionalProperties": false,
+                "required": self.targets,
+                "properties": translations,
+            }),
+        );
+        if self.deadlock_mode {
+            required.push("segments");
+            properties.insert("segments".into(), segments);
+        }
         json!({
             "type": "object",
             "additionalProperties": false,
-            "required": ["segments", "translations"],
-            "properties": {
-                "segments": segments,
-                "translations": {
-                    "type": "object",
-                    "additionalProperties": false,
-                    "required": self.targets,
-                    "properties": translations,
-                },
-            },
+            "required": required,
+            "properties": properties,
         })
     }
 }
@@ -207,7 +229,8 @@ type GlossaryKey = (u32, Vec<LangCode>);
 /// LLM の答え
 #[derive(Debug, Deserialize)]
 struct Analysis {
-    /// つなげると字幕になる区切り。用語なら参照
+    /// つなげると字幕になる区切り。用語なら参照。デッドロックモードを切ると聞かない
+    #[serde(default)]
     segments: Vec<Segment>,
     /// 訳文。用語は `⟦参照⟧`。翻訳先がなければ聞かない
     #[serde(default)]
@@ -398,21 +421,20 @@ enum Span {
     Entity { reference: String, spoken: String },
 }
 
+/// デッドロックモードを切ったときは翻訳だけを頼み、ゲームの話として扱わない
+fn plain_prompt(source_lang: &str) -> String {
+    let lang_label = lang::find(source_lang).map_or(source_lang, |l| l.label);
+    format!(
+        "You translate live commentary from a streamer who speaks {lang_label}. Each request has \"transcript\" \
+         (one utterance from speech recognition, which may mishear words) and \"context\" \
+         (the previous utterances, for reference only; do not translate them). \
+         In \"translations\", translate only the transcript into each requested language, naturally and casually.\n"
+    )
+}
+
 /// 役割とルールと用語の一覧。用語は 1 行ずつ「参照 | 種類 | 話す言語の名前 | 英語名 | スキルの持ち主と番号」
 fn system_prompt(source_lang: &str, glossary: Option<&Glossary>) -> String {
     let lang_label = lang::find(source_lang).map_or(source_lang, |l| l.label);
-    // デッドロックモードを切ったときは、ゲームの話として扱わない
-    if glossary.is_none() {
-        return format!(
-            "You process live commentary from a streamer who speaks {lang_label}. Each request has \"transcript\" \
-             (one utterance from speech recognition, which may mishear words) and \"context\" \
-             (the previous utterances, for reference only; do not split or translate them).\n\
-             \n\
-             Rules:\n\
-             1. \"segments\": return the whole transcript as a single segment, exactly as given, with ref null.\n\
-             2. \"translations\": translate only the transcript into each requested language, naturally and casually.\n"
-        );
-    }
     let mut lines = Vec::new();
     for (reference, e) in glossary.map(|g| &g.entities).into_iter().flatten() {
         let kind = match e.kind {
@@ -588,6 +610,7 @@ mod tests {
             None,
             "ja".into(),
             targets.iter().map(|t| (*t).to_owned()).collect(),
+            true,
             // 保存しない（persist を動かさない）ので、ファイルは作られない
             Arc::new(Meter::new("usage.json".into())),
         )
@@ -738,8 +761,9 @@ mod tests {
     }
 
     #[test]
-    fn without_a_glossary_the_prompt_is_not_about_the_game() {
-        assert!(!system_prompt("ja", None).contains("Deadlock"));
-        assert!(system_prompt("ja", Some(&glossary())).contains("Deadlock"));
+    fn the_plain_prompt_is_not_about_the_game() {
+        assert!(!plain_prompt("ja").contains("Deadlock"));
+        // 辞書が読めていないだけなら、ゲームの話のまま
+        assert!(system_prompt("ja", None).contains("Deadlock"));
     }
 }
