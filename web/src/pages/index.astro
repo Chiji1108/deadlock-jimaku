@@ -1,6 +1,4 @@
 ---
-import { siDiscord, siTwitch } from "simple-icons";
-import BrandIcon from "../components/BrandIcon.astro";
 import Layout from "../layouts/Layout.astro";
 import RankBadge from "../../../frontend/src/lib/RankBadge.svelte";
 import LiveDemo from "../components/LiveDemo.svelte";
@@ -115,6 +113,7 @@ const faqs = [
   {
     q: "どんな人が開発したんですか？",
     a: "Twitch で Deadlock を配信しているミリちゃんねるが、配信者目線で開発しました。",
+    photo: "/media/miri.webp",
     link: { href: TWITCH, label: "Twitch のチャンネルを見る" },
   },
   {
@@ -355,21 +354,6 @@ const official = [
     </details>
   </section>
 
-  <section class="mx-auto mt-28 grid max-w-6xl items-center gap-8 px-4 sm:mt-40 md:grid-cols-[auto_1fr]">
-    <img src="/media/miri.webp" alt="ミリちゃんねる" width="480" height="480" loading="lazy" class="reveal size-40 rounded-full object-cover sm:size-56" />
-    <div class="reveal">
-      <p class="text-sm font-bold text-muted">つくった人</p>
-      <h2 class="display mt-1 text-[clamp(2.1rem,5.4vw,4.25rem)]">ミリちゃんねる</h2>
-      <p class="mt-3 max-w-2xl text-lg leading-relaxed text-muted">
-        Twitch で Deadlock を配信しながら、配信者目線で開発しています。質問などは Discord のサーバーで受け付けています。
-      </p>
-      <div class="mt-5 flex flex-wrap gap-3">
-        <a href={TWITCH} class="pill px-5 py-2.5 text-sm"><BrandIcon icon={siTwitch} class="size-4" />Twitch</a>
-        <a href={DISCORD} class="pill px-5 py-2.5 text-sm"><BrandIcon icon={siDiscord} class="size-4" />Discord</a>
-      </div>
-    </div>
-  </section>
-
   <section id="faq" class="mx-auto mt-28 max-w-6xl px-4 sm:mt-40">
     <h2 class="display reveal text-[clamp(2.1rem,5.4vw,4.25rem)]">よくある質問</h2>
     <div class="mt-10 border-b border-line">
@@ -377,6 +361,16 @@ const official = [
         faqs.map((f) => (
           <details class="border-t border-line py-5">
             <summary class="cursor-pointer text-lg font-bold">{f.q}</summary>
+            {f.photo && (
+              <img
+                src={f.photo}
+                alt="ミリちゃんねる"
+                width="480"
+                height="480"
+                loading="lazy"
+                class="mt-3 size-20 rounded-full object-cover"
+              />
+            )}
             <p class="mt-3 leading-relaxed text-muted">{f.a}</p>
             {f.link && (
               <a class="mt-2 inline-block underline" href={f.link.href}>
