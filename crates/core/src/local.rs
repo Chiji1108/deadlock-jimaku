@@ -6,10 +6,12 @@
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::sync::Arc;
+use std::time::Duration;
 
-use anyhow::Context;
+use anyhow::{Context, bail};
 use flate2::read::GzDecoder;
 use serde_json::Value;
+use sha2::{Digest, Sha256};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::{ChildStdin, Command};
 use tokio::sync::mpsc;
@@ -22,6 +24,23 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 const RELEASES: &str = "https://github.com/Chiji1108/deadlock-jimaku/releases/download";
 /// 開発中は、手元でビルドした補助プログラムを使う（`mise run local`）
 const DEV_DIR: &str = "JIMAKU_LOCAL_DIR";
+/// 補助プログラムのアーカイブの SHA-256。CI がビルドのときに埋め込む（手元のビルドにはないので、
+/// `JIMAKU_LOCAL_DIR` を使う）
+const ARCHIVE_SHA256: Option<&str> = if cfg!(windows) {
+    option_env!("JIMAKU_LOCAL_SHA256_WINDOWS_X86_64")
+} else if cfg!(target_os = "linux") {
+    option_env!("JIMAKU_LOCAL_SHA256_LINUX_X86_64")
+} else if cfg!(target_arch = "aarch64") {
+    option_env!("JIMAKU_LOCAL_SHA256_MACOS_AARCH64")
+} else {
+    option_env!("JIMAKU_LOCAL_SHA256_MACOS_X86_64")
+};
+/// 遅い回線でも、大きなファイルを受け取れるようにする
+const DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(30 * 60);
+/// SenseVoice が聞き取れる言語
+const LANGUAGES: [&str; 5] = ["ja", "en", "zh", "ko", "yue"];
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 const AUDIO: u8 = 1;
 const CUT: u8 = 2;
 
@@ -67,33 +86,57 @@ async fn session(
     terms: &[(String, String)],
     input: &mut mpsc::UnboundedReceiver<Input>,
 ) -> anyhow::Result<()> {
+    let language = settings.mic_language.split('-').next().unwrap_or_default();
+    if !LANGUAGES.contains(&language) {
+        bail!("この言語には対応していません");
+    }
     let root = store.data_dir().join("local-ai");
     let dir = install(store, &root).await?;
     let terms_path = root.join("terms.json");
     tokio::fs::write(&terms_path, serde_json::to_vec(terms)?).await?;
-    let mut child = Command::new(dir.join(binary()))
+    let mut command = Command::new(dir.join(binary()));
+    command
         .arg(root.join("models"))
-        .arg(&settings.mic_language)
+        .arg(language)
         .arg(&terms_path)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
-        .kill_on_drop(true)
-        .spawn()
-        .context("start")?;
-    let mut stdin = child.stdin.take().context("stdin")?;
+        .kill_on_drop(true);
+    // コンソールの窓を出さない（全画面のゲームからフォーカスを奪う）
+    #[cfg(windows)]
+    command.creation_flags(CREATE_NO_WINDOW);
+    let mut child = command.spawn().context("start")?;
+    let stdin = child.stdin.take().context("stdin")?;
+    // 書き込みで止まっても、出力を読み続ける
+    let (writer, rx) = mpsc::unbounded_channel();
+    tokio::spawn(write_input(stdin, rx));
     let mut lines = BufReader::new(child.stdout.take().context("stdout")?).lines();
     let translate = settings.translate_to.iter().any(|l| l == "en");
+    // 準備が終わるまでの音声は渡さない（古い発話の字幕が今の発話に載る）
+    let mut ready = false;
     loop {
         tokio::select! {
             next = input.recv() => {
                 let Some(next) = next else { return Ok(()) };
-                send(&mut stdin, next).await?;
+                if ready {
+                    let _ = writer.send(next);
+                }
             }
             line = lines.next_line() => {
                 let line = line?.context("stopped")?;
-                on_line(store, &serde_json::from_str(&line)?, translate);
+                let message: Value = serde_json::from_str(&line)?;
+                ready |= message["type"] == "ready";
+                on_line(store, &message, translate);
             }
+        }
+    }
+}
+
+async fn write_input(mut stdin: ChildStdin, mut rx: mpsc::UnboundedReceiver<Input>) {
+    while let Some(input) = rx.recv().await {
+        if send(&mut stdin, input).await.is_err() {
+            return;
         }
     }
 }
@@ -174,17 +217,30 @@ async fn install(store: &Store, root: &Path) -> anyhow::Result<PathBuf> {
         std::env::consts::OS,
         std::env::consts::ARCH
     );
+    let expected = ARCHIVE_SHA256.context("no checksum in this build")?;
     let url = format!("{RELEASES}/v{VERSION}/{archive}");
     let bytes = crate::http()
         .get(&url)
+        .timeout(DOWNLOAD_TIMEOUT)
         .send()
         .await?
         .error_for_status()?
         .bytes()
         .await?;
+    if !checksum_matches(&bytes, expected) {
+        bail!("{archive}: the checksum does not match");
+    }
     let extract_to = dir.clone();
     tokio::task::spawn_blocking(move || extract(&bytes, &extract_to)).await??;
     Ok(dir)
+}
+
+fn checksum_matches(bytes: &[u8], expected: &str) -> bool {
+    let digest: String = Sha256::digest(bytes)
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect();
+    digest == expected.trim()
 }
 
 /// 途中で止まっても半端なフォルダを残さないよう、できてから置く
@@ -200,6 +256,13 @@ fn extract(bytes: &[u8], dir: &Path) -> anyhow::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn checksum_detects_a_changed_file() {
+        let sha256 = "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824";
+        assert!(checksum_matches(b"hello", sha256));
+        assert!(!checksum_matches(b"hello!", sha256));
+    }
 
     #[test]
     fn extracts_the_archive_into_place() {

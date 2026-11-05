@@ -93,6 +93,10 @@ jobs:
             dir=crates/local-ai/target/$target/release
             tar -czf "local-dist/jimaku-local-$name.tar.gz" -C "$dir" \
               $(cd "$dir" && ls jimaku-local jimaku-local.exe *.dylib *.dll *.so* 2>/dev/null)
+            # アプリに埋め込み、ダウンロードしたものを確かめる
+            sum=$(sha256sum "local-dist/jimaku-local-$name.tar.gz" 2>/dev/null || shasum -a 256 "local-dist/jimaku-local-$name.tar.gz")
+            key=$(echo "$name" | tr '[:lower:]-' '[:upper:]_')
+            echo "JIMAKU_LOCAL_SHA256_$key=${sum%% *}" >> "$GITHUB_ENV"
           done
       - if: ${{ !inputs.sign }}
         run: frontend/node_modules/.bin/tauri build ${{ matrix.args }}

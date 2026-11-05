@@ -101,6 +101,7 @@ pub async fn run(store: Arc<Store>, input: audio::Input, access: Access) -> anyh
         let (tx, rx) = mpsc::unbounded_channel();
         let terms = store
             .glossary()
+            .filter(|_| settings.deadlock_mode)
             .map(|l| local::terms(&l.glossary))
             .unwrap_or_default();
         tokio::spawn(local::run(store.clone(), settings.clone(), terms, rx));

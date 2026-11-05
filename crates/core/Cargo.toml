@@ -31,6 +31,7 @@ serde = { version = "1.0.229", features = ["derive"] }
 serde_json = { version = "1.0.154", features = ["preserve_order"] }
 flate2 = "1.1.9"
 jiter = "0.18.0"
+sha2 = "0.10.9"
 tar = "0.4.45"
 rustls = { version = "0.23.46", default-features = false, features = ["aws_lc_rs"] }
 tokio = { version = "1.54.1", features = ["rt-multi-thread", "macros", "sync", "time", "net", "fs", "process", "io-util"] }

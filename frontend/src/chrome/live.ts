@@ -18,8 +18,10 @@ export class Live {
   ) {}
 
   onText(text: string, final: boolean) {
-    this.text = `${this.settled}${text.trim()}`;
-    if (final) this.settled = this.text;
+    // 英語などは単語の前の空白も認識の結果に入っている
+    const joined = `${this.settled}${text}`;
+    if (final) this.settled = joined;
+    this.text = joined.trim();
     if (!this.text) return;
     this.publish();
     void this.translate();

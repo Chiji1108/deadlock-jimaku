@@ -214,7 +214,10 @@ impl Store {
 
     /// 字幕を始めるなら Chrome を起動し、止めるなら閉じる（DESIGN.md 9.6）
     pub fn sync_chrome(self: &Arc<Self>, wanted: bool) {
-        if !wanted {
+        // ハイブリッドで確定の字幕が止まっているなら、音声を Google に送らない
+        let stalled = self.transcription_error().is_some()
+            && self.settings().speech_engine == SpeechEngine::Hybrid;
+        if !wanted || stalled {
             self.close_chrome();
             return;
         }

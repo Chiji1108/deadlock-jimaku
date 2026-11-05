@@ -150,6 +150,8 @@ pub async fn run(store: Arc<Store>, options: Options) {
                 && settings.speech_engine != SpeechEngine::Chrome)
                 .then(|| Source::Mic(settings.mic_device.clone())),
         };
+        // ハイブリッドは確定の字幕を作れないなら聞かない（音声を Google に送り続けない）
+        let can_finish = settings.speech_engine == SpeechEngine::Chrome || access.is_some();
         let input = SubtitlesInput {
             source: source.clone(),
             transcription_enabled: settings.transcription_enabled,
@@ -163,13 +165,6 @@ pub async fn run(store: Arc<Store>, options: Options) {
             segmentation: settings.segmentation.clone(),
             access: access.clone(),
         };
-        // ハイブリッドは確定の字幕を作れないなら聞かない（音声を Google に送り続けない）
-        let can_finish = settings.speech_engine == SpeechEngine::Chrome || access.is_some();
-        if settings.speech_engine.uses_chrome() {
-            store.sync_chrome(settings.transcription_enabled && can_finish);
-        } else {
-            store.drop_browser();
-        }
         let starting = !running;
         running = source.is_some();
         subtitles_slot
@@ -180,6 +175,11 @@ pub async fn run(store: Arc<Store>, options: Options) {
             })
             .await;
 
+        if settings.speech_engine.uses_chrome() {
+            store.sync_chrome(settings.transcription_enabled && can_finish);
+        } else {
+            store.drop_browser();
+        }
         if settings_rx.changed().await.is_err() {
             return;
         }

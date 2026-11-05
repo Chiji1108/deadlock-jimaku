@@ -16,6 +16,7 @@ use std::time::Duration;
 use anyhow::Context;
 use futures_util::{SinkExt, StreamExt};
 use serde_json::{Value, json};
+use tokio::task::JoinHandle;
 use tokio_tungstenite::tungstenite::Message;
 
 use crate::DEFAULT_PORT;
@@ -44,6 +45,7 @@ const CHECK_INTERVAL: Duration = Duration::from_secs(1);
 /// 落とすと Chrome を閉じる
 pub struct Browser {
     child: Child,
+    watcher: JoinHandle<()>,
 }
 
 impl Browser {
@@ -56,7 +58,7 @@ impl Browser {
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .spawn()?;
-        tokio::spawn(async move {
+        let watcher = tokio::spawn(async move {
             let closed = attach(&profile).await;
             // 字幕を止める前に閉じられたら、操作パネルで開き直せるようにする
             let settings = store.settings();
@@ -68,7 +70,7 @@ impl Browser {
                 }));
             }
         });
-        Ok(Self { child })
+        Ok(Self { child, watcher })
     }
 
     pub fn running(&mut self) -> bool {
@@ -78,6 +80,8 @@ impl Browser {
 
 impl Drop for Browser {
     fn drop(&mut self) {
+        // 閉じたのはアプリなので、閉じられたと知らせない
+        self.watcher.abort();
         let _ = self.child.kill();
         let _ = self.child.wait();
     }
