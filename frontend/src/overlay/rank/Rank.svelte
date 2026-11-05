@@ -12,7 +12,7 @@
   let rank = $state<RankState | undefined>();
   /** ランク名の言語と、出すもの。操作パネルで変え、サーバーから届く（名前がなければ英語） */
   let lang = $state("ja");
-  let content = $state<RankContent>("full");
+  let content = $state<RankContent>("gauge");
   let anchor = $state<Anchor>("top-left");
 
   // 大きさは --scale で描く（zoom だとポイントの数字のアニメーションの位置がずれる）

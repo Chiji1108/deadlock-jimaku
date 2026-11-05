@@ -380,7 +380,7 @@ impl Default for Settings {
             subtitle_display: SubtitleDisplay::default(),
             item_cards: ItemCards::default(),
             rank_language: None,
-            rank_content: RankContent::Full,
+            rank_content: RankContent::Gauge,
             rank_anchor: Anchor::TopLeft,
             obs_seen: false,
             onboarding_closed: false,
