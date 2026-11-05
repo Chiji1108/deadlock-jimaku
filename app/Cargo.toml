@@ -8,11 +8,12 @@ license-file.workspace = true
 overlays-core = { path = "../crates/core" }
 # generate_context! が tauri.conf.json の plugins の設定を埋め込むのに使う
 serde_json = "1.0.154"
-tauri = { version = "2.12.5", features = [] }
+tauri = { version = "2.12.5", features = ["tray-icon"] }
 tauri-plugin-dialog = "2.8.4"
 tauri-plugin-opener = "2.7.2"
+tauri-plugin-single-instance = "2.5.5"
 tauri-plugin-updater = "2.14.1"
-tokio = { version = "1.54.1", features = ["net"] }
+tokio = { version = "1.54.1", features = ["net", "time"] }
 tracing = "0.1.44"
 tracing-subscriber = "0.3.23"
 url = "2.5.8"

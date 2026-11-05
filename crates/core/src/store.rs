@@ -98,8 +98,10 @@ impl Store {
         if display_changed {
             let _ = self.tx.send(display);
         }
-        if next.obs_seen && !current.obs_seen {
-            let _ = self.tx.send(ServerMsg::ObsSeen);
+        if next.obs_seen != current.obs_seen
+            || next.transcription_enabled != current.transcription_enabled
+        {
+            let _ = self.tx.send(ServerMsg::SettingsChanged);
         }
         Ok(next)
     }
@@ -330,7 +332,7 @@ mod tests {
             ..Default::default()
         };
         store.update_settings(seen()).unwrap();
-        assert!(matches!(rx.try_recv(), Ok(ServerMsg::ObsSeen)));
+        assert!(matches!(rx.try_recv(), Ok(ServerMsg::SettingsChanged)));
         let file = dir.path().join(settings::FILE);
         std::fs::remove_file(&file).unwrap();
         store.update_settings(seen()).unwrap();

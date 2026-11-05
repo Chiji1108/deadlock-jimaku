@@ -49,6 +49,8 @@ pub struct Settings {
     pub obs_seen: bool,
     /// はじめかたを閉じた、または全部終えた
     pub onboarding_closed: bool,
+    /// ウィンドウを閉じても動き続けることを知らせた
+    pub tray_notice_seen: bool,
     // 以下の詳細項目は操作パネルで変えない（`ADVANCED`）
     pub models: Models,
     /// リアルタイムの音声認識の遅れ（`minimal` / `low` / `medium` / `high` / `xhigh`。
@@ -384,6 +386,7 @@ impl Default for Settings {
             rank_anchor: Anchor::TopLeft,
             obs_seen: false,
             onboarding_closed: false,
+            tray_notice_seen: false,
             rank_region: None,
             models: Models::default(),
             realtime_delay: "low".into(),
@@ -546,6 +549,7 @@ impl Settings {
         }
         next.obs_seen = patch.obs_seen.unwrap_or(next.obs_seen);
         next.onboarding_closed = patch.onboarding_closed.unwrap_or(next.onboarding_closed);
+        next.tray_notice_seen = patch.tray_notice_seen.unwrap_or(next.tray_notice_seen);
         if let Some(region) = patch.rank_region {
             next.rank_region = match region.as_str() {
                 "" => None,
@@ -604,6 +608,8 @@ pub struct SettingsPatch {
     pub obs_seen: Option<bool>,
     #[ts(optional)]
     pub onboarding_closed: Option<bool>,
+    #[ts(optional)]
+    pub tray_notice_seen: Option<bool>,
     /// 地域（`Region`）。空文字列なら順位を調べない
     #[ts(optional)]
     pub rank_region: Option<String>,
