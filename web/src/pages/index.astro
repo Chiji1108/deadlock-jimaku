@@ -129,10 +129,10 @@ const faqs = [
 ];
 
 const line = LINES[0]!;
-/** 手元の測定（M5 Pro、v0.2.10）とリリースのファイルの大きさ */
+/** 手元の測定（M5 Pro）とリリースのファイルの大きさ */
 const lightness = [
   { value: "約 1%", label: "CPU", note: "字幕を出している間の、1 コアに対する割合" },
-  { value: "約 170MB", label: "メモリ", note: "Mac でウィンドウを開いているとき" },
+  { value: "約 80MB", label: "メモリ", note: "Mac でウィンドウを閉じて動かしているとき" },
   { value: "約 6MB", label: "インストーラー", note: "Windows 版" },
 ];
 const cards = await fetchCards();
@@ -250,7 +250,7 @@ const official = [
       ゲームの<span class="band">邪魔をしない。</span>
     </h2>
     <p class="reveal mt-5 max-w-2xl text-lg leading-relaxed text-muted">
-      文字起こしと翻訳はクラウドで動くので、ゲーム中の PC に重い処理をさせません。アプリは Electron ではなく Tauri で作っているので、小さくて軽いです。
+      文字起こしと翻訳はクラウドで動くので、ゲーム中の PC に重い処理をさせません。アプリの本体は Rust で作っているので、小さくて軽いです。
     </p>
     <ul class="mt-10 grid gap-8 md:grid-cols-3">
       {
