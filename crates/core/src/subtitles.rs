@@ -75,19 +75,21 @@ pub async fn run(store: Arc<Store>, input: audio::Input, access: Access) -> anyh
     let mut audio_rx = audio::open(input).await?;
 
     // 開く・音声・閉じるは同じチャンネルで順番どおりに送る
-    let (rt_tx, rt_rx) = mpsc::unbounded_channel();
     let (delta_tx, mut delta_rx) = mpsc::channel(256);
-    let realtime = RealtimeConfig {
-        access: access.clone(),
-        model: settings.models.realtime.clone(),
-        delay: settings.realtime_delay.clone(),
-        meter: store.meter(),
-    };
     // オフなら Realtime につながず、確定の字幕だけを出す
-    let rt_tx = settings.live_subtitles.then(|| {
-        tokio::spawn(realtime_loop(realtime, hints.clone(), rt_rx, delta_tx));
-        rt_tx
-    });
+    let realtime = if settings.live_subtitles {
+        let (tx, rx) = mpsc::unbounded_channel();
+        let config = RealtimeConfig {
+            access: access.clone(),
+            model: settings.models.realtime.clone(),
+            delay: settings.realtime_delay.clone(),
+            meter: store.meter(),
+        };
+        tokio::spawn(realtime_loop(config, hints.clone(), rx, delta_tx));
+        Some(tx)
+    } else {
+        None
+    };
 
     let enricher = Enricher::new(
         access.clone(),
@@ -105,7 +107,14 @@ pub async fn run(store: Arc<Store>, input: audio::Input, access: Access) -> anyh
         hints,
         meter: store.meter(),
     });
-    let mut pipeline = Pipeline::new(store, &settings, batch, Arc::new(enricher), done_tx, rt_tx);
+    let mut pipeline = Pipeline::new(
+        store,
+        &settings,
+        batch,
+        Arc::new(enricher),
+        done_tx,
+        realtime,
+    );
 
     let mut level = LevelMeter::default();
     loop {
@@ -166,7 +175,7 @@ struct Pipeline {
     history: History,
     detector: earshot::Detector,
     segmenter: Segmenter,
-    /// リアルタイムの音声認識へ（入力が終わったら None にして閉じる）
+    /// リアルタイムの音声認識へ（途中の字幕を出さないときと、入力が終わったあとは None）
     realtime: Option<mpsc::UnboundedSender<stt::Input>>,
     live: HashMap<String, Segment>,
     current: Option<String>,
@@ -209,7 +218,9 @@ impl Pipeline {
     }
 
     fn on_audio(&mut self, chunk: &[f32]) {
-        self.send_realtime(stt::Input::Audio(chunk.to_vec()));
+        if self.realtime.is_some() {
+            self.send_realtime(stt::Input::Audio(chunk.to_vec()));
+        }
         self.history.push(chunk);
         self.frame.extend_from_slice(chunk);
         while self.frame.len() >= FRAME {
@@ -323,11 +334,15 @@ impl Pipeline {
         let Some(seg) = self.live.get_mut(id) else {
             return;
         };
-        // バッチが失敗したら Realtime で溜めたテキストを使う
+        // バッチが失敗したら Realtime で溜めたテキストを使う（途中の字幕を出さないときは出せない）
         let text = text.unwrap_or_else(|| seg.text.clone());
         if text.trim().is_empty() {
             self.discard(id);
             return;
+        }
+        // 途中の字幕を出さないときはここで初めて表示する。読む時間と並びはこの時刻から数える
+        if seg.text.is_empty() {
+            seg.started_at = now_ms();
         }
         seg.stage = Stage::Final;
         seg.text = text.clone();

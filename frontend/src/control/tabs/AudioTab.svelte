@@ -128,7 +128,7 @@
         <Field.Content>
           <Field.Label for="live-subtitles">話している途中から字幕を出す</Field.Label>
           <Field.Description>
-            オフにすると料金が 4 割ほど下がります。字幕は話し終えてから出ます
+            オフにすると途中の字幕の料金がかかりません。字幕は話し終えてから出ます。切り替えると、字幕は始め直します
           </Field.Description>
         </Field.Content>
         <Switch
