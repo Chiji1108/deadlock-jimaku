@@ -4,7 +4,7 @@
 //! フラグは Chrome の起動時にしか効かないので、ふだんの Chrome のプロファイルとは分ける
 
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::{Command, Stdio};
 
 const FLAGS: [&str; 6] = [
@@ -44,7 +44,7 @@ fn command(args: &[String]) -> io::Result<Command> {
     let chrome = ["ProgramFiles", "ProgramFiles(x86)", "LOCALAPPDATA"]
         .iter()
         .filter_map(std::env::var_os)
-        .map(|base| PathBuf::from(base).join(r"Google\Chrome\Application\chrome.exe"))
+        .map(|base| std::path::PathBuf::from(base).join(r"Google\Chrome\Application\chrome.exe"))
         .find(|path| path.exists())
         .ok_or(io::ErrorKind::NotFound)?;
     let mut command = Command::new(chrome);
@@ -54,7 +54,7 @@ fn command(args: &[String]) -> io::Result<Command> {
 
 #[cfg(target_os = "macos")]
 fn command(args: &[String]) -> io::Result<Command> {
-    let app = PathBuf::from("/Applications/Google Chrome.app");
+    let app = std::path::PathBuf::from("/Applications/Google Chrome.app");
     if !app.exists() {
         return Err(io::ErrorKind::NotFound.into());
     }
