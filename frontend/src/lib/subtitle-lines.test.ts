@@ -86,6 +86,12 @@ describe("翻訳だけを出すとき", () => {
     expect(showsSource(translated, { showSource: true })).toBe(true);
   });
 
+  it("書きかけの訳文が届いたら出す", () => {
+    const drafting = { draft: { en: [{ t: "text", text: "Hi" }] } } as unknown as Segment;
+    expect(isReady(drafting, { showSource: false })).toBe(true);
+    expect(showsSource(drafting, { showSource: false })).toBe(false);
+  });
+
   it("翻訳に失敗したら話した言葉を出す", () => {
     expect(showsSource(seg({}), { showSource: false })).toBe(true);
     expect(showsSource(seg({ translations: { en: [] } }), { showSource: false })).toBe(true);

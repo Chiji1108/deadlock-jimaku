@@ -21,7 +21,24 @@ export const app = new Hono<{ Bindings: Env }>().basePath("/v1");
 const MAX_MEMO = 100;
 
 /** Responses API に渡す項目。ほかの項目（有料のツールなど）は、おすそ分けした人の料金を数えられないので通さない */
-const RESPONSES_FIELDS = ["model", "instructions", "input", "text", "reasoning", "max_output_tokens"];
+const RESPONSES_FIELDS = ["model", "instructions", "input", "text", "reasoning", "max_output_tokens", "stream"];
+
+/** ストリームの最後の応答の usage */
+function streamUsage(text: string): unknown {
+  for (const line of text.split("\n").reverse()) {
+    const usage = line.startsWith("data:") ? parsedUsage(line.slice("data:".length)) : undefined;
+    if (usage) return usage;
+  }
+  return undefined;
+}
+
+function parsedUsage(data: string): unknown {
+  try {
+    return (JSON.parse(data) as { response?: { usage?: unknown } }).response?.usage;
+  } catch {
+    return undefined;
+  }
+}
 
 // ---- おすそ分けする人（合言葉で見分ける） ----
 
@@ -144,7 +161,6 @@ app.post("/openai/responses", async (c) => {
   if (gift instanceof Response) return gift;
   const body = (await json<Record<string, unknown>>(c)) ?? {};
   const model = body.model;
-  // 料金は応答の usage で数えるので、ストリームにはしない（stream は通さない）
   if (typeof model !== "string" || tokensUsd(model, tokensOf(undefined)) === undefined) {
     return c.json({ error: "notAllowed" }, 400);
   }
@@ -155,6 +171,15 @@ app.post("/openai/responses", async (c) => {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ...forwarded, store: false }),
   });
+  // ストリームは流しながら写しを読み、最後の応答の usage で数える
+  if (res.ok && body.stream === true && res.body) {
+    const [client, copy] = res.body.tee();
+    const usage = new Response(copy).text().then(streamUsage);
+    c.executionCtx.waitUntil(
+      usage.then((u) => addUsage(c.env.DB, gift.code.id, tokensUsd(model, tokensOf(u)) ?? 0, Date.now())),
+    );
+    return new Response(client, { headers: { "Content-Type": "text/event-stream" } });
+  }
   const text = await res.text();
   if (res.ok) {
     const usage = (JSON.parse(text) as { usage?: unknown }).usage;

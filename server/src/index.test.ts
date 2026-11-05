@@ -211,6 +211,29 @@ describe("relay", () => {
     expect(listed!.monthUsd).toBeCloseTo(0.0074);
   });
 
+  it("passes a stream through and counts the cost from its last response", async () => {
+    const token = await share();
+    const { code } = await createCode(token);
+    const usage = { input_tokens: 10_000, input_tokens_details: { cached_tokens: 8_000 }, output_tokens: 1_000 };
+    const sse = [
+      `data: ${JSON.stringify({ type: "response.output_text.delta", delta: "{" })}`,
+      `data: ${JSON.stringify({ type: "response.completed", response: { usage } })}`,
+      "data: [DONE]",
+      "",
+    ].join("\n\n");
+    vi.mocked(openai).mockResolvedValue(new Response(sse));
+    const res = await call("/openai/responses", {
+      method: "POST",
+      token: code,
+      ...json({ model: "gpt-6.1-terra", input: "ヘイズ", stream: true }),
+    });
+    expect(res.headers.get("Content-Type")).toBe("text/event-stream");
+    expect(await res.text()).toBe(sse);
+    expect(JSON.parse(vi.mocked(openai).mock.calls[0]![2]!.body as string)).toMatchObject({ stream: true });
+    const [listed] = await listCodes(token);
+    expect(listed!.usd).toBeCloseTo(0.0074);
+  });
+
   it("refuses models without a price", async () => {
     const token = await share();
     const { code } = await createCode(token);
@@ -229,7 +252,6 @@ describe("relay", () => {
       input: "x",
       text: { format: { type: "json_schema" } },
       reasoning: { effort: "none" },
-      stream: true,
       tools: [{ type: "web_search" }],
       background: true,
     };

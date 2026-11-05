@@ -47,8 +47,11 @@ pub enum Token {
 #[ts(export)]
 pub struct Enriched {
     pub source: Vec<Token>,
-    pub translations: BTreeMap<LangCode, Vec<Token>>,
+    pub translations: Translations,
 }
+
+/// 言語ごとの訳文
+pub type Translations = BTreeMap<LangCode, Vec<Token>>;
 
 /// 1 発話 = 1 Segment。
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
@@ -65,6 +68,10 @@ pub struct Segment {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub enriched: Option<Enriched>,
+    /// 書きかけの訳文。`enriched` が届いたら消す
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub draft: Option<Translations>,
     /// 表示時間の起点（epoch ms）。enriched になった時刻、または enrich が失敗した時刻
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional, type = "number")]

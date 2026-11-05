@@ -6,7 +6,7 @@
   import type { SubtitleDisplay } from "../generated/SubtitleDisplay";
   import Rich from "./Rich.svelte";
   import { slide } from "./slide";
-  import { showsSource } from "./subtitle-lines";
+  import { showsSource, translationsOf } from "./subtitle-lines";
 
   let { segments, display }: { segments: Segment[]; display?: SubtitleDisplay } = $props();
 
@@ -41,13 +41,11 @@
             >{:else}<TextMorph text={s.text} locale={s.lang} as="span" {...MORPH} />{/if}
         </p>
       {/if}
-      {#if s.enriched}
-        {#each Object.entries(s.enriched.translations) as [lang, tokens] (lang)}
-          <p class="translation" {lang} in:fly={{ y: 8, duration: 250 }}>
-            <Rich {tokens} {lang} furigana={display?.furigana} />
-          </p>
-        {/each}
-      {/if}
+      {#each Object.entries(translationsOf(s)) as [lang, tokens] (lang)}
+        <p class="translation" {lang} in:fly={{ y: 8, duration: 250 }}>
+          <Rich tokens={tokens ?? []} {lang} furigana={display?.furigana} />
+        </p>
+      {/each}
     </li>
   {/each}
 </ol>
