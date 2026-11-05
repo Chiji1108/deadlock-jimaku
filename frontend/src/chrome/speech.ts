@@ -126,6 +126,12 @@ interface Listening {
   stop(): void;
 }
 
+/** マイクを開いたままにする。キャプチャ中のページは Chrome に凍結されない。戻り値は閉じる関数 */
+export async function holdMicrophone() {
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  return () => stream.getTracks().forEach((track) => track.stop());
+}
+
 /** 止めるまで聞き続ける */
 export function listen(lang: string, { silenceMs, onText, onEnd, onFatal }: Listener): Listening {
   let stopped = false;
@@ -164,7 +170,10 @@ export function listen(lang: string, { silenceMs, onText, onEnd, onFatal }: List
       clearTimeout(silence);
       onEnd();
       if (stopped) return;
-      restart = setTimeout(start, Math.max(0, RETRY_MS - (Date.now() - startedAt)));
+      // 隠れているとタイマーが絞られるので、すぐ聞き直せるときは待たない
+      const wait = RETRY_MS - (Date.now() - startedAt);
+      if (wait > 0) restart = setTimeout(start, wait);
+      else start();
     };
     startedAt = Date.now();
     cutting = false;

@@ -3,8 +3,8 @@
 //! 全画面のゲームに隠れても認識が止まらないよう、省電力の働きを切った Chrome を専用のプロファイルで起動する。
 //! フラグは Chrome の起動時にしか効かないので、ふだんの Chrome のプロファイルとは分ける。
 //!
-//! 翻訳モデルのダウンロードにはクリックが要り、マイクにも許可が要るが、起動した Chrome を開発者ツールの
-//! 仕組み（CDP。この PC の中からだけ接続できる）で操作して、どちらも手を煩わせずに済ませる
+//! 翻訳モデルのダウンロードにはクリックが要るが、起動した Chrome を開発者ツールの仕組み
+//! （CDP。この PC の中からだけ接続できる）で操作して、手を煩わせずに済ませる
 
 use std::fs;
 use std::io;
@@ -22,13 +22,15 @@ use crate::DEFAULT_PORT;
 use crate::store::Store;
 use crate::types::{ChromeState, ChromeStatus};
 
-const FLAGS: [&str; 7] = [
+const FLAGS: [&str; 8] = [
     "--disable-features=CalculateNativeWinOcclusion,UseEcoQoSForBackgroundProcess",
     "--disable-background-timer-throttling",
     "--disable-backgrounding-occluded-windows",
     "--disable-renderer-backgrounding",
     "--no-first-run",
     "--no-default-browser-check",
+    // 専用のプロファイルで字幕のページしか開かないので、毎回マイクを聞かれないようにする
+    "--auto-accept-camera-and-microphone-capture",
     "--remote-debugging-port=0",
 ];
 /// タブやアドレスバーのない小さなウィンドウにする
@@ -36,6 +38,8 @@ const WINDOW_SIZE: &str = "--window-size=460,320";
 /// Chrome が CDP の窓口を開くまで、ページが読み込まれるまでの待ち時間
 const ATTEMPTS: u32 = 100;
 const RETRY: Duration = Duration::from_millis(200);
+/// ページの準備が要らないか確かめる間隔
+const CHECK_INTERVAL: Duration = Duration::from_secs(1);
 
 /// 落とすと Chrome を閉じる
 pub struct Browser {
@@ -53,11 +57,10 @@ impl Browser {
             .stderr(Stdio::null())
             .spawn()?;
         tokio::spawn(async move {
-            if let Err(e) = attach(&profile).await {
-                tracing::warn!("chrome: {e:#}");
-            }
+            let closed = attach(&profile).await;
             // 字幕を止める前に閉じられたら、操作パネルで開き直せるようにする
             if store.settings().transcription_enabled {
+                tracing::warn!("chrome: {closed:#?}");
                 store.set_chrome_status(Some(ChromeStatus {
                     state: ChromeState::Failed,
                     detail: Some("Chrome が閉じられました".into()),
@@ -95,9 +98,9 @@ fn arguments(profile: &Path) -> Vec<String> {
         .collect()
 }
 
-/// マイクを許可し、ページの準備（クリックが要るモデルのダウンロード）を始めさせる。
-/// 許可は接続している間だけ有効なので、Chrome が閉じるまでつないでおく
-async fn attach(profile: &Path) -> anyhow::Result<()> {
+/// ページの準備（クリックが要るモデルのダウンロード）を始めさせる。翻訳先を増やすと
+/// またダウンロードが要るので、Chrome が閉じるまで続ける（閉じたことも、これで分かる）
+async fn attach(profile: &Path) -> anyhow::Result<std::convert::Infallible> {
     let port = active_port(profile).await?;
     let version: Value = crate::http()
         .get(format!("http://127.0.0.1:{port}/json/version"))
@@ -110,33 +113,16 @@ async fn attach(profile: &Path) -> anyhow::Result<()> {
         .context("no debugger url")?;
     let (socket, _) = tokio_tungstenite::connect_async(url).await?;
     let mut cdp = Cdp { socket, id: 0 };
-    let origin = format!("http://127.0.0.1:{DEFAULT_PORT}");
-    cdp.call(
-        None,
-        "Browser.grantPermissions",
-        json!({ "origin": origin, "permissions": ["audioCapture"] }),
-    )
-    .await?;
     let session = cdp.page_session().await?;
-    for _ in 0..ATTEMPTS {
-        let started = cdp
-            .call(
-                Some(&session),
-                "Runtime.evaluate",
-                json!({
-                    "expression": "window.jimakuStart?.() === true",
-                    "userGesture": true,
-                    "returnByValue": true,
-                }),
-            )
-            .await?;
-        if started["result"]["value"] == true {
-            break;
-        }
-        tokio::time::sleep(RETRY).await;
+    loop {
+        cdp.call(
+            Some(&session),
+            "Runtime.evaluate",
+            json!({ "expression": "window.jimakuStart?.()", "userGesture": true }),
+        )
+        .await?;
+        tokio::time::sleep(CHECK_INTERVAL).await;
     }
-    while cdp.socket.next().await.is_some() {}
-    Ok(())
 }
 
 /// Chrome が開いた CDP のポートはプロファイルのファイルに書かれる

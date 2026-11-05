@@ -7,7 +7,7 @@
   import { connect } from "../lib/ws";
   import { Captions } from "./captions";
   import { Live } from "./live";
-  import { availability, listen, prepare } from "./speech";
+  import { availability, holdMicrophone, listen, prepare } from "./speech";
 
   /** 認識を続けられない理由ごとの案内 */
   const FATAL: Record<string, string> = {
@@ -83,6 +83,7 @@
     });
     progress = undefined;
     const target = sink(s, translators);
+    const release = await holdMicrophone();
     const recognition = listen(s.micLanguage, {
       silenceMs: target.silenceMs,
       onText: target.onText,
@@ -94,6 +95,7 @@
     });
     stop = () => {
       recognition.stop();
+      release();
       target.discard();
     };
     cut = () => {
@@ -217,7 +219,10 @@
     <progress max="1" value={progress}></progress>
     <p>初回だけ、翻訳のモデルをダウンロードします。</p>
   {:else if state_ === "listening"}
-    <p>このウィンドウはそのまま隠して大丈夫です。閉じると字幕が止まります。</p>
+    <p>
+      ゲームの後ろに置いたままで大丈夫です。<strong>最小化はしないでください</strong>
+      （聞き取りが止まることがあります）。閉じると字幕が止まります。
+    </p>
   {:else if settings && settings.speechEngine === "openai"}
     <p>今のモードでは Chrome を使いません。このウィンドウは閉じてかまいません。</p>
   {:else}
