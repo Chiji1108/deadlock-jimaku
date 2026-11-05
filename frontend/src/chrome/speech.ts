@@ -53,8 +53,6 @@ const FATAL = new Set([
 /** すぐ終わり続けるときに、始め直しを連打しない */
 const RETRY_MS = 1000;
 const CREATE_ATTEMPTS = 3;
-/** OpenAI のときの発話の区切り（`minSilenceMs` の既定）と揃える。Chrome の確定を待つより早く字幕を閉じる */
-const SILENCE_MS = 750;
 
 /** `ja` を認識に渡す形（`ja-JP`）にする */
 const speechTag = (lang: string) => {
@@ -101,6 +99,8 @@ export async function prepare(lang: string, targets: string[]): Promise<Map<stri
 }
 
 interface Listener {
+  /** 文の区切り（`minSilenceMs`）。Chrome の確定を待つより早く字幕を閉じる */
+  silenceMs: number;
   onText(text: string, final: boolean): void;
   /** 認識がひと区切りした。確定しなかった文は、ここで確定する */
   onEnd(): void;
@@ -108,7 +108,7 @@ interface Listener {
 }
 
 /** 止めるまで聞き続ける。戻り値は止める関数 */
-export function listen(lang: string, { onText, onEnd, onFatal }: Listener): () => void {
+export function listen(lang: string, { silenceMs, onText, onEnd, onFatal }: Listener): () => void {
   let stopped = false;
   let current: Recognizer;
   let startedAt = 0;
@@ -132,7 +132,7 @@ export function listen(lang: string, { onText, onEnd, onFatal }: Listener): () =
       if (!interim) return;
       onText(interim, false);
       // 文字が増えなくなったら止めて確定させる。終わったらすぐ聞き直す
-      silence = setTimeout(() => current.stop(), SILENCE_MS);
+      silence = setTimeout(() => current.stop(), silenceMs);
     };
     current.onerror = ({ error }) => {
       if (!FATAL.has(error)) return;

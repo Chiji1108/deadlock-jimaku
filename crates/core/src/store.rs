@@ -103,6 +103,7 @@ impl Store {
             || next.speech_engine != current.speech_engine
             || next.mic_language != current.mic_language
             || next.translate_to != current.translate_to
+            || next.segmentation != current.segmentation
         {
             let _ = self.tx.send(ServerMsg::SettingsChanged);
         }

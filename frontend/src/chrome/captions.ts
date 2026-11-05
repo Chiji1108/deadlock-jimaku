@@ -8,7 +8,7 @@ export class Captions {
   private seq = 0;
   /** 古い字幕が新しい字幕を追い越さないよう、1 つずつ送る */
   private sending: Promise<unknown> = Promise.resolve();
-  private translating = false;
+  private translating?: Segment;
 
   constructor(
     private lang: string,
@@ -56,8 +56,8 @@ export class Captions {
   }
 
   private async draft(segment: Segment) {
-    if (this.translating) return;
-    this.translating = true;
+    if (this.translating === segment) return;
+    this.translating = segment;
     let text;
     do {
       text = segment.text;
@@ -67,7 +67,7 @@ export class Captions {
         this.publish(segment);
       }
     } while (segment === this.current && segment.text !== text);
-    this.translating = false;
+    if (this.translating === segment) this.translating = undefined;
   }
 
   private async settle(segment: Segment) {

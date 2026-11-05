@@ -24,8 +24,11 @@
   /** 処理は 1 つずつ。途中で設定が変わったら、終わってから合わせ直す */
   let busy = false;
   let changed = false;
+  /** ほかのタブが聞いている */
+  let other = $state(false);
 
-  const key = (s: Settings) => JSON.stringify([s.micLanguage, s.translateTo]);
+  const key = (s: Settings) =>
+    JSON.stringify([s.micLanguage, s.translateTo, s.segmentation.minSilenceMs]);
   const wanted = (s?: Settings) => s?.speechEngine === "chrome" && s.transcriptionEnabled;
 
   function halt() {
@@ -38,6 +41,7 @@
     const translators = await prepare(s.micLanguage, targets);
     const captions = new Captions(s.micLanguage, translators, api.segment);
     const end = listen(s.micLanguage, {
+      silenceMs: s.segmentation.minSilenceMs,
       onText: (text, final) => captions.onText(text, final),
       onEnd: () => captions.finish(),
       onFatal: (error) => {
@@ -101,6 +105,22 @@
   }
 
   onMount(() => {
+    // 開いたタブが増えても、聞くのは 1 つだけ（字幕が二重に出ない）
+    let release = () => {};
+    let disconnect = () => {};
+    other = true;
+    void navigator.locks.request("listening", () => {
+      other = false;
+      disconnect = watch();
+      return new Promise<void>((resolve) => (release = resolve));
+    });
+    return () => {
+      release();
+      disconnect();
+    };
+  });
+
+  function watch() {
     void sync();
     const disconnect = connect(
       ["status"],
@@ -118,12 +138,14 @@
       window.removeEventListener("pagehide", halt);
       halt();
     };
-  });
+  }
 </script>
 
 <main>
   <h1>デドロ字幕（無料モード）</h1>
-  {#if settings && settings.speechEngine !== "chrome"}
+  {#if other}
+    <p>ほかのタブで動いています。このタブは閉じてください。</p>
+  {:else if settings && settings.speechEngine !== "chrome"}
     <p>操作パネルの「マイクと翻訳」で、音声認識を「Chrome（無料）」にしてください。</p>
   {:else if state_ === "unsupported"}
     <p>
