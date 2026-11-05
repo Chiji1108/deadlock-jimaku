@@ -70,14 +70,19 @@ fn main() {
             // 開発中は確かめない（リリースの版と比べても意味がない）
             if !cfg!(debug_assertions) {
                 let app = app.handle().clone();
-                // 常駐すると起動し直さないので、字幕を止めている間に時々確かめる
+                // 常駐すると起動し直さないので、そのあとは字幕を止めている間に時々確かめる。
+                // 断られたら、次に起動するまで聞かない
                 tauri::async_runtime::spawn(async move {
+                    let mut starting = true;
                     loop {
-                        if !idle.settings().transcription_enabled
-                            && let Err(e) = update(app.clone()).await
-                        {
-                            tracing::warn!("update: {e}");
+                        if starting || !idle.settings().transcription_enabled {
+                            match update(app.clone()).await {
+                                Ok(Answer::Declined) => return,
+                                Ok(Answer::Latest) => {}
+                                Err(e) => tracing::warn!("update: {e}"),
+                            }
                         }
+                        starting = false;
                         tokio::time::sleep(UPDATE_INTERVAL).await;
                     }
                 });
@@ -113,11 +118,16 @@ fn show_window(app: &AppHandle) {
     }
 }
 
+enum Answer {
+    Latest,
+    Declined,
+}
+
 /// 新しい版があれば聞いて、入れ替えて再起動する（DESIGN.md 13.5）。
 /// 更新情報は GitHub の最新のリリースの latest.json で、署名を公開鍵（tauri.conf.json）で確かめる
-async fn update(app: AppHandle) -> Result<(), Box<dyn std::error::Error>> {
+async fn update(app: AppHandle) -> Result<Answer, Box<dyn std::error::Error>> {
     let Some(update) = app.updater()?.check().await? else {
-        return Ok(());
+        return Ok(Answer::Latest);
     };
     tracing::info!("update available: {}", update.version);
     // 隠れたウィンドウに付くと、質問が見えない
@@ -137,7 +147,7 @@ async fn update(app: AppHandle) -> Result<(), Box<dyn std::error::Error>> {
         ));
     // 答えを待つ間、非同期のワーカーを塞がない
     if !tauri::async_runtime::spawn_blocking(move || dialog.blocking_show()).await? {
-        return Ok(());
+        return Ok(Answer::Declined);
     }
     update.download_and_install(|_, _| {}, || {}).await?;
     app.restart();
