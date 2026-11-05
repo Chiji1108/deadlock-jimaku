@@ -15,8 +15,9 @@
   import { overlayUrl, panel } from "../panel.svelte";
 
   const CONTENTS: { value: RankContent; label: string }[] = [
-    { value: "full", label: "アイコン・名前・ポイント" },
-    { value: "name", label: "アイコンと名前" },
+    { value: "gauge", label: "名前とゲージ" },
+    { value: "full", label: "名前とポイント" },
+    { value: "name", label: "名前だけ" },
     { value: "icon", label: "アイコンだけ" },
   ];
   const regions = Object.entries(REGIONS) as [Region, { ja: string }][];
@@ -47,7 +48,7 @@
     <Card.Header>
       <Card.Title>ランクオーバーレイ</Card.Title>
       <Card.Description>
-        ランクのアイコン・名前・ポイントを出します。試合の結果が反映されるまで少しかかります
+        ランクのアイコン・名前・ゲージを出します。試合の結果が反映されるまで少しかかります
       </Card.Description>
     </Card.Header>
     <Card.Content class="flex flex-col gap-6">
@@ -81,6 +82,7 @@
 
       <Field.Field>
         <Field.Label>出すもの</Field.Label>
+        <Field.Description>「アイコンだけ」以外は、アイコンの横に出します</Field.Description>
         <ToggleGroup.Root
           type="single"
           variant="outline"

@@ -94,7 +94,7 @@
       aria-label="Deadlock の配信画面。左上にランク、右にアイテム説明、下の中央に字幕が重なる見本"
     ></video>
     <div class="stream-rank" style:--scale={scale}>
-      <RankBadge rank={RANK} lang="ja" content="full" />
+      <RankBadge rank={RANK} lang="ja" content="gauge" />
     </div>
     <dl-provider language="japanese">
       <div class="stream-card" class:show={cardShown} style:zoom={scale * (narrow ? 0.9 : 1)}>

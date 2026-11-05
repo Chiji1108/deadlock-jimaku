@@ -29,23 +29,25 @@
 
 <div class="rank">
   {#if rank.image}<img class="badge" src={rank.image} alt="" />{/if}
-  <!-- 1 行目: ランク名、2 行目: 太いゲージ（ポイントは中に重ねる）。出すものは操作パネルで選ぶ -->
+  <!-- 1 行目: ランク名、2 行目: ゲージ（ポイントを重ねるか、数字なしで細くする）。出すものは操作パネルで選ぶ -->
   {#if content !== "icon"}<div class="text">
       {#if label}<p class="name" lang={shown}>{label}</p>{/if}
-      {#if content !== "full"}
+      {#if content === "name"}
         <!-- 名前だけ -->
       {:else if rank.leaderboard}
         <!-- エターナスは上のティアがないので、リーダーボードの順位を出す -->
         <p class="points">{placement(rank.leaderboard)}</p>
       {:else if rank.progress}
-        <div class="bar">
+        <div class="bar" class:thin={content === "gauge"}>
           <div class="fill" style:width="{ratio * 100}%"></div>
-          <p class="points">
-            <!-- ポイントが変わったら桁ごとに数字を動かす -->
-            <TextMorph text={number(rank.progress.value)} numbers as="span" duration={600} /><span
-              class="max">{` / ${number(rank.progress.max)}`}</span
-            >
-          </p>
+          {#if content === "full"}
+            <p class="points">
+              <!-- ポイントが変わったら桁ごとに数字を動かす -->
+              <TextMorph text={number(rank.progress.value)} numbers as="span" duration={600} /><span
+                class="max">{` / ${number(rank.progress.max)}`}</span
+              >
+            </p>
+          {/if}
         </div>
       {:else if rank.points !== undefined}
         <!-- 順位が取れないエターナスは、累積のポイントを出す -->
@@ -107,6 +109,11 @@
     background: rgb(0 0 0 / 0.55);
     box-shadow: 0 0 0 calc(2px * var(--scale)) rgb(0 0 0 / 0.6);
     overflow: hidden;
+  }
+  /* 数字を重ねないときは細くして、幅はランク名に合わせる（短い名前でも進み具合が読める長さは残す） */
+  .thin {
+    min-width: var(--gauge-thin-width, calc(120px * var(--scale)));
+    height: var(--gauge-thin-height, calc(12px * var(--scale)));
   }
   .fill {
     position: absolute;
