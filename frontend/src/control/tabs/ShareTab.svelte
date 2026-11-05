@@ -39,9 +39,11 @@
   }
 
   /** 預けてから作る。分けておくと、作るのに失敗しても預けた状態が画面に出て、やめられる */
-  const consent = async () => (await panel.shareAction(api.enableShare)) && create();
+  const consent = async () => (await panel.shareAction(api.enableShare)) && (joining || create());
 
   let consenting = $state(false);
+  /** ほかの PC のおすそ分けを見るだけで、コードは作らない */
+  let joining = $state(false);
   let stopping = $state(false);
 
   // 期限を変えるダイアログ
@@ -86,7 +88,10 @@
           onsubmit={(e) => {
             e.preventDefault();
             if (share.enabled) void create();
-            else consenting = true;
+            else {
+              joining = false;
+              consenting = true;
+            }
           }}
         >
           <Field.Field>
@@ -111,8 +116,20 @@
               {/if}
             </Field.Description>
           </Field.Field>
-          <Button type="submit" class="w-fit" disabled={past || creating}>ギフトコードを作る</Button
-          >
+          <div class="flex flex-wrap gap-2">
+            <Button type="submit" class="w-fit" disabled={past || creating}
+              >ギフトコードを作る</Button
+            >
+            {#if !share.enabled}
+              <Button
+                variant="outline"
+                onclick={() => {
+                  joining = true;
+                  consenting = true;
+                }}>ほかの PC のおすそ分けを表示する</Button
+              >
+            {/if}
+          </div>
         </form>
       {/if}
     </Card.Content>
@@ -185,8 +202,8 @@
 <ConfirmDialog
   bind:open={consenting}
   title="あなたの API キーをサーバーに預けます"
-  action="預けてギフトコードを作る"
-  disabled={past}
+  action={joining ? "預けて表示する" : "預けてギフトコードを作る"}
+  disabled={!joining && past}
   onconfirm={consent}
 >
   <p>

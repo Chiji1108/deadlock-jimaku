@@ -31,21 +31,17 @@ app.post("/share", async (c) => {
   if (typeof key !== "string" || !key) return c.json({ error: "noKey" }, 400);
   if (!(await validKey(key))) return c.json({ error: "invalidKey" }, 400);
   const keyHash = await sha256(key);
-  const existing = await c.env.DB.prepare("SELECT id FROM issuers WHERE key_hash = ?")
-    .bind(keyHash)
-    .first<{ id: string }>();
-  const id = existing?.id ?? newId();
-  const token = await issuerToken(id, c.env.SHARE_KEY);
+  const token = await issuerToken(keyHash, c.env.SHARE_KEY);
   await c.env.DB.prepare(
     `INSERT INTO issuers (id, admin_token_hash, key_hash, encrypted_key, created_at) VALUES (?, ?, ?, ?, ?)
      ON CONFLICT (key_hash) DO UPDATE SET admin_token_hash = excluded.admin_token_hash, encrypted_key = excluded.encrypted_key`,
   )
-    .bind(id, await sha256(token), keyHash, await encrypt(key, c.env.SHARE_KEY), Date.now())
+    .bind(newId(), await sha256(token), keyHash, await encrypt(key, c.env.SHARE_KEY), Date.now())
     .run();
   return c.json({ token });
 });
 
-/** キーを替えたとき。コードはそのまま、新しいキーで動く */
+/** キーを替えたとき。コードはそのまま、新しいキーで動く。合言葉も新しくなり、古いキーのものは使えなくなる */
 app.put("/share/key", async (c) => {
   const issuer = await admin(c);
   if (!issuer) return c.json({ error: "unauthorized" }, 401);
@@ -59,10 +55,13 @@ app.put("/share/key", async (c) => {
     .first();
   // そのキーで別の人としておすそ分けを有効にしている。片方を無効にしてもらう
   if (other) return c.json({ error: "keyInUse" }, 409);
-  await c.env.DB.prepare("UPDATE issuers SET key_hash = ?, encrypted_key = ? WHERE id = ?")
-    .bind(keyHash, await encrypt(key, c.env.SHARE_KEY), issuer.id)
+  const token = await issuerToken(keyHash, c.env.SHARE_KEY);
+  await c.env.DB.prepare(
+    "UPDATE issuers SET key_hash = ?, encrypted_key = ?, admin_token_hash = ? WHERE id = ?",
+  )
+    .bind(keyHash, await encrypt(key, c.env.SHARE_KEY), await sha256(token), issuer.id)
     .run();
-  return c.body(null, 204);
+  return c.json({ token });
 });
 
 /** おすそ分けをやめる。預けたキーとコードを消す */

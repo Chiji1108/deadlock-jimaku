@@ -81,12 +81,16 @@ describe("share", () => {
     expect((await listCodes(second)).map((c) => c.memo)).toEqual(["友達"]);
   });
 
-  it("gives a different token to a different key, and a new one after stopping", async () => {
-    const mine = await share();
-    expect(await share("sk-other")).not.toBe(mine);
-    await call("/share", { method: "DELETE", token: mine });
-    expect((await call("/share/codes", { token: mine })).status).toBe(401);
-    expect(await share()).not.toBe(mine);
+  it("gives a different token to a different key", async () => {
+    expect(await share("sk-other")).not.toBe(await share());
+  });
+
+  it("stops on every PC, and starts empty when shared again", async () => {
+    const token = await share();
+    await createCode(token, { memo: "友達" });
+    await call("/share", { method: "DELETE", token });
+    expect((await call("/share/codes", { token })).status).toBe(401);
+    expect(await listCodes(await share())).toEqual([]);
   });
 
   it("codes are random, shown once, and accept loose typing", async () => {
@@ -96,6 +100,18 @@ describe("share", () => {
     expect(normalizeCode("ko1l-")).toBe("K011");
     const loose = code.toLowerCase().replace(/-/g, " ");
     expect((await call("/gift", { token: loose })).status).toBe(200);
+  });
+
+  it("replaces the token when the key changes, keeping the codes", async () => {
+    const old = await share();
+    await createCode(old, { memo: "友達" });
+    const res = await call("/share/key", { method: "PUT", token: old, ...json({ key: "sk-new" }) });
+    expect(res.status).toBe(200);
+    const { token } = (await res.json()) as { token: string };
+    expect(token).not.toBe(old);
+    expect((await call("/share/codes", { token: old })).status).toBe(401);
+    expect((await listCodes(token)).map((c) => c.memo)).toEqual(["友達"]);
+    expect(await share("sk-new")).toBe(token);
   });
 
   it("refuses to switch to a key already shared by someone else", async () => {
