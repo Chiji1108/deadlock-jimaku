@@ -5,7 +5,7 @@
   import SettingsDialog from "./SettingsDialog.svelte";
 
   // 文字の大きさを数値で決める（範囲はサーバーと同じ）
-  const RANGE = { min: 16, max: 96 };
+  const RANGE = { min: 12, max: 96 };
 
   let { field, label }: { field: "fontSize" | "translationFontSize"; label: string } = $props();
 

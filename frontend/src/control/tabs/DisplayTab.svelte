@@ -23,10 +23,10 @@
     { value: "center", label: "中央", icon: AlignCenterIcon },
     { value: "right", label: "右寄せ", icon: AlignEndIcon },
   ];
-  /** 文字の大きさ（px）。既定を一番大きくする。もっと大きくしたいときは「数値で指定」 */
+  /** 文字の大きさ（px）。もっと大きくしたいときは「数値で指定」 */
   const SIZES = [
-    { field: "fontSize", label: "話した言葉の大きさ", presets: [16, 24, 32, 40] },
-    { field: "translationFontSize", label: "翻訳の大きさ", presets: [16, 20, 26] },
+    { field: "fontSize", label: "話した言葉の大きさ", presets: [12, 16, 24, 32, 40] },
+    { field: "translationFontSize", label: "翻訳の大きさ", presets: [12, 16, 20, 26, 32, 40] },
   ] as const;
   const BACKGROUNDS: { value: Background; label: string; hint: string }[] = [
     { value: "outline", label: "縁取り", hint: "文字に黒い縁取りを付けます" },
@@ -47,6 +47,8 @@
 
   const s = $derived(panel.settings!);
   const d = $derived(s.subtitleDisplay);
+  const noTargets = $derived(s.translateTo.length === 0);
+  const translationOnly = $derived(!d.showSource && !noTargets);
   /** 変えた項目だけを送る（続けて変えても、前の変更を古い値で戻さない） */
   const set = (patch: SubtitleDisplayPatch) => panel.update({ subtitleDisplay: patch });
 </script>
@@ -111,6 +113,9 @@
             {#if !(f.presets as readonly number[]).includes(d[f.field])}
               <Field.Description>数値で指定しています（{d[f.field]}px）</Field.Description>
             {/if}
+            {#if f.field === "fontSize" && d.fontSize < 16 && d.furigana && !translationOnly}
+              <Field.Description>小さくすると、ふりがなが読みにくくなります</Field.Description>
+            {/if}
           </Field.Field>
         {/each}
         <Field.Field>
@@ -135,6 +140,26 @@
 
         <Field.Field orientation="horizontal">
           <Field.Content>
+            <Field.Label for="show-source">話した言葉を出す</Field.Label>
+            <Field.Description>
+              {#if noTargets}
+                翻訳先がないときは、話した言葉を出します
+              {:else}
+                オフにすると翻訳だけを出します。途中の字幕とふりがなの料金がかからず、6
+                割ほど安くなります。字幕は翻訳が終わってから出ます
+              {/if}
+            </Field.Description>
+          </Field.Content>
+          <Switch
+            id="show-source"
+            checked={d.showSource}
+            disabled={noTargets}
+            onCheckedChange={(v) => set({ showSource: v })}
+          />
+        </Field.Field>
+
+        <Field.Field orientation="horizontal">
+          <Field.Content>
             <Field.Label for="furigana">ふりがなを付ける</Field.Label>
             <Field.Description
               >漢字に読みを付けます（日本語を学んでいる視聴者向け）</Field.Description
@@ -143,6 +168,7 @@
           <Switch
             id="furigana"
             checked={d.furigana}
+            disabled={translationOnly}
             onCheckedChange={(v) => set({ furigana: v })}
           />
         </Field.Field>

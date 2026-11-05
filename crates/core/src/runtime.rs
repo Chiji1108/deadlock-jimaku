@@ -148,7 +148,7 @@ pub async fn run(store: Arc<Store>, options: Options) {
             mic_language: settings.mic_language.clone(),
             translate_to: settings.translate_to.clone(),
             deadlock_mode: settings.deadlock_mode,
-            live_subtitles: settings.live_subtitles,
+            live_subtitles: settings.wants_live_subtitles(),
             models: settings.models.clone(),
             realtime_delay: settings.realtime_delay.clone(),
             segmentation: settings.segmentation.clone(),

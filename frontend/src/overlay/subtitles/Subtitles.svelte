@@ -6,7 +6,7 @@
   import Captions from "../../lib/Captions.svelte";
   import { api } from "../../lib/api";
   import { loadGlossary } from "../../lib/glossary.svelte";
-  import { visibleLines } from "../../lib/subtitle-lines";
+  import { isReady, visibleLines } from "../../lib/subtitle-lines";
   import { connect } from "../../lib/ws";
 
   const segments = new SvelteMap<string, Segment>();
@@ -25,7 +25,9 @@
   const visible = $derived(
     display
       ? visibleLines(
-          [...segments.values()].filter(isLive).toSorted((a, b) => a.startedAt - b.startedAt),
+          [...segments.values()]
+            .filter((s) => isLive(s) && isReady(s, display!))
+            .toSorted((a, b) => a.startedAt - b.startedAt),
           now,
           display,
         )

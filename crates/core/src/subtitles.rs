@@ -77,7 +77,7 @@ pub async fn run(store: Arc<Store>, input: audio::Input, access: Access) -> anyh
     // 開く・音声・閉じるは同じチャンネルで順番どおりに送る
     let (delta_tx, mut delta_rx) = mpsc::channel(256);
     // オフなら Realtime につながず、確定の字幕だけを出す
-    let realtime = if settings.live_subtitles {
+    let realtime = if settings.wants_live_subtitles() {
         let (tx, rx) = mpsc::unbounded_channel();
         let config = RealtimeConfig {
             access: access.clone(),
@@ -357,7 +357,7 @@ impl Pipeline {
         // 辞書は enrich のたびに store から取る（後から届いたり、作り直されたりする）。
         // ふりがなは出さない設定なら聞かない（字幕を止めずに切り替えられるので、そのときの設定を見る）
         let glossary = self.store.glossary().map(|l| l.glossary);
-        let furigana = self.store.settings().subtitle_display.furigana;
+        let furigana = self.store.settings().wants_furigana();
         tokio::spawn(enrich(
             self.enricher.clone(),
             id.to_owned(),

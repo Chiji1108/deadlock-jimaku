@@ -21,6 +21,7 @@
   ];
 
   const s = $derived(panel.settings!);
+  const translationOnly = $derived(!s.subtitleDisplay.showSource && s.translateTo.length > 0);
   const pause = $derived(s.segmentation.minSilenceMs);
   const preset = $derived(PAUSES.find((p) => p.ms === pause));
 
@@ -128,12 +129,17 @@
         <Field.Content>
           <Field.Label for="live-subtitles">話している途中から字幕を出す</Field.Label>
           <Field.Description>
-            オフにすると途中の字幕の料金がかかりません。字幕は話し終えてから出ます。切り替えると、字幕は始め直します
+            {#if translationOnly}
+              翻訳だけを出しているので、途中の字幕は出ません
+            {:else}
+              オフにすると途中の字幕の料金がかかりません。字幕は話し終えてから出ます。切り替えると、字幕は始め直します
+            {/if}
           </Field.Description>
         </Field.Content>
         <Switch
           id="live-subtitles"
           checked={s.liveSubtitles}
+          disabled={translationOnly}
           onCheckedChange={(v) => panel.update({ liveSubtitles: v })}
         />
       </Field.Field>

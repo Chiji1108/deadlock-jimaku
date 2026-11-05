@@ -1,6 +1,14 @@
 import type { Segment } from "../generated/Segment";
 import type { SubtitleDisplay } from "../generated/SubtitleDisplay";
 
+/** 翻訳だけを出すときは、翻訳が届くまで字幕を出さない */
+export const isReady = (s: Segment, { showSource }: Pick<SubtitleDisplay, "showSource">) =>
+  showSource || s.enriched !== undefined;
+
+/** 話した言葉の行を出すか。翻訳に失敗したら、字幕が消えないよう出す */
+export const showsSource = (s: Segment, display?: Pick<SubtitleDisplay, "showSource">) =>
+  display?.showSource !== false || Object.keys(s.enriched?.translations ?? {}).length === 0;
+
 type Timing = Pick<SubtitleDisplay, "maxLines" | "minReadSeconds" | "maxWaitSeconds">;
 
 /**

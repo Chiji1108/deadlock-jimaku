@@ -95,6 +95,7 @@ export const enriched = (id: string, line: Line, lang?: Lang): Segment => ({
 });
 
 export const display = (fontSize: number, translationFontSize: number): SubtitleDisplay => ({
+  showSource: true,
   furigana: true,
   align: "center",
   fontSize,

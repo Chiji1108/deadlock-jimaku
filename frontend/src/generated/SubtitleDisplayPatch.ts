@@ -5,4 +5,4 @@ import type { Background } from "./Background";
 /**
  * 字幕の見せ方の変更。省いた項目は変えない（続けて変えたとき、前の変更を古い値で戻さない）
  */
-export type SubtitleDisplayPatch = { furigana?: boolean, align?: Align, fontSize?: number, translationFontSize?: number, background?: Background, perCharSeconds?: number, minReadSeconds?: number, maxWaitSeconds?: number, maxLines?: number, holdSeconds?: number, };
+export type SubtitleDisplayPatch = { showSource?: boolean, furigana?: boolean, align?: Align, fontSize?: number, translationFontSize?: number, background?: Background, perCharSeconds?: number, minReadSeconds?: number, maxWaitSeconds?: number, maxLines?: number, holdSeconds?: number, };

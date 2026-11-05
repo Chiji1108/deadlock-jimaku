@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Segment } from "../generated/Segment";
-import { visibleLines } from "./subtitle-lines";
+import { isReady, showsSource, visibleLines } from "./subtitle-lines";
 
 const NOW = 100_000;
 const TIMING = { minReadSeconds: 3, maxWaitSeconds: 6 };
@@ -67,5 +67,26 @@ describe("visibleLines", () => {
   it("stops holding the newest line when translations take too long", () => {
     expect(shown([line("a"), line("b", undefined, 5999)], 1)).toBe("a");
     expect(shown([line("a"), line("b", undefined, 6000)], 1)).toBe("b");
+  });
+});
+
+describe("翻訳だけを出すとき", () => {
+  const seg = (enriched?: Partial<NonNullable<Segment["enriched"]>>) =>
+    ({ enriched: enriched && { source: [], translations: {}, ...enriched } }) as Segment;
+  const translated = seg({ translations: { en: [] } });
+
+  it("翻訳が届くまで字幕を出さない", () => {
+    expect(isReady(seg(), { showSource: false })).toBe(false);
+    expect(isReady(translated, { showSource: false })).toBe(true);
+    expect(isReady(seg(), { showSource: true })).toBe(true);
+  });
+
+  it("翻訳があれば話した言葉の行を隠す", () => {
+    expect(showsSource(translated, { showSource: false })).toBe(false);
+    expect(showsSource(translated, { showSource: true })).toBe(true);
+  });
+
+  it("翻訳に失敗したら話した言葉を出す", () => {
+    expect(showsSource(seg({}), { showSource: false })).toBe(true);
   });
 });
