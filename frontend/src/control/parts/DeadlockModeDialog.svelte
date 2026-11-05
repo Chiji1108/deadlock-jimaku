@@ -20,7 +20,7 @@
     <Dialog.Header>
       <Dialog.Title>デッドロックモード</Dialog.Title>
       <Dialog.Description>
-        雑談の配信や、ほかのゲームの配信ではオフにしてください。切り替えると、字幕は始め直します
+        雑談やほかのゲームの配信では、オフにすると普通の字幕になります。切り替えると、字幕は始め直します
       </Dialog.Description>
     </Dialog.Header>
     <table class="w-full text-sm">
