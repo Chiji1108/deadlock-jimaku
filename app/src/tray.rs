@@ -3,12 +3,14 @@
 
 use std::sync::Arc;
 
+use overlays_core::secrets;
 use overlays_core::settings::SettingsPatch;
 use overlays_core::store::Store;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri::{App, AppHandle, Manager, WebviewWindow};
+use tauri::{App, AppHandle, Manager, Window};
 use tauri_plugin_dialog::DialogExt;
+use tokio::sync::broadcast::error::RecvError;
 
 use crate::show_window;
 
@@ -21,25 +23,45 @@ const NOTICE: &str = "デドロ字幕は閉じても動き続けます。終了�
 #[cfg(not(target_os = "macos"))]
 const NOTICE: &str = "デドロ字幕は閉じても動き続けます。終了するときは、タスクバーの通知領域のアイコンから「終了」を選んでください。";
 
-fn toggle_label(enabled: bool) -> &'static str {
-    if enabled {
-        "字幕を止める"
-    } else {
-        "字幕を始める"
-    }
+/// トレイに出す状態。字幕が止まったことは、ウィンドウが隠れていてもここで分かるようにする
+#[derive(Clone, Copy, PartialEq)]
+enum State {
+    Stopped,
+    Running,
+    Failed,
 }
 
-fn tooltip(enabled: bool) -> &'static str {
-    if enabled {
-        "デドロ字幕（字幕を出しています）"
-    } else {
-        "デドロ字幕（停止中）"
+impl State {
+    fn of(store: &Store) -> Self {
+        match (
+            store.settings().transcription_enabled,
+            store.transcription_error(),
+        ) {
+            (false, _) => Self::Stopped,
+            (true, None) => Self::Running,
+            (true, Some(_)) => Self::Failed,
+        }
+    }
+
+    fn toggle_label(self) -> &'static str {
+        match self {
+            Self::Stopped => "字幕を始める",
+            Self::Running | Self::Failed => "字幕を止める",
+        }
+    }
+
+    fn tooltip(self) -> &'static str {
+        match self {
+            Self::Stopped => "デドロ字幕（停止中）",
+            Self::Running => "デドロ字幕（字幕を出しています）",
+            Self::Failed => "デドロ字幕（字幕が止まっています）",
+        }
     }
 }
 
 pub fn install(app: &App, store: Arc<Store>) -> tauri::Result<()> {
-    let enabled = store.settings().transcription_enabled;
-    let toggle = MenuItem::with_id(app, TOGGLE, toggle_label(enabled), true, None::<&str>)?;
+    let mut state = State::of(&store);
+    let toggle = MenuItem::with_id(app, TOGGLE, state.toggle_label(), true, None::<&str>)?;
     let menu = Menu::with_items(
         app,
         &[
@@ -52,12 +74,12 @@ pub fn install(app: &App, store: Arc<Store>) -> tauri::Result<()> {
     let on_menu = store.clone();
     let tray = TrayIconBuilder::new()
         .icon(tauri::include_image!("icons/32x32.png"))
-        .tooltip(tooltip(enabled))
+        .tooltip(state.tooltip())
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_menu_event(move |app, event| match event.id.as_ref() {
             OPEN => show_window(app),
-            TOGGLE => toggle_subtitles(&on_menu),
+            TOGGLE => toggle_subtitles(app.clone(), on_menu.clone()),
             QUIT => app.exit(0),
             _ => {}
         })
@@ -73,15 +95,21 @@ pub fn install(app: &App, store: Arc<Store>) -> tauri::Result<()> {
         })
         .build(app)?;
 
-    // 操作パネルで変えても、メニューと説明を今の状態にする
-    let mut settings = store.watch_settings();
+    let mut messages = store.subscribe();
     tauri::async_runtime::spawn(async move {
-        while settings.changed().await.is_ok() {
-            let enabled = settings.borrow_and_update().transcription_enabled;
-            if let Err(e) = toggle.set_text(toggle_label(enabled)) {
+        loop {
+            if let Err(RecvError::Closed) = messages.recv().await {
+                return;
+            }
+            let next = State::of(&store);
+            if next == state {
+                continue;
+            }
+            state = next;
+            if let Err(e) = toggle.set_text(state.toggle_label()) {
                 tracing::warn!("tray menu: {e}");
             }
-            if let Err(e) = tray.set_tooltip(Some(tooltip(enabled))) {
+            if let Err(e) = tray.set_tooltip(Some(state.tooltip())) {
                 tracing::warn!("tray tooltip: {e}");
             }
         }
@@ -89,39 +117,53 @@ pub fn install(app: &App, store: Arc<Store>) -> tauri::Result<()> {
     Ok(())
 }
 
-fn toggle_subtitles(store: &Store) {
-    let patch = SettingsPatch {
-        transcription_enabled: Some(!store.settings().transcription_enabled),
-        ..Default::default()
-    };
-    if let Err(e) = store.update_settings(patch) {
-        tracing::warn!("tray toggle: {e}");
-    }
+/// キーがないと字幕は始められないので、始める代わりに操作パネルを開く
+fn toggle_subtitles(app: AppHandle, store: Arc<Store>) {
+    tauri::async_runtime::spawn_blocking(move || {
+        let start = !store.settings().transcription_enabled;
+        if start && secrets::openai().is_none() && secrets::gift().is_none() {
+            show_window(&app);
+            return;
+        }
+        let patch = SettingsPatch {
+            transcription_enabled: Some(start),
+            ..Default::default()
+        };
+        if let Err(e) = store.update_settings(patch) {
+            tracing::warn!("tray toggle: {e}");
+        }
+    });
 }
 
-/// 閉じるボタンではウィンドウを隠すだけにする。動き続けていることは初回だけ知らせる
-pub fn hide(window: &WebviewWindow) {
-    if let Err(e) = window.hide() {
-        tracing::warn!("hide window: {e}");
-    }
-    let app = window.app_handle();
-    let store = app.state::<Arc<Store>>();
+/// 閉じるボタンではウィンドウを隠すだけにする。動き続けていることは初回だけ、隠す前に知らせる
+pub fn hide(window: &Window) {
+    let store = window.state::<Arc<Store>>();
     if store.settings().tray_notice_seen {
+        conceal(window);
         return;
     }
-    notify(app);
-    let patch = SettingsPatch {
-        tray_notice_seen: Some(true),
-        ..Default::default()
-    };
-    if let Err(e) = store.update_settings(patch) {
-        tracing::warn!("tray notice: {e}");
-    }
-}
-
-fn notify(app: &AppHandle) {
-    app.dialog()
+    let shown = window.clone();
+    window
+        .dialog()
         .message(NOTICE)
         .title("デドロ字幕")
-        .show(|_| {});
+        .parent(window)
+        .show(move |_| {
+            conceal(&shown);
+            let patch = SettingsPatch {
+                tray_notice_seen: Some(true),
+                ..Default::default()
+            };
+            if let Err(e) = shown.state::<Arc<Store>>().update_settings(patch) {
+                tracing::warn!("tray notice: {e}");
+            }
+        });
+}
+
+fn conceal(window: &Window) {
+    // Mac の全画面のまま隠すと、空の画面が残る
+    let hidden = window.set_fullscreen(false).and_then(|()| window.hide());
+    if let Err(e) = hidden {
+        tracing::warn!("hide window: {e}");
+    }
 }

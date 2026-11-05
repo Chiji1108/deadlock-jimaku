@@ -5,6 +5,7 @@
 mod tray;
 
 use std::net::{Ipv4Addr, SocketAddr};
+use std::time::Duration;
 
 use overlays_core::{DEFAULT_PORT, runtime, server, settings, store::Store};
 use tauri::webview::NewWindowResponse;
@@ -12,6 +13,8 @@ use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
 use tauri_plugin_updater::UpdaterExt;
 use tokio::net::TcpListener;
+
+const UPDATE_INTERVAL: Duration = Duration::from_secs(6 * 60 * 60);
 
 fn main() {
     tracing_subscriber::fmt::init();
@@ -28,6 +31,7 @@ fn main() {
             let data_dir = app.path().app_data_dir()?;
             let settings = settings::load(&data_dir.join(settings::FILE));
             let store = Store::new(settings, data_dir);
+            let idle = store.clone();
             #[cfg(not(target_os = "linux"))]
             {
                 app.manage(store.clone());
@@ -66,9 +70,15 @@ fn main() {
             // 開発中は確かめない（リリースの版と比べても意味がない）
             if !cfg!(debug_assertions) {
                 let app = app.handle().clone();
+                // 常駐すると起動し直さないので、字幕を止めている間に時々確かめる
                 tauri::async_runtime::spawn(async move {
-                    if let Err(e) = update(app).await {
-                        tracing::warn!("update: {e}");
+                    loop {
+                        if !idle.settings().transcription_enabled
+                            && let Err(e) = update(app.clone()).await
+                        {
+                            tracing::warn!("update: {e}");
+                        }
+                        tokio::time::sleep(UPDATE_INTERVAL).await;
                     }
                 });
             }
@@ -76,12 +86,9 @@ fn main() {
         })
         .on_window_event(|window, event| {
             #[cfg(not(target_os = "linux"))]
-            if let (tauri::WindowEvent::CloseRequested { api, .. }, Some(window)) = (
-                event,
-                window.app_handle().get_webview_window(window.label()),
-            ) {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();
-                tray::hide(&window);
+                tray::hide(window);
             }
             #[cfg(target_os = "linux")]
             let _ = (window, event);
@@ -113,6 +120,8 @@ async fn update(app: AppHandle) -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     };
     tracing::info!("update available: {}", update.version);
+    // 隠れたウィンドウに付くと、質問が見えない
+    show_window(&app);
     let dialog = app
         .dialog()
         .message(format!(

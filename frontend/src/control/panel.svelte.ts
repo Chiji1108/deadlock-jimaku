@@ -109,7 +109,7 @@ class Panel {
       this.transcriptionError = msg.error ?? undefined;
     } else if (msg.type === "usage") {
       this.usage = msg.usage;
-    } else if (msg.type === "obs.seen") {
+    } else if (msg.type === "settings.changed") {
       void this.refreshSettings();
     } else if (msg.type === "segment.upsert") {
       if (this.running) this.subtitled = true;

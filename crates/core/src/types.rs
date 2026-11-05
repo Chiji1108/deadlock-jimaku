@@ -126,9 +126,9 @@ pub enum ServerMsg {
     AudioLevel { db: f32 },
     #[serde(rename = "usage")]
     Usage { usage: crate::usage::UsageView },
-    /// OBS のブラウザソースで字幕オーバーレイが初めて開かれた（操作パネルのはじめかた）
-    #[serde(rename = "obs.seen")]
-    ObsSeen,
+    /// 操作パネル以外（OBS の字幕オーバーレイ、トレイ）で設定が変わった。パネルは取り直す
+    #[serde(rename = "settings.changed")]
+    SettingsChanged,
 }
 
 /// 字幕を始められなかった・止まった理由。文は操作パネルが作る（サーバーは中身だけを返す）
@@ -186,7 +186,7 @@ impl ServerMsg {
             Self::Snapshot { .. } | Self::SegmentUpsert { .. } => Topic::Subtitle,
             Self::GlossaryUpdated { .. } => Topic::Glossary,
             Self::RankUpdate { .. } => Topic::Rank,
-            Self::TranscriptionStatus { .. } | Self::ObsSeen => Topic::Status,
+            Self::TranscriptionStatus { .. } | Self::SettingsChanged => Topic::Status,
             Self::Display { .. } => Topic::Display,
             Self::AudioLevel { .. } => Topic::Level,
             Self::Usage { .. } => Topic::Usage,
