@@ -1041,6 +1041,7 @@ name = "deadlock-jimaku"
 version = "0.2.13"
 dependencies = [
  "overlays-core",
+ "rustls",
  "serde_json",
  "tauri",
  "tauri-build",

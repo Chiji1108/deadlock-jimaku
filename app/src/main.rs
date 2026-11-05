@@ -19,6 +19,11 @@ const UPDATE_INTERVAL: Duration = Duration::from_secs(6 * 60 * 60);
 
 fn main() {
     tracing_subscriber::fmt::init();
+    // 依存が ring と aws-lc の両方を有効にするので、rustls は TLS の実装を自分では選べない。
+    // 選ばないと、Realtime につなぐときに panic する（reqwest と同じ aws-lc にする）
+    rustls::crypto::aws_lc_rs::default_provider()
+        .install_default()
+        .expect("no other TLS provider is installed yet");
 
     tauri::Builder::default()
         // 動いているときにもう一度開いたら、ポートを取り合わずにウィンドウを出す
