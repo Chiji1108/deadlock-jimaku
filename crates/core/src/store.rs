@@ -100,6 +100,9 @@ impl Store {
         }
         if next.obs_seen != current.obs_seen
             || next.transcription_enabled != current.transcription_enabled
+            || next.speech_engine != current.speech_engine
+            || next.mic_language != current.mic_language
+            || next.translate_to != current.translate_to
         {
             let _ = self.tx.send(ServerMsg::SettingsChanged);
         }

@@ -22,6 +22,8 @@ pub const MAX_TRANSLATE_TO: usize = 4;
 pub struct Settings {
     /// マイクを字幕にするか（操作パネルの開始・停止）
     pub transcription_enabled: bool,
+    /// 音声認識と翻訳をどこで動かすか
+    pub speech_engine: SpeechEngine,
     /// 配信者が話す言語
     pub mic_language: LangCode,
     /// マイクのデバイス名。None なら OS の既定の入力デバイス
@@ -359,6 +361,18 @@ pub enum Background {
     Band,
 }
 
+/// 音声認識と翻訳をどこで動かすか（DESIGN.md 9.6）
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "lowercase")]
+#[ts(export)]
+pub enum SpeechEngine {
+    /// OpenAI の API。用語の強調とふりがなが使える
+    #[default]
+    OpenAi,
+    /// Chrome のページの中で動かす。無料で、用語の強調とふりがなは使えない
+    Chrome,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "lowercase")]
 #[ts(export)]
@@ -383,6 +397,7 @@ impl Default for Settings {
     fn default() -> Self {
         Self {
             transcription_enabled: false,
+            speech_engine: SpeechEngine::default(),
             mic_language: "ja".into(),
             mic_device: None,
             translate_to: vec!["en".into()],
@@ -565,6 +580,9 @@ impl Settings {
         if let Some(enabled) = patch.deadlock_mode {
             next.deadlock_mode = enabled;
         }
+        if let Some(engine) = patch.speech_engine {
+            next.speech_engine = engine;
+        }
         if let Some(enabled) = patch.live_subtitles {
             next.live_subtitles = enabled;
         }
@@ -616,6 +634,8 @@ pub struct SettingsPatch {
     pub deadlock_mode: Option<bool>,
     #[ts(optional)]
     pub live_subtitles: Option<bool>,
+    #[ts(optional)]
+    pub speech_engine: Option<SpeechEngine>,
     /// SteamID64 か 32bit のアカウント ID。空文字列ならランクを表示しない
     #[ts(optional)]
     pub rank_account: Option<String>,

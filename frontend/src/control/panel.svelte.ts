@@ -16,6 +16,9 @@ import { connect, type Status } from "../lib/ws";
 export const overlayUrl = (name: "subtitles" | "rank" | "items") =>
   `${import.meta.env.CORE_ORIGIN}/overlay/${name}`;
 
+/** Chrome のモードで字幕を動かすページ */
+export const chromeUrl = `${import.meta.env.CORE_ORIGIN}/chrome`;
+
 /** 言語名は画面の言語（日本語）で出す。翻訳先は配信者が読める名前で選ぶ */
 const languageNames = new Intl.DisplayNames("ja", { type: "language" });
 /** Intl の名前が不自然なもの（「ポルトガル語 (イベリア半島)」）は地域を外す */
@@ -64,9 +67,13 @@ class Panel {
     return this.view?.keys.openai.state === "missing" && this.view.keys.gift.state === "missing";
   }
 
-  /** 字幕を始められる鍵（自分のキーかギフトコード）がある */
+  /** 字幕を始められる鍵（自分のキーかギフトコード）がある。Chrome のモードは鍵が要らない */
   get hasAccess() {
-    return this.view?.keys.openai.state === "saved" || this.view?.keys.gift.state === "saved";
+    return (
+      this.settings?.speechEngine === "chrome" ||
+      this.view?.keys.openai.state === "saved" ||
+      this.view?.keys.gift.state === "saved"
+    );
   }
 
   /** 字幕を始める操作をしていて、止まった理由もない */

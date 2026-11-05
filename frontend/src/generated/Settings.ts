@@ -5,6 +5,7 @@ import type { Models } from "./Models";
 import type { RankContent } from "./RankContent";
 import type { Region } from "./Region";
 import type { Segmentation } from "./Segmentation";
+import type { SpeechEngine } from "./SpeechEngine";
 import type { SubtitleDisplay } from "./SubtitleDisplay";
 
 export type Settings = { 
@@ -12,6 +13,10 @@ export type Settings = {
  * マイクを字幕にするか（操作パネルの開始・停止）
  */
 transcriptionEnabled: boolean, 
+/**
+ * 音声認識と翻訳をどこで動かすか
+ */
+speechEngine: SpeechEngine, 
 /**
  * 配信者が話す言語
  */

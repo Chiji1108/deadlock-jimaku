@@ -1,5 +1,6 @@
 import type { GiftStatus } from "../generated/GiftStatus";
 import type { Provider } from "../generated/Provider";
+import type { Segment } from "../generated/Segment";
 import type { SettingsPatch } from "../generated/SettingsPatch";
 import type { SettingsView } from "../generated/SettingsView";
 import type { ShareView } from "../generated/ShareView";
@@ -28,6 +29,14 @@ export const api = {
   /** 対応している言語のコード */
   languages: () => request<string[]>("/api/languages"),
   demo: () => fetch("/api/demo", { method: "POST" }),
+  /** Chrome のページが認識した字幕を送る */
+  segment: (segment: Segment) =>
+    fetch("/api/segments", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(segment),
+      keepalive: true,
+    }),
 
   /** もらったギフトコードの状態 */
   gift: () => request<GiftStatus>("/api/gift"),

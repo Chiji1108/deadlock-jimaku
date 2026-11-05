@@ -11,7 +11,7 @@ use futures_util::FutureExt;
 use tokio::task::JoinHandle;
 
 use crate::openai::Access;
-use crate::settings::{Models, Region, Segmentation, Settings};
+use crate::settings::{Models, Region, Segmentation, Settings, SpeechEngine};
 use crate::store::Store;
 use crate::types::{LangCode, TranscriptionError};
 use crate::{assets, audio, rank, secrets, share, subtitles};
@@ -139,8 +139,9 @@ pub async fn run(store: Arc<Store>, options: Options) {
 
         let source = match &options.input_file {
             Some(path) => Some(Source::File(path.clone())),
-            None => settings
-                .transcription_enabled
+            // Chrome のモードでは、ページが認識した字幕を受け取るだけ
+            None => (settings.transcription_enabled
+                && settings.speech_engine == SpeechEngine::OpenAi)
                 .then(|| Source::Mic(settings.mic_device.clone())),
         };
         let input = SubtitlesInput {

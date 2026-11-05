@@ -63,6 +63,8 @@
 
   const status = $derived.by(() => {
     if (!s?.transcriptionEnabled) return { label: "停止中", dot: "bg-muted-foreground/50" };
+    if (s.speechEngine === "chrome")
+      return { label: "Chrome のページで字幕を出します", dot: "bg-emerald-500" };
     if (panel.transcriptionError) return { label: "止まっています", dot: "bg-destructive" };
     if (panel.silent) return { label: "音が届いていません", dot: "bg-amber-500" };
     if (panel.level === undefined)

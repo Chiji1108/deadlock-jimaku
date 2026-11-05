@@ -20,7 +20,7 @@ use crate::secrets::{self, Provider};
 use crate::settings::SettingsPatch;
 use crate::share::{self, GiftStatus, Refused, SharedCode};
 use crate::store::Store;
-use crate::types::{ClientMsg, LangCode, ServerMsg, SettingsView, Topic};
+use crate::types::{ClientMsg, LangCode, Segment, ServerMsg, SettingsView, Topic};
 use crate::{audio, lang};
 use ts_rs::TS;
 
@@ -44,6 +44,7 @@ pub fn router(store: Arc<Store>) -> Router {
         .route("/share/codes/{id}", patch(update_code))
         .route("/devices", get(devices))
         .route("/languages", get(languages))
+        .route("/segments", post(post_segment))
         .layer(middleware::from_fn(local_only));
     Router::new()
         .route("/ws", get(ws))
@@ -68,6 +69,12 @@ async fn local_only(headers: HeaderMap, request: Request, next: Next) -> Respons
     } else {
         StatusCode::FORBIDDEN.into_response()
     }
+}
+
+/// Chrome のページが認識した字幕を受け取る（DESIGN.md 9.6）
+async fn post_segment(State(store): State<Arc<Store>>, Json(segment): Json<Segment>) -> StatusCode {
+    store.upsert_segment(segment);
+    StatusCode::NO_CONTENT
 }
 
 async fn get_settings(State(store): State<Arc<Store>>) -> Json<SettingsView> {
