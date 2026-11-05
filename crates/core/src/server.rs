@@ -117,13 +117,23 @@ async fn put_key(
         provider,
         key.is_empty(),
         blocking(secrets::share_token).await,
-    ) && let Err(refused) = share::update_key(&store.settings().api_base, &token, &key).await
-    {
-        let message = format!(
-            "キーは保存しましたが、おすそ分けに預けたキーを替えられませんでした（{}）",
-            refused.message
-        );
-        return (StatusCode::BAD_GATEWAY, message).into_response();
+    ) {
+        match share::update_key(&store.settings().api_base, &token, &key).await {
+            Ok(token) => {
+                if let Err(e) = blocking(move || secrets::set_share_token(&token)).await {
+                    return (StatusCode::INTERNAL_SERVER_ERROR, format!("{e:#}")).into_response();
+                }
+            }
+            // ほかの PC でやめた、キーを替えたなど。預けたキーはもうない
+            Err(refused) if refused.status == StatusCode::UNAUTHORIZED => {}
+            Err(refused) => {
+                let message = format!(
+                    "キーは保存しましたが、おすそ分けに預けたキーを替えられませんでした（{}）",
+                    refused.message
+                );
+                return (StatusCode::BAD_GATEWAY, message).into_response();
+            }
+        }
     }
     get_settings(State(store)).await.into_response()
 }
@@ -211,6 +221,17 @@ async fn get_share(State(store): State<Arc<Store>>) -> Response {
             Json(ShareView {
                 enabled: true,
                 codes,
+            })
+            .into_response()
+        }
+        // ほかの PC でやめた、キーを替えたなど。この PC は預ける前の状態に戻す
+        Err(refused) if refused.status == StatusCode::UNAUTHORIZED => {
+            if let Err(e) = blocking(|| secrets::set_share_token("")).await {
+                return (StatusCode::INTERNAL_SERVER_ERROR, format!("{e:#}")).into_response();
+            }
+            Json(ShareView {
+                enabled: false,
+                codes: Vec::new(),
             })
             .into_response()
         }

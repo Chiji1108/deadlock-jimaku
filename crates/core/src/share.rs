@@ -162,7 +162,7 @@ async fn call(
     }
     let message = match value["error"].as_str() {
         Some("invalidKey" | "noKey") => "OpenAI の API キーが使えません".to_owned(),
-        Some("keyInUse") => "そのキーは、別の PC でおすそ分けに使っています".to_owned(),
+        Some("keyInUse") => "そのキーは、別のおすそ分けで使っています".to_owned(),
         Some("unauthorized") => {
             "おすそ分けの登録が見つかりません。「おすそ分けをやめる」を押してから、ギフトコードを作り直してください"
                 .to_owned()
@@ -192,17 +192,24 @@ pub async fn disable(api: &str, token: &str) -> Result<(), Refused> {
         .map(drop)
 }
 
-pub async fn update_key(api: &str, token: &str, key: &str) -> Result<(), Refused> {
+/// 預けたキーを替える。合言葉も新しくなる
+pub async fn update_key(api: &str, token: &str, key: &str) -> Result<String, Refused> {
     let body = json!({ "key": key });
-    call(
+    let value = call(
         api,
         reqwest::Method::PUT,
         "/share/key",
         Some(token),
         Some(body),
     )
-    .await
-    .map(drop)
+    .await?;
+    value["token"]
+        .as_str()
+        .map(str::to_owned)
+        .ok_or_else(|| Refused {
+            status: StatusCode::BAD_GATEWAY,
+            message: "サーバーの答えを読めません".to_owned(),
+        })
 }
 
 pub async fn codes(api: &str, token: &str) -> Result<Vec<SharedCode>, Refused> {

@@ -5,7 +5,7 @@ import { addUsage, codeByValue, issuerByToken, month, usable, type Code } from "
 import { openai, validKey } from "./openai";
 import { audioUsd, tokensOf, tokensUsd, wavSeconds } from "./price";
 import { relay } from "./realtime";
-import { decrypt, encrypt, newCode, newId, newToken, normalizeCode, sha256 } from "./secrets";
+import { decrypt, encrypt, issuerToken, newCode, newId, normalizeCode, sha256 } from "./secrets";
 
 export interface Env {
   DB: D1Database;
@@ -25,22 +25,23 @@ const RESPONSES_FIELDS = ["model", "instructions", "input", "text", "reasoning",
 
 // ---- おすそ分けする人（合言葉で見分ける） ----
 
-/** キーを預ける。同じキーで預け直したら、合言葉だけ作り直す（コードは残る） */
+/** キーを預ける。同じキーならどの PC からでも同じ人になり、同じ合言葉とコードを使う */
 app.post("/share", async (c) => {
   const key = (await json<{ key?: unknown }>(c))?.key;
   if (typeof key !== "string" || !key) return c.json({ error: "noKey" }, 400);
   if (!(await validKey(key))) return c.json({ error: "invalidKey" }, 400);
-  const token = newToken();
+  const keyHash = await sha256(key);
+  const token = await issuerToken(keyHash, c.env.SHARE_KEY);
   await c.env.DB.prepare(
     `INSERT INTO issuers (id, admin_token_hash, key_hash, encrypted_key, created_at) VALUES (?, ?, ?, ?, ?)
      ON CONFLICT (key_hash) DO UPDATE SET admin_token_hash = excluded.admin_token_hash, encrypted_key = excluded.encrypted_key`,
   )
-    .bind(newId(), await sha256(token), await sha256(key), await encrypt(key, c.env.SHARE_KEY), Date.now())
+    .bind(newId(), await sha256(token), keyHash, await encrypt(key, c.env.SHARE_KEY), Date.now())
     .run();
   return c.json({ token });
 });
 
-/** キーを替えたとき。コードはそのまま、新しいキーで動く */
+/** キーを替えたとき。コードはそのまま、新しいキーで動く。合言葉も新しくなり、古いキーのものは使えなくなる */
 app.put("/share/key", async (c) => {
   const issuer = await admin(c);
   if (!issuer) return c.json({ error: "unauthorized" }, 401);
@@ -52,12 +53,15 @@ app.put("/share/key", async (c) => {
   const other = await c.env.DB.prepare("SELECT id FROM issuers WHERE key_hash = ? AND id != ?")
     .bind(keyHash, issuer.id)
     .first();
-  // そのキーで別におすそ分けを有効にしている（合言葉が 2 つある）。片方を無効にしてもらう
+  // そのキーで別の人としておすそ分けを有効にしている。片方を無効にしてもらう
   if (other) return c.json({ error: "keyInUse" }, 409);
-  await c.env.DB.prepare("UPDATE issuers SET key_hash = ?, encrypted_key = ? WHERE id = ?")
-    .bind(keyHash, await encrypt(key, c.env.SHARE_KEY), issuer.id)
+  const token = await issuerToken(keyHash, c.env.SHARE_KEY);
+  await c.env.DB.prepare(
+    "UPDATE issuers SET key_hash = ?, encrypted_key = ?, admin_token_hash = ? WHERE id = ?",
+  )
+    .bind(keyHash, await encrypt(key, c.env.SHARE_KEY), await sha256(token), issuer.id)
     .run();
-  return c.body(null, 204);
+  return c.json({ token });
 });
 
 /** おすそ分けをやめる。預けたキーとコードを消す */

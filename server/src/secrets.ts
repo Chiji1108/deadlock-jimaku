@@ -19,8 +19,17 @@ export function normalizeCode(code: string): string {
     .replace(/[IL]/g, "1");
 }
 
-export function newToken(): string {
-  return base64url(crypto.getRandomValues(new Uint8Array(32)));
+/** おすそ分けする人の合言葉。キーごとに決まった値にして、同じキーの PC で同じものを使う */
+export async function issuerToken(keyHash: string, secret: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    rawKey(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const mac = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`issuer:${keyHash}`));
+  return base64url(new Uint8Array(mac));
 }
 
 export function newId(): string {
@@ -54,8 +63,11 @@ export async function decrypt(sealed: string, secret: string): Promise<string> {
 }
 
 function aesKey(secret: string): Promise<CryptoKey> {
-  const raw = Uint8Array.from(atob(secret), (c) => c.charCodeAt(0));
-  return crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["encrypt", "decrypt"]);
+  return crypto.subtle.importKey("raw", rawKey(secret), "AES-GCM", false, ["encrypt", "decrypt"]);
+}
+
+function rawKey(secret: string): Uint8Array {
+  return Uint8Array.from(atob(secret), (c) => c.charCodeAt(0));
 }
 
 function base64url(bytes: Uint8Array): string {

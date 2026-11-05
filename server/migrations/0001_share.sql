@@ -1,6 +1,6 @@
 -- おすそ分け（DESIGN.md 17.1）。キーとコードと合言葉は、そのものを保存しない（キーは暗号化、ほかはハッシュ）
 
--- おすそ分けを有効にした人。同じキーで有効にし直したら同じ行（合言葉だけ作り直す）
+-- おすそ分けを有効にした人。同じキーで有効にし直したら同じ行（合言葉もキーで決まる）
 CREATE TABLE issuers (
   id TEXT PRIMARY KEY,
   admin_token_hash TEXT NOT NULL UNIQUE,
