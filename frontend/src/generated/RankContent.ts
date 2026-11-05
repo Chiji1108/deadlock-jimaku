@@ -3,4 +3,4 @@
 /**
  * ランクのオーバーレイに出すもの
  */
-export type RankContent = "full" | "name" | "icon";
+export type RankContent = "full" | "gauge" | "name" | "icon";

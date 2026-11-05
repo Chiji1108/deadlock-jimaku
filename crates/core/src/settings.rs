@@ -279,6 +279,8 @@ impl SubtitleDisplay {
 pub enum RankContent {
     /// アイコン・名前・ポイント（ゲージ）
     Full,
+    /// アイコン・名前・ゲージ（数字なし。小さく置くとき向け）
+    Gauge,
     /// アイコンと名前
     Name,
     /// アイコンだけ

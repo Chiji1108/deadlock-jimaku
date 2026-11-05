@@ -32,7 +32,7 @@
   <!-- 1 行目: ランク名、2 行目: 太いゲージ（ポイントは中に重ねる）。出すものは操作パネルで選ぶ -->
   {#if content !== "icon"}<div class="text">
       {#if label}<p class="name" lang={shown}>{label}</p>{/if}
-      {#if content !== "full"}
+      {#if content === "name"}
         <!-- 名前だけ -->
       {:else if rank.leaderboard}
         <!-- エターナスは上のティアがないので、リーダーボードの順位を出す -->
@@ -40,12 +40,14 @@
       {:else if rank.progress}
         <div class="bar">
           <div class="fill" style:width="{ratio * 100}%"></div>
-          <p class="points">
-            <!-- ポイントが変わったら桁ごとに数字を動かす -->
-            <TextMorph text={number(rank.progress.value)} numbers as="span" duration={600} /><span
-              class="max">{` / ${number(rank.progress.max)}`}</span
-            >
-          </p>
+          {#if content === "full"}
+            <p class="points">
+              <!-- ポイントが変わったら桁ごとに数字を動かす -->
+              <TextMorph text={number(rank.progress.value)} numbers as="span" duration={600} /><span
+                class="max">{` / ${number(rank.progress.max)}`}</span
+              >
+            </p>
+          {/if}
         </div>
       {:else if rank.points !== undefined}
         <!-- 順位が取れないエターナスは、累積のポイントを出す -->
