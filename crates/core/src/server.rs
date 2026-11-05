@@ -20,7 +20,9 @@ use crate::secrets::{self, Provider};
 use crate::settings::SettingsPatch;
 use crate::share::{self, GiftStatus, Refused, SharedCode};
 use crate::store::Store;
-use crate::types::{ClientMsg, LangCode, Segment, ServerMsg, SettingsView, Topic};
+use crate::types::{
+    ChromeStatus, ClientMsg, LangCode, LiveText, Segment, ServerMsg, SettingsView, Topic,
+};
 use crate::{audio, lang};
 use ts_rs::TS;
 
@@ -46,6 +48,8 @@ pub fn router(store: Arc<Store>) -> Router {
         .route("/languages", get(languages))
         .route("/segments", post(post_segment))
         .route("/chrome/open", post(open_chrome))
+        .route("/chrome/status", post(post_chrome_status))
+        .route("/live", post(post_live))
         .layer(middleware::from_fn(local_only));
     Router::new()
         .route("/ws", get(ws))
@@ -78,17 +82,25 @@ async fn post_segment(State(store): State<Arc<Store>>, Json(segment): Json<Segme
     StatusCode::NO_CONTENT
 }
 
-/// 無料モードのページを Chrome で開く
+/// 閉じられた Chrome を開き直す
 async fn open_chrome(State(store): State<Arc<Store>>) -> StatusCode {
-    let url = format!("http://127.0.0.1:{}/chrome", crate::DEFAULT_PORT);
-    match crate::chrome::open(store.data_dir(), &url) {
-        Ok(()) => StatusCode::NO_CONTENT,
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => StatusCode::NOT_FOUND,
-        Err(e) => {
-            tracing::warn!("open chrome: {e}");
-            StatusCode::INTERNAL_SERVER_ERROR
-        }
-    }
+    store.sync_chrome(true);
+    StatusCode::NO_CONTENT
+}
+
+/// ハイブリッドモードの途中の文を受け取る
+async fn post_live(State(store): State<Arc<Store>>, Json(live): Json<LiveText>) -> StatusCode {
+    store.send_live(live);
+    StatusCode::NO_CONTENT
+}
+
+/// Chrome のページの状態を受け取る
+async fn post_chrome_status(
+    State(store): State<Arc<Store>>,
+    Json(status): Json<ChromeStatus>,
+) -> StatusCode {
+    store.set_chrome_status(Some(status));
+    StatusCode::NO_CONTENT
 }
 
 async fn get_settings(State(store): State<Arc<Store>>) -> Json<SettingsView> {

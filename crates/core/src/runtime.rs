@@ -75,6 +75,7 @@ struct SubtitlesInput {
     /// 用語ヒントはセッションの開始時にしか渡せないので、変えたら始め直す
     deadlock_mode: bool,
     live_subtitles: bool,
+    speech_engine: SpeechEngine,
     models: Models,
     realtime_delay: String,
     segmentation: Segmentation,
@@ -141,9 +142,9 @@ pub async fn run(store: Arc<Store>, options: Options) {
 
         let source = match &options.input_file {
             Some(path) => Some(Source::File(path.clone())),
-            // Chrome のモードでは、ページが認識した字幕を受け取るだけ
+            // Chrome だけのモードでは、ページが認識した字幕を受け取るだけ
             None => (settings.transcription_enabled
-                && settings.speech_engine == SpeechEngine::OpenAi)
+                && settings.speech_engine != SpeechEngine::Chrome)
                 .then(|| Source::Mic(settings.mic_device.clone())),
         };
         let input = SubtitlesInput {
@@ -153,11 +154,13 @@ pub async fn run(store: Arc<Store>, options: Options) {
             translate_to: settings.translate_to.clone(),
             deadlock_mode: settings.deadlock_mode,
             live_subtitles: settings.wants_live_subtitles(),
+            speech_engine: settings.speech_engine,
             models: settings.models.clone(),
             realtime_delay: settings.realtime_delay.clone(),
             segmentation: settings.segmentation.clone(),
             access: access.clone(),
         };
+        store.sync_chrome(settings.transcription_enabled && settings.speech_engine.uses_chrome());
         let starting = !running;
         running = source.is_some();
         subtitles_slot

@@ -133,9 +133,52 @@ pub enum ServerMsg {
     AudioLevel { db: f32 },
     #[serde(rename = "usage")]
     Usage { usage: crate::usage::UsageView },
+    /// Chrome のページの状態。None はページがつながっていない
+    #[serde(rename = "chrome.status")]
+    ChromeStatus { status: Option<ChromeStatus> },
+    /// ハイブリッドモードで発話が閉じた。ページは認識を区切り、次の発話に備える
+    #[serde(rename = "speech.cut")]
+    SpeechCut,
     /// 操作パネル以外（OBS の字幕オーバーレイ、トレイ）で設定が変わった。パネルは取り直す
     #[serde(rename = "settings.changed")]
     SettingsChanged,
+}
+
+/// Chrome のページが知らせる状態（DESIGN.md 9.6）
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum ChromeState {
+    /// 翻訳のモデルをダウンロードしている
+    Preparing,
+    /// 聞いている
+    Listening,
+    /// 止まっている（字幕を始めるのを待っている）
+    Idle,
+    /// この Chrome では使えない
+    Unsupported,
+    /// マイクが使えないなど
+    Failed,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ChromeStatus {
+    pub state: ChromeState,
+    /// 利用者に見せる説明
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub detail: Option<String>,
+}
+
+/// ハイブリッドモードで Chrome が認識した途中の文と訳
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct LiveText {
+    pub text: String,
+    #[serde(default)]
+    pub translations: Translations,
 }
 
 /// 字幕を始められなかった・止まった理由。文は操作パネルが作る（サーバーは中身だけを返す）
@@ -193,7 +236,10 @@ impl ServerMsg {
             Self::Snapshot { .. } | Self::SegmentUpsert { .. } => Topic::Subtitle,
             Self::GlossaryUpdated { .. } => Topic::Glossary,
             Self::RankUpdate { .. } => Topic::Rank,
-            Self::TranscriptionStatus { .. } | Self::SettingsChanged => Topic::Status,
+            Self::TranscriptionStatus { .. }
+            | Self::SettingsChanged
+            | Self::ChromeStatus { .. }
+            | Self::SpeechCut => Topic::Status,
             Self::Display { .. } => Topic::Display,
             Self::AudioLevel { .. } => Topic::Level,
             Self::Usage { .. } => Topic::Usage,

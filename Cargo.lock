@@ -1038,7 +1038,7 @@ dependencies = [
 
 [[package]]
 name = "deadlock-jimaku"
-version = "0.2.13"
+version = "0.3.0"
 dependencies = [
  "overlays-core",
  "rustls",
@@ -3248,7 +3248,7 @@ dependencies = [
 
 [[package]]
 name = "overlays-core"
-version = "0.2.13"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "audioadapter-buffers",

@@ -1,5 +1,5 @@
 import type { Segment } from "../generated/Segment";
-import type { Token } from "../generated/Token";
+import { tokens, translateAll } from "./live";
 import type { Translator } from "./speech";
 
 /** 字幕を組み立てて送る。途中の文もその場で訳す（訳している間に届いた文は、終わってから訳す） */
@@ -61,7 +61,7 @@ export class Captions {
     let text;
     do {
       text = segment.text;
-      const draft = await this.translate(text);
+      const draft = await translateAll(this.translators, text);
       if (segment === this.current && Object.keys(draft).length > 0) {
         segment.draft = draft;
         this.publish(segment);
@@ -73,7 +73,7 @@ export class Captions {
   private async settle(segment: Segment) {
     segment.stage = "final";
     this.publish(segment);
-    const translations = await this.translate(segment.text);
+    const translations = await translateAll(this.translators, segment.text);
     const { draft: _, ...settled } = segment;
     this.publish({
       ...settled,
@@ -82,17 +82,4 @@ export class Captions {
       settledAt: Date.now(),
     });
   }
-
-  /** 訳せなかった言語は省く（全部だめなら、話した言葉だけを出す） */
-  private async translate(text: string) {
-    const results = await Promise.all(
-      [...this.translators].map(async ([lang, translator]) => {
-        const translated = await translator.translate(text).catch(() => "");
-        return [lang, tokens(translated)] as const;
-      }),
-    );
-    return Object.fromEntries(results.filter(([, t]) => t.length > 0));
-  }
 }
-
-const tokens = (text: string): Token[] => (text ? [{ t: "text", text }] : []);

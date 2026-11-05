@@ -9,8 +9,12 @@ use bytes::Bytes;
 use tokio::sync::{broadcast, watch};
 
 use crate::assets::Loaded;
+use crate::chrome::Browser;
 use crate::settings::{self, Settings, SettingsPatch, SubtitleDisplay};
-use crate::types::{ItemCardsView, RankState, Segment, ServerMsg, Stage, TranscriptionError};
+use crate::types::{
+    ChromeState, ChromeStatus, ItemCardsView, LiveText, RankState, Segment, ServerMsg, Stage,
+    TranscriptionError,
+};
 use crate::usage::Meter;
 
 /// snapshot で送る直近の Segment の数
@@ -35,6 +39,11 @@ pub struct Store {
     /// マイクの入力レベル（dBFS）。1 秒に 10 回届くので、字幕などと同じ broadcast には流さない
     /// （購読していないオーバーレイを起こさず、取りこぼしの原因にもしない）
     level: watch::Sender<f32>,
+    /// ハイブリッドモードの途中の文（最新だけあればいい）
+    live: watch::Sender<LiveText>,
+    chrome_status: Mutex<Option<ChromeStatus>>,
+    /// 字幕のために起動した Chrome
+    browser: Mutex<Option<Browser>>,
     meter: Arc<Meter>,
 }
 
@@ -60,6 +69,9 @@ impl Store {
             rank_image: Mutex::new(None),
             tx: broadcast::channel(256).0,
             level: watch::Sender::new(f32::NEG_INFINITY),
+            live: watch::Sender::new(LiveText::default()),
+            chrome_status: Mutex::new(None),
+            browser: Mutex::new(None),
             meter,
         })
     }
@@ -177,11 +189,62 @@ impl Store {
         msgs.push(ServerMsg::TranscriptionStatus {
             error: self.transcription_error(),
         });
+        msgs.push(ServerMsg::ChromeStatus {
+            status: self.chrome_status.lock().unwrap().clone(),
+        });
         msgs.push(display(&self.settings()));
         msgs.push(ServerMsg::Usage {
             usage: self.meter.watch().borrow().clone(),
         });
         msgs
+    }
+
+    /// Chrome のページの状態を受け取る。変わったときだけ知らせる
+    pub fn set_chrome_status(&self, status: Option<ChromeStatus>) {
+        let mut current = self.chrome_status.lock().unwrap();
+        if *current != status {
+            current.clone_from(&status);
+            let _ = self.tx.send(ServerMsg::ChromeStatus { status });
+        }
+    }
+
+    /// 字幕を始めるなら Chrome を起動し、止めるなら閉じる（DESIGN.md 9.6）
+    pub fn sync_chrome(self: &Arc<Self>, wanted: bool) {
+        let mut browser = self.browser.lock().unwrap();
+        if !wanted {
+            *browser = None;
+            drop(browser);
+            self.set_chrome_status(None);
+            return;
+        }
+        if browser.as_mut().is_some_and(Browser::running) {
+            return;
+        }
+        match Browser::launch(self.clone()) {
+            Ok(launched) => *browser = Some(launched),
+            Err(e) => {
+                tracing::warn!("open chrome: {e}");
+                drop(browser);
+                self.set_chrome_status(Some(ChromeStatus {
+                    state: ChromeState::Failed,
+                    detail: Some("Google Chrome が見つかりません".into()),
+                }));
+            }
+        }
+    }
+
+    /// Chrome が認識した途中の文。ハイブリッドモードの字幕の処理が読む
+    pub fn send_live(&self, live: LiveText) {
+        self.live.send_replace(live);
+    }
+
+    pub fn watch_live(&self) -> watch::Receiver<LiveText> {
+        self.live.subscribe()
+    }
+
+    /// 発話の区切りをページに知らせる
+    pub fn send_speech_cut(&self) {
+        let _ = self.tx.send(ServerMsg::SpeechCut);
     }
 
     /// OpenAI の使用量を数える

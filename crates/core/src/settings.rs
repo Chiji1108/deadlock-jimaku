@@ -366,11 +366,19 @@ pub enum Background {
 #[serde(rename_all = "lowercase")]
 #[ts(export)]
 pub enum SpeechEngine {
-    /// OpenAI の API。用語の強調とふりがなが使える
+    /// 途中の字幕は Chrome、確定は OpenAI。速く、用語の強調とふりがなが使える
     #[default]
+    Hybrid,
+    /// すべて OpenAI。Chrome が要らず、PC の負荷が小さい
     OpenAi,
-    /// Chrome のページの中で動かす。無料で、用語の強調とふりがなは使えない
+    /// すべて Chrome。無料で、用語の強調とふりがなは使えない
     Chrome,
+}
+
+impl SpeechEngine {
+    pub fn uses_chrome(self) -> bool {
+        self != Self::OpenAi
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -470,9 +478,11 @@ impl Settings {
         !self.subtitle_display.show_source && !self.translate_to.is_empty()
     }
 
-    /// 途中の字幕を動かすか。翻訳だけなら見えないので、料金をかけない
+    /// OpenAI の途中の字幕を動かすか。翻訳だけなら見えないので、料金をかけない
     pub fn wants_live_subtitles(&self) -> bool {
-        self.live_subtitles && !self.translation_only()
+        self.speech_engine == SpeechEngine::OpenAi
+            && self.live_subtitles
+            && !self.translation_only()
     }
 
     /// ふりがなを聞くか。翻訳だけなら見えないので、料金をかけない
@@ -844,6 +854,7 @@ mod tests {
     fn translation_only_needs_a_translation_target() {
         let hide = |translate_to: Vec<LangCode>| Settings {
             translate_to,
+            speech_engine: SpeechEngine::OpenAi,
             subtitle_display: SubtitleDisplay {
                 show_source: false,
                 ..Default::default()
@@ -859,6 +870,18 @@ mod tests {
         assert!(!source.translation_only());
         assert!(source.wants_live_subtitles());
         assert!(source.wants_furigana());
+    }
+
+    #[test]
+    fn only_the_openai_engine_uses_realtime() {
+        let with = |speech_engine| Settings {
+            speech_engine,
+            ..Default::default()
+        };
+        assert_eq!(Settings::default().speech_engine, SpeechEngine::Hybrid);
+        assert!(with(SpeechEngine::OpenAi).wants_live_subtitles());
+        assert!(!with(SpeechEngine::Hybrid).wants_live_subtitles());
+        assert!(!with(SpeechEngine::Chrome).wants_live_subtitles());
     }
 
     #[test]

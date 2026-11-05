@@ -169,7 +169,8 @@
           <Switch
             id="furigana"
             checked={d.furigana}
-            disabled={onlyTranslation && !s.translateTo.includes("ja")}
+            disabled={s.speechEngine === "chrome" ||
+              (onlyTranslation && !s.translateTo.includes("ja"))}
             onCheckedChange={(v) => set({ furigana: v })}
           />
         </Field.Field>

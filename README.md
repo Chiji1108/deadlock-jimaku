@@ -6,7 +6,7 @@ Deadlock の配信者向けの OBS オーバーレイ（非公式）。
 - **ランク**: ランクのアイコン・名前・ポイントのゲージ
 - **アイテム説明**: 字幕でアイテム名が出たら、その説明をゲーム内と同じカードで出す
 
-音声認識と翻訳には OpenAI の API キーが必要です。設定はアプリの操作パネルから行います。
+字幕の作り方は 3 つのモードから選べます。ハイブリッド（既定）は Google Chrome と OpenAI の API キー、OpenAI は API キー、Chrome は Google Chrome が必要です。設定はアプリの操作パネルから行います。
 
 サイトは [jimaku.deadlock.jp](https://jimaku.deadlock.jp)。設計は [DESIGN.md](DESIGN.md) を見てください。
 

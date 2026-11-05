@@ -33,9 +33,12 @@ interface Pair {
 export interface Translator {
   translate(text: string): Promise<string>;
 }
+interface Monitor {
+  addEventListener(type: "downloadprogress", on: (event: { loaded: number }) => void): void;
+}
 interface TranslatorClass {
   availability(pair: Pair): Promise<Availability>;
-  create(pair: Pair): Promise<Translator>;
+  create(options: Pair & { monitor?(monitor: Monitor): void }): Promise<Translator>;
 }
 
 const { SpeechRecognition: Recognition, Translator: TranslatorApi } = window as unknown as {
@@ -79,41 +82,59 @@ export async function availability(lang: string, targets: string[]) {
 }
 
 /** 初回はモデルの準備中に失敗することがあるので、少し待って作り直す */
-async function create(pair: Pair, attempts = CREATE_ATTEMPTS): Promise<Translator> {
+async function create(
+  pair: Pair,
+  onProgress: (loaded: number) => void,
+  attempts = CREATE_ATTEMPTS,
+): Promise<Translator> {
+  const monitor = (m: Monitor) =>
+    m.addEventListener("downloadprogress", ({ loaded }) => onProgress(loaded));
   try {
-    return await TranslatorApi!.create(pair);
+    return await TranslatorApi!.create({ ...pair, monitor });
   } catch (e) {
     if (attempts <= 1) throw e;
     await new Promise((resolve) => setTimeout(resolve, RETRY_MS));
-    return create(pair, attempts - 1);
+    return create(pair, onProgress, attempts - 1);
   }
 }
 
-/** 翻訳モデルを入れる。ダウンロードにはクリックが要る */
-export async function prepare(lang: string, targets: string[]): Promise<Map<string, Translator>> {
+/** 翻訳モデルを入れる。ダウンロードにはクリックが要る。`onProgress` は 0〜1 */
+export async function prepare(
+  lang: string,
+  targets: string[],
+  onProgress: (loaded: number) => void,
+): Promise<Map<string, Translator>> {
   const created = new Map<string, Translator>();
   for (const pair of pairs(lang, targets)) {
-    created.set(pair.targetLanguage, await create(pair));
+    created.set(pair.targetLanguage, await create(pair, onProgress));
   }
   return created;
 }
 
 interface Listener {
-  /** 文の区切り（`minSilenceMs`）。Chrome の確定を待つより早く字幕を閉じる */
-  silenceMs: number;
+  /** 文字が増えなくなってから区切るまでの時間。省くと区切らない（`cut` で区切る） */
+  silenceMs?: number;
   onText(text: string, final: boolean): void;
   /** 認識がひと区切りした。確定しなかった文は、ここで確定する */
   onEnd(): void;
   onFatal(error: string): void;
 }
 
-/** 止めるまで聞き続ける。戻り値は止める関数 */
-export function listen(lang: string, { silenceMs, onText, onEnd, onFatal }: Listener): () => void {
+interface Listening {
+  /** 今の認識を区切り、すぐ聞き直す */
+  cut(): void;
+  stop(): void;
+}
+
+/** 止めるまで聞き続ける */
+export function listen(lang: string, { silenceMs, onText, onEnd, onFatal }: Listener): Listening {
   let stopped = false;
   let current: Recognizer;
   let startedAt = 0;
   let restart: ReturnType<typeof setTimeout>;
   let silence: ReturnType<typeof setTimeout>;
+  /** 区切ったあと、聞き直すまでの結果は使わない */
+  let cutting = false;
 
   const start = () => {
     current = new Recognition!();
@@ -121,7 +142,7 @@ export function listen(lang: string, { silenceMs, onText, onEnd, onFatal }: List
     current.continuous = true;
     current.interimResults = true;
     current.onresult = ({ resultIndex, results }) => {
-      if (stopped) return;
+      if (stopped || cutting) return;
       clearTimeout(silence);
       let interim = "";
       for (let i = resultIndex; i < results.length; i++) {
@@ -132,7 +153,7 @@ export function listen(lang: string, { silenceMs, onText, onEnd, onFatal }: List
       if (!interim) return;
       onText(interim, false);
       // 文字が増えなくなったら止めて確定させる。終わったらすぐ聞き直す
-      silence = setTimeout(() => current.stop(), silenceMs);
+      if (silenceMs !== undefined) silence = setTimeout(() => current.stop(), silenceMs);
     };
     current.onerror = ({ error }) => {
       if (!FATAL.has(error)) return;
@@ -146,13 +167,21 @@ export function listen(lang: string, { silenceMs, onText, onEnd, onFatal }: List
       restart = setTimeout(start, Math.max(0, RETRY_MS - (Date.now() - startedAt)));
     };
     startedAt = Date.now();
+    cutting = false;
     current.start();
   };
   start();
-  return () => {
-    stopped = true;
-    clearTimeout(restart);
-    clearTimeout(silence);
-    current.stop();
+  return {
+    cut() {
+      if (cutting) return;
+      cutting = true;
+      current.stop();
+    },
+    stop() {
+      stopped = true;
+      clearTimeout(restart);
+      clearTimeout(silence);
+      current.stop();
+    },
   };
 }

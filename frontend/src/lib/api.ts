@@ -1,4 +1,6 @@
+import type { ChromeStatus } from "../generated/ChromeStatus";
 import type { GiftStatus } from "../generated/GiftStatus";
+import type { LiveText } from "../generated/LiveText";
 import type { Provider } from "../generated/Provider";
 import type { Segment } from "../generated/Segment";
 import type { SettingsPatch } from "../generated/SettingsPatch";
@@ -15,6 +17,15 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await res.json()) as T;
 }
 
+/** 閉じる途中のページからも届くよう keepalive にする */
+const post = (path: string, body: unknown) =>
+  fetch(path, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+    keepalive: true,
+  });
+
 export const api = {
   settings: () => request<SettingsView>("/api/settings"),
   updateSettings: (patch: SettingsPatch) =>
@@ -29,21 +40,14 @@ export const api = {
   /** 対応している言語のコード */
   languages: () => request<string[]>("/api/languages"),
   demo: () => fetch("/api/demo", { method: "POST" }),
-  /** 無料モードのページを Chrome で開く。Chrome が見つからなければ false */
-  openChrome: async () => {
-    const res = await fetch("/api/chrome/open", { method: "POST" });
-    if (res.status === 404) return false;
-    if (!res.ok) throw new Error(res.statusText);
-    return true;
-  },
+  /** 閉じられた Chrome を開き直す */
+  openChrome: () => fetch("/api/chrome/open", { method: "POST" }),
+  /** Chrome のページの状態を知らせる */
+  chromeStatus: (status: ChromeStatus) => post("/api/chrome/status", status),
+  /** ハイブリッドモードの途中の文を送る */
+  live: (live: LiveText) => post("/api/live", live),
   /** Chrome のページが認識した字幕を送る */
-  segment: (segment: Segment) =>
-    fetch("/api/segments", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(segment),
-      keepalive: true,
-    }),
+  segment: (segment: Segment) => post("/api/segments", segment),
 
   /** もらったギフトコードの状態 */
   gift: () => request<GiftStatus>("/api/gift"),

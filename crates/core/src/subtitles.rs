@@ -21,7 +21,9 @@ use crate::openai::Access;
 use crate::settings::Settings;
 use crate::store::Store;
 use crate::stt::{self, BatchRequest, Hints, RealtimeConfig};
-use crate::types::{Enriched, EntityKind, Glossary, LangCode, Segment, Stage, Translations};
+use crate::types::{
+    Enriched, EntityKind, Glossary, LangCode, LiveText, Segment, Stage, Translations,
+};
 use crate::usage::Meter;
 
 /// earshot が受け取るフレームの長さ（16ms）
@@ -117,8 +119,14 @@ pub async fn run(store: Arc<Store>, input: audio::Input, access: Access) -> anyh
     );
 
     let mut level = LevelMeter::default();
+    let mut live = pipeline.store.watch_live();
+    live.mark_unchanged();
     loop {
         tokio::select! {
+            Ok(()) = live.changed() => {
+                let text = live.borrow_and_update().clone();
+                pipeline.on_live(text);
+            }
             chunk = audio_rx.recv() => {
                 let Some(chunk) = chunk else { break };
                 if let Some(db) = level.push(&chunk) {
@@ -277,6 +285,7 @@ impl Pipeline {
         };
         // 捨てる発話も閉じる（閉じないと、その音声が次の発話に混ざる）
         self.send_realtime(stt::Input::Close);
+        self.store.send_speech_cut();
         if close.speech_ms < MIN_SPEECH_MS {
             self.discard(&id);
             return;
@@ -312,6 +321,18 @@ impl Pipeline {
                 seg.stage = Stage::Discarded;
                 self.store.upsert_segment(seg);
             }
+        }
+    }
+
+    /// ハイブリッドモードで Chrome が認識した途中の文を、開いている発話に載せる
+    fn on_live(&mut self, live: LiveText) {
+        let seg = self.current.as_ref().and_then(|id| self.live.get_mut(id));
+        if let Some(seg) = seg.filter(|s| s.stage == Stage::Partial) {
+            seg.text = live.text;
+            if !live.translations.is_empty() {
+                seg.draft = Some(live.translations);
+            }
+            self.store.upsert_segment(seg.clone());
         }
     }
 
