@@ -72,13 +72,21 @@ describe("share", () => {
     expect((await call("/share", { method: "POST", ...json({ key: "bad" }) })).status).toBe(400);
   });
 
-  it("keeps codes when enabled again with the same key, with a new token", async () => {
+  it("shares the same codes on every PC with the same key", async () => {
     const first = await share();
     await createCode(first, { memo: "友達" });
     const second = await share();
-    expect(second).not.toBe(first);
-    expect((await call("/share/codes", { token: first })).status).toBe(401);
+    expect(second).toBe(first);
+    expect((await listCodes(first)).map((c) => c.memo)).toEqual(["友達"]);
     expect((await listCodes(second)).map((c) => c.memo)).toEqual(["友達"]);
+  });
+
+  it("gives a different token to a different key, and a new one after stopping", async () => {
+    const mine = await share();
+    expect(await share("sk-other")).not.toBe(mine);
+    await call("/share", { method: "DELETE", token: mine });
+    expect((await call("/share/codes", { token: mine })).status).toBe(401);
+    expect(await share()).not.toBe(mine);
   });
 
   it("codes are random, shown once, and accept loose typing", async () => {
