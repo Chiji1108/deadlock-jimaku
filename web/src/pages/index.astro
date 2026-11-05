@@ -129,6 +129,12 @@ const faqs = [
 ];
 
 const line = LINES[0]!;
+/** 手元の測定（M5 Pro）とリリースのファイルの大きさ */
+const lightness = [
+  { value: "約 1%", label: "CPU", note: "字幕を出している間の、1 コアに対する割合" },
+  { value: "約 80MB", label: "メモリ", note: "Mac でウィンドウを閉じて動かしているとき" },
+  { value: "約 6MB", label: "インストーラー", note: "Windows 版" },
+];
 const cards = await fetchCards();
 /** 「カート」と話しても、翻訳では正式名になる例 */
 const official = [
@@ -237,6 +243,26 @@ const official = [
         </div>
       </div>
     </div>
+  </section>
+
+  <section class="mx-auto mt-28 max-w-6xl px-4 sm:mt-40">
+    <h2 class="display reveal text-[clamp(2.1rem,5.4vw,4.25rem)]">
+      ゲームの<span class="band">邪魔をしない。</span>
+    </h2>
+    <p class="reveal mt-5 max-w-2xl text-lg leading-relaxed text-muted">
+      文字起こしと翻訳はクラウドで動くので、ゲーム中の PC に重い処理をさせません。アプリの本体は Rust で作っているので、小さくて軽いです。
+    </p>
+    <ul class="mt-10 grid gap-8 md:grid-cols-3">
+      {
+        lightness.map((l) => (
+          <li class="reveal border-t-2 border-ink pt-4">
+            <p class="display text-5xl">{l.value}</p>
+            <h3 class="mt-2 font-bold">{l.label}</h3>
+            <p class="mt-1 text-sm text-muted">{l.note}</p>
+          </li>
+        ))
+      }
+    </ul>
   </section>
 
   <section class="mx-auto mt-28 max-w-6xl px-4 text-center sm:mt-40">
