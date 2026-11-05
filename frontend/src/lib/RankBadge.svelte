@@ -110,8 +110,9 @@
     box-shadow: 0 0 0 calc(2px * var(--scale)) rgb(0 0 0 / 0.6);
     overflow: hidden;
   }
-  /* 数字を重ねないときは細くする */
+  /* 数字を重ねないときは細くして、幅はランク名に合わせる（短い名前でも進み具合が読める長さは残す） */
   .thin {
+    min-width: var(--gauge-thin-width, calc(120px * var(--scale)));
     height: var(--gauge-thin-height, calc(12px * var(--scale)));
   }
   .fill {
