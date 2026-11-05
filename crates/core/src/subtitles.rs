@@ -83,7 +83,11 @@ pub async fn run(store: Arc<Store>, input: audio::Input, access: Access) -> anyh
         delay: settings.realtime_delay.clone(),
         meter: store.meter(),
     };
-    tokio::spawn(realtime_loop(realtime, hints.clone(), rt_rx, delta_tx));
+    // オフなら Realtime につながず、確定の字幕だけを出す
+    let rt_tx = settings.live_subtitles.then(|| {
+        tokio::spawn(realtime_loop(realtime, hints.clone(), rt_rx, delta_tx));
+        rt_tx
+    });
 
     let enricher = Enricher::new(
         access.clone(),
@@ -182,7 +186,7 @@ impl Pipeline {
         batch: Arc<BatchContext>,
         enricher: Arc<Enricher>,
         done_tx: mpsc::Sender<Done>,
-        realtime: mpsc::UnboundedSender<stt::Input>,
+        realtime: Option<mpsc::UnboundedSender<stt::Input>>,
     ) -> Self {
         Self {
             store,
@@ -193,7 +197,7 @@ impl Pipeline {
             history: History::new(60),
             detector: earshot::Detector::default(),
             segmenter: Segmenter::new(&settings.segmentation),
-            realtime: Some(realtime),
+            realtime,
             live: HashMap::new(),
             current: None,
             frame: Vec::with_capacity(FRAME * 2),
