@@ -38,7 +38,7 @@
         <!-- エターナスは上のティアがないので、リーダーボードの順位を出す -->
         <p class="points">{placement(rank.leaderboard)}</p>
       {:else if rank.progress}
-        <div class="bar">
+        <div class="bar" class:thin={content === "gauge"}>
           <div class="fill" style:width="{ratio * 100}%"></div>
           {#if content === "full"}
             <p class="points">
@@ -109,6 +109,10 @@
     background: rgb(0 0 0 / 0.55);
     box-shadow: 0 0 0 calc(2px * var(--scale)) rgb(0 0 0 / 0.6);
     overflow: hidden;
+  }
+  /* 数字を重ねないときは細くする */
+  .thin {
+    height: var(--gauge-thin-height, calc(12px * var(--scale)));
   }
   .fill {
     position: absolute;
