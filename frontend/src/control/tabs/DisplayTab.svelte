@@ -25,9 +25,10 @@
     { value: "right", label: "右寄せ", icon: AlignEndIcon },
   ];
   /** 文字の大きさ（px）。もっと大きくしたいときは「数値で指定」 */
+  const SIZE_PRESETS = [12, 16, 20, 26, 32, 40];
   const SIZES = [
-    { field: "fontSize", label: "話した言葉の大きさ", presets: [12, 16, 24, 32, 40] },
-    { field: "translationFontSize", label: "翻訳の大きさ", presets: [12, 16, 20, 26, 32, 40] },
+    { field: "fontSize", label: "話した言葉の大きさ" },
+    { field: "translationFontSize", label: "翻訳の大きさ" },
   ] as const;
   const BACKGROUNDS: { value: Background; label: string; hint: string }[] = [
     { value: "outline", label: "縁取り", hint: "文字に黒い縁取りを付けます" },
@@ -107,11 +108,11 @@
               value={String(d[f.field])}
               onValueChange={(v) => v && set({ [f.field]: Number(v) })}
             >
-              {#each f.presets as px (px)}
+              {#each SIZE_PRESETS as px (px)}
                 <ToggleGroup.Item value={String(px)} class="flex-1">{px}px</ToggleGroup.Item>
               {/each}
             </ToggleGroup.Root>
-            {#if !(f.presets as readonly number[]).includes(d[f.field])}
+            {#if !SIZE_PRESETS.includes(d[f.field])}
               <Field.Description>数値で指定しています（{d[f.field]}px）</Field.Description>
             {/if}
             {#if f.field === "fontSize" && d.fontSize < 16 && d.furigana && !onlyTranslation && s.micLanguage === "ja"}
