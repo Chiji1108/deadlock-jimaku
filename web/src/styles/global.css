@@ -1,8 +1,8 @@
 @import "tailwindcss";
-@import "@fontsource-variable/noto-sans-jp";
 
 @theme {
-  --font-sans: "Noto Sans JP Variable", "Hiragino Sans", "Yu Gothic UI", sans-serif;
+  /* フォントは読み込まず、アプリの字幕と同じく端末のものを使う（ふりがなの位置も揃う） */
+  --font-sans: system-ui, "Hiragino Sans", "Yu Gothic UI", "Meiryo", sans-serif;
   --color-ink: #12110e;
   --color-paper: #f1efe9;
   --color-panel: #fbfaf7;
