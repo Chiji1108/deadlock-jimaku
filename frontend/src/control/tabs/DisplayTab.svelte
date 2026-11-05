@@ -17,6 +17,7 @@
   import FontSizeDialog from "../parts/FontSizeDialog.svelte";
   import { SUBTITLE_SIZE } from "../../lib/overlay-size";
   import { overlayUrl, panel } from "../panel.svelte";
+  import { translationOnly } from "../../lib/subtitle-lines";
 
   const ALIGNS: { value: Align; label: string; icon: typeof AlignStartIcon }[] = [
     { value: "left", label: "左寄せ", icon: AlignStartIcon },
@@ -48,7 +49,7 @@
   const s = $derived(panel.settings!);
   const d = $derived(s.subtitleDisplay);
   const noTargets = $derived(s.translateTo.length === 0);
-  const translationOnly = $derived(!d.showSource && !noTargets);
+  const onlyTranslation = $derived(translationOnly(s));
   /** 変えた項目だけを送る（続けて変えても、前の変更を古い値で戻さない） */
   const set = (patch: SubtitleDisplayPatch) => panel.update({ subtitleDisplay: patch });
 </script>
@@ -113,7 +114,7 @@
             {#if !(f.presets as readonly number[]).includes(d[f.field])}
               <Field.Description>数値で指定しています（{d[f.field]}px）</Field.Description>
             {/if}
-            {#if f.field === "fontSize" && d.fontSize < 16 && d.furigana && !translationOnly}
+            {#if f.field === "fontSize" && d.fontSize < 16 && d.furigana && !onlyTranslation && s.micLanguage === "ja"}
               <Field.Description>小さくすると、ふりがなが読みにくくなります</Field.Description>
             {/if}
           </Field.Field>
@@ -145,14 +146,13 @@
               {#if noTargets}
                 翻訳先がないときは、話した言葉を出します
               {:else}
-                オフにすると翻訳だけを出します。途中の字幕とふりがなの料金がかからず、6
-                割ほど安くなります。字幕は翻訳が終わってから出ます
+                オフにすると翻訳だけを出します。途中の字幕とふりがなの料金がかかりません。字幕は翻訳が終わってから出ます。切り替えると、字幕は始め直します
               {/if}
             </Field.Description>
           </Field.Content>
           <Switch
             id="show-source"
-            checked={d.showSource}
+            checked={!onlyTranslation}
             disabled={noTargets}
             onCheckedChange={(v) => set({ showSource: v })}
           />
@@ -168,7 +168,7 @@
           <Switch
             id="furigana"
             checked={d.furigana}
-            disabled={translationOnly}
+            disabled={onlyTranslation && !s.translateTo.includes("ja")}
             onCheckedChange={(v) => set({ furigana: v })}
           />
         </Field.Field>
