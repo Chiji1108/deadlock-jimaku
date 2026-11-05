@@ -1,0 +1,27 @@
+# 途中の字幕と途中の翻訳を PC の中で作る補助プログラム（DESIGN.md 9.6）。
+# 実行環境とモデルが大きいので、アプリには入れず、使う人だけ初回にダウンロードする。
+# ワークスペースの外に置くのは、アプリのビルドにネイティブのライブラリを持ち込まないため
+[package]
+name = "jimaku-local"
+version = "0.3.0"
+edition = "2024"
+license-file = "../../LICENSE.md"
+publish = false
+
+[workspace]
+
+[dependencies]
+anyhow = "1.0.102"
+bzip2-rs = "0.1.2"
+fxtranslate = "0.5.0"
+ruzstd = "0.8.2"
+serde_json = "1.0.154"
+sha2 = "0.10.9"
+# static は shared より 3.7 倍遅い（原因は不明）。shared なら実行環境の DLL で分かれる
+sherpa-onnx = { version = "2.0.1", default-features = false, features = ["shared"] }
+tar = "0.4.45"
+ureq = "3.3.0"
+
+[profile.release]
+strip = true
+lto = "thin"

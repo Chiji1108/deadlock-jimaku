@@ -42,13 +42,16 @@ jobs:
           - os: macos-latest
             args: --target universal-apple-darwin --bundles app,dmg
             rust-targets: aarch64-apple-darwin x86_64-apple-darwin
+            local-targets: aarch64-apple-darwin x86_64-apple-darwin
             bundle: target/universal-apple-darwin/release/bundle
           - os: windows-latest
             args: --bundles nsis
+            local-targets: x86_64-pc-windows-msvc
             bundle: target/release/bundle
           # 古い glibc で作ると、新しいディストリビューションでも動く
           - os: ubuntu-22.04
             args: --bundles deb,rpm,appimage
+            local-targets: x86_64-unknown-linux-gnu
             bundle: target/release/bundle
     runs-on: ${{ matrix.os }}
     defaults:
@@ -72,6 +75,25 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: pnpm install --frozen-lockfile
       # Tauri の CLI はリポジトリのルートから動かす（app/tauri.conf.json を探す）
+      # ローカル AI の補助プログラム。アプリには入れず、使う人だけダウンロードする
+      - name: ローカル AI の補助プログラムを作る
+        env:
+          FXTRANSLATE_REQUIRE_SIMD: "1"
+        run: |
+          mkdir -p local-dist
+          for target in ${{ matrix.local-targets }}; do
+            rustup target add "$target"
+            cargo build --release --manifest-path crates/local-ai/Cargo.toml --target "$target"
+            case "$target" in
+              aarch64-apple-darwin) name=macos-aarch64 ;;
+              x86_64-apple-darwin) name=macos-x86_64 ;;
+              x86_64-pc-windows-msvc) name=windows-x86_64 ;;
+              *) name=linux-x86_64 ;;
+            esac
+            dir=crates/local-ai/target/$target/release
+            tar -czf "local-dist/jimaku-local-$name.tar.gz" -C "$dir" \
+              $(cd "$dir" && ls jimaku-local jimaku-local.exe *.dylib *.dll *.so* 2>/dev/null)
+          done
       - if: ${{ !inputs.sign }}
         run: frontend/node_modules/.bin/tauri build ${{ matrix.args }}
       # リリースのとき: 自動更新のファイル（署名つき）も作る。Mac は Developer ID で署名して公証する
@@ -142,6 +164,7 @@ jobs:
           if-no-files-found: error
           # .sig と .app.tar.gz は自動更新のファイル（リリースのときだけできる）
           path: |
+            local-dist/*.tar.gz
             ${{ matrix.bundle }}/dmg/*.dmg
             ${{ matrix.bundle }}/nsis/*.exe
             ${{ matrix.bundle }}/nsis/*.exe.sig

@@ -6,6 +6,7 @@ pub mod enrich;
 pub mod furigana;
 pub mod lang;
 pub mod llm;
+pub mod local;
 pub mod markup;
 pub mod openai;
 pub mod rank;

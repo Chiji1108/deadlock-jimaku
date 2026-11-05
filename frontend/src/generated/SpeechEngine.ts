@@ -3,4 +3,4 @@
 /**
  * 音声認識と翻訳をどこで動かすか（DESIGN.md 9.6）
  */
-export type SpeechEngine = "hybrid" | "openai" | "chrome";
+export type SpeechEngine = "hybrid" | "local" | "openai" | "chrome";

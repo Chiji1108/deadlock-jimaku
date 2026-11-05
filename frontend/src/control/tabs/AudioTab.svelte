@@ -41,6 +41,13 @@
       recommended: true,
     },
     {
+      value: "local",
+      label: "ローカル AI",
+      traits: "高速・ふりがな・デッドロックモード",
+      price: "約 $0.6／時間",
+      hint: "話している途中の字幕と英語の翻訳は PC の中で、確定の字幕は OpenAI で作ります。Chrome は要りません。API キーかギフトコードが必要です。初回に約 210MB をダウンロードし、動かしている間は約 700MB のメモリを使います",
+    },
+    {
       value: "openai",
       label: "OpenAI",
       traits: "低負荷・ふりがな・デッドロックモード",
@@ -60,10 +67,10 @@
   const onlyTranslation = $derived(translationOnly(s));
   const chrome = $derived(s.speechEngine === "chrome");
   const engine = $derived(ENGINES.find((e) => e.value === s.speechEngine)!);
-  /** Chrome のページが止まっている理由 */
+  /** 途中の字幕を作るものが止まっている理由 */
   const chromeProblem = $derived(
-    panel.chrome?.state === "failed" || panel.chrome?.state === "unsupported"
-      ? panel.chrome.detail
+    panel.liveStatus?.state === "failed" || panel.liveStatus?.state === "unsupported"
+      ? panel.liveStatus.detail
       : undefined,
   );
   const pause = $derived(s.segmentation.minSilenceMs);
@@ -79,7 +86,7 @@
       <Card.Description>字幕をどこで作るかを選びます</Card.Description>
     </Card.Header>
     <Card.Content class="flex flex-col gap-3">
-      <div class="grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label="モード">
+      <div class="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="モード">
         {#each ENGINES as e (e.value)}
           <button
             type="button"
@@ -98,16 +105,21 @@
         {/each}
       </div>
       <p class="text-sm text-muted-foreground">{engine.hint}</p>
+      {#if s.speechEngine === "local" && s.transcriptionEnabled && panel.liveStatus?.state === "preparing"}
+        <p class="text-sm">{panel.liveStatus.detail ?? "モデルを読み込んでいます…"}</p>
+      {/if}
       {#if s.speechEngine !== "openai" && s.transcriptionEnabled && chromeProblem}
         <Alert.Root variant="destructive">
           <Alert.Title>{chromeProblem}</Alert.Title>
           <Alert.Description>
-            {#if s.speechEngine === "hybrid"}
+            {#if s.speechEngine !== "chrome"}
               確定の字幕は出ています。話している途中の字幕だけが止まっています。
             {/if}
-            <Button variant="outline" size="sm" class="mt-2" onclick={() => api.openChrome()}>
-              Chrome を開き直す
-            </Button>
+            {#if s.speechEngine !== "local"}
+              <Button variant="outline" size="sm" class="mt-2" onclick={() => api.openChrome()}>
+                Chrome を開き直す
+              </Button>
+            {/if}
           </Alert.Description>
         </Alert.Root>
       {/if}

@@ -62,8 +62,8 @@
   });
 
   /** Chrome だけのモードの状態。ハイブリッドは止まったときだけ出す（確定の字幕は出続ける） */
-  function chromeStatus() {
-    switch (panel.chrome?.state) {
+  function liveStatus() {
+    switch (panel.liveStatus?.state) {
       case "listening":
         return { label: "字幕を出しています", dot: "bg-emerald-500 animate-pulse" };
       case "failed":
@@ -76,7 +76,7 @@
 
   const status = $derived.by(() => {
     if (!s?.transcriptionEnabled) return { label: "停止中", dot: "bg-muted-foreground/50" };
-    if (s.speechEngine === "chrome") return chromeStatus();
+    if (s.speechEngine === "chrome") return liveStatus();
     if (panel.transcriptionError) return { label: "止まっています", dot: "bg-destructive" };
     if (panel.silent) return { label: "音が届いていません", dot: "bg-amber-500" };
     if (panel.level === undefined)

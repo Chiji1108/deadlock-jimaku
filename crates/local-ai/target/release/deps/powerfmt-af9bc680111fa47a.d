@@ -1,0 +1,11 @@
+/Users/chiji/js/deadlock-jimaku/crates/local-ai/target/release/deps/powerfmt-af9bc680111fa47a.d: /Users/chiji/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/powerfmt-0.2.1/src/lib.rs /Users/chiji/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/powerfmt-0.2.1/src/buf.rs /Users/chiji/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/powerfmt-0.2.1/src/ext.rs /Users/chiji/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/powerfmt-0.2.1/src/smart_display.rs /Users/chiji/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/powerfmt-0.2.1/src/smart_display_impls.rs
+
+/Users/chiji/js/deadlock-jimaku/crates/local-ai/target/release/deps/libpowerfmt-af9bc680111fa47a.rlib: /Users/chiji/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/powerfmt-0.2.1/src/lib.rs /Users/chiji/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/powerfmt-0.2.1/src/buf.rs /Users/chiji/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/powerfmt-0.2.1/src/ext.rs /Users/chiji/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/powerfmt-0.2.1/src/smart_display.rs /Users/chiji/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/powerfmt-0.2.1/src/smart_display_impls.rs
+
+/Users/chiji/js/deadlock-jimaku/crates/local-ai/target/release/deps/libpowerfmt-af9bc680111fa47a.rmeta: /Users/chiji/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/powerfmt-0.2.1/src/lib.rs /Users/chiji/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/powerfmt-0.2.1/src/buf.rs /Users/chiji/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/powerfmt-0.2.1/src/ext.rs /Users/chiji/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/powerfmt-0.2.1/src/smart_display.rs /Users/chiji/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/powerfmt-0.2.1/src/smart_display_impls.rs
+
+/Users/chiji/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/powerfmt-0.2.1/src/lib.rs:
+/Users/chiji/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/powerfmt-0.2.1/src/buf.rs:
+/Users/chiji/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/powerfmt-0.2.1/src/ext.rs:
+/Users/chiji/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/powerfmt-0.2.1/src/smart_display.rs:
+/Users/chiji/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/powerfmt-0.2.1/src/smart_display_impls.rs:

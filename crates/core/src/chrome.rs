@@ -20,7 +20,7 @@ use tokio_tungstenite::tungstenite::Message;
 
 use crate::DEFAULT_PORT;
 use crate::store::Store;
-use crate::types::{ChromeState, ChromeStatus};
+use crate::types::{LiveState, LiveStatus};
 
 const FLAGS: [&str; 8] = [
     "--disable-features=CalculateNativeWinOcclusion,UseEcoQoSForBackgroundProcess",
@@ -62,8 +62,8 @@ impl Browser {
             let settings = store.settings();
             if settings.transcription_enabled && settings.speech_engine.uses_chrome() {
                 tracing::warn!("chrome: {closed:#?}");
-                store.set_chrome_status(Some(ChromeStatus {
-                    state: ChromeState::Failed,
+                store.set_live_status(Some(LiveStatus {
+                    state: LiveState::Failed,
                     detail: Some("Chrome が閉じられました".into()),
                 }));
             }

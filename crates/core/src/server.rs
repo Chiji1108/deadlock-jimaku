@@ -21,7 +21,7 @@ use crate::settings::SettingsPatch;
 use crate::share::{self, GiftStatus, Refused, SharedCode};
 use crate::store::Store;
 use crate::types::{
-    ChromeStatus, ClientMsg, LangCode, LiveText, Segment, ServerMsg, SettingsView, Topic,
+    ClientMsg, LangCode, LiveStatus, LiveText, Segment, ServerMsg, SettingsView, Topic,
 };
 use crate::{audio, lang};
 use ts_rs::TS;
@@ -48,7 +48,7 @@ pub fn router(store: Arc<Store>) -> Router {
         .route("/languages", get(languages))
         .route("/segments", post(post_segment))
         .route("/chrome/open", post(open_chrome))
-        .route("/chrome/status", post(post_chrome_status))
+        .route("/live/status", post(post_live_status))
         .route("/live", post(post_live))
         .layer(middleware::from_fn(local_only));
     Router::new()
@@ -98,11 +98,11 @@ async fn post_live(State(store): State<Arc<Store>>, Json(live): Json<LiveText>) 
 }
 
 /// Chrome のページの状態を受け取る
-async fn post_chrome_status(
+async fn post_live_status(
     State(store): State<Arc<Store>>,
-    Json(status): Json<ChromeStatus>,
+    Json(status): Json<LiveStatus>,
 ) -> StatusCode {
-    store.set_chrome_status(Some(status));
+    store.set_live_status(Some(status));
     StatusCode::NO_CONTENT
 }
 

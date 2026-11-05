@@ -16,9 +16,10 @@ use tokio::sync::mpsc;
 use crate::audio::{self, History, SAMPLE_RATE};
 use crate::enrich::Enricher;
 use crate::lang;
+use crate::local;
 use crate::now_ms;
 use crate::openai::Access;
-use crate::settings::Settings;
+use crate::settings::{Settings, SpeechEngine};
 use crate::store::Store;
 use crate::stt::{self, BatchRequest, Hints, RealtimeConfig};
 use crate::types::{
@@ -33,6 +34,8 @@ const FRAME_MS: u32 = 16;
 const PADDING: u64 = SAMPLE_RATE as u64 * 300 / 1000;
 /// これより短い発話（咳やクリック）はバッチに送らず捨てる
 const MIN_SPEECH_MS: u32 = 250;
+/// ローカル AI に渡す、発話を検出する前の音声（0.3 秒）
+const LOCAL_LEAD_SAMPLES: u64 = SAMPLE_RATE as u64 * 300 / 1000;
 /// enrich に文脈として渡す直前の確定字幕の数
 const CONTEXT_LINES: usize = 3;
 /// 用語ヒントの上限。辞書が増えても送りすぎない
@@ -93,6 +96,17 @@ pub async fn run(store: Arc<Store>, input: audio::Input, access: Access) -> anyh
         None
     };
 
+    // ローカル AI のモードでは、音声を補助プログラムにも渡す
+    let local = (settings.speech_engine == SpeechEngine::Local).then(|| {
+        let (tx, rx) = mpsc::unbounded_channel();
+        let terms = store
+            .glossary()
+            .map(|l| local::terms(&l.glossary))
+            .unwrap_or_default();
+        tokio::spawn(local::run(store.clone(), settings.clone(), terms, rx));
+        tx
+    });
+
     let enricher = Enricher::new(
         access.clone(),
         &settings.models,
@@ -116,6 +130,7 @@ pub async fn run(store: Arc<Store>, input: audio::Input, access: Access) -> anyh
         Arc::new(enricher),
         done_tx,
         realtime,
+        local,
     );
 
     let mut level = LevelMeter::default();
@@ -185,6 +200,7 @@ struct Pipeline {
     segmenter: Segmenter,
     /// リアルタイムの音声認識へ（途中の字幕を出さないときと、入力が終わったあとは None）
     realtime: Option<mpsc::UnboundedSender<stt::Input>>,
+    local: Option<mpsc::UnboundedSender<local::Input>>,
     live: HashMap<String, Segment>,
     current: Option<String>,
     frame: Vec<f32>,
@@ -204,6 +220,7 @@ impl Pipeline {
         enricher: Arc<Enricher>,
         done_tx: mpsc::Sender<Done>,
         realtime: Option<mpsc::UnboundedSender<stt::Input>>,
+        local: Option<mpsc::UnboundedSender<local::Input>>,
     ) -> Self {
         Self {
             store,
@@ -215,6 +232,7 @@ impl Pipeline {
             detector: earshot::Detector::default(),
             segmenter: Segmenter::new(&settings.segmentation),
             realtime,
+            local,
             live: HashMap::new(),
             current: None,
             frame: Vec::with_capacity(FRAME * 2),
@@ -230,6 +248,9 @@ impl Pipeline {
             self.send_realtime(stt::Input::Audio(chunk.to_vec()));
         }
         self.history.push(chunk);
+        if self.current.is_some() {
+            self.send_local(local::Input::Audio(chunk.to_vec()));
+        }
         self.frame.extend_from_slice(chunk);
         while self.frame.len() >= FRAME {
             let prob = self.detector.predict_f32(&self.frame[..FRAME]);
@@ -258,7 +279,18 @@ impl Pipeline {
         }
     }
 
+    fn send_local(&self, input: local::Input) {
+        if let Some(tx) = &self.local {
+            let _ = tx.send(input);
+        }
+    }
+
     fn open(&mut self) {
+        // 発話を検出するまでの音声も渡す（最初の言葉を落とさない）
+        let lead = self.frame_pos.saturating_sub(LOCAL_LEAD_SAMPLES);
+        self.send_local(local::Input::Audio(
+            self.history.slice(lead, self.frame_pos),
+        ));
         self.seq += 1;
         let started_at = now_ms();
         let id = format!("mic-{started_at}-{}", self.seq);
@@ -285,6 +317,7 @@ impl Pipeline {
         };
         // 捨てる発話も閉じる（閉じないと、その音声が次の発話に混ざる）
         self.send_realtime(stt::Input::Close);
+        self.send_local(local::Input::Cut);
         self.store.send_speech_cut();
         if close.speech_ms < MIN_SPEECH_MS {
             self.discard(&id);

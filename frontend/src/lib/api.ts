@@ -1,4 +1,4 @@
-import type { ChromeStatus } from "../generated/ChromeStatus";
+import type { LiveStatus } from "../generated/LiveStatus";
 import type { GiftStatus } from "../generated/GiftStatus";
 import type { LiveText } from "../generated/LiveText";
 import type { Provider } from "../generated/Provider";
@@ -43,7 +43,7 @@ export const api = {
   /** 閉じられた Chrome を開き直す */
   openChrome: () => post("/api/chrome/open", {}),
   /** Chrome のページの状態を知らせる */
-  chromeStatus: (status: ChromeStatus) => post("/api/chrome/status", status),
+  liveStatus: (status: LiveStatus) => post("/api/live/status", status),
   /** ハイブリッドモードの途中の文を送る */
   live: (live: LiveText) => post("/api/live", live),
   /** Chrome のページが認識した字幕を送る */

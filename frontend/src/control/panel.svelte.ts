@@ -1,6 +1,6 @@
 // 操作パネルの状態。各タブはこれを読み、変更は api 経由でサーバーに送る（サーバーの返す設定で置き換える）
 import { toast } from "svelte-sonner";
-import type { ChromeStatus } from "../generated/ChromeStatus";
+import type { LiveStatus } from "../generated/LiveStatus";
 import type { GiftStatus } from "../generated/GiftStatus";
 import type { Provider } from "../generated/Provider";
 import type { ServerMsg } from "../generated/ServerMsg";
@@ -55,8 +55,8 @@ class Panel {
   /** 最後にレベルが届いた時刻 */
   private levelAt = 0;
   now = $state(Date.now());
-  /** Chrome のページの状態。つながっていなければ undefined */
-  chrome = $state<ChromeStatus>();
+  /** 途中の字幕を作るもの（Chrome、ローカル AI）の状態。動いていなければ undefined */
+  liveStatus = $state<LiveStatus>();
 
   get settings() {
     return this.view?.settings;
@@ -114,8 +114,8 @@ class Panel {
   private onMessage(msg: ServerMsg) {
     if (msg.type === "transcription.status") {
       this.transcriptionError = msg.error ?? undefined;
-    } else if (msg.type === "chrome.status") {
-      this.chrome = msg.status ?? undefined;
+    } else if (msg.type === "live.status") {
+      this.liveStatus = msg.status ?? undefined;
     } else if (msg.type === "usage") {
       this.usage = msg.usage;
     } else if (msg.type === "settings.changed") {

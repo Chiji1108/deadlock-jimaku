@@ -165,9 +165,11 @@ pub async fn run(store: Arc<Store>, options: Options) {
         };
         // ハイブリッドは確定の字幕を作れないなら聞かない（音声を Google に送り続けない）
         let can_finish = settings.speech_engine == SpeechEngine::Chrome || access.is_some();
-        store.sync_chrome(
-            settings.transcription_enabled && settings.speech_engine.uses_chrome() && can_finish,
-        );
+        if settings.speech_engine.uses_chrome() {
+            store.sync_chrome(settings.transcription_enabled && can_finish);
+        } else {
+            store.drop_browser();
+        }
         let starting = !running;
         running = source.is_some();
         subtitles_slot

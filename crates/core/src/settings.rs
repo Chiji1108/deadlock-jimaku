@@ -368,6 +368,8 @@ pub enum Background {
 pub enum SpeechEngine {
     /// 途中の字幕は Chrome、確定は OpenAI。速く、用語の強調とふりがなが使える
     Hybrid,
+    /// 途中の字幕は PC の中のモデル、確定は OpenAI。Chrome が要らない
+    Local,
     /// すべて OpenAI。Chrome が要らず、PC の負荷が小さい。
     /// 0.3 より前の設定ファイルはこの値になる（音声の送り先を黙って増やさない）。
     /// 新しく使い始める人はハイブリッドから始める（`load`）
@@ -379,7 +381,7 @@ pub enum SpeechEngine {
 
 impl SpeechEngine {
     pub fn uses_chrome(self) -> bool {
-        self != Self::OpenAi
+        matches!(self, Self::Hybrid | Self::Chrome)
     }
 }
 
@@ -887,6 +889,7 @@ mod tests {
         };
         assert!(with(SpeechEngine::OpenAi).wants_live_subtitles());
         assert!(!with(SpeechEngine::Hybrid).wants_live_subtitles());
+        assert!(!with(SpeechEngine::Local).wants_live_subtitles());
         assert!(!with(SpeechEngine::Chrome).wants_live_subtitles());
     }
 

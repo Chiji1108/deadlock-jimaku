@@ -133,9 +133,9 @@ pub enum ServerMsg {
     AudioLevel { db: f32 },
     #[serde(rename = "usage")]
     Usage { usage: crate::usage::UsageView },
-    /// Chrome のページの状態。None はページがつながっていない
-    #[serde(rename = "chrome.status")]
-    ChromeStatus { status: Option<ChromeStatus> },
+    /// 途中の字幕を作るものの状態。None は動いていない
+    #[serde(rename = "live.status")]
+    LiveStatus { status: Option<LiveStatus> },
     /// ハイブリッドモードで発話が閉じた。ページは認識を区切り、次の発話に備える
     #[serde(rename = "speech.cut")]
     SpeechCut,
@@ -144,12 +144,12 @@ pub enum ServerMsg {
     SettingsChanged,
 }
 
-/// Chrome のページが知らせる状態（DESIGN.md 9.6）
+/// 途中の字幕を作るもの（Chrome のページ、ローカル AI）の状態（DESIGN.md 9.6）
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
-pub enum ChromeState {
-    /// 翻訳のモデルをダウンロードしている
+pub enum LiveState {
+    /// モデルをダウンロードしている
     Preparing,
     /// 聞いている
     Listening,
@@ -164,8 +164,8 @@ pub enum ChromeState {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
-pub struct ChromeStatus {
-    pub state: ChromeState,
+pub struct LiveStatus {
+    pub state: LiveState,
     /// 利用者に見せる説明
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
@@ -238,7 +238,7 @@ impl ServerMsg {
             Self::RankUpdate { .. } => Topic::Rank,
             Self::TranscriptionStatus { .. }
             | Self::SettingsChanged
-            | Self::ChromeStatus { .. }
+            | Self::LiveStatus { .. }
             | Self::SpeechCut => Topic::Status,
             Self::Display { .. } => Topic::Display,
             Self::AudioLevel { .. } => Topic::Level,

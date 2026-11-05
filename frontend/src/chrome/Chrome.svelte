@@ -1,7 +1,7 @@
 <script lang="ts">
   // Chrome のモードとハイブリッドモードのページ。アプリが起動し、設定に合わせて聞き始める（DESIGN.md 9.6）
   import { onMount } from "svelte";
-  import type { ChromeState } from "../generated/ChromeState";
+  import type { LiveState } from "../generated/LiveState";
   import type { Settings } from "../generated/Settings";
   import { api } from "../lib/api";
   import { connect } from "../lib/ws";
@@ -24,7 +24,7 @@
   const UNSUPPORTED = "この Chrome では使えません。Google Chrome を最新にしてください";
 
   let settings = $state<Settings>();
-  let state_ = $state<ChromeState>("idle");
+  let state_ = $state<LiveState>("idle");
   /** 翻訳モデルのダウンロードにクリックが要る */
   let needsDownload = $state(false);
   let detail = $state("");
@@ -48,10 +48,10 @@
     JSON.stringify([s.speechEngine, s.micLanguage, s.translateTo, s.segmentation.minSilenceMs]);
   const wanted = (s: Settings) => s.speechEngine !== "openai" && s.transcriptionEnabled;
 
-  function show(state: ChromeState, text = "") {
+  function show(state: LiveState, text = "") {
     state_ = state;
     detail = text;
-    void api.chromeStatus({ state, detail: text || undefined }).catch(() => {});
+    void api.liveStatus({ state, detail: text || undefined }).catch(() => {});
   }
 
   function halt() {

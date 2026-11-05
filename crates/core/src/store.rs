@@ -12,7 +12,7 @@ use crate::assets::Loaded;
 use crate::chrome::Browser;
 use crate::settings::{self, Settings, SettingsPatch, SpeechEngine, SubtitleDisplay};
 use crate::types::{
-    ChromeState, ChromeStatus, ItemCardsView, LiveText, RankState, Segment, ServerMsg, Stage,
+    ItemCardsView, LiveState, LiveStatus, LiveText, RankState, Segment, ServerMsg, Stage,
     TranscriptionError,
 };
 use crate::usage::Meter;
@@ -41,7 +41,7 @@ pub struct Store {
     level: watch::Sender<f32>,
     /// ハイブリッドモードの途中の文（最新だけあればいい）
     live: watch::Sender<LiveText>,
-    chrome_status: Mutex<Option<ChromeStatus>>,
+    live_status: Mutex<Option<LiveStatus>>,
     /// 字幕のために起動した Chrome
     browser: Mutex<Option<Browser>>,
     meter: Arc<Meter>,
@@ -70,7 +70,7 @@ impl Store {
             tx: broadcast::channel(256).0,
             level: watch::Sender::new(f32::NEG_INFINITY),
             live: watch::Sender::new(LiveText::default()),
-            chrome_status: Mutex::new(None),
+            live_status: Mutex::new(None),
             browser: Mutex::new(None),
             meter,
         })
@@ -193,8 +193,8 @@ impl Store {
         msgs.push(ServerMsg::TranscriptionStatus {
             error: self.transcription_error(),
         });
-        msgs.push(ServerMsg::ChromeStatus {
-            status: self.chrome_status.lock().unwrap().clone(),
+        msgs.push(ServerMsg::LiveStatus {
+            status: self.live_status.lock().unwrap().clone(),
         });
         msgs.push(display(&self.settings()));
         msgs.push(ServerMsg::Usage {
@@ -204,11 +204,11 @@ impl Store {
     }
 
     /// Chrome のページの状態を受け取る。変わったときだけ知らせる
-    pub fn set_chrome_status(&self, status: Option<ChromeStatus>) {
-        let mut current = self.chrome_status.lock().unwrap();
+    pub fn set_live_status(&self, status: Option<LiveStatus>) {
+        let mut current = self.live_status.lock().unwrap();
         if *current != status {
             current.clone_from(&status);
-            let _ = self.tx.send(ServerMsg::ChromeStatus { status });
+            let _ = self.tx.send(ServerMsg::LiveStatus { status });
         }
     }
 
@@ -227,17 +227,22 @@ impl Store {
             Err(e) => {
                 tracing::warn!("open chrome: {e}");
                 drop(browser);
-                self.set_chrome_status(Some(ChromeStatus {
-                    state: ChromeState::Failed,
+                self.set_live_status(Some(LiveStatus {
+                    state: LiveState::Failed,
                     detail: Some("Google Chrome が見つかりません".into()),
                 }));
             }
         }
     }
 
+    /// ローカル AI に切り替えたときに Chrome を閉じる。状態はローカル AI が知らせる
+    pub fn drop_browser(&self) {
+        *self.browser.lock().unwrap() = None;
+    }
+
     pub fn close_chrome(&self) {
         *self.browser.lock().unwrap() = None;
-        self.set_chrome_status(None);
+        self.set_live_status(None);
     }
 
     /// 開き直す。プロセスが残っていても、ページが止まっていることがある
