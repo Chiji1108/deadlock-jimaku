@@ -59,7 +59,11 @@ obsSeen: boolean,
 /**
  * はじめかたを閉じた、または全部終えた
  */
-onboardingClosed: boolean, models: Models, 
+onboardingClosed: boolean, 
+/**
+ * ウィンドウを閉じても動き続けることを知らせた
+ */
+trayNoticeSeen: boolean, models: Models, 
 /**
  * リアルタイムの音声認識の遅れ（`minimal` / `low` / `medium` / `high` / `xhigh`。
  * 低いほど早く字幕が出て、高いほど正確）

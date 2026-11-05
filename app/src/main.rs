@@ -1,6 +1,9 @@
 // リリースビルドで Windows のコンソールウィンドウを出さない
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+#[cfg(not(target_os = "linux"))]
+mod tray;
+
 use std::net::{Ipv4Addr, SocketAddr};
 
 use overlays_core::{DEFAULT_PORT, runtime, server, settings, store::Store};
@@ -14,6 +17,10 @@ fn main() {
     tracing_subscriber::fmt::init();
 
     tauri::Builder::default()
+        // 隠れているときにもう一度開いたら、ポートを取り合わずに今のウィンドウを出す
+        .plugin(tauri_plugin_single_instance::init(|app, _, _| {
+            show_window(app);
+        }))
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
@@ -21,6 +28,11 @@ fn main() {
             let data_dir = app.path().app_data_dir()?;
             let settings = settings::load(&data_dir.join(settings::FILE));
             let store = Store::new(settings, data_dir);
+            #[cfg(not(target_os = "linux"))]
+            {
+                app.manage(store.clone());
+                tray::install(app, store.clone())?;
+            }
             tauri::async_runtime::spawn(runtime::run(
                 store.clone(),
                 runtime::Options { input_file: None },
@@ -62,8 +74,36 @@ fn main() {
             }
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .on_window_event(|window, event| {
+            #[cfg(not(target_os = "linux"))]
+            if let (tauri::WindowEvent::CloseRequested { api, .. }, Some(window)) = (
+                event,
+                window.app_handle().get_webview_window(window.label()),
+            ) {
+                api.prevent_close();
+                tray::hide(&window);
+            }
+            #[cfg(target_os = "linux")]
+            let _ = (window, event);
+        })
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|_app, _event| {
+            // Mac は Dock のアイコンを押したときに、隠したウィンドウを戻す
+            #[cfg(target_os = "macos")]
+            if let tauri::RunEvent::Reopen { .. } = _event {
+                show_window(_app);
+            }
+        });
+}
+
+fn show_window(app: &AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let shown = window.show().and_then(|()| window.unminimize());
+        if let Err(e) = shown.and_then(|()| window.set_focus()) {
+            tracing::warn!("show window: {e}");
+        }
+    }
 }
 
 /// 新しい版があれば聞いて、入れ替えて再起動する（DESIGN.md 13.5）。
