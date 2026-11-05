@@ -41,7 +41,7 @@ export const api = {
   languages: () => request<string[]>("/api/languages"),
   demo: () => fetch("/api/demo", { method: "POST" }),
   /** 閉じられた Chrome を開き直す */
-  openChrome: () => fetch("/api/chrome/open", { method: "POST" }),
+  openChrome: () => post("/api/chrome/open", {}),
   /** Chrome のページの状態を知らせる */
   chromeStatus: (status: ChromeStatus) => post("/api/chrome/status", status),
   /** ハイブリッドモードの途中の文を送る */

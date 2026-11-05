@@ -10,7 +10,7 @@ use tokio::sync::{broadcast, watch};
 
 use crate::assets::Loaded;
 use crate::chrome::Browser;
-use crate::settings::{self, Settings, SettingsPatch, SubtitleDisplay};
+use crate::settings::{self, Settings, SettingsPatch, SpeechEngine, SubtitleDisplay};
 use crate::types::{
     ChromeState, ChromeStatus, ItemCardsView, LiveText, RankState, Segment, ServerMsg, Stage,
     TranscriptionError,
@@ -128,6 +128,10 @@ impl Store {
     }
 
     pub fn set_transcription_error(&self, error: Option<TranscriptionError>) {
+        // ハイブリッドで確定の字幕が止まったら、音声を Google に送り続けない
+        if error.is_some() && self.settings().speech_engine == SpeechEngine::Hybrid {
+            self.close_chrome();
+        }
         *self.transcription_error.lock().unwrap() = error.clone();
         let _ = self.tx.send(ServerMsg::TranscriptionStatus { error });
     }
@@ -210,13 +214,11 @@ impl Store {
 
     /// 字幕を始めるなら Chrome を起動し、止めるなら閉じる（DESIGN.md 9.6）
     pub fn sync_chrome(self: &Arc<Self>, wanted: bool) {
-        let mut browser = self.browser.lock().unwrap();
         if !wanted {
-            *browser = None;
-            drop(browser);
-            self.set_chrome_status(None);
+            self.close_chrome();
             return;
         }
+        let mut browser = self.browser.lock().unwrap();
         if browser.as_mut().is_some_and(Browser::running) {
             return;
         }
@@ -231,6 +233,18 @@ impl Store {
                 }));
             }
         }
+    }
+
+    pub fn close_chrome(&self) {
+        *self.browser.lock().unwrap() = None;
+        self.set_chrome_status(None);
+    }
+
+    /// 開き直す。プロセスが残っていても、ページが止まっていることがある
+    pub fn reopen_chrome(self: &Arc<Self>) {
+        self.close_chrome();
+        let settings = self.settings();
+        self.sync_chrome(settings.transcription_enabled && settings.speech_engine.uses_chrome());
     }
 
     /// Chrome が認識した途中の文。ハイブリッドモードの字幕の処理が読む

@@ -56,6 +56,8 @@ const FATAL = new Set([
 /** すぐ終わり続けるときに、始め直しを連打しない */
 const RETRY_MS = 1000;
 const CREATE_ATTEMPTS = 3;
+/** 続けて失敗したら、通信できないと判断する */
+const NETWORK_FAILURES = 5;
 
 /** `ja` を認識に渡す形（`ja-JP`）にする */
 const speechTag = (lang: string) => {
@@ -141,6 +143,7 @@ export function listen(lang: string, { silenceMs, onText, onEnd, onFatal }: List
   let silence: ReturnType<typeof setTimeout>;
   /** 区切ったあと、聞き直すまでの結果は使わない */
   let cutting = false;
+  let failures = 0;
 
   const start = () => {
     current = new Recognition!();
@@ -148,6 +151,7 @@ export function listen(lang: string, { silenceMs, onText, onEnd, onFatal }: List
     current.continuous = true;
     current.interimResults = true;
     current.onresult = ({ resultIndex, results }) => {
+      failures = 0;
       if (stopped || cutting) return;
       clearTimeout(silence);
       let interim = "";
@@ -162,7 +166,8 @@ export function listen(lang: string, { silenceMs, onText, onEnd, onFatal }: List
       if (silenceMs !== undefined) silence = setTimeout(() => current.stop(), silenceMs);
     };
     current.onerror = ({ error }) => {
-      if (!FATAL.has(error)) return;
+      if (error === "network") failures++;
+      if (!FATAL.has(error) && failures < NETWORK_FAILURES) return;
       stopped = true;
       onFatal(error);
     };

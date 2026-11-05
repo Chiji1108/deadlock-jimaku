@@ -367,9 +367,11 @@ pub enum Background {
 #[ts(export)]
 pub enum SpeechEngine {
     /// 途中の字幕は Chrome、確定は OpenAI。速く、用語の強調とふりがなが使える
-    #[default]
     Hybrid,
-    /// すべて OpenAI。Chrome が要らず、PC の負荷が小さい
+    /// すべて OpenAI。Chrome が要らず、PC の負荷が小さい。
+    /// 0.3 より前の設定ファイルはこの値になる（音声の送り先を黙って増やさない）。
+    /// 新しく使い始める人はハイブリッドから始める（`load`）
+    #[default]
     OpenAi,
     /// すべて Chrome。無料で、用語の強調とふりがなは使えない
     Chrome,
@@ -696,7 +698,12 @@ fn parse(bytes: &[u8]) -> serde_json::Result<Settings> {
 pub fn load(path: &Path) -> std::io::Result<Settings> {
     let bytes = match std::fs::read(path) {
         Ok(bytes) => bytes,
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Settings::default()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            return Ok(Settings {
+                speech_engine: SpeechEngine::Hybrid,
+                ..Settings::default()
+            });
+        }
         Err(e) => return Err(e),
     };
     match parse(&bytes) {
@@ -878,10 +885,26 @@ mod tests {
             speech_engine,
             ..Default::default()
         };
-        assert_eq!(Settings::default().speech_engine, SpeechEngine::Hybrid);
         assert!(with(SpeechEngine::OpenAi).wants_live_subtitles());
         assert!(!with(SpeechEngine::Hybrid).wants_live_subtitles());
         assert!(!with(SpeechEngine::Chrome).wants_live_subtitles());
+    }
+
+    #[test]
+    fn hybrid_is_only_for_new_users() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join(FILE);
+        assert_eq!(load(&path).unwrap().speech_engine, SpeechEngine::Hybrid);
+        // 前の版の設定ファイルには `speechEngine` がない
+        std::fs::write(&path, r#"{ "micLanguage": "ja" }"#).unwrap();
+        assert_eq!(load(&path).unwrap().speech_engine, SpeechEngine::OpenAi);
+        // 選んだモードは保存される
+        let hybrid = Settings {
+            speech_engine: SpeechEngine::Hybrid,
+            ..Default::default()
+        };
+        save(&path, &hybrid).unwrap();
+        assert_eq!(load(&path).unwrap().speech_engine, SpeechEngine::Hybrid);
     }
 
     #[test]

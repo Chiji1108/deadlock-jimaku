@@ -5,6 +5,8 @@ import type { Translator } from "./speech";
 /** ハイブリッドモード。途中の文をその場で訳してアプリへ送る。確定の字幕はアプリが作る */
 export class Live {
   private text = "";
+  /** 発話の途中で Chrome が確定した文。アプリの区切りまでつなげる */
+  private settled = "";
   private translations: LiveText["translations"] = {};
   private translating = false;
   /** 区切ったら、訳している途中の文の結果は捨てる */
@@ -15,8 +17,9 @@ export class Live {
     private send: (live: LiveText) => unknown,
   ) {}
 
-  onText(text: string) {
-    this.text = text.trim();
+  onText(text: string, final: boolean) {
+    this.text = `${this.settled}${text.trim()}`;
+    if (final) this.settled = this.text;
     if (!this.text) return;
     this.publish();
     void this.translate();
@@ -26,6 +29,7 @@ export class Live {
   cut() {
     this.generation++;
     this.text = "";
+    this.settled = "";
     this.translations = {};
   }
 

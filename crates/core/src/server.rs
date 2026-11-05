@@ -82,9 +82,12 @@ async fn post_segment(State(store): State<Arc<Store>>, Json(segment): Json<Segme
     StatusCode::NO_CONTENT
 }
 
-/// 閉じられた Chrome を開き直す
-async fn open_chrome(State(store): State<Arc<Store>>) -> StatusCode {
-    store.sync_chrome(true);
+/// Chrome を開き直す。別のサイトから単純なリクエストで起動されないよう、JSON だけを受け付ける
+async fn open_chrome(
+    State(store): State<Arc<Store>>,
+    Json(_): Json<serde_json::Value>,
+) -> StatusCode {
+    store.reopen_chrome();
     StatusCode::NO_CONTENT
 }
 

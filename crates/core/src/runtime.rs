@@ -89,6 +89,9 @@ enum Source {
 }
 
 pub async fn run(store: Arc<Store>, options: Options) {
+    // 依存が ring と aws-lc の両方を有効にするので、rustls は TLS の実装を自分では選べない。
+    // 選ばないと、Realtime につなぐときに panic する（reqwest と同じ aws-lc にする）
+    let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
     let meter = store.meter();
     tokio::spawn(async move { meter.persist().await });
     let mut settings_rx = store.watch_settings();
@@ -160,7 +163,11 @@ pub async fn run(store: Arc<Store>, options: Options) {
             segmentation: settings.segmentation.clone(),
             access: access.clone(),
         };
-        store.sync_chrome(settings.transcription_enabled && settings.speech_engine.uses_chrome());
+        // ハイブリッドは確定の字幕を作れないなら聞かない（音声を Google に送り続けない）
+        let can_finish = settings.speech_engine == SpeechEngine::Chrome || access.is_some();
+        store.sync_chrome(
+            settings.transcription_enabled && settings.speech_engine.uses_chrome() && can_finish,
+        );
         let starting = !running;
         running = source.is_some();
         subtitles_slot

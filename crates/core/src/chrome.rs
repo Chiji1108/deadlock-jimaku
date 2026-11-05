@@ -59,7 +59,8 @@ impl Browser {
         tokio::spawn(async move {
             let closed = attach(&profile).await;
             // 字幕を止める前に閉じられたら、操作パネルで開き直せるようにする
-            if store.settings().transcription_enabled {
+            let settings = store.settings();
+            if settings.transcription_enabled && settings.speech_engine.uses_chrome() {
                 tracing::warn!("chrome: {closed:#?}");
                 store.set_chrome_status(Some(ChromeStatus {
                     state: ChromeState::Failed,

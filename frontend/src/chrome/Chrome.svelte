@@ -15,7 +15,12 @@
     "service-not-allowed": "マイクを許可してください（アドレスバーの左のアイコンから変えられます）",
     "audio-capture": "マイクが見つかりません。つないでから、字幕を始め直してください",
     "language-not-supported": "この言語は Chrome の音声認識に対応していません",
+    network: "音声認識につながりません。ネットワークを確かめて、字幕を始め直してください",
   };
+  /** 翻訳先が複数あると、2 つ目以降はやり直しが要る */
+  const DOWNLOAD_ATTEMPTS = 3;
+  /** アプリが落ちても Chrome を残さない */
+  const ORPHAN_MS = 5000;
   const UNSUPPORTED = "この Chrome では使えません。Google Chrome を最新にしてください";
 
   let settings = $state<Settings>();
@@ -36,6 +41,8 @@
   let changed = false;
   /** 最初の設定を読み終えた（アプリが準備を始めさせられる） */
   let ready = false;
+  /** ダウンロードに続けて失敗した回数。上限のあとは手で押してもらう */
+  let failures = 0;
 
   const key = (s: Settings) =>
     JSON.stringify([s.speechEngine, s.micLanguage, s.translateTo, s.segmentation.minSilenceMs]);
@@ -59,8 +66,8 @@
     if (s.speechEngine === "hybrid") {
       const live = new Live(translators, api.live);
       return {
-        onText: (text: string, final: boolean) => final || live.onText(text),
-        onEnd: () => live.cut(),
+        onText: (text: string, final: boolean) => live.onText(text, final),
+        onEnd: () => {},
         discard: () => live.cut(),
         cut: () => live.cut(),
         silenceMs: undefined,
@@ -123,7 +130,7 @@
     else if (state === "available") await run(s, targets);
     else {
       needsDownload = true;
-      show("idle");
+      if (failures === 0) show("idle");
     }
   }
 
@@ -147,7 +154,9 @@
     const s = settings!;
     try {
       await run(s, (await availability(s.micLanguage, s.translateTo)).targets);
+      failures = 0;
     } catch (e) {
+      failures++;
       show("failed", (e as Error).message);
     }
     busy = false;
@@ -155,6 +164,7 @@
   }
 
   function watch() {
+    let orphan: ReturnType<typeof setTimeout>;
     void sync();
     const disconnect = connect(
       ["status"],
@@ -164,11 +174,17 @@
       },
       // つなぎ直す間に変わった設定に追いつく
       (status) => {
+        clearTimeout(orphan);
         if (status === "open") void sync();
+        else
+          orphan = setTimeout(() => {
+            halt();
+            window.close();
+          }, ORPHAN_MS);
       },
     );
     (window as unknown as { jimakuStart(): boolean }).jimakuStart = () => {
-      if (ready) void download();
+      if (ready && failures < DOWNLOAD_ATTEMPTS) void download();
       return ready;
     };
     window.addEventListener("pagehide", halt);
@@ -230,7 +246,7 @@
   {/if}
 
   {#if needsDownload && !busy}
-    <button onclick={download}>翻訳のモデルをダウンロードする</button>
+    <button onclick={() => ((failures = 0), download())}>翻訳のモデルをダウンロードする</button>
   {/if}
 
   <p class="note">音声は Google の音声認識に送られます。翻訳はこの PC の中で動きます。</p>

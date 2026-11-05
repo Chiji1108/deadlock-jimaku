@@ -6,7 +6,6 @@ license-file.workspace = true
 
 [dependencies]
 overlays-core = { path = "../crates/core" }
-rustls = { version = "0.23.46", default-features = false, features = ["aws_lc_rs"] }
 # generate_context! が tauri.conf.json の plugins の設定を埋め込むのに使う
 serde_json = "1.0.154"
 tauri = { version = "2.12.5", features = ["tray-icon"] }
