@@ -46,7 +46,6 @@ pub async fn stream_json<T: DeserializeOwned>(
     let mut res = send(http, &req, body).await?;
     let mut text = String::new();
     let mut buf = Vec::new();
-    let mut done = None;
     while let Some(chunk) = res.chunk().await? {
         buf.extend_from_slice(&chunk);
         while let Some(end) = buf.iter().position(|b| *b == b'\n') {
@@ -60,13 +59,14 @@ pub async fn stream_json<T: DeserializeOwned>(
                     on_text(&text);
                 }
                 Some("response.completed" | "response.incomplete" | "response.failed") => {
-                    done = Some(event["response"].clone());
+                    return finish(&req, &event["response"]);
                 }
+                Some("error") => anyhow::bail!("stream: {event}"),
                 _ => {}
             }
         }
     }
-    finish(&req, &done.context("the stream ended without a response")?)
+    anyhow::bail!("the stream ended without a response")
 }
 
 /// SSE の 1 行。`data:` の行だけが JSON を持つ
@@ -131,7 +131,12 @@ fn output_text(res: &Value) -> anyhow::Result<String> {
             _ => {}
         }
     }
-    anyhow::ensure!(!text.is_empty(), "no output text: {}", res["status"]);
+    anyhow::ensure!(
+        !text.is_empty(),
+        "no output text: {} {}",
+        res["status"],
+        res["error"]
+    );
     Ok(text)
 }
 

@@ -140,6 +140,10 @@ impl Enricher {
         let user = json!({ "context": context, "transcript": text });
         let mut last = Translations::new();
         let on_text = |partial: &str| {
+            // 訳文のあとは区切りが続くだけ
+            if partial.contains("\"segments\":") {
+                return;
+            }
             let translations = draft(partial, glossary);
             if !translations.is_empty() && translations != last {
                 last.clone_from(&translations);
@@ -334,12 +338,8 @@ fn draft(partial: &str, glossary: Option<&Glossary>) -> Translations {
             let JsonValue::Str(text) = text else {
                 return None;
             };
-            let done = match (text.rfind('⟦'), text.rfind('⟧')) {
-                (Some(open), Some(close)) if open < close => text.as_ref(),
-                (Some(open), _) => &text[..open],
-                _ => text.as_ref(),
-            };
-            let tokens = resolve(done, |r| known(glossary, r));
+            let open = text.rfind('⟦').filter(|&o| !text[o..].contains('⟧'));
+            let tokens = resolve(&text[..open.unwrap_or(text.len())], |r| known(glossary, r));
             (!tokens.is_empty()).then(|| (lang.to_string(), tokens))
         })
         .collect()
@@ -519,7 +519,8 @@ fn system_prompt(source_lang: &str, glossary: Option<&Glossary>) -> String {
          that name it (for \"グレイブスの3番\": \"グレイブス\" is the hero, \"の\" is plain, \"3番\" is the ability).\n\
          2. \"translations\": translate only the transcript into each requested language, naturally and casually, \
          like gamers talk. Write each game term as its id in brackets, like ⟦hero:13⟧, where the term belongs; \
-         never write a term's name yourself. When a term's English name starts with \"The\", do not put an article right before it.\n\
+         never write a term's name yourself. When a term's English name starts with \"The\", do not put an article right before it. \
+         Answer with \"translations\" first, then \"segments\": every id you write in the translations must also be a \"ref\" in the segments.\n\
          3. Do not attach inflectional endings to a term; rephrase instead (Russian: \"ульта ⟦hero:13⟧\", not \"⟦hero:13⟧а\"). \
          The only exception is the English possessive 's, which reads naturally: \"⟦hero:13⟧'s ⟦ability:1⟧\".\n\
          4. Keep common gamer words natural (ult, farm, push, gank).\n\

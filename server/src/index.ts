@@ -26,11 +26,18 @@ const RESPONSES_FIELDS = ["model", "instructions", "input", "text", "reasoning",
 /** ストリームの最後の応答の usage */
 function streamUsage(text: string): unknown {
   for (const line of text.split("\n").reverse()) {
-    if (!line.startsWith("data:")) continue;
-    const event = JSON.parse(line.slice("data:".length)) as { response?: { usage?: unknown } };
-    if (event.response?.usage) return event.response.usage;
+    const usage = line.startsWith("data:") ? parsedUsage(line.slice("data:".length)) : undefined;
+    if (usage) return usage;
   }
   return undefined;
+}
+
+function parsedUsage(data: string): unknown {
+  try {
+    return (JSON.parse(data) as { response?: { usage?: unknown } }).response?.usage;
+  } catch {
+    return undefined;
+  }
 }
 
 // ---- おすそ分けする人（合言葉で見分ける） ----

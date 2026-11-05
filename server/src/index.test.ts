@@ -218,6 +218,7 @@ describe("relay", () => {
     const sse = [
       `data: ${JSON.stringify({ type: "response.output_text.delta", delta: "{" })}`,
       `data: ${JSON.stringify({ type: "response.completed", response: { usage } })}`,
+      "data: [DONE]",
       "",
     ].join("\n\n");
     vi.mocked(openai).mockResolvedValue(new Response(sse));

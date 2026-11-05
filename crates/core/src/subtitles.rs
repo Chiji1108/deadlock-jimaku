@@ -377,10 +377,9 @@ impl Pipeline {
     }
 
     fn on_draft(&mut self, id: &str, translations: Translations) {
-        let translation_only = self.store.settings().translation_only();
         if let Some(seg) = self.live.get_mut(id) {
             // 翻訳だけなら届いて初めて表示する。読む時間と並びはこの時刻から数える
-            if translation_only && seg.draft.is_none() {
+            if seg.draft.is_none() && self.store.settings().translation_only() {
                 seg.started_at = now_ms();
             }
             seg.draft = Some(translations);
@@ -388,17 +387,22 @@ impl Pipeline {
         }
     }
 
-    fn on_enriched(&mut self, id: &str, enriched: Enriched) {
+    fn on_enriched(&mut self, id: &str, mut enriched: Enriched) {
         let Some(mut seg) = self.live.remove(id) else {
             return;
         };
+        // 訳文が 1 文字も届かなかったときも、翻訳だけならここで初めて表示する
+        let draft = seg.draft.take();
+        if draft.is_none() && self.store.settings().translation_only() {
+            seg.started_at = now_ms();
+        }
+        // 訳文のあとで失敗しても、出ている訳文は消さない
+        if enriched.translations.is_empty() {
+            enriched.translations = draft.unwrap_or_default();
+        }
         seg.stage = Stage::Enriched;
         seg.enriched = Some(enriched);
         seg.settled_at = Some(now_ms());
-        // 訳文が 1 文字も届かなかったときも、翻訳だけならここで初めて表示する
-        if seg.draft.take().is_none() && self.store.settings().translation_only() {
-            seg.started_at = now_ms();
-        }
         self.store.upsert_segment(seg);
     }
 }
