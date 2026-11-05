@@ -122,9 +122,7 @@
     <Card.Root>
       <Card.Header>
         <Card.Title>作ったギフトコード</Card.Title>
-        <Card.Description>
-          同じコードを何人に渡しても使えます。配信に映っても大丈夫なよう、コードは伏せてあります
-        </Card.Description>
+        <Card.Description>同じコードを何人に渡しても使えます</Card.Description>
       </Card.Header>
       <Card.Content class="flex flex-col gap-4">
         {#each share.codes as c (c.id)}
