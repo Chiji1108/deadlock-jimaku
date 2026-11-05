@@ -12,6 +12,7 @@ use tauri::webview::NewWindowResponse;
 use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
 use tauri_plugin_updater::UpdaterExt;
+use tauri_plugin_window_state::StateFlags;
 use tokio::net::TcpListener;
 
 const UPDATE_INTERVAL: Duration = Duration::from_secs(6 * 60 * 60);
@@ -20,10 +21,16 @@ fn main() {
     tracing_subscriber::fmt::init();
 
     tauri::Builder::default()
-        // 隠れているときにもう一度開いたら、ポートを取り合わずに今のウィンドウを出す
+        // 動いているときにもう一度開いたら、ポートを取り合わずにウィンドウを出す
         .plugin(tauri_plugin_single_instance::init(|app, _, _| {
             show_window(app);
         }))
+        // 作り直しても大きさと位置を保つ。全画面は戻さない
+        .plugin(
+            tauri_plugin_window_state::Builder::default()
+                .with_state_flags(StateFlags::SIZE | StateFlags::POSITION | StateFlags::MAXIMIZED)
+                .build(),
+        )
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
@@ -52,7 +59,7 @@ fn main() {
                 }
             });
 
-            open_window(app.handle())?;
+            front_window(app.handle())?;
 
             // 開発中は確かめない（リリースの版と比べても意味がない）
             if !cfg!(debug_assertions) {
@@ -111,6 +118,8 @@ fn open_window(app: &AppHandle) -> tauri::Result<WebviewWindow> {
     // 「OBS にドラッグして追加」を使うので切る（このアプリはファイルを受け取らない）
     .disable_drag_drop_handler()
     .inner_size(960.0, 720.0)
+    // 大きさと位置を戻してから見せる
+    .visible(false)
     // 外部へのリンク（API キーの作成ページなど）はふだんのブラウザで開く
     .on_new_window(|url, _| {
         if let Err(e) = tauri_plugin_opener::open_url(url.as_str(), None::<&str>) {
@@ -121,26 +130,25 @@ fn open_window(app: &AppHandle) -> tauri::Result<WebviewWindow> {
     .build()
 }
 
-/// 閉じていれば開き直す。ウィンドウの操作はメインスレッドで行う
+/// 閉じていれば開き直す。Windows はイベントハンドラーの中でウィンドウを作ると止まるので、別のスレッドで行う
 fn show_window(app: &AppHandle) {
-    let handle = app.clone();
-    let shown = app.run_on_main_thread(move || {
-        let window = match handle.get_webview_window("main") {
-            Some(window) => Ok(window),
-            None => open_window(&handle),
-        };
-        let shown = window.and_then(|w| {
-            w.show()?;
-            w.unminimize()?;
-            w.set_focus()
-        });
-        if let Err(e) = shown {
+    let app = app.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        if let Err(e) = front_window(&app) {
             tracing::warn!("show window: {e}");
         }
     });
-    if let Err(e) = shown {
-        tracing::warn!("show window: {e}");
-    }
+}
+
+fn front_window(app: &AppHandle) -> tauri::Result<WebviewWindow> {
+    let window = match app.get_webview_window("main") {
+        Some(window) => window,
+        None => open_window(app)?,
+    };
+    window.show()?;
+    window.unminimize()?;
+    window.set_focus()?;
+    Ok(window)
 }
 
 enum Answer {
@@ -155,9 +163,10 @@ async fn update(app: AppHandle) -> Result<Answer, Box<dyn std::error::Error>> {
         return Ok(Answer::Latest);
     };
     tracing::info!("update available: {}", update.version);
-    // 隠れたウィンドウに付くと、質問が見えない
-    show_window(&app);
-    let mut dialog = app
+    // 操作パネルの前に出す（親がないと、Windows ではウィンドウの裏に隠れる）
+    let handle = app.clone();
+    let window = tauri::async_runtime::spawn_blocking(move || front_window(&handle)).await??;
+    let dialog = app
         .dialog()
         .message(format!(
             "新しい版（{}）があります。今の版は {} です。\n更新して再起動しますか？（字幕は一度止まります）",
@@ -167,11 +176,8 @@ async fn update(app: AppHandle) -> Result<Answer, Box<dyn std::error::Error>> {
         .buttons(MessageDialogButtons::OkCancelCustom(
             "更新する".into(),
             "あとで".into(),
-        ));
-    // 操作パネルの前に出す（親がないと、Windows ではウィンドウの裏に隠れる）
-    if let Some(window) = app.get_webview_window("main") {
-        dialog = dialog.parent(&window);
-    }
+        ))
+        .parent(&window);
     // 答えを待つ間、非同期のワーカーを塞がない
     if !tauri::async_runtime::spawn_blocking(move || dialog.blocking_show()).await? {
         return Ok(Answer::Declined);
