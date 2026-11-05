@@ -135,11 +135,12 @@ fn toggle_subtitles(app: AppHandle, store: Arc<Store>) {
     });
 }
 
-/// 閉じるボタンではウィンドウを隠すだけにする。動き続けていることは初回だけ、隠す前に知らせる
-pub fn hide(window: &Window) {
+/// 閉じるボタンで WebView ごとウィンドウを閉じ、メモリを空ける。字幕はアプリの本体で動き続ける。
+/// 動き続けていることは初回だけ、閉じる前に知らせる
+pub fn close(window: &Window) {
     let store = window.state::<Arc<Store>>();
     if store.settings().tray_notice_seen {
-        conceal(window);
+        destroy(window);
         return;
     }
     let shown = window.clone();
@@ -149,7 +150,6 @@ pub fn hide(window: &Window) {
         .title("デドロ字幕")
         .parent(window)
         .show(move |_| {
-            conceal(&shown);
             let patch = SettingsPatch {
                 tray_notice_seen: Some(true),
                 ..Default::default()
@@ -157,13 +157,12 @@ pub fn hide(window: &Window) {
             if let Err(e) = shown.state::<Arc<Store>>().update_settings(patch) {
                 tracing::warn!("tray notice: {e}");
             }
+            destroy(&shown);
         });
 }
 
-fn conceal(window: &Window) {
-    // Mac の全画面のまま隠すと、空の画面が残る
-    let hidden = window.set_fullscreen(false).and_then(|()| window.hide());
-    if let Err(e) = hidden {
-        tracing::warn!("hide window: {e}");
+fn destroy(window: &Window) {
+    if let Err(e) = window.destroy() {
+        tracing::warn!("close window: {e}");
     }
 }

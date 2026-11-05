@@ -9,7 +9,7 @@ use std::time::Duration;
 
 use overlays_core::{DEFAULT_PORT, runtime, server, settings, store::Store};
 use tauri::webview::NewWindowResponse;
-use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
 use tauri_plugin_updater::UpdaterExt;
 use tokio::net::TcpListener;
@@ -52,20 +52,7 @@ fn main() {
                 }
             });
 
-            WebviewWindowBuilder::new(app, "main", control_url()?)
-                .title("デドロ字幕")
-                // Windows ではファイルを落とす処理があるとページの中のドラッグが働かない。
-                // 「OBS にドラッグして追加」を使うので切る（このアプリはファイルを落として使わない）
-                .disable_drag_drop_handler()
-                .inner_size(960.0, 720.0)
-                // 外部へのリンク（API キーの作成ページなど）はふだんのブラウザで開く
-                .on_new_window(|url, _| {
-                    if let Err(e) = tauri_plugin_opener::open_url(url.as_str(), None::<&str>) {
-                        tracing::warn!("cannot open {url}: {e}");
-                    }
-                    NewWindowResponse::Deny
-                })
-                .build()?;
+            open_window(app.handle())?;
 
             // 開発中は確かめない（リリースの版と比べても意味がない）
             if !cfg!(debug_assertions) {
@@ -93,28 +80,66 @@ fn main() {
             #[cfg(not(target_os = "linux"))]
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();
-                tray::hide(window);
+                tray::close(window);
             }
             #[cfg(target_os = "linux")]
             let _ = (window, event);
         })
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
-        .run(|_app, _event| {
-            // Mac は Dock のアイコンを押したときに、隠したウィンドウを戻す
+        .run(|_app, event| match event {
+            // ウィンドウを閉じても常駐する。終了はトレイの「終了」（code がある）だけ
+            #[cfg(not(target_os = "linux"))]
+            tauri::RunEvent::ExitRequested {
+                api, code: None, ..
+            } => api.prevent_exit(),
+            // Mac は Dock のアイコンを押したときに、閉じたウィンドウを開き直す
             #[cfg(target_os = "macos")]
-            if let tauri::RunEvent::Reopen { .. } = _event {
-                show_window(_app);
-            }
+            tauri::RunEvent::Reopen { .. } => show_window(_app),
+            _ => {}
         });
 }
 
+fn open_window(app: &AppHandle) -> tauri::Result<WebviewWindow> {
+    WebviewWindowBuilder::new(
+        app,
+        "main",
+        control_url().map_err(tauri::Error::InvalidUrl)?,
+    )
+    .title("デドロ字幕")
+    // Windows ではファイルを落とす処理があるとページの中のドラッグが効かない。
+    // 「OBS にドラッグして追加」を使うので切る（このアプリはファイルを受け取らない）
+    .disable_drag_drop_handler()
+    .inner_size(960.0, 720.0)
+    // 外部へのリンク（API キーの作成ページなど）はふだんのブラウザで開く
+    .on_new_window(|url, _| {
+        if let Err(e) = tauri_plugin_opener::open_url(url.as_str(), None::<&str>) {
+            tracing::warn!("cannot open {url}: {e}");
+        }
+        NewWindowResponse::Deny
+    })
+    .build()
+}
+
+/// 閉じていれば開き直す。ウィンドウの操作はメインスレッドで行う
 fn show_window(app: &AppHandle) {
-    if let Some(window) = app.get_webview_window("main") {
-        let shown = window.show().and_then(|()| window.unminimize());
-        if let Err(e) = shown.and_then(|()| window.set_focus()) {
+    let handle = app.clone();
+    let shown = app.run_on_main_thread(move || {
+        let window = match handle.get_webview_window("main") {
+            Some(window) => Ok(window),
+            None => open_window(&handle),
+        };
+        let shown = window.and_then(|w| {
+            w.show()?;
+            w.unminimize()?;
+            w.set_focus()
+        });
+        if let Err(e) = shown {
             tracing::warn!("show window: {e}");
         }
+    });
+    if let Err(e) = shown {
+        tracing::warn!("show window: {e}");
     }
 }
 
@@ -132,19 +157,21 @@ async fn update(app: AppHandle) -> Result<Answer, Box<dyn std::error::Error>> {
     tracing::info!("update available: {}", update.version);
     // 隠れたウィンドウに付くと、質問が見えない
     show_window(&app);
-    let dialog = app
+    let mut dialog = app
         .dialog()
         .message(format!(
             "新しい版（{}）があります。今の版は {} です。\n更新して再起動しますか？（字幕は一度止まります）",
             update.version, update.current_version
         ))
         .title("デドロ字幕の更新")
-        // 操作パネルの前に出す（親がないと、Windows ではウィンドウの裏に隠れることがある）
-        .parent(&app.get_webview_window("main").ok_or("no main window")?)
         .buttons(MessageDialogButtons::OkCancelCustom(
             "更新する".into(),
             "あとで".into(),
         ));
+    // 操作パネルの前に出す（親がないと、Windows ではウィンドウの裏に隠れる）
+    if let Some(window) = app.get_webview_window("main") {
+        dialog = dialog.parent(&window);
+    }
     // 答えを待つ間、非同期のワーカーを塞がない
     if !tauri::async_runtime::spawn_blocking(move || dialog.blocking_show()).await? {
         return Ok(Answer::Declined);
