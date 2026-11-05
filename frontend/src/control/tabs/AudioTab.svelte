@@ -11,6 +11,7 @@
   import LevelMeter from "../parts/LevelMeter.svelte";
   import PauseDialog from "../parts/PauseDialog.svelte";
   import { panel } from "../panel.svelte";
+  import { translationOnly } from "../../lib/subtitle-lines";
 
   const MAX_TRANSLATE_TO = 4;
   /** 何 ms 黙ったら区切るか */
@@ -21,6 +22,7 @@
   ];
 
   const s = $derived(panel.settings!);
+  const onlyTranslation = $derived(translationOnly(s));
   const pause = $derived(s.segmentation.minSilenceMs);
   const preset = $derived(PAUSES.find((p) => p.ms === pause));
 
@@ -128,12 +130,17 @@
         <Field.Content>
           <Field.Label for="live-subtitles">話している途中から字幕を出す</Field.Label>
           <Field.Description>
-            オフにすると途中の字幕の料金がかかりません。字幕は話し終えてから出ます。切り替えると、字幕は始め直します
+            {#if onlyTranslation}
+              翻訳だけを出しているので、途中の字幕は出ません
+            {:else}
+              オフにすると途中の字幕の料金がかかりません。字幕は話し終えてから出ます。切り替えると、字幕は始め直します
+            {/if}
           </Field.Description>
         </Field.Content>
         <Switch
           id="live-subtitles"
           checked={s.liveSubtitles}
+          disabled={onlyTranslation}
           onCheckedChange={(v) => panel.update({ liveSubtitles: v })}
         />
       </Field.Field>

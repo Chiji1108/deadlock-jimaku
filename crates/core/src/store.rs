@@ -9,7 +9,7 @@ use bytes::Bytes;
 use tokio::sync::{broadcast, watch};
 
 use crate::assets::Loaded;
-use crate::settings::{self, Settings, SettingsPatch};
+use crate::settings::{self, Settings, SettingsPatch, SubtitleDisplay};
 use crate::types::{ItemCardsView, RankState, Segment, ServerMsg, Stage, TranscriptionError};
 use crate::usage::Meter;
 
@@ -258,7 +258,11 @@ impl Store {
 
 fn display(settings: &Settings) -> ServerMsg {
     ServerMsg::Display {
-        subtitles: settings.subtitle_display.clone(),
+        // 翻訳先がなければ話した言葉を出す
+        subtitles: SubtitleDisplay {
+            show_source: !settings.translation_only(),
+            ..settings.subtitle_display.clone()
+        },
         rank_language: settings.rank_language(),
         rank_content: settings.rank_content,
         rank_anchor: settings.rank_anchor,

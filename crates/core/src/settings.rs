@@ -100,6 +100,8 @@ pub struct Models {
 #[serde(default, rename_all = "camelCase")]
 #[ts(export)]
 pub struct SubtitleDisplay {
+    /// 話した言葉を出す。オフなら翻訳だけを、届いてから出す
+    pub show_source: bool,
     /// 話した言葉にふりがなを付ける
     pub furigana: bool,
     /// 字幕の揃え。オーバーレイは字幕の箱で、置く場所は OBS で決める
@@ -125,6 +127,7 @@ pub struct SubtitleDisplay {
 impl Default for SubtitleDisplay {
     fn default() -> Self {
         Self {
+            show_source: true,
             furigana: true,
             align: Align::Center,
             font_size: 40,
@@ -143,7 +146,7 @@ impl SubtitleDisplay {
     /// 0 は制限なし
     pub const MAX_LINES: std::ops::RangeInclusive<u32> = 0..=5;
     pub const HOLD_SECONDS: std::ops::RangeInclusive<f32> = 2.0..=30.0;
-    pub const FONT_SIZE: std::ops::RangeInclusive<u32> = 16..=96;
+    pub const FONT_SIZE: std::ops::RangeInclusive<u32> = 12..=96;
     pub const PER_CHAR_SECONDS: std::ops::RangeInclusive<f32> = 0.0..=1.0;
     pub const MIN_READ_SECONDS: std::ops::RangeInclusive<f32> = 1.0..=30.0;
     pub const MAX_WAIT_SECONDS: std::ops::RangeInclusive<f32> = 0.0..=30.0;
@@ -234,6 +237,8 @@ pub struct ItemCardsPatch {
 #[ts(export)]
 pub struct SubtitleDisplayPatch {
     #[ts(optional)]
+    pub show_source: Option<bool>,
+    #[ts(optional)]
     pub furigana: Option<bool>,
     #[ts(optional)]
     pub align: Option<Align>,
@@ -258,6 +263,7 @@ pub struct SubtitleDisplayPatch {
 impl SubtitleDisplay {
     fn apply(&self, patch: SubtitleDisplayPatch) -> Result<Self, String> {
         let next = Self {
+            show_source: patch.show_source.unwrap_or(self.show_source),
             furigana: patch.furigana.unwrap_or(self.furigana),
             align: patch.align.unwrap_or(self.align),
             font_size: patch.font_size.unwrap_or(self.font_size),
@@ -442,6 +448,21 @@ impl Settings {
             .clone()
             .filter(|l| self.glossary_languages().contains(l))
             .unwrap_or_else(|| self.mic_language.clone())
+    }
+
+    /// 翻訳だけを出すか。翻訳先がなければ、話した言葉を出す
+    pub fn translation_only(&self) -> bool {
+        !self.subtitle_display.show_source && !self.translate_to.is_empty()
+    }
+
+    /// 途中の字幕を動かすか。翻訳だけなら見えないので、料金をかけない
+    pub fn wants_live_subtitles(&self) -> bool {
+        self.live_subtitles && !self.translation_only()
+    }
+
+    /// ふりがなを聞くか。翻訳だけなら見えないので、料金をかけない
+    pub fn wants_furigana(&self) -> bool {
+        self.subtitle_display.furigana && !self.translation_only()
     }
 
     /// 辞書に名前を載せる言語（DESIGN.md 8.2）
@@ -797,6 +818,41 @@ mod tests {
         ] {
             assert!(s.apply(patch).is_err());
         }
+    }
+
+    #[test]
+    fn translation_only_needs_a_translation_target() {
+        let hide = |translate_to: Vec<LangCode>| Settings {
+            translate_to,
+            subtitle_display: SubtitleDisplay {
+                show_source: false,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let only = hide(vec!["en".into()]);
+        assert!(only.translation_only());
+        assert!(!only.wants_live_subtitles());
+        assert!(!only.wants_furigana());
+
+        let source = hide(Vec::new());
+        assert!(!source.translation_only());
+        assert!(source.wants_live_subtitles());
+        assert!(source.wants_furigana());
+    }
+
+    #[test]
+    fn font_size_goes_down_to_12() {
+        let patch = |size| SettingsPatch {
+            subtitle_display: Some(SubtitleDisplayPatch {
+                font_size: Some(size),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        let s = Settings::default();
+        assert!(s.apply(patch(12)).is_ok());
+        assert!(s.apply(patch(11)).is_err());
     }
 
     #[test]

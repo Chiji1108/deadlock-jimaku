@@ -6,6 +6,7 @@
   import type { SubtitleDisplay } from "../generated/SubtitleDisplay";
   import Rich from "./Rich.svelte";
   import { slide } from "./slide";
+  import { showsSource } from "./subtitle-lines";
 
   let { segments, display }: { segments: Segment[]; display?: SubtitleDisplay } = $props();
 
@@ -32,12 +33,14 @@
       in:fly={{ y: 16, duration: 200 }}
       out:fade={{ duration: replacing() ? 0 : 400 }}
     >
-      <p class="source" lang={s.lang}>
-        <!-- partial / final は文字単位で変化させ、enriched ではふりがなとアイコンを足す -->
-        {#if s.enriched}<span class="enriched"
-            ><Rich tokens={s.enriched.source} lang={s.lang} furigana={display?.furigana} /></span
-          >{:else}<TextMorph text={s.text} locale={s.lang} as="span" {...MORPH} />{/if}
-      </p>
+      {#if showsSource(s, display)}
+        <p class="source" lang={s.lang}>
+          <!-- partial / final は文字単位で変化させ、enriched ではふりがなとアイコンを足す -->
+          {#if s.enriched}<span class="enriched"
+              ><Rich tokens={s.enriched.source} lang={s.lang} furigana={display?.furigana} /></span
+            >{:else}<TextMorph text={s.text} locale={s.lang} as="span" {...MORPH} />{/if}
+        </p>
+      {/if}
       {#if s.enriched}
         {#each Object.entries(s.enriched.translations) as [lang, tokens] (lang)}
           <p class="translation" {lang} in:fly={{ y: 8, duration: 250 }}>

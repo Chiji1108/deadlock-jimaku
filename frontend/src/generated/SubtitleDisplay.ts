@@ -7,6 +7,10 @@ import type { Background } from "./Background";
  */
 export type SubtitleDisplay = { 
 /**
+ * 話した言葉を出す。オフなら翻訳だけを、届いてから出す
+ */
+showSource: boolean, 
+/**
  * 話した言葉にふりがなを付ける
  */
 furigana: boolean, 
