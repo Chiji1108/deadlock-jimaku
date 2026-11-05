@@ -123,9 +123,12 @@
     font-size: var(--points-size, calc(20px * var(--scale)));
     font-variant-numeric: tabular-nums;
   }
-  .unit,
-  .max {
+  .unit {
     font-size: 0.7em;
+    opacity: 0.75;
+  }
+  /* 小さく置いても読めるよう、大きさは揃えて色だけ薄くする */
+  .max {
     opacity: 0.75;
   }
 </style>
