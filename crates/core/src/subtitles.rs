@@ -376,6 +376,10 @@ impl Pipeline {
         seg.stage = Stage::Enriched;
         seg.enriched = Some(enriched);
         seg.settled_at = Some(now_ms());
+        // 翻訳だけなら届いて初めて表示する。読む時間と並びはこの時刻から数える
+        if self.store.settings().translation_only() {
+            seg.started_at = now_ms();
+        }
         self.store.upsert_segment(seg);
     }
 }

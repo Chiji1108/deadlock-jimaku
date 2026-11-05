@@ -73,7 +73,7 @@ describe("visibleLines", () => {
 describe("翻訳だけを出すとき", () => {
   const seg = (enriched?: Partial<NonNullable<Segment["enriched"]>>) =>
     ({ enriched: enriched && { source: [], translations: {}, ...enriched } }) as Segment;
-  const translated = seg({ translations: { en: [] } });
+  const translated = seg({ translations: { en: [{ t: "text", text: "Hi" }] } });
 
   it("翻訳が届くまで字幕を出さない", () => {
     expect(isReady(seg(), { showSource: false })).toBe(false);
@@ -88,5 +88,6 @@ describe("翻訳だけを出すとき", () => {
 
   it("翻訳に失敗したら話した言葉を出す", () => {
     expect(showsSource(seg({}), { showSource: false })).toBe(true);
+    expect(showsSource(seg({ translations: { en: [] } }), { showSource: false })).toBe(true);
   });
 });
