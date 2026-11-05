@@ -29,7 +29,7 @@
 
 <div class="rank">
   {#if rank.image}<img class="badge" src={rank.image} alt="" />{/if}
-  <!-- 1 行目: ランク名、2 行目: 太いゲージ（ポイントは中に重ねる）。出すものは操作パネルで選ぶ -->
+  <!-- 1 行目: ランク名、2 行目: ゲージ（ポイントを重ねるか、数字なしで細くする）。出すものは操作パネルで選ぶ -->
   {#if content !== "icon"}<div class="text">
       {#if label}<p class="name" lang={shown}>{label}</p>{/if}
       {#if content === "name"}

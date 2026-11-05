@@ -4,5 +4,5 @@ members = ["crates/core", "app"]
 
 [workspace.package]
 edition = "2024"
-version = "0.2.6"
+version = "0.2.7"
 license-file = "LICENSE.md"

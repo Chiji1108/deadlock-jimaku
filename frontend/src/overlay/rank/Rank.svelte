@@ -12,14 +12,17 @@
   let rank = $state<RankState | undefined>();
   /** ランク名の言語と、出すもの。操作パネルで変え、サーバーから届く（名前がなければ英語） */
   let lang = $state("ja");
-  let content = $state<RankContent>("gauge");
+  /** 表示の設定が届くまでは描かない（設定と違う形で一瞬出さない） */
+  let content = $state<RankContent | undefined>();
   let anchor = $state<Anchor>("top-left");
 
   // 大きさは --scale で描く（zoom だとポイントの数字のアニメーションの位置がずれる）
   $effect(() =>
-    fitSource(rankSize(content), (factor) =>
-      document.documentElement.style.setProperty("--scale", String(factor)),
-    ),
+    content
+      ? fitSource(rankSize(content), (factor) =>
+          document.documentElement.style.setProperty("--scale", String(factor)),
+        )
+      : undefined,
   );
 
   onMount(() =>
@@ -36,7 +39,7 @@
 
 <!-- ソースの箱の中で、操作パネルで選んだ位置に寄せる -->
 <div class="stage" style:place-items={placeItems(anchor)}>
-  {#if rank}
+  {#if rank && content}
     <!-- バッジが変わったら作り直してアニメーションさせる -->
     {#key rank.badge}
       <div class="card" in:scale={{ start: 0.8, duration: 400 }}>

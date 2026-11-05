@@ -48,7 +48,7 @@
     <Card.Header>
       <Card.Title>ランクオーバーレイ</Card.Title>
       <Card.Description>
-        ランクのアイコン・名前・ポイントを出します。試合の結果が反映されるまで少しかかります
+        ランクのアイコン・名前・ゲージを出します。試合の結果が反映されるまで少しかかります
       </Card.Description>
     </Card.Header>
     <Card.Content class="flex flex-col gap-6">
@@ -82,6 +82,7 @@
 
       <Field.Field>
         <Field.Label>出すもの</Field.Label>
+        <Field.Description>「アイコンだけ」以外は、アイコンの横に出します</Field.Description>
         <ToggleGroup.Root
           type="single"
           variant="outline"
