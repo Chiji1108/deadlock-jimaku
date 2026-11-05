@@ -45,6 +45,7 @@ pub fn router(store: Arc<Store>) -> Router {
         .route("/devices", get(devices))
         .route("/languages", get(languages))
         .route("/segments", post(post_segment))
+        .route("/chrome/open", post(open_chrome))
         .layer(middleware::from_fn(local_only));
     Router::new()
         .route("/ws", get(ws))
@@ -75,6 +76,19 @@ async fn local_only(headers: HeaderMap, request: Request, next: Next) -> Respons
 async fn post_segment(State(store): State<Arc<Store>>, Json(segment): Json<Segment>) -> StatusCode {
     store.upsert_segment(segment);
     StatusCode::NO_CONTENT
+}
+
+/// 無料モードのページを Chrome で開く
+async fn open_chrome(State(store): State<Arc<Store>>) -> StatusCode {
+    let url = format!("http://127.0.0.1:{}/chrome", crate::DEFAULT_PORT);
+    match crate::chrome::open(store.data_dir(), &url) {
+        Ok(()) => StatusCode::NO_CONTENT,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => StatusCode::NOT_FOUND,
+        Err(e) => {
+            tracing::warn!("open chrome: {e}");
+            StatusCode::INTERNAL_SERVER_ERROR
+        }
+    }
 }
 
 async fn get_settings(State(store): State<Arc<Store>>) -> Json<SettingsView> {

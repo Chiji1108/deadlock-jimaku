@@ -29,6 +29,13 @@ export const api = {
   /** 対応している言語のコード */
   languages: () => request<string[]>("/api/languages"),
   demo: () => fetch("/api/demo", { method: "POST" }),
+  /** 無料モードのページを Chrome で開く。Chrome が見つからなければ false */
+  openChrome: async () => {
+    const res = await fetch("/api/chrome/open", { method: "POST" });
+    if (res.status === 404) return false;
+    if (!res.ok) throw new Error(res.statusText);
+    return true;
+  },
   /** Chrome のページが認識した字幕を送る */
   segment: (segment: Segment) =>
     fetch("/api/segments", {

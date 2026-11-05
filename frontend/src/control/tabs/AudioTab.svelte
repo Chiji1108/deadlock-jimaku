@@ -10,7 +10,9 @@
   import DeadlockModeDialog from "../parts/DeadlockModeDialog.svelte";
   import LevelMeter from "../parts/LevelMeter.svelte";
   import PauseDialog from "../parts/PauseDialog.svelte";
-  import { chromeUrl, panel } from "../panel.svelte";
+  import { toast } from "svelte-sonner";
+  import { api } from "../../lib/api";
+  import { panel } from "../panel.svelte";
   import { translationOnly } from "../../lib/subtitle-lines";
   import type { SpeechEngine } from "../../generated/SpeechEngine";
 
@@ -25,6 +27,11 @@
   const s = $derived(panel.settings!);
   const onlyTranslation = $derived(translationOnly(s));
   const chrome = $derived(s.speechEngine === "chrome");
+
+  async function openChrome() {
+    if (!(await api.openChrome().catch(() => false)))
+      toast.error("Chrome を開けませんでした。Google Chrome を入れてから、もう一度押してください");
+  }
   const pause = $derived(s.segmentation.minSilenceMs);
   const preset = $derived(PAUSES.find((p) => p.ms === pause));
 
@@ -50,10 +57,10 @@
       {#if chrome}
         <p class="text-sm text-muted-foreground">
           Google Chrome の中で音声認識と翻訳を動かします。API キーは要りません。音声は PC
-          の外に送られません。精度は下がり、用語の強調、ふりがな、アイテム説明は使えません。下のページを
-          Chrome で開いたまま、「字幕を始める」を押してください
+          の外に送られません。精度は下がり、用語の強調、ふりがな、アイテム説明は使えません。下のボタンで開いた
+          Chrome を閉じずに、「字幕を始める」を押してください
         </p>
-        <Button variant="outline" href={chromeUrl} target="_blank">Chrome で開くページ</Button>
+        <Button variant="outline" onclick={openChrome}>Chrome を開く</Button>
       {:else}
         <p class="text-sm text-muted-foreground">
           精度が高く、用語の強調とふりがなが使えます。API キーかギフトコードが必要です

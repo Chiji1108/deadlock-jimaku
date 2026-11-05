@@ -16,9 +16,6 @@ import { connect, type Status } from "../lib/ws";
 export const overlayUrl = (name: "subtitles" | "rank" | "items") =>
   `${import.meta.env.CORE_ORIGIN}/overlay/${name}`;
 
-/** Chrome のモードで字幕を動かすページ */
-export const chromeUrl = `${import.meta.env.CORE_ORIGIN}/chrome`;
-
 /** 言語名は画面の言語（日本語）で出す。翻訳先は配信者が読める名前で選ぶ */
 const languageNames = new Intl.DisplayNames("ja", { type: "language" });
 /** Intl の名前が不自然なもの（「ポルトガル語 (イベリア半島)」）は地域を外す */

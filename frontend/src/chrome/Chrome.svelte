@@ -21,6 +21,9 @@
   let stop: (() => void) | undefined;
   /** 同じ設定で聞き直さない。言語が変わったら聞き直す */
   let listening = "";
+  /** 処理は 1 つずつ。途中で設定が変わったら、終わってから合わせ直す */
+  let busy = false;
+  let changed = false;
 
   const key = (s: Settings) => JSON.stringify([s.micLanguage, s.translateTo]);
   const wanted = (s?: Settings) => s?.speechEngine === "chrome" && s.transcriptionEnabled;
@@ -31,26 +34,29 @@
     listening = "";
   }
 
-  async function run(s: Settings) {
-    const translators = await prepare(s.micLanguage, s.translateTo);
+  async function run(s: Settings, targets: string[]) {
+    const translators = await prepare(s.micLanguage, targets);
     const captions = new Captions(s.micLanguage, translators, api.segment);
     const end = listen(s.micLanguage, {
       onText: (text, final) => captions.onText(text, final),
       onEnd: () => captions.discard(),
       onFatal: (error) => {
         message = FATAL[error] ?? error;
-        state_ = "idle";
-        listening = "";
+        halt();
+        void api.updateSettings({ transcriptionEnabled: false }).catch(() => {});
       },
     });
-    stop = end;
+    stop = () => {
+      end();
+      captions.discard();
+    };
     listening = key(s);
     state_ = "running";
     message = "";
   }
 
   /** 設定に合わせて始める・止める */
-  async function sync() {
+  async function apply() {
     const s = (await api.settings()).settings;
     settings = s;
     if (!wanted(s)) {
@@ -60,26 +66,51 @@
     }
     if (listening === key(s)) return;
     halt();
-    const ready = await availability(s.micLanguage, s.translateTo);
-    if (ready === "unavailable") state_ = "unsupported";
-    else if (ready === "downloadable") state_ = "download";
-    else await run(s);
+    const { state, targets } = await availability(s.micLanguage, s.translateTo);
+    if (state === "unavailable") state_ = "unsupported";
+    else if (state === "available") await run(s, targets);
+    else state_ = "download";
+  }
+
+  async function sync() {
+    changed = true;
+    if (busy) return;
+    busy = true;
+    while (changed) {
+      changed = false;
+      await apply().catch((e: Error) => (message = e.message));
+    }
+    busy = false;
   }
 
   /** ダウンロードにはクリックが要る */
   async function download() {
+    if (busy) return;
+    busy = true;
     state_ = "preparing";
-    await run(settings!).catch((e: Error) => {
-      message = e.message;
+    const s = settings!;
+    try {
+      await run(s, (await availability(s.micLanguage, s.translateTo)).targets);
+    } catch (e) {
+      message = `${(e as Error).message}（もう一度押してください）`;
       state_ = "download";
-    });
+    }
+    busy = false;
+    void sync();
   }
 
   onMount(() => {
     void sync();
-    const disconnect = connect(["status"], (msg) => {
-      if (msg.type === "settings.changed") void sync();
-    });
+    const disconnect = connect(
+      ["status"],
+      (msg) => {
+        if (msg.type === "settings.changed") void sync();
+      },
+      // つなぎ直す間に変わった設定に追いつく
+      (status) => {
+        if (status === "open") void sync();
+      },
+    );
     window.addEventListener("pagehide", halt);
     return () => {
       disconnect();

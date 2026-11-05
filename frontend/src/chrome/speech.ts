@@ -59,6 +59,7 @@ const FATAL = new Set([
 ]);
 /** すぐ終わり続けるときに、始め直しを連打しない */
 const RETRY_MS = 1000;
+const CREATE_ATTEMPTS = 3;
 
 /** `ja` を認識に渡す形（`ja-JP`）にする */
 const speechTag = (lang: string) => {
@@ -69,25 +70,44 @@ const local = (lang: string): LocalOptions => ({ langs: [speechTag(lang)], proce
 const pairs = (lang: string, targets: string[]) =>
   targets.map((targetLanguage) => ({ sourceLanguage: lang, targetLanguage }));
 
-/** 使えるか。downloadable はダウンロードすれば使える（クリックの中で `prepare` する） */
-export async function availability(lang: string, targets: string[]): Promise<Availability> {
-  if (!Recognition?.available || !Recognition.install || !TranslatorApi) return "unavailable";
-  const all = await Promise.all([
-    Recognition.available(local(lang)),
-    ...pairs(lang, targets).map((pair) => TranslatorApi.availability(pair)),
-  ]);
-  if (all.includes("unavailable")) return "unavailable";
-  return all.every((a) => a === "available") ? "available" : "downloadable";
+/** 使えるか。downloadable はダウンロードすれば使える（クリックの中で `prepare` する）。
+ * `targets` は訳せる言語だけに絞る（訳せない言語があっても、ほかの言語で字幕は出せる） */
+export async function availability(lang: string, targets: string[]) {
+  const none = { state: "unavailable" as Availability, targets: [] as string[] };
+  if (!Recognition?.available || !Recognition.install || !TranslatorApi) return none;
+  const speech = await Recognition.available(local(lang));
+  if (speech === "unavailable") return none;
+  const translation = await Promise.all(
+    pairs(lang, targets).map((pair) => TranslatorApi.availability(pair)),
+  );
+  const ready =
+    speech === "available" && translation.every((a) => a === "available" || a === "unavailable");
+  return {
+    state: (ready ? "available" : "downloadable") as Availability,
+    targets: targets.filter((_, i) => translation[i] !== "unavailable"),
+  };
+}
+
+/** 初回はモデルの準備中に失敗することがあるので、少し待って作り直す */
+async function create(pair: Pair, attempts = CREATE_ATTEMPTS): Promise<Translator> {
+  try {
+    return await TranslatorApi!.create(pair);
+  } catch (e) {
+    if (attempts <= 1) throw e;
+    await new Promise((resolve) => setTimeout(resolve, RETRY_MS));
+    return create(pair, attempts - 1);
+  }
 }
 
 /** 言語パックと翻訳モデルを入れる。ダウンロードにはクリックが要る */
 export async function prepare(lang: string, targets: string[]): Promise<Map<string, Translator>> {
-  // 同時に作ると、初回のダウンロード中に失敗することがあるので 1 つずつ作る
   const created = new Map<string, Translator>();
   for (const pair of pairs(lang, targets)) {
-    created.set(pair.targetLanguage, await TranslatorApi!.create(pair));
+    created.set(pair.targetLanguage, await create(pair));
   }
-  await Recognition!.install!(local(lang));
+  if (!(await Recognition!.install!(local(lang)))) {
+    throw new Error("言語パックをダウンロードできませんでした");
+  }
   return created;
 }
 
@@ -103,6 +123,7 @@ export function listen(lang: string, { onText, onEnd, onFatal }: Listener): () =
   let stopped = false;
   let current: Recognizer;
   let startedAt = 0;
+  let restart: ReturnType<typeof setTimeout>;
 
   const start = () => {
     current = new Recognition!();
@@ -127,7 +148,7 @@ export function listen(lang: string, { onText, onEnd, onFatal }: Listener): () =
     current.onend = () => {
       onEnd();
       if (stopped) return;
-      setTimeout(start, Math.max(0, RETRY_MS - (Date.now() - startedAt)));
+      restart = setTimeout(start, Math.max(0, RETRY_MS - (Date.now() - startedAt)));
     };
     startedAt = Date.now();
     current.start();
@@ -135,6 +156,7 @@ export function listen(lang: string, { onText, onEnd, onFatal }: Listener): () =
   start();
   return () => {
     stopped = true;
+    clearTimeout(restart);
     current.stop();
   };
 }

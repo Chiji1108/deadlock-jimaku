@@ -68,6 +68,8 @@ struct RankInput {
 struct SubtitlesInput {
     /// None なら止めている
     source: Option<Source>,
+    /// Chrome のモードでは `source` が変わらないので、止めたことはこれで分かる
+    transcription_enabled: bool,
     mic_language: LangCode,
     translate_to: Vec<LangCode>,
     /// 用語ヒントはセッションの開始時にしか渡せないので、変えたら始め直す
@@ -146,6 +148,7 @@ pub async fn run(store: Arc<Store>, options: Options) {
         };
         let input = SubtitlesInput {
             source: source.clone(),
+            transcription_enabled: settings.transcription_enabled,
             mic_language: settings.mic_language.clone(),
             translate_to: settings.translate_to.clone(),
             deadlock_mode: settings.deadlock_mode,
