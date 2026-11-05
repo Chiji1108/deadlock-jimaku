@@ -39,6 +39,11 @@ export class Captions {
     }
   }
 
+  /** 認識が終わったら、確定しなかった文をそのまま確定する */
+  finish() {
+    if (this.current) this.onText(this.current.text, true);
+  }
+
   /** 止めたら、確定しなかった字幕を消す */
   discard() {
     if (this.current) this.publish({ ...this.current, stage: "discarded" });

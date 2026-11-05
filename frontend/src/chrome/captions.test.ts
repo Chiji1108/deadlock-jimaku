@@ -63,6 +63,15 @@ describe("Captions", () => {
     expect(sent.at(-1)!.stage).toBe("discarded");
   });
 
+  it("認識が終わったら、途中の文を確定する", async () => {
+    const { sent, captions, settled } = setup(hello);
+    captions.onText("さあ", false);
+    captions.finish();
+    await settled();
+    expect(sent.at(-1)!.stage).toBe("enriched");
+    expect(sent.at(-1)!.text).toBe("さあ");
+  });
+
   it("止めたら確定しなかった字幕を消す", async () => {
     const { sent, captions, settled } = setup(hello);
     captions.onText("さあ", false);

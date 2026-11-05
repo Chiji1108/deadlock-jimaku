@@ -56,8 +56,8 @@
       </ToggleGroup.Root>
       {#if chrome}
         <p class="text-sm text-muted-foreground">
-          Google Chrome の中で音声認識と翻訳を動かします。API キーは要りません。音声は PC
-          の外に送られません。精度は下がり、用語の強調、ふりがな、アイテム説明は使えません。下のボタンで開いた
+          Google Chrome の音声認識と翻訳を使います。API キーは要りません。音声は Google
+          の音声認識に送られます。精度は下がり、用語の強調、ふりがな、アイテム説明は使えません。下のボタンで開いた
           Chrome を閉じずに、「字幕を始める」を押してください
         </p>
         <Button variant="outline" onclick={openChrome}>Chrome を開く</Button>

@@ -39,7 +39,7 @@
     const captions = new Captions(s.micLanguage, translators, api.segment);
     const end = listen(s.micLanguage, {
       onText: (text, final) => captions.onText(text, final),
-      onEnd: () => captions.discard(),
+      onEnd: () => captions.finish(),
       onFatal: (error) => {
         message = FATAL[error] ?? error;
         halt();
@@ -131,7 +131,7 @@
       が古いときは、更新してください。
     </p>
   {:else if state_ === "download"}
-    <p>音声認識と翻訳のモデルをダウンロードします（初回だけ）。</p>
+    <p>翻訳のモデルをダウンロードします（初回だけ）。</p>
     <button onclick={download}>ダウンロードして始める</button>
   {:else if state_ === "preparing"}
     <p>ダウンロードしています…</p>
@@ -141,7 +141,7 @@
     <p>操作パネルの「字幕を始める」を押すと、ここで音声認識が始まります。</p>
   {/if}
   {#if message}<p class="error">{message}</p>{/if}
-  <p class="note">音声は PC の外に送られません。</p>
+  <p class="note">音声は Google の音声認識に送られます。</p>
 </main>
 
 <style>

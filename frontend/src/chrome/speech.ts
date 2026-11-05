@@ -1,4 +1,4 @@
-// Chrome の端末内の音声認識と翻訳（Web Speech API と Translator API）。音声は PC の外に出ない
+// Chrome の音声認識と翻訳（Web Speech API と Translator API）。音声は Google に送られ、翻訳は端末の中で動く
 
 type Availability = "unavailable" | "downloadable" | "downloading" | "available";
 
@@ -17,7 +17,6 @@ interface Recognizer {
   lang: string;
   continuous: boolean;
   interimResults: boolean;
-  processLocally: boolean;
   onresult: (event: ResultEvent) => void;
   onerror: (event: { error: string }) => void;
   onend: () => void;
@@ -26,12 +25,6 @@ interface Recognizer {
 }
 interface RecognizerClass {
   new (): Recognizer;
-  available?(options: LocalOptions): Promise<Availability>;
-  install?(options: LocalOptions): Promise<boolean>;
-}
-interface LocalOptions {
-  langs: string[];
-  processLocally: true;
 }
 interface Pair {
   sourceLanguage: string;
@@ -60,28 +53,27 @@ const FATAL = new Set([
 /** すぐ終わり続けるときに、始め直しを連打しない */
 const RETRY_MS = 1000;
 const CREATE_ATTEMPTS = 3;
+/** OpenAI のときの発話の区切り（`minSilenceMs` の既定）と揃える。Chrome の確定を待つより早く字幕を閉じる */
+const SILENCE_MS = 750;
 
 /** `ja` を認識に渡す形（`ja-JP`）にする */
 const speechTag = (lang: string) => {
   const { language, region } = new Intl.Locale(lang).maximize();
   return `${language}-${region}`;
 };
-const local = (lang: string): LocalOptions => ({ langs: [speechTag(lang)], processLocally: true });
 const pairs = (lang: string, targets: string[]) =>
   targets.map((targetLanguage) => ({ sourceLanguage: lang, targetLanguage }));
 
 /** 使えるか。downloadable はダウンロードすれば使える（クリックの中で `prepare` する）。
  * `targets` は訳せる言語だけに絞る（訳せない言語があっても、ほかの言語で字幕は出せる） */
 export async function availability(lang: string, targets: string[]) {
-  const none = { state: "unavailable" as Availability, targets: [] as string[] };
-  if (!Recognition?.available || !Recognition.install || !TranslatorApi) return none;
-  const speech = await Recognition.available(local(lang));
-  if (speech === "unavailable") return none;
+  if (!Recognition || !TranslatorApi) {
+    return { state: "unavailable" as Availability, targets: [] as string[] };
+  }
   const translation = await Promise.all(
     pairs(lang, targets).map((pair) => TranslatorApi.availability(pair)),
   );
-  const ready =
-    speech === "available" && translation.every((a) => a === "available" || a === "unavailable");
+  const ready = translation.every((a) => a === "available" || a === "unavailable");
   return {
     state: (ready ? "available" : "downloadable") as Availability,
     targets: targets.filter((_, i) => translation[i] !== "unavailable"),
@@ -99,21 +91,18 @@ async function create(pair: Pair, attempts = CREATE_ATTEMPTS): Promise<Translato
   }
 }
 
-/** 言語パックと翻訳モデルを入れる。ダウンロードにはクリックが要る */
+/** 翻訳モデルを入れる。ダウンロードにはクリックが要る */
 export async function prepare(lang: string, targets: string[]): Promise<Map<string, Translator>> {
   const created = new Map<string, Translator>();
   for (const pair of pairs(lang, targets)) {
     created.set(pair.targetLanguage, await create(pair));
-  }
-  if (!(await Recognition!.install!(local(lang)))) {
-    throw new Error("言語パックをダウンロードできませんでした");
   }
   return created;
 }
 
 interface Listener {
   onText(text: string, final: boolean): void;
-  /** 認識がひと区切りした。確定しなかった文はもう確定しない */
+  /** 認識がひと区切りした。確定しなかった文は、ここで確定する */
   onEnd(): void;
   onFatal(error: string): void;
 }
@@ -124,22 +113,26 @@ export function listen(lang: string, { onText, onEnd, onFatal }: Listener): () =
   let current: Recognizer;
   let startedAt = 0;
   let restart: ReturnType<typeof setTimeout>;
+  let silence: ReturnType<typeof setTimeout>;
 
   const start = () => {
     current = new Recognition!();
     current.lang = speechTag(lang);
     current.continuous = true;
     current.interimResults = true;
-    current.processLocally = true;
     current.onresult = ({ resultIndex, results }) => {
       if (stopped) return;
+      clearTimeout(silence);
       let interim = "";
       for (let i = resultIndex; i < results.length; i++) {
         const result = results[i]!;
         if (result.isFinal) onText(result[0].transcript, true);
         else interim += result[0].transcript;
       }
-      if (interim) onText(interim, false);
+      if (!interim) return;
+      onText(interim, false);
+      // 文字が増えなくなったら止めて確定させる。終わったらすぐ聞き直す
+      silence = setTimeout(() => current.stop(), SILENCE_MS);
     };
     current.onerror = ({ error }) => {
       if (!FATAL.has(error)) return;
@@ -147,6 +140,7 @@ export function listen(lang: string, { onText, onEnd, onFatal }: Listener): () =
       onFatal(error);
     };
     current.onend = () => {
+      clearTimeout(silence);
       onEnd();
       if (stopped) return;
       restart = setTimeout(start, Math.max(0, RETRY_MS - (Date.now() - startedAt)));
@@ -158,6 +152,7 @@ export function listen(lang: string, { onText, onEnd, onFatal }: Listener): () =
   return () => {
     stopped = true;
     clearTimeout(restart);
+    clearTimeout(silence);
     current.stop();
   };
 }
