@@ -31,6 +31,8 @@ pub struct Settings {
     pub translate_to: Vec<LangCode>,
     /// ヒーロー・スキル・アイテムを判定して強調し、アイテム説明を出す。雑談の配信ならオフにする
     pub deadlock_mode: bool,
+    /// 話している途中から字幕を出す。オフなら話し終えてから出し、途中の字幕の料金がかからない
+    pub live_subtitles: bool,
     /// 字幕オーバーレイの見せ方。変えると表示中のオーバーレイにそのまま届く
     pub subtitle_display: SubtitleDisplay,
     /// アイテム説明のオーバーレイ（字幕でアイテム名が出たら説明のカードを出す）
@@ -379,6 +381,7 @@ impl Default for Settings {
             mic_device: None,
             translate_to: vec!["en".into()],
             deadlock_mode: true,
+            live_subtitles: true,
             subtitle_display: SubtitleDisplay::default(),
             item_cards: ItemCards::default(),
             rank_language: None,
@@ -541,6 +544,9 @@ impl Settings {
         if let Some(enabled) = patch.deadlock_mode {
             next.deadlock_mode = enabled;
         }
+        if let Some(enabled) = patch.live_subtitles {
+            next.live_subtitles = enabled;
+        }
         if let Some(content) = patch.rank_content {
             next.rank_content = content;
         }
@@ -587,6 +593,8 @@ pub struct SettingsPatch {
     pub translate_to: Option<Vec<LangCode>>,
     #[ts(optional)]
     pub deadlock_mode: Option<bool>,
+    #[ts(optional)]
+    pub live_subtitles: Option<bool>,
     /// SteamID64 か 32bit のアカウント ID。空文字列ならランクを表示しない
     #[ts(optional)]
     pub rank_account: Option<String>,
@@ -789,6 +797,17 @@ mod tests {
         ] {
             assert!(s.apply(patch).is_err());
         }
+    }
+
+    #[test]
+    fn live_subtitles_are_on_unless_turned_off() {
+        let s = Settings::default();
+        assert!(s.live_subtitles);
+        let patch = SettingsPatch {
+            live_subtitles: Some(false),
+            ..Default::default()
+        };
+        assert!(!s.apply(patch).unwrap().live_subtitles);
     }
 
     #[test]

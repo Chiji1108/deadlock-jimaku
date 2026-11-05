@@ -29,6 +29,10 @@ translateTo: Array<string>,
  */
 deadlockMode: boolean, 
 /**
+ * 話している途中から字幕を出す。オフなら話し終えてから出し、途中の字幕の料金がかからない
+ */
+liveSubtitles: boolean, 
+/**
  * 字幕オーバーレイの見せ方。変えると表示中のオーバーレイにそのまま届く
  */
 subtitleDisplay: SubtitleDisplay, 

@@ -72,6 +72,7 @@ struct SubtitlesInput {
     translate_to: Vec<LangCode>,
     /// 用語ヒントはセッションの開始時にしか渡せないので、変えたら始め直す
     deadlock_mode: bool,
+    live_subtitles: bool,
     models: Models,
     realtime_delay: String,
     segmentation: Segmentation,
@@ -147,6 +148,7 @@ pub async fn run(store: Arc<Store>, options: Options) {
             mic_language: settings.mic_language.clone(),
             translate_to: settings.translate_to.clone(),
             deadlock_mode: settings.deadlock_mode,
+            live_subtitles: settings.live_subtitles,
             models: settings.models.clone(),
             realtime_delay: settings.realtime_delay.clone(),
             segmentation: settings.segmentation.clone(),

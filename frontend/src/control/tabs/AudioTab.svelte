@@ -124,6 +124,20 @@
         />
       </Field.Field>
 
+      <Field.Field orientation="horizontal">
+        <Field.Content>
+          <Field.Label for="live-subtitles">話している途中から字幕を出す</Field.Label>
+          <Field.Description>
+            オフにすると途中の字幕の料金がかかりません。字幕は話し終えてから出ます。切り替えると、字幕は始め直します
+          </Field.Description>
+        </Field.Content>
+        <Switch
+          id="live-subtitles"
+          checked={s.liveSubtitles}
+          onCheckedChange={(v) => panel.update({ liveSubtitles: v })}
+        />
+      </Field.Field>
+
       <Field.Field>
         <Field.Label>翻訳先</Field.Label>
         <Field.Description>
