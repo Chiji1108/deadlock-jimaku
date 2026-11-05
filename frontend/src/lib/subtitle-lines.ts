@@ -6,14 +6,17 @@ import type { SubtitleDisplay } from "../generated/SubtitleDisplay";
 export const translationOnly = (s: Settings) =>
   !s.subtitleDisplay.showSource && s.translateTo.length > 0;
 
+/** 届いている訳文。書きかけのうちから出す */
+export const translationsOf = (s: Segment) => s.enriched?.translations ?? s.draft ?? {};
+
 /** 翻訳だけを出すときは、翻訳が届くまで字幕を出さない */
 export const isReady = (s: Segment, { showSource }: Pick<SubtitleDisplay, "showSource">) =>
-  showSource || s.enriched !== undefined;
+  showSource || s.enriched !== undefined || s.draft !== undefined;
 
 /** 話した言葉の行を出すか。翻訳に失敗したら、字幕が消えないよう出す */
 export const showsSource = (s: Segment, display?: Pick<SubtitleDisplay, "showSource">) =>
   display?.showSource !== false ||
-  !Object.values(s.enriched?.translations ?? {}).some((tokens) => tokens?.length);
+  !Object.values(translationsOf(s)).some((tokens) => tokens?.length);
 
 type Timing = Pick<SubtitleDisplay, "maxLines" | "minReadSeconds" | "maxWaitSeconds">;
 

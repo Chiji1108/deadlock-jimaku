@@ -7,11 +7,14 @@
 //!
 //! 答えは確かめてから使う。区切りをつなげて字幕にならなければ用語を付けず、辞書にない参照は捨てる。
 //! ふりがなは文字の位置で区切りに当てはめる（`source_tokens`）。
+//!
+//! 訳文は先に書かせて（`schema`）、書きかけのうちから字幕に出す（`draft`）。
 
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+use jiter::{JsonValue, PartialMode};
 use serde::Deserialize;
 use serde_json::{Value, json};
 
@@ -20,7 +23,7 @@ use crate::lang;
 use crate::llm;
 use crate::openai::Access;
 use crate::settings::Models;
-use crate::types::{Enriched, EntityKind, Glossary, LangCode, RubySegment, Token};
+use crate::types::{Enriched, EntityKind, Glossary, LangCode, RubySegment, Token, Translations};
 use crate::usage::{Meter, Use};
 
 const TIMEOUT: Duration = Duration::from_secs(8);
@@ -74,11 +77,12 @@ impl Enricher {
         context: &[String],
         glossary: Option<&Glossary>,
         furigana: bool,
+        on_draft: impl FnMut(Translations),
     ) -> Enriched {
         let glossary = glossary.filter(|_| self.deadlock_mode);
         let (ruby, analysis) = tokio::join!(
             self.furigana(text, context, furigana),
-            self.analyze(text, context, glossary)
+            self.analyze(text, context, glossary, on_draft)
         );
         let (spans, translations) = match analysis {
             Some(a) if self.deadlock_mode => (
@@ -128,12 +132,21 @@ impl Enricher {
         text: &str,
         context: &[String],
         glossary: Option<&Glossary>,
+        mut on_draft: impl FnMut(Translations),
     ) -> Option<Analysis> {
         if glossary.is_none() && self.targets.is_empty() {
             return None;
         }
         let user = json!({ "context": context, "transcript": text });
-        llm::chat_json(
+        let mut last = Translations::new();
+        let on_text = |partial: &str| {
+            let translations = draft(partial, glossary);
+            if !translations.is_empty() && translations != last {
+                last.clone_from(&translations);
+                on_draft(translations);
+            }
+        };
+        llm::stream_json(
             &self.http,
             llm::Request {
                 access: &self.access,
@@ -147,6 +160,7 @@ impl Enricher {
                 meter: &self.meter,
                 purpose: Use::Translate,
             },
+            on_text,
         )
         .await
         .inspect_err(|e| tracing::warn!("terms and translation: {e:#}"))
@@ -198,7 +212,8 @@ impl Enricher {
             .iter()
             .map(|t| (t.clone(), json!({ "type": "string" })))
             .collect();
-        let mut required = Vec::new();
+        // 書きかけを早く出すよう、訳文を先に書かせる
+        let mut required = vec!["translations"];
         let mut properties = serde_json::Map::new();
         properties.insert(
             "translations".into(),
@@ -213,7 +228,6 @@ impl Enricher {
             required.push("segments");
             properties.insert("segments".into(), segments);
         }
-        required.push("translations");
         json!({
             "type": "object",
             "additionalProperties": false,
@@ -289,7 +303,7 @@ impl Analysis {
         self.translations
             .iter()
             .filter(|(lang, _)| targets.contains(lang))
-            .map(|(lang, text)| (lang.clone(), resolve(text, &terms)))
+            .map(|(lang, text)| (lang.clone(), resolve(text, |r| terms.contains(&r))))
             .collect()
     }
 }
@@ -298,8 +312,41 @@ fn known(glossary: Option<&Glossary>, reference: &str) -> bool {
     glossary.is_some_and(|g| g.entities.contains_key(reference))
 }
 
-/// 訳文の `⟦参照⟧` をエンティティにする。`terms` にない参照は捨て、そのために空いた空白を詰める
-fn resolve(text: &str, terms: &[&str]) -> Vec<Token> {
+/// 答えの JSON の書きかけから、書きかけの訳文を取り出す。読めないところまで届いたら空を返す（次で読める）。
+/// 原文の区切りはまだ届かないので、辞書にある参照をそのまま使う。閉じていない `⟦` からあとは出さない
+fn draft(partial: &str, glossary: Option<&Glossary>) -> Translations {
+    let Ok(answer) =
+        JsonValue::parse_with_config(partial.as_bytes(), false, PartialMode::TrailingStrings)
+    else {
+        return Translations::new();
+    };
+    let JsonValue::Object(answer) = answer else {
+        return Translations::new();
+    };
+    let Some((_, JsonValue::Object(translations))) =
+        answer.iter().find(|(key, _)| key == "translations")
+    else {
+        return Translations::new();
+    };
+    translations
+        .iter()
+        .filter_map(|(lang, text)| {
+            let JsonValue::Str(text) = text else {
+                return None;
+            };
+            let done = match (text.rfind('⟦'), text.rfind('⟧')) {
+                (Some(open), Some(close)) if open < close => text.as_ref(),
+                (Some(open), _) => &text[..open],
+                _ => text.as_ref(),
+            };
+            let tokens = resolve(done, |r| known(glossary, r));
+            (!tokens.is_empty()).then(|| (lang.to_string(), tokens))
+        })
+        .collect()
+}
+
+/// 訳文の `⟦参照⟧` をエンティティにする。`allowed` でない参照は捨て、そのために空いた空白を詰める
+fn resolve(text: &str, allowed: impl Fn(&str) -> bool) -> Vec<Token> {
     let mut tokens: Vec<Token> = Vec::new();
     let mut buf = String::new();
     let mut rest = text;
@@ -311,7 +358,7 @@ fn resolve(text: &str, terms: &[&str]) -> Vec<Token> {
         buf.push_str(&rest[..start]);
         let reference = rest[start + '⟦'.len_utf8()..end].trim();
         let after = &rest[end + '⟧'.len_utf8()..];
-        if terms.contains(&reference) {
+        if allowed(reference) {
             push_text(&mut tokens, std::mem::take(&mut buf));
             tokens.push(Token::Entity {
                 reference: reference.to_owned(),
@@ -538,6 +585,45 @@ mod tests {
     }
 
     #[test]
+    fn draft_reads_the_translation_as_it_is_written() {
+        let g = glossary();
+        let text = |t: &str| Token::Text {
+            text: t.into(),
+            ruby: None,
+        };
+        assert!(draft("", Some(&g)).is_empty());
+        assert!(draft("{\"translations\":{\"en\":\"", Some(&g)).is_empty());
+        assert_eq!(
+            draft("{\"translations\":{\"en\":\"Buy it", Some(&g))["en"],
+            [text("Buy it")]
+        );
+        // 閉じていない参照は出さない
+        assert_eq!(
+            draft("{\"translations\":{\"en\":\"Use ⟦hero:", Some(&g))["en"],
+            [text("Use ")]
+        );
+        assert_eq!(
+            draft("{\"translations\":{\"en\":\"Use ⟦hero:13⟧ now", Some(&g))["en"],
+            [
+                text("Use "),
+                Token::Entity {
+                    reference: "hero:13".into(),
+                    spoken: None,
+                    ruby: None,
+                },
+                text(" now"),
+            ]
+        );
+    }
+
+    #[test]
+    fn schema_asks_for_the_translation_first() {
+        let schema = enricher(&["en"]).schema();
+        let keys: Vec<&String> = schema["properties"].as_object().unwrap().keys().collect();
+        assert_eq!(keys, ["translations", "segments"]);
+    }
+
+    #[test]
     fn spans_keep_known_terms_and_merge_the_rest() {
         let g = glossary();
         let a = analysis(
@@ -579,7 +665,7 @@ mod tests {
         assert_eq!(
             resolve(
                 "⟦hero:13⟧'s ⟦ ability:8 ⟧ beat ⟦item:1⟧ easily, ask ⟦hero:2⟧'s team ⟦oops",
-                &["hero:13", "ability:8"]
+                |r| ["hero:13", "ability:8"].contains(&r)
             ),
             [
                 ent("hero:13"),
@@ -649,7 +735,7 @@ mod tests {
     #[test]
     fn schema_asks_translations_only_with_targets() {
         let schema = enricher(&["en"]).schema();
-        assert_eq!(schema["required"], json!(["segments", "translations"]));
+        assert_eq!(schema["required"], json!(["translations", "segments"]));
         assert_eq!(
             schema["properties"]["translations"]["required"],
             json!(["en"])
@@ -669,7 +755,7 @@ mod tests {
         // API キーもモデルも偽物なので、呼べばエラーになって warn が出るだけ。呼ばずに返ることを確かめる
         let e = enricher(&["ja"]);
         let started = std::time::Instant::now();
-        let out = e.enrich("ヘイズ強い", &[], None, false).await;
+        let out = e.enrich("ヘイズ強い", &[], None, false, |_| {}).await;
         assert!(out.translations.is_empty());
         assert_eq!(out.source, [text("ヘイズ強い")]);
         assert!(started.elapsed() < Duration::from_secs(1));

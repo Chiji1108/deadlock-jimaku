@@ -289,6 +289,7 @@ mod tests {
             lang: "ja".into(),
             text: text.into(),
             enriched: None,
+            draft: None,
             settled_at: None,
         }
     }

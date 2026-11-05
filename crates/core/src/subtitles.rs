@@ -21,7 +21,7 @@ use crate::openai::Access;
 use crate::settings::Settings;
 use crate::store::Store;
 use crate::stt::{self, BatchRequest, Hints, RealtimeConfig};
-use crate::types::{Enriched, EntityKind, Glossary, LangCode, Segment, Stage};
+use crate::types::{Enriched, EntityKind, Glossary, LangCode, Segment, Stage, Translations};
 use crate::usage::Meter;
 
 /// earshot が受け取るフレームの長さ（16ms）
@@ -264,6 +264,7 @@ impl Pipeline {
                 lang: self.lang.clone(),
                 text: String::new(),
                 enriched: None,
+                draft: None,
                 settled_at: None,
             },
         );
@@ -323,10 +324,16 @@ impl Pipeline {
     }
 
     fn on_done(&mut self, done: Done) {
-        self.pending -= 1;
         match done {
-            Done::Transcribed { id, text } => self.on_transcribed(&id, text),
-            Done::Enriched { id, enriched } => self.on_enriched(&id, enriched),
+            Done::Transcribed { id, text } => {
+                self.pending -= 1;
+                self.on_transcribed(&id, text);
+            }
+            Done::Draft { id, translations } => self.on_draft(&id, translations),
+            Done::Enriched { id, enriched } => {
+                self.pending -= 1;
+                self.on_enriched(&id, enriched);
+            }
         }
     }
 
@@ -369,6 +376,18 @@ impl Pipeline {
         ));
     }
 
+    fn on_draft(&mut self, id: &str, translations: Translations) {
+        let translation_only = self.store.settings().translation_only();
+        if let Some(seg) = self.live.get_mut(id) {
+            // 翻訳だけなら届いて初めて表示する。読む時間と並びはこの時刻から数える
+            if translation_only && seg.draft.is_none() {
+                seg.started_at = now_ms();
+            }
+            seg.draft = Some(translations);
+            self.store.upsert_segment(seg.clone());
+        }
+    }
+
     fn on_enriched(&mut self, id: &str, enriched: Enriched) {
         let Some(mut seg) = self.live.remove(id) else {
             return;
@@ -376,8 +395,8 @@ impl Pipeline {
         seg.stage = Stage::Enriched;
         seg.enriched = Some(enriched);
         seg.settled_at = Some(now_ms());
-        // 翻訳だけなら届いて初めて表示する。読む時間と並びはこの時刻から数える
-        if self.store.settings().translation_only() {
+        // 訳文が 1 文字も届かなかったときも、翻訳だけならここで初めて表示する
+        if seg.draft.take().is_none() && self.store.settings().translation_only() {
             seg.started_at = now_ms();
         }
         self.store.upsert_segment(seg);
@@ -428,6 +447,11 @@ struct BatchContext {
 enum Done {
     /// None ならバッチが失敗した
     Transcribed { id: String, text: Option<String> },
+    /// 書きかけの訳文
+    Draft {
+        id: String,
+        translations: Translations,
+    },
     /// 翻訳に失敗しても、固有名詞とふりがなは付いている
     Enriched { id: String, enriched: Enriched },
 }
@@ -467,8 +491,15 @@ async fn enrich(
     done: mpsc::Sender<Done>,
 ) {
     let started = Instant::now();
+    let on_draft = |translations| {
+        // 書きかけは次のものが追い越すので、詰まっていたら捨てる
+        let _ = done.try_send(Done::Draft {
+            id: id.clone(),
+            translations,
+        });
+    };
     let enriched = enricher
-        .enrich(&text, &context, glossary.as_deref(), furigana)
+        .enrich(&text, &context, glossary.as_deref(), furigana, on_draft)
         .await;
     tracing::debug!("enriched in {:?}", started.elapsed());
     let _ = done.send(Done::Enriched { id, enriched }).await;

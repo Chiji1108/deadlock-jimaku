@@ -31,6 +31,50 @@ pub async fn chat_json<T: DeserializeOwned>(
     http: &reqwest::Client,
     req: Request<'_>,
 ) -> anyhow::Result<T> {
+    let res = send(http, &req, body(&req)).await?;
+    finish(&req, &res.json().await?)
+}
+
+/// `chat_json` と同じ答えを返す。途中の文（JSON の書きかけ）を、届くたびに `on_text` に渡す
+pub async fn stream_json<T: DeserializeOwned>(
+    http: &reqwest::Client,
+    req: Request<'_>,
+    mut on_text: impl FnMut(&str),
+) -> anyhow::Result<T> {
+    let mut body = body(&req);
+    body["stream"] = json!(true);
+    let mut res = send(http, &req, body).await?;
+    let mut text = String::new();
+    let mut buf = Vec::new();
+    let mut done = None;
+    while let Some(chunk) = res.chunk().await? {
+        buf.extend_from_slice(&chunk);
+        while let Some(end) = buf.iter().position(|b| *b == b'\n') {
+            let line: Vec<u8> = buf.drain(..=end).collect();
+            let Some(event) = event(&line) else {
+                continue;
+            };
+            match event["type"].as_str() {
+                Some("response.output_text.delta") => {
+                    text.push_str(event["delta"].as_str().unwrap_or_default());
+                    on_text(&text);
+                }
+                Some("response.completed" | "response.incomplete" | "response.failed") => {
+                    done = Some(event["response"].clone());
+                }
+                _ => {}
+            }
+        }
+    }
+    finish(&req, &done.context("the stream ended without a response")?)
+}
+
+/// SSE の 1 行。`data:` の行だけが JSON を持つ
+fn event(line: &[u8]) -> Option<Value> {
+    serde_json::from_slice(line.strip_prefix(b"data:")?).ok()
+}
+
+fn body(req: &Request<'_>) -> Value {
     let mut body = json!({
         "model": req.model,
         "instructions": req.system,
@@ -43,6 +87,14 @@ pub async fn chat_json<T: DeserializeOwned>(
     if let Some(effort) = req.reasoning_effort {
         body["reasoning"] = json!({ "effort": effort });
     }
+    body
+}
+
+async fn send(
+    http: &reqwest::Client,
+    req: &Request<'_>,
+    body: Value,
+) -> anyhow::Result<reqwest::Response> {
     let res = http
         .post(req.access.url("/responses"))
         .bearer_auth(req.access.token())
@@ -54,10 +106,13 @@ pub async fn chat_json<T: DeserializeOwned>(
     if !status.is_success() {
         anyhow::bail!("{status}: {}", res.text().await.unwrap_or_default());
     }
-    let res: Value = res.json().await?;
+    Ok(res)
+}
+
+fn finish<T: DeserializeOwned>(req: &Request<'_>, res: &Value) -> anyhow::Result<T> {
     req.meter
         .tokens(req.purpose, req.model, Tokens::from_response(&res["usage"]));
-    serde_json::from_str(&output_text(&res)?).context("response does not match the schema")
+    serde_json::from_str(&output_text(res)?).context("response does not match the schema")
 }
 
 /// 応答の文。`output` のメッセージの `output_text` をつなげる（推論の項目などは飛ばす）
@@ -83,6 +138,14 @@ fn output_text(res: &Value) -> anyhow::Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn event_reads_only_data_lines() {
+        assert_eq!(event(b"data: {\"type\":\"x\"}\n").unwrap()["type"], "x");
+        assert!(event(b"event: response.created\n").is_none());
+        assert!(event(b"data: [DONE]\n").is_none());
+        assert!(event(b"\n").is_none());
+    }
 
     #[test]
     fn output_text_joins_message_texts_and_reports_refusals() {
