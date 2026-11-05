@@ -45,6 +45,7 @@
   let stopping = $state(false);
 
   // 期限を変えるダイアログ
+  let editingMemo = $state("");
   let editing = $state<number | null>(null);
 
   function expiry(c: SharedCode) {
@@ -144,6 +145,22 @@
             <div class="flex flex-wrap items-center gap-2 text-sm">
               <span class="text-muted-foreground">{expiry(c)}</span>
               <span class="ml-auto flex gap-1">
+                <SettingsDialog
+                  trigger="メモを変える"
+                  title="メモを変える"
+                  valid={true}
+                  onopen={() => (editingMemo = c.memo)}
+                  onsave={() =>
+                    panel.shareAction(
+                      () => api.updateCode(c.id, { memo: editingMemo.trim() }),
+                      "メモを変えました",
+                    )}
+                >
+                  <Field.Field>
+                    <Field.Label for="edit-memo-{c.id}">メモ（自分だけに見えます）</Field.Label>
+                    <Input id="edit-memo-{c.id}" maxlength={100} bind:value={editingMemo} />
+                  </Field.Field>
+                </SettingsDialog>
                 <SettingsDialog
                   trigger="期限を変える"
                   title="期限を変える"
