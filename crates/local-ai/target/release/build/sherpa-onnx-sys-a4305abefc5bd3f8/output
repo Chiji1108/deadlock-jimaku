@@ -1,8 +1,0 @@
-cargo:rerun-if-env-changed=SHERPA_ONNX_LIB_DIR
-cargo:rerun-if-env-changed=SHERPA_ONNX_ARCHIVE_DIR
-cargo:rerun-if-env-changed=DOCS_RS
-cargo:rustc-link-search=native=/Users/chiji/js/deadlock-jimaku/crates/local-ai/target/sherpa-onnx-prebuilt/sherpa-onnx-v2.0.1-osx-arm64-shared-lib/lib
-cargo:rustc-link-arg=-Wl,-rpath,/Users/chiji/js/deadlock-jimaku/crates/local-ai/target/sherpa-onnx-prebuilt/sherpa-onnx-v2.0.1-osx-arm64-shared-lib/lib
-cargo:rustc-link-arg=-Wl,-rpath,@loader_path
-cargo:rustc-link-lib=dylib=sherpa-onnx-c-api
-cargo:rustc-link-lib=dylib=onnxruntime

@@ -11,3 +11,4 @@ node_modules/
 
 # wrangler dev の手元だけの秘密（SHARE_KEY など）
 .dev.vars
+/crates/local-ai/target
