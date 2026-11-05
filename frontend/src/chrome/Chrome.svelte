@@ -66,6 +66,7 @@
     }
     if (listening === key(s)) return;
     halt();
+    state_ = "idle";
     const { state, targets } = await availability(s.micLanguage, s.translateTo);
     if (state === "unavailable") state_ = "unsupported";
     else if (state === "available") await run(s, targets);

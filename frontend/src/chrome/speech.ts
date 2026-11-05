@@ -132,6 +132,7 @@ export function listen(lang: string, { onText, onEnd, onFatal }: Listener): () =
     current.interimResults = true;
     current.processLocally = true;
     current.onresult = ({ resultIndex, results }) => {
+      if (stopped) return;
       let interim = "";
       for (let i = resultIndex; i < results.length; i++) {
         const result = results[i]!;

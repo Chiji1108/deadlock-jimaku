@@ -55,6 +55,14 @@ describe("Captions", () => {
     });
   });
 
+  it("確定した文が空なら、途中の字幕を消す", async () => {
+    const { sent, captions, settled } = setup(hello);
+    captions.onText("さあ", false);
+    captions.onText(" ", true);
+    await settled();
+    expect(sent.at(-1)!.stage).toBe("discarded");
+  });
+
   it("止めたら確定しなかった字幕を消す", async () => {
     const { sent, captions, settled } = setup(hello);
     captions.onText("さあ", false);

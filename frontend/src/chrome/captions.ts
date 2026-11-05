@@ -18,7 +18,10 @@ export class Captions {
 
   onText(text: string, final: boolean) {
     const trimmed = text.trim();
-    if (!trimmed) return;
+    if (!trimmed) {
+      if (final) this.discard();
+      return;
+    }
     const segment = (this.current ??= {
       id: `chrome-${Date.now()}-${++this.seq}`,
       startedAt: Date.now(),
