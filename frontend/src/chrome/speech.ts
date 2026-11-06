@@ -70,6 +70,10 @@ const SOUND_CHECK_MS = 250;
 const SOUND_LEVEL = 0.01;
 /** 通信のエラーが出ずにこの時間続いたら、回線が戻ったとみなす（黙っていると結果が届かない） */
 const STABLE_MS = 5000;
+/** アプリが CDP でマイクを許可するまで待つ時間 */
+const GRANT_MS = 5000;
+/** 「既定」「通信」のデバイス ID。本物のマイクの別名で、接頭辞は Chrome の言語で変わるので ID で除く */
+const MIC_ALIASES = new Set(["default", "communications"]);
 
 const recognition = () => {
   const { SpeechRecognition, webkitSpeechRecognition } = window as unknown as {
@@ -143,9 +147,48 @@ export async function prepare(
   return created;
 }
 
-/** アプリのマイクの名前とブラウザのラベルは同じとは限らないので、片方がもう片方を含めば同じとみなす */
-const sameMic = (name: string, label: string) =>
-  !!label && (label === name || label.includes(name) || name.includes(label));
+/** 選んだマイクを使えない理由 */
+export type MicProblem =
+  | { type: "missing" }
+  | { type: "unopenable"; error: string }
+  | { type: "silent" };
+
+/** 理由と、既定のマイクで続けていることを知らせる文。Chrome の既定は OS の既定のマイク */
+export function micNotice(name: string, problem: MicProblem) {
+  const reason = {
+    missing: `Chrome に『${name}』が見つかりません`,
+    unopenable: `『${name}』を開けません（${"error" in problem ? problem.error : ""}）`,
+    silent: `『${name}』の音が認識に届きません`,
+  }[problem.type];
+  return `${reason}。Chrome の既定のマイクを使っています。OS の既定のマイクを『${name}』にすると揃います`;
+}
+
+const tidy = (text: string) => text.normalize("NFKC").trim().replace(/\s+/g, " ");
+
+/** Chrome がラベルの末尾に足す括弧を除く。Windows は (045e:0810) や (Bluetooth)、Mac は (Built-in) など */
+const withoutSuffix = (label: string) => label.replace(/\s*\([^()]*\)$/, "");
+
+/** アプリのマイクの名前に当たるデバイスを返す。部分一致は別のマイクに当たるので、全体を比べる。
+ * 同じ名前が複数なら見分けられない（アプリも先頭のものを開く） */
+export function findMics(inputs: MediaDeviceInfo[], name: string) {
+  const mics = inputs.filter((d) => d.deviceId && !MIC_ALIASES.has(d.deviceId));
+  const wanted = tidy(name);
+  const exact = mics.filter((d) => tidy(d.label) === wanted);
+  return exact.length ? exact : mics.filter((d) => tidy(withoutSuffix(d.label)) === wanted);
+}
+
+/** アプリの許可が届くまで待つ。アプリの外で開いたページなら、待ったあと `getUserMedia` で許可を聞く */
+async function micPermission() {
+  const status = await navigator.permissions.query({ name: "microphone" as PermissionName });
+  if (status.state !== "prompt") return;
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, GRANT_MS);
+    status.addEventListener("change", () => resolve(), { once: true });
+  });
+}
+
+const audioInputs = async () =>
+  (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === "audioinput");
 
 /** ストリームの音を見張る。`heard` は前に聞いてから音が来たか。
  * ページの音声が動いていなければ分からないので、来たとみなす */
@@ -172,30 +215,78 @@ function watchSound(stream: MediaStream) {
   };
 }
 
+export interface Microphone {
+  /** 認識に渡すマイク。なければ Chrome の既定のマイクを使う */
+  track?: MediaStreamTrack;
+  heardSound?(): boolean;
+  /** 選んだマイクを使えない理由 */
+  problem?: MicProblem;
+  /** 選んだマイクを閉じて、既定のマイクを開く */
+  useDefault(): Promise<void>;
+  release(): void;
+}
+
 /** マイクを開いたままにする。キャプチャ中のページは Chrome に凍結されない。
- * `name` があれば、その名前のマイクのトラックを `track` で返す。見つからなければ `track` はなく、
- * 既定のマイクを使う */
-export async function openMicrophone(name?: string | null) {
+ * `name` があれば、その名前のマイクのトラックを `track` で返す。使えなければ `track` はなく、
+ * 既定のマイクを開いて理由を `problem` で返す。`log` は調べるための記録 */
+export async function openMicrophone(
+  name?: string | null,
+  log: (line: string) => void = () => {},
+): Promise<Microphone> {
   const open = (audio: MediaStreamConstraints["audio"]) =>
     navigator.mediaDevices.getUserMedia({ audio });
-  const closer = (stream: MediaStream) => () => stream.getTracks().forEach((track) => track.stop());
-  // ラベルは許可のあとにしか読めない
-  const fallback = await open(true);
-  const devices = name ? await navigator.mediaDevices.enumerateDevices() : [];
-  const inputs = devices.filter((d) => d.kind === "audioinput");
-  const device =
-    inputs.find((d) => d.label === name) ?? inputs.find((d) => sameMic(name!, d.label));
-  if (!device) return { release: closer(fallback), missed: !!name };
-  // 選んだマイクを開けない（ほかのアプリが占有しているなど）なら、開けた既定のマイクで続ける
-  const stream = await open({ deviceId: { exact: device.deviceId } }).catch(() => undefined);
-  if (!stream) return { release: closer(fallback), missed: true };
-  closer(fallback)();
-  const sound = watchSound(stream);
-  const release = () => {
-    sound.close();
-    closer(stream)();
+  const stop = (stream: MediaStream) => stream.getTracks().forEach((track) => track.stop());
+  let opened = () => {};
+  let released = false;
+  const close = () => {
+    opened();
+    opened = () => {};
   };
-  return { release, track: stream.getAudioTracks()[0], heardSound: sound.heard, missed: false };
+  const useDefault = async () => {
+    close();
+    const stream = await open(true);
+    if (released) stop(stream);
+    else opened = () => stop(stream);
+  };
+  const release = () => {
+    released = true;
+    close();
+  };
+  const fallBack = async (problem?: MicProblem) => {
+    await useDefault();
+    return { problem, useDefault, release };
+  };
+
+  if (!name) return fallBack();
+  await micPermission();
+  let inputs = await audioInputs();
+  // ふつうのタブでは、許可のあとにしかラベルを読めない。選んだマイクを開く前に閉じる
+  const asking = inputs.some((d) => d.label) ? undefined : await open(true);
+  if (asking) inputs = await audioInputs();
+  log(`Chrome のマイク: ${inputs.map((d) => d.label || "（名前なし）").join(" / ")}`);
+  const mics = findMics(inputs, name);
+  if (asking) stop(asking);
+  const device = mics[0];
+  if (!device) {
+    log(`『${name}』に当たるマイクがありません`);
+    return fallBack({ type: "missing" });
+  }
+  if (mics.length > 1) log(`『${name}』が ${mics.length} 個あるので、先頭を使います`);
+  let stream: MediaStream;
+  try {
+    stream = await open({ deviceId: { exact: device.deviceId } });
+  } catch (e) {
+    const error = (e as Error).name;
+    log(`getUserMedia のエラー: ${error}`);
+    return fallBack({ type: "unopenable", error });
+  }
+  log(`開きました: ${stream.getAudioTracks()[0]?.label}`);
+  const sound = watchSound(stream);
+  opened = () => {
+    sound.close();
+    stop(stream);
+  };
+  return { track: stream.getAudioTracks()[0], heardSound: sound.heard, useDefault, release };
 }
 
 interface Listener {
@@ -212,11 +303,13 @@ interface Listener {
   heardSound?(): boolean;
   /** `track` が使えないので、既定のマイクに戻した */
   onDefaultMic?(): void;
+  /** `track` を渡した結果の記録。同じ行は 1 度だけ */
+  onMicLog?(line: string): void;
 }
 
 /** 止めるまで聞き続ける。`cut` は今の認識を区切り、すぐ聞き直す */
 export function listen(lang: string, listener: Listener) {
-  const { silenceMs, onText, onFatal, onTrouble, heardSound, onDefaultMic } = listener;
+  const { silenceMs, onText, onFatal, onTrouble, heardSound, onDefaultMic, onMicLog } = listener;
   let { track } = listener;
   const Recognition = recognition()!;
   let stopped = false;
@@ -247,7 +340,15 @@ export function listen(lang: string, listener: Listener) {
     failures = 0;
   };
 
-  const useDefaultMic = () => {
+  const noted = new Set<string>();
+  const note = (line: string) => {
+    if (noted.has(line)) return;
+    noted.add(line);
+    onMicLog?.(line);
+  };
+
+  const useDefaultMic = (reason: string) => {
+    note(`既定のマイクに戻します: ${reason}`);
     track = undefined;
     onDefaultMic?.();
   };
@@ -256,7 +357,9 @@ export function listen(lang: string, listener: Listener) {
   const checkTrack = () => {
     const heard = heardSound?.() ?? true;
     if (!track || trackWorks || heardResult || failed || !heard) return;
-    if (++silentTracks >= SILENT_TRACK_LIMIT) useDefaultMic();
+    silentTracks++;
+    note(`音が来ているのに結果がありません（${silentTracks} 回目）`);
+    if (silentTracks >= SILENT_TRACK_LIMIT) useDefaultMic("結果が来ません");
   };
 
   /** 止まった認識を捨てて始め直す。遅れて届く知らせは `current` との比較で無視される */
@@ -278,7 +381,7 @@ export function listen(lang: string, listener: Listener) {
     failed = undefined;
     heardResult = false;
     // 抜かれたマイクのトラックは戻らない
-    if (track?.readyState === "ended") useDefaultMic();
+    if (track?.readyState === "ended") useDefaultMic("トラックが終わりました");
     if (failures) stable = setTimeout(recovered, STABLE_MS);
     // 再開のたびに作り直す。古いインスタンスの遅れた知らせは使わない
     const recognizer = new Recognition();
@@ -293,7 +396,9 @@ export function listen(lang: string, listener: Listener) {
     };
     const alive = () => watch(STALL_MS);
     recognizer.onstart = () => {
-      if (recognizer === current) alive();
+      if (recognizer !== current) return;
+      alive();
+      if (track) note("start(track): 認識が動き始めました");
     };
     recognizer.onaudiostart = recognizer.onstart;
     recognizer.onresult = ({ resultIndex, results }) => {
@@ -301,6 +406,7 @@ export function listen(lang: string, listener: Listener) {
       alive();
       heardResult = true;
       trackWorks ||= !!track;
+      if (track) note("start(track): 結果が届きました");
       recovered();
       if (stopped || cutting) return;
       clearTimeout(silence);
@@ -323,6 +429,7 @@ export function listen(lang: string, listener: Listener) {
     recognizer.onerror = ({ error }) => {
       if (recognizer !== current || stopped) return;
       alive();
+      if (track) note(`start(track): 認識のエラー ${error}`);
       if (FATAL.has(error)) {
         stopped = true;
         onFatal(error);
@@ -358,7 +465,7 @@ export function listen(lang: string, listener: Listener) {
     } catch (e) {
       if (!track) throw e;
       // トラックを受け付けない（終わったトラックなど）
-      useDefaultMic();
+      useDefaultMic(`start(track) の例外 ${(e as Error).name}`);
       recognizer.start();
     }
   };

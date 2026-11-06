@@ -96,8 +96,12 @@ impl Drop for Browser {
     }
 }
 
+fn page_origin() -> String {
+    format!("http://127.0.0.1:{DEFAULT_PORT}")
+}
+
 fn page_url() -> String {
-    format!("http://127.0.0.1:{DEFAULT_PORT}/chrome")
+    format!("{}/chrome", page_origin())
 }
 
 fn arguments(profile: &Path) -> Vec<String> {
@@ -127,6 +131,15 @@ async fn attach(profile: &Path) -> anyhow::Result<std::convert::Infallible> {
         .context("no debugger url")?;
     let (socket, _) = tokio_tungstenite::connect_async(url).await?;
     let mut cdp = Cdp { socket, id: 0 };
+    // `--auto-accept-camera-and-microphone-capture` はマイクを開かせるだけで、権限として残さない。
+    // 権限がないと `enumerateDevices` がマイクの名前も ID も隠すので、選んだマイクを探せない。
+    // 許せなくても、ページは既定のマイクで動いて理由を出す
+    if let Err(e) = cdp
+        .call(None, "Browser.grantPermissions", mic_permission())
+        .await
+    {
+        tracing::warn!("chrome: {e:#}");
+    }
     let session = cdp.page_session().await?;
     loop {
         cdp.call(
@@ -137,6 +150,10 @@ async fn attach(profile: &Path) -> anyhow::Result<std::convert::Infallible> {
         .await?;
         tokio::time::sleep(CHECK_INTERVAL).await;
     }
+}
+
+fn mic_permission() -> Value {
+    json!({ "origin": page_origin(), "permissions": ["audioCapture"] })
 }
 
 /// Chrome が開いた CDP のポートはプロファイルのファイルに書かれる
@@ -415,6 +432,16 @@ mod tests {
         let args = arguments(Path::new("/data/chrome-profile"));
         assert_eq!(args.last().unwrap(), &format!("--app={}", page_url()));
         assert!(args.contains(&"--user-data-dir=/data/chrome-profile".to_owned()));
+    }
+
+    #[test]
+    fn allows_only_the_page_to_read_the_microphones() {
+        let permission = mic_permission();
+        assert_eq!(permission["permissions"], json!(["audioCapture"]));
+        assert_eq!(
+            page_url(),
+            format!("{}/chrome", permission["origin"].as_str().unwrap())
+        );
     }
 
     /// 全画面のゲームに隠れても止まらず、確認も出さない形で起動する

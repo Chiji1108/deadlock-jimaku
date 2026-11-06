@@ -7,7 +7,14 @@
   import type { Settings } from "../generated/Settings";
   import { api } from "../lib/api";
   import { connect } from "../lib/ws";
-  import { availability, listen, openMicrophone, prepare, supported } from "./speech";
+  import {
+    availability,
+    listen,
+    micNotice as describeMic,
+    openMicrophone,
+    prepare,
+    supported,
+  } from "./speech";
   import { Translation } from "./translation";
 
   /** 認識を続けられない理由ごとの案内 */
@@ -32,7 +39,6 @@
     network: "音声認識につながりません。回線が戻ると自動で再開します",
     "audio-capture": "マイクの音を取れません。つなぎ直すと自動で再開します",
   };
-  const DEFAULT_MIC = "Chrome の既定のマイクを使っています";
   const names = new Intl.DisplayNames(["ja"], { type: "language" });
 
   const usable = supported();
@@ -71,6 +77,9 @@
   let notice: string | undefined;
   /** 選んだマイクを使えない案内 */
   let micNotice: string | undefined;
+  /** マイクを調べるための記録。機器の名前が入るので、外に送らず、押されたらコピーするだけ */
+  let micLog = $state<string[]>([]);
+  let copied = $state(false);
   let translation = new Translation(new Map(), reply);
 
   function send(msg: ChromeMsg) {
@@ -183,15 +192,19 @@
     notice = missing.length
       ? `Chrome の翻訳が対応していない言語は訳しません: ${missing.map((l) => names.of(l)).join("、")}`
       : undefined;
+    micLog = [navigator.userAgent, `アプリのマイク: ${s.micDevice ?? "OS の既定"}`];
+    const logMic = (line: string) => micLog.push(line);
     let microphone;
     try {
-      microphone = await openMicrophone(s.micDevice);
+      microphone = await openMicrophone(s.micDevice, logMic);
     } catch (e) {
       const denied = e instanceof DOMException && e.name === "NotAllowedError";
       fail(denied ? "not-allowed" : "audio-capture");
       return;
     }
-    micNotice = microphone.missed ? DEFAULT_MIC : undefined;
+    const opened = microphone;
+    micNotice =
+      opened.problem && s.micDevice ? describeMic(s.micDevice, opened.problem) : undefined;
     const sink = s.speechEngine === "hybrid" ? hybridSink() : chromeSink(s);
     const recognition = listen(s.micLanguage, {
       silenceMs: sink.silenceMs,
@@ -204,16 +217,18 @@
               detail: TROUBLE[error] ?? `音声認識のエラーが続いています（${error}）`,
             })
           : showListening(),
-      track: microphone.track,
-      heardSound: microphone.heardSound,
+      track: opened.track,
+      heardSound: opened.heardSound,
       onDefaultMic() {
-        micNotice = DEFAULT_MIC;
+        micNotice = describeMic(s.micDevice!, { type: "silent" });
         showListening();
+        opened.useDefault().catch((e: Error) => logMic(`既定のマイクを開けません: ${e.name}`));
       },
+      onMicLog: logMic,
     });
     stop = () => {
       recognition.stop();
-      microphone.release();
+      opened.release();
       sink.reset();
     };
     reset = sink.reset;
@@ -313,6 +328,11 @@
     };
   });
 
+  async function copyMicLog() {
+    await navigator.clipboard.writeText(micLog.join("\n"));
+    copied = true;
+  }
+
   const title = $derived.by(() => {
     if (!usable) return "Google Chrome で開いてください";
     if (other) return "ほかのウィンドウで動いています";
@@ -354,6 +374,12 @@
   {/if}
 
   <p class="note">音声は Chrome を通じて Google に送られます。翻訳はこの PC の中で動きます。</p>
+
+  {#if micLog.length}
+    <button class="quiet" onclick={copyMicLog}>
+      {copied ? "コピーしました" : "マイクの記録をコピー"}
+    </button>
+  {/if}
 </main>
 
 <style>
@@ -420,6 +446,15 @@
     font: inherit;
     font-weight: 600;
     cursor: pointer;
+  }
+  .quiet {
+    margin: 8px 0 0;
+    padding: 0;
+    background: none;
+    color: #a0a4ad;
+    font-size: 13px;
+    font-weight: 400;
+    text-decoration: underline;
   }
   .note {
     margin: 0;
