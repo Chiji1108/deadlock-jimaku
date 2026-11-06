@@ -22,6 +22,8 @@
     { name: "mecab-ipadic", text: mecabIpadic },
     { name: "Lindera", text: lindera },
   ];
+  // 全文は 230KB あるので、開いたときに読み込む（毎日開くページのバンドルに入れない）
+  let thirdParty = $state<Promise<string>>();
 </script>
 
 <Dialog.Root>
@@ -52,6 +54,18 @@
             class="mt-1 max-h-48 overflow-y-auto font-sans whitespace-pre-wrap">{notice.text}</pre>
         </details>
       {/each}
+      <details
+        ontoggle={() =>
+          (thirdParty ??= import("../../../../notices/third-party.txt?raw").then(
+            (module) => module.default,
+          ))}
+      >
+        <summary class="cursor-pointer">第三者のライセンス</summary>
+        {#await thirdParty then text}
+          <pre
+            class="mt-1 max-h-64 overflow-y-auto font-sans wrap-anywhere whitespace-pre-wrap">{text}</pre>
+        {/await}
+      </details>
     </div>
     <p class="text-xs text-muted-foreground">
       Valve の公式のものではありません。ゲームのデータとアイコンは deadlock-api から取得しています

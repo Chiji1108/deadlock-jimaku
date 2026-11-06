@@ -71,6 +71,9 @@ jobs:
         run: rustup target add ${{ matrix.rust-targets }}
       - uses: Swatinem/rust-cache@v2
       - run: pnpm install --frozen-lockfile
+      # 依存を変えたのに notices/third-party.txt を作り直し忘れたら気づく（OS によらず同じ結果なので Linux だけ）
+      - if: runner.os == 'Linux'
+        run: node frontend/scripts/notices.ts --check
       # Tauri の CLI はリポジトリのルートから動かす（app/tauri.conf.json を探す）
       # RPM は版のハイフンを受け付けないので、プレリリースでは作らない
       - name: 作るものを決める

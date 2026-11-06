@@ -238,6 +238,7 @@ deadlock-jimaku/
 │        └─ models.rs         # モデルのダウンロードと検証
 ├─ app/                       # Tauri シェル（トレイ、keyring、自動更新、core の起動）
 ├─ data/                      # 手で管理する辞書データ（git 管理）
+├─ notices/                   # 第三者のライセンス表示（13.7）
 └─ frontend/
    ├─ control.html
    ├─ overlay/subtitles.html
@@ -797,6 +798,15 @@ API（すべて `/api`）:
   - Linux: AppImage だけ（`linux-x86_64-appimage`）。deb・rpm はそれぞれのパッケージの仕組みで入れ直すので、更新の知らせを出さない（`latest.json` に載せない）
 - `latest.json` はリリースのワークフローで作る（署名の `.sig` の中身を入れ、`.sig` 自体はリリースに載せない）
 - v0.1.2 までのアプリには自動更新がないので、一度だけ手で入れ直す
+
+## 13.7 第三者のライセンス表示（`notices/`、`frontend/scripts/notices.ts`）
+
+- `notices/third-party.txt` は `mise run notices` で作ってコミットする。手で編集しない。IPADIC と Lindera は別のファイルのまま（利用規約でも読む）
+- 載せるのは配るものだけ。Rust は `cargo tree --edges normal,no-proc-macro` を build.yml の 4 つのターゲットごとに解決し、リンクされる crate を集める（dev-dependencies、build-dependencies、proc-macro は成果物に入らない）。フロントはほぼ全部が devDependencies なので、`vite build` の結果に実際に残ったモジュール、フォントなどのアセット、CSS の `@import` から取る
+- 外の道具（`cargo-about` など）は使わない。フロントの分と NOTICE は結局自分で書くので、Node のスクリプト 1 つのほうが単純で、版の固定も要らない
+- 著作権表示はパッケージの中のライセンスファイル（サブフォルダの分も）から取る。同じ本文は 1 度だけ書く。`OR` は義務が軽いものを 1 つ選ぶ。ファイルがないものは、推測で埋めず一覧に分けて出す
+- About からは開いたときに読み込む（`import("...?raw")`。全文を初期のバンドルに入れない）
+- `mise run check` と build.yml（Linux）が `--check` で作り直して比べ、古ければ失敗する。3 秒ほどで済む
 
 ## 14. 実装フェーズ
 
