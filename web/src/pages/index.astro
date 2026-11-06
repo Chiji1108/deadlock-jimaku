@@ -69,7 +69,7 @@ const steps = [
   { title: "ダウンロード", body: "Windows・Mac・Linux 用のアプリを入れます。" },
   {
     title: "API キーかギフトコードを設定",
-    body: "おすすめのモードは、確定の字幕に OpenAI を使います。無料のローカル AI モードなら要りません。キーの作り方はアプリの中でも案内します。知り合いからギフトコードをもらった場合は、キーは要りません。",
+    body: "おすすめのモードは、確定の字幕に OpenAI を使います。無料のモードなら要りません。キーの作り方はアプリの中でも案内します。知り合いからギフトコードをもらった場合は、キーは要りません。",
     link: { href: "#openai-key", label: "作り方を見る" },
   },
   {
@@ -89,16 +89,16 @@ const faqs = [
   },
   {
     q: "OpenAI の API キーを作らずに使えますか？",
-    a: "使えます。無料のローカル AI モードならキーは要りません。OpenAI の精度を使いたいときは、Discord のサーバーで声をかけてもらえれば、お試し用のギフトコードをお渡しします。アプリの「API キー」のタブに入れるだけで使えます。知り合いからコードをもらって使うこともできて、その場合の料金はコードをくれた人の OpenAI アカウントに請求されます。API キーを持っている人は、アプリの「おすそ分け」のタブでコードを作れます。",
+    a: "使えます。無料のモードならキーは要りません。OpenAI の精度を使いたいときは、Discord のサーバーで声をかけてもらえれば、お試し用のギフトコードをお渡しします。アプリの「API キー」のタブに入れるだけで使えます。知り合いからコードをもらって使うこともできて、その場合の料金はコードをくれた人の OpenAI アカウントに請求されます。API キーを持っている人は、アプリの「おすそ分け」のタブでコードを作れます。",
     link: { href: DISCORD, label: "Discord のサーバーに参加する" },
   },
   {
-    q: "どのモデルを使っていますか？",
-    a: "ローカル AI を使うモードでは、PC の中の SenseVoice（音声認識）と Bergamot（翻訳）で途中の字幕を作ります。OpenAI モードの途中の字幕は GPT-Live-Transcribe、確定した字幕は GPT-Transcribe、用語の判定・翻訳・ふりがなは GPT-6.1 Terra です。",
+    q: "字幕はどこで作っていますか？",
+    a: "無料のモードは、すべて PC の中で作ります。ハイブリッドは、話している途中の字幕を PC の中で作り、確定した字幕と翻訳を OpenAI で作ります。OpenAI モードは、すべて OpenAI で作ります。",
   },
   {
     q: "どんな情報が送信されますか？",
-    a: "字幕を出している間の話し声と字幕の文字を OpenAI に送ります。無料のローカル AI モードでは、音声も字幕も外に送りません。ランクを出すときは、Steam のアカウント ID を deadlock-api に送ります。デドロ字幕のサーバーを通るのはおすそ分けのときだけで、音声や字幕の文字は保存しません。",
+    a: "字幕を出している間の話し声と字幕の文字を OpenAI に送ります。無料のモードでは、音声も字幕も外に送りません。ランクを出すときは、Steam のアカウント ID を deadlock-api に送ります。デドロ字幕のサーバーを通るのはおすそ分けのときだけで、音声や字幕の文字は保存しません。",
     link: { href: "/privacy", label: "プライバシーポリシーを見る" },
   },
   {
@@ -131,25 +131,25 @@ const faqs = [
 /** 字幕の作り方 */
 const modes = [
   {
-    name: "ローカル AI + OpenAI",
+    name: "ハイブリッド",
     badge: "おすすめ",
-    traits: ["高速", "ふりがな", "デッドロックモード"],
+    traits: ["高速", "高精度", "ふりがな", "デッドロックモード"],
     price: "約 $0.6／時間",
-    body: "話している途中の字幕と翻訳は PC の中で作り、確定の字幕は OpenAI。声を出してすぐ字幕が出て、最後は高い精度に置き換わります。",
+    body: "話している途中は無料のモードと同じく PC の中で作り、最後に OpenAI の高い精度の結果に置き換えます。声を出してすぐ字幕が出て、用語もすぐ強調されます。",
     needs: "API キーかギフトコード",
   },
   {
     name: "OpenAI",
-    traits: ["低負荷", "ふりがな", "デッドロックモード"],
+    traits: ["低負荷", "高精度", "ふりがな", "デッドロックモード"],
     price: "約 $1／時間",
-    body: "すべてクラウドで処理します。モデルを動かさないので、PC の負荷がいちばん小さいです。",
+    body: "すべてクラウドで処理します。ふりがなとデッドロックモードの精度が高く、モデルを動かさないので、PC の負荷がいちばん小さいです。",
     needs: "API キーかギフトコード",
   },
   {
-    name: "ローカル AI",
-    traits: ["無料", "高速", "ふりがな"],
+    name: "無料",
+    traits: ["無料", "高速", "ふりがな", "デッドロックモード"],
     price: "無料",
-    body: "すべて PC の中で作ります。音声は外に送られません。精度は下がり、用語の強調とアイテム説明は使えません。日本語の配信で、翻訳先は英語・ロシア語・中国語です。",
+    body: "翻訳、ふりがな、デッドロックモードまで、すべて PC の中で作ります。音声は外に送られません。精度は下がります。用語は公式の名前と書き方か読みが同じときだけ強調するので、略称は強調されず、ふつうの言葉が強調されることがあります。日本語の配信で、翻訳先は英語・ロシア語・中国語です。",
     needs: "なし",
   },
 ];
@@ -157,8 +157,8 @@ const modes = [
 const line = LINES[0]!;
 /** 手元の測定（M5 Pro）とリリースのファイルの大きさ */
 const lightness = [
-  { value: "約 1%", label: "CPU", note: "字幕を出している間の、1 コアに対する割合" },
-  { value: "約 20MB", label: "メモリ", note: "Windows でウィンドウを閉じて、字幕を出しているとき" },
+  { value: "約 1%", label: "CPU", note: "OpenAI モードで字幕を出している間の、1 コアに対する割合" },
+  { value: "約 20MB", label: "メモリ", note: "OpenAI モード。Windows でウィンドウを閉じて、字幕を出しているとき" },
   { value: "約 6MB", label: "インストーラー", note: "Windows 版" },
 ];
 const cards = await fetchCards();
@@ -187,7 +187,7 @@ const official = [
         聞き取りの<br /><span class="band">精度が違う。</span>
       </h2>
       <p class="reveal mt-5 text-lg leading-relaxed text-muted">
-        OpenAI の最新モデルで文字起こしします。略して呼んでも、どのアイテムやスキルのことか見分けます。
+        ハイブリッドと OpenAI のモードでは、OpenAI の最新モデルで文字起こしします。略して呼んでも、どのアイテムやスキルのことか見分けます。
       </p>
     </div>
     <div class="reveal plate relative h-64 overflow-hidden">
@@ -214,7 +214,7 @@ const official = [
       <span class="band">デッドロック特化。</span>
     </h2>
     <p class="reveal mt-5 max-w-2xl text-lg leading-relaxed text-muted">
-      ヒーロー・スキル・アイテムの名前は色とアイコンで強調します。アイテムの名前が出たら、ゲーム内と同じカードで説明も出します。略して話しても、翻訳はゲーム内の正式な名前になります。
+      ヒーロー・スキル・アイテムの名前は色とアイコンで強調します。アイテムの名前が出たら、ゲーム内と同じカードで説明も出します。ハイブリッドと OpenAI のモードでは、略して話しても、翻訳はゲーム内の正式な名前になります。
     </p>
     <div class="mt-10 grid gap-4 md:grid-cols-2">
       <figure class="reveal">
@@ -276,7 +276,7 @@ const official = [
       ゲームの<span class="band">邪魔をしない。</span>
     </h2>
     <p class="reveal mt-5 max-w-2xl text-lg leading-relaxed text-muted">
-      文字起こしはクラウドで動くので、ゲーム中の PC に重い処理をさせません。アプリの本体は Rust で作っているので、小さくて軽いです。
+      OpenAI モードは文字起こしをクラウドで動かすので、ゲーム中の PC に重い処理をさせません。PC の中で動かすモードも、Deadlock と同時に CPU 5% 未満、メモリ約 400MB で動きます。アプリの本体は Rust で作っているので、小さくて軽いです。
     </p>
     <ul class="mt-10 grid gap-8 md:grid-cols-3">
       {
@@ -341,7 +341,7 @@ const official = [
         <h2 class="text-sm font-bold text-gold">料金</h2>
         <p class="display mt-3 text-[clamp(2.6rem,7vw,5.5rem)]">アプリは無料。</p>
         <p class="mt-5 text-lg leading-relaxed text-paper/70">
-          無料のローカル AI モードのほかは、ご自身の
+          無料のモードのほかは、ご自身の
           <a href="#openai-key" class="underline hover:text-paper">OpenAI の API キー</a>を使います。
         </p>
       </div>
@@ -409,7 +409,7 @@ const official = [
     <details id="openai-key" class="mt-12 border-y border-line py-6">
       <summary class="cursor-pointer text-xl font-bold">OpenAI の API キーの作り方</summary>
       <p class="mt-4 text-muted">
-        文字起こしと翻訳は OpenAI に頼むので、OpenAI の API キーが必要です。支払いは使った分だけです。デドロ字幕を使っている人からコードをもらった場合は、キーがなくても使えます。アプリの「API
+        ハイブリッドと OpenAI のモードは文字起こしと翻訳を OpenAI に頼むので、OpenAI の API キーが必要です。支払いは使った分だけです。デドロ字幕を使っている人からコードをもらった場合は、キーがなくても使えます。アプリの「API
         キー」のタブの「ギフトコード」に入れてください。
       </p>
       <ol class="mt-6 flex flex-col gap-5">

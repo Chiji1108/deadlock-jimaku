@@ -1,5 +1,5 @@
 //! 途中の字幕と無料モードのふりがな（DESIGN.md 9.6）。読みは形態素解析（Lindera + IPADIC）で決める。
-//! 文脈で決まる読みや造語は誤るが、速く、OpenAI も要らない。確定の字幕は OpenAI で読みを決める
+//! 文脈で決まる読みや造語は誤るが、速く、OpenAI も要らない。ハイブリッドは最後に OpenAI の読みに置き換える
 
 use std::borrow::Cow;
 
@@ -19,6 +19,14 @@ pub struct Part {
     pub ruby: Option<String>,
 }
 
+/// 字幕の 1 語。バイトの位置は元の文のもの
+pub struct Morpheme {
+    pub start: usize,
+    pub end: usize,
+    /// ひらがなの読み。分からなければ None
+    pub reading: Option<String>,
+}
+
 pub struct Furigana {
     segmenter: Segmenter,
 }
@@ -31,24 +39,46 @@ impl Furigana {
         })
     }
 
-    pub fn annotate(&self, text: &str) -> Vec<Part> {
-        let mut out: Vec<Part> = Vec::new();
+    pub fn morphemes(&self, text: &str) -> Vec<Morpheme> {
         let Ok(mut morphemes) = self.segmenter.segment(Cow::Borrowed(text)) else {
-            return vec![plain(text)];
+            return Vec::new();
         };
-        for m in &mut morphemes {
-            let surface = m.surface.to_string();
-            let reading = m
-                .details()
-                .get(READING)
-                .filter(|r| **r != "*")
-                .map(|r| to_hiragana(r));
-            for part in ruby_tokens(&surface, reading.as_deref()) {
-                push(&mut out, part);
-            }
-        }
-        out
+        morphemes
+            .iter_mut()
+            .map(|m| {
+                let reading = m
+                    .details()
+                    .get(READING)
+                    .filter(|r| **r != "*")
+                    .map(|r| to_hiragana(r));
+                let surface = to_hiragana(&m.surface);
+                Morpheme {
+                    start: m.byte_start,
+                    end: m.byte_end,
+                    reading: reading.or_else(|| surface.chars().all(is_kana).then_some(surface)),
+                }
+            })
+            .collect()
     }
+}
+
+/// 文の `from..to` にふりがなを付ける。形態素にならなかった文字（空白など）もそのまま残す
+pub fn annotate(text: &str, morphemes: &[Morpheme], from: usize, to: usize) -> Vec<Part> {
+    let mut out: Vec<Part> = Vec::new();
+    let mut pos = from;
+    for m in morphemes.iter().filter(|m| from <= m.start && m.end <= to) {
+        if pos < m.start {
+            push(&mut out, plain(&text[pos..m.start]));
+        }
+        for part in ruby_tokens(&text[m.start..m.end], m.reading.as_deref()) {
+            push(&mut out, part);
+        }
+        pos = m.end;
+    }
+    if pos < to {
+        push(&mut out, plain(&text[pos..to]));
+    }
+    out
 }
 
 /// ルビのない文字は前の部分につなげる
@@ -88,7 +118,7 @@ fn ruby_tokens(text: &str, ruby: Option<&str>) -> Vec<Part> {
 
 /// 漢字の続く部分と、それ以外（かななど）の部分に分け、かなの部分を読みの中で探して区切る。
 /// 読みとかなの部分が合わなければ None
-fn align(text: &str, reading: &str) -> Option<Vec<Part>> {
+pub fn align(text: &str, reading: &str) -> Option<Vec<Part>> {
     let mut runs: Vec<(bool, String)> = Vec::new();
     for c in text.chars() {
         match runs.last_mut() {
@@ -130,7 +160,7 @@ fn align(text: &str, reading: &str) -> Option<Vec<Part>> {
     (pos == r.len()).then_some(out)
 }
 
-fn to_hiragana(s: &str) -> String {
+pub fn to_hiragana(s: &str) -> String {
     s.chars()
         .map(|c| match c {
             // カタカナ（ァ〜ヶ）をひらがなに。長音符などはそのまま
@@ -140,7 +170,7 @@ fn to_hiragana(s: &str) -> String {
         .collect()
 }
 
-fn is_kana(c: char) -> bool {
+pub fn is_kana(c: char) -> bool {
     matches!(c, '\u{3041}'..='\u{309F}' | '\u{30A0}'..='\u{30FF}')
 }
 
@@ -179,7 +209,16 @@ mod tests {
     #[test]
     fn reads_a_sentence_with_the_dictionary() {
         let furigana = Furigana::new().unwrap();
-        let parts = furigana.annotate("実況です");
+        let text = "実況です";
+        let parts = annotate(text, &furigana.morphemes(text), 0, text.len());
         assert_eq!(parts, [p("実況", Some("じっきょう")), p("です", None)]);
+    }
+
+    #[test]
+    fn spaces_stay_in_the_text() {
+        let furigana = Furigana::new().unwrap();
+        let text = "Deadlock is fun";
+        let parts = annotate(text, &furigana.morphemes(text), 0, text.len());
+        assert_eq!(parts, [p(text, None)]);
     }
 }

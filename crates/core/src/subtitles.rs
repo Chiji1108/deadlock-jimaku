@@ -19,11 +19,11 @@ use crate::lang;
 use crate::local;
 use crate::now_ms;
 use crate::openai::Access;
-use crate::settings::{Settings, SpeechEngine};
+use crate::settings::Settings;
 use crate::store::Store;
 use crate::stt::{self, BatchRequest, Hints, RealtimeConfig};
 use crate::types::{
-    Enriched, EntityKind, Glossary, LangCode, LiveText, Segment, Stage, Translations,
+    Enriched, EntityKind, Glossary, LangCode, LiveText, Segment, Stage, Token, Translations,
 };
 use crate::usage::Meter;
 
@@ -113,8 +113,8 @@ pub async fn run(
                 .filter(|_| settings.deadlock_mode)
                 .map(|l| local::terms(&l.glossary))
                 .unwrap_or_default();
-            let finals = (settings.speech_engine == SpeechEngine::Free).then(|| done_tx.clone());
-            let task = local::Task::spawn(store.clone(), settings.clone(), terms, finals, rx);
+            let task =
+                local::Task::spawn(store.clone(), settings.clone(), terms, done_tx.clone(), rx);
             (tx, task)
         })
         .unzip();
@@ -421,6 +421,7 @@ impl Pipeline {
                 self.on_transcribed(&id, text);
             }
             Done::Draft { id, translations } => self.on_draft(&id, translations),
+            Done::Marked { id, tokens } => self.on_marked(&id, tokens),
             Done::Local(result) => {
                 self.pending -= 1;
                 self.on_local_final(result);
@@ -448,7 +449,15 @@ impl Pipeline {
         }
         seg.stage = Stage::Final;
         seg.text = text.clone();
-        seg.draft_source = None;
+        // ハイブリッドは途中の字幕の用語とふりがなを残し、確定の文のものが届いたら入れ替える。
+        // 補助プログラムが止まっていたら届かないので、確定の文を出す
+        let mark = local::Input::Mark {
+            id: id.to_owned(),
+            text: text.clone(),
+        };
+        if !self.local.as_ref().is_some_and(|tx| tx.send(mark).is_ok()) {
+            seg.draft_source = None;
+        }
         self.store.upsert_segment(seg.clone());
 
         let context: Vec<String> = self.context.iter().cloned().collect();
@@ -473,6 +482,14 @@ impl Pipeline {
             furigana,
             self.done_tx.clone(),
         ));
+    }
+
+    /// enrich が先に終わっていたら、もう発話がないので何もしない
+    fn on_marked(&mut self, id: &str, tokens: Vec<Token>) {
+        if let Some(seg) = self.live.get_mut(id) {
+            seg.draft_source = Some(tokens);
+            self.store.upsert_segment(seg.clone());
+        }
     }
 
     /// 無料のモードの確定の字幕。区切った順に届く
@@ -508,7 +525,10 @@ impl Pipeline {
             // 途中の字幕の訳が出ていれば、OpenAI の訳がそれを追い越すまで残す
             let draft = seg.draft.get_or_insert_default();
             for (lang, tokens) in translations {
-                if draft.get(&lang).is_none_or(|old| old.len() <= tokens.len()) {
+                if draft
+                    .get(&lang)
+                    .is_none_or(|old| text_len(old) <= text_len(&tokens))
+                {
                     draft.insert(lang, tokens);
                 }
             }
@@ -530,11 +550,21 @@ impl Pipeline {
             enriched.translations = draft.unwrap_or_default();
         }
         seg.stage = Stage::Enriched;
-        seg.draft_source = None;
         seg.enriched = Some(enriched);
         seg.settled_at = Some(now_ms());
         self.store.upsert_segment(seg);
     }
+}
+
+/// 訳文の長さ。用語は言語ごとの名前が分からないので数えない
+fn text_len(tokens: &[Token]) -> usize {
+    tokens
+        .iter()
+        .map(|t| match t {
+            Token::Text { text, .. } => text.chars().count(),
+            Token::Entity { .. } => 0,
+        })
+        .sum()
 }
 
 async fn realtime_loop(
@@ -588,6 +618,8 @@ pub(crate) enum Done {
         id: String,
         translations: Translations,
     },
+    /// ハイブリッドの確定の文に、PC の中で読みと用語を付けたもの
+    Marked { id: String, tokens: Vec<Token> },
     /// 翻訳に失敗しても、固有名詞とふりがなは付いている
     Enriched { id: String, enriched: Enriched },
 }

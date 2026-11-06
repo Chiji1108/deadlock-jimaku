@@ -6,7 +6,7 @@ Deadlock の配信者向けの OBS オーバーレイ（非公式）。
 - **ランク**: ランクのアイコン・名前・ポイントのゲージ
 - **アイテム説明**: 字幕でアイテム名が出たら、その説明をゲーム内と同じカードで出す
 
-字幕の作り方は 3 つのモードから選べます。ローカル AI + OpenAI（既定）と OpenAI は API キーかギフトコード、ローカル AI（無料）はキーなしで使えます。ローカル AI だけのモードは日本語の配信用で、翻訳先は英語・ロシア語・中国語です。用語の強調とアイテム説明は使えません。設定はアプリの操作パネルから行います。
+字幕の作り方は 3 つのモードから選べます。ハイブリッド（既定）と OpenAI は API キーかギフトコード、無料はキーなしで使えます。設定はアプリの操作パネルから行います。
 
 サイトは [jimaku.deadlock.jp](https://jimaku.deadlock.jp)。設計は [DESIGN.md](DESIGN.md) を見てください。
 
@@ -67,12 +67,12 @@ flowchart LR
 
 モードは設定の `speechEngine` で決まります。図は処理の順で、黄色は PC の外です。OpenAI や `jimaku-local` とのやりとりは、すべて中核が行います。字幕は `/ws` でオーバーレイと操作パネルに届きます。
 
-**`local`（ローカル AI + OpenAI）。** 途中の字幕は PC の中で作ります。発話が終わると、声と文字を OpenAI に送ります。
+**`hybrid`（ハイブリッド）。** 途中の字幕は PC の中で作ります。発話が終わると、声と文字を OpenAI に送ります。
 
 ```mermaid
 flowchart LR
   mic["マイク"] --> core["中核<br/>発話を区切る"]
-  core -- "発話の音声" --> helper["jimaku-local<br/>途中の字幕<br/>翻訳、ふりがな"]
+  core -- "発話の音声" --> helper["jimaku-local<br/>途中の字幕<br/>用語、翻訳<br/>ふりがな"]
   core -- "区切った音声" --> batch["OpenAI /audio/transcriptions<br/>確定の字幕"]
   batch --> llm["OpenAI /responses<br/>用語、翻訳<br/>ふりがな"]
   helper --> ws["/ws"]
@@ -95,16 +95,16 @@ flowchart LR
   class realtime,batch,llm cloud
 ```
 
-**`free`（ローカル AI）。** すべて PC の中で作ります。OpenAI には何も送りません。
+**`free`（無料）。** すべて PC の中で作ります。OpenAI には何も送りません。
 
 ```mermaid
 flowchart LR
   mic["マイク"] --> core["中核<br/>発話を区切る"]
-  core -- "発話の音声、区切り" --> helper["jimaku-local<br/>途中の字幕<br/>確定の字幕<br/>翻訳、ふりがな"]
+  core -- "発話の音声、区切り" --> helper["jimaku-local<br/>途中の字幕<br/>確定の字幕<br/>用語、翻訳<br/>ふりがな"]
   helper --> ws["/ws"]
 ```
 
-ローカル AI は話す言語が日本語のときだけ動きます。`local` では、ローカル AI で訳せない言語を確定のあとに OpenAI が訳します。
+ローカル AI は話す言語が日本語のときだけ動きます。`hybrid` では、ローカル AI で訳せない言語を確定のあとに OpenAI が訳します。
 
 ## リリースの作り方
 

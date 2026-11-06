@@ -68,7 +68,7 @@ pub struct Segment {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub enriched: Option<Enriched>,
-    /// 途中の字幕のふりがな付きの文。確定したら消す
+    /// PC の中で作った、ふりがなと用語の付いた文。`enriched` のあとは、途中から付いていた印に残す
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub draft_source: Option<Vec<Token>>,
@@ -174,7 +174,7 @@ pub struct LiveStatus {
 #[ts(export)]
 pub struct LiveText {
     pub text: String,
-    /// ふりがな付きの文
+    /// ふりがなと用語の付いた文
     #[serde(default)]
     pub tokens: Vec<Token>,
     #[serde(default)]

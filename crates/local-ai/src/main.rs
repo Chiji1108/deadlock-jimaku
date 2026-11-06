@@ -1,14 +1,17 @@
 //! 途中の字幕と途中の翻訳を PC の中で作る（DESIGN.md 9.6）。アプリが起動し、標準入出力でやりとりする。
 //!
-//! - 引数: モデルを置くフォルダ、用語の表（JSON の `[["ヘイズ", "Haze"], ...]`）のパス、
+//! - 引数: モデルを置くフォルダ、用語の表（`terms::Term` の JSON の配列）のパス、
 //!   翻訳先（`en,ru` のようにコンマで区切る）、確定の字幕も作るなら `final`、作らないなら `partial`
-//! - 入力: 1 バイトの種類と、種類が音声なら 4 バイトの長さ（リトルエンディアン）と 16kHz の f32 の音声
-//! - 出力: 1 行に 1 つの JSON（`progress`、`ready`、`text`、`final`）。`final` は区切りごとに 1 つ返す
+//! - 入力: 1 バイトの種類と、音声なら 4 バイトの長さ（リトルエンディアン）と 16kHz の f32 の音声、
+//!   読みと用語を付ける文なら 4 バイトの長さと `{発話の id}\n{文}`
+//! - 出力: 1 行に 1 つの JSON（`progress`、`ready`、`text`、`final`、`marked`）。`final` は区切りごとに
+//!   1 つ返す。文字はアプリの `Token` の形で入る
 //!
 //! 入力が閉じたら終わる（アプリが落ちても残らない）
 
 mod furigana;
 mod models;
+mod terms;
 
 use std::collections::{BTreeMap, VecDeque};
 use std::io::{self, BufWriter, Read, Write};
@@ -17,14 +20,17 @@ use std::sync::{Arc, Condvar, Mutex};
 use std::time::{Duration, Instant};
 
 use anyhow::Context;
-use furigana::Furigana;
+use furigana::{Furigana, Morpheme, Part, annotate};
 use fxtranslate::engine::Engine;
 use models::PairPaths;
+use serde::Serialize;
 use serde_json::{Value, json};
 use sherpa_onnx::{OfflineRecognizer, OfflineRecognizerConfig};
+use terms::{Found, Terms};
 
 const AUDIO: u8 = 1;
 const CUT: u8 = 2;
+const MARK: u8 = 3;
 const SAMPLE_RATE: usize = 16_000;
 /// 長い発話でも、再デコードの時間が伸び続けないようにする
 const MAX_SAMPLES: usize = 10 * SAMPLE_RATE;
@@ -41,7 +47,45 @@ struct Speech {
     fresh: bool,
     /// 区切られた発話。確定の字幕を作る
     finished: VecDeque<Vec<f32>>,
+    /// OpenAI の確定の文（発話の id と文）。読みと用語を付けて返す
+    marks: VecDeque<(String, String)>,
     closed: bool,
+}
+
+/// 次にすること。確定の字幕を先に作る
+enum Job {
+    Final(Vec<f32>),
+    Mark(String, String),
+    Partial(Vec<f32>, u64),
+}
+
+impl Speech {
+    fn next_job(&mut self) -> Option<Job> {
+        if let Some(finished) = self.finished.pop_front() {
+            return Some(Job::Final(finished));
+        }
+        if let Some((id, text)) = self.marks.pop_front() {
+            return Some(Job::Mark(id, text));
+        }
+        let start = self.samples.len().saturating_sub(MAX_SAMPLES);
+        std::mem::take(&mut self.fresh)
+            .then(|| Job::Partial(self.samples[start..].to_vec(), self.generation))
+    }
+}
+
+/// アプリの `Token` と同じ形
+#[derive(Debug, PartialEq, Serialize)]
+#[serde(tag = "t", rename_all = "lowercase")]
+enum Token {
+    Text(Part),
+    Entity {
+        #[serde(rename = "ref")]
+        reference: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        spoken: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        ruby: Option<Vec<Part>>,
+    },
 }
 
 type Shared = Arc<(Mutex<Speech>, Condvar)>;
@@ -54,7 +98,7 @@ struct Local {
     /// 英語から訳す言語
     from_english: Vec<(String, Engine)>,
     translate_english: bool,
-    terms: Vec<(String, String)>,
+    terms: Terms,
 }
 
 impl Local {
@@ -69,39 +113,124 @@ impl Local {
     }
 
     /// 用語を先に英語にしておくと、訳が崩れない（「ヘイズ」が Hayes にならない）
-    fn translate(&self, text: &str) -> BTreeMap<String, String> {
-        let replaced = self
-            .terms
-            .iter()
-            .fold(text.to_owned(), |text, (source, target)| {
-                text.replace(source, target)
-            });
-        let english = self.japanese_english.translate(&replaced);
-        let mut translations: BTreeMap<String, String> = self
+    fn translate(&self, text: &str, found: &[Found]) -> BTreeMap<String, Vec<Token>> {
+        let english = self
+            .japanese_english
+            .translate(&with_english_names(text, found));
+        let mut translations: BTreeMap<String, Vec<Token>> = self
             .from_english
             .iter()
-            .map(|(lang, engine)| (lang.clone(), engine.translate(&english)))
+            .map(|(lang, engine)| (lang.clone(), mark_names(&engine.translate(&english), found)))
             .collect();
         if self.translate_english {
-            translations.insert("en".to_owned(), english);
+            translations.insert("en".to_owned(), mark_names(&english, found));
         }
         translations
     }
 
     fn message(&self, kind: &str, text: &str) -> Value {
+        let morphemes = self.furigana.morphemes(text);
+        let found = self.terms.find(text, &morphemes);
         json!({
             "type": kind,
             "text": text,
-            "parts": self.furigana.annotate(text),
-            "translations": self.translate(text),
+            "tokens": source_tokens(text, &morphemes, &found),
+            "translations": self.translate(text, &found),
         })
+    }
+
+    /// 訳は OpenAI のものを待つので、原文に読みと用語だけを付ける
+    fn mark(&self, id: &str, text: &str) -> Value {
+        let morphemes = self.furigana.morphemes(text);
+        let found = self.terms.find(text, &morphemes);
+        json!({
+            "type": "marked",
+            "id": id,
+            "tokens": source_tokens(text, &morphemes, &found),
+        })
+    }
+}
+
+/// 話した言葉はそのまま残し、用語にアイコンと色が付くようにする
+fn source_tokens(text: &str, morphemes: &[Morpheme], found: &[Found]) -> Vec<Token> {
+    let plain = |from, to| {
+        annotate(text, morphemes, from, to)
+            .into_iter()
+            .map(Token::Text)
+    };
+    let mut tokens = Vec::new();
+    let mut pos = 0;
+    for f in found {
+        tokens.extend(plain(pos, f.start));
+        let spoken = &text[f.start..f.end];
+        tokens.push(Token::Entity {
+            reference: f.term.reference.clone(),
+            spoken: Some(spoken.to_owned()),
+            ruby: terms::ruby(f.term, spoken),
+        });
+        pos = f.end;
+    }
+    tokens.extend(plain(pos, text.len()));
+    tokens
+}
+
+fn with_english_names(text: &str, found: &[Found]) -> String {
+    let mut replaced = String::with_capacity(text.len());
+    let mut pos = 0;
+    for f in found {
+        replaced.push_str(&text[pos..f.start]);
+        replaced.push_str(&f.term.en);
+        pos = f.end;
+    }
+    replaced.push_str(&text[pos..]);
+    replaced
+}
+
+/// 訳文に残った英語名を用語にする。原文で見つけた用語だけを探す
+fn mark_names(translation: &str, found: &[Found]) -> Vec<Token> {
+    let mut tokens = Vec::new();
+    let mut rest = translation;
+    while let Some((start, term)) = found
+        .iter()
+        .filter_map(|f| Some((find_word(rest, &f.term.en)?, f.term)))
+        .min_by_key(|(start, term)| (*start, std::cmp::Reverse(term.en.len())))
+    {
+        push_text(&mut tokens, &rest[..start]);
+        tokens.push(Token::Entity {
+            reference: term.reference.clone(),
+            spoken: None,
+            ruby: None,
+        });
+        rest = &rest[start + term.en.len()..];
+    }
+    push_text(&mut tokens, rest);
+    tokens
+}
+
+/// 別の単語の一部（Rem と Remember）は名前にしない
+fn find_word(text: &str, word: &str) -> Option<usize> {
+    let joined = |c: Option<char>| c.is_some_and(|c| c.is_ascii_alphanumeric());
+    text.match_indices(word)
+        .find(|(i, _)| {
+            !joined(text[..*i].chars().next_back())
+                && !joined(text[i + word.len()..].chars().next())
+        })
+        .map(|(i, _)| i)
+}
+
+fn push_text(tokens: &mut Vec<Token>, text: &str) {
+    if !text.is_empty() {
+        tokens.push(Token::Text(Part {
+            text: text.to_owned(),
+            ruby: None,
+        }));
     }
 }
 
 fn main() -> anyhow::Result<()> {
     let mut args = std::env::args().skip(1);
     let dir = PathBuf::from(args.next().context("models folder")?);
-    let terms = load_terms(&args.next().context("terms file")?);
+    let terms_path = args.next().context("terms file")?;
     let targets: Vec<String> = args
         .next()
         .context("targets")?
@@ -128,7 +257,7 @@ fn main() -> anyhow::Result<()> {
             })
             .collect::<anyhow::Result<_>>()?,
         translate_english: targets.iter().any(|t| t == "en"),
-        terms,
+        terms: load_terms(&terms_path),
     };
     emit(&json!({ "type": "ready" }));
 
@@ -145,30 +274,27 @@ fn main() -> anyhow::Result<()> {
     let mut shown = String::new();
     let mut shown_generation = 0;
     loop {
-        let (samples, generation, finished) = {
+        let job = {
             let (lock, wake) = &*speech;
-            let mut s = wake
-                .wait_while(lock.lock().unwrap(), |s| {
-                    !s.fresh && !s.closed && s.finished.is_empty()
-                })
-                .unwrap();
-            if s.closed && s.finished.is_empty() {
-                return Ok(());
-            }
-            // 確定の字幕を先に作る
-            if let Some(finished) = s.finished.pop_front() {
-                (Vec::new(), s.generation, Some(finished))
-            } else {
-                s.fresh = false;
-                let start = s.samples.len().saturating_sub(MAX_SAMPLES);
-                (s.samples[start..].to_vec(), s.generation, None)
-            }
+            wake.wait_while(lock.lock().unwrap(), |s| {
+                !s.fresh && !s.closed && s.finished.is_empty() && s.marks.is_empty()
+            })
+            .unwrap()
+            .next_job()
         };
-        if let Some(finished) = finished {
-            let text = local.decode(&finished);
-            emit(&local.message("final", &text));
-            continue;
-        }
+        let (samples, generation) = match job {
+            None => return Ok(()),
+            Some(Job::Final(finished)) => {
+                let text = local.decode(&finished);
+                emit(&local.message("final", &text));
+                continue;
+            }
+            Some(Job::Mark(id, text)) => {
+                emit(&local.mark(&id, &text));
+                continue;
+            }
+            Some(Job::Partial(samples, generation)) => (samples, generation),
+        };
         let started = Instant::now();
         let text = local.decode(&samples);
         if generation != shown_generation {
@@ -239,20 +365,30 @@ fn read_input(speech: &Shared, finals: bool) -> io::Result<()> {
                 s.fresh = false;
                 speech.1.notify_all();
             }
+            MARK => {
+                let mut len = [0; 4];
+                input.read_exact(&mut len)?;
+                let mut bytes = vec![0; u32::from_le_bytes(len) as usize];
+                input.read_exact(&mut bytes)?;
+                let frame = String::from_utf8(bytes).map_err(io::Error::other)?;
+                if let Some((id, text)) = frame.split_once('\n') {
+                    let mut s = speech.0.lock().unwrap();
+                    s.marks.push_back((id.to_owned(), text.to_owned()));
+                    speech.1.notify_all();
+                }
+            }
             other => return Err(io::Error::other(format!("unknown input {other}"))),
         }
     }
     Ok(())
 }
 
-/// 長い名前から置き換えられるよう、長い順に並べる
-fn load_terms(path: &str) -> Vec<(String, String)> {
-    let mut terms: Vec<(String, String)> = std::fs::read(path)
+fn load_terms(path: &str) -> Terms {
+    let terms = std::fs::read(path)
         .ok()
         .and_then(|bytes| serde_json::from_slice(&bytes).ok())
         .unwrap_or_default();
-    terms.sort_by_key(|(source, _)| std::cmp::Reverse(source.chars().count()));
-    terms
+    Terms::new(terms)
 }
 
 fn emit(message: &Value) {
@@ -263,16 +399,100 @@ fn emit(message: &Value) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use terms::Term;
+
+    fn magazine() -> Term {
+        Term {
+            reference: "item:1".into(),
+            text: "基礎拡張マガジン".into(),
+            reading: "きそかくちょうマガジン".into(),
+            en: "Extended Magazine".into(),
+        }
+    }
+
+    fn text(text: &str) -> Token {
+        Token::Text(Part {
+            text: text.into(),
+            ruby: None,
+        })
+    }
+
+    fn entity(spoken: Option<&str>) -> Token {
+        Token::Entity {
+            reference: "item:1".into(),
+            spoken: spoken.map(Into::into),
+            ruby: None,
+        }
+    }
 
     #[test]
-    fn longer_terms_come_first() {
-        let path = std::env::temp_dir().join("jimaku-local-terms.json");
-        std::fs::write(
-            &path,
-            r#"[["カース", "Curse"], ["カースブレイカー", "Breaker"]]"#,
-        )
-        .unwrap();
-        let terms = load_terms(path.to_str().unwrap());
-        assert_eq!(terms[0].1, "Breaker");
+    fn the_translator_receives_the_english_name() {
+        let term = magazine();
+        let found = [Found {
+            start: 0,
+            end: "きそかくちょうまがじん".len(),
+            term: &term,
+        }];
+        assert_eq!(
+            with_english_names("きそかくちょうまがじんを取る", &found),
+            "Extended Magazineを取る"
+        );
+    }
+
+    #[test]
+    fn translations_show_the_english_name_as_a_term() {
+        let term = magazine();
+        let found = [Found {
+            start: 0,
+            end: 1,
+            term: &term,
+        }];
+        assert_eq!(
+            mark_names("Buy Extended Magazine first", &found),
+            [text("Buy "), entity(None), text(" first")]
+        );
+        assert_eq!(mark_names("Buy a clip", &[]), [text("Buy a clip")]);
+    }
+
+    #[test]
+    fn a_name_inside_another_word_stays_plain() {
+        let mut term = magazine();
+        term.en = "Rem".into();
+        let found = [Found {
+            start: 0,
+            end: 1,
+            term: &term,
+        }];
+        assert_eq!(mark_names("Remember", &found), [text("Remember")]);
+        assert_eq!(
+            mark_names("Rem's Remember", &found),
+            [entity(None), text("'s Remember")]
+        );
+    }
+
+    #[test]
+    fn the_source_keeps_what_was_said() {
+        let furigana = Furigana::new().unwrap();
+        let term = magazine();
+        let sentence = "きそかくちょうまがじんを";
+        let found = [Found {
+            start: 0,
+            end: "きそかくちょうまがじん".len(),
+            term: &term,
+        }];
+        let tokens = source_tokens(sentence, &furigana.morphemes(sentence), &found);
+        assert_eq!(tokens, [entity(Some("きそかくちょうまがじん")), text("を")]);
+    }
+
+    #[test]
+    fn tokens_have_the_shape_of_the_app() {
+        assert_eq!(
+            serde_json::to_value(text("あ")).unwrap(),
+            json!({ "t": "text", "text": "あ" })
+        );
+        assert_eq!(
+            serde_json::to_value(entity(Some("きそかくちょうまがじん"))).unwrap(),
+            json!({ "t": "entity", "ref": "item:1", "spoken": "きそかくちょうまがじん" })
+        );
     }
 }
