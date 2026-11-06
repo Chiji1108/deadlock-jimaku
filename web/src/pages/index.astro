@@ -128,7 +128,7 @@ const faqs = [
   },
 ];
 
-/** 字幕の作り方 */
+/** 字幕の作り方。`voice` は声を扱う場所ごとの中身で、`null` はその場所を使わないこと */
 const modes = [
   {
     name: "ローカル AI + OpenAI",
@@ -137,6 +137,7 @@ const modes = [
     price: "約 $0.6／時間",
     body: "話している途中の字幕と翻訳は PC の中で作り、確定の字幕は OpenAI。声を出してすぐ字幕が出て、最後は高い精度に置き換わります。",
     needs: "API キーかギフトコード",
+    voice: { pc: "途中の字幕", openai: "確定の字幕" },
   },
   {
     name: "OpenAI",
@@ -144,6 +145,7 @@ const modes = [
     price: "約 $1／時間",
     body: "すべてクラウドで処理します。モデルを動かさないので、PC の負荷がいちばん小さいです。",
     needs: "API キーかギフトコード",
+    voice: { pc: null, openai: "すべて" },
   },
   {
     name: "ローカル AI",
@@ -151,6 +153,7 @@ const modes = [
     price: "無料",
     body: "すべて PC の中で作ります。音声は外に送られません。精度は下がり、用語の強調とアイテム説明は使えません。日本語の配信で、翻訳先は英語・ロシア語・中国語です。",
     needs: "なし",
+    voice: { pc: "すべて", openai: null },
   },
 ];
 
@@ -333,6 +336,36 @@ const official = [
         ))
       }
     </ul>
+    <figure class="reveal mt-12 grid items-center gap-6 md:grid-cols-2 md:gap-10">
+      <figcaption>
+        <h3 class="text-xl font-bold">声の行き先</h3>
+        <p class="mt-1 leading-relaxed text-muted">
+          無料のローカル AI モードなら、声は PC の外に出ません。ほかの 2 つのモードは、声を OpenAI に送ります。
+        </p>
+      </figcaption>
+      <dl class="divide-y divide-line rounded-[20px] bg-panel px-6 py-2 sm:px-8">
+        {
+          modes.map((m) => (
+            <div class="py-4">
+              <dt class="font-bold">{m.name}</dt>
+              <dd class="mt-3 grid grid-cols-[1fr_1rem_1fr] items-center gap-2">
+                <p class:list={["rounded-xl border p-3", m.voice.pc ? "border-ink bg-ink text-paper" : "border-line text-muted"]}>
+                  <span class:list={["block text-xs", m.voice.pc && "text-paper/70"]}>PC の中</span>
+                  <span class="mt-0.5 block font-bold">{m.voice.pc ?? "送るだけ"}</span>
+                </p>
+                <span aria-hidden="true" class="text-center font-bold">
+                  {m.voice.openai ? "→" : "×"}
+                </span>
+                <p class:list={["rounded-xl border p-3", m.voice.openai ? "border-gold bg-gold text-ink" : "border-line text-muted"]}>
+                  <span class:list={["block text-xs", m.voice.openai && "text-ink/70"]}>OpenAI</span>
+                  <span class="mt-0.5 block font-bold">{m.voice.openai ?? "送らない"}</span>
+                </p>
+              </dd>
+            </div>
+          ))
+        }
+      </dl>
+    </figure>
   </section>
 
   <section id="pricing" class="mt-28 bg-ink text-paper sm:mt-40">
