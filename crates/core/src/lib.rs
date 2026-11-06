@@ -1,5 +1,6 @@
 pub mod assets;
 pub mod audio;
+pub mod chrome;
 pub mod demo;
 pub mod enrich;
 pub mod furigana;

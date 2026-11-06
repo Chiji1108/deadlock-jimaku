@@ -1,4 +1,4 @@
-//! ローカルAI のモード（DESIGN.md 9.6）。途中の字幕と途中の翻訳、用語の判定を、PC の中の補助プログラムで作る。
+//! 翻訳、ふりがな、用語の判定と、ハイブリッドの途中の字幕を、PC の中の補助プログラムで作る（DESIGN.md 9.6）。
 //!
 //! 補助プログラム（`crates/local-ai`）は実行環境が大きいので、アプリに入れず、使う人だけ初回に
 //! ダウンロードする。別のプロセスにすると、使わない人のメモリも増えない
@@ -20,7 +20,7 @@ use tokio::task::JoinHandle;
 use crate::settings::{Settings, SpeechEngine};
 use crate::store::Store;
 use crate::subtitles::Done;
-use crate::types::{Entity, Glossary, LiveState, LiveStatus, LiveText, Token, Translations};
+use crate::types::{Entity, Glossary, Heard, LiveState, LiveStatus, LiveText, Token, Translations};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const RELEASES: &str = "https://github.com/Chiji1108/deadlock-jimaku/releases/download";
@@ -47,6 +47,8 @@ const AUDIO: u8 = 1;
 const CUT: u8 = 2;
 const MARK: u8 = 3;
 const TERMS: u8 = 4;
+const PARTIAL_TEXT: u8 = 5;
+const FINAL_TEXT: u8 = 6;
 
 /// 字幕の処理が持つ。落とすと補助プログラムの処理も止まる
 pub struct Task {
@@ -84,6 +86,14 @@ pub enum Input {
     },
     /// 用語の表を入れ替える
     Terms(Vec<Term>),
+    /// Chrome が認識した文。確定の文には `Done::Local` で 1 つ返す
+    Text(Heard),
+}
+
+impl Input {
+    fn wants_final(&self) -> bool {
+        matches!(self, Self::Text(heard) if heard.is_final)
+    }
 }
 
 /// 補助プログラムからの 1 行。形が合わなければ `session` が止まって知らせる（空の字幕を出さない）
@@ -97,7 +107,7 @@ enum Message {
     Marked { id: String, tokens: Vec<Token> },
 }
 
-/// 補助プログラムが認識した文。ローカルAIのモードの確定の字幕では、文字が空なら、その発話を捨てる
+/// 補助プログラムが作った字幕。Chrome のモードの確定の字幕では、文字が空なら、その発話を捨てる
 #[derive(Debug, Default, Deserialize)]
 pub struct Final {
     pub text: String,
@@ -151,10 +161,9 @@ async fn run(
     mut input: mpsc::UnboundedReceiver<Input>,
 ) {
     show(&store, LiveState::Preparing, None);
-    let finals = settings.speech_engine == SpeechEngine::Local;
-    // 確定の字幕を返していない発話の数。ローカルAIのモードの字幕の処理は、区切りごとの返事を待っている
+    // 確定の字幕を返していない発話の数。Chrome のモードの字幕の処理は、確定の文ごとの返事を待っている
     let mut waiting = 0;
-    let result = session(&store, &settings, finals, &done, &mut input, &mut waiting);
+    let result = session(&store, &settings, &done, &mut input, &mut waiting);
     if let Err(e) = result.await {
         tracing::warn!("local ai: {e:#}");
         show(
@@ -163,15 +172,12 @@ async fn run(
             Some(format!("PC で字幕を作れません: {e}")),
         );
     }
-    // 止まったあとも区切りには返事をする（字幕の処理が待ち続けないように）
-    if !finals {
-        return;
-    }
+    // 止まったあとも確定の文には返事をする（字幕の処理が待ち続けないように）
     for _ in 0..waiting {
         let _ = done.send(Done::Local(Final::default())).await;
     }
     while let Some(next) = input.recv().await {
-        if matches!(next, Input::Cut) {
+        if next.wants_final() {
             let _ = done.send(Done::Local(Final::default())).await;
         }
     }
@@ -184,7 +190,6 @@ fn show(store: &Store, state: LiveState, detail: Option<String>) {
 async fn session(
     store: &Arc<Store>,
     settings: &Settings,
-    finals: bool,
     done: &mpsc::Sender<Done>,
     input: &mut mpsc::UnboundedReceiver<Input>,
     waiting: &mut usize,
@@ -203,7 +208,11 @@ async fn session(
     command
         .arg(root.join("models"))
         .arg(targets.join(","))
-        .arg(if finals { "final" } else { "partial" })
+        .arg(if settings.speech_engine == SpeechEngine::Chrome {
+            "text"
+        } else {
+            "partial"
+        })
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -227,11 +236,10 @@ async fn session(
         tokio::select! {
             next = input.recv() => {
                 let Some(next) = next else { return Ok(()) };
-                let cut = matches!(next, Input::Cut);
                 if ready {
-                    *waiting += usize::from(cut && finals);
+                    *waiting += usize::from(next.wants_final());
                     let _ = writer.send(next);
-                } else if cut && finals {
+                } else if next.wants_final() {
                     let _ = done.send(Done::Local(Final::default())).await;
                 }
             }
@@ -304,6 +312,10 @@ async fn send(stdin: &mut ChildStdin, input: Input) -> std::io::Result<()> {
         Input::Terms(terms) => {
             let body = serde_json::to_vec(&terms)?;
             stdin.write_all(&frame(TERMS, &body)).await
+        }
+        Input::Text(Heard { text, is_final }) => {
+            let kind = if is_final { FINAL_TEXT } else { PARTIAL_TEXT };
+            stdin.write_all(&frame(kind, text.as_bytes())).await
         }
     }
 }

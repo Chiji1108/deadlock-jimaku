@@ -1,5 +1,6 @@
 //! axum: オーバーレイと操作パネルの配信、WS、REST（DESIGN.md 1, 10 章）。
 
+use std::io::ErrorKind;
 use std::sync::Arc;
 
 use axum::Json;
@@ -20,8 +21,8 @@ use crate::secrets::{self, Provider};
 use crate::settings::SettingsPatch;
 use crate::share::{self, GiftStatus, Refused, SharedCode};
 use crate::store::Store;
-use crate::types::{ClientMsg, LangCode, ServerMsg, SettingsView, Topic};
-use crate::{audio, lang};
+use crate::types::{ChromeMsg, ClientMsg, Heard, LangCode, ServerMsg, SettingsView, Topic};
+use crate::{audio, chrome, lang};
 use ts_rs::TS;
 
 #[derive(RustEmbed)]
@@ -43,7 +44,9 @@ pub fn router(store: Arc<Store>) -> Router {
         .route("/share/codes", post(create_code))
         .route("/share/codes/{id}", patch(update_code))
         .route("/devices", get(devices))
-        .route("/languages", get(languages));
+        .route("/languages", get(languages))
+        .route("/chrome/open", post(open_chrome))
+        .route("/chrome/ws", get(chrome_ws));
     Router::new()
         .route("/ws", get(ws))
         .nest("/api", api)
@@ -343,6 +346,49 @@ async fn update_code(
     get_share(State(store)).await
 }
 
+// ---- Chrome のモード（DESIGN.md 9.6） ----
+
+/// 聞き取りのページを Chrome で開く。開いたあとはページが `/api/chrome/ws` につなぐ
+async fn open_chrome(headers: HeaderMap) -> Response {
+    let host = headers
+        .get(header::HOST)
+        .and_then(|h| h.to_str().ok())
+        .unwrap_or_default();
+    let url = format!("http://{host}/chrome");
+    match chrome::open(&url) {
+        Ok(()) => StatusCode::NO_CONTENT.into_response(),
+        Err(e) if e.kind() == ErrorKind::NotFound => {
+            let message =
+                format!("Google Chrome が見つかりません。Chrome で {url} を開いてください");
+            (StatusCode::NOT_FOUND, message).into_response()
+        }
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+    }
+}
+
+async fn chrome_ws(upgrade: WebSocketUpgrade, State(store): State<Arc<Store>>) -> Response {
+    upgrade.on_upgrade(move |socket| chrome_session(socket, store))
+}
+
+/// ページからの文と状態を受け取る。切れたらタブが閉じられたので、開いている発話を捨てる
+async fn chrome_session(mut socket: WebSocket, store: Arc<Store>) {
+    while let Some(Ok(message)) = socket.recv().await {
+        let Message::Text(text) = message else {
+            continue;
+        };
+        match serde_json::from_str(text.as_str()) {
+            Ok(ChromeMsg::Text(heard)) => store.send_heard(heard),
+            Ok(ChromeMsg::Status { status }) => store.set_chrome_status(Some(status)),
+            Err(e) => tracing::warn!("invalid chrome message: {e}"),
+        }
+    }
+    store.send_heard(Heard {
+        text: String::new(),
+        is_final: true,
+    });
+    store.set_chrome_status(None);
+}
+
 async fn devices() -> Response {
     match tokio::task::spawn_blocking(audio::input_devices).await {
         Ok(Ok(names)) => Json(names).into_response(),
@@ -526,10 +572,12 @@ async fn frontend(uri: Uri) -> Response {
 mod tests {
     use std::path::PathBuf;
 
+    use futures_util::SinkExt;
     use tokio_tungstenite::tungstenite::{self, client::IntoClientRequest};
 
     use super::*;
     use crate::settings::Settings;
+    use crate::types::{LiveState, LiveStatus};
 
     /// 手元のポートで動かす。アドレス（`127.0.0.1:…`）を返す
     async fn serve_on_any_port() -> String {
@@ -609,6 +657,77 @@ mod tests {
         ];
         assert_eq!(post_demo(&addr, &rebinding).await, StatusCode::FORBIDDEN);
         assert_eq!(ws_status(&addr, &rebinding).await, StatusCode::FORBIDDEN);
+    }
+
+    #[tokio::test]
+    async fn other_sites_cannot_reach_the_chrome_page_routes() {
+        let addr = serve_on_any_port().await;
+        let client = reqwest::Client::new();
+        let open = client
+            .post(format!("http://{addr}/api/chrome/open"))
+            .header("origin", "https://evil.example")
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(open.status(), StatusCode::FORBIDDEN);
+        let mut req = format!("ws://{addr}/api/chrome/ws")
+            .into_client_request()
+            .unwrap();
+        req.headers_mut()
+            .insert("origin", "https://evil.example".parse().unwrap());
+        let refused = tokio_tungstenite::connect_async(req).await;
+        assert!(
+            matches!(refused, Err(tungstenite::Error::Http(res)) if res.status() == StatusCode::FORBIDDEN)
+        );
+    }
+
+    #[tokio::test]
+    async fn the_chrome_page_sends_text_and_status_until_it_closes() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let store = Store::new(Ok(Settings::default()), PathBuf::new());
+        tokio::spawn(serve(listener, store.clone()));
+        let mut heard = store.subscribe_heard();
+        let mut messages = store.subscribe();
+        let (mut socket, _) =
+            tokio_tungstenite::connect_async(format!("ws://{addr}/api/chrome/ws"))
+                .await
+                .unwrap();
+
+        let status = r#"{ "type": "status", "status": { "state": "listening" } }"#;
+        socket.send(status.into()).await.unwrap();
+        let text = r#"{ "type": "text", "text": "ヘイズ", "final": false }"#;
+        socket.send(text.into()).await.unwrap();
+        assert_eq!(
+            messages.recv().await.unwrap(),
+            ServerMsg::ChromeStatus {
+                status: Some(LiveStatus {
+                    state: LiveState::Listening,
+                    detail: None,
+                }),
+            }
+        );
+        assert_eq!(
+            heard.recv().await.unwrap(),
+            Heard {
+                text: "ヘイズ".into(),
+                is_final: false,
+            }
+        );
+
+        socket.close(None).await.unwrap();
+        assert_eq!(
+            heard.recv().await.unwrap(),
+            Heard {
+                text: String::new(),
+                is_final: true,
+            },
+            "開いている発話を捨てる"
+        );
+        assert_eq!(
+            messages.recv().await.unwrap(),
+            ServerMsg::ChromeStatus { status: None }
+        );
     }
 
     #[tokio::test]

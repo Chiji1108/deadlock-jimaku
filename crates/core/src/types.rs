@@ -137,20 +137,23 @@ pub enum ServerMsg {
     AudioLevel { db: f32 },
     #[serde(rename = "usage")]
     Usage { usage: crate::usage::UsageView },
-    /// ローカルAI の状態。None は動いていない
+    /// 補助プログラムの状態。None は動いていない
     #[serde(rename = "live.status")]
     LiveStatus { status: Option<LiveStatus> },
+    /// Chrome のページの状態。None はタブが開いていない
+    #[serde(rename = "chrome.status")]
+    ChromeStatus { status: Option<LiveStatus> },
     /// 操作パネル以外（OBS の字幕オーバーレイ、トレイ）で設定が変わった。パネルは取り直す
     #[serde(rename = "settings.changed")]
     SettingsChanged,
 }
 
-/// ローカルAI の状態（DESIGN.md 9.6）
+/// 補助プログラムや Chrome のページの状態（DESIGN.md 9.6）
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub enum LiveState {
-    /// モデルをダウンロードしている
+    /// モデルをダウンロードしている。Chrome のページは聞き始めるのを待っている
     Preparing,
     /// 聞いている
     Listening,
@@ -169,7 +172,25 @@ pub struct LiveStatus {
     pub detail: Option<String>,
 }
 
-/// ローカルAI が認識した途中の文と訳
+/// Chrome のページから core への 1 通（WS `/api/chrome/ws`）
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[serde(tag = "type", rename_all = "lowercase")]
+#[ts(export)]
+pub enum ChromeMsg {
+    Text(Heard),
+    Status { status: LiveStatus },
+}
+
+/// Chrome が認識した文。確定で文が空なら、開いている発話を捨てる
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct Heard {
+    pub text: String,
+    #[serde(rename = "final")]
+    pub is_final: bool,
+}
+
+/// 補助プログラムが作った途中の文と訳
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub struct LiveText {
@@ -241,9 +262,10 @@ impl ServerMsg {
             Self::Snapshot { .. } | Self::SegmentUpsert { .. } => Topic::Subtitle,
             Self::GlossaryUpdated { .. } => Topic::Glossary,
             Self::RankUpdate { .. } => Topic::Rank,
-            Self::TranscriptionStatus { .. } | Self::SettingsChanged | Self::LiveStatus { .. } => {
-                Topic::Status
-            }
+            Self::TranscriptionStatus { .. }
+            | Self::SettingsChanged
+            | Self::LiveStatus { .. }
+            | Self::ChromeStatus { .. } => Topic::Status,
             Self::Display { .. } => Topic::Display,
             Self::AudioLevel { .. } => Topic::Level,
             Self::Usage { .. } => Topic::Usage,

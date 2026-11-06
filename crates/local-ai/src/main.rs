@@ -1,11 +1,13 @@
-//! 途中の字幕と途中の翻訳を PC の中で作る（DESIGN.md 9.6）。アプリが起動し、標準入出力でやりとりする。
+//! 字幕に翻訳、ふりがな、用語を付ける（DESIGN.md 9.6）。アプリが起動し、標準入出力でやりとりする。
 //!
 //! - 引数: モデルを置くフォルダ、翻訳先（`en,ru` のようにコンマで区切る）、
-//!   確定の字幕も作るなら `final`、作らないなら `partial`
+//!   音声を認識して途中の字幕を作るなら `partial`、ほかで認識した文を受け取るなら `text`
+//!   （音声認識のモデルをダウンロードしない）
 //! - 入力: 1 バイトの種類（区切りはこれだけ）と、4 バイトの長さ（リトルエンディアン）と中身。
 //!   中身は 16kHz の f32 の音声、読みと用語を付ける `{発話の id}\n{文}`、
-//!   用語の表（`terms::Term` の JSON の配列。辞書が変わるたびに届き、入れ替える）のどれか
-//! - 出力: 1 行に 1 つの JSON（`progress`、`ready`、`text`、`final`、`marked`）。`final` は区切りごとに
+//!   用語の表（`terms::Term` の JSON の配列。辞書が変わるたびに届き、入れ替える）、
+//!   途中か確定の文のどれか
+//! - 出力: 1 行に 1 つの JSON（`progress`、`ready`、`text`、`final`、`marked`）。`final` は確定の文ごとに
 //!   1 つ返す。文字はアプリの `Token` の形で入る
 //!
 //! 入力が閉じたら終わる（アプリが落ちても残らない）
@@ -33,6 +35,8 @@ const AUDIO: u8 = 1;
 const CUT: u8 = 2;
 const MARK: u8 = 3;
 const TERMS: u8 = 4;
+const PARTIAL_TEXT: u8 = 5;
+const FINAL_TEXT: u8 = 6;
 const SAMPLE_RATE: usize = 16_000;
 /// 長い発話でも、再デコードの時間が伸び続けないようにする
 const MAX_SAMPLES: usize = 10 * SAMPLE_RATE;
@@ -43,12 +47,14 @@ const MIN_TICK: Duration = Duration::from_millis(200);
 #[derive(Default)]
 struct Speech {
     samples: Vec<f32>,
-    /// 区切るたびに増える。デコード中に区切られたら結果を捨てる
+    /// 区切るたびに増える。処理の途中で区切られたら結果を捨てる
     generation: u64,
     /// 前のデコードのあとに音声が増えた
     fresh: bool,
-    /// 区切られた発話。確定の字幕を作る
-    finished: VecDeque<Vec<f32>>,
+    /// ほかで認識した途中の文。最新だけあればいい
+    partial_text: Option<String>,
+    /// ほかで認識した確定の文
+    final_texts: VecDeque<String>,
     /// OpenAI の確定の文（発話の id と文）。読みと用語を付けて返す
     marks: VecDeque<(String, String)>,
     /// 新しい用語の表
@@ -59,8 +65,9 @@ struct Speech {
 /// 次にすること。確定の字幕を先に作る
 enum Job {
     Terms(Terms),
-    Final(Vec<f32>),
+    FinalText(String),
     Mark(String, String),
+    PartialText(String, u64),
     Partial(Vec<f32>, u64),
 }
 
@@ -69,11 +76,14 @@ impl Speech {
         if let Some(terms) = self.terms.take() {
             return Some(Job::Terms(terms));
         }
-        if let Some(finished) = self.finished.pop_front() {
-            return Some(Job::Final(finished));
+        if let Some(text) = self.final_texts.pop_front() {
+            return Some(Job::FinalText(text));
         }
         if let Some((id, text)) = self.marks.pop_front() {
             return Some(Job::Mark(id, text));
+        }
+        if let Some(text) = self.partial_text.take() {
+            return Some(Job::PartialText(text, self.generation));
         }
         let start = self.samples.len().saturating_sub(MAX_SAMPLES);
         std::mem::take(&mut self.fresh)
@@ -100,7 +110,8 @@ type Shared = Arc<(Mutex<Speech>, Condvar)>;
 
 /// 字幕を作るもの。Engine はスレッドをまたげないので、メインのスレッドで持つ
 struct Local {
-    recognizer: OfflineRecognizer,
+    /// 認識した文を受け取るときはない
+    recognizer: Option<OfflineRecognizer>,
     furigana: Furigana,
     japanese_english: Engine,
     /// 英語から訳す言語
@@ -111,9 +122,12 @@ struct Local {
 
 impl Local {
     fn decode(&self, samples: &[f32]) -> String {
-        let stream = self.recognizer.create_stream();
+        let Some(recognizer) = &self.recognizer else {
+            return String::new();
+        };
+        let stream = recognizer.create_stream();
         stream.accept_waveform(SAMPLE_RATE as i32, samples);
-        self.recognizer.decode(&stream);
+        recognizer.decode(&stream);
         stream
             .get_result()
             .map(|r| r.text.trim().to_owned())
@@ -253,16 +267,16 @@ fn main() -> anyhow::Result<()> {
         .filter(|t| !t.is_empty())
         .map(ToOwned::to_owned)
         .collect();
-    let finals = args.next().context("mode")? == "final";
+    let speech = args.next().context("mode")? == "partial";
 
     let others: Vec<String> = targets.iter().filter(|t| *t != "en").cloned().collect();
-    let paths = models::ensure(&dir, &others, |loaded, total| {
+    let paths = models::ensure(&dir, &others, speech, |loaded, total| {
         emit(&json!({ "type": "progress", "loaded": loaded, "total": total }));
     })?;
     let mut pairs = paths.pairs.iter();
     let (_, japanese_english) = pairs.next().context("ja-en model")?;
     let mut local = Local {
-        recognizer: recognizer(&paths)?,
+        recognizer: paths.speech.as_ref().map(recognizer).transpose()?,
         furigana: Furigana::new()?,
         japanese_english: engine(japanese_english)?,
         from_english: pairs
@@ -276,10 +290,10 @@ fn main() -> anyhow::Result<()> {
     };
     emit(&json!({ "type": "ready" }));
 
-    let speech: Shared = Arc::default();
-    let reader = speech.clone();
+    let shared: Shared = Arc::default();
+    let reader = shared.clone();
     std::thread::spawn(move || {
-        if let Err(e) = read_input(&reader, finals) {
+        if let Err(e) = read_input(&reader) {
             eprintln!("input: {e}");
         }
         reader.0.lock().unwrap().closed = true;
@@ -290,11 +304,12 @@ fn main() -> anyhow::Result<()> {
     let mut shown_generation = 0;
     loop {
         let job = {
-            let (lock, wake) = &*speech;
+            let (lock, wake) = &*shared;
             wake.wait_while(lock.lock().unwrap(), |s| {
                 !s.fresh
                     && !s.closed
-                    && s.finished.is_empty()
+                    && s.partial_text.is_none()
+                    && s.final_texts.is_empty()
                     && s.marks.is_empty()
                     && s.terms.is_none()
             })
@@ -307,13 +322,19 @@ fn main() -> anyhow::Result<()> {
                 local.terms = terms;
                 continue;
             }
-            Some(Job::Final(finished)) => {
-                let text = local.decode(&finished);
+            Some(Job::FinalText(text)) => {
                 emit(&local.message("final", &text));
                 continue;
             }
             Some(Job::Mark(id, text)) => {
                 emit(&local.mark(&id, &text));
+                continue;
+            }
+            Some(Job::PartialText(text, generation)) => {
+                let message = local.message("text", &text);
+                if current_generation(&shared) == generation {
+                    emit(&message);
+                }
                 continue;
             }
             Some(Job::Partial(samples, generation)) => (samples, generation),
@@ -324,7 +345,7 @@ fn main() -> anyhow::Result<()> {
             shown.clear();
             shown_generation = generation;
         }
-        if !text.is_empty() && text != shown && speech.0.lock().unwrap().generation == generation {
+        if !text.is_empty() && text != shown && current_generation(&shared) == generation {
             emit(&local.message("text", &text));
             shown = text;
         }
@@ -333,9 +354,13 @@ fn main() -> anyhow::Result<()> {
     }
 }
 
-fn recognizer(paths: &models::Paths) -> anyhow::Result<OfflineRecognizer> {
+fn current_generation(speech: &Shared) -> u64 {
+    speech.0.lock().unwrap().generation
+}
+
+fn recognizer(paths: &models::SpeechPaths) -> anyhow::Result<OfflineRecognizer> {
     let mut config = OfflineRecognizerConfig::default();
-    config.model_config.sense_voice.model = Some(path(&paths.speech_model));
+    config.model_config.sense_voice.model = Some(path(&paths.model));
     config.model_config.sense_voice.language = Some("ja".to_owned());
     config.model_config.sense_voice.use_itn = false;
     config.model_config.tokens = Some(path(&paths.tokens));
@@ -359,7 +384,7 @@ fn path(path: &Path) -> String {
     path.display().to_string()
 }
 
-fn read_input(speech: &Shared, finals: bool) -> io::Result<()> {
+fn read_input(speech: &Shared) -> io::Result<()> {
     let mut input = io::stdin().lock();
     let mut kind = [0];
     while input.read_exact(&mut kind).is_ok() {
@@ -377,16 +402,13 @@ fn read_input(speech: &Shared, finals: bool) -> io::Result<()> {
             }
             CUT => {
                 let mut s = speech.0.lock().unwrap();
-                let samples = std::mem::take(&mut s.samples);
-                if finals {
-                    s.finished.push_back(samples);
-                }
+                s.samples.clear();
                 s.generation += 1;
                 s.fresh = false;
                 speech.1.notify_all();
             }
             MARK => {
-                let frame = String::from_utf8(read_body(&mut input)?).map_err(io::Error::other)?;
+                let frame = read_text(&mut input)?;
                 if let Some((id, text)) = frame.split_once('\n') {
                     let mut s = speech.0.lock().unwrap();
                     s.marks.push_back((id.to_owned(), text.to_owned()));
@@ -396,6 +418,19 @@ fn read_input(speech: &Shared, finals: bool) -> io::Result<()> {
             TERMS => {
                 let terms = serde_json::from_slice(&read_body(&mut input)?)?;
                 speech.0.lock().unwrap().terms = Some(Terms::new(terms));
+                speech.1.notify_all();
+            }
+            PARTIAL_TEXT => {
+                let text = read_text(&mut input)?;
+                speech.0.lock().unwrap().partial_text = Some(text);
+                speech.1.notify_all();
+            }
+            FINAL_TEXT => {
+                let text = read_text(&mut input)?;
+                let mut s = speech.0.lock().unwrap();
+                s.partial_text = None;
+                s.final_texts.push_back(text);
+                s.generation += 1;
                 speech.1.notify_all();
             }
             other => return Err(io::Error::other(format!("unknown input {other}"))),
@@ -410,6 +445,10 @@ fn read_body(input: &mut impl Read) -> io::Result<Vec<u8>> {
     let mut bytes = vec![0; u32::from_le_bytes(len) as usize];
     input.read_exact(&mut bytes)?;
     Ok(bytes)
+}
+
+fn read_text(input: &mut impl Read) -> io::Result<String> {
+    String::from_utf8(read_body(input)?).map_err(io::Error::other)
 }
 
 fn emit(message: &Value) {
@@ -449,12 +488,24 @@ mod tests {
     #[test]
     fn new_terms_come_before_the_next_subtitle() {
         let mut speech = Speech {
-            finished: VecDeque::from([Vec::new()]),
+            final_texts: VecDeque::from(["あ".to_owned()]),
             terms: Some(Terms::new(vec![magazine()])),
             ..Default::default()
         };
         assert!(matches!(speech.next_job(), Some(Job::Terms(_))));
-        assert!(matches!(speech.next_job(), Some(Job::Final(_))));
+        assert!(matches!(speech.next_job(), Some(Job::FinalText(_))));
+    }
+
+    #[test]
+    fn a_final_text_comes_before_the_partial_text() {
+        let mut speech = Speech {
+            partial_text: Some("い".to_owned()),
+            final_texts: VecDeque::from(["あ".to_owned()]),
+            ..Default::default()
+        };
+        assert!(matches!(speech.next_job(), Some(Job::FinalText(t)) if t == "あ"));
+        assert!(matches!(speech.next_job(), Some(Job::PartialText(t, _)) if t == "い"));
+        assert!(speech.next_job().is_none());
     }
 
     #[test]

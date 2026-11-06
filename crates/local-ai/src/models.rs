@@ -114,29 +114,42 @@ pub struct PairPaths {
     pub shortlist: PathBuf,
 }
 
-pub struct Paths {
-    pub speech_model: PathBuf,
+/// 音声認識のファイル
+pub struct SpeechPaths {
+    pub model: PathBuf,
     pub tokens: PathBuf,
+}
+
+pub struct Paths {
+    /// 認識した文を受け取るときはない
+    pub speech: Option<SpeechPaths>,
     /// `ja-en` は常にあり、`targets` の言語は `en-{言語}`
     pub pairs: Vec<(&'static str, PairPaths)>,
 }
 
-/// 足りないモデルをダウンロードする。`targets` は英語以外の翻訳先
+/// 足りないモデルをダウンロードする。`targets` は英語以外の翻訳先。`speech` は音声認識のモデルも要るか
 pub fn ensure(
     dir: &Path,
     targets: &[String],
+    speech: bool,
     mut progress: impl FnMut(u64, u64),
 ) -> anyhow::Result<Paths> {
     fs::create_dir_all(dir)?;
-    let speech_model = dir.join(SPEECH_FILES[0]);
-    let tokens = dir.join(SPEECH_FILES[1]);
+    let speech = speech.then(|| SpeechPaths {
+        model: dir.join(SPEECH_FILES[0]),
+        tokens: dir.join(SPEECH_FILES[1]),
+    });
     let selected: Vec<&Pair> = PAIRS
         .iter()
         .filter(|p| p.name == "ja-en" || targets.iter().any(|t| p.name == format!("en-{t}")))
         .collect();
-    let total = SPEECH_BYTES + PAIR_BYTES * selected.len() as u64;
+    let speech_bytes = if speech.is_some() { SPEECH_BYTES } else { 0 };
+    let total = speech_bytes + PAIR_BYTES * selected.len() as u64;
     let mut loaded = 0;
-    if !(speech_model.exists() && tokens.exists()) {
+    if speech
+        .as_ref()
+        .is_some_and(|s| !(s.model.exists() && s.tokens.exists()))
+    {
         let archive = download(SPEECH_URL, SPEECH_SHA256, total, &mut loaded, &mut progress)?;
         extract_speech(&archive, dir)?;
     }
@@ -154,11 +167,7 @@ pub fn ensure(
             },
         ));
     }
-    Ok(Paths {
-        speech_model,
-        tokens,
-        pairs,
-    })
+    Ok(Paths { speech, pairs })
 }
 
 /// 展開したファイルの名前は、添付ファイルの名前から `.zst` を除いたもの

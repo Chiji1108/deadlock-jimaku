@@ -17,7 +17,8 @@ use crate::types::{LangCode, TranscriptionError};
 use crate::{assets, audio, rank, secrets, share, subtitles};
 
 pub struct Options {
-    /// 開発・検証用: マイクの代わりに WAV ファイルを流す（設定の開始・停止に関係なく流す）
+    /// 開発・検証用: マイクの代わりに WAV ファイルを流す（設定の開始・停止に関係なく流す）。
+    /// Chrome のモードでは使わない（音声はページが聞く）
     pub input_file: Option<PathBuf>,
 }
 
@@ -84,6 +85,8 @@ struct SubtitlesInput {
 enum Source {
     Mic(Option<String>),
     File(PathBuf),
+    /// Chrome のページが認識した文を受け取る
+    Chrome,
 }
 
 pub async fn run(store: Arc<Store>, options: Options) {
@@ -105,7 +108,7 @@ pub async fn run(store: Arc<Store>, options: Options) {
             .await
             .unwrap_or_default();
         let languages = settings.glossary_languages();
-        // ローカルAIのモードは OpenAI に何も送らない
+        // Chrome のモードは OpenAI に何も送らない
         let needs_key = settings.speech_engine.needs_key();
         let access = keys.access(&settings.api_base).filter(|_| needs_key);
 
@@ -143,9 +146,10 @@ pub async fn run(store: Arc<Store>, options: Options) {
             })
             .await;
 
-        let source = match &options.input_file {
-            Some(path) => Some(Source::File(path.clone())),
-            None => settings
+        let source = match (&options.input_file, settings.speech_engine) {
+            (_, SpeechEngine::Chrome) => settings.transcription_enabled.then_some(Source::Chrome),
+            (Some(path), _) => Some(Source::File(path.clone())),
+            (None, _) => settings
                 .transcription_enabled
                 .then(|| Source::Mic(settings.mic_device.clone())),
         };
@@ -197,10 +201,11 @@ fn start_subtitles(
     tracing::info!("transcription started");
     let (input, ended) = match source {
         Source::Mic(device) => (
-            audio::Input::Mic(device),
+            Some(audio::Input::Mic(device)),
             Some(TranscriptionError::InputEnded),
         ),
-        Source::File(path) => (audio::Input::File(path), None),
+        Source::File(path) => (Some(audio::Input::File(path)), None),
+        Source::Chrome => (None, None),
     };
     let store = store.clone();
     Some(tokio::spawn(async move {

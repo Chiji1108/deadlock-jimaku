@@ -5,6 +5,8 @@
 //!                        └→ Segment が閉じたら区間を切り出して GPT-Transcribe（final）
 //!                             → ふりがな・翻訳・固有名詞（enriched）
 //!
+//! Chrome のモードではページが認識した文（`Heard`）を受け取り、補助プログラムで字幕にする（DESIGN.md 9.6）。
+//!
 //! Segment の状態を書き換えるのは `Pipeline` だけにする。バッチや enrich の結果もチャンネルで受け取って反映する。
 
 use std::collections::{HashMap, VecDeque};
@@ -24,7 +26,7 @@ use crate::share;
 use crate::store::Store;
 use crate::stt::{self, BatchRequest, Hints, RealtimeConfig};
 use crate::types::{
-    Enriched, EntityKind, Glossary, LangCode, LiveText, Segment, Stage, Token, Translations,
+    Enriched, EntityKind, Glossary, Heard, LangCode, LiveText, Segment, Stage, Token, Translations,
 };
 use crate::usage::Meter;
 
@@ -35,7 +37,7 @@ const FRAME_MS: u32 = 16;
 const PADDING: u64 = SAMPLE_RATE as u64 * 300 / 1000;
 /// これより短い発話（咳やクリック）はバッチに送らず捨てる
 const MIN_SPEECH_MS: u32 = 250;
-/// ローカルAI に渡す、発話を検出する前の音声（0.3 秒）
+/// 補助プログラムに渡す、発話を検出する前の音声（0.3 秒）
 const LOCAL_LEAD_SAMPLES: u64 = SAMPLE_RATE as u64 * 300 / 1000;
 /// enrich に文脈として渡す直前の確定字幕の数
 const CONTEXT_LINES: usize = 3;
@@ -46,12 +48,15 @@ const PROMPT: &str = "Live commentary by a streamer playing the video game Deadl
 /// デッドロックモードを切ったとき（雑談の配信など）
 const PLAIN_PROMPT: &str = "Live commentary by a streamer.";
 
-/// `access` は OpenAI（文字起こし・翻訳）の送り先と鍵。ローカルAIのモードは使わない
+/// `access` は OpenAI（文字起こし・翻訳）の送り先と鍵。`input` がなければ Chrome のモードで、どちらも使わない
 pub async fn run(
     store: Arc<Store>,
-    input: audio::Input,
+    input: Option<audio::Input>,
     access: Option<Access>,
 ) -> anyhow::Result<()> {
+    let Some(input) = input else {
+        return run_chrome(store).await;
+    };
     let settings = store.settings();
 
     // 用語ヒントは Realtime のセッション開始時に 1 回しか渡せないので、辞書を少し待つ。
@@ -109,7 +114,7 @@ pub async fn run(
         None
     };
 
-    // ローカルAI を使うモードでは、音声を補助プログラムにも渡す
+    // 途中の字幕を PC で作るときは、音声を補助プログラムにも渡す
     let (local, local_task) = settings
         .wants_local()
         .then(|| {
@@ -174,6 +179,36 @@ pub async fn run(
     Ok(())
 }
 
+/// ページが認識した文を字幕にする。止めるまで続く（ページが閉じられても、開き直せば続きが出る）
+async fn run_chrome(store: Arc<Store>) -> anyhow::Result<()> {
+    let settings = store.settings();
+    let (done_tx, mut done_rx) = mpsc::channel(64);
+    let (local, input) = mpsc::unbounded_channel();
+    let task = local::Task::spawn(store.clone(), settings.clone(), done_tx.clone(), input);
+    let mut heard = store.subscribe_heard();
+    let mut live = store.watch_live();
+    live.mark_unchanged();
+    let mut pipeline = Pipeline::new(
+        store,
+        &settings,
+        None,
+        done_tx,
+        None,
+        Some(local),
+        Some(task),
+    );
+    loop {
+        tokio::select! {
+            Ok(()) = live.changed() => {
+                let text = live.borrow_and_update().clone();
+                pipeline.on_live(text);
+            }
+            Ok(heard) = heard.recv() => pipeline.on_heard(heard),
+            Some(done) = done_rx.recv() => pipeline.on_done(done),
+        }
+    }
+}
+
 /// 操作パネルのメーター用。区間ごとのピークを dBFS で返す
 #[derive(Default)]
 struct LevelMeter {
@@ -207,7 +242,7 @@ struct Cloud {
 struct Pipeline {
     store: Arc<Store>,
     lang: LangCode,
-    /// ローカルAIのモードにはない
+    /// Chrome のモードにはない
     cloud: Option<Cloud>,
     done_tx: mpsc::Sender<Done>,
     history: History,
@@ -216,7 +251,7 @@ struct Pipeline {
     /// リアルタイムの音声認識へ（途中の字幕を出さないときと、入力が終わったあとは None）
     realtime: Option<mpsc::UnboundedSender<stt::Input>>,
     local: Option<mpsc::UnboundedSender<local::Input>>,
-    /// ローカルAIのモードで確定の字幕を待っている発話。区切った順
+    /// Chrome のモードで確定の字幕を待っている発話。確定した順
     local_finals: VecDeque<String>,
     /// 前の発話を無音でないところで切った
     cut_mid_speech: bool,
@@ -321,6 +356,10 @@ impl Pipeline {
             self.frame_pos.saturating_sub(LOCAL_LEAD_SAMPLES)
         };
         self.send_local(local::Input::Audio(self.history.slice(lead, end)));
+        self.open_segment();
+    }
+
+    fn open_segment(&mut self) {
         self.seq += 1;
         let started_at = now_ms();
         let id = format!("mic-{started_at}-{}", self.seq);
@@ -350,11 +389,6 @@ impl Pipeline {
         self.send_realtime(stt::Input::Close);
         self.send_local(local::Input::Cut);
         self.cut_mid_speech = close.cut_end;
-        // ローカルAIのモードは補助プログラムが確定の字幕も作る（捨てる発話の分も返ってくる）
-        if self.cloud.is_none() {
-            self.local_finals.push_back(id.clone());
-            self.pending += 1;
-        }
         if close.speech_ms < MIN_SPEECH_MS {
             self.discard(&id);
             return;
@@ -396,7 +430,22 @@ impl Pipeline {
         }
     }
 
-    /// ローカルAI が認識した途中の文を、開いている発話に載せる
+    /// Chrome が認識した文を補助プログラムに渡す。文の始まりは最初の途中の文で分かる
+    fn on_heard(&mut self, heard: Heard) {
+        if self.current.is_none() {
+            if heard.text.is_empty() {
+                return;
+            }
+            self.open_segment();
+        }
+        if heard.is_final {
+            self.local_finals.extend(self.current.take());
+            self.pending += 1;
+        }
+        self.send_local(local::Input::Text(heard));
+    }
+
+    /// 補助プログラムが作った途中の文を、開いている発話に載せる
     fn on_live(&mut self, live: LiveText) {
         let seg = self.current.as_ref().and_then(|id| self.live.get_mut(id));
         if let Some(seg) = seg.filter(|s| s.stage == Stage::Partial) {
@@ -501,7 +550,7 @@ impl Pipeline {
         }
     }
 
-    /// ローカルAIのモードの確定の字幕。区切った順に届く
+    /// Chrome のモードの確定の字幕。確定した順に届く
     fn on_local_final(&mut self, result: local::Final) {
         let Some(id) = self.local_finals.pop_front() else {
             return;
@@ -627,7 +676,7 @@ struct BatchContext {
 pub(crate) enum Done {
     /// None ならバッチが失敗した
     Transcribed { id: String, text: Option<String> },
-    /// ローカルAIのモードで PC の中で作った確定の字幕
+    /// Chrome のモードの確定の文に、翻訳と読みと用語を付けたもの
     Local(local::Final),
     /// 書きかけの訳文
     Draft {
@@ -846,6 +895,103 @@ mod tests {
     use tokio_tungstenite::tungstenite::Message;
     use tokio_tungstenite::tungstenite::protocol::CloseFrame;
     use tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode;
+
+    fn chrome_pipeline() -> (
+        Pipeline,
+        mpsc::UnboundedReceiver<local::Input>,
+        tokio::sync::broadcast::Receiver<crate::types::ServerMsg>,
+    ) {
+        let store = Store::new(Ok(Settings::default()), std::path::PathBuf::new());
+        let messages = store.subscribe();
+        let (done_tx, _done) = mpsc::channel(1);
+        let (local, input) = mpsc::unbounded_channel();
+        let settings = store.settings();
+        let pipeline = Pipeline::new(store, &settings, None, done_tx, None, Some(local), None);
+        (pipeline, input, messages)
+    }
+
+    fn heard(text: &str, is_final: bool) -> Heard {
+        Heard {
+            text: text.into(),
+            is_final,
+        }
+    }
+
+    fn sent_text(input: &mut mpsc::UnboundedReceiver<local::Input>) -> Option<Heard> {
+        match input.try_recv() {
+            Ok(local::Input::Text(heard)) => Some(heard),
+            _ => None,
+        }
+    }
+
+    /// 流れた字幕の段階と文
+    fn last_upsert(
+        messages: &mut tokio::sync::broadcast::Receiver<crate::types::ServerMsg>,
+    ) -> Option<(Stage, String)> {
+        let mut last = None;
+        while let Ok(message) = messages.try_recv() {
+            if let crate::types::ServerMsg::SegmentUpsert { segment } = message {
+                last = Some((segment.stage, segment.text));
+            }
+        }
+        last
+    }
+
+    #[test]
+    fn chrome_text_goes_through_the_helper_to_the_overlay() {
+        let (mut pipeline, mut input, mut messages) = chrome_pipeline();
+        pipeline.on_heard(heard("ヘイズ", false));
+        assert_eq!(sent_text(&mut input), Some(heard("ヘイズ", false)));
+        pipeline.on_live(LiveText {
+            text: "ヘイズ".into(),
+            tokens: Vec::new(),
+            translations: Translations::new(),
+        });
+        assert_eq!(
+            last_upsert(&mut messages),
+            Some((Stage::Partial, "ヘイズ".to_owned()))
+        );
+
+        pipeline.on_heard(heard("ヘイズが強い", true));
+        assert_eq!(sent_text(&mut input), Some(heard("ヘイズが強い", true)));
+        assert!(pipeline.current.is_none());
+        pipeline.on_done(Done::Local(local::Final {
+            text: "ヘイズが強い".into(),
+            ..Default::default()
+        }));
+        assert_eq!(
+            last_upsert(&mut messages),
+            Some((Stage::Enriched, "ヘイズが強い".to_owned()))
+        );
+        assert_eq!(pipeline.pending, 0);
+    }
+
+    #[test]
+    fn a_final_text_alone_is_a_subtitle() {
+        let (mut pipeline, mut input, _messages) = chrome_pipeline();
+        pipeline.on_heard(heard("リロード", true));
+        assert_eq!(sent_text(&mut input), Some(heard("リロード", true)));
+        assert_eq!(pipeline.local_finals.len(), 1);
+    }
+
+    #[test]
+    fn an_empty_final_text_discards_the_open_subtitle() {
+        let (mut pipeline, mut input, mut messages) = chrome_pipeline();
+        pipeline.on_heard(heard("", true));
+        assert!(sent_text(&mut input).is_none(), "開いている字幕がない");
+
+        pipeline.on_heard(heard("ヘイズ", false));
+        pipeline.on_live(LiveText {
+            text: "ヘイズ".into(),
+            ..Default::default()
+        });
+        pipeline.on_heard(heard("", true));
+        pipeline.on_done(Done::Local(local::Final::default()));
+        assert_eq!(
+            last_upsert(&mut messages),
+            Some((Stage::Discarded, "ヘイズ".to_owned()))
+        );
+    }
 
     /// 字幕の途中で上限に達したら張り直さず、`Done::DailyLimit` を送って終わる
     async fn stops_at_the_daily_limit(api: String) {

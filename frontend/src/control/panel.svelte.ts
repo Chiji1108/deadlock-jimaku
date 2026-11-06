@@ -55,8 +55,10 @@ class Panel {
   /** 最後にレベルが届いた時刻 */
   private levelAt = 0;
   now = $state(Date.now());
-  /** ローカルAI の状態。動いていなければ undefined */
+  /** 補助プログラムの状態。動いていなければ undefined */
   liveStatus = $state<LiveStatus>();
+  /** Chrome のページの状態。タブが開いていなければ undefined */
+  chromeStatus = $state<LiveStatus>();
 
   get settings() {
     return this.view?.settings;
@@ -67,10 +69,10 @@ class Panel {
     return this.view?.keys.openai.state === "missing" && this.view.keys.gift.state === "missing";
   }
 
-  /** 字幕を始められる鍵（自分のキーかギフトコード）がある。ローカルAIのモードは鍵が要らない */
+  /** 字幕を始められる鍵（自分のキーかギフトコード）がある。Chrome のモードは鍵が要らない */
   get hasAccess() {
     return (
-      this.settings?.speechEngine === "local" ||
+      this.settings?.speechEngine === "chrome" ||
       this.view?.keys.openai.state === "saved" ||
       this.view?.keys.gift.state === "saved"
     );
@@ -81,9 +83,14 @@ class Panel {
     return !!this.settings?.transcriptionEnabled && !this.transcriptionError;
   }
 
-  /** 動いているのに、しばらく音が来ていない */
+  /** 動いているのに、しばらく音が来ていない。Chrome のモードのマイクはページが開く */
   get silent() {
-    return this.running && this.level !== undefined && this.now - this.heardAt > SILENT_MS;
+    return (
+      this.running &&
+      this.settings?.speechEngine !== "chrome" &&
+      this.level !== undefined &&
+      this.now - this.heardAt > SILENT_MS
+    );
   }
 
   label = (code: string) => languageNames.of(NAME_CODE[code] ?? code) ?? code;
@@ -116,6 +123,8 @@ class Panel {
       this.transcriptionError = msg.error ?? undefined;
     } else if (msg.type === "live.status") {
       this.liveStatus = msg.status ?? undefined;
+    } else if (msg.type === "chrome.status") {
+      this.chromeStatus = msg.status ?? undefined;
     } else if (msg.type === "usage") {
       this.usage = msg.usage;
     } else if (msg.type === "settings.changed") {
@@ -149,6 +158,8 @@ class Panel {
       const view = await api.updateSettings(patch);
       if (id === this.updates) this.view = view;
     });
+
+  openChrome = () => this.run(api.openChrome);
 
   setTranscription(enabled: boolean) {
     this.level = undefined;

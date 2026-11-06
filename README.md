@@ -6,7 +6,7 @@ Deadlock の配信者向けの OBS オーバーレイ（非公式）。
 - **ランク**: ランクのアイコン・名前・ポイントのゲージ
 - **アイテム説明**: 字幕でアイテム名が出たら、その説明をゲーム内と同じカードで出す
 
-字幕の作り方は 3 つのモードから選べます。ハイブリッド（既定）と OpenAI は API キーかギフトコード、ローカルAI はキーなしで使えます。設定はアプリの操作パネルから行います。
+字幕の作り方は 3 つのモードから選べます。ハイブリッド（既定）と OpenAI は API キーかギフトコードで使います。Chrome はキーが要らず、Chrome のタブを開いておいて使います。設定はアプリの操作パネルから行います。
 
 サイトは [jimaku.deadlock.jp](https://jimaku.deadlock.jp)。設計は [DESIGN.md](DESIGN.md) を見てください。
 
@@ -40,9 +40,11 @@ flowchart LR
       shell["トレイ<br/>自動更新"]
     end
     helper["jimaku-local<br/>crates/local-ai"]
+    tab["Chrome のタブ<br/>/chrome"]
   end
   worker["Cloudflare Worker（server/）<br/>おすそ分け"]
   openai["OpenAI"]
+  google["Google の音声認識"]
   deadlockapi["deadlock-api"]
   releases["GitHub Releases"]
   lp["LP（web/）<br/>jimaku.deadlock.jp"]
@@ -50,6 +52,8 @@ flowchart LR
   obs --> core
   panel --> core
   core <-- "標準入出力" --> helper
+  tab -- "認識した文" --> core
+  tab -- "声" --> google
   core -- "ギフトコード" --> worker
   worker -- "おすそ分けした人のキー" --> openai
   core -- "自分の API キー" --> openai
@@ -60,7 +64,7 @@ flowchart LR
 ```
 
 - 操作パネルは Tauri のウィンドウでも OBS のドックでも同じ画面で、`/api` と `/ws` だけを使います。
-- `jimaku-local` はローカルAI の別プロセスです。アプリに入れず、使う人だけ、初回にダウンロードします。アプリは SHA-256 を確かめてから起動します。モデルは `jimaku-local` がダウンロードします。
+- `jimaku-local` はハイブリッドの途中の字幕と、Chrome のモードの翻訳、ふりがな、用語を作る別プロセスです。アプリに入れず、使う人だけ、初回にダウンロードします。アプリは SHA-256 を確かめてから起動します。モデルは `jimaku-local` がダウンロードします。
 - 自分の API キーがあれば OpenAI へ直接送ります。なければギフトコードで Worker を通します。Worker は同じパスで中継するので、下の図の OpenAI はどちらの経路でも同じです。
 
 ### 声と文字の流れ
@@ -95,16 +99,21 @@ flowchart LR
   class realtime,batch,llm cloud
 ```
 
-**`local`（ローカルAI）。** すべて PC の中で作ります。OpenAI には何も送りません。
+**`chrome`（Chrome）。** 音声認識は Chrome で行い、声は Chrome を通じて Google に送られます。マイクは Chrome のタブが開きます。翻訳、ふりがな、用語は PC の中で作り、OpenAI には何も送りません。
 
 ```mermaid
 flowchart LR
-  mic["マイク"] --> core["中核<br/>発話を区切る"]
-  core -- "発話の音声、区切り" --> helper["jimaku-local<br/>途中の字幕<br/>確定の字幕<br/>用語、翻訳<br/>ふりがな"]
+  mic["マイク"] --> tab["Chrome のタブ<br/>/chrome"]
+  tab -- "声" --> google["Google の音声認識"]
+  google -- "途中と確定の文" --> tab
+  tab -- "/api/chrome/ws" --> core["中核"]
+  core -- "途中と確定の文" --> helper["jimaku-local<br/>用語、翻訳<br/>ふりがな"]
   helper --> ws["/ws"]
+  classDef cloud fill:#ffcf33,stroke:#12110e,color:#12110e
+  class google cloud
 ```
 
-ローカルAI は話す言語が日本語のときだけ動きます。`hybrid` では、ほかの言語を話すと途中の字幕は出ず、確定の字幕を OpenAI が作ります。ローカルAI で訳せない言語も、確定のあとに OpenAI が訳します。
+`jimaku-local` は話す言語が日本語のときだけ動きます。`hybrid` では、ほかの言語を話すと途中の字幕は出ず、確定の字幕を OpenAI が作ります。`jimaku-local` で訳せない言語も、確定のあとに OpenAI が訳します。`chrome` では理由を出して止まります。
 
 ## リリースの作り方
 

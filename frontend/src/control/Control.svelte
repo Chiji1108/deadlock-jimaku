@@ -61,23 +61,23 @@
     window.scrollTo({ top: 0 });
   });
 
-  /** ローカルAIのモードは字幕をすべて PC の中で作るので、ローカルAI の状態がそのまま字幕の状態になる */
-  function localStatus() {
-    switch (panel.liveStatus?.state) {
-      case "listening":
-        return { label: "字幕を出しています", dot: "bg-emerald-500 animate-pulse" };
-      case "failed":
-        return { label: "止まっています", dot: "bg-destructive" };
-      default:
-        return { label: "準備しています…", dot: "bg-sky-500 animate-pulse" };
-    }
+  /** Chrome のモードの字幕は、補助プログラムと Chrome のタブの両方が動いて出る */
+  function chromeStatus() {
+    if (panel.liveStatus?.state === "failed" || panel.chromeStatus?.state === "failed")
+      return { label: "止まっています", dot: "bg-destructive" };
+    if (panel.liveStatus?.state !== "listening")
+      return { label: "準備しています…", dot: "bg-sky-500 animate-pulse" };
+    if (!panel.chromeStatus) return { label: "Chrome のタブが開いていません", dot: "bg-amber-500" };
+    if (panel.chromeStatus.state === "listening")
+      return { label: "字幕を出しています", dot: "bg-emerald-500 animate-pulse" };
+    return { label: "準備しています…", dot: "bg-sky-500 animate-pulse" };
   }
 
   const status = $derived.by(() => {
     if (!s?.transcriptionEnabled) return { label: "停止中", dot: "bg-muted-foreground/50" };
     if (panel.transcriptionError) return { label: "止まっています", dot: "bg-destructive" };
     if (panel.silent) return { label: "音が届いていません", dot: "bg-amber-500" };
-    if (s.speechEngine === "local") return localStatus();
+    if (s.speechEngine === "chrome") return chromeStatus();
     if (panel.level === undefined)
       return { label: "準備しています…", dot: "bg-sky-500 animate-pulse" };
     return { label: "字幕を出しています", dot: "bg-emerald-500 animate-pulse" };

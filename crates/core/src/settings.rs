@@ -373,16 +373,16 @@ pub enum SpeechEngine {
     /// 新しく使い始める人はハイブリッドから始める（`load`）
     #[default]
     OpenAi,
-    /// すべて PC の中のモデル。無料で、用語の判定も LLM を使わない。
-    /// 0.3 の rc には `free` で保存した版がある
-    #[serde(alias = "free")]
-    Local,
+    /// 音声認識は Chrome、翻訳と用語は PC の中のモデル。無料で、用語の判定も LLM を使わない。
+    /// 0.3 の rc には `local` や `free` で保存した版がある
+    #[serde(alias = "local", alias = "free")]
+    Chrome,
 }
 
 impl SpeechEngine {
     /// OpenAI の鍵が要るか
     pub fn needs_key(self) -> bool {
-        self != Self::Local
+        self != Self::Chrome
     }
 }
 
@@ -501,7 +501,7 @@ impl Settings {
         match self.speech_engine {
             SpeechEngine::Hybrid => self.mic_language == "ja",
             SpeechEngine::OpenAi => false,
-            SpeechEngine::Local => true,
+            SpeechEngine::Chrome => true,
         }
     }
 
@@ -905,18 +905,18 @@ mod tests {
         };
         assert!(with(SpeechEngine::OpenAi).wants_live_subtitles());
         assert!(!with(SpeechEngine::Hybrid).wants_live_subtitles());
-        assert!(!with(SpeechEngine::Local).wants_live_subtitles());
+        assert!(!with(SpeechEngine::Chrome).wants_live_subtitles());
     }
 
     #[test]
-    fn the_rc_names_of_the_local_engine_are_read() {
-        for saved in ["local", "free"] {
+    fn the_rc_names_of_the_chrome_engine_are_read() {
+        for saved in ["chrome", "local", "free"] {
             let engine: SpeechEngine = serde_json::from_value(saved.into()).unwrap();
-            assert_eq!(engine, SpeechEngine::Local);
+            assert_eq!(engine, SpeechEngine::Chrome);
         }
         assert_eq!(
-            serde_json::to_value(SpeechEngine::Local).unwrap(),
-            serde_json::json!("local")
+            serde_json::to_value(SpeechEngine::Chrome).unwrap(),
+            serde_json::json!("chrome")
         );
     }
 
@@ -931,8 +931,8 @@ mod tests {
         assert!(!with(SpeechEngine::Hybrid, "en").wants_local());
         assert!(!with(SpeechEngine::OpenAi, "ja").wants_local());
         assert!(
-            with(SpeechEngine::Local, "en").wants_local(),
-            "ローカルAIのモードは理由を出して止まる"
+            with(SpeechEngine::Chrome, "en").wants_local(),
+            "Chrome のモードは理由を出して止まる"
         );
     }
 
@@ -958,7 +958,7 @@ mod tests {
     }
 
     #[test]
-    fn local_is_only_for_new_users() {
+    fn hybrid_is_only_for_new_users() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join(FILE);
         assert_eq!(load(&path).unwrap().speech_engine, SpeechEngine::Hybrid);
@@ -966,11 +966,11 @@ mod tests {
         std::fs::write(&path, r#"{ "micLanguage": "ja" }"#).unwrap();
         assert_eq!(load(&path).unwrap().speech_engine, SpeechEngine::OpenAi);
         // 選んだモードは保存される
-        let local = Settings {
+        let hybrid = Settings {
             speech_engine: SpeechEngine::Hybrid,
             ..Default::default()
         };
-        save(&path, &local).unwrap();
+        save(&path, &hybrid).unwrap();
         assert_eq!(load(&path).unwrap().speech_engine, SpeechEngine::Hybrid);
     }
 

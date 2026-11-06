@@ -48,21 +48,34 @@
       hint: "すべて OpenAI で作ります。PC の負荷は最小です",
     },
     {
-      value: "local",
-      label: "ローカルAI",
-      traits: "無料・高速",
+      value: "chrome",
+      label: "Chrome",
+      traits: "キー不要・Chrome のタブを開く",
       price: "無料",
-      hint: "PC だけで作ります。無料でキー不要、精度は低めです",
+      hint: "音声認識は Chrome、翻訳は PC で行います。無料でキー不要です",
     },
   ];
 
   const s = $derived(panel.settings!);
   const onlyTranslation = $derived(translationOnly(s));
   const engine = $derived(ENGINES.find((e) => e.value === s.speechEngine)!);
-  /** ローカルAI が止まっている理由 */
+  /** 補助プログラムが止まっている理由 */
   const localProblem = $derived(
     panel.liveStatus?.state === "failed" ? panel.liveStatus.detail : undefined,
   );
+  /** Chrome のタブが字幕を止めている理由 */
+  const chromeProblem = $derived.by(() => {
+    if (panel.chromeStatus?.state === "failed") return panel.chromeStatus.detail;
+    return s.transcriptionEnabled && !panel.chromeStatus
+      ? "Chrome のタブが開いていません"
+      : undefined;
+  });
+  /** Chrome のタブの今の状態 */
+  const chromeNote = $derived.by(() => {
+    if (!panel.chromeStatus) return "タブが開いていません";
+    if (panel.chromeStatus.state === "listening") return "タブが聞き取っています";
+    return "タブが開いています";
+  });
   const pause = $derived(s.segmentation.minSilenceMs);
   const preset = $derived(PAUSES.find((p) => p.ms === pause));
 
@@ -96,10 +109,24 @@
       </div>
       <p class="text-sm text-muted-foreground">{engine.hint}</p>
       <p class="text-xs text-muted-foreground">
-        ハイブリッドとローカルAIは、初回に約 200MB をダウンロードします
+        ハイブリッドは初回に約 200MB、Chrome は約 60MB をダウンロードします
       </p>
       {#if s.speechEngine !== "openai" && s.transcriptionEnabled && panel.liveStatus?.state === "preparing"}
         <p class="text-sm">{panel.liveStatus.detail ?? "モデルを読み込んでいます…"}</p>
+      {/if}
+      {#if s.speechEngine === "chrome"}
+        <div class="flex items-center gap-3">
+          <Button variant="outline" size="sm" onclick={panel.openChrome}>Chrome で開く</Button>
+          {#if !chromeProblem}<p class="text-sm text-muted-foreground">{chromeNote}</p>{/if}
+        </div>
+        <p class="text-xs text-muted-foreground">
+          音声は Chrome を通じて Google に送られます。字幕を出す間はタブを開いておいてください
+        </p>
+        {#if chromeProblem}
+          <Alert.Root variant="destructive">
+            <Alert.Title>{chromeProblem}</Alert.Title>
+          </Alert.Root>
+        {/if}
       {/if}
       {#if s.speechEngine !== "openai" && s.transcriptionEnabled && localProblem}
         <Alert.Root variant="destructive">
@@ -114,65 +141,71 @@
     </Card.Content>
   </Card.Root>
 
-  <Card.Root>
-    <Card.Header>
-      <Card.Title>マイク</Card.Title>
-      <Card.Description>配信に乗せている声のマイクを選んでください</Card.Description>
-    </Card.Header>
-    <Card.Content class="flex flex-col gap-5">
-      <Field.Field>
-        <Field.Label>入力デバイス</Field.Label>
-        <div class="flex gap-2">
-          <Select.Root
-            type="single"
-            value={s.micDevice ?? DEFAULT_DEVICE}
-            onValueChange={(v) => panel.update({ micDevice: v === DEFAULT_DEVICE ? "" : v })}
-            onOpenChange={(open) => open && void panel.refreshDevices()}
-          >
-            <Select.Trigger class="flex-1">{s.micDevice ?? "OS の既定のマイク"}</Select.Trigger>
-            <Select.Content>
-              <Select.Item value={DEFAULT_DEVICE}>OS の既定のマイク</Select.Item>
-              {#each panel.devices ?? [] as name (name)}
-                <Select.Item value={name}>{name}</Select.Item>
-              {/each}
-            </Select.Content>
-          </Select.Root>
-          <Button
-            variant="outline"
-            size="icon"
-            aria-label="デバイスの一覧を更新"
-            onclick={() => panel.refreshDevices()}
-          >
-            <RefreshCwIcon />
-          </Button>
-        </div>
-        {#if panel.devices?.length === 0}
-          <Field.Description class="text-amber-500">
-            マイクが見つかりません。つないだら更新ボタンを押してください
-          </Field.Description>
-        {/if}
-      </Field.Field>
+  {#if s.speechEngine === "chrome"}<Card.Root>
+      <Card.Header>
+        <Card.Title>マイク</Card.Title>
+        <Card.Description>マイクは Chrome の設定で選びます</Card.Description>
+      </Card.Header>
+    </Card.Root>{:else}<Card.Root>
+      <Card.Header>
+        <Card.Title>マイク</Card.Title>
+        <Card.Description>配信に乗せている声のマイクを選んでください</Card.Description>
+      </Card.Header>
+      <Card.Content class="flex flex-col gap-5">
+        <Field.Field>
+          <Field.Label>入力デバイス</Field.Label>
+          <div class="flex gap-2">
+            <Select.Root
+              type="single"
+              value={s.micDevice ?? DEFAULT_DEVICE}
+              onValueChange={(v) => panel.update({ micDevice: v === DEFAULT_DEVICE ? "" : v })}
+              onOpenChange={(open) => open && void panel.refreshDevices()}
+            >
+              <Select.Trigger class="flex-1">{s.micDevice ?? "OS の既定のマイク"}</Select.Trigger>
+              <Select.Content>
+                <Select.Item value={DEFAULT_DEVICE}>OS の既定のマイク</Select.Item>
+                {#each panel.devices ?? [] as name (name)}
+                  <Select.Item value={name}>{name}</Select.Item>
+                {/each}
+              </Select.Content>
+            </Select.Root>
+            <Button
+              variant="outline"
+              size="icon"
+              aria-label="デバイスの一覧を更新"
+              onclick={() => panel.refreshDevices()}
+            >
+              <RefreshCwIcon />
+            </Button>
+          </div>
+          {#if panel.devices?.length === 0}
+            <Field.Description class="text-amber-500">
+              マイクが見つかりません。つないだら更新ボタンを押してください
+            </Field.Description>
+          {/if}
+        </Field.Field>
 
-      <Field.Field>
-        <Field.Label>入力レベル</Field.Label>
-        <LevelMeter />
-        {#if !panel.running}
-          <Field.Description>字幕を始めると、マイクに届いている音の大きさが出ます</Field.Description
-          >
-        {/if}
-      </Field.Field>
+        <Field.Field>
+          <Field.Label>入力レベル</Field.Label>
+          <LevelMeter />
+          {#if !panel.running}
+            <Field.Description
+              >字幕を始めると、マイクに届いている音の大きさが出ます</Field.Description
+            >
+          {/if}
+        </Field.Field>
 
-      {#if panel.silent}
-        <Alert.Root variant="destructive">
-          <Alert.Title>音が届いていません</Alert.Title>
-          <Alert.Description>
-            マイクの選択と、OS のマイクの許可（macOS: システム設定 → プライバシーとセキュリティ →
-            マイク）を確認してください
-          </Alert.Description>
-        </Alert.Root>
-      {/if}
-    </Card.Content>
-  </Card.Root>
+        {#if panel.silent}
+          <Alert.Root variant="destructive">
+            <Alert.Title>音が届いていません</Alert.Title>
+            <Alert.Description>
+              マイクの選択と、OS のマイクの許可（macOS: システム設定 → プライバシーとセキュリティ →
+              マイク）を確認してください
+            </Alert.Description>
+          </Alert.Root>
+        {/if}
+      </Card.Content>
+    </Card.Root>{/if}
 
   <Card.Root>
     <Card.Header>
@@ -195,6 +228,8 @@
         </Select.Root>
         {#if s.speechEngine === "hybrid" && s.micLanguage !== "ja"}
           <Field.Description>途中の字幕は日本語のときだけ出ます</Field.Description>
+        {:else if s.speechEngine === "chrome" && s.micLanguage !== "ja"}
+          <Field.Description>Chrome のモードは日本語のときだけ使えます</Field.Description>
         {/if}
       </Field.Field>
 
@@ -235,8 +270,9 @@
       <Field.Field>
         <Field.Label>翻訳先</Field.Label>
         <Field.Description>
-          最大 {MAX_TRANSLATE_TO} つ（{s.translateTo.length} / {MAX_TRANSLATE_TO}）{#if s.speechEngine === "local"}。ローカルAIで訳せるのは英語・ロシア語・中国語です{:else}。1
-            つ増えるごとに、話し続けて 1 時間あたり約 $0.3{/if}
+          最大 {MAX_TRANSLATE_TO} つ（{s.translateTo.length} / {MAX_TRANSLATE_TO}）{#if s.speechEngine === "chrome"}。Chrome
+            のモードで訳せるのは英語・ロシア語・中国語です{:else}。1 つ増えるごとに、話し続けて 1
+            時間あたり約 $0.3{/if}
         </Field.Description>
         <ToggleGroup.Root
           type="multiple"
