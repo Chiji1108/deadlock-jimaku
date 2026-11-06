@@ -1,8 +1,10 @@
 ---
 import Layout from "../layouts/Layout.astro";
+import lindera from "../../../notices/lindera.txt?raw";
+import mecabIpadic from "../../../notices/mecab-ipadic.txt?raw";
 import { DISCORD } from "../site";
 
-const UPDATED = "2026 年 11 月 6 日";
+const UPDATED = "2026 年 11 月 7 日";
 ---
 
 <Layout title="利用規約" description="デドロ字幕を使うときの約束ごと。">
@@ -16,7 +18,6 @@ const UPDATED = "2026 年 11 月 6 日";
     <ul>
       <li>本アプリは無料です。</li>
       <li>ハイブリッドと OpenAI のモードの文字起こしと翻訳には OpenAI を使います。OpenAI の料金は、API キーの持ち主が負担します。</li>
-      <li>ふりがなと辞書の一致に、Lindera（MIT）と IPADIC（Copyright 2000-2007 Nara Institute of Science and Technology。ICOT の著作物を含む。IPADIC のライセンス）を使います。</li>
       <li>ハイブリッドと Chrome のモードの音声認識と翻訳は Google Chrome の機能です。音声は Chrome を通じて Google に送られます。Google が内容を変えたり止めたりすると、Chrome のモードと、ハイブリッドの途中の字幕は使えなくなることがあります。</li>
       <li>アプリに出る料金は目安です。正確な金額は OpenAI の使用量のページで確かめてください。</li>
     </ul>
@@ -44,6 +45,17 @@ const UPDATED = "2026 年 11 月 6 日";
         本アプリは Valve とは関係のない非公式のツールです。Deadlock の利用は、Valve の規約に従ってください。
       </li>
     </ul>
+
+    <h2>使っているソフトウェア</h2>
+    <p>ふりがなと辞書の一致に、形態素解析の Lindera（MIT License）と辞書の mecab-ipadic（Nara Institute of Science and Technology の著作物。辞書の項目の多くは ICOT Free Software に由来します）を使います。mecab-ipadic は本アプリに組み込まれています。それぞれのライセンスの全文は次のとおりです。</p>
+    <details class="mt-4">
+      <summary class="cursor-pointer">mecab-ipadic のライセンス</summary>
+      <pre class="mt-2 overflow-x-auto text-xs whitespace-pre-wrap">{mecabIpadic}</pre>
+    </details>
+    <details class="mt-4">
+      <summary class="cursor-pointer">Lindera のライセンス</summary>
+      <pre class="mt-2 overflow-x-auto text-xs whitespace-pre-wrap">{lindera}</pre>
+    </details>
 
     <h2>変更</h2>
     <p>この規約は変更することがあります。変更したら、このページの最終更新の日付を更新します。</p>

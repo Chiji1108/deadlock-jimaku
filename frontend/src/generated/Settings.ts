@@ -73,7 +73,11 @@ onboardingClosed: boolean,
 /**
  * ウィンドウを閉じても動き続けることを知らせた
  */
-trayNoticeSeen: boolean, models: Models, 
+trayNoticeSeen: boolean, 
+/**
+ * Chrome のモードの「ハイブリッドにする」の提案を閉じた
+ */
+hybridHintClosed: boolean, models: Models, 
 /**
  * リアルタイムの音声認識の遅れ（`minimal` / `low` / `medium` / `high` / `xhigh`。
  * 低いほど早く字幕が出て、高いほど正確）

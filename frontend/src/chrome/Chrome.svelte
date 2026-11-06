@@ -7,7 +7,19 @@
   import type { Settings } from "../generated/Settings";
   import { api } from "../lib/api";
   import { connect } from "../lib/ws";
-  import { availability, listen, openMicrophone, prepare, supported } from "./speech";
+  import {
+    availability,
+    chosenMic,
+    DEFAULT_MIC,
+    listen,
+    micNotice,
+    openMicrophone,
+    prepare,
+    rememberMic,
+    supported,
+    type MicChoice,
+    type MicTrouble,
+  } from "./speech";
   import { Translation } from "./translation";
 
   /** 認識を続けられない理由ごとの案内 */
@@ -32,7 +44,6 @@
     network: "音声認識につながりません。回線が戻ると自動で再開します",
     "audio-capture": "マイクの音を取れません。つなぎ直すと自動で再開します",
   };
-  const DEFAULT_MIC = "Chrome の既定のマイクを使っています";
   const names = new Intl.DisplayNames(["ja"], { type: "language" });
 
   const usable = supported();
@@ -70,8 +81,23 @@
   /** 訳せない言語の案内。聞いている間ずっと出す */
   let notice: string | undefined;
   /** 選んだマイクを使えない案内 */
-  let micNotice: string | undefined;
+  let micTrouble: string | undefined;
+  /** 自動で見つからないときに選べるマイク。空なら選択欄を出さない */
+  let micChoices = $state<MicChoice[]>([]);
+  /** 選択欄のマイクの ID。空なら Chrome の既定のマイク。開き直したら、実際に開いたマイクに揃える */
+  let micChosen = $state("");
+  /** 選択欄を押した回数。同じマイクを選び直しても開き直す */
+  let micPicks = 0;
+  /** ハイブリッドなら、選んだマイクはアプリのマイクとずれることがある */
+  let hybrid = $state(false);
+  /** マイクを調べるための記録。機器の名前が入るので、外に送らず、押されたらコピーするだけ */
+  let micLog = $state<string[]>([]);
+  let copyResult = $state<string>();
+  /** 止めるたびに増える。待っている間に止められた処理が、あとから聞き始めないようにする */
+  let runs = 0;
   let translation = new Translation(new Map(), reply);
+  /** 今の `translation` の言語。マイクだけ変えるなら作り直さない */
+  let translatorLanguages = "";
 
   function send(msg: ChromeMsg) {
     if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(msg));
@@ -89,7 +115,7 @@
   const showListening = () =>
     show({
       state: "listening",
-      detail: [micNotice, notice].filter(Boolean).join("。") || undefined,
+      detail: [micTrouble, notice].filter(Boolean).join("。") || undefined,
     });
 
   function dial() {
@@ -118,6 +144,7 @@
   }
 
   function halt() {
+    runs++;
     stop?.();
     stop = undefined;
     cut = undefined;
@@ -138,6 +165,7 @@
       s.micLanguage,
       s.translateTo,
       s.segmentation.minSilenceMs,
+      micPicks,
     ]);
   /** 字幕を止めているか、core の準備ができていないなら聞かない（音声を Google に送らない） */
   const wanted = (s: Settings) =>
@@ -171,27 +199,65 @@
     };
   }
 
+  function chooseMic(deviceId: string) {
+    const mic = micChoices.find((d) => d.deviceId === deviceId) ?? DEFAULT_MIC;
+    try {
+      rememberMic(mic, settings?.micDevice);
+    } catch (e) {
+      logMic(`マイクの選択を覚えられません: ${(e as Error).name}`);
+    }
+    micPicks++;
+    void sync();
+  }
+
+  async function open(s: Settings) {
+    try {
+      return await openMicrophone(s.micDevice, logMic, chosenMic(s.micDevice));
+    } catch (e) {
+      const denied = e instanceof DOMException && e.name === "NotAllowedError";
+      fail(denied ? "not-allowed" : "audio-capture");
+    }
+  }
+
+  const logMic = (line: string) => micLog.push(line);
+
   async function run(s: Settings, targets: string[]) {
-    const translators = await prepare(s.micLanguage, targets, (loaded) =>
-      show({
-        state: "preparing",
-        detail: `翻訳のモデルをダウンロードしています（${Math.round(loaded * 100)}%）`,
-      }),
-    );
-    translation = new Translation(translators, reply);
+    const started = runs;
+    // 始めたあとに届いた変更は、ここの値と比べて分かる
+    const running = key(s);
+    const languages = JSON.stringify([s.micLanguage, targets]);
+    if (languages !== translatorLanguages) {
+      const translators = await prepare(s.micLanguage, targets, (loaded) =>
+        show({
+          state: "preparing",
+          detail: `翻訳のモデルをダウンロードしています（${Math.round(loaded * 100)}%）`,
+        }),
+      );
+      translation = new Translation(translators, reply);
+      translatorLanguages = languages;
+    }
     const missing = s.translateTo.filter((target) => !targets.includes(target));
     notice = missing.length
       ? `Chrome の翻訳が対応していない言語は訳しません: ${missing.map((l) => names.of(l)).join("、")}`
       : undefined;
-    let microphone;
-    try {
-      microphone = await openMicrophone(s.micDevice);
-    } catch (e) {
-      const denied = e instanceof DOMException && e.name === "NotAllowedError";
-      fail(denied ? "not-allowed" : "audio-capture");
+    // 待っている間に止められたら、聞き始めない
+    if (started !== runs) return;
+    micLog = [navigator.userAgent, `アプリのマイク: ${s.micDevice ?? "OS の既定"}`];
+    copyResult = undefined;
+    const microphone = await open(s);
+    if (!microphone) return;
+    if (started !== runs) {
+      microphone.release();
       return;
     }
-    micNotice = microphone.missed ? DEFAULT_MIC : undefined;
+    const showMic = (trouble?: MicTrouble, using?: MicChoice) => {
+      micTrouble = trouble && micNotice(trouble, using?.label);
+      if (trouble && microphone.choices.length) micTrouble += "。Chrome のウィンドウで選べます";
+      micChoices = trouble || microphone.chosen ? microphone.choices : [];
+      micChosen = using?.deviceId ?? DEFAULT_MIC.deviceId;
+    };
+    showMic(microphone.trouble, microphone.opened);
+    hybrid = s.speechEngine === "hybrid";
     const sink = s.speechEngine === "hybrid" ? hybridSink() : chromeSink(s);
     const recognition = listen(s.micLanguage, {
       silenceMs: sink.silenceMs,
@@ -206,10 +272,12 @@
           : showListening(),
       track: microphone.track,
       heardSound: microphone.heardSound,
-      onDefaultMic() {
-        micNotice = DEFAULT_MIC;
+      onDefaultMic(problem) {
+        showMic({ name: microphone.opened?.label ?? s.micDevice ?? "", problem });
         showListening();
+        microphone.useDefault().catch((e: Error) => logMic(`既定のマイクを開けません: ${e.name}`));
       },
+      onMicLog: logMic,
     });
     stop = () => {
       recognition.stop();
@@ -221,7 +289,7 @@
       sink.reset();
       recognition.cut();
     };
-    listening = key(s);
+    listening = running;
     needsDownload = false;
     showListening();
   }
@@ -238,7 +306,9 @@
     }
     if (listening === key(s)) return;
     halt();
+    const started = runs;
     const { state, targets } = await availability(s.micLanguage, s.translateTo);
+    if (started !== runs) return;
     if (state === "unavailable") show({ state: "failed", detail: UNSUPPORTED });
     else if (state === "available") await run(s, targets);
     else {
@@ -265,7 +335,9 @@
     busy = true;
     const s = settings;
     try {
-      await run(s, (await availability(s.micLanguage, s.translateTo)).targets);
+      const started = runs;
+      const { targets } = await availability(s.micLanguage, s.translateTo);
+      if (started === runs) await run(s, targets);
       failures = 0;
     } catch (e) {
       failures++;
@@ -313,6 +385,13 @@
     };
   });
 
+  async function copyMicLog() {
+    copyResult = await navigator.clipboard
+      .writeText(micLog.join("\n"))
+      .then(() => "コピーしました")
+      .catch((e: Error) => `コピーできません（${e.name}）`);
+  }
+
   const title = $derived.by(() => {
     if (!usable) return "Google Chrome で開いてください";
     if (other) return "ほかのウィンドウで動いています";
@@ -353,7 +432,28 @@
     <button onclick={() => ((failures = 0), download())}>翻訳のモデルをダウンロードする</button>
   {/if}
 
+  {#if micChoices.length && (status.state === "listening" || status.state === "blocked")}
+    <label class="mic">
+      認識に使うマイク
+      <select bind:value={micChosen} onchange={(e) => chooseMic(e.currentTarget.value)}>
+        <option value={DEFAULT_MIC.deviceId}>Chrome の既定のマイク</option>
+        {#each micChoices as mic (mic.deviceId)}
+          <option value={mic.deviceId}>{mic.label}</option>
+        {/each}
+      </select>
+    </label>
+    {#if hybrid}
+      <p class="note">アプリのマイクと違うものを選ぶと、途中の字幕と確定の字幕がずれます。</p>
+    {/if}
+  {/if}
+
   <p class="note">音声は Chrome を通じて Google に送られます。翻訳はこの PC の中で動きます。</p>
+
+  {#if micLog.length}
+    <button class="quiet" onclick={copyMicLog}>
+      {copyResult ?? "マイクの記録をコピー"}
+    </button>
+  {/if}
 </main>
 
 <style>
@@ -420,6 +520,30 @@
     font: inherit;
     font-weight: 600;
     cursor: pointer;
+  }
+  .mic {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 12px;
+    font-size: 13px;
+  }
+  select {
+    padding: 6px 8px;
+    border: 1px solid #3a3d44;
+    border-radius: 8px;
+    background: #1a1c20;
+    color: inherit;
+    font: inherit;
+  }
+  .quiet {
+    margin: 8px 0 0;
+    padding: 0;
+    background: none;
+    color: #a0a4ad;
+    font-size: 13px;
+    font-weight: 400;
+    text-decoration: underline;
   }
   .note {
     margin: 0;
