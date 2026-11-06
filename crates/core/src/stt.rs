@@ -17,6 +17,7 @@ use tokio_tungstenite::tungstenite::{Message, client::IntoClientRequest, http::H
 
 use crate::audio::{SAMPLE_RATE, to_i16};
 use crate::openai::Access;
+use crate::share;
 use crate::usage::{Meter, Use};
 
 /// リアルタイムの `audio/pcm` は 24kHz（入力の 16kHz からちょうど 3/2 倍）
@@ -406,7 +407,11 @@ pub async fn transcribe(http: &reqwest::Client, req: BatchRequest<'_>) -> anyhow
     let status = res.status();
     if !status.is_success() {
         // 400 の理由は本文にしか書かれていない
-        bail!("{status}: {}", res.text().await.unwrap_or_default());
+        let body = res.text().await.unwrap_or_default();
+        if share::is_daily_limit(status, &body) {
+            return Err(share::DailyLimit.into());
+        }
+        bail!("{status}: {body}");
     }
     req.meter.audio(Use::Batch, req.model, req.seconds);
     let res: Value = res.json().await?;

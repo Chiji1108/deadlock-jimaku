@@ -34,6 +34,8 @@ pub enum GiftStatus {
     },
     /// おすそ分けした人が止めた
     Revoked,
+    /// 今日（UTC）の上限に達した
+    Limit,
     /// ないコード（打ち間違い、おすそ分けをやめた）
     Unknown,
     /// サーバーにつながらない
@@ -47,6 +49,25 @@ struct GiftAnswer {
     error: Option<String>,
     #[serde(default)]
     expires_at: Option<i64>,
+}
+
+/// サーバーがギフトコードの今日の上限で断った（配信の途中で字幕を止める理由）
+#[derive(Debug)]
+pub struct DailyLimit;
+
+impl std::fmt::Display for DailyLimit {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("the gift code reached its daily limit")
+    }
+}
+
+impl std::error::Error for DailyLimit {}
+
+/// 失敗した中継の応答が、今日の上限で断られたものか
+pub fn is_daily_limit(status: StatusCode, body: &str) -> bool {
+    status == StatusCode::FORBIDDEN
+        && serde_json::from_str::<GiftAnswer>(body)
+            .is_ok_and(|a| a.error.as_deref() == Some("limit"))
 }
 
 pub async fn gift_status(api: &str, code: &str) -> GiftStatus {
@@ -77,6 +98,7 @@ pub async fn gift_status(api: &str, code: &str) -> GiftStatus {
         (StatusCode::OK, _, expires_at) => GiftStatus::Active { expires_at },
         (_, Some("expired"), Some(expires_at)) => GiftStatus::Expired { expires_at },
         (_, Some("revoked"), _) => GiftStatus::Revoked,
+        (_, Some("limit"), _) => GiftStatus::Limit,
         (StatusCode::UNAUTHORIZED, _, _) => GiftStatus::Unknown,
         _ => GiftStatus::Unreachable {
             detail: status.to_string(),
@@ -90,6 +112,7 @@ pub async fn check_gift(api: &str, code: &str) -> Result<(), TranscriptionError>
         GiftStatus::Active { .. } => Ok(()),
         GiftStatus::Expired { expires_at } => Err(TranscriptionError::GiftExpired { expires_at }),
         GiftStatus::Revoked => Err(TranscriptionError::GiftRevoked),
+        GiftStatus::Limit => Err(TranscriptionError::GiftLimit),
         GiftStatus::Unknown | GiftStatus::None => Err(TranscriptionError::GiftUnknown),
         GiftStatus::Unreachable { detail } => Err(TranscriptionError::Failed {
             detail: format!("gift: {detail}"),
@@ -116,6 +139,10 @@ pub struct SharedCode {
     pub usd: f64,
     /// 今月（UTC）使われた額
     pub month_usd: f64,
+    /// 今日（UTC）使われた額
+    pub day_usd: f64,
+    /// 1 日（UTC）の上限（USD）
+    pub daily_limit_usd: f64,
     #[ts(type = "number")]
     pub created_at: i64,
 }
@@ -239,10 +266,50 @@ pub async fn create(api: &str, token: &str, body: Value) -> Result<(String, Stri
     }
 }
 
-/// メモ・期限・止めるかを変える（`body` はそのままサーバーへ）
+/// メモ・期限・1 日の上限・止めるかを変える（`body` はそのままサーバーへ）
 pub async fn update(api: &str, token: &str, id: &str, body: Value) -> Result<(), Refused> {
     let path = format!("/share/codes/{id}");
     call(api, reqwest::Method::PATCH, &path, Some(token), Some(body))
         .await
         .map(drop)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn only_the_workers_limit_answer_is_a_daily_limit() {
+        let limit = r#"{"error":"limit"}"#;
+        assert!(is_daily_limit(StatusCode::FORBIDDEN, limit));
+        assert!(!is_daily_limit(StatusCode::BAD_REQUEST, limit));
+        assert!(!is_daily_limit(
+            StatusCode::FORBIDDEN,
+            r#"{"error":"revoked"}"#
+        ));
+        // OpenAI の 403 の error はオブジェクト
+        assert!(!is_daily_limit(
+            StatusCode::FORBIDDEN,
+            r#"{"error":{"message":"no"}}"#
+        ));
+    }
+
+    #[tokio::test]
+    async fn a_gift_at_its_daily_limit_does_not_start() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let api = format!("http://{}", listener.local_addr().unwrap());
+        let refuse = || async {
+            (
+                axum::http::StatusCode::FORBIDDEN,
+                axum::Json(json!({ "error": "limit" })),
+            )
+        };
+        let router = axum::Router::new().route("/gift", axum::routing::get(refuse));
+        tokio::spawn(async move { axum::serve(listener, router).await });
+        assert_eq!(gift_status(&api, "code").await, GiftStatus::Limit);
+        assert_eq!(
+            check_gift(&api, "code").await,
+            Err(TranscriptionError::GiftLimit)
+        );
+    }
 }

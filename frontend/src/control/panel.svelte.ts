@@ -225,6 +225,9 @@ class Panel {
 
 export const panel = new Panel();
 
+/** ギフトコードの 1 日の上限は UTC の日で区切る */
+const LIMIT_RESET = "日本時間の朝 9 時（UTC の 0 時）にまた使えます";
+
 /** 字幕が止まった理由を文にする（サーバーは種類と中身だけを返す） */
 export function transcriptionErrorText(e: TranscriptionError): string {
   switch (e.code) {
@@ -234,6 +237,8 @@ export function transcriptionErrorText(e: TranscriptionError): string {
       return `ギフトコードの期限が切れました（${dateTime(e.expiresAt)} まで）`;
     case "giftRevoked":
       return "ギフトコードが止められています。おすそ分けしてくれた人に確かめてください";
+    case "giftLimit":
+      return `ギフトコードの今日の上限に達しました。${LIMIT_RESET}`;
     case "giftUnknown":
       return "ギフトコードが見つかりません。おすそ分けしてくれた人に確かめてください";
     case "inputEnded":
@@ -278,6 +283,8 @@ export function giftStatusText(s: GiftStatus): string {
       return `期限が切れています（${dateTime(s.expiresAt)} まで）`;
     case "revoked":
       return "おすそ分けした人が止めています";
+    case "limit":
+      return `今日の上限に達しました。${LIMIT_RESET}`;
     case "unknown":
       return "このコードは見つかりません。打ち間違いがないか確かめてください";
     case "unreachable":

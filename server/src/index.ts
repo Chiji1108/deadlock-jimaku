@@ -1,7 +1,17 @@
 // API（api.jimaku.deadlock.jp。DESIGN.md 17.1）。パスは版（/v1）で区切る。
 // おすそ分け: 自分の OpenAI キーを預けた人がコードを作り、コードを持つ人の通信を、そのキーで OpenAI に中継する
 import { Hono, type Context } from "hono";
-import { addUsage, codeByValue, issuerByToken, month, usable, type Code } from "./db";
+import {
+  addUsage,
+  codeByValue,
+  day,
+  DEFAULT_DAILY_LIMIT_USD,
+  issuerByToken,
+  month,
+  overLimit,
+  refusal,
+  type Code,
+} from "./db";
 import { openai, validKey } from "./openai";
 import { audioUsd, tokensOf, tokensUsd, wavSeconds } from "./price";
 import { relay } from "./realtime";
@@ -22,6 +32,15 @@ const MAX_MEMO = 100;
 
 /** Responses API に渡す項目。ほかの項目（有料のツールなど）は、おすそ分けした人の料金を数えられないので通さない */
 const RESPONSES_FIELDS = ["model", "instructions", "input", "text", "reasoning", "max_output_tokens", "stream"];
+
+/**
+ * 1 回の出力の上限（推論の分も含む）。アプリは送らないので、ここで必ず付ける。切れると JSON が読めなくなるので、
+ * いちばん長い辞書の読み（40 語で 3,000 トークンほど）の 10 倍にする（DESIGN.md 17.1）
+ */
+const MAX_OUTPUT_TOKENS = 32_000;
+
+/** 本文の長さの上限（文字数）。いちばん長い用語の判定（辞書の全部を送る。32,000 文字ほど）の 8 倍 */
+const MAX_RESPONSES_BODY = 256_000;
 
 /** ストリームの最後の応答の usage */
 function streamUsage(text: string): unknown {
@@ -94,14 +113,21 @@ app.get("/share/codes", async (c) => {
   if (!issuer) return c.json({ error: "unauthorized" }, 401);
   const { results } = await c.env.DB.prepare(
     `SELECT c.id, c.memo, c.expires_at AS expiresAt, c.revoked, c.created_at AS createdAt,
+            c.daily_limit_usd AS dailyLimitUsd,
+            CASE WHEN c.day = ? THEN c.day_usd ELSE 0 END AS dayUsd,
             COALESCE(SUM(u.usd), 0) AS usd,
             COALESCE(SUM(CASE WHEN u.month = ? THEN u.usd END), 0) AS monthUsd
      FROM codes c LEFT JOIN code_usage u ON u.code_id = c.id
      WHERE c.issuer_id = ? GROUP BY c.id ORDER BY c.created_at DESC`,
   )
-    .bind(month(Date.now()), issuer.id)
-    .all<{ revoked: number }>();
-  return c.json({ codes: results.map((r) => ({ ...r, revoked: !!r.revoked })) });
+    .bind(day(Date.now()), month(Date.now()), issuer.id)
+    .all<{ revoked: number; dailyLimitUsd: number | null }>();
+  const codes = results.map((r) => ({
+    ...r,
+    revoked: !!r.revoked,
+    dailyLimitUsd: r.dailyLimitUsd ?? DEFAULT_DAILY_LIMIT_USD,
+  }));
+  return c.json({ codes });
 });
 
 /** コードを作る。コードそのものはこの応答でだけ返す（保存するのはハッシュ） */
@@ -113,18 +139,27 @@ app.post("/share/codes", async (c) => {
   const id = newId();
   const code = newCode();
   await c.env.DB.prepare(
-    "INSERT INTO codes (id, code_hash, issuer_id, memo, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+    `INSERT INTO codes (id, code_hash, issuer_id, memo, expires_at, daily_limit_usd, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
   )
-    .bind(id, await sha256(normalizeCode(code)), issuer.id, fields.memo ?? "", fields.expiresAt ?? null, Date.now())
+    .bind(
+      id,
+      await sha256(normalizeCode(code)),
+      issuer.id,
+      fields.memo ?? "",
+      fields.expiresAt ?? null,
+      fields.dailyLimitUsd ?? null,
+      Date.now(),
+    )
     .run();
   return c.json({ id, code });
 });
 
-/** メモ・期限を変える。止める（revoked）・止めたのを戻す */
+/** メモ・期限・1 日の上限を変える。止める（revoked）・止めたのを戻す */
 app.patch("/share/codes/:id", async (c) => {
   const issuer = await admin(c);
   if (!issuer) return c.json({ error: "unauthorized" }, 401);
-  const body = (await json<{ memo?: unknown; expiresAt?: unknown; revoked?: unknown }>(c)) ?? {};
+  const body = (await json<CodeFields & { revoked?: unknown }>(c)) ?? {};
   const fields = codeFields(body);
   if (!fields || (body.revoked !== undefined && typeof body.revoked !== "boolean")) {
     return c.json({ error: "invalid" }, 400);
@@ -133,6 +168,7 @@ app.patch("/share/codes/:id", async (c) => {
   const values: unknown[] = [];
   if (fields.memo !== undefined) sets.push("memo = ?"), values.push(fields.memo);
   if (fields.expiresAt !== undefined) sets.push("expires_at = ?"), values.push(fields.expiresAt);
+  if (fields.dailyLimitUsd !== undefined) sets.push("daily_limit_usd = ?"), values.push(fields.dailyLimitUsd);
   if (body.revoked !== undefined) sets.push("revoked = ?"), values.push(body.revoked ? 1 : 0);
   if (sets.length === 0) return c.body(null, 204);
   const { meta } = await c.env.DB.prepare(
@@ -153,23 +189,32 @@ app.get("/gift", async (c) => {
   if (code.expires_at !== null && Date.now() >= code.expires_at) {
     return c.json({ error: "expired", expiresAt: code.expires_at }, 403);
   }
+  if (overLimit(code, Date.now())) return c.json({ error: "limit" }, 403);
   return c.json({ expiresAt: code.expires_at });
 });
 
 app.post("/openai/responses", async (c) => {
   const gift = await giftKey(c);
   if (gift instanceof Response) return gift;
+  if ((await c.req.text()).length > MAX_RESPONSES_BODY) return c.json({ error: "tooLarge" }, 413);
   const body = (await json<Record<string, unknown>>(c)) ?? {};
   const model = body.model;
-  if (typeof model !== "string" || tokensUsd(model, tokensOf(undefined)) === undefined) {
+  // input はアプリが送る文だけ（配列なら画像やファイルを渡せて、長さの上限が効かない）
+  if (
+    typeof model !== "string" ||
+    tokensUsd(model, tokensOf(undefined)) === undefined ||
+    typeof body.input !== "string"
+  ) {
     return c.json({ error: "notAllowed" }, 400);
   }
   const forwarded = Object.fromEntries(RESPONSES_FIELDS.flatMap((k) => (k in body ? [[k, body[k]]] : [])));
+  const asked = body.max_output_tokens;
+  const maxOutput = typeof asked === "number" ? Math.min(asked, MAX_OUTPUT_TOKENS) : MAX_OUTPUT_TOKENS;
   // 他人の字幕を通すので、OpenAI に応答を保存させない
   const res = await openai("/v1/responses", gift.key, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ...forwarded, store: false }),
+    body: JSON.stringify({ ...forwarded, max_output_tokens: maxOutput, store: false }),
   });
   // ストリームは流しながら写しを読み、最後の応答の usage で数える
   if (res.ok && body.stream === true && res.body) {
@@ -235,7 +280,8 @@ async function giftCode(c: Ctx): Promise<Code | null> {
 async function giftKey(c: Ctx): Promise<{ code: Code; key: string } | Response> {
   const code = await giftCode(c);
   if (!code) return c.json({ error: "unknown" }, 401);
-  if (!usable(code, Date.now())) return c.json({ error: code.revoked ? "revoked" : "expired" }, 403);
+  const error = refusal(code, Date.now());
+  if (error) return c.json({ error }, 403);
   return { code, key: await decrypt(code.encrypted_key, c.env.SHARE_KEY) };
 }
 
@@ -245,14 +291,31 @@ async function json<T = Record<string, unknown>>(c: Ctx): Promise<T | undefined>
   return body !== null && typeof body === "object" ? (body as T) : undefined;
 }
 
-/** メモと期限を確かめる。省いた項目は undefined、期限なしは null */
-function codeFields(body: { memo?: unknown; expiresAt?: unknown }) {
-  const { memo, expiresAt } = body;
+interface CodeFields {
+  memo?: unknown;
+  expiresAt?: unknown;
+  dailyLimitUsd?: unknown;
+}
+
+/** メモ・期限・1 日の上限を確かめる。省いた項目は undefined、期限なしと既定の上限は null */
+function codeFields(body: CodeFields) {
+  const { memo, expiresAt, dailyLimitUsd } = body;
   if (memo !== undefined && (typeof memo !== "string" || memo.length > MAX_MEMO)) return undefined;
   if (expiresAt !== undefined && expiresAt !== null && !Number.isSafeInteger(expiresAt)) {
     return undefined;
   }
-  return { memo: memo as string | undefined, expiresAt: expiresAt as number | null | undefined };
+  if (
+    dailyLimitUsd !== undefined &&
+    dailyLimitUsd !== null &&
+    !(typeof dailyLimitUsd === "number" && Number.isFinite(dailyLimitUsd) && dailyLimitUsd > 0)
+  ) {
+    return undefined;
+  }
+  return {
+    memo: memo as string | undefined,
+    expiresAt: expiresAt as number | null | undefined,
+    dailyLimitUsd: dailyLimitUsd as number | null | undefined,
+  };
 }
 
 export default app;

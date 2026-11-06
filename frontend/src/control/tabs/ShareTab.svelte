@@ -9,6 +9,7 @@
   import type { SharedCode } from "../../generated/SharedCode";
   import { api } from "../../lib/api";
   import ConfirmDialog from "../parts/ConfirmDialog.svelte";
+  import DailyLimitField from "../parts/DailyLimitField.svelte";
   import ExpiryPicker from "../parts/ExpiryPicker.svelte";
   import MaskedCode from "../parts/MaskedCode.svelte";
   import SettingsDialog from "../parts/SettingsDialog.svelte";
@@ -23,17 +24,21 @@
   let memo = $state("");
   let expiresAt = $state<number | null>(threeDays());
   const past = $derived(expiresAt !== null && expiresAt <= panel.now);
+  // 空欄は既定の額（サーバーが決める）
+  let dailyLimit = $state<number | null>(null);
+  const validLimit = (limit: number | null) => limit === null || limit > 0;
 
   let creating = $state(false);
 
   async function create() {
     creating = true;
-    const body = { memo: memo.trim(), expiresAt };
+    const body = { memo: memo.trim(), expiresAt, dailyLimitUsd: dailyLimit };
     const created = await panel.shareAction(() => api.createCode(body), "ギフトコードを作りました");
     creating = false;
     if (created) {
       memo = "";
       expiresAt = threeDays();
+      dailyLimit = null;
     }
     return created;
   }
@@ -49,6 +54,8 @@
   // 期限を変えるダイアログ
   let editingMemo = $state("");
   let editing = $state<number | null>(null);
+  // 1 日の上限を変えるダイアログ
+  let editingLimit = $state<number | null>(null);
 
   function expiry(c: SharedCode) {
     if (c.expiresAt === null) return "期限なし";
@@ -117,9 +124,12 @@
               {/if}
             </Field.Description>
           </Field.Field>
+          <DailyLimitField id="share-limit" bind:value={dailyLimit} />
           <div class="flex flex-wrap gap-2">
-            <Button type="submit" class="w-fit" disabled={past || creating}
-              >ギフトコードを作る</Button
+            <Button
+              type="submit"
+              class="w-fit"
+              disabled={past || !validLimit(dailyLimit) || creating}>ギフトコードを作る</Button
             >
             {#if !share.enabled}
               <Button
@@ -149,7 +159,9 @@
               <span class="font-medium">{c.memo || "メモなし"}</span>
               {#if c.revoked}<Badge variant="destructive">止めています</Badge>{/if}
               <span class="ml-auto text-sm text-muted-foreground tabular-nums">
-                今月 {usd(c.monthUsd)} ／ 合計 {usd(c.usd)}
+                今日 {usd(c.dayUsd)}（上限 {usd(c.dailyLimitUsd)}）／ 今月 {usd(c.monthUsd)} ／ 合計 {usd(
+                  c.usd,
+                )}
               </span>
             </div>
             {#if c.code}
@@ -192,6 +204,20 @@
                 >
                   <ExpiryPicker bind:value={editing} />
                 </SettingsDialog>
+                <SettingsDialog
+                  trigger="上限を変える"
+                  title="1 日の上限を変える"
+                  description={c.memo || undefined}
+                  valid={validLimit(editingLimit)}
+                  onopen={() => (editingLimit = c.dailyLimitUsd)}
+                  onsave={() =>
+                    panel.shareAction(
+                      () => api.updateCode(c.id, { dailyLimitUsd: editingLimit }),
+                      "1 日の上限を変えました",
+                    )}
+                >
+                  <DailyLimitField id="edit-limit-{c.id}" bind:value={editingLimit} />
+                </SettingsDialog>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -218,7 +244,7 @@
   bind:open={consenting}
   title="あなたの API キーをサーバーに預けます"
   action={joining ? "預けて表示する" : "預けてギフトコードを作る"}
-  disabled={!joining && past}
+  disabled={!joining && (past || !validLimit(dailyLimit))}
   onconfirm={consent}
 >
   <p>

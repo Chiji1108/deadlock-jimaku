@@ -19,4 +19,12 @@ usd: number,
 /**
  * 今月（UTC）使われた額
  */
-monthUsd: number, createdAt: number, };
+monthUsd: number, 
+/**
+ * 今日（UTC）使われた額
+ */
+dayUsd: number, 
+/**
+ * 1 日（UTC）の上限（USD）
+ */
+dailyLimitUsd: number, createdAt: number, };

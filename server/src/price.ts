@@ -70,9 +70,12 @@ export function wavSeconds(bytes: ArrayBuffer): number | undefined {
   return undefined;
 }
 
+/** Realtime で受ける音声のレート（`appendSeconds` が数えられるのはこの PCM だけ） */
+export const REALTIME_RATE = 24_000;
+
 /** Realtime の `input_audio_buffer.append`（24kHz・16bit の PCM を base64）の長さ（秒） */
 export function appendSeconds(base64: string): number {
   const padding = base64.endsWith("==") ? 2 : base64.endsWith("=") ? 1 : 0;
   const bytes = (base64.length * 3) / 4 - padding;
-  return bytes / 2 / 24_000;
+  return bytes / 2 / REALTIME_RATE;
 }

@@ -20,6 +20,7 @@ use crate::local;
 use crate::now_ms;
 use crate::openai::Access;
 use crate::settings::Settings;
+use crate::share;
 use crate::store::Store;
 use crate::stt::{self, BatchRequest, Hints, RealtimeConfig};
 use crate::types::{
@@ -142,7 +143,7 @@ pub async fn run(
     let mut level = LevelMeter::default();
     let mut live = pipeline.store.watch_live();
     live.mark_unchanged();
-    loop {
+    while !pipeline.daily_limit {
         tokio::select! {
             Ok(()) = live.changed() => {
                 let text = live.borrow_and_update().clone();
@@ -167,6 +168,9 @@ pub async fn run(
             Some(done) = done_rx.recv() => pipeline.on_done(done),
             Some(delta) = delta_rx.recv() => pipeline.on_delta(delta),
         }
+    }
+    if pipeline.daily_limit {
+        return Err(share::DailyLimit.into());
     }
     Ok(())
 }
@@ -228,6 +232,8 @@ struct Pipeline {
     context: VecDeque<String>,
     /// バッチか enrich の結果を待っている数
     pending: usize,
+    /// ギフトコードの今日の上限に達した。確定の字幕は発話ごとに送るので、これで気づける
+    daily_limit: bool,
 }
 
 impl Pipeline {
@@ -260,6 +266,7 @@ impl Pipeline {
             seq: 0,
             context: VecDeque::new(),
             pending: 0,
+            daily_limit: false,
         }
     }
 
@@ -420,6 +427,7 @@ impl Pipeline {
                 self.pending -= 1;
                 self.on_transcribed(&id, text);
             }
+            Done::DailyLimit => self.daily_limit = true,
             Done::Draft { id, translations } => self.on_draft(&id, translations),
             Done::Marked { id, tokens } => self.on_marked(&id, tokens),
             Done::Local(result) => {
@@ -618,6 +626,8 @@ pub(crate) enum Done {
         id: String,
         translations: Translations,
     },
+    /// サーバーがギフトコードの今日の上限で断った
+    DailyLimit,
     /// ハイブリッドの確定の文に、PC の中で読みと用語を付けたもの
     Marked { id: String, tokens: Vec<Token> },
     /// 翻訳に失敗しても、固有名詞とふりがなは付いている
@@ -643,6 +653,9 @@ async fn transcribe(
         Ok(text) => Some(text),
         Err(e) => {
             tracing::warn!("batch transcription: {e:#}");
+            if e.is::<share::DailyLimit>() {
+                let _ = done.send(Done::DailyLimit).await;
+            }
             None
         }
     };
