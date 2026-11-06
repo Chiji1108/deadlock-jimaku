@@ -1,4 +1,4 @@
-//! ローカル AI のモード（DESIGN.md 9.6）。途中の字幕と途中の翻訳を、PC の中の補助プログラムで作る。
+//! ローカル AI のモード（DESIGN.md 9.6）。途中の字幕と途中の翻訳、用語の判定を、PC の中の補助プログラムで作る。
 //!
 //! 補助プログラム（`crates/local-ai`）は実行環境が大きいので、アプリに入れず、使う人だけ初回に
 //! ダウンロードする。別のプロセスにすると、使わない人のメモリも増えない
@@ -10,6 +10,7 @@ use std::time::Duration;
 
 use anyhow::{Context, bail};
 use flate2::read::GzDecoder;
+use serde::Serialize;
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
@@ -17,10 +18,10 @@ use tokio::process::{ChildStdin, Command};
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 
-use crate::settings::Settings;
+use crate::settings::{Settings, SpeechEngine};
 use crate::store::Store;
 use crate::subtitles::Done;
-use crate::types::{Glossary, LiveState, LiveStatus, LiveText, Token, Translations};
+use crate::types::{Entity, Glossary, LiveState, LiveStatus, LiveText, Token, Translations};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const RELEASES: &str = "https://github.com/Chiji1108/deadlock-jimaku/releases/download";
@@ -45,6 +46,7 @@ const TARGETS: [&str; 4] = ["en", "ru", "zh-Hans", "zh-Hant"];
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 const AUDIO: u8 = 1;
 const CUT: u8 = 2;
+const MARK: u8 = 3;
 
 /// 字幕の処理が持つ。落とすと補助プログラムの処理も止まる
 pub struct Task {
@@ -56,11 +58,11 @@ impl Task {
     pub(crate) fn spawn(
         store: Arc<Store>,
         settings: Settings,
-        terms: Vec<(String, String)>,
-        finals: Option<mpsc::Sender<Done>>,
+        terms: Vec<Term>,
+        done: mpsc::Sender<Done>,
         input: mpsc::UnboundedReceiver<Input>,
     ) -> Self {
-        let handle = tokio::spawn(run(store.clone(), settings, terms, finals, input));
+        let handle = tokio::spawn(run(store.clone(), settings, terms, done, input));
         Self { store, handle }
     }
 }
@@ -76,6 +78,11 @@ pub enum Input {
     Audio(Vec<f32>),
     /// 発話が閉じた
     Cut,
+    /// OpenAI の確定の文に、読みと用語を付ける（`Done::Marked` で返る）
+    Mark {
+        id: String,
+        text: String,
+    },
 }
 
 /// 無料のモードの確定の字幕。文字が空なら、その発話を捨てる
@@ -86,30 +93,62 @@ pub struct Final {
     pub translations: Translations,
 }
 
-/// 用語の表。翻訳の前に英語の名前へ置き換える
-pub fn terms(glossary: &Glossary) -> Vec<(String, String)> {
-    glossary
+/// 辞書の 1 つの名前。補助プログラムが字幕の中から探し、翻訳の前に英語の名前へ置き換える
+#[derive(Debug, PartialEq, Serialize)]
+pub struct Term {
+    #[serde(rename = "ref")]
+    reference: String,
+    text: String,
+    /// かなの読み。辞書に読みがなければ名前のまま（漢字を含むなら、読みでは探さない）
+    reading: String,
+    en: String,
+}
+
+/// 日本語と英語の公式名がある、すべての用語
+pub fn terms(glossary: &Glossary) -> Vec<Term> {
+    let mut terms: Vec<Term> = glossary
         .entities
-        .values()
-        .filter_map(|e| Some((e.names.get("ja")?.clone(), e.names.get("en")?.clone())))
-        .collect()
+        .iter()
+        .filter_map(|(reference, e)| {
+            let (name, en) = (e.names.get("ja")?, e.names.get("en")?);
+            Some(Term {
+                reference: reference.clone(),
+                text: name.clone(),
+                reading: reading(e).unwrap_or_else(|| name.clone()),
+                en: en.clone(),
+            })
+        })
+        .collect();
+    // スキルと同じ名前のアイテムがある（ライフドレイン）。先の行が勝つので、説明を出せるアイテムを先にする
+    terms.sort_by_key(|t| !t.reference.starts_with("item:"));
+    terms
+}
+
+fn reading(entity: &Entity) -> Option<String> {
+    let ruby = entity.ruby.as_ref()?.iter();
+    Some(
+        ruby.map(|s| s.ruby.as_ref().unwrap_or(&s.text).as_str())
+            .collect(),
+    )
 }
 
 async fn run(
     store: Arc<Store>,
     settings: Settings,
-    terms: Vec<(String, String)>,
-    finals: Option<mpsc::Sender<Done>>,
+    terms: Vec<Term>,
+    done: mpsc::Sender<Done>,
     mut input: mpsc::UnboundedReceiver<Input>,
 ) {
     show(&store, LiveState::Preparing, None);
+    let finals = settings.speech_engine == SpeechEngine::Free;
     // 確定の字幕を返していない発話の数。無料のモードの字幕の処理は、区切りごとの返事を待っている
     let mut waiting = 0;
     let result = session(
         &store,
         &settings,
         &terms,
-        finals.as_ref(),
+        finals,
+        &done,
         &mut input,
         &mut waiting,
     );
@@ -122,13 +161,15 @@ async fn run(
         );
     }
     // 止まったあとも区切りには返事をする（字幕の処理が待ち続けないように）
-    let Some(finals) = finals else { return };
+    if !finals {
+        return;
+    }
     for _ in 0..waiting {
-        let _ = finals.send(Done::Local(Final::default())).await;
+        let _ = done.send(Done::Local(Final::default())).await;
     }
     while let Some(next) = input.recv().await {
         if matches!(next, Input::Cut) {
-            let _ = finals.send(Done::Local(Final::default())).await;
+            let _ = done.send(Done::Local(Final::default())).await;
         }
     }
 }
@@ -140,8 +181,9 @@ fn show(store: &Store, state: LiveState, detail: Option<String>) {
 async fn session(
     store: &Arc<Store>,
     settings: &Settings,
-    terms: &[(String, String)],
-    finals: Option<&mpsc::Sender<Done>>,
+    terms: &[Term],
+    finals: bool,
+    done: &mpsc::Sender<Done>,
     input: &mut mpsc::UnboundedReceiver<Input>,
     waiting: &mut usize,
 ) -> anyhow::Result<()> {
@@ -162,7 +204,7 @@ async fn session(
         .arg(root.join("models"))
         .arg(&terms_path)
         .arg(targets.join(","))
-        .arg(if finals.is_some() { "final" } else { "partial" })
+        .arg(if finals { "final" } else { "partial" })
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -185,10 +227,10 @@ async fn session(
                 let Some(next) = next else { return Ok(()) };
                 let cut = matches!(next, Input::Cut);
                 if ready {
-                    *waiting += usize::from(cut && finals.is_some());
+                    *waiting += usize::from(cut && finals);
                     let _ = writer.send(next);
-                } else if let (true, Some(finals)) = (cut, finals) {
-                    let _ = finals.send(Done::Local(Final::default())).await;
+                } else if cut && finals {
+                    let _ = done.send(Done::Local(Final::default())).await;
                 }
             }
             line = lines.next_line() => {
@@ -200,14 +242,22 @@ async fn session(
                 let message: Value = serde_json::from_str(&line)?;
                 ready |= message["type"] == "ready";
                 on_line(store, &message);
-                if let (Some(finals), Some("final")) = (finals, message["type"].as_str()) {
-                    *waiting -= 1;
-                    let result = Final {
-                        text: message["text"].as_str().unwrap_or_default().to_owned(),
-                        tokens: tokens(&message["parts"]),
-                        translations: translations(&message["translations"]),
-                    };
-                    let _ = finals.send(Done::Local(result)).await;
+                match message["type"].as_str() {
+                    Some("final") if finals => {
+                        *waiting -= 1;
+                        let result = Final {
+                            text: text(&message),
+                            tokens: tokens(&message),
+                            translations: translations(&message),
+                        };
+                        let _ = done.send(Done::Local(result)).await;
+                    }
+                    Some("marked") => {
+                        let id = message["id"].as_str().unwrap_or_default().to_owned();
+                        let tokens = tokens(&message);
+                        let _ = done.send(Done::Marked { id, tokens }).await;
+                    }
+                    _ => {}
                 }
             }
         }
@@ -232,31 +282,30 @@ async fn send(stdin: &mut ChildStdin, input: Input) -> std::io::Result<()> {
             stdin.write_all(&frame).await
         }
         Input::Cut => stdin.write_all(&[CUT]).await,
+        Input::Mark { id, text } => {
+            let body = format!("{id}\n{text}");
+            let mut frame = Vec::with_capacity(5 + body.len());
+            frame.push(MARK);
+            frame.extend_from_slice(&(body.len() as u32).to_le_bytes());
+            frame.extend_from_slice(body.as_bytes());
+            stdin.write_all(&frame).await
+        }
     }
 }
 
-fn tokens(parts: &Value) -> Vec<Token> {
-    parts
-        .as_array()
-        .into_iter()
-        .flatten()
-        .map(|part| Token::Text {
-            text: part["text"].as_str().unwrap_or_default().to_owned(),
-            ruby: part["ruby"].as_str().map(ToOwned::to_owned),
-        })
-        .collect()
+fn text(message: &Value) -> String {
+    message["text"].as_str().unwrap_or_default().to_owned()
 }
 
-fn translations(translations: &Value) -> Translations {
+fn tokens(message: &Value) -> Vec<Token> {
+    serde_json::from_value(message["tokens"].clone()).unwrap_or_default()
+}
+
+fn translations(message: &Value) -> Translations {
+    let mut translations: Translations =
+        serde_json::from_value(message["translations"].clone()).unwrap_or_default();
+    translations.retain(|_, tokens| !tokens.is_empty());
     translations
-        .as_object()
-        .into_iter()
-        .flatten()
-        .filter_map(|(lang, text)| {
-            let text = text.as_str().filter(|t| !t.is_empty())?.to_owned();
-            Some((lang.clone(), vec![Token::Text { text, ruby: None }]))
-        })
-        .collect()
 }
 
 fn on_line(store: &Store, message: &Value) {
@@ -275,9 +324,9 @@ fn on_line(store: &Store, message: &Value) {
         }
         Some("ready") => show(store, LiveState::Listening, None),
         Some("text") => store.send_live(LiveText {
-            text: message["text"].as_str().unwrap_or_default().to_owned(),
-            tokens: tokens(&message["parts"]),
-            translations: translations(&message["translations"]),
+            text: text(message),
+            tokens: tokens(message),
+            translations: translations(message),
         }),
         _ => {}
     }
@@ -353,6 +402,93 @@ fn extract(bytes: &[u8], dir: &Path) -> anyhow::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::{EntityKind, RubySegment};
+
+    fn magazine(ruby: Option<Vec<RubySegment>>) -> Glossary {
+        let entity = Entity {
+            kind: EntityKind::Item,
+            class_name: "upgrade_clip_size".into(),
+            names: [("ja", "基礎拡張マガジン"), ("en", "Extended Magazine")]
+                .map(|(lang, name)| (lang.to_owned(), name.to_owned()))
+                .into(),
+            ruby,
+            icon: None,
+            slot: None,
+            hero: None,
+            ability_slot: None,
+        };
+        Glossary {
+            client_version: 1,
+            languages: Vec::new(),
+            entities: [("item:1548066885".to_owned(), entity)].into(),
+        }
+    }
+
+    #[test]
+    fn a_term_has_the_reading_of_its_name() {
+        let ruby = vec![
+            RubySegment {
+                text: "基礎拡張".into(),
+                ruby: Some("きそかくちょう".into()),
+            },
+            RubySegment {
+                text: "マガジン".into(),
+                ruby: None,
+            },
+        ];
+        let terms = terms(&magazine(Some(ruby)));
+        assert_eq!(terms[0].reading, "きそかくちょうマガジン");
+        assert_eq!(terms[0].en, "Extended Magazine");
+    }
+
+    #[test]
+    fn a_name_that_is_an_ordinary_word_is_a_term() {
+        let mut glossary = magazine(None);
+        let entity = glossary.entities.values_mut().next().unwrap();
+        entity.names.insert("ja".into(), "ポケット".into());
+        assert_eq!(terms(&glossary)[0].text, "ポケット");
+    }
+
+    #[test]
+    fn items_come_before_abilities_of_the_same_name() {
+        let mut glossary = magazine(None);
+        let mut ability = glossary.entities.values().next().unwrap().clone();
+        ability.kind = EntityKind::Ability;
+        glossary.entities.insert("ability:1".into(), ability);
+        assert_eq!(terms(&glossary)[0].reference, "item:1548066885");
+    }
+
+    #[test]
+    fn a_name_without_a_reading_is_listed_as_written() {
+        assert_eq!(terms(&magazine(None))[0].reading, "基礎拡張マガジン");
+    }
+
+    #[test]
+    fn helper_tokens_become_app_tokens() {
+        let message = serde_json::json!({
+            "tokens": [{ "t": "entity", "ref": "item:1", "spoken": "基礎拡張マガジン" }, { "t": "text", "text": "を" }],
+            "translations": { "en": [{ "t": "entity", "ref": "item:1" }], "ru": [] },
+        });
+        assert_eq!(
+            tokens(&message),
+            [
+                Token::Entity {
+                    reference: "item:1".into(),
+                    spoken: Some("基礎拡張マガジン".into()),
+                    ruby: None,
+                },
+                Token::Text {
+                    text: "を".into(),
+                    ruby: None,
+                },
+            ]
+        );
+        assert_eq!(
+            translations(&message).keys().collect::<Vec<_>>(),
+            ["en"],
+            "空の訳は出さない"
+        );
+    }
 
     #[test]
     fn checksum_detects_a_changed_file() {

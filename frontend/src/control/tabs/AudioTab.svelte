@@ -33,32 +33,31 @@
     recommended?: boolean;
   }[] = [
     {
-      value: "local",
-      label: "ローカル AI + OpenAI",
-      traits: "高速・ふりがな・デッドロックモード",
+      value: "hybrid",
+      label: "ハイブリッド",
+      traits: "高速・高精度・ふりがな・デッドロックモード",
       price: "約 $0.6／時間",
-      hint: "話している途中の字幕と翻訳は PC の中で、確定の字幕は OpenAI で作ります。API キーかギフトコードが必要です。途中の翻訳は英語・ロシア語・中国語です。初回に約 200MB をダウンロードし、動かしている間は約 400MB のメモリを使います",
+      hint: "話している途中の字幕は無料のモードと同じく PC の中で作り、最後に OpenAI の高い精度の結果に置き換えます。API キーかギフトコードが必要です。途中の翻訳は英語・ロシア語・中国語です。初回に約 200MB をダウンロードし、動かしている間は約 400MB のメモリを使います",
       recommended: true,
     },
     {
       value: "openai",
       label: "OpenAI",
-      traits: "低負荷・ふりがな・デッドロックモード",
+      traits: "低負荷・高精度・ふりがな・デッドロックモード",
       price: "約 $1／時間",
-      hint: "すべて OpenAI で作ります。モデルを動かさないので、PC の負荷がいちばん小さいです。API キーかギフトコードが必要です",
+      hint: "すべて OpenAI で作ります。ふりがなとデッドロックモードの精度が高く、モデルを動かさないので、PC の負荷がいちばん小さいです。API キーかギフトコードが必要です",
     },
     {
       value: "free",
-      label: "ローカル AI",
-      traits: "無料・高速・ふりがな",
+      label: "無料",
+      traits: "無料・高速・ふりがな・デッドロックモード",
       price: "無料",
-      hint: "すべて PC の中で作ります。API キーは要りません。音声は PC の外に送られません。精度は下がり、用語の強調とアイテム説明は使えません。翻訳先は英語・ロシア語・中国語です。初回に約 200MB をダウンロードします",
+      hint: "翻訳、ふりがな、デッドロックモードまで、すべて PC の中で作ります。API キーは要りません。音声は PC の外に送られません。精度は下がります。用語は公式の名前と書き方か読みが同じときだけ強調するので、略称は強調されず、ふつうの言葉が強調されることがあります。翻訳先は英語・ロシア語・中国語です。初回に約 200MB をダウンロードします",
     },
   ];
 
   const s = $derived(panel.settings!);
   const onlyTranslation = $derived(translationOnly(s));
-  const free = $derived(s.speechEngine === "free");
   const engine = $derived(ENGINES.find((e) => e.value === s.speechEngine)!);
   /** ローカル AI が止まっている理由 */
   const localProblem = $derived(
@@ -102,7 +101,7 @@
       {#if s.speechEngine !== "openai" && s.transcriptionEnabled && localProblem}
         <Alert.Root variant="destructive">
           <Alert.Title>{localProblem}</Alert.Title>
-          {#if s.speechEngine === "local"}
+          {#if s.speechEngine === "hybrid"}
             <Alert.Description>
               確定の字幕は出ています。話している途中の字幕だけが止まっています。
             </Alert.Description>
@@ -193,39 +192,39 @@
         </Select.Root>
       </Field.Field>
 
-      {#if !free}<Field.Field orientation="horizontal">
+      <Field.Field orientation="horizontal">
+        <Field.Content>
+          <Field.Label for="deadlock-mode">デッドロックモード</Field.Label>
+          <Field.Description>
+            ヒーロー・スキル・アイテムを強調し、アイテム説明を出します。雑談やほかのゲームの配信では、オフにすると普通の字幕になります
+            <DeadlockModeDialog />
+          </Field.Description>
+        </Field.Content>
+        <Switch
+          id="deadlock-mode"
+          checked={s.deadlockMode}
+          onCheckedChange={(v) => panel.update({ deadlockMode: v })}
+        />
+      </Field.Field>
+
+      {#if s.speechEngine === "openai"}<Field.Field orientation="horizontal">
           <Field.Content>
-            <Field.Label for="deadlock-mode">デッドロックモード</Field.Label>
+            <Field.Label for="live-subtitles">話している途中から字幕を出す</Field.Label>
             <Field.Description>
-              ヒーロー・スキル・アイテムを強調し、アイテム説明を出します。雑談やほかのゲームの配信では、オフにすると普通の字幕になります
-              <DeadlockModeDialog />
+              {#if onlyTranslation}
+                翻訳だけを出しているので、途中の字幕は出ません
+              {:else}
+                オフにすると途中の字幕の料金がかかりません。字幕は話し終えてから出ます。切り替えると、字幕は始め直します
+              {/if}
             </Field.Description>
           </Field.Content>
           <Switch
-            id="deadlock-mode"
-            checked={s.deadlockMode}
-            onCheckedChange={(v) => panel.update({ deadlockMode: v })}
+            id="live-subtitles"
+            checked={s.liveSubtitles}
+            disabled={onlyTranslation}
+            onCheckedChange={(v) => panel.update({ liveSubtitles: v })}
           />
-        </Field.Field>
-
-        {#if s.speechEngine === "openai"}<Field.Field orientation="horizontal">
-            <Field.Content>
-              <Field.Label for="live-subtitles">話している途中から字幕を出す</Field.Label>
-              <Field.Description>
-                {#if onlyTranslation}
-                  翻訳だけを出しているので、途中の字幕は出ません
-                {:else}
-                  オフにすると途中の字幕の料金がかかりません。字幕は話し終えてから出ます。切り替えると、字幕は始め直します
-                {/if}
-              </Field.Description>
-            </Field.Content>
-            <Switch
-              id="live-subtitles"
-              checked={s.liveSubtitles}
-              disabled={onlyTranslation}
-              onCheckedChange={(v) => panel.update({ liveSubtitles: v })}
-            />
-          </Field.Field>{/if}{/if}
+        </Field.Field>{/if}
 
       <Field.Field>
         <Field.Label>翻訳先</Field.Label>
