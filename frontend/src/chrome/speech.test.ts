@@ -470,6 +470,11 @@ test.each([
   expect(found(name, WINDOWS_MICS)).toEqual([id]);
 });
 
+test("機器の括弧ではない括弧は除かない", () => {
+  expect(found("Foo", [{ deviceId: "x", label: "Foo (Virtual)" }])).toEqual([]);
+  expect(found("マイク", [{ deviceId: "x", label: "マイク (Realtek Audio)" }])).toEqual([]);
+});
+
 test("Mac の接続の種類の括弧を除いて見つける", () => {
   const mics = [{ deviceId: "m", label: "MacBook Pro Microphone (Built-in)" }];
   expect(found("MacBook Pro Microphone", mics)).toEqual(["m"]);
@@ -593,7 +598,57 @@ test("音が認識に届かないまま既定に戻す案内と、start(track) �
     "start(track): 認識が動き始めました",
     "音が来ているのに結果がありません（1 回目）",
     "音が来ているのに結果がありません（2 回目）",
-    "既定のマイクに戻します: 結果が来ません",
+    '既定のマイクに戻します: {"type":"silent"}',
   ]);
   expect(micNotice("A", { type: "silent" })).toContain("『A』の音が認識に届きません");
+});
+
+test("見つからないときは選べるマイクを返し、別名は入れない", async () => {
+  fakeDevices(WINDOWS_MICS);
+  const microphone = await openMicrophone("抜いたマイク");
+  expect(microphone.choices.map((d) => d.deviceId)).toEqual(["r", "u"]);
+});
+
+test("覚えた選択を優先し、ID が変わってもラベルで見つける", async () => {
+  const { getUserMedia } = fakeDevices(WINDOWS_MICS);
+  const byId = await openMicrophone("A", undefined, { deviceId: "u", label: "別の名前" });
+  expect(byId.chosen?.deviceId).toBe("u");
+  expect(byId.problem).toBeUndefined();
+  const byLabel = await openMicrophone("A", undefined, {
+    deviceId: "古い ID",
+    label: "マイク (Realtek Audio)",
+  });
+  expect(byLabel.chosen?.deviceId).toBe("r");
+  expect(getUserMedia).toHaveBeenLastCalledWith({ audio: { deviceId: { exact: "r" } } });
+});
+
+test("覚えた選択が見つからなければ理由と選択欄に戻る", async () => {
+  fakeDevices(WINDOWS_MICS);
+  const microphone = await openMicrophone("A", undefined, { deviceId: "z", label: "ない" });
+  expect(microphone.chosen).toBeUndefined();
+  expect(microphone.problem).toEqual({ type: "missing" });
+  expect(microphone.choices).toHaveLength(2);
+});
+
+test("start(track) のない Chrome では理由を返し、既定のマイクを使う", async () => {
+  const { enumerateDevices } = fakeDevices(WINDOWS_MICS);
+  vi.stubGlobal("navigator", {
+    ...navigator,
+    userAgentData: { brands: [{ brand: "Google Chrome", version: "134" }] },
+  });
+  const microphone = await openMicrophone("A");
+  expect(microphone.problem).toEqual({ type: "oldChrome", version: 134 });
+  expect(enumerateDevices).not.toHaveBeenCalled();
+  expect(micNotice("A", microphone.problem!)).toContain("Chrome 135 以降");
+});
+
+test("切れたマイクの理由を知らせる", () => {
+  const ended = { kind: "audio", readyState: "live" } as { readyState: string };
+  const onDefaultMic = vi.fn();
+  listen("ja", { ...options(), track: ended as unknown as MediaStreamTrack, onDefaultMic });
+  ended.readyState = "ended";
+  FakeRecognizer.last.onend();
+  vi.advanceTimersByTime(100);
+  expect(onDefaultMic).toHaveBeenCalledWith({ type: "ended" });
+  expect(micNotice("A", { type: "ended" })).toContain("『A』が切れました");
 });

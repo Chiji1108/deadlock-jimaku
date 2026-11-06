@@ -133,9 +133,9 @@ async fn attach(profile: &Path) -> anyhow::Result<std::convert::Infallible> {
     let mut cdp = Cdp { socket, id: 0 };
     // `--auto-accept-camera-and-microphone-capture` はマイクを開かせるだけで、権限として残さない。
     // 権限がないと `enumerateDevices` がマイクの名前も ID も隠すので、選んだマイクを探せない。
-    // 許せなくても、ページは既定のマイクで動いて理由を出す
+    // `grantPermissions` はほかの権限を拒むので使わない。許せなくても、ページは既定のマイクで動いて理由を出す
     if let Err(e) = cdp
-        .call(None, "Browser.grantPermissions", mic_permission())
+        .call(None, "Browser.setPermission", mic_permission())
         .await
     {
         tracing::warn!("chrome: {e:#}");
@@ -153,7 +153,11 @@ async fn attach(profile: &Path) -> anyhow::Result<std::convert::Infallible> {
 }
 
 fn mic_permission() -> Value {
-    json!({ "origin": page_origin(), "permissions": ["audioCapture"] })
+    json!({
+        "origin": page_origin(),
+        "permission": { "name": "microphone" },
+        "setting": "granted",
+    })
 }
 
 /// Chrome が開いた CDP のポートはプロファイルのファイルに書かれる
@@ -437,7 +441,7 @@ mod tests {
     #[test]
     fn allows_only_the_page_to_read_the_microphones() {
         let permission = mic_permission();
-        assert_eq!(permission["permissions"], json!(["audioCapture"]));
+        assert_eq!(permission["permission"]["name"], "microphone");
         assert_eq!(
             page_url(),
             format!("{}/chrome", permission["origin"].as_str().unwrap())

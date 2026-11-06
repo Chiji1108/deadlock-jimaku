@@ -70,6 +70,8 @@ const SOUND_CHECK_MS = 250;
 const SOUND_LEVEL = 0.01;
 /** 通信のエラーが出ずにこの時間続いたら、回線が戻ったとみなす（黙っていると結果が届かない） */
 const STABLE_MS = 5000;
+/** `start(track)` が使える Chrome の版 */
+const TRACK_CHROME = 135;
 /** アプリが CDP でマイクを許可するまで待つ時間 */
 const GRANT_MS = 5000;
 /** 「既定」「通信」のデバイス ID。本物のマイクの別名で、接頭辞は Chrome の言語で変わるので ID で除く */
@@ -85,12 +87,16 @@ const recognition = () => {
 
 const translatorApi = () => (window as unknown as { Translator?: TranslatorClass }).Translator;
 
+const chromeBrand = () => {
+  const { userAgentData } = navigator as unknown as {
+    userAgentData?: { brands: { brand: string; version: string }[] };
+  };
+  return userAgentData?.brands.find((b) => b.brand === "Google Chrome");
+};
+
 /** Google Chrome か。Edge や WebView2 は音声の送り先が違い、認識も失敗することがある */
 export function supported() {
-  const { userAgentData } = navigator as unknown as {
-    userAgentData?: { brands: { brand: string }[] };
-  };
-  return !!recognition() && !!userAgentData?.brands.some((b) => b.brand === "Google Chrome");
+  return !!recognition() && !!chromeBrand();
 }
 
 /** `ja` を認識に渡す形（`ja-JP`）にする */
@@ -151,27 +157,43 @@ export async function prepare(
 export type MicProblem =
   | { type: "missing" }
   | { type: "unopenable"; error: string }
-  | { type: "silent" };
+  | { type: "silent" }
+  | { type: "ended" }
+  | { type: "oldChrome"; version: number };
+
+const micReason = (name: string, problem: MicProblem) => {
+  switch (problem.type) {
+    case "missing":
+      return `Chrome に『${name}』が見つかりません`;
+    case "unopenable":
+      return `『${name}』を開けません（${problem.error}）`;
+    case "silent":
+      return `『${name}』の音が認識に届きません`;
+    case "ended":
+      return `『${name}』が切れました`;
+    case "oldChrome":
+      return `この Chrome（${problem.version}）は『${name}』を認識に渡せません。Chrome ${TRACK_CHROME} 以降にしてください`;
+  }
+};
 
 /** 理由と、既定のマイクで続けていることを知らせる文。Chrome の既定は OS の既定のマイク */
 export function micNotice(name: string, problem: MicProblem) {
-  const reason = {
-    missing: `Chrome に『${name}』が見つかりません`,
-    unopenable: `『${name}』を開けません（${"error" in problem ? problem.error : ""}）`,
-    silent: `『${name}』の音が認識に届きません`,
-  }[problem.type];
-  return `${reason}。Chrome の既定のマイクを使っています。OS の既定のマイクを『${name}』にすると揃います`;
+  return `${micReason(name, problem)}。Chrome の既定のマイクを使っています。OS の既定のマイクを『${name}』にすると揃います`;
 }
 
 const tidy = (text: string) => text.normalize("NFKC").trim().replace(/\s+/g, " ");
 
-/** Chrome がラベルの末尾に足す括弧を除く。Windows は (045e:0810) や (Bluetooth)、Mac は (Built-in) など */
-const withoutSuffix = (label: string) => label.replace(/\s*\([^()]*\)$/, "");
+/** Chrome がラベルの末尾に足すものを除く。Windows は (045e:0810) か (Bluetooth)、Mac は (Built-in) など */
+const withoutSuffix = (label: string) =>
+  label.replace(/\s*\((?:[0-9a-f]{4}:[0-9a-f]{4}|Bluetooth|Built-in)\)$/, "");
+
+const realMics = (inputs: MediaDeviceInfo[]) =>
+  inputs.filter((d) => d.deviceId && !MIC_ALIASES.has(d.deviceId));
 
 /** アプリのマイクの名前に当たるデバイスを返す。部分一致は別のマイクに当たるので、全体を比べる。
  * 同じ名前が複数なら見分けられない（アプリも先頭のものを開く） */
 export function findMics(inputs: MediaDeviceInfo[], name: string) {
-  const mics = inputs.filter((d) => d.deviceId && !MIC_ALIASES.has(d.deviceId));
+  const mics = realMics(inputs);
   const wanted = tidy(name);
   const exact = mics.filter((d) => tidy(d.label) === wanted);
   return exact.length ? exact : mics.filter((d) => tidy(withoutSuffix(d.label)) === wanted);
@@ -187,8 +209,23 @@ async function micPermission() {
   });
 }
 
+const openAudio = (audio: MediaStreamConstraints["audio"]) =>
+  navigator.mediaDevices.getUserMedia({ audio });
+const stopStream = (stream: MediaStream) => stream.getTracks().forEach((track) => track.stop());
 const audioInputs = async () =>
   (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === "audioinput");
+
+/** マイクの一覧。ふつうのタブでは、許可のあとにしかラベルを読めない。開いたマイクはここで閉じる */
+async function readableInputs() {
+  const inputs = await audioInputs();
+  if (inputs.some((d) => d.label)) return inputs;
+  const asking = await openAudio(true);
+  try {
+    return await audioInputs();
+  } finally {
+    stopStream(asking);
+  }
+}
 
 /** ストリームの音を見張る。`heard` は前に聞いてから音が来たか。
  * ページの音声が動いていなければ分からないので、来たとみなす */
@@ -215,27 +252,35 @@ function watchSound(stream: MediaStream) {
   };
 }
 
+/** Chrome のウィンドウで選べるマイク */
+export interface MicChoice {
+  deviceId: string;
+  label: string;
+}
+
 export interface Microphone {
   /** 認識に渡すマイク。なければ Chrome の既定のマイクを使う */
   track?: MediaStreamTrack;
   heardSound?(): boolean;
   /** 選んだマイクを使えない理由 */
   problem?: MicProblem;
+  /** 選べるマイク */
+  choices: MicChoice[];
+  /** 覚えていた選択で開いたマイク */
+  chosen?: MicChoice;
   /** 選んだマイクを閉じて、既定のマイクを開く */
   useDefault(): Promise<void>;
   release(): void;
 }
 
 /** マイクを開いたままにする。キャプチャ中のページは Chrome に凍結されない。
- * `name` があれば、その名前のマイクのトラックを `track` で返す。使えなければ `track` はなく、
- * 既定のマイクを開いて理由を `problem` で返す。`log` は調べるための記録 */
+ * `name` があれば、`chosen`（ウィンドウで選んだマイク）か、その名前のマイクのトラックを `track` で返す。
+ * 使えなければ `track` はなく、既定のマイクを開いて理由を `problem` で返す。`log` は調べるための記録 */
 export async function openMicrophone(
   name?: string | null,
   log: (line: string) => void = () => {},
+  chosen?: MicChoice,
 ): Promise<Microphone> {
-  const open = (audio: MediaStreamConstraints["audio"]) =>
-    navigator.mediaDevices.getUserMedia({ audio });
-  const stop = (stream: MediaStream) => stream.getTracks().forEach((track) => track.stop());
   let opened = () => {};
   let released = false;
   const close = () => {
@@ -244,49 +289,62 @@ export async function openMicrophone(
   };
   const useDefault = async () => {
     close();
-    const stream = await open(true);
-    if (released) stop(stream);
-    else opened = () => stop(stream);
+    const stream = await openAudio(true);
+    if (released) stopStream(stream);
+    else opened = () => stopStream(stream);
   };
   const release = () => {
     released = true;
     close();
   };
-  const fallBack = async (problem?: MicProblem) => {
+  const fallBack = async (problem?: MicProblem, choices: MicChoice[] = []) => {
     await useDefault();
-    return { problem, useDefault, release };
+    return { problem, choices, useDefault, release };
   };
 
   if (!name) return fallBack();
+  const version = Number(chromeBrand()?.version);
+  if (version < TRACK_CHROME) {
+    log(`Chrome ${version} には start(track) がありません`);
+    return fallBack({ type: "oldChrome", version });
+  }
   await micPermission();
-  let inputs = await audioInputs();
-  // ふつうのタブでは、許可のあとにしかラベルを読めない。選んだマイクを開く前に閉じる
-  const asking = inputs.some((d) => d.label) ? undefined : await open(true);
-  if (asking) inputs = await audioInputs();
+  const inputs = await readableInputs();
   log(`Chrome のマイク: ${inputs.map((d) => d.label || "（名前なし）").join(" / ")}`);
+  const choices = realMics(inputs).map(({ deviceId, label }) => ({ deviceId, label }));
+  const remembered =
+    choices.find((d) => d.deviceId === chosen?.deviceId) ??
+    choices.find((d) => d.label === chosen?.label);
   const mics = findMics(inputs, name);
-  if (asking) stop(asking);
-  const device = mics[0];
+  const device = remembered ?? mics[0];
   if (!device) {
     log(`『${name}』に当たるマイクがありません`);
-    return fallBack({ type: "missing" });
+    return fallBack({ type: "missing" }, choices);
   }
-  if (mics.length > 1) log(`『${name}』が ${mics.length} 個あるので、先頭を使います`);
+  if (!remembered && mics.length > 1)
+    log(`『${name}』が ${mics.length} 個あるので、先頭を使います`);
   let stream: MediaStream;
   try {
-    stream = await open({ deviceId: { exact: device.deviceId } });
+    stream = await openAudio({ deviceId: { exact: device.deviceId } });
   } catch (e) {
     const error = (e as Error).name;
     log(`getUserMedia のエラー: ${error}`);
-    return fallBack({ type: "unopenable", error });
+    return fallBack({ type: "unopenable", error }, choices);
   }
   log(`開きました: ${stream.getAudioTracks()[0]?.label}`);
   const sound = watchSound(stream);
   opened = () => {
     sound.close();
-    stop(stream);
+    stopStream(stream);
   };
-  return { track: stream.getAudioTracks()[0], heardSound: sound.heard, useDefault, release };
+  return {
+    track: stream.getAudioTracks()[0],
+    heardSound: sound.heard,
+    choices,
+    chosen: remembered,
+    useDefault,
+    release,
+  };
 }
 
 interface Listener {
@@ -302,7 +360,7 @@ interface Listener {
   /** 前に聞いてから `track` に音が来たか */
   heardSound?(): boolean;
   /** `track` が使えないので、既定のマイクに戻した */
-  onDefaultMic?(): void;
+  onDefaultMic?(problem: MicProblem): void;
   /** `track` を渡した結果の記録。同じ行は 1 度だけ */
   onMicLog?(line: string): void;
 }
@@ -347,10 +405,10 @@ export function listen(lang: string, listener: Listener) {
     onMicLog?.(line);
   };
 
-  const useDefaultMic = (reason: string) => {
-    note(`既定のマイクに戻します: ${reason}`);
+  const useDefaultMic = (problem: MicProblem) => {
+    note(`既定のマイクに戻します: ${JSON.stringify(problem)}`);
     track = undefined;
-    onDefaultMic?.();
+    onDefaultMic?.(problem);
   };
 
   /** 今の認識を終えるときに呼ぶ。音が来ているのに聞き取れないトラックは諦める */
@@ -359,7 +417,7 @@ export function listen(lang: string, listener: Listener) {
     if (!track || trackWorks || heardResult || failed || !heard) return;
     silentTracks++;
     note(`音が来ているのに結果がありません（${silentTracks} 回目）`);
-    if (silentTracks >= SILENT_TRACK_LIMIT) useDefaultMic("結果が来ません");
+    if (silentTracks >= SILENT_TRACK_LIMIT) useDefaultMic({ type: "silent" });
   };
 
   /** 止まった認識を捨てて始め直す。遅れて届く知らせは `current` との比較で無視される */
@@ -381,7 +439,7 @@ export function listen(lang: string, listener: Listener) {
     failed = undefined;
     heardResult = false;
     // 抜かれたマイクのトラックは戻らない
-    if (track?.readyState === "ended") useDefaultMic("トラックが終わりました");
+    if (track?.readyState === "ended") useDefaultMic({ type: "ended" });
     if (failures) stable = setTimeout(recovered, STABLE_MS);
     // 再開のたびに作り直す。古いインスタンスの遅れた知らせは使わない
     const recognizer = new Recognition();
@@ -465,7 +523,7 @@ export function listen(lang: string, listener: Listener) {
     } catch (e) {
       if (!track) throw e;
       // トラックを受け付けない（終わったトラックなど）
-      useDefaultMic(`start(track) の例外 ${(e as Error).name}`);
+      useDefaultMic({ type: "unopenable", error: (e as Error).name });
       recognizer.start();
     }
   };
