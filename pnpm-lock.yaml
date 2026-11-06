@@ -9,6 +9,10 @@ importers:
   .: {}
 
   frontend:
+    dependencies:
+      torph:
+        specifier: 0.1.3
+        version: 0.1.3(svelte@5.57.3)
     devDependencies:
       '@deadlock-api/ui-core':
         specifier: 1.7.0
@@ -64,9 +68,6 @@ importers:
       tailwindcss:
         specifier: ^4.3.3
         version: 4.3.3
-      torph:
-        specifier: 0.1.3
-        version: 0.1.3(svelte@5.57.3)
       tw-animate-css:
         specifier: ^1.4.0
         version: 1.4.0

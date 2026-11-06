@@ -1,17 +1,14 @@
 <script lang="ts">
   // 字幕の見た目。OBS のオーバーレイと LP の見本で同じものを使う。親の下に揃えて積み上げる
-  import { TextMorph } from "torph/svelte";
   import { fade, fly } from "svelte/transition";
   import type { Segment } from "../generated/Segment";
   import type { SubtitleDisplay } from "../generated/SubtitleDisplay";
+  import GrowingText from "./GrowingText.svelte";
   import Rich from "./Rich.svelte";
   import { slide } from "./slide";
   import { showsSource, translationsOf } from "./subtitle-lines";
 
   let { segments, display }: { segments: Segment[]; display?: SubtitleDisplay } = $props();
-
-  /** partial が伸びる・final で直るときの文字の動き（DESIGN.md 11 章） */
-  const MORPH = { duration: 220, ease: "cubic-bezier(0.19, 1, 0.22, 1)" };
 
   /** 1 行だけのとき、次の字幕に入れ替わるなら、古い行をフェードさせない（2 行に見える） */
   const replacing = () => display?.maxLines === 1 && segments.length > 0;
@@ -35,10 +32,10 @@
     >
       {#if showsSource(s, display)}
         <p class="source" lang={s.lang}>
-          <!-- partial / final は文字単位で変化させ、enriched ではふりがなとアイコンを足す -->
+          <!-- partial / final は増えた文字だけをフェードさせ、enriched ではふりがなとアイコンを足す -->
           {#if s.enriched}<span class="enriched"
               ><Rich tokens={s.enriched.source} lang={s.lang} furigana={display?.furigana} /></span
-            >{:else}<TextMorph text={s.text} locale={s.lang} as="span" {...MORPH} />{/if}
+            >{:else}<GrowingText text={s.text} />{/if}
         </p>
       {/if}
       {#each Object.entries(translationsOf(s)) as [lang, tokens] (lang)}
@@ -113,11 +110,6 @@
   }
   .source {
     font-size: var(--source-size);
-  }
-  /* TextMorph は既定で折り返さないので、partial / final が長いと箱からはみ出す */
-  .source :global([torph-root]) {
-    max-width: 100%;
-    white-space: normal;
   }
   .translation {
     font-size: var(--translation-size);
