@@ -8,7 +8,7 @@
 
 use std::fs;
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::{Child, Command, Stdio};
 use std::sync::Arc;
 use std::time::Duration;
@@ -210,7 +210,7 @@ fn command(args: &[String]) -> io::Result<Command> {
     let chrome = ["ProgramFiles", "ProgramFiles(x86)", "LOCALAPPDATA"]
         .iter()
         .filter_map(std::env::var_os)
-        .map(|base| PathBuf::from(base).join(r"Google\Chrome\Application\chrome.exe"))
+        .map(|base| std::path::PathBuf::from(base).join(r"Google\Chrome\Application\chrome.exe"))
         .find(|path| path.exists())
         .ok_or(io::ErrorKind::NotFound)?;
     let mut command = Command::new(chrome);
@@ -220,7 +220,8 @@ fn command(args: &[String]) -> io::Result<Command> {
 
 #[cfg(target_os = "macos")]
 fn command(args: &[String]) -> io::Result<Command> {
-    let chrome = PathBuf::from("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome");
+    let chrome =
+        std::path::PathBuf::from("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome");
     if !chrome.exists() {
         return Err(io::ErrorKind::NotFound.into());
     }
