@@ -12,7 +12,7 @@ export type Segment = { id: string,
  */
 startedAt: number, stage: Stage, lang: string, text: string, enriched?: Enriched, 
 /**
- * 途中の字幕のふりがな付きの文。確定したら消す
+ * PC の中で作った、ふりがなと用語の付いた文。`enriched` のあとは、途中から付いていた印に残す
  */
 draftSource?: Array<Token>, 
 /**

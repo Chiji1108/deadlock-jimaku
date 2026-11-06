@@ -6,6 +6,6 @@ import type { Token } from "./Token";
  */
 export type LiveText = { text: string, 
 /**
- * ふりがな付きの文
+ * ふりがなと用語の付いた文
  */
 tokens: Array<Token>, translations: { [key in string]: Array<Token> }, };

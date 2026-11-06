@@ -32,8 +32,9 @@
     >
       {#if showsSource(s, display)}
         <p class="source" lang={s.lang}>
-          <!-- partial / final は増えた文字だけをフェードさせ、enriched ではふりがなとアイコンを足す -->
-          {#if s.enriched}<span class="enriched"
+          <!-- partial / final は増えた文字だけをフェードさせ、enriched ではふりがなとアイコンを足す。
+               途中から付いていたものは、出し直して見えないよう足し直さない -->
+          {#if s.enriched}<span class:enriched={!s.draftSource}
               ><Rich tokens={s.enriched.source} lang={s.lang} furigana={display?.furigana} /></span
             >{:else}<GrowingText
               text={s.text}
