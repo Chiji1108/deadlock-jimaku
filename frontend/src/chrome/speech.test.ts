@@ -10,14 +10,17 @@ class FakeRecognizer {
   onresult: (event: unknown) => void = () => {};
   onerror: (event: unknown) => void = () => {};
   onend = () => {};
+  onstart = () => {};
+  onaudiostart = () => {};
   stop = vi.fn(() => this.onend());
+  abort = vi.fn();
 
   constructor() {
     FakeRecognizer.last = this;
   }
-  start() {
+  start = vi.fn((_track?: unknown) => {
     FakeRecognizer.started++;
-  }
+  });
   say(transcript: string, isFinal: boolean) {
     this.onresult({ resultIndex: 0, results: [{ isFinal, 0: { transcript } }] });
   }
@@ -27,7 +30,7 @@ const options = () => ({
   silenceMs: 750,
   onText: vi.fn(),
   onFatal: vi.fn(),
-  onOffline: vi.fn(),
+  onTrouble: vi.fn(),
 });
 
 beforeEach(() => {
@@ -113,6 +116,220 @@ test("再開のたびに作り直し、古いインスタンスの遅れた知�
   expect(FakeRecognizer.started).toBe(2);
 });
 
+test("なにも届かなくなった認識を作り直す", () => {
+  const o = options();
+  listen("ja", { ...o, silenceMs: undefined });
+  const stuck = FakeRecognizer.last;
+  stuck.say("ヘイズ", false);
+  vi.advanceTimersByTime(89_000);
+  expect(FakeRecognizer.started).toBe(1);
+  stuck.say("ヘイズが", false);
+  vi.advanceTimersByTime(90_000);
+  expect(stuck.abort).toHaveBeenCalled();
+  expect(FakeRecognizer.started).toBe(2);
+  expect(o.onText).toHaveBeenLastCalledWith("ヘイズが", true);
+});
+
+test("始めたまま進まない認識も作り直す", () => {
+  listen("ja", { ...options(), silenceMs: undefined });
+  vi.advanceTimersByTime(7999);
+  expect(FakeRecognizer.started).toBe(1);
+  vi.advanceTimersByTime(1);
+  expect(FakeRecognizer.started).toBe(2);
+});
+
+test("動き始めたら、黙っていても 90 秒は作り直さない", () => {
+  listen("ja", { ...options(), silenceMs: undefined });
+  FakeRecognizer.last.onstart();
+  vi.advanceTimersByTime(89_999);
+  expect(FakeRecognizer.started).toBe(1);
+  vi.advanceTimersByTime(1);
+  expect(FakeRecognizer.started).toBe(2);
+});
+
+test("エラーがなければ、すぐ終わった認識も待たずに聞き直す", () => {
+  listen("ja", options());
+  FakeRecognizer.last.onend();
+  vi.advanceTimersByTime(99);
+  expect(FakeRecognizer.started).toBe(1);
+  vi.advanceTimersByTime(1);
+  expect(FakeRecognizer.started).toBe(2);
+});
+
+test("マイクのエラーでは止まらず、続いたら知らせて聞き直し、直ったら戻す", () => {
+  const o = options();
+  listen("ja", o);
+  for (let i = 0; i < 3; i++) {
+    FakeRecognizer.last.onerror({ error: "audio-capture" });
+    FakeRecognizer.last.onend();
+    vi.advanceTimersToNextTimer();
+  }
+  expect(o.onFatal).not.toHaveBeenCalled();
+  expect(o.onTrouble).toHaveBeenCalledExactlyOnceWith("audio-capture");
+  expect(FakeRecognizer.started).toBe(4);
+  FakeRecognizer.last.say("ヘイズ", false);
+  expect(o.onTrouble).toHaveBeenLastCalledWith();
+});
+
+test("知らない種類のエラーでも止まらない", () => {
+  const o = options();
+  listen("ja", o);
+  FakeRecognizer.last.onerror({ error: "phrases-not-supported" });
+  FakeRecognizer.last.onend();
+  vi.advanceTimersByTime(2000);
+  expect(o.onFatal).not.toHaveBeenCalled();
+  expect(FakeRecognizer.started).toBe(2);
+});
+
+test.each(["not-allowed", "service-not-allowed", "language-not-supported"])(
+  "%s では止まる",
+  (error) => {
+    const o = options();
+    listen("ja", o);
+    FakeRecognizer.last.onerror({ error });
+    expect(o.onFatal).toHaveBeenCalledExactlyOnceWith(error);
+  },
+);
+
+test("終わったトラックは渡さず、既定のマイクに戻す", () => {
+  const ended = { kind: "audio", readyState: "live" } as { readyState: string };
+  const onDefaultMic = vi.fn();
+  listen("ja", {
+    ...options(),
+    track: ended as unknown as MediaStreamTrack,
+    heardSound: () => false,
+    onDefaultMic,
+  });
+  ended.readyState = "ended";
+  FakeRecognizer.last.onend();
+  vi.advanceTimersByTime(100);
+  expect(onDefaultMic).toHaveBeenCalledOnce();
+  expect(FakeRecognizer.last.start).toHaveBeenCalledWith();
+});
+
+test("聞き直しを待っている間は作り直さない", () => {
+  listen("ja", options());
+  FakeRecognizer.last.onerror({ error: "no-speech" });
+  FakeRecognizer.last.onend();
+  vi.advanceTimersByTime(1000);
+  expect(FakeRecognizer.started).toBe(2);
+});
+
+test("止めたら作り直さない", () => {
+  const { stop } = listen("ja", options());
+  stop();
+  vi.advanceTimersByTime(60_000);
+  expect(FakeRecognizer.started).toBe(1);
+});
+
+const track = { kind: "audio" } as unknown as MediaStreamTrack;
+
+test("マイクのトラックを認識に渡す", () => {
+  listen("ja", { ...options(), track });
+  expect(FakeRecognizer.last.start).toHaveBeenCalledWith(track);
+});
+
+test("トラックを受け付けなければ既定のマイクに戻す", () => {
+  const onDefaultMic = vi.fn();
+  class Refusing extends FakeRecognizer {
+    override start = vi.fn((given?: unknown) => {
+      if (given) throw new TypeError("no track");
+      FakeRecognizer.started++;
+    });
+  }
+  vi.stubGlobal("window", { SpeechRecognition: Refusing });
+  listen("ja", { ...options(), track, onDefaultMic });
+  expect(onDefaultMic).toHaveBeenCalled();
+  expect(FakeRecognizer.started).toBe(1);
+});
+
+test("トラックで結果が来ないまま 2 回作り直したら既定のマイクに戻す", () => {
+  const onDefaultMic = vi.fn();
+  listen("ja", { ...options(), track, onDefaultMic });
+  FakeRecognizer.last.onend();
+  vi.advanceTimersByTime(1000);
+  expect(onDefaultMic).not.toHaveBeenCalled();
+  FakeRecognizer.last.onend();
+  vi.advanceTimersByTime(1000);
+  expect(onDefaultMic).toHaveBeenCalledOnce();
+  expect(FakeRecognizer.last.start).toHaveBeenCalledWith();
+});
+
+test("トラックに音が来ていなければ、何回作り直しても既定のマイクに戻さない", () => {
+  const onDefaultMic = vi.fn();
+  listen("ja", { ...options(), track, heardSound: () => false, onDefaultMic });
+  for (let i = 0; i < 5; i++) {
+    FakeRecognizer.last.onend();
+    vi.advanceTimersByTime(1000);
+  }
+  expect(onDefaultMic).not.toHaveBeenCalled();
+  expect(FakeRecognizer.last.start).toHaveBeenCalledWith(track);
+});
+
+test("音が来ているのに認識が止まり続けたら既定のマイクに戻す", () => {
+  const onDefaultMic = vi.fn();
+  listen("ja", { ...options(), track, heardSound: () => true, onDefaultMic });
+  vi.advanceTimersByTime(60_000);
+  expect(onDefaultMic).toHaveBeenCalledOnce();
+  expect(FakeRecognizer.last.start).toHaveBeenCalledWith();
+});
+
+test("無音で終わって再開するのを、止まったとみなさない", () => {
+  listen("ja", options());
+  const first = FakeRecognizer.last;
+  for (let i = 0; i < 12; i++) {
+    const recognizer = FakeRecognizer.last;
+    recognizer.onstart();
+    vi.advanceTimersByTime(10_000);
+    recognizer.onerror({ error: "no-speech" });
+    recognizer.onend();
+    expect(recognizer.abort).not.toHaveBeenCalled();
+  }
+  expect(first.abort).not.toHaveBeenCalled();
+  expect(FakeRecognizer.started).toBe(13);
+});
+
+test("途中の文は、変わらなかった前の部分も含めて渡す", () => {
+  const o = options();
+  listen("ja", o);
+  FakeRecognizer.last.onresult({
+    resultIndex: 1,
+    results: [
+      { isFinal: false, 0: { transcript: "ヘイズが" } },
+      { isFinal: false, 0: { transcript: "強い" } },
+    ],
+  });
+  expect(o.onText).toHaveBeenCalledExactlyOnceWith("ヘイズが強い", false);
+});
+
+test("確定した文は、次の結果で渡し直さない", () => {
+  const o = options();
+  listen("ja", o);
+  FakeRecognizer.last.say("ヘイズ", true);
+  FakeRecognizer.last.onresult({
+    resultIndex: 1,
+    results: [
+      { isFinal: true, 0: { transcript: "ヘイズ" } },
+      { isFinal: false, 0: { transcript: "強い" } },
+    ],
+  });
+  expect(o.onText.mock.calls).toEqual([
+    ["ヘイズ", true],
+    ["強い", false],
+  ]);
+});
+
+test("トラックで結果が届いたら、黙っていても既定のマイクに戻さない", () => {
+  const onDefaultMic = vi.fn();
+  listen("ja", { ...options(), track, onDefaultMic });
+  FakeRecognizer.last.say("ヘイズ", true);
+  for (let i = 0; i < 5; i++) {
+    FakeRecognizer.last.onend();
+    vi.advanceTimersByTime(1000);
+  }
+  expect(onDefaultMic).not.toHaveBeenCalled();
+});
+
 test("切れたら始め直す", () => {
   listen("ja", options());
   FakeRecognizer.last.onerror({ error: "no-speech" });
@@ -152,10 +369,10 @@ test("通信できない間は止まらず、知らせて聞き直し続ける",
   const o = options();
   listen("ja", o);
   for (let i = 0; i < 2; i++) failNetwork();
-  expect(o.onOffline).not.toHaveBeenCalled();
+  expect(o.onTrouble).not.toHaveBeenCalled();
   for (let i = 0; i < 10; i++) failNetwork();
   expect(o.onFatal).not.toHaveBeenCalled();
-  expect(o.onOffline.mock.calls).toEqual([[true]]);
+  expect(o.onTrouble.mock.calls).toEqual([["network"]]);
   expect(FakeRecognizer.started).toBe(13);
 });
 
@@ -164,7 +381,7 @@ test("文が届いたら回線が戻ったと知らせる", () => {
   listen("ja", o);
   for (let i = 0; i < 3; i++) failNetwork();
   FakeRecognizer.last.say("ヘイズ", false);
-  expect(o.onOffline).toHaveBeenLastCalledWith(false);
+  expect(o.onTrouble).toHaveBeenLastCalledWith();
 });
 
 test("黙っていても、通信のエラーが出なければ回線が戻ったと知らせる", () => {
@@ -172,7 +389,7 @@ test("黙っていても、通信のエラーが出なければ回線が戻っ�
   listen("ja", o);
   for (let i = 0; i < 3; i++) failNetwork();
   vi.advanceTimersByTime(5000);
-  expect(o.onOffline).toHaveBeenLastCalledWith(false);
+  expect(o.onTrouble).toHaveBeenLastCalledWith();
 });
 
 test("間に正常に終わった認識があれば、失敗を続けて数えない", () => {
@@ -182,7 +399,7 @@ test("間に正常に終わった認識があれば、失敗を続けて数え�
   FakeRecognizer.last.onend();
   vi.advanceTimersToNextTimer();
   for (let i = 0; i < 2; i++) failNetwork();
-  expect(o.onOffline).not.toHaveBeenCalled();
+  expect(o.onTrouble).not.toHaveBeenCalled();
 });
 
 test("Google Chrome のほかは使えない", () => {

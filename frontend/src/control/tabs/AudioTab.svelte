@@ -11,7 +11,6 @@
   import LevelMeter from "../parts/LevelMeter.svelte";
   import PauseDialog from "../parts/PauseDialog.svelte";
   import { Badge } from "$lib/components/ui/badge";
-  import { api } from "../../lib/api";
   import { panel } from "../panel.svelte";
   import { translationOnly } from "../../lib/subtitle-lines";
   import type { SpeechEngine } from "../../generated/SpeechEngine";
@@ -107,6 +106,18 @@
         {/each}
       </div>
       <p class="text-sm text-muted-foreground">{engine.hint}</p>
+      {#if s.speechEngine === "chrome" && panel.hybridReady}
+        <div class="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3">
+          <p class="text-sm">ハイブリッドにすると、確定の字幕が高い精度になります</p>
+          <Button
+            variant="outline"
+            size="sm"
+            onclick={() => panel.update({ speechEngine: "hybrid" })}
+          >
+            ハイブリッドにする
+          </Button>
+        </div>
+      {/if}
       {#if s.speechEngine !== "openai"}
         <div class="flex items-center gap-3">
           {#if s.transcriptionEnabled}
@@ -148,53 +159,46 @@
     </Card.Content>
   </Card.Root>
 
-  {#if s.speechEngine === "chrome"}<Card.Root>
-      <Card.Header>
-        <Card.Title>マイク</Card.Title>
-        <Card.Description>Chrome は OS の既定のマイクを使います</Card.Description>
-      </Card.Header>
-    </Card.Root>{:else}<Card.Root>
-      <Card.Header>
-        <Card.Title>マイク</Card.Title>
-        <Card.Description>
-          配信に乗せている声のマイクを選んでください{#if s.speechEngine === "hybrid"}。Chrome は OS
-            の既定のマイクを使います。アプリのマイクを同じものにしてください{/if}
-        </Card.Description>
-      </Card.Header>
-      <Card.Content class="flex flex-col gap-5">
-        <Field.Field>
-          <Field.Label>入力デバイス</Field.Label>
-          <div class="flex gap-2">
-            <Select.Root
-              type="single"
-              value={s.micDevice ?? DEFAULT_DEVICE}
-              onValueChange={(v) => panel.update({ micDevice: v === DEFAULT_DEVICE ? "" : v })}
-              onOpenChange={(open) => open && void panel.refreshDevices()}
-            >
-              <Select.Trigger class="flex-1">{s.micDevice ?? "OS の既定のマイク"}</Select.Trigger>
-              <Select.Content>
-                <Select.Item value={DEFAULT_DEVICE}>OS の既定のマイク</Select.Item>
-                {#each panel.devices ?? [] as name (name)}
-                  <Select.Item value={name}>{name}</Select.Item>
-                {/each}
-              </Select.Content>
-            </Select.Root>
-            <Button
-              variant="outline"
-              size="icon"
-              aria-label="デバイスの一覧を更新"
-              onclick={() => panel.refreshDevices()}
-            >
-              <RefreshCwIcon />
-            </Button>
-          </div>
-          {#if panel.devices?.length === 0}
-            <Field.Description class="text-amber-500">
-              マイクが見つかりません。つないだら更新ボタンを押してください
-            </Field.Description>
-          {/if}
-        </Field.Field>
+  <Card.Root>
+    <Card.Header>
+      <Card.Title>マイク</Card.Title>
+      <Card.Description>配信に乗せている声のマイクを選んでください</Card.Description>
+    </Card.Header>
+    <Card.Content class="flex flex-col gap-5">
+      <Field.Field>
+        <Field.Label>入力デバイス</Field.Label>
+        <div class="flex gap-2">
+          <Select.Root
+            type="single"
+            value={s.micDevice ?? DEFAULT_DEVICE}
+            onValueChange={(v) => panel.update({ micDevice: v === DEFAULT_DEVICE ? "" : v })}
+            onOpenChange={(open) => open && void panel.refreshDevices()}
+          >
+            <Select.Trigger class="flex-1">{s.micDevice ?? "OS の既定のマイク"}</Select.Trigger>
+            <Select.Content>
+              <Select.Item value={DEFAULT_DEVICE}>OS の既定のマイク</Select.Item>
+              {#each panel.devices ?? [] as name (name)}
+                <Select.Item value={name}>{name}</Select.Item>
+              {/each}
+            </Select.Content>
+          </Select.Root>
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label="デバイスの一覧を更新"
+            onclick={() => panel.refreshDevices()}
+          >
+            <RefreshCwIcon />
+          </Button>
+        </div>
+        {#if panel.devices?.length === 0}
+          <Field.Description class="text-amber-500">
+            マイクが見つかりません。つないだら更新ボタンを押してください
+          </Field.Description>
+        {/if}
+      </Field.Field>
 
+      {#if s.speechEngine !== "chrome"}
         <Field.Field>
           <Field.Label>入力レベル</Field.Label>
           <LevelMeter />
@@ -214,8 +218,9 @@
             </Alert.Description>
           </Alert.Root>
         {/if}
-      </Card.Content>
-    </Card.Root>{/if}
+      {/if}
+    </Card.Content>
+  </Card.Root>
 
   <Card.Root>
     <Card.Header>

@@ -7,7 +7,7 @@
   import type { Settings } from "../generated/Settings";
   import { api } from "../lib/api";
   import { connect } from "../lib/ws";
-  import { availability, holdMicrophone, listen, prepare, supported } from "./speech";
+  import { availability, listen, openMicrophone, prepare, supported } from "./speech";
   import { Translation } from "./translation";
 
   /** 認識を続けられない理由ごとの案内 */
@@ -22,10 +22,17 @@
   const REPLACED = 4001;
   /** 翻訳先が複数あると、2 つ目以降はやり直しが要る */
   const DOWNLOAD_ATTEMPTS = 3;
+  /** `/api/chrome/ws` だけ切れたときに、つなぎ直すまでの時間 */
+  const REDIAL_MS = 1000;
   /** アプリが落ちても Chrome を残さない */
   const ORPHAN_MS = 5000;
   const UNSUPPORTED = "この Chrome では使えません。Google Chrome を最新にしてください";
-  const OFFLINE = "音声認識につながりません。回線が戻ると自動で再開します";
+  /** 続いているエラーの案内。聞き直しは続けている */
+  const TROUBLE: Record<string, string> = {
+    network: "音声認識につながりません。回線が戻ると自動で再開します",
+    "audio-capture": "マイクの音を取れません。つなぎ直すと自動で再開します",
+  };
+  const DEFAULT_MIC = "Chrome の既定のマイクを使っています";
   const names = new Intl.DisplayNames(["ja"], { type: "language" });
 
   const usable = supported();
@@ -46,6 +53,9 @@
   let reset: (() => void) | undefined;
   /** 今の区切りの番号。core が前の発話の文を見分ける */
   let cuts = 0;
+  /** `/ws` がつながっている。切れている間はアプリがないので、`/api/chrome/ws` もつなぎ直さない */
+  let online = false;
+  let redial: ReturnType<typeof setTimeout>;
   /** `/ws` の購読をやめる */
   let disconnect = () => {};
   /** 同じ設定で聞き直さない。言語や区切りが変わったら聞き直す */
@@ -59,6 +69,8 @@
   let failures = 0;
   /** 訳せない言語の案内。聞いている間ずっと出す */
   let notice: string | undefined;
+  /** 選んだマイクを使えない案内 */
+  let micNotice: string | undefined;
   let translation = new Translation(new Map(), reply);
 
   function send(msg: ChromeMsg) {
@@ -74,7 +86,11 @@
     send({ type: "status", status: next });
   }
 
-  const showListening = () => show({ state: "listening", detail: notice });
+  const showListening = () =>
+    show({
+      state: "listening",
+      detail: [micNotice, notice].filter(Boolean).join("。") || undefined,
+    });
 
   function dial() {
     const next = new WebSocket(
@@ -93,10 +109,11 @@
       cut?.();
     });
     next.addEventListener("close", ({ code }) => {
-      if (code !== REPLACED) return;
-      other = true;
-      halt();
-      disconnect();
+      if (code === REPLACED) {
+        other = true;
+        halt();
+        disconnect();
+      } else if (online && next === socket) redial = setTimeout(dial, REDIAL_MS);
     });
   }
 
@@ -115,7 +132,13 @@
   }
 
   const key = (s: Settings) =>
-    JSON.stringify([s.speechEngine, s.micLanguage, s.translateTo, s.segmentation.minSilenceMs]);
+    JSON.stringify([
+      s.speechEngine,
+      s.micDevice,
+      s.micLanguage,
+      s.translateTo,
+      s.segmentation.minSilenceMs,
+    ]);
   /** 字幕を止めているか、core の準備ができていないなら聞かない（音声を Google に送らない） */
   const wanted = (s: Settings) =>
     s.speechEngine !== "openai" &&
@@ -160,25 +183,37 @@
     notice = missing.length
       ? `Chrome の翻訳が対応していない言語は訳しません: ${missing.map((l) => names.of(l)).join("、")}`
       : undefined;
-    let release;
+    let microphone;
     try {
-      release = await holdMicrophone();
+      microphone = await openMicrophone(s.micDevice);
     } catch (e) {
       const denied = e instanceof DOMException && e.name === "NotAllowedError";
       fail(denied ? "not-allowed" : "audio-capture");
       return;
     }
+    micNotice = microphone.missed ? DEFAULT_MIC : undefined;
     const sink = s.speechEngine === "hybrid" ? hybridSink() : chromeSink(s);
     const recognition = listen(s.micLanguage, {
       silenceMs: sink.silenceMs,
       onText: sink.onText,
       onFatal: fail,
-      onOffline: (offline) =>
-        offline ? show({ state: "blocked", detail: OFFLINE }) : showListening(),
+      onTrouble: (error) =>
+        error
+          ? show({
+              state: "blocked",
+              detail: TROUBLE[error] ?? `音声認識のエラーが続いています（${error}）`,
+            })
+          : showListening(),
+      track: microphone.track,
+      heardSound: microphone.heardSound,
+      onDefaultMic() {
+        micNotice = DEFAULT_MIC;
+        showListening();
+      },
     });
     stop = () => {
       recognition.stop();
-      release();
+      microphone.release();
       sink.reset();
     };
     reset = sink.reset;
@@ -253,8 +288,10 @@
       // アプリが落ちたら聞き続けない。戻ったら、届く状態に合わせて聞き直す
       (connection) => {
         clearTimeout(orphan);
+        clearTimeout(redial);
         if (other) return;
-        if (connection === "open") return dial();
+        online = connection === "open";
+        if (online) return dial();
         halt();
         socket?.close();
         orphan = setTimeout(() => window.close(), ORPHAN_MS);
@@ -268,6 +305,8 @@
     return () => {
       disconnect();
       clearTimeout(orphan);
+      clearTimeout(redial);
+      online = false;
       window.removeEventListener("pagehide", halt);
       halt();
       socket?.close();

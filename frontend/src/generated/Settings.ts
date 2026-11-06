@@ -46,7 +46,8 @@ subtitleDisplay: SubtitleDisplay,
  */
 itemCards: ItemCards, 
 /**
- * ランク名の言語。None なら話す言語
+ * ランク名の言語。None なら話す言語に合わせる。
+ * 既定は None のまま（前の版の設定ファイルを変えない）で、新しく使い始める人は英語（`load`）
  */
 rankLanguage?: string, 
 /**

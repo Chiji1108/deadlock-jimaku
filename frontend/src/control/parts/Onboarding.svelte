@@ -13,12 +13,17 @@
   /** 全部終わった画面は、この起動の間だけ出しておく（そのあと字幕を止めても崩さない） */
   let celebrating = $state(false);
   const steps = $derived([
-    {
-      title: "API キーかギフトコードを入れる（なければ Chrome のモードで始める）",
-      done: celebrating || panel.hasAccess,
-      tab: "keys",
-      go: "API キーへ",
-    },
+    // Chrome のモードは鍵が要らないので、鍵の手順は鍵の要るモードを選んだ人にだけ出す
+    ...(s.speechEngine === "chrome"
+      ? []
+      : [
+          {
+            title: "API キーかギフトコードを入れる（なければ Chrome のモードで始める）",
+            done: celebrating || panel.hasAccess,
+            tab: "keys",
+            go: "API キーへ",
+          },
+        ]),
     {
       title: "OBS に字幕を追加する",
       done: celebrating || s.obsSeen,

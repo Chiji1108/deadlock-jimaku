@@ -39,7 +39,8 @@ pub struct Settings {
     pub subtitle_display: SubtitleDisplay,
     /// アイテム説明のオーバーレイ（字幕でアイテム名が出たら説明のカードを出す）
     pub item_cards: ItemCards,
-    /// ランク名の言語。None なら話す言語
+    /// ランク名の言語。None なら話す言語に合わせる。
+    /// 既定は None のまま（前の版の設定ファイルを変えない）で、新しく使い始める人は英語（`load`）
     #[ts(optional)]
     pub rank_language: Option<LangCode>,
     /// ランクのオーバーレイに出すもの
@@ -366,14 +367,14 @@ pub enum Background {
 #[serde(rename_all = "lowercase")]
 #[ts(export)]
 pub enum SpeechEngine {
-    /// 途中の字幕は PC の中のモデル、確定は OpenAI の高い精度の結果に置き換える
+    /// 途中の字幕は Chrome、確定は OpenAI の高い精度の結果に置き換える
     Hybrid,
-    /// すべて OpenAI。モデルが要らず、PC の負荷が小さい。
-    /// 0.3 より前の設定ファイルはこの値になる（新しいモデルを黙って入れない）。
-    /// 新しく使い始める人はハイブリッドから始める（`load`）
+    /// すべて OpenAI。Chrome が要らず、PC の負荷が小さい。
+    /// 0.3 より前の設定ファイルはこの値になる（Chrome のウィンドウを黙って開かない）。
+    /// 新しく使い始める人は Chrome から始める（`load`）
     #[default]
     OpenAi,
-    /// 音声認識は Chrome、翻訳と用語は PC の中のモデル。無料で、用語の判定も LLM を使わない。
+    /// 音声認識と翻訳は Chrome、読みと用語は中核。無料で、用語の判定も LLM を使わない。
     /// 0.3 の rc には `local` や `free` で保存した版がある
     #[serde(alias = "local", alias = "free")]
     Chrome,
@@ -794,7 +795,8 @@ pub fn load(path: &Path) -> std::io::Result<Settings> {
         Ok(bytes) => bytes,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
             return Ok(Settings {
-                speech_engine: SpeechEngine::Hybrid,
+                speech_engine: SpeechEngine::Chrome,
+                rank_language: Some("en".into()),
                 ..Settings::default()
             });
         }
@@ -1085,10 +1087,10 @@ mod tests {
     }
 
     #[test]
-    fn hybrid_is_only_for_new_users() {
+    fn chrome_is_only_for_new_users() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join(FILE);
-        assert_eq!(load(&path).unwrap().speech_engine, SpeechEngine::Hybrid);
+        assert_eq!(load(&path).unwrap().speech_engine, SpeechEngine::Chrome);
         // 前の版の設定ファイルには `speechEngine` がない
         std::fs::write(&path, r#"{ "micLanguage": "ja" }"#).unwrap();
         assert_eq!(load(&path).unwrap().speech_engine, SpeechEngine::OpenAi);
@@ -1099,6 +1101,36 @@ mod tests {
         };
         save(&path, &hybrid).unwrap();
         assert_eq!(load(&path).unwrap().speech_engine, SpeechEngine::Hybrid);
+    }
+
+    #[test]
+    fn english_rank_names_are_only_for_new_users() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join(FILE);
+        let new_user = load(&path).unwrap();
+        assert_eq!(new_user.rank_language, Some("en".into()));
+        assert_eq!(new_user.rank_language(), "en");
+        // 前の版の設定ファイルには `rankLanguage` がない。話す言語に合わせたまま
+        std::fs::write(&path, r#"{ "micLanguage": "ja" }"#).unwrap();
+        let existing = load(&path).unwrap();
+        assert_eq!(existing.rank_language, None);
+        assert_eq!(existing.rank_language(), "ja");
+        // 「話す言語に合わせる」を選んだ人も、保存して読み直して変わらない
+        let follow = new_user
+            .apply(SettingsPatch {
+                rank_language: Some(String::new()),
+                ..Default::default()
+            })
+            .unwrap();
+        save(&path, &follow).unwrap();
+        assert_eq!(load(&path).unwrap().rank_language, None);
+        // 選んだ言語はそのまま
+        let korean = Settings {
+            rank_language: Some("ko".into()),
+            ..Default::default()
+        };
+        save(&path, &korean).unwrap();
+        assert_eq!(load(&path).unwrap().rank_language, Some("ko".into()));
     }
 
     #[test]

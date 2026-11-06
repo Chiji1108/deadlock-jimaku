@@ -17,11 +17,14 @@ interface Recognizer {
   lang: string;
   continuous: boolean;
   interimResults: boolean;
+  onstart: () => void;
+  onaudiostart: () => void;
   onresult: (event: ResultEvent) => void;
   onerror: (event: { error: string }) => void;
   onend: () => void;
-  start(): void;
+  start(track?: MediaStreamTrack): void;
   stop(): void;
+  abort(): void;
 }
 interface RecognizerClass {
   new (): Recognizer;
@@ -41,20 +44,30 @@ interface TranslatorClass {
   create(options: Pair & { monitor?(monitor: Monitor): void }): Promise<Translator>;
 }
 
-/** 続けても直らないエラー。それ以外（無音で切れたなど）は認識を始め直す */
-const FATAL = new Set([
-  "not-allowed",
-  "service-not-allowed",
-  "language-not-supported",
-  "audio-capture",
-]);
-/** すぐ終わり続けるときに、始め直しを連打しない */
+/** 続けても直らないエラー。それ以外は認識を始め直す */
+const FATAL = new Set(["not-allowed", "service-not-allowed", "language-not-supported"]);
+/** ふだんの終わり方。問題として数えない */
+const EXPECTED = new Set(["no-speech", "aborted"]);
+/** すぐ終わり続けるときに、聞き直しを連打しない。短い発話のあとの声を落とさないよう短くする */
+const MIN_RESTART_MS = 100;
+/** エラーが続くときの聞き直しの間隔の元。翻訳のモデルの作り直しの待ちにも使う */
 const RETRY_MS = 1000;
 const CREATE_ATTEMPTS = 3;
-/** 通信できない間の始め直しの間隔の上限。回線が戻ればこの時間のうちに再開する */
+/** エラーが続く間の始め直しの間隔の上限。直ればこの時間のうちに再開する */
 const MAX_RETRY_MS = 15_000;
-/** 続けて失敗したら、通信できないと知らせる */
-const NETWORK_FAILURES = 3;
+/** 続けて失敗したら知らせる */
+const TROUBLE_FAILURES = 3;
+/** 始めてから `onstart` が来るまでの時間。これを過ぎたら止まったとみなして作り直す */
+const START_MS = 8000;
+/** 動き始めてから、この時間なにも届かなければ止まったとみなして作り直す。
+ * `continuous` の認識は黙っている間なにも届かないことがあるので長くする */
+const STALL_MS = 90_000;
+/** マイクのトラックに音が来ているのに結果が来ないまま、この回数作り直したら既定のマイクに戻す。
+ * 受け付けても黙って動かない環境がある。黙っているだけなら数えない */
+const SILENT_TRACK_LIMIT = 2;
+/** トラックの音を見る間隔と、音が来ているとみなす振幅（-40 dBFS。部屋の雑音は数えない） */
+const SOUND_CHECK_MS = 250;
+const SOUND_LEVEL = 0.01;
 /** 通信のエラーが出ずにこの時間続いたら、回線が戻ったとみなす（黙っていると結果が届かない） */
 const STABLE_MS = 5000;
 
@@ -130,10 +143,59 @@ export async function prepare(
   return created;
 }
 
-/** マイクを開いたままにする。キャプチャ中のページは Chrome に凍結されない。戻り値は閉じる関数 */
-export async function holdMicrophone() {
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  return () => stream.getTracks().forEach((track) => track.stop());
+/** アプリのマイクの名前とブラウザのラベルは同じとは限らないので、片方がもう片方を含めば同じとみなす */
+const sameMic = (name: string, label: string) =>
+  !!label && (label === name || label.includes(name) || name.includes(label));
+
+/** ストリームの音を見張る。`heard` は前に聞いてから音が来たか。
+ * ページの音声が動いていなければ分からないので、来たとみなす */
+function watchSound(stream: MediaStream) {
+  const context = new AudioContext();
+  const analyser = context.createAnalyser();
+  context.createMediaStreamSource(stream).connect(analyser);
+  const samples = new Float32Array(analyser.fftSize);
+  let sound = false;
+  const timer = setInterval(() => {
+    analyser.getFloatTimeDomainData(samples);
+    sound ||= samples.some((sample) => Math.abs(sample) > SOUND_LEVEL);
+  }, SOUND_CHECK_MS);
+  return {
+    heard() {
+      const heard = sound || context.state !== "running";
+      sound = false;
+      return heard;
+    },
+    close() {
+      clearInterval(timer);
+      void context.close();
+    },
+  };
+}
+
+/** マイクを開いたままにする。キャプチャ中のページは Chrome に凍結されない。
+ * `name` があれば、その名前のマイクのトラックを `track` で返す。見つからなければ `track` はなく、
+ * 既定のマイクを使う */
+export async function openMicrophone(name?: string | null) {
+  const open = (audio: MediaStreamConstraints["audio"]) =>
+    navigator.mediaDevices.getUserMedia({ audio });
+  const closer = (stream: MediaStream) => () => stream.getTracks().forEach((track) => track.stop());
+  // ラベルは許可のあとにしか読めない
+  const fallback = await open(true);
+  const devices = name ? await navigator.mediaDevices.enumerateDevices() : [];
+  const inputs = devices.filter((d) => d.kind === "audioinput");
+  const device =
+    inputs.find((d) => d.label === name) ?? inputs.find((d) => sameMic(name!, d.label));
+  if (!device) return { release: closer(fallback), missed: !!name };
+  // 選んだマイクを開けない（ほかのアプリが占有しているなど）なら、開けた既定のマイクで続ける
+  const stream = await open({ deviceId: { exact: device.deviceId } }).catch(() => undefined);
+  if (!stream) return { release: closer(fallback), missed: true };
+  closer(fallback)();
+  const sound = watchSound(stream);
+  const release = () => {
+    sound.close();
+    closer(stream)();
+  };
+  return { release, track: stream.getAudioTracks()[0], heardSound: sound.heard, missed: false };
 }
 
 interface Listener {
@@ -142,12 +204,20 @@ interface Listener {
   /** 途中か確定の文。確定で文が空なら、途中の文を捨てる */
   onText(text: string, final: boolean): void;
   onFatal(error: string): void;
-  /** 通信できなくなった、または戻った */
-  onOffline(offline: boolean): void;
+  /** エラーが続いている（聞き直しは続ける）。`undefined` なら直った */
+  onTrouble(error?: string): void;
+  /** 認識に渡すマイク。省くと Chrome の既定のマイクを使う */
+  track?: MediaStreamTrack;
+  /** 前に聞いてから `track` に音が来たか */
+  heardSound?(): boolean;
+  /** `track` が使えないので、既定のマイクに戻した */
+  onDefaultMic?(): void;
 }
 
 /** 止めるまで聞き続ける。`cut` は今の認識を区切り、すぐ聞き直す */
-export function listen(lang: string, { silenceMs, onText, onFatal, onOffline }: Listener) {
+export function listen(lang: string, listener: Listener) {
+  const { silenceMs, onText, onFatal, onTrouble, heardSound, onDefaultMic } = listener;
+  let { track } = listener;
   const Recognition = recognition()!;
   let stopped = false;
   let current: Recognizer;
@@ -155,23 +225,60 @@ export function listen(lang: string, { silenceMs, onText, onFatal, onOffline }: 
   let restart: ReturnType<typeof setTimeout>;
   let silence: ReturnType<typeof setTimeout>;
   let stable: ReturnType<typeof setTimeout>;
-  /** 続けて通信のエラーで終わった回数 */
+  /** 続けてエラーで終わった回数 */
   let failures = 0;
-  /** 今の認識が通信のエラーになった */
-  let failed = false;
+  /** 今の認識のエラー */
+  let failed: string | undefined;
   /** 確定していない文 */
   let pending = "";
   /** 区切ったあと、聞き直すまでの結果は使わない */
   let cutting = false;
+  let stall: ReturnType<typeof setTimeout>;
+  /** `track` で結果が届いた */
+  let trackWorks = false;
+  /** 今の認識で結果が届いた */
+  let heardResult = false;
+  /** `track` に音が来ているのに、結果が来ないまま終わった回数 */
+  let silentTracks = 0;
 
   const recovered = () => {
     clearTimeout(stable);
-    if (failures >= NETWORK_FAILURES) onOffline(false);
+    if (failures >= TROUBLE_FAILURES) onTrouble();
     failures = 0;
   };
 
+  const useDefaultMic = () => {
+    track = undefined;
+    onDefaultMic?.();
+  };
+
+  /** 今の認識を終えるときに呼ぶ。音が来ているのに聞き取れないトラックは諦める */
+  const checkTrack = () => {
+    const heard = heardSound?.() ?? true;
+    if (!track || trackWorks || heardResult || failed || !heard) return;
+    if (++silentTracks >= SILENT_TRACK_LIMIT) useDefaultMic();
+  };
+
+  /** 止まった認識を捨てて始め直す。遅れて届く知らせは `current` との比較で無視される */
+  const replace = (stuck: Recognizer) => {
+    if (stuck !== current || stopped) return;
+    try {
+      stuck.abort();
+    } catch {
+      // 動いていなければ止めるものがない
+    }
+    clearTimeout(silence);
+    if (pending) onText(pending, true);
+    pending = "";
+    checkTrack();
+    start();
+  };
+
   const start = () => {
-    failed = false;
+    failed = undefined;
+    heardResult = false;
+    // 抜かれたマイクのトラックは戻らない
+    if (track?.readyState === "ended") useDefaultMic();
     if (failures) stable = setTimeout(recovered, STABLE_MS);
     // 再開のたびに作り直す。古いインスタンスの遅れた知らせは使わない
     const recognizer = new Recognition();
@@ -179,18 +286,33 @@ export function listen(lang: string, { silenceMs, onText, onFatal, onOffline }: 
     recognizer.lang = speechTag(lang);
     recognizer.continuous = true;
     recognizer.interimResults = true;
+    // 動いている間だけ見る。終わったあとの聞き直しの待ちは数えない
+    const watch = (ms: number) => {
+      clearTimeout(stall);
+      stall = setTimeout(() => replace(recognizer), ms);
+    };
+    const alive = () => watch(STALL_MS);
+    recognizer.onstart = () => {
+      if (recognizer === current) alive();
+    };
+    recognizer.onaudiostart = recognizer.onstart;
     recognizer.onresult = ({ resultIndex, results }) => {
       if (recognizer !== current) return;
+      alive();
+      heardResult = true;
+      trackWorks ||= !!track;
       recovered();
       if (stopped || cutting) return;
       clearTimeout(silence);
+      // 確定は新しいものだけ渡す。途中の文は `resultIndex` より前の変わらない分も含めて全体を作る
       let interim = "";
-      for (let i = resultIndex; i < results.length; i++) {
+      for (let i = 0; i < results.length; i++) {
         const result = results[i]!;
-        if (result.isFinal) {
+        if (!result.isFinal) interim += result[0].transcript;
+        else if (i >= resultIndex) {
           pending = "";
           onText(result[0].transcript, true);
-        } else interim += result[0].transcript;
+        }
       }
       if (!interim.trim()) return;
       pending = interim;
@@ -199,34 +321,46 @@ export function listen(lang: string, { silenceMs, onText, onFatal, onOffline }: 
       if (silenceMs !== undefined) silence = setTimeout(() => current.stop(), silenceMs);
     };
     recognizer.onerror = ({ error }) => {
-      if (recognizer !== current) return;
+      if (recognizer !== current || stopped) return;
+      alive();
       if (FATAL.has(error)) {
         stopped = true;
         onFatal(error);
-      } else if (error === "network") {
-        failed = true;
+      } else if (!EXPECTED.has(error)) {
+        failed = error;
         clearTimeout(stable);
       }
     };
     recognizer.onend = () => {
       if (recognizer !== current) return;
+      clearTimeout(stall);
       clearTimeout(silence);
       // 認識が区切れたら、確定しなかった文をそのまま確定する。止めたなら捨てる
       if (pending) onText(stopped ? "" : pending, true);
       pending = "";
       if (stopped) return;
       if (failed) {
-        if (++failures === NETWORK_FAILURES) onOffline(true);
+        if (++failures === TROUBLE_FAILURES) onTrouble(failed);
       } else recovered();
+      checkTrack();
       // 隠れているとタイマーが絞られるので、すぐ聞き直せるときは待たない
-      const backoff = Math.min(RETRY_MS * 2 ** failures, MAX_RETRY_MS);
+      const backoff = failures ? Math.min(RETRY_MS * 2 ** failures, MAX_RETRY_MS) : MIN_RESTART_MS;
       const wait = backoff - (Date.now() - startedAt);
       if (wait > 0) restart = setTimeout(start, wait);
       else start();
     };
     startedAt = Date.now();
     cutting = false;
-    recognizer.start();
+    watch(START_MS);
+    try {
+      if (track) recognizer.start(track);
+      else recognizer.start();
+    } catch (e) {
+      if (!track) throw e;
+      // トラックを受け付けない（終わったトラックなど）
+      useDefaultMic();
+      recognizer.start();
+    }
   };
   start();
   return {
@@ -241,6 +375,7 @@ export function listen(lang: string, { silenceMs, onText, onFatal, onOffline }: 
       clearTimeout(restart);
       clearTimeout(silence);
       clearTimeout(stable);
+      clearTimeout(stall);
       current.stop();
     },
   };

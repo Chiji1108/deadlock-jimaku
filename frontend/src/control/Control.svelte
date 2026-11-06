@@ -70,7 +70,7 @@
     if (!panel.chromeStatus)
       return { label: "Chrome のウィンドウが開いていません", dot: "bg-amber-500" };
     if (panel.chromeStatus.state === "blocked")
-      return { label: "音声認識につながりません", dot: "bg-amber-500" };
+      return { label: "再開を待っています", dot: "bg-amber-500" };
     if (panel.chromeStatus.state === "listening")
       return { label: "字幕を出しています", dot: "bg-emerald-500 animate-pulse" };
     return { label: "準備しています…", dot: "bg-sky-500 animate-pulse" };
