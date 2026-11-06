@@ -94,6 +94,7 @@ struct AudioInput {
 /// ページは準備が整い直すたびに設定を読むので、ページが使う設定もここに入れる
 #[derive(Clone, PartialEq)]
 struct ChromeInput {
+    mic_device: Option<String>,
     mic_language: LangCode,
     translate_to: Vec<LangCode>,
     deadlock_mode: bool,
@@ -196,6 +197,7 @@ fn subtitles_input(
             return SubtitlesInput::Stopped;
         }
         return SubtitlesInput::Chrome(ChromeInput {
+            mic_device: settings.mic_device.clone(),
             mic_language: settings.mic_language.clone(),
             translate_to: settings.translate_to.clone(),
             deadlock_mode: settings.deadlock_mode,

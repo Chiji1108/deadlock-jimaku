@@ -84,12 +84,12 @@ flowchart LR
 
 モードは設定の `speechEngine` で決まります。図は処理の順で、黄色は PC の外です。OpenAI とのやりとりは、すべて中核が行います。字幕は `/ws` でオーバーレイと操作パネルに届きます。
 
-**`hybrid`（ハイブリッド）。** 途中の字幕は Chrome で作ります。発話が終わると、アプリのマイクの声と文字を OpenAI に送ります。Chrome は OS の既定のマイクを使います。
+**`hybrid`（ハイブリッド）。** 途中の字幕は Chrome で作ります。発話が終わると、アプリのマイクの声と文字を OpenAI に送ります。Chrome にも同じマイクを渡します（渡せない環境では Chrome の既定のマイクを使い、操作パネルに出します）。
 
 ```mermaid
 flowchart LR
   mic["マイク"] --> core["中核<br/>発話を区切る<br/>読み、用語"]
-  mic2["OS の既定のマイク"] --> tab["Chrome のウィンドウ<br/>/chrome<br/>途中の翻訳"]
+  mic --> tab["Chrome のウィンドウ<br/>/chrome<br/>途中の翻訳"]
   tab -- "声" --> google["Google の音声認識"]
   google -- "途中の文" --> tab
   tab <-- "/api/chrome/ws" --> core

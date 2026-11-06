@@ -7,7 +7,7 @@
   import type { Settings } from "../generated/Settings";
   import { api } from "../lib/api";
   import { connect } from "../lib/ws";
-  import { availability, holdMicrophone, listen, prepare, supported } from "./speech";
+  import { availability, listen, openMicrophone, prepare, supported } from "./speech";
   import { Translation } from "./translation";
 
   /** 認識を続けられない理由ごとの案内 */
@@ -26,6 +26,7 @@
   const ORPHAN_MS = 5000;
   const UNSUPPORTED = "この Chrome では使えません。Google Chrome を最新にしてください";
   const OFFLINE = "音声認識につながりません。回線が戻ると自動で再開します";
+  const DEFAULT_MIC = "Chrome の既定のマイクを使っています";
   const names = new Intl.DisplayNames(["ja"], { type: "language" });
 
   const usable = supported();
@@ -59,6 +60,8 @@
   let failures = 0;
   /** 訳せない言語の案内。聞いている間ずっと出す */
   let notice: string | undefined;
+  /** 選んだマイクを使えない案内 */
+  let micNotice: string | undefined;
   let translation = new Translation(new Map(), reply);
 
   function send(msg: ChromeMsg) {
@@ -74,7 +77,11 @@
     send({ type: "status", status: next });
   }
 
-  const showListening = () => show({ state: "listening", detail: notice });
+  const showListening = () =>
+    show({
+      state: "listening",
+      detail: [micNotice, notice].filter(Boolean).join("。") || undefined,
+    });
 
   function dial() {
     const next = new WebSocket(
@@ -115,7 +122,13 @@
   }
 
   const key = (s: Settings) =>
-    JSON.stringify([s.speechEngine, s.micLanguage, s.translateTo, s.segmentation.minSilenceMs]);
+    JSON.stringify([
+      s.speechEngine,
+      s.micDevice,
+      s.micLanguage,
+      s.translateTo,
+      s.segmentation.minSilenceMs,
+    ]);
   /** 字幕を止めているか、core の準備ができていないなら聞かない（音声を Google に送らない） */
   const wanted = (s: Settings) =>
     s.speechEngine !== "openai" &&
@@ -160,14 +173,15 @@
     notice = missing.length
       ? `Chrome の翻訳が対応していない言語は訳しません: ${missing.map((l) => names.of(l)).join("、")}`
       : undefined;
-    let release;
+    let microphone;
     try {
-      release = await holdMicrophone();
+      microphone = await openMicrophone(s.micDevice);
     } catch (e) {
       const denied = e instanceof DOMException && e.name === "NotAllowedError";
       fail(denied ? "not-allowed" : "audio-capture");
       return;
     }
+    micNotice = microphone.missed ? DEFAULT_MIC : undefined;
     const sink = s.speechEngine === "hybrid" ? hybridSink() : chromeSink(s);
     const recognition = listen(s.micLanguage, {
       silenceMs: sink.silenceMs,
@@ -175,10 +189,15 @@
       onFatal: fail,
       onOffline: (offline) =>
         offline ? show({ state: "blocked", detail: OFFLINE }) : showListening(),
+      track: microphone.track,
+      onDefaultMic() {
+        micNotice = DEFAULT_MIC;
+        showListening();
+      },
     });
     stop = () => {
       recognition.stop();
-      release();
+      microphone.release();
       sink.reset();
     };
     reset = sink.reset;

@@ -10,14 +10,17 @@ class FakeRecognizer {
   onresult: (event: unknown) => void = () => {};
   onerror: (event: unknown) => void = () => {};
   onend = () => {};
+  onstart = () => {};
+  onaudiostart = () => {};
   stop = vi.fn(() => this.onend());
+  abort = vi.fn();
 
   constructor() {
     FakeRecognizer.last = this;
   }
-  start() {
+  start = vi.fn((_track?: unknown) => {
     FakeRecognizer.started++;
-  }
+  });
   say(transcript: string, isFinal: boolean) {
     this.onresult({ resultIndex: 0, results: [{ isFinal, 0: { transcript } }] });
   }
@@ -111,6 +114,85 @@ test("再開のたびに作り直し、古いインスタンスの遅れた知�
   expect(o.onText).not.toHaveBeenCalled();
   expect(o.onFatal).not.toHaveBeenCalled();
   expect(FakeRecognizer.started).toBe(2);
+});
+
+test("なにも届かなくなった認識を作り直す", () => {
+  const o = options();
+  listen("ja", { ...o, silenceMs: undefined });
+  const stuck = FakeRecognizer.last;
+  stuck.say("ヘイズ", false);
+  vi.advanceTimersByTime(29_000);
+  expect(FakeRecognizer.started).toBe(1);
+  stuck.say("ヘイズが", false);
+  vi.advanceTimersByTime(30_000);
+  expect(stuck.abort).toHaveBeenCalled();
+  expect(FakeRecognizer.started).toBe(2);
+  expect(o.onText).toHaveBeenLastCalledWith("ヘイズが", true);
+});
+
+test("始めたまま進まない認識も作り直す", () => {
+  listen("ja", { ...options(), silenceMs: undefined });
+  vi.advanceTimersByTime(30_000);
+  expect(FakeRecognizer.started).toBe(2);
+});
+
+test("聞き直しを待っている間は作り直さない", () => {
+  listen("ja", options());
+  FakeRecognizer.last.onerror({ error: "no-speech" });
+  FakeRecognizer.last.onend();
+  vi.advanceTimersByTime(1000);
+  expect(FakeRecognizer.started).toBe(2);
+});
+
+test("止めたら作り直さない", () => {
+  const { stop } = listen("ja", options());
+  stop();
+  vi.advanceTimersByTime(60_000);
+  expect(FakeRecognizer.started).toBe(1);
+});
+
+const track = { kind: "audio" } as unknown as MediaStreamTrack;
+
+test("マイクのトラックを認識に渡す", () => {
+  listen("ja", { ...options(), track });
+  expect(FakeRecognizer.last.start).toHaveBeenCalledWith(track);
+});
+
+test("トラックを受け付けなければ既定のマイクに戻す", () => {
+  const onDefaultMic = vi.fn();
+  class Refusing extends FakeRecognizer {
+    override start = vi.fn((given?: unknown) => {
+      if (given) throw new TypeError("no track");
+      FakeRecognizer.started++;
+    });
+  }
+  vi.stubGlobal("window", { SpeechRecognition: Refusing });
+  listen("ja", { ...options(), track, onDefaultMic });
+  expect(onDefaultMic).toHaveBeenCalled();
+  expect(FakeRecognizer.started).toBe(1);
+});
+
+test("トラックで結果が来ないまま 2 回作り直したら既定のマイクに戻す", () => {
+  const onDefaultMic = vi.fn();
+  listen("ja", { ...options(), track, onDefaultMic });
+  FakeRecognizer.last.onend();
+  vi.advanceTimersByTime(1000);
+  expect(onDefaultMic).not.toHaveBeenCalled();
+  FakeRecognizer.last.onend();
+  vi.advanceTimersByTime(1000);
+  expect(onDefaultMic).toHaveBeenCalledOnce();
+  expect(FakeRecognizer.last.start).toHaveBeenCalledWith();
+});
+
+test("トラックで結果が届いたら、黙っていても既定のマイクに戻さない", () => {
+  const onDefaultMic = vi.fn();
+  listen("ja", { ...options(), track, onDefaultMic });
+  FakeRecognizer.last.say("ヘイズ", true);
+  for (let i = 0; i < 5; i++) {
+    FakeRecognizer.last.onend();
+    vi.advanceTimersByTime(1000);
+  }
+  expect(onDefaultMic).not.toHaveBeenCalled();
 });
 
 test("切れたら始め直す", () => {
