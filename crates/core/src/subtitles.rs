@@ -80,6 +80,9 @@ pub async fn run(store: Arc<Store>, input: audio::Input, access: Access) -> anyh
         .to_owned(),
         keywords,
     });
+    // 文を受け取ったら読みと用語を付ける。ハイブリッドの途中の文は Chrome から届く
+    let mut chrome_events = store.subscribe_chrome();
+    let annotator = Annotator::new(store.clone(), &settings).await;
     let mut audio_rx = audio::open(input).await?;
 
     let (done_tx, mut done_rx) = mpsc::channel(64);
@@ -107,9 +110,6 @@ pub async fn run(store: Arc<Store>, input: audio::Input, access: Access) -> anyh
         None
     };
 
-    // 文を受け取ったら読みと用語を付ける。ハイブリッドの途中の文は Chrome から届く
-    let mut chrome_events = store.subscribe_chrome();
-    let annotator = Annotator::new(store.clone(), &settings).await;
     let cloud = Cloud {
         enricher: Arc::new(Enricher::new(
             access.clone(),
@@ -200,8 +200,6 @@ struct Pipeline {
     /// リアルタイムの音声認識へ（途中の字幕を出さないときと、入力が終わったあとは None）
     realtime: Option<mpsc::UnboundedSender<stt::Input>>,
     annotator: Annotator,
-    /// Chrome の認識を区切った数。これより前の区切りの文は前の発話のもの
-    cuts: u32,
     live: HashMap<String, Segment>,
     current: Option<String>,
     frame: Vec<f32>,
@@ -234,7 +232,6 @@ impl Pipeline {
             segmenter: Segmenter::new(&settings.segmentation),
             realtime,
             annotator,
-            cuts: 0,
             live: HashMap::new(),
             current: None,
             frame: Vec::with_capacity(FRAME * 2),
@@ -284,6 +281,8 @@ impl Pipeline {
         let segment = partial_segment(self.seq, &self.lang);
         let id = segment.id.clone();
         self.send_realtime(stt::Input::Open(id.clone()));
+        // 発話が開く前に Chrome が確定した文は、この発話の文ではない
+        self.store.send_chrome_command(ChromeCommand::Open);
         self.live.insert(id.clone(), segment);
         self.current = Some(id);
     }
@@ -295,9 +294,7 @@ impl Pipeline {
         // 捨てる発話も閉じる（閉じないと、その音声が次の発話に混ざる）
         self.send_realtime(stt::Input::Close);
         // Chrome の文を次の発話に持ち越さない
-        self.cuts += 1;
-        self.store
-            .send_chrome_command(ChromeCommand::Cut { count: self.cuts });
+        self.store.cut_chrome();
         if close.speech_ms < MIN_SPEECH_MS {
             self.discard(&id);
             return;
@@ -357,7 +354,7 @@ impl Pipeline {
         let Some(id) = self.current.clone() else {
             return;
         };
-        if cut != self.cuts || text.is_empty() {
+        if cut != self.store.chrome_cuts() || text.is_empty() {
             return;
         }
         let seg = self.live.get_mut(&id);
@@ -367,7 +364,7 @@ impl Pipeline {
         let phase = self.store.settings().plan().partial;
         let (tokens, translate) = self.annotator.annotate(&text, &phase);
         seg.text = text;
-        seg.tokens = Some(tokens);
+        seg.tokens = phase.marks().then_some(tokens);
         self.store.upsert_segment(seg.clone());
         if phase.translation.is_some() {
             chrome::ask_translation(&self.store, id, translate, false);
@@ -379,7 +376,9 @@ impl Pipeline {
         if let Some(seg) = seg.filter(|s| s.stage == Stage::Partial) {
             seg.text.push_str(&delta.text);
             let phase = self.store.settings().plan().partial;
-            seg.tokens = Some(self.annotator.annotate(&seg.text, &phase).0);
+            seg.tokens = phase
+                .marks()
+                .then(|| self.annotator.annotate(&seg.text, &phase).0);
             self.store.upsert_segment(seg.clone());
         }
     }
@@ -417,7 +416,10 @@ impl Pipeline {
         seg.stage = Stage::Final;
         seg.text = text.clone();
         // 文と読みを同時に入れ替えるので、途中の字幕のふりがなやアイコンが消える瞬間がない
-        seg.tokens = Some(self.annotator.annotate(&text, &plan.partial).0);
+        seg.tokens = plan
+            .partial
+            .marks()
+            .then(|| self.annotator.annotate(&text, &plan.partial).0);
         self.store.upsert_segment(seg.clone());
 
         let context: Vec<String> = self.context.iter().cloned().collect();

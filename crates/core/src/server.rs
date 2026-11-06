@@ -20,7 +20,7 @@ use crate::secrets::{self, Provider};
 use crate::settings::SettingsPatch;
 use crate::share::{self, GiftStatus, Refused, SharedCode};
 use crate::store::{ChromeEvent, Store};
-use crate::types::{ChromeMsg, ClientMsg, LangCode, ServerMsg, SettingsView, Topic};
+use crate::types::{ChromeCommand, ChromeMsg, ClientMsg, LangCode, ServerMsg, SettingsView, Topic};
 use crate::{audio, lang};
 use ts_rs::TS;
 
@@ -365,6 +365,13 @@ async fn chrome_ws(upgrade: WebSocketUpgrade, State(store): State<Arc<Store>>) -
 async fn chrome_session(mut socket: WebSocket, store: Arc<Store>) {
     let (id, mut tabs) = store.connect_chrome();
     let mut commands = store.subscribe_chrome_commands();
+    // ページの番号を、今の区切りの番号に揃える
+    let count = store.chrome_cuts();
+    let hello = serde_json::to_string(&ChromeCommand::Cut { count }).expect("chrome command");
+    if socket.send(Message::text(hello)).await.is_err() {
+        store.chrome_tab_closed(id);
+        return;
+    }
     loop {
         tokio::select! {
             biased;
@@ -380,7 +387,8 @@ async fn chrome_session(mut socket: WebSocket, store: Arc<Store>) {
                         break;
                     }
                 }
-                Err(RecvError::Lagged(_)) => {}
+                // 届かなかった確定の文の訳を待ち続けない
+                Err(RecvError::Lagged(_)) => store.send_chrome_event(ChromeEvent::Closed),
                 Err(RecvError::Closed) => break,
             },
             message = socket.recv() => {

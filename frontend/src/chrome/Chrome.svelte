@@ -42,6 +42,8 @@
   let stop: (() => void) | undefined;
   /** ハイブリッドの発話が閉じた */
   let cut: (() => void) | undefined;
+  /** ハイブリッドの発話が開いた */
+  let reset: (() => void) | undefined;
   /** 今の区切りの番号。core が前の発話の文を見分ける */
   let cuts = 0;
   /** `/ws` の購読をやめる */
@@ -86,6 +88,7 @@
     next.addEventListener("message", (e) => {
       const command = JSON.parse(e.data as string) as ChromeCommand;
       if (command.type === "translate") return translation.onTask(command);
+      if (command.type === "open") return reset?.();
       cuts = command.count;
       cut?.();
     });
@@ -101,11 +104,13 @@
     stop?.();
     stop = undefined;
     cut = undefined;
+    reset = undefined;
     listening = "";
   }
 
   function fail(error: string) {
     halt();
+    needsDownload = false;
     show({ state: "failed", detail: FATAL[error] ?? error });
   }
 
@@ -176,6 +181,7 @@
       release();
       sink.reset();
     };
+    reset = sink.reset;
     cut = () => {
       sink.reset();
       recognition.cut();

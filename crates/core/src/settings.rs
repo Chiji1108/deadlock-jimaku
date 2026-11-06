@@ -427,6 +427,13 @@ pub struct Plan {
     pub translation_only: bool,
 }
 
+impl Phase {
+    /// PC の中で読みか用語を付けるか
+    pub fn marks(&self) -> bool {
+        self.ruby == Some(RubySource::Lindera) || self.emphasis == Some(EmphasisSource::Terms)
+    }
+}
+
 impl Plan {
     /// Chrome を起動するか
     pub fn uses_chrome(&self) -> bool {

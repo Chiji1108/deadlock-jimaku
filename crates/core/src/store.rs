@@ -2,7 +2,7 @@
 
 use std::collections::VecDeque;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -73,6 +73,10 @@ pub struct Store {
     chrome_tab: watch::Sender<ChromeTab>,
     /// 字幕を出している間の Chrome。落とすと閉じる
     browser: Mutex<Option<Browser>>,
+    /// Chrome を開いておくか（`runtime` が決める）
+    chrome_wanted: AtomicBool,
+    /// ハイブリッドの発話を閉じた回数
+    chrome_cuts: AtomicU32,
     meter: Arc<Meter>,
 }
 
@@ -104,6 +108,8 @@ impl Store {
             chrome_commands: broadcast::channel(256).0,
             chrome_tab: watch::Sender::new(ChromeTab::default()),
             browser: Mutex::new(None),
+            chrome_wanted: AtomicBool::new(false),
+            chrome_cuts: AtomicU32::new(0),
             meter,
         })
     }
@@ -259,16 +265,16 @@ impl Store {
     /// 戻り値はこのページの番号と、代わられたと分かるもの
     pub fn connect_chrome(&self) -> (u64, watch::Receiver<ChromeTab>) {
         let mut replaced = false;
+        let mut id = 0;
         self.chrome_tab.send_modify(|tab| {
             tab.id += 1;
+            id = tab.id;
             replaced = tab.status.is_some();
         });
         if replaced {
             self.send_chrome_event(ChromeEvent::Closed);
         }
-        let tabs = self.chrome_tab.subscribe();
-        let id = tabs.borrow().id;
-        (id, tabs)
+        (id, self.chrome_tab.subscribe())
     }
 
     /// 古いページの知らせは捨てる
@@ -288,6 +294,16 @@ impl Store {
                 self.send_chrome_event(ChromeEvent::Closed);
             }
         });
+    }
+
+    /// ハイブリッドの発話を閉じた。番号は字幕の処理を作り直しても戻らないので、ページとずれない
+    pub fn cut_chrome(&self) {
+        let count = self.chrome_cuts.fetch_add(1, Ordering::Relaxed) + 1;
+        self.send_chrome_command(ChromeCommand::Cut { count });
+    }
+
+    pub fn chrome_cuts(&self) -> u32 {
+        self.chrome_cuts.load(Ordering::Relaxed)
     }
 
     /// 今操作パネルに出している、ページの状態
@@ -319,6 +335,7 @@ impl Store {
 
     /// 字幕を始めるなら Chrome を起動し、止めるなら閉じる（DESIGN.md 9.6）
     pub fn sync_chrome(self: &Arc<Self>, wanted: bool) {
+        self.chrome_wanted.store(wanted, Ordering::Relaxed);
         // ハイブリッドで確定の字幕が止まっているなら、音声を Google に送らない
         let stalled = self.transcription_error.lock().unwrap().is_some()
             && self.settings().speech_engine == SpeechEngine::Hybrid;
@@ -355,8 +372,7 @@ impl Store {
     /// 開き直す。プロセスが残っていても、ページが止まっていることがある
     pub fn reopen_chrome(self: &Arc<Self>) {
         self.close_chrome();
-        let settings = self.settings();
-        self.sync_chrome(settings.transcription_enabled && settings.plan().uses_chrome());
+        self.sync_chrome(self.chrome_wanted.load(Ordering::Relaxed));
     }
 
     /// OpenAI の使用量を数える

@@ -4,4 +4,4 @@ import type { ChromeTask } from "./ChromeTask";
 /**
  * core から Chrome のページへの 1 通
  */
-export type ChromeCommand = { "type": "translate" } & ChromeTask | { "type": "cut", count: number, };
+export type ChromeCommand = { "type": "translate" } & ChromeTask | { "type": "open" } | { "type": "cut", count: number, };

@@ -277,8 +277,10 @@ pub async fn run(store: Arc<Store>) -> anyhow::Result<()> {
     let mut events = store.subscribe_chrome();
     let mut subtitles = Subtitles::new(store, &settings, annotator);
     loop {
-        if let Ok(event) = events.recv().await {
-            subtitles.on_event(event);
+        match events.recv().await {
+            Ok(event) => subtitles.on_event(event),
+            // 取りこぼした確定の文や訳を待ち続けない
+            Err(_) => subtitles.on_closed(),
         }
     }
 }

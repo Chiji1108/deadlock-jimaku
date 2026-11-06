@@ -11,7 +11,7 @@ use futures_util::FutureExt;
 use tokio::task::JoinHandle;
 
 use crate::openai::Access;
-use crate::settings::{Models, Plan, Region, Segmentation, Settings, SpeechEngine};
+use crate::settings::{Models, Region, Segmentation, Settings, SpeechEngine, TextSource};
 use crate::store::Store;
 use crate::types::{LangCode, TranscriptionError};
 use crate::{assets, audio, chrome, rank, secrets, share, subtitles};
@@ -82,7 +82,8 @@ struct AudioInput {
     translate_to: Vec<LangCode>,
     /// 用語ヒントはセッションの開始時にしか渡せないので、変えたら始め直す
     deadlock_mode: bool,
-    plan: Plan,
+    /// 途中の字幕の出どころ。表示の切り替えでは字幕を止めない
+    partial_text: Option<TextSource>,
     speech_engine: SpeechEngine,
     models: Models,
     realtime_delay: String,
@@ -211,7 +212,7 @@ fn subtitles_input(
         mic_language: settings.mic_language.clone(),
         translate_to: settings.translate_to.clone(),
         deadlock_mode: settings.deadlock_mode,
-        plan: settings.plan(),
+        partial_text: settings.plan().partial.text,
         speech_engine: settings.speech_engine,
         models: settings.models.clone(),
         realtime_delay: settings.realtime_delay.clone(),

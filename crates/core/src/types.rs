@@ -203,7 +203,10 @@ pub struct Heard {
 #[ts(export)]
 pub enum ChromeCommand {
     Translate(ChromeTask),
-    /// ハイブリッドの発話が閉じた。認識を区切り、すぐ聞き直す。`count` はこの区切りの番号
+    /// ハイブリッドの発話が開いた。ページがつなげていた文を捨てる
+    Open,
+    /// ハイブリッドの発話が閉じた。認識を区切り、すぐ聞き直す。`count` はこの区切りの番号で、
+    /// つないだときにも今の番号を知らせる
     Cut {
         count: u32,
     },
