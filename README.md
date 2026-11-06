@@ -6,7 +6,7 @@ Deadlock の配信者向けの OBS オーバーレイ（非公式）。
 - **ランク**: ランクのアイコン・名前・ポイントのゲージ
 - **アイテム説明**: 字幕でアイテム名が出たら、その説明をゲーム内と同じカードで出す
 
-字幕の作り方は 3 つのモードから選べます。ハイブリッド（既定）と OpenAI は API キーかギフトコード、ローカルAI はキーなしで使えます。設定はアプリの操作パネルから行います。
+字幕の作り方は 3 つのモードから選べます。ハイブリッド（既定）と OpenAI は API キーかギフトコードで使います。Chrome はキーが要りません。ハイブリッドと Chrome は Google Chrome が必要で、字幕を始めると小さな Chrome のウィンドウが開きます。設定はアプリの操作パネルから行います。
 
 サイトは [jimaku.deadlock.jp](https://jimaku.deadlock.jp)。設計は [DESIGN.md](DESIGN.md) を見てください。
 
@@ -30,6 +30,21 @@ macOS 版は Apple の署名と公証を済ませています。Windows 版は�
 
 開発する人のための地図です。理由は [DESIGN.md](DESIGN.md) を見てください（モードは 9.6、おすそ分けは 17.1、LP は 17 章）。
 
+字幕を何で作るかは、モードと設定から `Settings::plan` が決めます（`crates/core/src/settings.rs`。この表はテストに同じ値があります）。
+
+| | ハイブリッド | OpenAI | Chrome |
+|---|---|---|---|
+| 途中の字幕 | Chrome | GPT-Live-Transcribe | Chrome |
+| 途中の翻訳 | Chrome Translator | なし | Chrome Translator |
+| 途中のふりがな | Lindera | Lindera | Lindera |
+| 途中の強調 | 辞書の一致 | 辞書の一致 | 辞書の一致 |
+| 確定の字幕 | GPT-Transcribe | GPT-Transcribe | Chrome |
+| 確定の翻訳 | GPT-6.1 Terra | GPT-6.1 Terra | Chrome Translator |
+| 確定のふりがな | GPT-6.1 Terra | GPT-6.1 Terra | Lindera |
+| 確定の強調 | GPT-6.1 Terra | GPT-6.1 Terra | 辞書の一致 |
+
+翻訳先がない、翻訳だけを見せる、ふりがなやデッドロックモードを切る、話す言語が日本語でない（Lindera と辞書の一致は日本語だけ）ときは、その項目が「なし」になります。
+
 ```mermaid
 flowchart LR
   subgraph pc["配信 PC"]
@@ -39,46 +54,51 @@ flowchart LR
       core["中核（crates/core）<br/>字幕の処理、Store<br/>localhost:4510 の /api、/ws、/overlay/*"]
       shell["トレイ<br/>自動更新"]
     end
-    helper["jimaku-local<br/>crates/local-ai"]
+    tab["Chrome のウィンドウ<br/>/chrome<br/>音声認識、翻訳"]
   end
   worker["Cloudflare Worker（server/）<br/>おすそ分け"]
   openai["OpenAI"]
+  google["Google の音声認識"]
   deadlockapi["deadlock-api"]
   releases["GitHub Releases"]
   lp["LP（web/）<br/>jimaku.deadlock.jp"]
 
   obs --> core
   panel --> core
-  core <-- "標準入出力" --> helper
+  tab <-- "文と訳" --> core
+  core -- "起動、閉じる" --> tab
+  tab -- "声" --> google
   core -- "ギフトコード" --> worker
   worker -- "おすそ分けした人のキー" --> openai
   core -- "自分の API キー" --> openai
   core -- "ランク、辞書" --> deadlockapi
-  core -- "初回に jimaku-local を取得" --> releases
   shell -- "新しい版を確認" --> releases
   lp -- "ダウンロードのリンク" --> releases
 ```
 
 - 操作パネルは Tauri のウィンドウでも OBS のドックでも同じ画面で、`/api` と `/ws` だけを使います。
-- `jimaku-local` はローカルAI の別プロセスです。アプリに入れず、使う人だけ、初回にダウンロードします。アプリは SHA-256 を確かめてから起動します。モデルは `jimaku-local` がダウンロードします。
+- ハイブリッドと Chrome のモードでは、アプリが専用のプロファイルの Chrome を起動します。音声認識と翻訳は Chrome が行い、ふりがなと辞書の一致は中核の中で Lindera + IPADIC が行います。
 - 自分の API キーがあれば OpenAI へ直接送ります。なければギフトコードで Worker を通します。Worker は同じパスで中継するので、下の図の OpenAI はどちらの経路でも同じです。
 
 ### 声と文字の流れ
 
-モードは設定の `speechEngine` で決まります。図は処理の順で、黄色は PC の外です。OpenAI や `jimaku-local` とのやりとりは、すべて中核が行います。字幕は `/ws` でオーバーレイと操作パネルに届きます。
+モードは設定の `speechEngine` で決まります。図は処理の順で、黄色は PC の外です。OpenAI とのやりとりは、すべて中核が行います。字幕は `/ws` でオーバーレイと操作パネルに届きます。
 
-**`hybrid`（ハイブリッド）。** 途中の字幕は PC の中で作ります。発話が終わると、声と文字を OpenAI に送ります。
+**`hybrid`（ハイブリッド）。** 途中の字幕は Chrome で作ります。発話が終わると、アプリのマイクの声と文字を OpenAI に送ります。Chrome は OS の既定のマイクを使います。
 
 ```mermaid
 flowchart LR
-  mic["マイク"] --> core["中核<br/>発話を区切る"]
-  core -- "発話の音声" --> helper["jimaku-local<br/>途中の字幕<br/>用語、翻訳<br/>ふりがな"]
+  mic["マイク"] --> core["中核<br/>発話を区切る<br/>読み、用語"]
+  mic2["OS の既定のマイク"] --> tab["Chrome のウィンドウ<br/>/chrome<br/>途中の翻訳"]
+  tab -- "声" --> google["Google の音声認識"]
+  google -- "途中の文" --> tab
+  tab <-- "/api/chrome/ws" --> core
   core -- "区切った音声" --> batch["OpenAI /audio/transcriptions<br/>確定の字幕"]
   batch --> llm["OpenAI /responses<br/>用語、翻訳<br/>ふりがな"]
-  helper --> ws["/ws"]
+  core --> ws["/ws"]
   llm --> ws
   classDef cloud fill:#ffcf33,stroke:#12110e,color:#12110e
-  class batch,llm cloud
+  class google,batch,llm cloud
 ```
 
 **`openai`（OpenAI）。** 途中の字幕も OpenAI で作ります。途中の字幕を切ると、Realtime にはつなぎません。
@@ -95,20 +115,24 @@ flowchart LR
   class realtime,batch,llm cloud
 ```
 
-**`local`（ローカルAI）。** すべて PC の中で作ります。OpenAI には何も送りません。
+**`chrome`（Chrome）。** 音声認識も翻訳も Chrome で行い、声は Chrome を通じて Google に送られます。読みと用語は中核で付け、OpenAI には何も送りません。
 
 ```mermaid
 flowchart LR
-  mic["マイク"] --> core["中核<br/>発話を区切る"]
-  core -- "発話の音声、区切り" --> helper["jimaku-local<br/>途中の字幕<br/>確定の字幕<br/>用語、翻訳<br/>ふりがな"]
-  helper --> ws["/ws"]
+  mic["マイク"] --> tab["Chrome のウィンドウ<br/>/chrome<br/>翻訳"]
+  tab -- "声" --> google["Google の音声認識"]
+  google -- "途中と確定の文" --> tab
+  tab <-- "/api/chrome/ws" --> core["中核<br/>読み、用語"]
+  core --> ws["/ws"]
+  classDef cloud fill:#ffcf33,stroke:#12110e,color:#12110e
+  class google cloud
 ```
 
-ローカルAI は話す言語が日本語のときだけ動きます。`hybrid` では、ほかの言語を話すと途中の字幕は出ず、確定の字幕を OpenAI が作ります。ローカルAI で訳せない言語も、確定のあとに OpenAI が訳します。
+読みと辞書の一致は話す言語が日本語のときだけ動きます。ほかの言語でも Chrome は認識するので、字幕は出ます。
 
 ## リリースの作り方
 
-`Cargo.toml` の `version` を上げてコミットし、同じ版のタグ（例: `v0.2.0`。`-` の付いた `v0.2.0-rc.1` はプレリリース）を push すると、GitHub Actions が 3 つの OS のインストーラーと `jimaku-local` のアーカイブを作って下書きのリリースに載せます（`.github/workflows/release.yml`）。プレリリースでは `.rpm` を作りません。中身を確かめてから GitHub で公開します。PR と main でも同じビルドが走り（`build.yml`）、作ったインストーラーは Actions の成果物から落とせます。
+`Cargo.toml` の `version` を上げてコミットし、同じ版のタグ（例: `v0.2.0`。`-` の付いた `v0.2.0-rc.1` はプレリリース）を push すると、GitHub Actions が 3 つの OS のインストーラーを作って下書きのリリースに載せます（`.github/workflows/release.yml`）。プレリリースでは `.rpm` を作りません。中身を確かめてから GitHub で公開します。PR と main でも同じビルドが走り（`build.yml`）、作ったインストーラーは Actions の成果物から落とせます。
 
 macOS 版の署名と公証には、リポジトリの Actions の Secrets に次を入れておきます（リリースのときだけ使い、PR と main ではアドホック署名）。
 
@@ -130,7 +154,7 @@ pnpm install
 mise run dev
 ```
 
-`mise run dev` は `jimaku-local` もビルドします。整形・リント・型チェック・テストは `mise run check` でまとめて実行します。
+整形・リント・型チェック・テストは `mise run check` でまとめて実行します。
 
 ## ライセンス
 

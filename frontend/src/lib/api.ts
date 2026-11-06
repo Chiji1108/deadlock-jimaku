@@ -28,6 +28,11 @@ export const api = {
   /** 対応している言語のコード */
   languages: () => request<string[]>("/api/languages"),
   demo: () => fetch("/api/demo", { method: "POST" }),
+  /** 聞き取りのページを Chrome で開く */
+  openChrome: async () => {
+    const res = await fetch("/api/chrome/open", { method: "POST" });
+    if (!res.ok) throw new Error((await res.text()) || res.statusText);
+  },
 
   /** もらったギフトコードの状態 */
   gift: () => request<GiftStatus>("/api/gift"),

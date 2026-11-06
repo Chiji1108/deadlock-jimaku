@@ -61,23 +61,26 @@
     window.scrollTo({ top: 0 });
   });
 
-  /** ローカルAIのモードは字幕をすべて PC の中で作るので、ローカルAI の状態がそのまま字幕の状態になる */
-  function localStatus() {
-    switch (panel.liveStatus?.state) {
-      case "listening":
-        return { label: "字幕を出しています", dot: "bg-emerald-500 animate-pulse" };
-      case "failed":
-        return { label: "止まっています", dot: "bg-destructive" };
-      default:
-        return { label: "準備しています…", dot: "bg-sky-500 animate-pulse" };
-    }
+  /** Chrome のモードの字幕は、Chrome のウィンドウが動いて出る */
+  function chromeStatus() {
+    if (panel.chromeStatus?.state === "failed")
+      return { label: "止まっています", dot: "bg-destructive" };
+    if (panel.chromeStatus?.state === "missing")
+      return { label: "Google Chrome が必要です", dot: "bg-destructive" };
+    if (!panel.chromeStatus)
+      return { label: "Chrome のウィンドウが開いていません", dot: "bg-amber-500" };
+    if (panel.chromeStatus.state === "blocked")
+      return { label: "音声認識につながりません", dot: "bg-amber-500" };
+    if (panel.chromeStatus.state === "listening")
+      return { label: "字幕を出しています", dot: "bg-emerald-500 animate-pulse" };
+    return { label: "準備しています…", dot: "bg-sky-500 animate-pulse" };
   }
 
   const status = $derived.by(() => {
     if (!s?.transcriptionEnabled) return { label: "停止中", dot: "bg-muted-foreground/50" };
     if (panel.transcriptionError) return { label: "止まっています", dot: "bg-destructive" };
     if (panel.silent) return { label: "音が届いていません", dot: "bg-amber-500" };
-    if (s.speechEngine === "local") return localStatus();
+    if (s.speechEngine === "chrome") return chromeStatus();
     if (panel.level === undefined)
       return { label: "準備しています…", dot: "bg-sky-500 animate-pulse" };
     return { label: "字幕を出しています", dot: "bg-emerald-500 animate-pulse" };
@@ -115,6 +118,9 @@
           <Button variant="outline" onclick={() => panel.setTranscription(false)}>
             <SquareIcon />字幕を止める
           </Button>
+        {:else if needsKey && s.speechEngine === "hybrid"}
+          <Button variant="outline" onclick={() => (tab = "keys")}>キーを入れる</Button>
+          <Button onclick={panel.startWithChrome}>キーなしで始める（Chrome）</Button>
         {:else}
           <Button disabled={needsKey} onclick={() => panel.setTranscription(true)}>
             <MicIcon />字幕を始める
@@ -181,10 +187,8 @@
               <Alert.Title>はじめに OpenAI の API キーを設定してください</Alert.Title>
               <Alert.Description>
                 <p>
-                  文字起こしと翻訳に使います。人からギフトコードをもらった場合は、それを入れても使えます。<button
-                    class="underline"
-                    onclick={() => (tab = "keys")}
-                  >
+                  文字起こしと翻訳に使います。人からギフトコードをもらった場合は、それを入れても使えます。キーがなければ、Chrome
+                  のモードで始められます。<button class="underline" onclick={() => (tab = "keys")}>
                     API キーの設定へ
                   </button>
                 </p>

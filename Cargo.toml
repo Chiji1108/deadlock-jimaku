@@ -1,7 +1,6 @@
 [workspace]
 resolver = "3"
 members = ["crates/core", "app"]
-exclude = ["crates/local-ai"]
 
 [workspace.package]
 edition = "2024"

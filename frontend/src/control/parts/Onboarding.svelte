@@ -14,7 +14,7 @@
   let celebrating = $state(false);
   const steps = $derived([
     {
-      title: "API キーかギフトコードを入れる",
+      title: "API キーかギフトコードを入れる（なければ Chrome のモードで始める）",
       done: celebrating || panel.hasAccess,
       tab: "keys",
       go: "API キーへ",
@@ -77,6 +77,11 @@
               >
                 {step.go}
               </Button>
+              {#if i === 0 && s.speechEngine === "hybrid"}
+                <Button variant="link" size="sm" class="h-auto p-0" onclick={panel.startWithChrome}>
+                  キーなしで始める（Chrome）
+                </Button>
+              {/if}
             {/if}
           </li>
         {/each}

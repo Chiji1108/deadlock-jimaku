@@ -29,10 +29,8 @@ rubato = "5.0.1"
 rust-embed = "8.13.0"
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = { version = "1.0.154", features = ["preserve_order"] }
-flate2 = "1.1.9"
+lindera = { version = "6.2.0", features = ["embed-ipadic"] }
 jiter = "0.18.0"
-sha2 = "0.10.9"
-tar = "0.4.45"
 rustls = { version = "0.23.46", default-features = false, features = ["aws_lc_rs"] }
 tokio = { version = "1.54.1", features = ["rt-multi-thread", "macros", "sync", "time", "net", "fs", "process", "io-util"] }
 tokio-tungstenite = { version = "0.30.0", features = ["rustls-tls-webpki-roots"] }

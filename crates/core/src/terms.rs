@@ -3,9 +3,8 @@
 
 use std::collections::HashMap;
 
-use serde::Deserialize;
-
-use crate::furigana::{Morpheme, Part, align, is_kana, to_hiragana};
+use crate::reading::{Morpheme, align, is_kana, to_hiragana};
+use crate::types::RubySegment as Part;
 
 /// これより短い読みは比べない。公式名と違う書き方の言葉に当たる（「皆」がミナ、「山と」がヤマト）
 const MIN_READING: usize = 4;
@@ -13,9 +12,8 @@ const MIN_READING: usize = 4;
 const MAX_MORPHEMES: usize = 12;
 
 /// 辞書の 1 つの名前。アプリが辞書から作る
-#[derive(Debug, Deserialize)]
+#[derive(Debug, PartialEq)]
 pub struct Term {
-    #[serde(rename = "ref")]
     pub reference: String,
     pub text: String,
     /// 読み（名前がかなだけなら名前そのもの）
@@ -103,7 +101,7 @@ pub fn ruby(term: &Term, spoken: &str) -> Option<Vec<Part>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::furigana::Furigana;
+    use crate::reading::Furigana;
 
     fn term(reference: &str, text: &str, reading: &str, en: &str) -> Term {
         Term {

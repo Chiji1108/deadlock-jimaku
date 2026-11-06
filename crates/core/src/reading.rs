@@ -1,4 +1,4 @@
-//! 途中の字幕とローカルAIのモードのふりがな（DESIGN.md 9.6）。読みは形態素解析（Lindera + IPADIC）で決める。
+//! Chrome が認識した文のふりがな（DESIGN.md 9.6）。読みは形態素解析（Lindera + IPADIC）で決める。
 //! 文脈で決まる読みや造語は誤るが、速く、OpenAI も要らない。ハイブリッドは最後に OpenAI の読みに置き換える
 
 use std::borrow::Cow;
@@ -6,18 +6,11 @@ use std::borrow::Cow;
 use lindera::dictionary::load_dictionary;
 use lindera::mode::Mode;
 use lindera::segmenter::Segmenter;
-use serde::Serialize;
+
+use crate::types::RubySegment as Part;
 
 /// IPADIC の素性のうち「読み」の位置
 const READING: usize = 7;
-
-/// 字幕の一部。ふりがなは漢字の部分だけに付く
-#[derive(Debug, PartialEq, Serialize)]
-pub struct Part {
-    pub text: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub ruby: Option<String>,
-}
 
 /// 字幕の 1 語。バイトの位置は元の文のもの
 pub struct Morpheme {
@@ -37,6 +30,14 @@ impl Furigana {
         Ok(Self {
             segmenter: Segmenter::new(Mode::Normal, dictionary, None),
         })
+    }
+
+    /// 文全体のひらがなの読み。読めない形態素があれば None
+    pub fn reading(&self, text: &str) -> Option<String> {
+        self.morphemes(text)
+            .into_iter()
+            .map(|m| m.reading)
+            .collect()
     }
 
     pub fn morphemes(&self, text: &str) -> Vec<Morpheme> {
