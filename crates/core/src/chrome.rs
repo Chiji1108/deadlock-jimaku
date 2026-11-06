@@ -247,7 +247,7 @@ fn command(args: &[String]) -> io::Result<Command> {
             .is_some_and(|path| std::env::split_paths(&path).any(|dir| dir.join(name).exists()))
     };
     let chrome = ["google-chrome", "google-chrome-stable"]
-        .iter()
+        .into_iter()
         .find(on_path)
         .ok_or(io::ErrorKind::NotFound)?;
     let mut command = Command::new(chrome);
