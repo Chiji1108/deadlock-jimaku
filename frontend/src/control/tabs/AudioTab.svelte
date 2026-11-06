@@ -11,7 +11,6 @@
   import LevelMeter from "../parts/LevelMeter.svelte";
   import PauseDialog from "../parts/PauseDialog.svelte";
   import { Badge } from "$lib/components/ui/badge";
-  import { api } from "../../lib/api";
   import { panel } from "../panel.svelte";
   import { translationOnly } from "../../lib/subtitle-lines";
   import type { SpeechEngine } from "../../generated/SpeechEngine";

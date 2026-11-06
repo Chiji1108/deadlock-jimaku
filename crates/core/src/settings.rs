@@ -367,14 +367,14 @@ pub enum Background {
 #[serde(rename_all = "lowercase")]
 #[ts(export)]
 pub enum SpeechEngine {
-    /// 途中の字幕は PC の中のモデル、確定は OpenAI の高い精度の結果に置き換える
+    /// 途中の字幕は Chrome、確定は OpenAI の高い精度の結果に置き換える
     Hybrid,
-    /// すべて OpenAI。モデルが要らず、PC の負荷が小さい。
-    /// 0.3 より前の設定ファイルはこの値になる（新しいモデルを黙って入れない）。
+    /// すべて OpenAI。Chrome が要らず、PC の負荷が小さい。
+    /// 0.3 より前の設定ファイルはこの値になる（Chrome のウィンドウを黙って開かない）。
     /// 新しく使い始める人は Chrome から始める（`load`）
     #[default]
     OpenAi,
-    /// 音声認識は Chrome、翻訳と用語は PC の中のモデル。無料で、用語の判定も LLM を使わない。
+    /// 音声認識と翻訳は Chrome、読みと用語は中核。無料で、用語の判定も LLM を使わない。
     /// 0.3 の rc には `local` や `free` で保存した版がある
     #[serde(alias = "local", alias = "free")]
     Chrome,
