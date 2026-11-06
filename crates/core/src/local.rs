@@ -12,9 +12,10 @@ use anyhow::{Context, bail};
 use flate2::read::GzDecoder;
 use serde_json::Value;
 use sha2::{Digest, Sha256};
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::process::{ChildStdin, Command};
 use tokio::sync::mpsc;
+use tokio::task::JoinHandle;
 
 use crate::settings::Settings;
 use crate::store::Store;
@@ -45,13 +46,40 @@ const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 const AUDIO: u8 = 1;
 const CUT: u8 = 2;
 
+/// 字幕の処理が持つ。落とすと補助プログラムの処理も止まる
+pub struct Task {
+    store: Arc<Store>,
+    handle: JoinHandle<()>,
+}
+
+impl Task {
+    pub(crate) fn spawn(
+        store: Arc<Store>,
+        settings: Settings,
+        terms: Vec<(String, String)>,
+        finals: Option<mpsc::Sender<Done>>,
+        input: mpsc::UnboundedReceiver<Input>,
+    ) -> Self {
+        let handle = tokio::spawn(run(store.clone(), settings, terms, finals, input));
+        Self { store, handle }
+    }
+}
+
+impl Drop for Task {
+    fn drop(&mut self) {
+        self.handle.abort();
+        self.store.set_live_status(None);
+    }
+}
+
 pub enum Input {
     Audio(Vec<f32>),
     /// 発話が閉じた
     Cut,
 }
 
-/// 無料のモードの確定の字幕
+/// 無料のモードの確定の字幕。文字が空なら、その発話を捨てる
+#[derive(Default)]
 pub struct Final {
     pub text: String,
     pub tokens: Vec<Token>,
@@ -67,7 +95,7 @@ pub fn terms(glossary: &Glossary) -> Vec<(String, String)> {
         .collect()
 }
 
-pub(crate) async fn run(
+async fn run(
     store: Arc<Store>,
     settings: Settings,
     terms: Vec<(String, String)>,
@@ -75,13 +103,33 @@ pub(crate) async fn run(
     mut input: mpsc::UnboundedReceiver<Input>,
 ) {
     show(&store, LiveState::Preparing, None);
-    if let Err(e) = session(&store, &settings, &terms, finals, &mut input).await {
+    // 確定の字幕を返していない発話の数。無料のモードの字幕の処理は、区切りごとの返事を待っている
+    let mut waiting = 0;
+    let result = session(
+        &store,
+        &settings,
+        &terms,
+        finals.as_ref(),
+        &mut input,
+        &mut waiting,
+    );
+    if let Err(e) = result.await {
         tracing::warn!("local ai: {e:#}");
         show(
             &store,
             LiveState::Failed,
             Some(format!("ローカル AI を起動できません: {e}")),
         );
+    }
+    // 止まったあとも区切りには返事をする（字幕の処理が待ち続けないように）
+    let Some(finals) = finals else { return };
+    for _ in 0..waiting {
+        let _ = finals.send(Done::Local(Final::default())).await;
+    }
+    while let Some(next) = input.recv().await {
+        if matches!(next, Input::Cut) {
+            let _ = finals.send(Done::Local(Final::default())).await;
+        }
     }
 }
 
@@ -93,8 +141,9 @@ async fn session(
     store: &Arc<Store>,
     settings: &Settings,
     terms: &[(String, String)],
-    finals: Option<mpsc::Sender<Done>>,
+    finals: Option<&mpsc::Sender<Done>>,
     input: &mut mpsc::UnboundedReceiver<Input>,
+    waiting: &mut usize,
 ) -> anyhow::Result<()> {
     if settings.mic_language != "ja" {
         bail!("話す言語が日本語のときだけ使えます");
@@ -116,13 +165,14 @@ async fn session(
         .arg(if finals.is_some() { "final" } else { "partial" })
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
-        .stderr(Stdio::null())
+        .stderr(Stdio::piped())
         .kill_on_drop(true);
     // コンソールの窓を出さない（全画面のゲームからフォーカスを奪う）
     #[cfg(windows)]
     command.creation_flags(CREATE_NO_WINDOW);
     let mut child = command.spawn().context("start")?;
     let stdin = child.stdin.take().context("stdin")?;
+    let mut stderr = child.stderr.take().context("stderr")?;
     // 書き込みで止まっても、出力を読み続ける
     let (writer, rx) = mpsc::unbounded_channel();
     tokio::spawn(write_input(stdin, rx));
@@ -133,16 +183,25 @@ async fn session(
         tokio::select! {
             next = input.recv() => {
                 let Some(next) = next else { return Ok(()) };
+                let cut = matches!(next, Input::Cut);
                 if ready {
+                    *waiting += usize::from(cut && finals.is_some());
                     let _ = writer.send(next);
+                } else if let (true, Some(finals)) = (cut, finals) {
+                    let _ = finals.send(Done::Local(Final::default())).await;
                 }
             }
             line = lines.next_line() => {
-                let line = line?.context("stopped")?;
+                let Some(line) = line? else {
+                    let mut reason = String::new();
+                    stderr.read_to_string(&mut reason).await?;
+                    bail!("{}", reason.trim());
+                };
                 let message: Value = serde_json::from_str(&line)?;
                 ready |= message["type"] == "ready";
                 on_line(store, &message);
-                if let (Some(finals), Some("final")) = (&finals, message["type"].as_str()) {
+                if let (Some(finals), Some("final")) = (finals, message["type"].as_str()) {
+                    *waiting -= 1;
                     let result = Final {
                         text: message["text"].as_str().unwrap_or_default().to_owned(),
                         tokens: tokens(&message["parts"]),
@@ -279,12 +338,16 @@ fn checksum_matches(bytes: &[u8], expected: &str) -> bool {
 
 /// 途中で止まっても半端なフォルダを残さないよう、できてから置く
 fn extract(bytes: &[u8], dir: &Path) -> anyhow::Result<()> {
-    let partial = dir.with_extension("partial");
-    let _ = std::fs::remove_dir_all(&partial);
+    let partial = dir.with_extension(format!("partial-{}", crate::now_ms()));
     std::fs::create_dir_all(&partial)?;
     tar::Archive::new(GzDecoder::new(bytes)).unpack(&partial)?;
-    std::fs::rename(partial, dir)?;
-    Ok(())
+    let renamed = std::fs::rename(&partial, dir);
+    // 同時に別の展開が終わっていたら、それを使う
+    if renamed.is_err() && dir.exists() {
+        std::fs::remove_dir_all(partial)?;
+        return Ok(());
+    }
+    Ok(renamed?)
 }
 
 #[cfg(test)]

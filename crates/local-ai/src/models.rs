@@ -3,6 +3,7 @@
 use std::fs;
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 use anyhow::{Context, bail};
 use sha2::{Digest, Sha256};
@@ -14,6 +15,8 @@ const SPEECH_FILES: [&str; 2] = ["model.int8.onnx", "tokens.txt"];
 /// Firefox の翻訳モデル（Bergamot）。日本語からは英語だけなので、ほかの言語は英語を経由する
 const TRANSLATION_BASE: &str =
     "https://firefox-settings-attachments.cdn.mozilla.net/main-workspace/translations-models-v2";
+/// 回線が止まっても待ち続けない
+const DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(30 * 60);
 const SPEECH_BYTES: u64 = 163_000_000;
 const PAIR_BYTES: u64 = 35_000_000;
 
@@ -186,7 +189,12 @@ fn download(
     loaded: &mut u64,
     progress: &mut impl FnMut(u64, u64),
 ) -> anyhow::Result<Vec<u8>> {
-    let mut response = ureq::get(url).call().with_context(|| url.to_owned())?;
+    let mut response = ureq::get(url)
+        .config()
+        .timeout_global(Some(DOWNLOAD_TIMEOUT))
+        .build()
+        .call()
+        .with_context(|| url.to_owned())?;
     let mut reader = response.body_mut().with_config().limit(u64::MAX).reader();
     let mut bytes = Vec::new();
     let mut chunk = vec![0; 1 << 20];

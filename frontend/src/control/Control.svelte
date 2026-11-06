@@ -75,9 +75,9 @@
 
   const status = $derived.by(() => {
     if (!s?.transcriptionEnabled) return { label: "停止中", dot: "bg-muted-foreground/50" };
-    if (s.speechEngine === "free") return freeStatus();
     if (panel.transcriptionError) return { label: "止まっています", dot: "bg-destructive" };
     if (panel.silent) return { label: "音が届いていません", dot: "bg-amber-500" };
+    if (s.speechEngine === "free") return freeStatus();
     if (panel.level === undefined)
       return { label: "準備しています…", dot: "bg-sky-500 animate-pulse" };
     return { label: "字幕を出しています", dot: "bg-emerald-500 animate-pulse" };

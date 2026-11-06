@@ -105,7 +105,9 @@ pub async fn run(store: Arc<Store>, options: Options) {
             .await
             .unwrap_or_default();
         let languages = settings.glossary_languages();
-        let access = keys.access(&settings.api_base);
+        // 無料のモードは OpenAI に何も送らない
+        let needs_key = settings.speech_engine.needs_key();
+        let access = keys.access(&settings.api_base).filter(|_| needs_key);
 
         assets_slot
             .update(
@@ -147,9 +149,6 @@ pub async fn run(store: Arc<Store>, options: Options) {
                 .transcription_enabled
                 .then(|| Source::Mic(settings.mic_device.clone())),
         };
-        // 無料のモードは鍵を使わないので、鍵を変えても始め直さない
-        let needs_key = settings.speech_engine.needs_key();
-        let access = access.filter(|_| needs_key);
         let input = SubtitlesInput {
             source: source.clone(),
             mic_language: settings.mic_language.clone(),

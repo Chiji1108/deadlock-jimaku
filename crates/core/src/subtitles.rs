@@ -103,23 +103,21 @@ pub async fn run(
 
     let (done_tx, mut done_rx) = mpsc::channel(64);
     // ローカル AI を使うモードでは、音声を補助プログラムにも渡す
-    let local = settings.speech_engine.uses_local().then(|| {
-        let (tx, rx) = mpsc::unbounded_channel();
-        let terms = store
-            .glossary()
-            .filter(|_| settings.deadlock_mode)
-            .map(|l| local::terms(&l.glossary))
-            .unwrap_or_default();
-        let finals = (settings.speech_engine == SpeechEngine::Free).then(|| done_tx.clone());
-        tokio::spawn(local::run(
-            store.clone(),
-            settings.clone(),
-            terms,
-            finals,
-            rx,
-        ));
-        tx
-    });
+    let (local, local_task) = settings
+        .speech_engine
+        .uses_local()
+        .then(|| {
+            let (tx, rx) = mpsc::unbounded_channel();
+            let terms = store
+                .glossary()
+                .filter(|_| settings.deadlock_mode)
+                .map(|l| local::terms(&l.glossary))
+                .unwrap_or_default();
+            let finals = (settings.speech_engine == SpeechEngine::Free).then(|| done_tx.clone());
+            let task = local::Task::spawn(store.clone(), settings.clone(), terms, finals, rx);
+            (tx, task)
+        })
+        .unzip();
     let cloud = access.map(|access| Cloud {
         enricher: Arc::new(Enricher::new(
             access.clone(),
@@ -137,7 +135,9 @@ pub async fn run(
             meter: store.meter(),
         }),
     });
-    let mut pipeline = Pipeline::new(store, &settings, cloud, done_tx, realtime, local);
+    let mut pipeline = Pipeline::new(
+        store, &settings, cloud, done_tx, realtime, local, local_task,
+    );
 
     let mut level = LevelMeter::default();
     let mut live = pipeline.store.watch_live();
@@ -215,6 +215,10 @@ struct Pipeline {
     local: Option<mpsc::UnboundedSender<local::Input>>,
     /// 無料のモードで確定の字幕を待っている発話。区切った順
     local_finals: VecDeque<String>,
+    /// 前の発話を無音でないところで切った
+    cut_mid_speech: bool,
+    /// 落とすと補助プログラムが止まる
+    _local_task: Option<local::Task>,
     live: HashMap<String, Segment>,
     current: Option<String>,
     frame: Vec<f32>,
@@ -234,6 +238,7 @@ impl Pipeline {
         done_tx: mpsc::Sender<Done>,
         realtime: Option<mpsc::UnboundedSender<stt::Input>>,
         local: Option<mpsc::UnboundedSender<local::Input>>,
+        local_task: Option<local::Task>,
     ) -> Self {
         Self {
             store,
@@ -246,6 +251,8 @@ impl Pipeline {
             realtime,
             local,
             local_finals: VecDeque::new(),
+            cut_mid_speech: false,
+            _local_task: local_task,
             live: HashMap::new(),
             current: None,
             frame: Vec::with_capacity(FRAME * 2),
@@ -299,11 +306,15 @@ impl Pipeline {
     }
 
     fn open(&mut self) {
-        // 発話を検出するまでの音声も渡す（最初の言葉を落とさない）
-        let lead = self.frame_pos.saturating_sub(LOCAL_LEAD_SAMPLES);
-        self.send_local(local::Input::Audio(
-            self.history.slice(lead, self.frame_pos),
-        ));
+        // 発話を検出するまでの音声も渡す（最初の言葉を落とさない）。強制的に切った境界は
+        // 無音ではないので、前の発話と言葉が重なる。今の音声の残りもここで渡す
+        let end = self.frame_pos + self.frame.len() as u64;
+        let lead = if self.cut_mid_speech {
+            self.frame_pos
+        } else {
+            self.frame_pos.saturating_sub(LOCAL_LEAD_SAMPLES)
+        };
+        self.send_local(local::Input::Audio(self.history.slice(lead, end)));
         self.seq += 1;
         let started_at = now_ms();
         let id = format!("mic-{started_at}-{}", self.seq);
@@ -332,6 +343,7 @@ impl Pipeline {
         // 捨てる発話も閉じる（閉じないと、その音声が次の発話に混ざる）
         self.send_realtime(stt::Input::Close);
         self.send_local(local::Input::Cut);
+        self.cut_mid_speech = close.cut_end;
         // 無料のモードは補助プログラムが確定の字幕も作る（捨てる発話の分も返ってくる）
         if self.cloud.is_none() {
             self.local_finals.push_back(id.clone());
@@ -385,6 +397,9 @@ impl Pipeline {
             seg.text = live.text;
             seg.draft_source = Some(live.tokens);
             if !live.translations.is_empty() {
+                if seg.draft.is_none() && self.store.settings().translation_only() {
+                    seg.started_at = now_ms();
+                }
                 seg.draft = Some(live.translations);
             }
             self.store.upsert_segment(seg.clone());
@@ -490,7 +505,13 @@ impl Pipeline {
             if seg.draft.is_none() && self.store.settings().translation_only() {
                 seg.started_at = now_ms();
             }
-            seg.draft = Some(translations);
+            // 途中の字幕の訳が出ていれば、OpenAI の訳がそれを追い越すまで残す
+            let draft = seg.draft.get_or_insert_default();
+            for (lang, tokens) in translations {
+                if draft.get(&lang).is_none_or(|old| old.len() <= tokens.len()) {
+                    draft.insert(lang, tokens);
+                }
+            }
             self.store.upsert_segment(seg.clone());
         }
     }
