@@ -534,7 +534,12 @@ async fn frontend(uri: Uri) -> Response {
     for candidate in candidates {
         if let Some(file) = Frontend::get(&candidate) {
             let mime = mime_guess::from_path(&candidate).first_or_octet_stream();
-            return ([(header::CONTENT_TYPE, mime.as_ref())], file.data).into_response();
+            // ページは更新されるので保存させない（中のスクリプトは名前が変わる）
+            let headers = [
+                (header::CONTENT_TYPE, mime.as_ref()),
+                (header::CACHE_CONTROL, "no-cache"),
+            ];
+            return (headers, file.data).into_response();
         }
     }
     StatusCode::NOT_FOUND.into_response()
