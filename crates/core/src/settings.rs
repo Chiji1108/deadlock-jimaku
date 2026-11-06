@@ -370,7 +370,7 @@ pub enum SpeechEngine {
     Hybrid,
     /// すべて OpenAI。モデルが要らず、PC の負荷が小さい。
     /// 0.3 より前の設定ファイルはこの値になる（新しいモデルを黙って入れない）。
-    /// 新しく使い始める人はハイブリッドから始める（`load`）
+    /// 新しく使い始める人は Chrome から始める（`load`）
     #[default]
     OpenAi,
     /// 音声認識は Chrome、翻訳と用語は PC の中のモデル。無料で、用語の判定も LLM を使わない。
@@ -794,7 +794,7 @@ pub fn load(path: &Path) -> std::io::Result<Settings> {
         Ok(bytes) => bytes,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
             return Ok(Settings {
-                speech_engine: SpeechEngine::Hybrid,
+                speech_engine: SpeechEngine::Chrome,
                 ..Settings::default()
             });
         }
@@ -1085,10 +1085,10 @@ mod tests {
     }
 
     #[test]
-    fn hybrid_is_only_for_new_users() {
+    fn chrome_is_only_for_new_users() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join(FILE);
-        assert_eq!(load(&path).unwrap().speech_engine, SpeechEngine::Hybrid);
+        assert_eq!(load(&path).unwrap().speech_engine, SpeechEngine::Chrome);
         // 前の版の設定ファイルには `speechEngine` がない
         std::fs::write(&path, r#"{ "micLanguage": "ja" }"#).unwrap();
         assert_eq!(load(&path).unwrap().speech_engine, SpeechEngine::OpenAi);

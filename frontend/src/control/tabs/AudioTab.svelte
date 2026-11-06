@@ -107,6 +107,18 @@
         {/each}
       </div>
       <p class="text-sm text-muted-foreground">{engine.hint}</p>
+      {#if s.speechEngine === "chrome" && panel.hybridReady}
+        <div class="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3">
+          <p class="text-sm">ハイブリッドにすると、確定の字幕が高い精度になります</p>
+          <Button
+            variant="outline"
+            size="sm"
+            onclick={() => panel.update({ speechEngine: "hybrid" })}
+          >
+            ハイブリッドにする
+          </Button>
+        </div>
+      {/if}
       {#if s.speechEngine !== "openai"}
         <div class="flex items-center gap-3">
           {#if s.transcriptionEnabled}

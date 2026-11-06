@@ -76,6 +76,11 @@ class Panel {
     );
   }
 
+  /** ハイブリッドで使える鍵（自分のキーか、期限内のギフトコード）がある */
+  get hybridReady() {
+    return this.view?.keys.openai.state === "saved" || giftValid(this.gift);
+  }
+
   /** 字幕を始める操作をしていて、止まった理由もない */
   get running() {
     return !!this.settings?.transcriptionEnabled && !this.transcriptionError;
