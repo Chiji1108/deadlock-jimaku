@@ -31,7 +31,7 @@ export const api = {
 
   /** もらったギフトコードの状態 */
   gift: () => request<GiftStatus>("/api/gift"),
-  /** 使えるコードだけ保存される。使えなければその状態を返す（投げない） */
+  /** 有効なコードだけ保存される。無効ならその状態を返す（投げない） */
   setGift: async (code: string): Promise<GiftStatus> => {
     const res = await fetch("/api/gift", {
       method: "PUT",
@@ -51,9 +51,17 @@ export const api = {
   enableShare: () => request<ShareView>("/api/share", { method: "POST" }),
   disableShare: () => request<ShareView>("/api/share", { method: "DELETE" }),
   /** `expiresAt` はミリ秒。null は期限なし */
-  createCode: (body: { memo: string; expiresAt: number | null }) =>
+  createCode: (body: { memo: string; expiresAt: number | null; dailyLimitUsd: number | null }) =>
     request<ShareView>("/api/share/codes", { method: "POST", body: JSON.stringify(body) }),
-  updateCode: (id: string, body: { memo?: string; expiresAt?: number | null; revoked?: boolean }) =>
+  updateCode: (
+    id: string,
+    body: {
+      memo?: string;
+      expiresAt?: number | null;
+      dailyLimitUsd?: number | null;
+      revoked?: boolean;
+    },
+  ) =>
     request<ShareView>(`/api/share/codes/${encodeURIComponent(id)}`, {
       method: "PATCH",
       body: JSON.stringify(body),

@@ -43,27 +43,40 @@ pub fn router(store: Arc<Store>) -> Router {
         .route("/share/codes", post(create_code))
         .route("/share/codes/{id}", patch(update_code))
         .route("/devices", get(devices))
-        .route("/languages", get(languages))
-        .layer(middleware::from_fn(local_only));
+        .route("/languages", get(languages));
     Router::new()
         .route("/ws", get(ws))
         .nest("/api", api)
+        .layer(middleware::from_fn(local_only))
         .route("/assets/{version}/icons/{*path}", get(icon))
         .route("/assets/rank/{file}", get(rank_image))
         .fallback(frontend)
         .with_state(store)
 }
 
-/// このマシンの画面（操作パネル、OBS のドック、開発中の Vite）からの呼び出しだけを受け付ける。
-/// 別のサイトを開いたブラウザから設定や API キーを書き換えられないようにする（DNS リバインディング対策）。
-/// 書き換えは JSON だけを受け付けるので、別のサイトからの単純なフォーム送信も通らない
+/// このマシンの画面（操作パネル、OBS のドックとオーバーレイ、開発中の Vite）からの呼び出しだけを受け付ける。
+/// 別のサイトを開いたブラウザから、字幕や使用量を読んだり、設定や API キーを書き換えたりできないようにする。
+/// Host は DNS リバインディング対策。Origin は別のサイトからの呼び出しの対策で、本文を読まない POST や
+/// WebSocket はプリフライトなしで届くので、ブラウザが付ける Origin をここで見る。
+/// Origin は呼ばれたアドレスと同じものだけを通す（Vite のプロキシは Host も Origin も `localhost:5173` のまま
+/// 渡すので、ポートの値を持たなくても通る）。`Origin: null` も通さない。
+/// no-cors の GET（`<img src>` など）には Origin が付かないので、`Sec-Fetch-Site: cross-site` も断る
+/// （`same-site` は `localhost` の別のポートの開発の画面があるので Origin の判定に任せる）。
+/// どちらも付かないものは curl などで、ブラウザの別サイトからの呼び出しではない
 async fn local_only(headers: HeaderMap, request: Request, next: Next) -> Response {
     let host = headers
         .get(header::HOST)
         .and_then(|h| h.to_str().ok())
         .unwrap_or_default();
     let hostname = host.rsplit_once(':').map_or(host, |(name, _)| name);
-    if matches!(hostname, "127.0.0.1" | "localhost" | "[::1]") {
+    let local = matches!(hostname, "127.0.0.1" | "localhost" | "[::1]");
+    let same_origin = headers.get(header::ORIGIN).is_none_or(|origin| {
+        origin.to_str().ok().and_then(|o| o.strip_prefix("http://")) == Some(host)
+    });
+    let cross_site = headers
+        .get("sec-fetch-site")
+        .is_some_and(|site| site == "cross-site");
+    if local && same_origin && !cross_site {
         next.run(request).await
     } else {
         StatusCode::FORBIDDEN.into_response()
@@ -156,11 +169,11 @@ struct GiftBody {
     code: String,
 }
 
-/// 使えるコードだけ保存する
+/// 有効なコードだけ保存する（今日の上限に達していても、明日には使える）
 async fn put_gift(State(store): State<Arc<Store>>, Json(body): Json<GiftBody>) -> Response {
     let code = body.code.trim().to_owned();
     let status = share::gift_status(&store.settings().api_base, &code).await;
-    if !matches!(status, GiftStatus::Active { .. }) {
+    if !status.is_valid() {
         return (StatusCode::BAD_REQUEST, Json(status)).into_response();
     }
     if let Err(e) = blocking(move || secrets::set_gift(&code)).await {
@@ -507,4 +520,132 @@ async fn frontend(uri: Uri) -> Response {
         }
     }
     StatusCode::NOT_FOUND.into_response()
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+
+    use tokio_tungstenite::tungstenite::{self, client::IntoClientRequest};
+
+    use super::*;
+    use crate::settings::Settings;
+
+    /// 手元のポートで動かす。アドレス（`127.0.0.1:…`）を返す
+    async fn serve_on_any_port() -> String {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap().to_string();
+        let store = Store::new(Ok(Settings::default()), PathBuf::new());
+        tokio::spawn(serve(listener, store));
+        addr
+    }
+
+    async fn post_demo(addr: &str, headers: &[(&str, &str)]) -> StatusCode {
+        let mut req = reqwest::Client::new().post(format!("http://{addr}/api/demo"));
+        for (name, value) in headers {
+            req = req.header(*name, *value);
+        }
+        req.send().await.unwrap().status()
+    }
+
+    /// 秘密を読まない GET。呼び出しの入り口の判定だけを見る
+    async fn get_settings_status(addr: &str, headers: &[(&str, &str)]) -> StatusCode {
+        let mut req = reqwest::Client::new().get(format!("http://{addr}/api/languages"));
+        for (name, value) in headers {
+            req = req.header(*name, *value);
+        }
+        req.send().await.unwrap().status()
+    }
+
+    /// `/ws` につなぐ。断られたらその状態、つながったら 101
+    async fn ws_status(addr: &str, headers: &[(&'static str, &str)]) -> StatusCode {
+        let mut req = format!("ws://{addr}/ws").into_client_request().unwrap();
+        for (name, value) in headers {
+            req.headers_mut().insert(*name, value.parse().unwrap());
+        }
+        match tokio_tungstenite::connect_async(req).await {
+            Ok((_, res)) => res.status(),
+            Err(tungstenite::Error::Http(res)) => res.status(),
+            Err(e) => panic!("{e}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn other_sites_cannot_reach_the_api_or_the_websocket() {
+        let addr = serve_on_any_port().await;
+        let port = addr.rsplit_once(':').unwrap().1;
+        for origin in [
+            "https://evil.example",
+            "null",
+            // 同じマシンの別のポート、https、呼ばれたのと違う名前
+            "http://127.0.0.1:1",
+            &format!("https://{addr}"),
+            &format!("http://localhost:{port}"),
+        ] {
+            let origin = [("origin", origin)];
+            assert_eq!(
+                post_demo(&addr, &origin).await,
+                StatusCode::FORBIDDEN,
+                "{origin:?}"
+            );
+            assert_eq!(
+                ws_status(&addr, &origin).await,
+                StatusCode::FORBIDDEN,
+                "{origin:?}"
+            );
+        }
+        // no-cors の GET には Origin が付かない
+        let cross_site = [("sec-fetch-site", "cross-site")];
+        assert_eq!(
+            get_settings_status(&addr, &cross_site).await,
+            StatusCode::FORBIDDEN
+        );
+        assert_eq!(post_demo(&addr, &cross_site).await, StatusCode::FORBIDDEN);
+        assert_eq!(ws_status(&addr, &cross_site).await, StatusCode::FORBIDDEN);
+        // DNS リバインディング（Host が別の名前）は Origin が揃っていても通らない
+        let rebinding = [
+            ("host", "evil.example:4510"),
+            ("origin", "http://evil.example:4510"),
+        ];
+        assert_eq!(post_demo(&addr, &rebinding).await, StatusCode::FORBIDDEN);
+        assert_eq!(ws_status(&addr, &rebinding).await, StatusCode::FORBIDDEN);
+    }
+
+    #[tokio::test]
+    async fn the_app_itself_and_callers_without_origin_get_through() {
+        let addr = serve_on_any_port().await;
+        let port = addr.rsplit_once(':').unwrap().1;
+        let localhost = format!("localhost:{port}");
+        let ipv6 = format!("[::1]:{port}");
+        for (host, origin) in [
+            (addr.as_str(), format!("http://{addr}")),
+            (localhost.as_str(), format!("http://{localhost}")),
+            (ipv6.as_str(), format!("http://{ipv6}")),
+            // Vite のプロキシ（`frontend/vite.config.ts`）が渡す形
+            ("localhost:5173", "http://localhost:5173".to_owned()),
+        ] {
+            let headers = [("host", host), ("origin", origin.as_str())];
+            assert_eq!(
+                post_demo(&addr, &headers).await,
+                StatusCode::ACCEPTED,
+                "{host}"
+            );
+            assert_eq!(
+                ws_status(&addr, &headers).await,
+                StatusCode::SWITCHING_PROTOCOLS,
+                "{host}"
+            );
+        }
+        assert_eq!(post_demo(&addr, &[]).await, StatusCode::ACCEPTED);
+        assert_eq!(ws_status(&addr, &[]).await, StatusCode::SWITCHING_PROTOCOLS);
+        // 操作パネルやオーバーレイ自身の呼び出しと、URL を開いたとき。same-site は Origin の判定に任せる
+        for site in ["same-origin", "none", "same-site"] {
+            let headers = [("sec-fetch-site", site)];
+            assert_eq!(post_demo(&addr, &headers).await, StatusCode::ACCEPTED);
+            assert_eq!(
+                ws_status(&addr, &headers).await,
+                StatusCode::SWITCHING_PROTOCOLS
+            );
+        }
+    }
 }

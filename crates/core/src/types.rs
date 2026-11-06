@@ -198,6 +198,8 @@ pub enum TranscriptionError {
     },
     /// おすそ分けした人がギフトコードを止めた
     GiftRevoked,
+    /// ギフトコードの今日（UTC）の上限に達した
+    GiftLimit,
     /// ないギフトコード（おすそ分けをやめたなど）
     GiftUnknown,
     /// マイクの入力が途切れた
@@ -219,6 +221,9 @@ pub enum TranscriptionError {
 
 impl TranscriptionError {
     pub fn from_error(e: &anyhow::Error) -> Self {
+        if e.is::<crate::share::DailyLimit>() {
+            return Self::GiftLimit;
+        }
         match e.downcast_ref::<crate::audio::MicError>() {
             Some(error) => Self::Microphone {
                 error: error.clone(),

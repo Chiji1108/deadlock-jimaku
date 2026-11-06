@@ -19,4 +19,16 @@ usd: number,
 /**
  * 今月（UTC）使われた額
  */
-monthUsd: number, createdAt: number, };
+monthUsd: number, 
+/**
+ * 今日（UTC）使われた額
+ */
+dayUsd: number, 
+/**
+ * 決めた 1 日（UTC）の上限（USD）。None は既定の額
+ */
+dailyLimitUsd: number | null, 
+/**
+ * 実際に効く 1 日の上限（既定の額はサーバーだけが持つ）
+ */
+effectiveLimitUsd: number, createdAt: number, };

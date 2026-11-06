@@ -7,4 +7,4 @@ export type GiftStatus = { "state": "none" } | { "state": "active",
 /**
  * ミリ秒。None は期限なし
  */
-expiresAt: number | null, } | { "state": "expired", expiresAt: number, } | { "state": "revoked" } | { "state": "unknown" } | { "state": "unreachable", detail: string, };
+expiresAt: number | null, } | { "state": "expired", expiresAt: number, } | { "state": "revoked" } | { "state": "limit" } | { "state": "unknown" } | { "state": "unreachable", detail: string, };

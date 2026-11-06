@@ -170,11 +170,11 @@ class Panel {
     this.gift = await api.gift().catch(() => undefined);
   };
 
-  /** 使えるコードなら保存する。保存できたら true */
+  /** 有効なコードなら保存する。保存できたら true */
   setGift = (code: string) =>
     this.run(async () => {
       const status = await api.setGift(code);
-      if (status.state !== "active") throw new Error(giftStatusText(status));
+      if (!giftValid(status)) throw new Error(giftStatusText(status));
       this.gift = status;
       this.view = await api.settings();
       toast.success("ギフトコードを保存しました");
@@ -225,6 +225,9 @@ class Panel {
 
 export const panel = new Panel();
 
+/** ギフトコードの 1 日の上限は UTC の日で区切る */
+export const LIMIT_RESET = "日本時間の朝 9 時（UTC の 0 時）にまた使えます";
+
 /** 字幕が止まった理由を文にする（サーバーは種類と中身だけを返す） */
 export function transcriptionErrorText(e: TranscriptionError): string {
   switch (e.code) {
@@ -234,6 +237,8 @@ export function transcriptionErrorText(e: TranscriptionError): string {
       return `ギフトコードの期限が切れました（${dateTime(e.expiresAt)} まで）`;
     case "giftRevoked":
       return "ギフトコードが止められています。おすそ分けしてくれた人に確かめてください";
+    case "giftLimit":
+      return `ギフトコードの今日の上限に達しました。${LIMIT_RESET}`;
     case "giftUnknown":
       return "ギフトコードが見つかりません。おすそ分けしてくれた人に確かめてください";
     case "inputEnded":
@@ -267,6 +272,10 @@ function micErrorText(e: MicError): string {
 /** 種類を足したら、ここで型エラーになる（版の違うサーバーから届いたときは中身を出す） */
 const unknown = (e: never) => `止まりました（${JSON.stringify(e)}）`;
 
+/** 有効なコードか。今日の上限は日が変われば戻るので、今は使えなくても有効 */
+export const giftValid = (s: GiftStatus | undefined) =>
+  s?.state === "active" || s?.state === "limit";
+
 /** ギフトコードの状態を文にする（使えるときは期限） */
 export function giftStatusText(s: GiftStatus): string {
   switch (s.state) {
@@ -278,6 +287,8 @@ export function giftStatusText(s: GiftStatus): string {
       return `期限が切れています（${dateTime(s.expiresAt)} まで）`;
     case "revoked":
       return "おすそ分けした人が止めています";
+    case "limit":
+      return `今日の上限に達しました。${LIMIT_RESET}`;
     case "unknown":
       return "このコードは見つかりません。打ち間違いがないか確かめてください";
     case "unreachable":
