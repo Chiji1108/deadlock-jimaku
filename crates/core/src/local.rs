@@ -1,4 +1,4 @@
-//! ローカル AI のモード（DESIGN.md 9.6）。途中の字幕と途中の翻訳、用語の判定を、PC の中の補助プログラムで作る。
+//! ローカルAI のモード（DESIGN.md 9.6）。途中の字幕と途中の翻訳、用語の判定を、PC の中の補助プログラムで作る。
 //!
 //! 補助プログラム（`crates/local-ai`）は実行環境が大きいので、アプリに入れず、使う人だけ初回に
 //! ダウンロードする。別のプロセスにすると、使わない人のメモリも増えない
@@ -10,8 +10,7 @@ use std::time::Duration;
 
 use anyhow::{Context, bail};
 use flate2::read::GzDecoder;
-use serde::Serialize;
-use serde_json::Value;
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::process::{ChildStdin, Command};
@@ -47,6 +46,7 @@ const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 const AUDIO: u8 = 1;
 const CUT: u8 = 2;
 const MARK: u8 = 3;
+const TERMS: u8 = 4;
 
 /// 字幕の処理が持つ。落とすと補助プログラムの処理も止まる
 pub struct Task {
@@ -58,11 +58,10 @@ impl Task {
     pub(crate) fn spawn(
         store: Arc<Store>,
         settings: Settings,
-        terms: Vec<Term>,
         done: mpsc::Sender<Done>,
         input: mpsc::UnboundedReceiver<Input>,
     ) -> Self {
-        let handle = tokio::spawn(run(store.clone(), settings, terms, done, input));
+        let handle = tokio::spawn(run(store.clone(), settings, done, input));
         Self { store, handle }
     }
 }
@@ -83,10 +82,23 @@ pub enum Input {
         id: String,
         text: String,
     },
+    /// 用語の表を入れ替える
+    Terms(Vec<Term>),
 }
 
-/// 無料のモードの確定の字幕。文字が空なら、その発話を捨てる
-#[derive(Default)]
+/// 補助プログラムからの 1 行。形が合わなければ `session` が止まって知らせる（空の字幕を出さない）
+#[derive(Debug, Deserialize)]
+#[serde(tag = "type", rename_all = "lowercase")]
+enum Message {
+    Progress { loaded: u64, total: u64 },
+    Ready,
+    Text(Final),
+    Final(Final),
+    Marked { id: String, tokens: Vec<Token> },
+}
+
+/// 補助プログラムが認識した文。ローカルAIのモードの確定の字幕では、文字が空なら、その発話を捨てる
+#[derive(Debug, Default, Deserialize)]
 pub struct Final {
     pub text: String,
     pub tokens: Vec<Token>,
@@ -135,29 +147,20 @@ fn reading(entity: &Entity) -> Option<String> {
 async fn run(
     store: Arc<Store>,
     settings: Settings,
-    terms: Vec<Term>,
     done: mpsc::Sender<Done>,
     mut input: mpsc::UnboundedReceiver<Input>,
 ) {
     show(&store, LiveState::Preparing, None);
-    let finals = settings.speech_engine == SpeechEngine::Free;
-    // 確定の字幕を返していない発話の数。無料のモードの字幕の処理は、区切りごとの返事を待っている
+    let finals = settings.speech_engine == SpeechEngine::Local;
+    // 確定の字幕を返していない発話の数。ローカルAIのモードの字幕の処理は、区切りごとの返事を待っている
     let mut waiting = 0;
-    let result = session(
-        &store,
-        &settings,
-        &terms,
-        finals,
-        &done,
-        &mut input,
-        &mut waiting,
-    );
+    let result = session(&store, &settings, finals, &done, &mut input, &mut waiting);
     if let Err(e) = result.await {
         tracing::warn!("local ai: {e:#}");
         show(
             &store,
             LiveState::Failed,
-            Some(format!("ローカル AI を起動できません: {e}")),
+            Some(format!("PC で字幕を作れません: {e}")),
         );
     }
     // 止まったあとも区切りには返事をする（字幕の処理が待ち続けないように）
@@ -181,7 +184,6 @@ fn show(store: &Store, state: LiveState, detail: Option<String>) {
 async fn session(
     store: &Arc<Store>,
     settings: &Settings,
-    terms: &[Term],
     finals: bool,
     done: &mpsc::Sender<Done>,
     input: &mut mpsc::UnboundedReceiver<Input>,
@@ -197,12 +199,9 @@ async fn session(
         .into_iter()
         .filter(|t| settings.translate_to.iter().any(|l| l == t))
         .collect();
-    let terms_path = root.join("terms.json");
-    tokio::fs::write(&terms_path, serde_json::to_vec(terms)?).await?;
     let mut command = Command::new(dir.join(binary()));
     command
         .arg(root.join("models"))
-        .arg(&terms_path)
         .arg(targets.join(","))
         .arg(if finals { "final" } else { "partial" })
         .stdin(Stdio::piped())
@@ -221,6 +220,9 @@ async fn session(
     let mut lines = BufReader::new(child.stdout.take().context("stdout")?).lines();
     // 準備が終わるまでの音声は渡さない（古い発話の字幕が今の発話に載る）
     let mut ready = false;
+    // 辞書はあとから届いたり、読みが増えて作り直されたりする。準備ができたら今の辞書から渡す
+    let mut glossary = store.watch_glossary();
+    glossary.mark_changed();
     loop {
         tokio::select! {
             next = input.recv() => {
@@ -233,31 +235,44 @@ async fn session(
                     let _ = done.send(Done::Local(Final::default())).await;
                 }
             }
+            Ok(()) = glossary.changed(), if ready && settings.deadlock_mode => {
+                let terms = glossary
+                    .borrow_and_update()
+                    .as_ref()
+                    .map(|l| terms(&l.glossary))
+                    .unwrap_or_default();
+                let _ = writer.send(Input::Terms(terms));
+            }
             line = lines.next_line() => {
                 let Some(line) = line? else {
                     let mut reason = String::new();
                     stderr.read_to_string(&mut reason).await?;
                     bail!("{}", reason.trim());
                 };
-                let message: Value = serde_json::from_str(&line)?;
-                ready |= message["type"] == "ready";
-                on_line(store, &message);
-                match message["type"].as_str() {
-                    Some("final") if finals => {
+                let message = serde_json::from_str(&line).context("補助プログラムの版が合いません")?;
+                match message {
+                    Message::Progress { loaded, total } => show(
+                        store,
+                        LiveState::Preparing,
+                        Some(format!(
+                            "モデルをダウンロードしています（{}%）",
+                            (loaded * 100 / total.max(1)).min(100)
+                        )),
+                    ),
+                    Message::Ready => {
+                        ready = true;
+                        show(store, LiveState::Listening, None);
+                    }
+                    Message::Text(Final { text, tokens, translations }) => {
+                        store.send_live(LiveText { text, tokens, translations });
+                    }
+                    Message::Final(result) => {
                         *waiting -= 1;
-                        let result = Final {
-                            text: text(&message),
-                            tokens: tokens(&message),
-                            translations: translations(&message),
-                        };
                         let _ = done.send(Done::Local(result)).await;
                     }
-                    Some("marked") => {
-                        let id = message["id"].as_str().unwrap_or_default().to_owned();
-                        let tokens = tokens(&message);
+                    Message::Marked { id, tokens } => {
                         let _ = done.send(Done::Marked { id, tokens }).await;
                     }
-                    _ => {}
                 }
             }
         }
@@ -284,52 +299,21 @@ async fn send(stdin: &mut ChildStdin, input: Input) -> std::io::Result<()> {
         Input::Cut => stdin.write_all(&[CUT]).await,
         Input::Mark { id, text } => {
             let body = format!("{id}\n{text}");
-            let mut frame = Vec::with_capacity(5 + body.len());
-            frame.push(MARK);
-            frame.extend_from_slice(&(body.len() as u32).to_le_bytes());
-            frame.extend_from_slice(body.as_bytes());
-            stdin.write_all(&frame).await
+            stdin.write_all(&frame(MARK, body.as_bytes())).await
+        }
+        Input::Terms(terms) => {
+            let body = serde_json::to_vec(&terms)?;
+            stdin.write_all(&frame(TERMS, &body)).await
         }
     }
 }
 
-fn text(message: &Value) -> String {
-    message["text"].as_str().unwrap_or_default().to_owned()
-}
-
-fn tokens(message: &Value) -> Vec<Token> {
-    serde_json::from_value(message["tokens"].clone()).unwrap_or_default()
-}
-
-fn translations(message: &Value) -> Translations {
-    let mut translations: Translations =
-        serde_json::from_value(message["translations"].clone()).unwrap_or_default();
-    translations.retain(|_, tokens| !tokens.is_empty());
-    translations
-}
-
-fn on_line(store: &Store, message: &Value) {
-    match message["type"].as_str() {
-        Some("progress") => {
-            let percent = message["loaded"].as_u64().unwrap_or(0) * 100
-                / message["total"].as_u64().unwrap_or(1).max(1);
-            show(
-                store,
-                LiveState::Preparing,
-                Some(format!(
-                    "モデルをダウンロードしています（{}%）",
-                    percent.min(100)
-                )),
-            );
-        }
-        Some("ready") => show(store, LiveState::Listening, None),
-        Some("text") => store.send_live(LiveText {
-            text: text(message),
-            tokens: tokens(message),
-            translations: translations(message),
-        }),
-        _ => {}
-    }
+fn frame(kind: u8, body: &[u8]) -> Vec<u8> {
+    let mut frame = Vec::with_capacity(5 + body.len());
+    frame.push(kind);
+    frame.extend_from_slice(&(body.len() as u32).to_le_bytes());
+    frame.extend_from_slice(body);
+    frame
 }
 
 fn binary() -> &'static str {
@@ -352,7 +336,7 @@ async fn install(store: &Store, root: &Path) -> anyhow::Result<PathBuf> {
     show(
         store,
         LiveState::Preparing,
-        Some("ローカル AI をダウンロードしています".into()),
+        Some("PC で字幕を作るプログラムをダウンロードしています".into()),
     );
     let archive = format!(
         "jimaku-local-{}-{}.tar.gz",
@@ -464,13 +448,18 @@ mod tests {
     }
 
     #[test]
-    fn helper_tokens_become_app_tokens() {
-        let message = serde_json::json!({
+    fn helper_lines_become_app_tokens() {
+        let line = serde_json::json!({
+            "type": "final",
+            "text": "基礎拡張マガジンを",
             "tokens": [{ "t": "entity", "ref": "item:1", "spoken": "基礎拡張マガジン" }, { "t": "text", "text": "を" }],
-            "translations": { "en": [{ "t": "entity", "ref": "item:1" }], "ru": [] },
+            "translations": { "en": [{ "t": "entity", "ref": "item:1" }] },
         });
+        let Message::Final(result) = serde_json::from_value(line).unwrap() else {
+            panic!("not a final");
+        };
         assert_eq!(
-            tokens(&message),
+            result.tokens,
             [
                 Token::Entity {
                     reference: "item:1".into(),
@@ -483,11 +472,19 @@ mod tests {
                 },
             ]
         );
-        assert_eq!(
-            translations(&message).keys().collect::<Vec<_>>(),
-            ["en"],
-            "空の訳は出さない"
-        );
+        assert_eq!(result.translations.keys().collect::<Vec<_>>(), ["en"]);
+    }
+
+    #[test]
+    fn a_line_of_another_shape_is_an_error() {
+        for line in [
+            r#"{ "type": "text", "text": "あ", "tokens": "あ", "translations": {} }"#,
+            r#"{ "type": "final", "text": "あ" }"#,
+            r#"{ "type": "marked", "id": "1", "tokens": [{ "t": "word" }] }"#,
+            r#"{ "type": "other" }"#,
+        ] {
+            assert!(serde_json::from_str::<Message>(line).is_err(), "{line}");
+        }
     }
 
     #[test]

@@ -1,9 +1,10 @@
 //! 途中の字幕と途中の翻訳を PC の中で作る（DESIGN.md 9.6）。アプリが起動し、標準入出力でやりとりする。
 //!
-//! - 引数: モデルを置くフォルダ、用語の表（`terms::Term` の JSON の配列）のパス、
-//!   翻訳先（`en,ru` のようにコンマで区切る）、確定の字幕も作るなら `final`、作らないなら `partial`
-//! - 入力: 1 バイトの種類と、音声なら 4 バイトの長さ（リトルエンディアン）と 16kHz の f32 の音声、
-//!   読みと用語を付ける文なら 4 バイトの長さと `{発話の id}\n{文}`
+//! - 引数: モデルを置くフォルダ、翻訳先（`en,ru` のようにコンマで区切る）、
+//!   確定の字幕も作るなら `final`、作らないなら `partial`
+//! - 入力: 1 バイトの種類（区切りはこれだけ）と、4 バイトの長さ（リトルエンディアン）と中身。
+//!   中身は 16kHz の f32 の音声、読みと用語を付ける `{発話の id}\n{文}`、
+//!   用語の表（`terms::Term` の JSON の配列。辞書が変わるたびに届き、入れ替える）のどれか
 //! - 出力: 1 行に 1 つの JSON（`progress`、`ready`、`text`、`final`、`marked`）。`final` は区切りごとに
 //!   1 つ返す。文字はアプリの `Token` の形で入る
 //!
@@ -31,6 +32,7 @@ use terms::{Found, Terms};
 const AUDIO: u8 = 1;
 const CUT: u8 = 2;
 const MARK: u8 = 3;
+const TERMS: u8 = 4;
 const SAMPLE_RATE: usize = 16_000;
 /// 長い発話でも、再デコードの時間が伸び続けないようにする
 const MAX_SAMPLES: usize = 10 * SAMPLE_RATE;
@@ -49,11 +51,14 @@ struct Speech {
     finished: VecDeque<Vec<f32>>,
     /// OpenAI の確定の文（発話の id と文）。読みと用語を付けて返す
     marks: VecDeque<(String, String)>,
+    /// 新しい用語の表
+    terms: Option<Terms>,
     closed: bool,
 }
 
 /// 次にすること。確定の字幕を先に作る
 enum Job {
+    Terms(Terms),
     Final(Vec<f32>),
     Mark(String, String),
     Partial(Vec<f32>, u64),
@@ -61,6 +66,9 @@ enum Job {
 
 impl Speech {
     fn next_job(&mut self) -> Option<Job> {
+        if let Some(terms) = self.terms.take() {
+            return Some(Job::Terms(terms));
+        }
         if let Some(finished) = self.finished.pop_front() {
             return Some(Job::Final(finished));
         }
@@ -117,15 +125,12 @@ impl Local {
         let english = self
             .japanese_english
             .translate(&with_english_names(text, found));
-        let mut translations: BTreeMap<String, Vec<Token>> = self
+        let translated = self
             .from_english
             .iter()
-            .map(|(lang, engine)| (lang.clone(), mark_names(&engine.translate(&english), found)))
-            .collect();
-        if self.translate_english {
-            translations.insert("en".to_owned(), mark_names(&english, found));
-        }
-        translations
+            .map(|(lang, engine)| (lang.as_str(), engine.translate(&english)));
+        let english = self.translate_english.then_some(("en", english.clone()));
+        translation_tokens(translated.chain(english), found)
     }
 
     fn message(&self, kind: &str, text: &str) -> Value {
@@ -186,6 +191,17 @@ fn with_english_names(text: &str, found: &[Found]) -> String {
     replaced
 }
 
+/// 言語ごとの訳文をトークンにする。訳が空の言語は載せない（訳文の行が空のまま出る）
+fn translation_tokens<'a>(
+    translated: impl Iterator<Item = (&'a str, String)>,
+    found: &[Found],
+) -> BTreeMap<String, Vec<Token>> {
+    translated
+        .map(|(lang, text)| (lang.to_owned(), mark_names(&text, found)))
+        .filter(|(_, tokens)| !tokens.is_empty())
+        .collect()
+}
+
 /// 訳文に残った英語名を用語にする。原文で見つけた用語だけを探す
 fn mark_names(translation: &str, found: &[Found]) -> Vec<Token> {
     let mut tokens = Vec::new();
@@ -230,7 +246,6 @@ fn push_text(tokens: &mut Vec<Token>, text: &str) {
 fn main() -> anyhow::Result<()> {
     let mut args = std::env::args().skip(1);
     let dir = PathBuf::from(args.next().context("models folder")?);
-    let terms_path = args.next().context("terms file")?;
     let targets: Vec<String> = args
         .next()
         .context("targets")?
@@ -246,7 +261,7 @@ fn main() -> anyhow::Result<()> {
     })?;
     let mut pairs = paths.pairs.iter();
     let (_, japanese_english) = pairs.next().context("ja-en model")?;
-    let local = Local {
+    let mut local = Local {
         recognizer: recognizer(&paths)?,
         furigana: Furigana::new()?,
         japanese_english: engine(japanese_english)?,
@@ -257,7 +272,7 @@ fn main() -> anyhow::Result<()> {
             })
             .collect::<anyhow::Result<_>>()?,
         translate_english: targets.iter().any(|t| t == "en"),
-        terms: load_terms(&terms_path),
+        terms: Terms::new(Vec::new()),
     };
     emit(&json!({ "type": "ready" }));
 
@@ -277,13 +292,21 @@ fn main() -> anyhow::Result<()> {
         let job = {
             let (lock, wake) = &*speech;
             wake.wait_while(lock.lock().unwrap(), |s| {
-                !s.fresh && !s.closed && s.finished.is_empty() && s.marks.is_empty()
+                !s.fresh
+                    && !s.closed
+                    && s.finished.is_empty()
+                    && s.marks.is_empty()
+                    && s.terms.is_none()
             })
             .unwrap()
             .next_job()
         };
         let (samples, generation) = match job {
             None => return Ok(()),
+            Some(Job::Terms(terms)) => {
+                local.terms = terms;
+                continue;
+            }
             Some(Job::Final(finished)) => {
                 let text = local.decode(&finished);
                 emit(&local.message("final", &text));
@@ -342,10 +365,7 @@ fn read_input(speech: &Shared, finals: bool) -> io::Result<()> {
     while input.read_exact(&mut kind).is_ok() {
         match kind[0] {
             AUDIO => {
-                let mut len = [0; 4];
-                input.read_exact(&mut len)?;
-                let mut bytes = vec![0; u32::from_le_bytes(len) as usize];
-                input.read_exact(&mut bytes)?;
+                let bytes = read_body(&mut input)?;
                 let mut s = speech.0.lock().unwrap();
                 s.samples.extend(
                     bytes
@@ -366,16 +386,17 @@ fn read_input(speech: &Shared, finals: bool) -> io::Result<()> {
                 speech.1.notify_all();
             }
             MARK => {
-                let mut len = [0; 4];
-                input.read_exact(&mut len)?;
-                let mut bytes = vec![0; u32::from_le_bytes(len) as usize];
-                input.read_exact(&mut bytes)?;
-                let frame = String::from_utf8(bytes).map_err(io::Error::other)?;
+                let frame = String::from_utf8(read_body(&mut input)?).map_err(io::Error::other)?;
                 if let Some((id, text)) = frame.split_once('\n') {
                     let mut s = speech.0.lock().unwrap();
                     s.marks.push_back((id.to_owned(), text.to_owned()));
                     speech.1.notify_all();
                 }
+            }
+            TERMS => {
+                let terms = serde_json::from_slice(&read_body(&mut input)?)?;
+                speech.0.lock().unwrap().terms = Some(Terms::new(terms));
+                speech.1.notify_all();
             }
             other => return Err(io::Error::other(format!("unknown input {other}"))),
         }
@@ -383,12 +404,12 @@ fn read_input(speech: &Shared, finals: bool) -> io::Result<()> {
     Ok(())
 }
 
-fn load_terms(path: &str) -> Terms {
-    let terms = std::fs::read(path)
-        .ok()
-        .and_then(|bytes| serde_json::from_slice(&bytes).ok())
-        .unwrap_or_default();
-    Terms::new(terms)
+fn read_body(input: &mut impl Read) -> io::Result<Vec<u8>> {
+    let mut len = [0; 4];
+    input.read_exact(&mut len)?;
+    let mut bytes = vec![0; u32::from_le_bytes(len) as usize];
+    input.read_exact(&mut bytes)?;
+    Ok(bytes)
 }
 
 fn emit(message: &Value) {
@@ -423,6 +444,17 @@ mod tests {
             spoken: spoken.map(Into::into),
             ruby: None,
         }
+    }
+
+    #[test]
+    fn new_terms_come_before_the_next_subtitle() {
+        let mut speech = Speech {
+            finished: VecDeque::from([Vec::new()]),
+            terms: Some(Terms::new(vec![magazine()])),
+            ..Default::default()
+        };
+        assert!(matches!(speech.next_job(), Some(Job::Terms(_))));
+        assert!(matches!(speech.next_job(), Some(Job::Final(_))));
     }
 
     #[test]
@@ -482,6 +514,14 @@ mod tests {
         }];
         let tokens = source_tokens(sentence, &furigana.morphemes(sentence), &found);
         assert_eq!(tokens, [entity(Some("きそかくちょうまがじん")), text("を")]);
+    }
+
+    #[test]
+    fn a_language_without_a_translation_is_left_out() {
+        let translated = [("en", "Reload".to_owned()), ("ru", String::new())];
+        let tokens = translation_tokens(translated.into_iter(), &[]);
+        assert_eq!(tokens.keys().collect::<Vec<_>>(), ["en"]);
+        assert_eq!(tokens["en"], [text("Reload")]);
     }
 
     #[test]

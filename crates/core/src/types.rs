@@ -137,7 +137,7 @@ pub enum ServerMsg {
     AudioLevel { db: f32 },
     #[serde(rename = "usage")]
     Usage { usage: crate::usage::UsageView },
-    /// ローカル AI の状態。None は動いていない
+    /// ローカルAI の状態。None は動いていない
     #[serde(rename = "live.status")]
     LiveStatus { status: Option<LiveStatus> },
     /// 操作パネル以外（OBS の字幕オーバーレイ、トレイ）で設定が変わった。パネルは取り直す
@@ -145,7 +145,7 @@ pub enum ServerMsg {
     SettingsChanged,
 }
 
-/// ローカル AI の状態（DESIGN.md 9.6）
+/// ローカルAI の状態（DESIGN.md 9.6）
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -154,7 +154,7 @@ pub enum LiveState {
     Preparing,
     /// 聞いている
     Listening,
-    /// 起動できない
+    /// 起動できない、または途中で止まった
     Failed,
 }
 
@@ -169,7 +169,7 @@ pub struct LiveStatus {
     pub detail: Option<String>,
 }
 
-/// ローカル AI が認識した途中の文と訳
+/// ローカルAI が認識した途中の文と訳
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub struct LiveText {

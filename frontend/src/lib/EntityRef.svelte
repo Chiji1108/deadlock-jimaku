@@ -9,6 +9,7 @@
     ruby: spokenRuby,
     lang,
     furigana,
+    fresh = false,
   }: {
     ref: string;
     /** 話した言葉（原文）。あればそのまま出す。翻訳では無く、公式名を出す */
@@ -17,6 +18,8 @@
     ruby?: RubySegment[];
     lang: string;
     furigana: boolean;
+    /** 確定で初めて現れた用語（`Captions` が演出する） */
+    fresh?: boolean;
   } = $props();
 
   const entity = $derived(glossary.entity(ref));
@@ -30,7 +33,7 @@
 </script>
 
 <!-- 辞書からアイコンと色（と翻訳での公式名）を引く。辞書にない（まだ読み込んでいない）ときは文字だけ -->
-{#if entity}<span class="entity {entity.kind} {entity.slot ?? ''}"
+{#if entity}<span class="entity {entity.kind} {entity.slot ?? ''}" class:fresh
     >{#if entity.icon}<img
         class="icon"
         src={entity.icon}
@@ -39,7 +42,7 @@
           text={seg.text}
           ruby={seg.ruby}
         />{/each}{:else}{label}{/if}</span
-  >{:else}<span class="entity">{label}</span>{/if}
+  >{:else}<span class="entity" class:fresh>{label}</span>{/if}
 
 <style>
   /* 種類ごとの色。アイテムはゲーム内と同じくスロット（武器 / バイタリティ / スピリット）で分ける。

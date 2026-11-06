@@ -75,8 +75,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: pnpm install --frozen-lockfile
       # Tauri の CLI はリポジトリのルートから動かす（app/tauri.conf.json を探す）
-      # ローカル AI の補助プログラム。アプリには入れず、使う人だけダウンロードする
-      - name: ローカル AI の補助プログラムを作る
+      # ローカルAI の補助プログラム。アプリには入れず、使う人だけダウンロードする
+      - name: ローカルAI の補助プログラムを作る
         run: |
           # 翻訳の SIMD 版は MSVC でビルドできないので、Windows はスカラー版（1 文 約 9ms）
           [ "$RUNNER_OS" = Windows ] || export FXTRANSLATE_REQUIRE_SIMD=1
