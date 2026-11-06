@@ -91,6 +91,7 @@ async fn session(
         bail!("この言語には対応していません");
     }
     let root = store.data_dir().join("local-ai");
+    tokio::fs::create_dir_all(&root).await?;
     let dir = install(store, &root).await?;
     let terms_path = root.join("terms.json");
     tokio::fs::write(&terms_path, serde_json::to_vec(terms)?).await?;
