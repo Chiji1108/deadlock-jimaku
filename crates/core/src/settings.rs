@@ -39,7 +39,8 @@ pub struct Settings {
     pub subtitle_display: SubtitleDisplay,
     /// アイテム説明のオーバーレイ（字幕でアイテム名が出たら説明のカードを出す）
     pub item_cards: ItemCards,
-    /// ランク名の言語。None なら話す言語
+    /// ランク名の言語。None なら話す言語に合わせる。
+    /// 既定は None のまま（前の版の設定ファイルを変えない）で、新しく使い始める人は英語（`load`）
     #[ts(optional)]
     pub rank_language: Option<LangCode>,
     /// ランクのオーバーレイに出すもの
@@ -795,6 +796,7 @@ pub fn load(path: &Path) -> std::io::Result<Settings> {
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
             return Ok(Settings {
                 speech_engine: SpeechEngine::Chrome,
+                rank_language: Some("en".into()),
                 ..Settings::default()
             });
         }
@@ -1099,6 +1101,36 @@ mod tests {
         };
         save(&path, &hybrid).unwrap();
         assert_eq!(load(&path).unwrap().speech_engine, SpeechEngine::Hybrid);
+    }
+
+    #[test]
+    fn english_rank_names_are_only_for_new_users() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join(FILE);
+        let new_user = load(&path).unwrap();
+        assert_eq!(new_user.rank_language, Some("en".into()));
+        assert_eq!(new_user.rank_language(), "en");
+        // 前の版の設定ファイルには `rankLanguage` がない。話す言語に合わせたまま
+        std::fs::write(&path, r#"{ "micLanguage": "ja" }"#).unwrap();
+        let existing = load(&path).unwrap();
+        assert_eq!(existing.rank_language, None);
+        assert_eq!(existing.rank_language(), "ja");
+        // 「話す言語に合わせる」を選んだ人も、保存して読み直して変わらない
+        let follow = new_user
+            .apply(SettingsPatch {
+                rank_language: Some(String::new()),
+                ..Default::default()
+            })
+            .unwrap();
+        save(&path, &follow).unwrap();
+        assert_eq!(load(&path).unwrap().rank_language, None);
+        // 選んだ言語はそのまま
+        let korean = Settings {
+            rank_language: Some("ko".into()),
+            ..Default::default()
+        };
+        save(&path, &korean).unwrap();
+        assert_eq!(load(&path).unwrap().rank_language, Some("ko".into()));
     }
 
     #[test]

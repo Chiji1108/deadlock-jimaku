@@ -269,7 +269,7 @@ interface Settings {
   micDevice?: string;              // なければ OS の既定の入力デバイス
   translateTo: LangCode[];         // 既定 ["en"]。最大 4。micLanguage は除く
   subtitleDisplay: SubtitleDisplay; // 字幕オーバーレイの見せ方（11 章）
-  rankLanguage?: LangCode;         // ランク名の言語。なければ話す言語
+  rankLanguage?: LangCode;         // ランク名の言語。なければ話す言語に合わせる。新しく使い始める人は en（設定ファイルがないときだけ。保存済みの値は変えない）
   models: { realtime; batch; translate; readings; reasoningEffort? };
   realtimeDelay: string;           // 既定 "low"（3.1）
   segmentation: { minSilenceMs: number; maxSegmentMs: number };  // 既定 750 / 8000
