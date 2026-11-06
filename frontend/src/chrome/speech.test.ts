@@ -184,6 +184,70 @@ test("トラックで結果が来ないまま 2 回作り直したら既定の�
   expect(FakeRecognizer.last.start).toHaveBeenCalledWith();
 });
 
+test("トラックに音が来ていなければ、何回作り直しても既定のマイクに戻さない", () => {
+  const onDefaultMic = vi.fn();
+  listen("ja", { ...options(), track, heardSound: () => false, onDefaultMic });
+  for (let i = 0; i < 5; i++) {
+    FakeRecognizer.last.onend();
+    vi.advanceTimersByTime(1000);
+  }
+  expect(onDefaultMic).not.toHaveBeenCalled();
+  expect(FakeRecognizer.last.start).toHaveBeenCalledWith(track);
+});
+
+test("音が来ているのに認識が止まり続けたら既定のマイクに戻す", () => {
+  const onDefaultMic = vi.fn();
+  listen("ja", { ...options(), track, heardSound: () => true, onDefaultMic });
+  vi.advanceTimersByTime(60_000);
+  expect(onDefaultMic).toHaveBeenCalledOnce();
+  expect(FakeRecognizer.last.start).toHaveBeenCalledWith();
+});
+
+test("無音で終わって再開するのを、止まったとみなさない", () => {
+  listen("ja", options());
+  const first = FakeRecognizer.last;
+  for (let i = 0; i < 12; i++) {
+    const recognizer = FakeRecognizer.last;
+    recognizer.onstart();
+    vi.advanceTimersByTime(10_000);
+    recognizer.onerror({ error: "no-speech" });
+    recognizer.onend();
+    expect(recognizer.abort).not.toHaveBeenCalled();
+  }
+  expect(first.abort).not.toHaveBeenCalled();
+  expect(FakeRecognizer.started).toBe(13);
+});
+
+test("途中の文は、変わらなかった前の部分も含めて渡す", () => {
+  const o = options();
+  listen("ja", o);
+  FakeRecognizer.last.onresult({
+    resultIndex: 1,
+    results: [
+      { isFinal: false, 0: { transcript: "ヘイズが" } },
+      { isFinal: false, 0: { transcript: "強い" } },
+    ],
+  });
+  expect(o.onText).toHaveBeenCalledExactlyOnceWith("ヘイズが強い", false);
+});
+
+test("確定した文は、次の結果で渡し直さない", () => {
+  const o = options();
+  listen("ja", o);
+  FakeRecognizer.last.say("ヘイズ", true);
+  FakeRecognizer.last.onresult({
+    resultIndex: 1,
+    results: [
+      { isFinal: true, 0: { transcript: "ヘイズ" } },
+      { isFinal: false, 0: { transcript: "強い" } },
+    ],
+  });
+  expect(o.onText.mock.calls).toEqual([
+    ["ヘイズ", true],
+    ["強い", false],
+  ]);
+});
+
 test("トラックで結果が届いたら、黙っていても既定のマイクに戻さない", () => {
   const onDefaultMic = vi.fn();
   listen("ja", { ...options(), track, onDefaultMic });

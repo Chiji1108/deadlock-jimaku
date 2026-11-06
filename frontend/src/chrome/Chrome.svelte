@@ -22,6 +22,8 @@
   const REPLACED = 4001;
   /** 翻訳先が複数あると、2 つ目以降はやり直しが要る */
   const DOWNLOAD_ATTEMPTS = 3;
+  /** `/api/chrome/ws` だけ切れたときに、つなぎ直すまでの時間 */
+  const REDIAL_MS = 1000;
   /** アプリが落ちても Chrome を残さない */
   const ORPHAN_MS = 5000;
   const UNSUPPORTED = "この Chrome では使えません。Google Chrome を最新にしてください";
@@ -47,6 +49,9 @@
   let reset: (() => void) | undefined;
   /** 今の区切りの番号。core が前の発話の文を見分ける */
   let cuts = 0;
+  /** `/ws` がつながっている。切れている間はアプリがないので、`/api/chrome/ws` もつなぎ直さない */
+  let online = false;
+  let redial: ReturnType<typeof setTimeout>;
   /** `/ws` の購読をやめる */
   let disconnect = () => {};
   /** 同じ設定で聞き直さない。言語や区切りが変わったら聞き直す */
@@ -100,10 +105,11 @@
       cut?.();
     });
     next.addEventListener("close", ({ code }) => {
-      if (code !== REPLACED) return;
-      other = true;
-      halt();
-      disconnect();
+      if (code === REPLACED) {
+        other = true;
+        halt();
+        disconnect();
+      } else if (online && next === socket) redial = setTimeout(dial, REDIAL_MS);
     });
   }
 
@@ -272,8 +278,10 @@
       // アプリが落ちたら聞き続けない。戻ったら、届く状態に合わせて聞き直す
       (connection) => {
         clearTimeout(orphan);
+        clearTimeout(redial);
         if (other) return;
-        if (connection === "open") return dial();
+        online = connection === "open";
+        if (online) return dial();
         halt();
         socket?.close();
         orphan = setTimeout(() => window.close(), ORPHAN_MS);
@@ -287,6 +295,8 @@
     return () => {
       disconnect();
       clearTimeout(orphan);
+      clearTimeout(redial);
+      online = false;
       window.removeEventListener("pagehide", halt);
       halt();
       socket?.close();
