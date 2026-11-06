@@ -63,9 +63,9 @@ const STALL_MS = 30_000;
 /** マイクのトラックに音が来ているのに結果が来ないまま、この回数作り直したら既定のマイクに戻す。
  * 受け付けても黙って動かない環境がある。黙っているだけなら数えない */
 const SILENT_TRACK_LIMIT = 2;
-/** トラックの音を見る間隔と、音が来ているとみなす振幅（-60 dBFS） */
+/** トラックの音を見る間隔と、音が来ているとみなす振幅（-40 dBFS。部屋の雑音は数えない） */
 const SOUND_CHECK_MS = 250;
-const SOUND_LEVEL = 0.001;
+const SOUND_LEVEL = 0.01;
 /** 通信のエラーが出ずにこの時間続いたら、回線が戻ったとみなす（黙っていると結果が届かない） */
 const STABLE_MS = 5000;
 
@@ -180,10 +180,14 @@ export async function openMicrophone(name?: string | null) {
   // ラベルは許可のあとにしか読めない
   const fallback = await open(true);
   const devices = name ? await navigator.mediaDevices.enumerateDevices() : [];
-  const device = devices.find((d) => d.kind === "audioinput" && sameMic(name!, d.label));
+  const inputs = devices.filter((d) => d.kind === "audioinput");
+  const device =
+    inputs.find((d) => d.label === name) ?? inputs.find((d) => sameMic(name!, d.label));
   if (!device) return { release: closer(fallback), missed: !!name };
+  // 選んだマイクを開けない（ほかのアプリが占有しているなど）なら、開けた既定のマイクで続ける
+  const stream = await open({ deviceId: { exact: device.deviceId } }).catch(() => undefined);
+  if (!stream) return { release: closer(fallback), missed: true };
   closer(fallback)();
-  const stream = await open({ deviceId: { exact: device.deviceId } });
   const sound = watchSound(stream);
   const release = () => {
     sound.close();
@@ -312,7 +316,7 @@ export function listen(lang: string, listener: Listener) {
       if (silenceMs !== undefined) silence = setTimeout(() => current.stop(), silenceMs);
     };
     recognizer.onerror = ({ error }) => {
-      if (recognizer !== current) return;
+      if (recognizer !== current || stopped) return;
       alive();
       if (FATAL.has(error)) {
         stopped = true;
@@ -348,7 +352,7 @@ export function listen(lang: string, listener: Listener) {
       else recognizer.start();
     } catch (e) {
       if (!track) throw e;
-      // トラックを受け付けない版の Chrome
+      // トラックを受け付けない（終わったトラックなど）
       useDefaultMic();
       recognizer.start();
     }

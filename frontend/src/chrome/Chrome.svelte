@@ -196,6 +196,7 @@
       onOffline: (offline) =>
         offline ? show({ state: "blocked", detail: OFFLINE }) : showListening(),
       track: microphone.track,
+      heardSound: microphone.heardSound,
       onDefaultMic() {
         micNotice = DEFAULT_MIC;
         showListening();
