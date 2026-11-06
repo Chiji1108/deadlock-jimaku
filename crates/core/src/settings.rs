@@ -373,8 +373,10 @@ pub enum SpeechEngine {
     /// 新しく使い始める人はハイブリッドから始める（`load`）
     #[default]
     OpenAi,
-    /// すべて PC の中のモデル。無料で、用語の判定も LLM を使わない
-    Free,
+    /// すべて PC の中のモデル。無料で、用語の判定も LLM を使わない。
+    /// 0.3 の rc には `free` で保存した版がある
+    #[serde(alias = "free")]
+    Local,
 }
 
 impl SpeechEngine {
@@ -385,7 +387,7 @@ impl SpeechEngine {
 
     /// OpenAI の鍵が要るか
     pub fn needs_key(self) -> bool {
-        self != Self::Free
+        self != Self::Local
     }
 }
 
@@ -496,6 +498,11 @@ impl Settings {
     /// ふりがなを聞くか。翻訳だけなら見えないので、料金をかけない
     pub fn wants_furigana(&self) -> bool {
         self.subtitle_display.furigana && !self.translation_only()
+    }
+
+    /// 確定の文に読みと用語を付け直すか。翻訳だけなら見えず、どちらも切っていれば付くものがない
+    pub fn wants_marks(&self) -> bool {
+        !self.translation_only() && (self.subtitle_display.furigana || self.deadlock_mode)
     }
 
     /// 辞書に名前を載せる言語（DESIGN.md 8.2）
@@ -893,7 +900,40 @@ mod tests {
         };
         assert!(with(SpeechEngine::OpenAi).wants_live_subtitles());
         assert!(!with(SpeechEngine::Hybrid).wants_live_subtitles());
-        assert!(!with(SpeechEngine::Free).wants_live_subtitles());
+        assert!(!with(SpeechEngine::Local).wants_live_subtitles());
+    }
+
+    #[test]
+    fn the_rc_names_of_the_local_engine_are_read() {
+        for saved in ["local", "free"] {
+            let engine: SpeechEngine = serde_json::from_value(saved.into()).unwrap();
+            assert_eq!(engine, SpeechEngine::Local);
+        }
+        assert_eq!(
+            serde_json::to_value(SpeechEngine::Local).unwrap(),
+            serde_json::json!("local")
+        );
+    }
+
+    #[test]
+    fn marks_are_for_visible_furigana_or_terms() {
+        let with = |furigana, deadlock_mode, show_source| Settings {
+            translate_to: vec!["en".into()],
+            deadlock_mode,
+            subtitle_display: SubtitleDisplay {
+                furigana,
+                show_source,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        assert!(with(true, false, true).wants_marks());
+        assert!(with(false, true, true).wants_marks());
+        assert!(!with(false, false, true).wants_marks());
+        assert!(
+            !with(true, true, false).wants_marks(),
+            "翻訳だけなら見えない"
+        );
     }
 
     #[test]

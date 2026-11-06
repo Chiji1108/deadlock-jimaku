@@ -35,31 +35,31 @@
     {
       value: "hybrid",
       label: "ハイブリッド",
-      traits: "高速・高精度・ふりがな・デッドロックモード",
+      traits: "高速・高精度",
       price: "約 $0.6／時間",
-      hint: "話している途中の字幕は無料のモードと同じく PC の中で作り、最後に OpenAI の高い精度の結果に置き換えます。API キーかギフトコードが必要です。途中の翻訳は英語・ロシア語・中国語です。初回に約 200MB をダウンロードし、動かしている間は約 400MB のメモリを使います",
+      hint: "途中の字幕は PC で作り、確定の字幕は OpenAI の高い精度に置き換えます",
       recommended: true,
     },
     {
       value: "openai",
       label: "OpenAI",
-      traits: "低負荷・高精度・ふりがな・デッドロックモード",
+      traits: "低負荷・高精度",
       price: "約 $1／時間",
-      hint: "すべて OpenAI で作ります。ふりがなとデッドロックモードの精度が高く、モデルを動かさないので、PC の負荷がいちばん小さいです。API キーかギフトコードが必要です",
+      hint: "すべて OpenAI で作ります。PC の負荷は最小です",
     },
     {
-      value: "free",
-      label: "無料",
-      traits: "無料・高速・ふりがな・デッドロックモード",
+      value: "local",
+      label: "ローカルAI",
+      traits: "無料・高速",
       price: "無料",
-      hint: "翻訳、ふりがな、デッドロックモードまで、すべて PC の中で作ります。API キーは要りません。音声は PC の外に送られません。精度は下がります。用語は公式の名前と書き方か読みが同じときだけ強調するので、略称は強調されず、ふつうの言葉が強調されることがあります。翻訳先は英語・ロシア語・中国語です。初回に約 200MB をダウンロードします",
+      hint: "PC だけで作ります。無料でキー不要、精度は低めです",
     },
   ];
 
   const s = $derived(panel.settings!);
   const onlyTranslation = $derived(translationOnly(s));
   const engine = $derived(ENGINES.find((e) => e.value === s.speechEngine)!);
-  /** ローカル AI が止まっている理由 */
+  /** ローカルAI が止まっている理由 */
   const localProblem = $derived(
     panel.liveStatus?.state === "failed" ? panel.liveStatus.detail : undefined,
   );
@@ -229,8 +229,8 @@
       <Field.Field>
         <Field.Label>翻訳先</Field.Label>
         <Field.Description>
-          最大 {MAX_TRANSLATE_TO} つ（{s.translateTo.length} / {MAX_TRANSLATE_TO}）。1
-          つ増えるごとに、話し続けて 1 時間あたり約 $0.3
+          最大 {MAX_TRANSLATE_TO} つ（{s.translateTo.length} / {MAX_TRANSLATE_TO}）{#if s.speechEngine !== "local"}。1
+            つ増えるごとに、話し続けて 1 時間あたり約 $0.3{/if}
         </Field.Description>
         <ToggleGroup.Root
           type="multiple"

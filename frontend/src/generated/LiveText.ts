@@ -2,7 +2,7 @@
 import type { Token } from "./Token";
 
 /**
- * ローカル AI が認識した途中の文と訳
+ * ローカルAI が認識した途中の文と訳
  */
 export type LiveText = { text: string, 
 /**

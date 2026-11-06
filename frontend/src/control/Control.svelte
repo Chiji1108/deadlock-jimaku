@@ -61,8 +61,8 @@
     window.scrollTo({ top: 0 });
   });
 
-  /** 無料のモードは字幕をすべて PC の中で作るので、ローカル AI の状態がそのまま字幕の状態になる */
-  function freeStatus() {
+  /** ローカルAIのモードは字幕をすべて PC の中で作るので、ローカルAI の状態がそのまま字幕の状態になる */
+  function localStatus() {
     switch (panel.liveStatus?.state) {
       case "listening":
         return { label: "字幕を出しています", dot: "bg-emerald-500 animate-pulse" };
@@ -77,7 +77,7 @@
     if (!s?.transcriptionEnabled) return { label: "停止中", dot: "bg-muted-foreground/50" };
     if (panel.transcriptionError) return { label: "止まっています", dot: "bg-destructive" };
     if (panel.silent) return { label: "音が届いていません", dot: "bg-amber-500" };
-    if (s.speechEngine === "free") return freeStatus();
+    if (s.speechEngine === "local") return localStatus();
     if (panel.level === undefined)
       return { label: "準備しています…", dot: "bg-sky-500 animate-pulse" };
     return { label: "字幕を出しています", dot: "bg-emerald-500 animate-pulse" };

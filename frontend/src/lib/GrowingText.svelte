@@ -2,7 +2,7 @@
   // 伸びていく字幕。認識の結果はまとめて届くので、数文字ずつ順に出して滑らかに見せる（DESIGN.md 11 章）
   import type { Token } from "../generated/Token";
   import Rich from "./Rich.svelte";
-  import { revealed } from "./subtitle-lines";
+  import { revealed, textOf } from "./subtitle-lines";
 
   let {
     text,
@@ -14,12 +14,14 @@
   /** 届いた分を約 0.2 秒で出し切る */
   const STEPS = 6;
   let shown = $state(0);
-  const visible = $derived(Math.min(shown, text.length));
+  // 確定の文に読みと用語が付くまで、トークンは `text` より古い。出す長さはトークンに合わせる
+  const full = $derived(tokens.length > 0 ? textOf(tokens) : text);
+  const visible = $derived(Math.min(shown, full.length));
 
   const partial = $derived(revealed(tokens, visible));
 
   $effect(() => {
-    const rest = text.length - visible;
+    const rest = full.length - visible;
     if (rest <= 0) return;
     const timer = setTimeout(() => (shown = visible + Math.ceil(rest / STEPS)), STEP_MS);
     return () => clearTimeout(timer);

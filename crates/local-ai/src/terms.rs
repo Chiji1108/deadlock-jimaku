@@ -201,6 +201,7 @@ mod tests {
             "次のページを見て",
             "レムソンを飲む",
             "カーストの話をする",
+            "ヘイズウルトを使う",
         ] {
             assert_eq!(find(sentence), Vec::new(), "{sentence}");
         }

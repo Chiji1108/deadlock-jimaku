@@ -6,7 +6,7 @@
   import GrowingText from "./GrowingText.svelte";
   import Rich from "./Rich.svelte";
   import { slide } from "./slide";
-  import { showsSource, translationsOf } from "./subtitle-lines";
+  import { draftTerms, showsSource, translationsOf } from "./subtitle-lines";
 
   let { segments, display }: { segments: Segment[]; display?: SubtitleDisplay } = $props();
 
@@ -33,9 +33,15 @@
       {#if showsSource(s, display)}
         <p class="source" lang={s.lang}>
           <!-- partial / final は増えた文字だけをフェードさせ、enriched ではふりがなとアイコンを足す。
-               途中から付いていたものは、出し直して見えないよう足し直さない -->
-          {#if s.enriched}<span class:enriched={!s.draftSource}
-              ><Rich tokens={s.enriched.source} lang={s.lang} furigana={display?.furigana} /></span
+               途中から付いていたものは、出し直して見えないよう足し直さない。確定で初めて見つかった
+               用語にだけ演出を付ける -->
+          {#if s.enriched}<span class:fresh={!s.draftSource}
+              ><Rich
+                tokens={s.enriched.source}
+                lang={s.lang}
+                furigana={display?.furigana}
+                known={s.draftSource && draftTerms(s)}
+              /></span
             >{:else}<GrowingText
               text={s.text}
               tokens={s.draftSource}
@@ -128,11 +134,12 @@
     color: var(--pending-color);
   }
   /* enriched になったら、ふりがな・アイコン・用語の色を後から重ねる（文字の位置は変えない） */
-  .enriched :global(rt),
-  .enriched :global(.icon) {
+  .source :global(.fresh rt),
+  .source :global(.fresh .icon) {
     animation: reveal 300ms ease-out;
   }
-  .enriched :global(.entity) {
+  .source :global(.fresh .entity),
+  .source :global(.entity.fresh) {
     animation: tint 400ms ease-out;
   }
   @keyframes reveal {
