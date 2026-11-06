@@ -22,7 +22,7 @@
     { name: "mecab-ipadic", text: mecabIpadic },
     { name: "Lindera", text: lindera },
   ];
-  // 全文は 230KB あるので、開いたときに読み込む（毎日開くページのバンドルに入れない）
+  // 全文は 300KB あるので、開いたときに読み込む（毎日開くページのバンドルに入れない）
   let thirdParty = $state<Promise<string>>();
 </script>
 
@@ -64,6 +64,8 @@
         {#await thirdParty then text}
           <pre
             class="mt-1 max-h-64 overflow-y-auto font-sans wrap-anywhere whitespace-pre-wrap">{text}</pre>
+        {:catch}
+          <p class="mt-1 text-muted-foreground">読み込めませんでした</p>
         {/await}
       </details>
     </div>

@@ -19,22 +19,9 @@ const TARGETS = [
 ];
 const LICENSE_FILE = /^(licen[sc]e|copying|copyright|unlicense|third[-_]party|mit$|apache)/i;
 const NOTICE_FILE = /^notice/i;
-const SKIPPED_EXTENSION = /\.(rs|spdx|c|h|cmake|m?[jt]s|map|json)$/;
-// OR は負う義務が軽いものから選ぶ
-const PREFERENCE = ["MIT-0", "0BSD", "MIT", "ISC", "BSD-2-Clause", "BSD-3-Clause", "Zlib"];
-// ファイルの先頭で本文を見分ける（aws-lc-sys のように本文の途中に別のライセンスを引くファイルを取り違えない）
-const KNOWN_TEXTS: [RegExp, string][] = [
-  [/apache license,? version 2\.0/, "Apache-2.0"],
-  [/permission is hereby granted, free of charge.*above copyright notice/, "MIT"],
-  [/permission is hereby granted, free of charge/, "MIT-0"],
-  [/permission to use, copy, modify,? and\/or distribute.*above copyright notice/, "ISC"],
-  [/permission to use, copy, modify,? and\/or distribute/, "0BSD"],
-  [/provided 'as-is', without any express or implied warranty/, "Zlib"],
-  [/this is free and unencumbered software/, "Unlicense"],
-  [/boost software license/, "BSL-1.0"],
-  [/creative commons (legal code|cc0|zero)|^cc0/, "CC0-1.0"],
-];
-
+const SKIPPED_EXTENSION = /\.(rs|spdx|c|h|cmake|[cm]?[jt]s|map|json|css|svelte|svg|py)$/;
+// features で vendored を選ばないので、ビルドされない（システムの libdbus を使う）
+const UNBUILT = /\/libdbus-sys-[^/]+\/vendor\//;
 function cargo(args: string[]) {
   return execFileSync("cargo", ["--locked", ...args], {
     cwd: ROOT,
@@ -81,7 +68,7 @@ function rustPackages(): Package[] {
     .map((p) => ({
       name: p.name,
       version: p.version,
-      license: p.license ?? "",
+      license: p.license ?? "（記載なし）",
       dir: dirname(p.manifest_path),
       authors: p.authors,
     }));
@@ -100,8 +87,8 @@ async function frontendPackages(): Promise<Package[]> {
     transform: {
       order: "pre",
       handler(code, id) {
-        if (!id.endsWith(".css")) return;
-        for (const [, name] of code.matchAll(/@import "((?:@[^/"]+\/)?[^/".]+)/g)) {
+        if (!id.endsWith(".css") || id.includes("/node_modules/")) return;
+        for (const [, name] of code.matchAll(/@import "(?!\.)((?:@[^/"]+\/)?[^/"]+)/g)) {
           collect(realpathSync(join(FRONTEND, "node_modules", name)));
         }
       },
@@ -128,86 +115,39 @@ async function frontendPackages(): Promise<Package[]> {
     return {
       name: json.name,
       version: json.version,
-      license: json.license ?? "",
+      license: json.license ?? "（記載なし）",
       dir,
       authors: author ? [author] : [],
     };
   });
 }
 
-// 取り込んだコードの LICENSE はサブフォルダにあるので、下の階層まで見る（ring、regex-syntax など）。
-// vendor/ はシステムのライブラリを使うならビルドされない（libdbus-sys）
+// 取り込んだコードの LICENSE はサブフォルダにあるので、下の階層まで見る（ring、regex-syntax など）
 function textFiles(dir: string, pattern: RegExp) {
   return readdirSync(dir, { recursive: true, encoding: "utf8" })
-    .filter((path) => pattern.test(basename(path)) && !/^vendor\/|\/node_modules\//.test(path))
-    .filter((path) => !SKIPPED_EXTENSION.test(path) && statSync(join(dir, path)).isFile())
+    .filter((path) => pattern.test(basename(path)) && !SKIPPED_EXTENSION.test(path))
+    .filter((path) => !UNBUILT.test(join(dir, path)) && statSync(join(dir, path)).isFile())
     .toSorted()
     .map((path) => readFileSync(join(dir, path), "utf8").replaceAll("\r\n", "\n").trim());
 }
 
-function identify(text: string) {
-  const head = text.slice(0, 2000).replace(/\s+/g, " ").toLowerCase();
-  return KNOWN_TEXTS.find(([pattern]) => pattern.test(head))?.[1];
-}
-
-// SPDX の式を読み、AND はすべて、OR は 1 つ選ぶ。ファイルがある選択肢を優先する（古い書き方の / は OR）
-function chooseLicenses(expression: string, available: Set<string | undefined>) {
-  const tokens = expression.replaceAll("/", " OR ").match(/[()]|[^\s()]+/g) ?? [];
-  const rank = (id: string) => {
-    const index = PREFERENCE.indexOf(id);
-    return (index < 0 ? PREFERENCE.length : index) + (available.has(id) ? 0 : 100);
-  };
-  const cost = (ids: string[]) => ids.reduce((sum, id) => sum + rank(id), 0);
-  let i = 0;
-  const term = (): string[] => {
-    if (tokens[i] === "(") {
-      i += 1;
-      const inner = or();
-      i += 1;
-      return inner;
-    }
-    const id = tokens[i++];
-    if (tokens[i] === "WITH") i += 2;
-    return [id];
-  };
-  const and = () => {
-    let ids = term();
-    while (tokens[i] === "AND") {
-      i += 1;
-      ids = [...ids, ...term()];
-    }
-    return ids;
-  };
-  function or() {
-    let best = and();
-    while (tokens[i] === "OR") {
-      i += 1;
-      const next = and();
-      if (cost(next) < cost(best)) best = next;
-    }
-    return best;
-  }
-  const chosen = new Set(or());
-  const rejected = tokens.filter((token) => /^[\w.+-]+$/.test(token) && !chosen.has(token));
-  return new Set(rejected);
-}
-
 function isCopyright(line: string) {
   return (
-    /^\W*((Copyright|COPYRIGHT|copyright)\s+(\([cC]\)|©|`?\d|[A-Z][a-z.])|©|\([cC]\)\s*\d)/.test(
-      line,
-    ) &&
-    !/^\W*copyright notice/i.test(line) &&
+    /^\W*(copyright\b.*(\d{4}|\(c\)|©)|©|\(c\)\s*\d)/i.test(line) &&
     !/\[yyyy\]|\{yyyy\}|<year>|\[year\]|\{year\}/i.test(line)
   );
 }
 
+// 記号や空白の違い、Apache の末尾の「適用のしかた」（本文ではない）は同じ本文として扱う
 function fingerprint(body: string) {
   return body
-    .replace(/end of terms and conditions[\s\S]*/i, "")
-    .replace(/\s+/g, " ")
     .toLowerCase()
-    .replace(/^\W*(the )?mit license\W*(mit\W*)?/, "");
+    .replace(/[^a-z0-9]+/g, " ")
+    .replaceAll("https", "http")
+    .replace(/^\W*(the )?mit license\W*(mit\W*)?/, "")
+    .replace(/appendix how to apply the apache license.*?limitations under the license/, "")
+    .replace(/end of terms and conditions/, "")
+    .trim();
 }
 
 function render(sections: { title: string; packages: Package[] }[]) {
@@ -219,11 +159,9 @@ function render(sections: { title: string; packages: Package[] }[]) {
 
   const entries = (pkg: Package) => {
     const files = textFiles(pkg.dir, LICENSE_FILE);
-    const rejected = chooseLicenses(pkg.license, new Set(files.map(identify)));
-    const kept = files.filter((text) => !rejected.has(identify(text) ?? ""));
     const label = `${pkg.name} ${pkg.version}`;
-    if (kept.length === 0) missing.push(`${label}  ${pkg.license}`);
-    const fingerprints = kept.map((text) => {
+    if (files.length === 0) missing.push(`${label}  ${pkg.license}`);
+    const fingerprints = files.map((text) => {
       const body = text
         .split("\n")
         .filter((line) => !isCopyright(line))
@@ -247,8 +185,7 @@ function render(sections: { title: string; packages: Package[] }[]) {
       ),
     ];
     for (const text of textFiles(pkg.dir, NOTICE_FILE)) notices.push(`--- ${label}\n\n${text}`);
-    const license = pkg.license || files.map(identify).find(Boolean) || "";
-    return { label, license, fingerprints, copyrights, authors: pkg.authors };
+    return { label, license: pkg.license, fingerprints, copyrights, authors: pkg.authors };
   };
 
   const rendered = sections.map(({ title, packages }) => ({
@@ -265,7 +202,7 @@ function render(sections: { title: string; packages: Package[] }[]) {
   lines.push(
     "デドロ字幕の配布物に含まれる第三者のソフトウェアとフォントのライセンス表示です。",
     "mise run notices で生成します。手で編集しないでください。",
-    "複数のライセンスから選べるものは、そのうち 1 つのもとで利用しています。[n] は末尾のライセンス本文の番号です。",
+    "複数のライセンスから選べるものは、そのうち 1 つのもとで利用しています。[n] はパッケージに含まれるライセンスファイルの本文で、末尾にあります。",
     "",
   );
   for (const { title, entries: list } of rendered) {

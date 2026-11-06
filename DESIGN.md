@@ -804,7 +804,8 @@ API（すべて `/api`）:
 - `notices/third-party.txt` は `mise run notices` で作ってコミットする。手で編集しない。IPADIC と Lindera は別のファイルのまま（利用規約でも読む）
 - 載せるのは配るものだけ。Rust は `cargo tree --edges normal,no-proc-macro` を build.yml の 4 つのターゲットごとに解決し、リンクされる crate を集める（dev-dependencies、build-dependencies、proc-macro は成果物に入らない）。フロントはほぼ全部が devDependencies なので、`vite build` の結果に実際に残ったモジュール、フォントなどのアセット、CSS の `@import` から取る
 - 外の道具（`cargo-about` など）は使わない。フロントの分と NOTICE は結局自分で書くので、Node のスクリプト 1 つのほうが単純で、版の固定も要らない
-- 著作権表示はパッケージの中のライセンスファイル（サブフォルダの分も）から取る。同じ本文は 1 度だけ書く。`OR` は義務が軽いものを 1 つ選ぶ。ファイルがないものは、推測で埋めず一覧に分けて出す
+- 著作権表示はパッケージの中のライセンスファイル（サブフォルダの分も）から取る。同じ本文は 1 度だけ書く。`OR` のものも選り分けず全部のファイルを載せる（本文は重ねないので大きくならず、SPDX の式を読まなくて済む）。ファイルがないものは、推測で埋めず一覧に分けて出す
+- 対象は Rust の crate とフロントのバンドル。AppImage が同梱する GTK・WebKitGTK など OS のライブラリと、Windows の WebView2Loader（Microsoft のバイナリ）はこの一覧に入らない
 - About からは開いたときに読み込む（`import("...?raw")`。全文を初期のバンドルに入れない）
 - `mise run check` と build.yml（Linux）が `--check` で作り直して比べ、古ければ失敗する。3 秒ほどで済む
 
