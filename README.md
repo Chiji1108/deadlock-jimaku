@@ -33,11 +33,11 @@ macOS 版は Apple の署名と公証を済ませています。Windows 版は�
 ```mermaid
 flowchart LR
   subgraph pc["配信 PC"]
-    obs["OBS<br/>オーバーレイ、ドック"]
+    obs["OBS<br/>オーバーレイ<br/>ドック"]
     subgraph app["Tauri アプリ（app/）"]
       panel["操作パネル<br/>control.html"]
       core["中核（crates/core）<br/>字幕の処理、Store<br/>localhost:4510 の /api、/ws、/overlay/*"]
-      shell["トレイ、自動更新"]
+      shell["トレイ<br/>自動更新"]
     end
     helper["jimaku-local<br/>crates/local-ai"]
   end
@@ -72,9 +72,9 @@ flowchart LR
 ```mermaid
 flowchart LR
   mic["マイク"] --> core["中核<br/>発話を区切る"]
-  core -- "発話の音声" --> helper["jimaku-local<br/>途中の字幕と翻訳<br/>ふりがな"]
+  core -- "発話の音声" --> helper["jimaku-local<br/>途中の字幕<br/>翻訳、ふりがな"]
   core -- "区切った音声" --> batch["OpenAI /audio/transcriptions<br/>確定の字幕"]
-  batch --> llm["OpenAI /responses<br/>用語、翻訳、ふりがな"]
+  batch --> llm["OpenAI /responses<br/>用語、翻訳<br/>ふりがな"]
   helper --> ws["/ws"]
   llm --> ws
   classDef cloud fill:#ffcf33,stroke:#12110e,color:#12110e
@@ -88,7 +88,7 @@ flowchart LR
   mic["マイク"] --> core["中核<br/>発話を区切る"]
   core -- "発話の音声" --> realtime["OpenAI /realtime<br/>途中の字幕"]
   core -- "区切った音声" --> batch["OpenAI /audio/transcriptions<br/>確定の字幕"]
-  batch --> llm["OpenAI /responses<br/>用語、翻訳、ふりがな"]
+  batch --> llm["OpenAI /responses<br/>用語、翻訳<br/>ふりがな"]
   realtime --> ws["/ws"]
   llm --> ws
   classDef cloud fill:#ffcf33,stroke:#12110e,color:#12110e
@@ -100,7 +100,7 @@ flowchart LR
 ```mermaid
 flowchart LR
   mic["マイク"] --> core["中核<br/>発話を区切る"]
-  core -- "発話の音声、区切り" --> helper["jimaku-local<br/>途中の字幕と確定の字幕<br/>翻訳、ふりがな"]
+  core -- "発話の音声、区切り" --> helper["jimaku-local<br/>途中の字幕<br/>確定の字幕<br/>翻訳、ふりがな"]
   helper --> ws["/ws"]
 ```
 
