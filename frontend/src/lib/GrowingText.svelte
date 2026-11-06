@@ -1,33 +1,19 @@
 <script lang="ts">
-  // 伸びていく字幕。増えた文字だけをその場でフェードさせる（DESIGN.md 11 章）。
-  // 1 文字ずつ要素に分けると縁取りが隣の文字に重なり、字間も崩れるので、
-  // フェードが終わった文字は 1 つの文字列に戻す
+  // 伸びていく字幕。認識の結果はまとめて届くので、数文字ずつ順に出して滑らかに見せる（DESIGN.md 11 章）
   let { text }: { text: string } = $props();
 
-  const FADE_MS = 160;
-  /** 文字列に戻した長さ */
-  let settled = $state(0);
-  const kept = $derived(Math.min(settled, text.length));
+  const STEP_MS = 30;
+  /** 届いた分を約 0.2 秒で出し切る */
+  const STEPS = 6;
+  let shown = $state(0);
+  const visible = $derived(Math.min(shown, text.length));
 
   $effect(() => {
-    const { length } = text;
-    const timer = setTimeout(() => (settled = length), FADE_MS);
+    const rest = text.length - visible;
+    if (rest <= 0) return;
+    const timer = setTimeout(() => (shown = visible + Math.ceil(rest / STEPS)), STEP_MS);
     return () => clearTimeout(timer);
   });
 </script>
 
-<span
-  >{text.slice(0, kept)}{#if kept < text.length}<span class="fresh">{text.slice(kept)}</span
-    >{/if}</span
->
-
-<style>
-  .fresh {
-    animation: appear 160ms ease-out;
-  }
-  @keyframes appear {
-    from {
-      opacity: 0;
-    }
-  }
-</style>
+<span>{text.slice(0, visible)}</span>

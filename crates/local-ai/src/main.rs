@@ -23,7 +23,8 @@ const CUT: u8 = 2;
 const SAMPLE_RATE: usize = 16_000;
 /// 長い発話でも、再デコードの時間が伸び続けないようにする
 const MAX_SAMPLES: usize = 10 * SAMPLE_RATE;
-const MIN_TICK: Duration = Duration::from_millis(300);
+/// 短い発話は滑らかに更新する。長くなったら認識の時間の 1.25 倍に広げ、CPU を占有しない
+const MIN_TICK: Duration = Duration::from_millis(200);
 
 /// 開いている発話の音声。最新だけあればいいので、デコードが追いつかなければ途中を飛ばす
 #[derive(Default)]
@@ -92,12 +93,8 @@ fn main() -> anyhow::Result<()> {
             emit(&json!({ "type": "text", "text": text, "translation": translation }));
             shown = text;
         }
-        // 長い発話では、デコードが CPU を占め続けないよう間を空ける
-        std::thread::sleep(
-            MIN_TICK
-                .max(started.elapsed() * 2)
-                .saturating_sub(started.elapsed()),
-        );
+        let elapsed = started.elapsed();
+        std::thread::sleep(MIN_TICK.max(elapsed.mul_f32(1.25)).saturating_sub(elapsed));
     }
 }
 
