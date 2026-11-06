@@ -98,8 +98,14 @@ jobs:
             key=$(echo "$name" | tr '[:lower:]-' '[:upper:]_')
             echo "JIMAKU_LOCAL_SHA256_$key=${sum%% *}" >> "$GITHUB_ENV"
           done
+      # RPM は版のハイフンを受け付けないので、プレリリースでは作らない
+      - name: 作るものを決める
+        run: |
+          args="${{ matrix.args }}"
+          grep -q '^version = ".*-' Cargo.toml && args="${args/deb,rpm,appimage/deb,appimage}"
+          echo "BUILD_ARGS=$args" >> "$GITHUB_ENV"
       - if: ${{ !inputs.sign }}
-        run: frontend/node_modules/.bin/tauri build ${{ matrix.args }}
+        run: frontend/node_modules/.bin/tauri build $BUILD_ARGS
       # リリースのとき: 自動更新のファイル（署名つき）も作る。Mac は Developer ID で署名して公証する
       # （証明書は Tauri が一時的なキーチェーンに読み込み、App Store Connect の API キーで公証する）。
       # 鍵はこの手順にだけ渡す（Apple の鍵は Mac にだけ）
@@ -115,10 +121,7 @@ jobs:
             export APPLE_API_KEY_PATH="$RUNNER_TEMP/AuthKey.p8"
             printf '%s' "$APPLE_API_KEY_P8" > "$APPLE_API_KEY_PATH"
           fi
-          args="${{ matrix.args }}"
-          # RPM は版のハイフンを受け付けないので、プレリリースでは作らない
-          case "$GITHUB_REF_NAME" in *-*) args="${args/deb,rpm,appimage/deb,appimage}" ;; esac
-          frontend/node_modules/.bin/tauri build $args \
+          frontend/node_modules/.bin/tauri build $BUILD_ARGS \
             --config '{"bundle":{"createUpdaterArtifacts":true}}'
           if [ "$RUNNER_OS" = macOS ]; then
             # Tauri が公証するのは中のアプリだけなので、ダウンロードして開く dmg も公証して印を付ける
