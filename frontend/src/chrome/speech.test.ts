@@ -30,7 +30,7 @@ const options = () => ({
   silenceMs: 750,
   onText: vi.fn(),
   onFatal: vi.fn(),
-  onOffline: vi.fn(),
+  onTrouble: vi.fn(),
 });
 
 beforeEach(() => {
@@ -121,10 +121,10 @@ test("なにも届かなくなった認識を作り直す", () => {
   listen("ja", { ...o, silenceMs: undefined });
   const stuck = FakeRecognizer.last;
   stuck.say("ヘイズ", false);
-  vi.advanceTimersByTime(29_000);
+  vi.advanceTimersByTime(89_000);
   expect(FakeRecognizer.started).toBe(1);
   stuck.say("ヘイズが", false);
-  vi.advanceTimersByTime(30_000);
+  vi.advanceTimersByTime(90_000);
   expect(stuck.abort).toHaveBeenCalled();
   expect(FakeRecognizer.started).toBe(2);
   expect(o.onText).toHaveBeenLastCalledWith("ヘイズが", true);
@@ -132,8 +132,79 @@ test("なにも届かなくなった認識を作り直す", () => {
 
 test("始めたまま進まない認識も作り直す", () => {
   listen("ja", { ...options(), silenceMs: undefined });
-  vi.advanceTimersByTime(30_000);
+  vi.advanceTimersByTime(7999);
+  expect(FakeRecognizer.started).toBe(1);
+  vi.advanceTimersByTime(1);
   expect(FakeRecognizer.started).toBe(2);
+});
+
+test("動き始めたら、黙っていても 90 秒は作り直さない", () => {
+  listen("ja", { ...options(), silenceMs: undefined });
+  FakeRecognizer.last.onstart();
+  vi.advanceTimersByTime(89_999);
+  expect(FakeRecognizer.started).toBe(1);
+  vi.advanceTimersByTime(1);
+  expect(FakeRecognizer.started).toBe(2);
+});
+
+test("エラーがなければ、すぐ終わった認識も待たずに聞き直す", () => {
+  listen("ja", options());
+  FakeRecognizer.last.onend();
+  vi.advanceTimersByTime(99);
+  expect(FakeRecognizer.started).toBe(1);
+  vi.advanceTimersByTime(1);
+  expect(FakeRecognizer.started).toBe(2);
+});
+
+test("マイクのエラーでは止まらず、続いたら知らせて聞き直し、直ったら戻す", () => {
+  const o = options();
+  listen("ja", o);
+  for (let i = 0; i < 3; i++) {
+    FakeRecognizer.last.onerror({ error: "audio-capture" });
+    FakeRecognizer.last.onend();
+    vi.advanceTimersToNextTimer();
+  }
+  expect(o.onFatal).not.toHaveBeenCalled();
+  expect(o.onTrouble).toHaveBeenCalledExactlyOnceWith("audio-capture");
+  expect(FakeRecognizer.started).toBe(4);
+  FakeRecognizer.last.say("ヘイズ", false);
+  expect(o.onTrouble).toHaveBeenLastCalledWith();
+});
+
+test("知らない種類のエラーでも止まらない", () => {
+  const o = options();
+  listen("ja", o);
+  FakeRecognizer.last.onerror({ error: "phrases-not-supported" });
+  FakeRecognizer.last.onend();
+  vi.advanceTimersByTime(2000);
+  expect(o.onFatal).not.toHaveBeenCalled();
+  expect(FakeRecognizer.started).toBe(2);
+});
+
+test.each(["not-allowed", "service-not-allowed", "language-not-supported"])(
+  "%s では止まる",
+  (error) => {
+    const o = options();
+    listen("ja", o);
+    FakeRecognizer.last.onerror({ error });
+    expect(o.onFatal).toHaveBeenCalledExactlyOnceWith(error);
+  },
+);
+
+test("終わったトラックは渡さず、既定のマイクに戻す", () => {
+  const ended = { kind: "audio", readyState: "live" } as { readyState: string };
+  const onDefaultMic = vi.fn();
+  listen("ja", {
+    ...options(),
+    track: ended as unknown as MediaStreamTrack,
+    heardSound: () => false,
+    onDefaultMic,
+  });
+  ended.readyState = "ended";
+  FakeRecognizer.last.onend();
+  vi.advanceTimersByTime(100);
+  expect(onDefaultMic).toHaveBeenCalledOnce();
+  expect(FakeRecognizer.last.start).toHaveBeenCalledWith();
 });
 
 test("聞き直しを待っている間は作り直さない", () => {
@@ -298,10 +369,10 @@ test("通信できない間は止まらず、知らせて聞き直し続ける",
   const o = options();
   listen("ja", o);
   for (let i = 0; i < 2; i++) failNetwork();
-  expect(o.onOffline).not.toHaveBeenCalled();
+  expect(o.onTrouble).not.toHaveBeenCalled();
   for (let i = 0; i < 10; i++) failNetwork();
   expect(o.onFatal).not.toHaveBeenCalled();
-  expect(o.onOffline.mock.calls).toEqual([[true]]);
+  expect(o.onTrouble.mock.calls).toEqual([["network"]]);
   expect(FakeRecognizer.started).toBe(13);
 });
 
@@ -310,7 +381,7 @@ test("文が届いたら回線が戻ったと知らせる", () => {
   listen("ja", o);
   for (let i = 0; i < 3; i++) failNetwork();
   FakeRecognizer.last.say("ヘイズ", false);
-  expect(o.onOffline).toHaveBeenLastCalledWith(false);
+  expect(o.onTrouble).toHaveBeenLastCalledWith();
 });
 
 test("黙っていても、通信のエラーが出なければ回線が戻ったと知らせる", () => {
@@ -318,7 +389,7 @@ test("黙っていても、通信のエラーが出なければ回線が戻っ�
   listen("ja", o);
   for (let i = 0; i < 3; i++) failNetwork();
   vi.advanceTimersByTime(5000);
-  expect(o.onOffline).toHaveBeenLastCalledWith(false);
+  expect(o.onTrouble).toHaveBeenLastCalledWith();
 });
 
 test("間に正常に終わった認識があれば、失敗を続けて数えない", () => {
@@ -328,7 +399,7 @@ test("間に正常に終わった認識があれば、失敗を続けて数え�
   FakeRecognizer.last.onend();
   vi.advanceTimersToNextTimer();
   for (let i = 0; i < 2; i++) failNetwork();
-  expect(o.onOffline).not.toHaveBeenCalled();
+  expect(o.onTrouble).not.toHaveBeenCalled();
 });
 
 test("Google Chrome のほかは使えない", () => {

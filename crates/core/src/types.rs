@@ -157,7 +157,7 @@ pub enum LiveState {
     Preparing,
     /// 聞いている
     Listening,
-    /// 回線が戻るのを待っている。`detail` に理由が入る
+    /// 回線やマイクが戻るのを待っている。`detail` に理由が入る
     Blocked,
     /// Google Chrome を起動できない。インストールを案内する
     Missing,

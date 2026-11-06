@@ -44,22 +44,24 @@ interface TranslatorClass {
   create(options: Pair & { monitor?(monitor: Monitor): void }): Promise<Translator>;
 }
 
-/** 続けても直らないエラー。それ以外（無音で切れたなど）は認識を始め直す */
-const FATAL = new Set([
-  "not-allowed",
-  "service-not-allowed",
-  "language-not-supported",
-  "audio-capture",
-]);
-/** すぐ終わり続けるときに、始め直しを連打しない */
+/** 続けても直らないエラー。それ以外は認識を始め直す */
+const FATAL = new Set(["not-allowed", "service-not-allowed", "language-not-supported"]);
+/** ふだんの終わり方。問題として数えない */
+const EXPECTED = new Set(["no-speech", "aborted"]);
+/** すぐ終わり続けるときに、聞き直しを連打しない。短い発話のあとの声を落とさないよう短くする */
+const MIN_RESTART_MS = 100;
+/** エラーが続くときの聞き直しの間隔の元。翻訳のモデルの作り直しの待ちにも使う */
 const RETRY_MS = 1000;
 const CREATE_ATTEMPTS = 3;
-/** 通信できない間の始め直しの間隔の上限。回線が戻ればこの時間のうちに再開する */
+/** エラーが続く間の始め直しの間隔の上限。直ればこの時間のうちに再開する */
 const MAX_RETRY_MS = 15_000;
-/** 続けて失敗したら、通信できないと知らせる */
-const NETWORK_FAILURES = 3;
-/** 認識が動いているはずなのに、この時間なにも届かなければ止まったとみなして作り直す */
-const STALL_MS = 30_000;
+/** 続けて失敗したら知らせる */
+const TROUBLE_FAILURES = 3;
+/** 始めてから `onstart` が来るまでの時間。これを過ぎたら止まったとみなして作り直す */
+const START_MS = 8000;
+/** 動き始めてから、この時間なにも届かなければ止まったとみなして作り直す。
+ * `continuous` の認識は黙っている間なにも届かないことがあるので長くする */
+const STALL_MS = 90_000;
 /** マイクのトラックに音が来ているのに結果が来ないまま、この回数作り直したら既定のマイクに戻す。
  * 受け付けても黙って動かない環境がある。黙っているだけなら数えない */
 const SILENT_TRACK_LIMIT = 2;
@@ -202,8 +204,8 @@ interface Listener {
   /** 途中か確定の文。確定で文が空なら、途中の文を捨てる */
   onText(text: string, final: boolean): void;
   onFatal(error: string): void;
-  /** 通信できなくなった、または戻った */
-  onOffline(offline: boolean): void;
+  /** エラーが続いている（聞き直しは続ける）。`undefined` なら直った */
+  onTrouble(error?: string): void;
   /** 認識に渡すマイク。省くと Chrome の既定のマイクを使う */
   track?: MediaStreamTrack;
   /** 前に聞いてから `track` に音が来たか */
@@ -214,7 +216,7 @@ interface Listener {
 
 /** 止めるまで聞き続ける。`cut` は今の認識を区切り、すぐ聞き直す */
 export function listen(lang: string, listener: Listener) {
-  const { silenceMs, onText, onFatal, onOffline, heardSound, onDefaultMic } = listener;
+  const { silenceMs, onText, onFatal, onTrouble, heardSound, onDefaultMic } = listener;
   let { track } = listener;
   const Recognition = recognition()!;
   let stopped = false;
@@ -223,10 +225,10 @@ export function listen(lang: string, listener: Listener) {
   let restart: ReturnType<typeof setTimeout>;
   let silence: ReturnType<typeof setTimeout>;
   let stable: ReturnType<typeof setTimeout>;
-  /** 続けて通信のエラーで終わった回数 */
+  /** 続けてエラーで終わった回数 */
   let failures = 0;
-  /** 今の認識が通信のエラーになった */
-  let failed = false;
+  /** 今の認識のエラー */
+  let failed: string | undefined;
   /** 確定していない文 */
   let pending = "";
   /** 区切ったあと、聞き直すまでの結果は使わない */
@@ -241,7 +243,7 @@ export function listen(lang: string, listener: Listener) {
 
   const recovered = () => {
     clearTimeout(stable);
-    if (failures >= NETWORK_FAILURES) onOffline(false);
+    if (failures >= TROUBLE_FAILURES) onTrouble();
     failures = 0;
   };
 
@@ -273,8 +275,10 @@ export function listen(lang: string, listener: Listener) {
   };
 
   const start = () => {
-    failed = false;
+    failed = undefined;
     heardResult = false;
+    // 抜かれたマイクのトラックは戻らない
+    if (track?.readyState === "ended") useDefaultMic();
     if (failures) stable = setTimeout(recovered, STABLE_MS);
     // 再開のたびに作り直す。古いインスタンスの遅れた知らせは使わない
     const recognizer = new Recognition();
@@ -283,10 +287,11 @@ export function listen(lang: string, listener: Listener) {
     recognizer.continuous = true;
     recognizer.interimResults = true;
     // 動いている間だけ見る。終わったあとの聞き直しの待ちは数えない
-    const alive = () => {
+    const watch = (ms: number) => {
       clearTimeout(stall);
-      stall = setTimeout(() => replace(recognizer), STALL_MS);
+      stall = setTimeout(() => replace(recognizer), ms);
     };
+    const alive = () => watch(STALL_MS);
     recognizer.onstart = () => {
       if (recognizer === current) alive();
     };
@@ -321,8 +326,8 @@ export function listen(lang: string, listener: Listener) {
       if (FATAL.has(error)) {
         stopped = true;
         onFatal(error);
-      } else if (error === "network") {
-        failed = true;
+      } else if (!EXPECTED.has(error)) {
+        failed = error;
         clearTimeout(stable);
       }
     };
@@ -335,18 +340,18 @@ export function listen(lang: string, listener: Listener) {
       pending = "";
       if (stopped) return;
       if (failed) {
-        if (++failures === NETWORK_FAILURES) onOffline(true);
+        if (++failures === TROUBLE_FAILURES) onTrouble(failed);
       } else recovered();
       checkTrack();
       // 隠れているとタイマーが絞られるので、すぐ聞き直せるときは待たない
-      const backoff = Math.min(RETRY_MS * 2 ** failures, MAX_RETRY_MS);
+      const backoff = failures ? Math.min(RETRY_MS * 2 ** failures, MAX_RETRY_MS) : MIN_RESTART_MS;
       const wait = backoff - (Date.now() - startedAt);
       if (wait > 0) restart = setTimeout(start, wait);
       else start();
     };
     startedAt = Date.now();
     cutting = false;
-    alive();
+    watch(START_MS);
     try {
       if (track) recognizer.start(track);
       else recognizer.start();

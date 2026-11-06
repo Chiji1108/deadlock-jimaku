@@ -27,7 +27,11 @@
   /** アプリが落ちても Chrome を残さない */
   const ORPHAN_MS = 5000;
   const UNSUPPORTED = "この Chrome では使えません。Google Chrome を最新にしてください";
-  const OFFLINE = "音声認識につながりません。回線が戻ると自動で再開します";
+  /** 続いているエラーの案内。聞き直しは続けている */
+  const TROUBLE: Record<string, string> = {
+    network: "音声認識につながりません。回線が戻ると自動で再開します",
+    "audio-capture": "マイクの音を取れません。つなぎ直すと自動で再開します",
+  };
   const DEFAULT_MIC = "Chrome の既定のマイクを使っています";
   const names = new Intl.DisplayNames(["ja"], { type: "language" });
 
@@ -193,8 +197,13 @@
       silenceMs: sink.silenceMs,
       onText: sink.onText,
       onFatal: fail,
-      onOffline: (offline) =>
-        offline ? show({ state: "blocked", detail: OFFLINE }) : showListening(),
+      onTrouble: (error) =>
+        error
+          ? show({
+              state: "blocked",
+              detail: TROUBLE[error] ?? `音声認識のエラーが続いています（${error}）`,
+            })
+          : showListening(),
       track: microphone.track,
       heardSound: microphone.heardSound,
       onDefaultMic() {
