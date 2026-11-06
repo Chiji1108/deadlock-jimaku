@@ -28,7 +28,8 @@ export default defineConfig({
     strictPort: true,
     proxy: {
       "/ws": { target: `ws://${core}`, ws: true },
-      "/api": `http://${core}`,
+      // Host をそのまま渡す（文字列の形だと書き換わり、axum の Origin の確かめに通らない）
+      "/api": { target: `http://${core}` },
       "/assets": `http://${core}`,
     },
   },
