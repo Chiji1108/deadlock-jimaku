@@ -2,7 +2,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { getPlatformProxy } from "wrangler";
 import share0001 from "../migrations/0001_share.sql?raw";
 import limit0002 from "../migrations/0002_daily_limit.sql?raw";
-import { addUsage, codeByValue, DEFAULT_DAILY_LIMIT_USD } from "./db";
+import { addUsage, codeByValue, day, DEFAULT_DAILY_LIMIT_USD } from "./db";
 import { app, type Env } from "./index";
 import { openai, validKey } from "./openai";
 import { appendSeconds, tokensUsd, wavSeconds } from "./price";
@@ -695,14 +695,45 @@ describe("realtime relay", () => {
 
   it("cuts the session when the audio reaches the daily limit", async () => {
     client.message(sessionUpdate());
-    // 上限の $0.001 を超える音声（約 4 秒）を送り、次の書き込みの時刻まで進める
+    // 上限の $0.001 を超える音声（約 8 秒）を、30 秒の確認を待たずに一度に送る
     client.message(append(400_000));
-    vi.mocked(Date.now).mockReturnValue(NOW + 30_000);
-    client.message(append());
-    await settled();
     // アプリは reason を見て、張り直さずに知らせる（crates/core/src/stt.rs）
     expect(client.closed).toEqual({ code: 1008, reason: "limit" });
     expect(upstream.closed?.code).toBe(1008);
+    expect(upstream.sent).toHaveLength(1);
+    await settled();
+    expect((await codeByValue(env.DB, code))!.day_usd).toBeCloseTo((400_000 / 2 / 24_000 / 60) * 0.017, 8);
+  });
+
+  it("adds up audio sent faster than real time", () => {
+    client.message(sessionUpdate());
+    // 1 回は上限に届かない 2 秒ずつ（約 $0.00057）。同じ時刻のうちに 2 回目で超える
+    client.message(append(96_000));
+    expect(client.closed).toBeUndefined();
+    client.message(append(96_000));
+    expect(client.closed).toEqual({ code: 1008, reason: "limit" });
+  });
+
+  it("starts from what was used today", async () => {
+    await env.DB.prepare("UPDATE codes SET day = ?, day_usd = 0.0009").bind(day(NOW)).run();
+    client = new FakeSocket();
+    upstream = new FakeSocket();
+    vi.mocked(openai).mockResolvedValue({ webSocket: upstream } as unknown as Response);
+    await relay(env.DB, (await codeByValue(env.DB, code))!, KEY, ctx);
+    client.message(sessionUpdate());
+    client.message(append(96_000));
+    expect(client.closed).toEqual({ code: 1008, reason: "limit" });
+  });
+
+  it("takes in what another session used at each check", async () => {
+    client.message(sessionUpdate());
+    await env.DB.prepare("UPDATE codes SET day = ?, day_usd = 0.0009").bind(day(NOW)).run();
+    vi.mocked(Date.now).mockReturnValue(NOW + 30_000);
+    client.message(append());
+    await settled();
+    expect(client.closed).toBeUndefined();
+    client.message(append(96_000));
+    expect(client.closed).toEqual({ code: 1008, reason: "limit" });
   });
 
   it("gives the general reason when a code is stopped", async () => {

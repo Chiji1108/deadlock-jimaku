@@ -2,7 +2,7 @@
 // 数えられない音声を送らせないよう、アプリが送る種類の文字のメッセージだけを通し、
 // 単価の分かるモデルと音声の形を session.update で決めるまでは、ほかのメッセージを通さない
 
-import { addUsage, codeById, refusal, type Code } from "./db";
+import { addUsage, codeById, dailyLimit, refusal, todayUsd, type Code } from "./db";
 import { openai } from "./openai";
 import { appendSeconds, audioUsd, REALTIME_RATE } from "./price";
 
@@ -34,6 +34,9 @@ export async function relay(
 
   let model: string | undefined;
   let pending = 0;
+  // 実時間より速く送られても 30 秒ごとの確認の間に上限を超えないよう、今日の残額を持ち、音声を受けるたびに引く
+  const budget = (now: Code) => dailyLimit(now) - todayUsd(now, Date.now()) - pending;
+  let remaining = budget(code);
   let flushed = Date.now();
   let writing: Promise<void> = Promise.resolve();
   let closed = false;
@@ -72,6 +75,7 @@ export async function relay(
       flush()
         .then(() => codeById(db, code.id))
         .then((now) => {
+          if (now) remaining = budget(now);
           const error = now ? refusal(now, Date.now()) : "revoked";
           if (error) close(1008, error === "limit" ? "limit" : "gift code is no longer usable");
         }),
@@ -102,7 +106,10 @@ export async function relay(
       return close(1008, "session.update with a model comes first");
     } else if (msg.type === "input_audio_buffer.append") {
       if (typeof msg.audio !== "string") return close(1008, "message not allowed");
-      pending += audioUsd(model, appendSeconds(msg.audio)) ?? 0;
+      const usd = audioUsd(model, appendSeconds(msg.audio)) ?? 0;
+      pending += usd;
+      remaining -= usd;
+      if (remaining <= 0) return close(1008, "limit");
     }
     if (Date.now() - flushed >= FLUSH_MS) flushAndCheck();
     send(upstream, event.data);
