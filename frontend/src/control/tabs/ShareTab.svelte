@@ -156,7 +156,7 @@
                   trigger="設定を変える"
                   title="設定を変える"
                   description={c.memo || undefined}
-                  valid={validCode(editing.expiresAt, editing.dailyLimit, panel.now)}
+                  valid={validCode(editing.expiresAt, editing.dailyLimit, panel.now, c.expiresAt)}
                   onopen={() =>
                     (editing = {
                       memo: c.memo,
@@ -179,6 +179,7 @@
                     bind:memo={editing.memo}
                     bind:expiresAt={editing.expiresAt}
                     bind:dailyLimit={editing.dailyLimit}
+                    saved={c.expiresAt}
                   />
                 </SettingsDialog>
                 <Button

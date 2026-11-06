@@ -1,8 +1,13 @@
 <script lang="ts" module>
   const expired = (expiresAt: number | null, now: number) => expiresAt !== null && expiresAt <= now;
-  /** 期限が過ぎていなくて、1 日の上限が正の数か空欄（既定の額） */
-  export const validCode = (expiresAt: number | null, limit: number | null, now: number) =>
-    !expired(expiresAt, now) && (limit === null || limit > 0);
+  /** 期限が過ぎていなくて、1 日の上限が正の数か空欄（既定の額）。
+   * 保存済みの期限（`saved`）のままなら、過ぎていてもメモと上限を変えられる */
+  export const validCode = (
+    expiresAt: number | null,
+    limit: number | null,
+    now: number,
+    saved?: number | null,
+  ) => (expiresAt === saved || !expired(expiresAt, now)) && (limit === null || limit > 0);
 </script>
 
 <script lang="ts">
@@ -18,12 +23,15 @@
     memo = $bindable(),
     expiresAt = $bindable(),
     dailyLimit = $bindable(),
+    saved,
     placeholder,
   }: {
     id: string;
     memo: string;
     expiresAt: number | null;
     dailyLimit: number | null;
+    /** 保存済みの期限。作るときはない */
+    saved?: number | null;
     placeholder?: string;
   } = $props();
 </script>
@@ -36,7 +44,10 @@
   <Field.Label>期限</Field.Label>
   <ExpiryPicker bind:value={expiresAt} />
   <Field.Description>
-    {#if expired(expiresAt, panel.now)}
+    {#if expired(expiresAt, panel.now) && expiresAt === saved}
+      この期限は過ぎています。メモと 1
+      日の上限はこのまま変えられます。また使うには期限を選び直してください
+    {:else if expired(expiresAt, panel.now)}
       <span class="text-destructive">この期限はもう過ぎています。選び直してください</span>
     {:else}
       {expiresAt === null
