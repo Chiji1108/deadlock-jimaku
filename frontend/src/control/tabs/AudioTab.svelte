@@ -33,45 +33,36 @@
     recommended?: boolean;
   }[] = [
     {
-      value: "hybrid",
-      label: "ハイブリッド",
-      traits: "高速・ふりがな・デッドロックモード",
-      price: "約 $0.6／時間",
-      hint: "話している途中の字幕は Chrome、確定の字幕は OpenAI で作ります。Google Chrome と API キーかギフトコードが必要です。音声は Google と OpenAI に送られます",
-      recommended: true,
-    },
-    {
       value: "local",
-      label: "ローカル AI",
+      label: "ローカル AI + OpenAI",
       traits: "高速・ふりがな・デッドロックモード",
       price: "約 $0.6／時間",
-      hint: "話している途中の字幕と英語の翻訳は PC の中で、確定の字幕は OpenAI で作ります。Chrome は要りません。API キーかギフトコードが必要です。初回に約 210MB をダウンロードし、動かしている間は約 700MB のメモリを使います",
+      hint: "話している途中の字幕と翻訳は PC の中で、確定の字幕は OpenAI で作ります。API キーかギフトコードが必要です。途中の翻訳は英語・ロシア語・中国語です。初回に約 200MB をダウンロードし、動かしている間は約 400MB のメモリを使います",
+      recommended: true,
     },
     {
       value: "openai",
       label: "OpenAI",
       traits: "低負荷・ふりがな・デッドロックモード",
       price: "約 $1／時間",
-      hint: "すべて OpenAI で作ります。Chrome を動かさないので、PC の負荷がいちばん小さいです。API キーかギフトコードが必要です",
+      hint: "すべて OpenAI で作ります。モデルを動かさないので、PC の負荷がいちばん小さいです。API キーかギフトコードが必要です",
     },
     {
-      value: "chrome",
-      label: "Chrome",
-      traits: "無料・高速",
+      value: "free",
+      label: "ローカル AI",
+      traits: "無料・高速・ふりがな",
       price: "無料",
-      hint: "すべて Google Chrome で作ります。API キーは要りません。音声は Google に送られます。精度は下がり、用語の強調、ふりがな、アイテム説明は使えません",
+      hint: "すべて PC の中で作ります。API キーは要りません。音声は PC の外に送られません。精度は下がり、用語の強調とアイテム説明は使えません。翻訳先は英語・ロシア語・中国語です。初回に約 200MB をダウンロードします",
     },
   ];
 
   const s = $derived(panel.settings!);
   const onlyTranslation = $derived(translationOnly(s));
-  const chrome = $derived(s.speechEngine === "chrome");
+  const free = $derived(s.speechEngine === "free");
   const engine = $derived(ENGINES.find((e) => e.value === s.speechEngine)!);
-  /** 途中の字幕を作るものが止まっている理由 */
-  const chromeProblem = $derived(
-    panel.liveStatus?.state === "failed" || panel.liveStatus?.state === "unsupported"
-      ? panel.liveStatus.detail
-      : undefined,
+  /** ローカル AI が止まっている理由 */
+  const localProblem = $derived(
+    panel.liveStatus?.state === "failed" ? panel.liveStatus.detail : undefined,
   );
   const pause = $derived(s.segmentation.minSilenceMs);
   const preset = $derived(PAUSES.find((p) => p.ms === pause));
@@ -86,7 +77,7 @@
       <Card.Description>字幕をどこで作るかを選びます</Card.Description>
     </Card.Header>
     <Card.Content class="flex flex-col gap-3">
-      <div class="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="モード">
+      <div class="grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label="モード">
         {#each ENGINES as e (e.value)}
           <button
             type="button"
@@ -105,92 +96,81 @@
         {/each}
       </div>
       <p class="text-sm text-muted-foreground">{engine.hint}</p>
-      {#if s.speechEngine === "local" && s.transcriptionEnabled && panel.liveStatus?.state === "preparing"}
+      {#if s.speechEngine !== "openai" && s.transcriptionEnabled && panel.liveStatus?.state === "preparing"}
         <p class="text-sm">{panel.liveStatus.detail ?? "モデルを読み込んでいます…"}</p>
       {/if}
-      {#if s.speechEngine !== "openai" && s.transcriptionEnabled && chromeProblem}
+      {#if s.speechEngine !== "openai" && s.transcriptionEnabled && localProblem}
         <Alert.Root variant="destructive">
-          <Alert.Title>{chromeProblem}</Alert.Title>
-          <Alert.Description>
-            {#if s.speechEngine !== "chrome"}
+          <Alert.Title>{localProblem}</Alert.Title>
+          {#if s.speechEngine === "local"}
+            <Alert.Description>
               確定の字幕は出ています。話している途中の字幕だけが止まっています。
-            {/if}
-            {#if s.speechEngine !== "local"}
-              <Button variant="outline" size="sm" class="mt-2" onclick={() => api.openChrome()}>
-                Chrome を開き直す
-              </Button>
-            {/if}
-          </Alert.Description>
+            </Alert.Description>
+          {/if}
         </Alert.Root>
       {/if}
     </Card.Content>
   </Card.Root>
 
-  {#if !chrome}<Card.Root>
-      <Card.Header>
-        <Card.Title>マイク</Card.Title>
-        <Card.Description>配信に乗せている声のマイクを選んでください</Card.Description>
-      </Card.Header>
-      <Card.Content class="flex flex-col gap-5">
-        <Field.Field>
-          <Field.Label>入力デバイス</Field.Label>
-          {#if s.speechEngine === "hybrid"}
-            <Field.Description>
-              途中の字幕には OS の既定のマイクを使います。OS の設定も同じマイクにしてください
-            </Field.Description>
-          {/if}
-          <div class="flex gap-2">
-            <Select.Root
-              type="single"
-              value={s.micDevice ?? DEFAULT_DEVICE}
-              onValueChange={(v) => panel.update({ micDevice: v === DEFAULT_DEVICE ? "" : v })}
-              onOpenChange={(open) => open && void panel.refreshDevices()}
-            >
-              <Select.Trigger class="flex-1">{s.micDevice ?? "OS の既定のマイク"}</Select.Trigger>
-              <Select.Content>
-                <Select.Item value={DEFAULT_DEVICE}>OS の既定のマイク</Select.Item>
-                {#each panel.devices ?? [] as name (name)}
-                  <Select.Item value={name}>{name}</Select.Item>
-                {/each}
-              </Select.Content>
-            </Select.Root>
-            <Button
-              variant="outline"
-              size="icon"
-              aria-label="デバイスの一覧を更新"
-              onclick={() => panel.refreshDevices()}
-            >
-              <RefreshCwIcon />
-            </Button>
-          </div>
-          {#if panel.devices?.length === 0}
-            <Field.Description class="text-amber-500">
-              マイクが見つかりません。つないだら更新ボタンを押してください
-            </Field.Description>
-          {/if}
-        </Field.Field>
-
-        <Field.Field>
-          <Field.Label>入力レベル</Field.Label>
-          <LevelMeter />
-          {#if !panel.running}
-            <Field.Description
-              >字幕を始めると、マイクに届いている音の大きさが出ます</Field.Description
-            >
-          {/if}
-        </Field.Field>
-
-        {#if panel.silent}
-          <Alert.Root variant="destructive">
-            <Alert.Title>音が届いていません</Alert.Title>
-            <Alert.Description>
-              マイクの選択と、OS のマイクの許可（macOS: システム設定 → プライバシーとセキュリティ →
-              マイク）を確認してください
-            </Alert.Description>
-          </Alert.Root>
+  <Card.Root>
+    <Card.Header>
+      <Card.Title>マイク</Card.Title>
+      <Card.Description>配信に乗せている声のマイクを選んでください</Card.Description>
+    </Card.Header>
+    <Card.Content class="flex flex-col gap-5">
+      <Field.Field>
+        <Field.Label>入力デバイス</Field.Label>
+        <div class="flex gap-2">
+          <Select.Root
+            type="single"
+            value={s.micDevice ?? DEFAULT_DEVICE}
+            onValueChange={(v) => panel.update({ micDevice: v === DEFAULT_DEVICE ? "" : v })}
+            onOpenChange={(open) => open && void panel.refreshDevices()}
+          >
+            <Select.Trigger class="flex-1">{s.micDevice ?? "OS の既定のマイク"}</Select.Trigger>
+            <Select.Content>
+              <Select.Item value={DEFAULT_DEVICE}>OS の既定のマイク</Select.Item>
+              {#each panel.devices ?? [] as name (name)}
+                <Select.Item value={name}>{name}</Select.Item>
+              {/each}
+            </Select.Content>
+          </Select.Root>
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label="デバイスの一覧を更新"
+            onclick={() => panel.refreshDevices()}
+          >
+            <RefreshCwIcon />
+          </Button>
+        </div>
+        {#if panel.devices?.length === 0}
+          <Field.Description class="text-amber-500">
+            マイクが見つかりません。つないだら更新ボタンを押してください
+          </Field.Description>
         {/if}
-      </Card.Content>
-    </Card.Root>{/if}
+      </Field.Field>
+
+      <Field.Field>
+        <Field.Label>入力レベル</Field.Label>
+        <LevelMeter />
+        {#if !panel.running}
+          <Field.Description>字幕を始めると、マイクに届いている音の大きさが出ます</Field.Description
+          >
+        {/if}
+      </Field.Field>
+
+      {#if panel.silent}
+        <Alert.Root variant="destructive">
+          <Alert.Title>音が届いていません</Alert.Title>
+          <Alert.Description>
+            マイクの選択と、OS のマイクの許可（macOS: システム設定 → プライバシーとセキュリティ →
+            マイク）を確認してください
+          </Alert.Description>
+        </Alert.Root>
+      {/if}
+    </Card.Content>
+  </Card.Root>
 
   <Card.Root>
     <Card.Header>
@@ -213,7 +193,7 @@
         </Select.Root>
       </Field.Field>
 
-      {#if !chrome}<Field.Field orientation="horizontal">
+      {#if !free}<Field.Field orientation="horizontal">
           <Field.Content>
             <Field.Label for="deadlock-mode">デッドロックモード</Field.Label>
             <Field.Description>

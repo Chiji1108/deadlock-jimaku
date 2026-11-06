@@ -1,0 +1,185 @@
+//! 途中の字幕と無料モードのふりがな（DESIGN.md 9.6）。読みは形態素解析（Lindera + IPADIC）で決める。
+//! 文脈で決まる読みや造語は誤るが、速く、OpenAI も要らない。確定の字幕は OpenAI で読みを決める
+
+use std::borrow::Cow;
+
+use lindera::dictionary::load_dictionary;
+use lindera::mode::Mode;
+use lindera::segmenter::Segmenter;
+use serde::Serialize;
+
+/// IPADIC の素性のうち「読み」の位置
+const READING: usize = 7;
+
+/// 字幕の一部。ふりがなは漢字の部分だけに付く
+#[derive(Debug, PartialEq, Serialize)]
+pub struct Part {
+    pub text: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ruby: Option<String>,
+}
+
+pub struct Furigana {
+    segmenter: Segmenter,
+}
+
+impl Furigana {
+    pub fn new() -> anyhow::Result<Self> {
+        let dictionary = load_dictionary("embedded://ipadic")?;
+        Ok(Self {
+            segmenter: Segmenter::new(Mode::Normal, dictionary, None),
+        })
+    }
+
+    pub fn annotate(&self, text: &str) -> Vec<Part> {
+        let mut out: Vec<Part> = Vec::new();
+        let Ok(mut morphemes) = self.segmenter.segment(Cow::Borrowed(text)) else {
+            return vec![plain(text)];
+        };
+        for m in &mut morphemes {
+            let surface = m.surface.to_string();
+            let reading = m
+                .details()
+                .get(READING)
+                .filter(|r| **r != "*")
+                .map(|r| to_hiragana(r));
+            for part in ruby_tokens(&surface, reading.as_deref()) {
+                push(&mut out, part);
+            }
+        }
+        out
+    }
+}
+
+/// ルビのない文字は前の部分につなげる
+fn push(out: &mut Vec<Part>, part: Part) {
+    if let (
+        Some(Part {
+            text: prev,
+            ruby: None,
+        }),
+        None,
+    ) = (out.last_mut(), &part.ruby)
+    {
+        prev.push_str(&part.text);
+        return;
+    }
+    out.push(part);
+}
+
+fn plain(text: &str) -> Part {
+    Part {
+        text: text.into(),
+        ruby: None,
+    }
+}
+
+/// 語の読みを漢字の部分ごとに割り当てる。漢字のない語や、かな以外の読みにはルビを付けない。
+/// 「強い / つよい」→「強(つよ)」「い」、「取り扱い / とりあつかい」→「取(と)」「り」「扱(あつか)」「い」
+fn ruby_tokens(text: &str, ruby: Option<&str>) -> Vec<Part> {
+    let Some(ruby) = ruby.filter(|r| !r.is_empty() && r.chars().all(is_kana)) else {
+        return vec![plain(text)];
+    };
+    if !text.chars().any(is_kanji) {
+        return vec![plain(text)];
+    }
+    align(text, &to_hiragana(ruby)).unwrap_or_else(|| vec![plain(text)])
+}
+
+/// 漢字の続く部分と、それ以外（かななど）の部分に分け、かなの部分を読みの中で探して区切る。
+/// 読みとかなの部分が合わなければ None
+fn align(text: &str, reading: &str) -> Option<Vec<Part>> {
+    let mut runs: Vec<(bool, String)> = Vec::new();
+    for c in text.chars() {
+        match runs.last_mut() {
+            Some((kanji, run)) if *kanji == is_kanji(c) => run.push(c),
+            _ => runs.push((is_kanji(c), c.to_string())),
+        }
+    }
+    let r: Vec<char> = reading.chars().collect();
+    let mut pos = 0;
+    let mut out = Vec::new();
+    for (i, (kanji, run)) in runs.iter().enumerate() {
+        if !kanji {
+            let kana: Vec<char> = to_hiragana(run).chars().collect();
+            if r.get(pos..pos + kana.len())? != kana.as_slice() {
+                return None;
+            }
+            out.push(plain(run));
+            pos += kana.len();
+            continue;
+        }
+        // 漢字の読みは、次のかなの部分が読みに現れるところまで（漢字 1 文字に少なくとも 1 文字）
+        let end = match runs.get(i + 1) {
+            None => r.len(),
+            Some((_, next)) => {
+                let next: Vec<char> = to_hiragana(next).chars().collect();
+                (pos + 1..=r.len().saturating_sub(next.len()))
+                    .find(|&j| r[j..].starts_with(&next))?
+            }
+        };
+        if end <= pos {
+            return None;
+        }
+        out.push(Part {
+            text: run.clone(),
+            ruby: Some(r[pos..end].iter().collect()),
+        });
+        pos = end;
+    }
+    (pos == r.len()).then_some(out)
+}
+
+fn to_hiragana(s: &str) -> String {
+    s.chars()
+        .map(|c| match c {
+            // カタカナ（ァ〜ヶ）をひらがなに。長音符などはそのまま
+            '\u{30A1}'..='\u{30F6}' => char::from_u32(c as u32 - 0x60).unwrap_or(c),
+            _ => c,
+        })
+        .collect()
+}
+
+fn is_kana(c: char) -> bool {
+    matches!(c, '\u{3041}'..='\u{309F}' | '\u{30A0}'..='\u{30FF}')
+}
+
+fn is_kanji(c: char) -> bool {
+    matches!(c, '\u{4E00}'..='\u{9FFF}' | '\u{3400}'..='\u{4DBF}' | '々')
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn p(text: &str, ruby: Option<&str>) -> Part {
+        Part {
+            text: text.into(),
+            ruby: ruby.map(Into::into),
+        }
+    }
+
+    #[test]
+    fn ruby_goes_only_on_kanji() {
+        assert_eq!(
+            ruby_tokens("強い", Some("つよい")),
+            [p("強", Some("つよ")), p("い", None)]
+        );
+        assert_eq!(
+            ruby_tokens("取り扱い", Some("とりあつかい")),
+            [
+                p("取", Some("と")),
+                p("り", None),
+                p("扱", Some("あつか")),
+                p("い", None)
+            ]
+        );
+    }
+
+    #[test]
+    fn reads_a_sentence_with_the_dictionary() {
+        let furigana = Furigana::new().unwrap();
+        let parts = furigana.annotate("実況です");
+        assert_eq!(parts, [p("実況", Some("じっきょう")), p("です", None)]);
+    }
+}

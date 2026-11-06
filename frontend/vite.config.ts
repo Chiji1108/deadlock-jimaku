@@ -17,7 +17,6 @@ export default defineConfig({
     rollupOptions: {
       input: {
         control: "control.html",
-        chrome: "chrome.html",
         subtitles: "overlay/subtitles.html",
         rank: "overlay/rank.html",
         items: "overlay/items.html",

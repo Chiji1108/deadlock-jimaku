@@ -366,22 +366,26 @@ pub enum Background {
 #[serde(rename_all = "lowercase")]
 #[ts(export)]
 pub enum SpeechEngine {
-    /// 途中の字幕は Chrome、確定は OpenAI。速く、用語の強調とふりがなが使える
-    Hybrid,
-    /// 途中の字幕は PC の中のモデル、確定は OpenAI。Chrome が要らない
+    /// 途中の字幕は PC の中のモデル、確定は OpenAI。速く、用語の強調とふりがなが使える
     Local,
-    /// すべて OpenAI。Chrome が要らず、PC の負荷が小さい。
-    /// 0.3 より前の設定ファイルはこの値になる（音声の送り先を黙って増やさない）。
-    /// 新しく使い始める人はハイブリッドから始める（`load`）
+    /// すべて OpenAI。モデルが要らず、PC の負荷が小さい。
+    /// 0.3 より前の設定ファイルはこの値になる（新しいモデルを黙って入れない）。
+    /// 新しく使い始める人はローカルから始める（`load`）
     #[default]
     OpenAi,
-    /// すべて Chrome。無料で、用語の強調とふりがなは使えない
-    Chrome,
+    /// すべて PC の中のモデル。無料で、用語の強調とふりがなは使えない
+    Free,
 }
 
 impl SpeechEngine {
-    pub fn uses_chrome(self) -> bool {
-        matches!(self, Self::Hybrid | Self::Chrome)
+    /// PC の中のモデルを動かすか
+    pub fn uses_local(self) -> bool {
+        self != Self::OpenAi
+    }
+
+    /// OpenAI の鍵が要るか
+    pub fn needs_key(self) -> bool {
+        self != Self::Free
     }
 }
 
@@ -702,7 +706,7 @@ pub fn load(path: &Path) -> std::io::Result<Settings> {
         Ok(bytes) => bytes,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
             return Ok(Settings {
-                speech_engine: SpeechEngine::Hybrid,
+                speech_engine: SpeechEngine::Local,
                 ..Settings::default()
             });
         }
@@ -888,26 +892,25 @@ mod tests {
             ..Default::default()
         };
         assert!(with(SpeechEngine::OpenAi).wants_live_subtitles());
-        assert!(!with(SpeechEngine::Hybrid).wants_live_subtitles());
         assert!(!with(SpeechEngine::Local).wants_live_subtitles());
-        assert!(!with(SpeechEngine::Chrome).wants_live_subtitles());
+        assert!(!with(SpeechEngine::Free).wants_live_subtitles());
     }
 
     #[test]
-    fn hybrid_is_only_for_new_users() {
+    fn local_is_only_for_new_users() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join(FILE);
-        assert_eq!(load(&path).unwrap().speech_engine, SpeechEngine::Hybrid);
+        assert_eq!(load(&path).unwrap().speech_engine, SpeechEngine::Local);
         // 前の版の設定ファイルには `speechEngine` がない
         std::fs::write(&path, r#"{ "micLanguage": "ja" }"#).unwrap();
         assert_eq!(load(&path).unwrap().speech_engine, SpeechEngine::OpenAi);
         // 選んだモードは保存される
-        let hybrid = Settings {
-            speech_engine: SpeechEngine::Hybrid,
+        let local = Settings {
+            speech_engine: SpeechEngine::Local,
             ..Default::default()
         };
-        save(&path, &hybrid).unwrap();
-        assert_eq!(load(&path).unwrap().speech_engine, SpeechEngine::Hybrid);
+        save(&path, &local).unwrap();
+        assert_eq!(load(&path).unwrap().speech_engine, SpeechEngine::Local);
     }
 
     #[test]

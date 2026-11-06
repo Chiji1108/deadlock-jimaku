@@ -4,7 +4,7 @@
 use std::sync::Arc;
 
 use overlays_core::secrets;
-use overlays_core::settings::{SettingsPatch, SpeechEngine};
+use overlays_core::settings::SettingsPatch;
 use overlays_core::store::Store;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
@@ -122,8 +122,11 @@ fn toggle_subtitles(app: AppHandle, store: Arc<Store>) {
     tauri::async_runtime::spawn_blocking(move || {
         let settings = store.settings();
         let start = !settings.transcription_enabled;
-        let needs_key = settings.speech_engine != SpeechEngine::Chrome;
-        if start && needs_key && secrets::openai().is_none() && secrets::gift().is_none() {
+        if start
+            && settings.speech_engine.needs_key()
+            && secrets::openai().is_none()
+            && secrets::gift().is_none()
+        {
             show_window(&app);
             return;
         }

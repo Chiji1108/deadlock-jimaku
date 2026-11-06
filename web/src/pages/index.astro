@@ -69,7 +69,7 @@ const steps = [
   { title: "ダウンロード", body: "Windows・Mac・Linux 用のアプリを入れます。" },
   {
     title: "API キーかギフトコードを設定",
-    body: "おすすめのハイブリッドモードは、文字起こしと翻訳に OpenAI も使います。無料の Chrome モードなら要りません。キーの作り方はアプリの中でも案内します。知り合いからギフトコードをもらった場合は、キーは要りません。",
+    body: "おすすめのモードは、確定の字幕に OpenAI を使います。無料のローカル AI モードなら要りません。キーの作り方はアプリの中でも案内します。知り合いからギフトコードをもらった場合は、キーは要りません。",
     link: { href: "#openai-key", label: "作り方を見る" },
   },
   {
@@ -89,16 +89,16 @@ const faqs = [
   },
   {
     q: "OpenAI の API キーを作らずに使えますか？",
-    a: "使えます。Chrome モードならキーは要りません。ふりがななどを使いたいときは、Discord のサーバーで声をかけてもらえれば、お試し用のギフトコードをお渡しします。アプリの「API キー」のタブに入れるだけで使えます。知り合いからコードをもらって使うこともできて、その場合の料金はコードをくれた人の OpenAI アカウントに請求されます。API キーを持っている人は、アプリの「おすそ分け」のタブでコードを作れます。",
+    a: "使えます。無料のローカル AI モードならキーは要りません。OpenAI の精度を使いたいときは、Discord のサーバーで声をかけてもらえれば、お試し用のギフトコードをお渡しします。アプリの「API キー」のタブに入れるだけで使えます。知り合いからコードをもらって使うこともできて、その場合の料金はコードをくれた人の OpenAI アカウントに請求されます。API キーを持っている人は、アプリの「おすそ分け」のタブでコードを作れます。",
     link: { href: DISCORD, label: "Discord のサーバーに参加する" },
   },
   {
     q: "どのモデルを使っていますか？",
-    a: "ハイブリッドモードでは、話している途中の字幕を Google Chrome の音声認識と翻訳で作ります。OpenAI モードの途中の字幕は GPT-Live-Transcribe、確定した字幕は GPT-Transcribe、用語の判定・翻訳・ふりがなは GPT-6.1 Terra です。",
+    a: "ローカル AI を使うモードでは、PC の中の SenseVoice（音声認識）と Bergamot（翻訳）で途中の字幕を作ります。OpenAI モードの途中の字幕は GPT-Live-Transcribe、確定した字幕は GPT-Transcribe、用語の判定・翻訳・ふりがなは GPT-6.1 Terra です。",
   },
   {
     q: "どんな情報が送信されますか？",
-    a: "字幕を出している間の話し声と字幕の文字を OpenAI に送ります。ハイブリッドモードと Chrome モードでは、話し声を Google の音声認識にも送ります。ランクを出すときは、Steam のアカウント ID を deadlock-api に送ります。デドロ字幕のサーバーを通るのはおすそ分けのときだけで、音声や字幕の文字は保存しません。",
+    a: "字幕を出している間の話し声と字幕の文字を OpenAI に送ります。無料のローカル AI モードでは、音声も字幕も外に送りません。ランクを出すときは、Steam のアカウント ID を deadlock-api に送ります。デドロ字幕のサーバーを通るのはおすそ分けのときだけで、音声や字幕の文字は保存しません。",
     link: { href: "/privacy", label: "プライバシーポリシーを見る" },
   },
   {
@@ -128,36 +128,29 @@ const faqs = [
   },
 ];
 
-/** 字幕の作り方。既定はハイブリッド */
+/** 字幕の作り方 */
 const modes = [
   {
-    name: "ハイブリッド",
+    name: "ローカル AI + OpenAI",
     badge: "おすすめ",
     traits: ["高速", "ふりがな", "デッドロックモード"],
     price: "約 $0.6／時間",
-    body: "話している途中の字幕は Chrome、確定の字幕は OpenAI。速さと精度を両立します。",
-    needs: "Google Chrome と API キーかギフトコード",
-  },
-  {
-    name: "ローカル AI",
-    traits: ["高速", "ふりがな", "デッドロックモード"],
-    price: "約 $0.6／時間",
-    body: "途中の字幕と英語の翻訳を PC の中で作り、確定の字幕は OpenAI。Chrome は要りません。初回に約 210MB をダウンロードし、約 700MB のメモリを使います。",
+    body: "話している途中の字幕と翻訳は PC の中で作り、確定の字幕は OpenAI。声を出してすぐ字幕が出て、最後は高い精度に置き換わります。",
     needs: "API キーかギフトコード",
   },
   {
     name: "OpenAI",
     traits: ["低負荷", "ふりがな", "デッドロックモード"],
     price: "約 $1／時間",
-    body: "すべてクラウドで処理します。Chrome を動かさないので、PC の負荷がいちばん小さいです。",
+    body: "すべてクラウドで処理します。モデルを動かさないので、PC の負荷がいちばん小さいです。",
     needs: "API キーかギフトコード",
   },
   {
-    name: "Chrome",
-    traits: ["無料", "高速"],
+    name: "ローカル AI",
+    traits: ["無料", "高速", "ふりがな"],
     price: "無料",
-    body: "Google Chrome の音声認識と翻訳だけで動きます。精度は下がり、用語の強調、ふりがな、アイテム説明は使えません。",
-    needs: "Google Chrome",
+    body: "すべて PC の中で作ります。音声は外に送られません。精度は下がり、用語の強調とアイテム説明は使えません。日本語の配信で、翻訳先は英語・ロシア語・中国語です。",
+    needs: "なし",
   },
 ];
 
@@ -322,9 +315,9 @@ const official = [
 
   <section id="modes" class="mx-auto mt-28 max-w-6xl px-4 sm:mt-40">
     <h2 class="display reveal text-[clamp(2.1rem,5.4vw,4.25rem)]">
-      4 つの<span class="band">モード</span>から選べる。
+      3 つの<span class="band">モード</span>から選べる。
     </h2>
-    <ul class="mt-10 grid gap-8 md:grid-cols-2">
+    <ul class="mt-10 grid gap-8 md:grid-cols-3">
       {
         modes.map((m) => (
           <li class="reveal border-t-2 border-ink pt-4">
@@ -348,14 +341,14 @@ const official = [
         <h2 class="text-sm font-bold text-gold">料金</h2>
         <p class="display mt-3 text-[clamp(2.6rem,7vw,5.5rem)]">アプリは無料。</p>
         <p class="mt-5 text-lg leading-relaxed text-paper/70">
-          無料の Chrome モードのほかは、ご自身の
+          無料のローカル AI モードのほかは、ご自身の
           <a href="#openai-key" class="underline hover:text-paper">OpenAI の API キー</a>を使います。
         </p>
       </div>
       <div class="md:pt-9">
         <p class="display text-[clamp(2.6rem,7vw,5.5rem)] text-gold">約 $0.6<span class="text-2xl text-paper">／時間</span></p>
         <p class="mt-5 leading-relaxed text-paper/70">
-          ハイブリッドモードで OpenAI に払う目安です。話していない間は音声を送らず料金もかからないので、配信で話す時間が半分くらいなら 1 時間あたり約 $0.6 です（翻訳 1 言語・ふりがなあり）。OpenAI モードは約 $1 で、ずっと話し続けると約 $2 になり、翻訳先を 1 つ増やすと、話し続けて 1 時間あたり約 $0.3 増えます。
+          おすすめのモードで OpenAI に払う目安です。話していない間は音声を送らず料金もかからないので、配信で話す時間が半分くらいなら 1 時間あたり約 $0.6 です（翻訳 1 言語・ふりがなあり）。OpenAI モードは約 $1 で、ずっと話し続けると約 $2 になり、翻訳先を 1 つ増やすと、話し続けて 1 時間あたり約 $0.3 増えます。
         </p>
         <p class="mt-3 leading-relaxed text-paper/70">
           ギフトコードで使うときは、自分には請求されません。使った分は、コードをくれた人の OpenAI アカウントに請求されます。

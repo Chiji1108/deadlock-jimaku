@@ -9,11 +9,9 @@ use bytes::Bytes;
 use tokio::sync::{broadcast, watch};
 
 use crate::assets::Loaded;
-use crate::chrome::Browser;
-use crate::settings::{self, Settings, SettingsPatch, SpeechEngine, SubtitleDisplay};
+use crate::settings::{self, Settings, SettingsPatch, SubtitleDisplay};
 use crate::types::{
-    ItemCardsView, LiveState, LiveStatus, LiveText, RankState, Segment, ServerMsg, Stage,
-    TranscriptionError,
+    ItemCardsView, LiveStatus, LiveText, RankState, Segment, ServerMsg, Stage, TranscriptionError,
 };
 use crate::usage::Meter;
 
@@ -39,11 +37,9 @@ pub struct Store {
     /// マイクの入力レベル（dBFS）。1 秒に 10 回届くので、字幕などと同じ broadcast には流さない
     /// （購読していないオーバーレイを起こさず、取りこぼしの原因にもしない）
     level: watch::Sender<f32>,
-    /// ハイブリッドモードの途中の文（最新だけあればいい）
+    /// ローカル AI の途中の文（最新だけあればいい）
     live: watch::Sender<LiveText>,
     live_status: Mutex<Option<LiveStatus>>,
-    /// 字幕のために起動した Chrome
-    browser: Mutex<Option<Browser>>,
     meter: Arc<Meter>,
 }
 
@@ -71,7 +67,6 @@ impl Store {
             level: watch::Sender::new(f32::NEG_INFINITY),
             live: watch::Sender::new(LiveText::default()),
             live_status: Mutex::new(None),
-            browser: Mutex::new(None),
             meter,
         })
     }
@@ -112,10 +107,6 @@ impl Store {
         }
         if next.obs_seen != current.obs_seen
             || next.transcription_enabled != current.transcription_enabled
-            || next.speech_engine != current.speech_engine
-            || next.mic_language != current.mic_language
-            || next.translate_to != current.translate_to
-            || next.segmentation != current.segmentation
         {
             let _ = self.tx.send(ServerMsg::SettingsChanged);
         }
@@ -128,10 +119,6 @@ impl Store {
     }
 
     pub fn set_transcription_error(&self, error: Option<TranscriptionError>) {
-        // ハイブリッドで確定の字幕が止まったら、音声を Google に送り続けない
-        if error.is_some() && self.settings().speech_engine == SpeechEngine::Hybrid {
-            self.close_chrome();
-        }
         *self.transcription_error.lock().unwrap() = error.clone();
         let _ = self.tx.send(ServerMsg::TranscriptionStatus { error });
     }
@@ -203,7 +190,7 @@ impl Store {
         msgs
     }
 
-    /// Chrome のページの状態を受け取る。変わったときだけ知らせる
+    /// ローカル AI の状態を受け取る。変わったときだけ知らせる
     pub fn set_live_status(&self, status: Option<LiveStatus>) {
         let mut current = self.live_status.lock().unwrap();
         if *current != status {
@@ -212,61 +199,13 @@ impl Store {
         }
     }
 
-    /// 字幕を始めるなら Chrome を起動し、止めるなら閉じる（DESIGN.md 9.6）
-    pub fn sync_chrome(self: &Arc<Self>, wanted: bool) {
-        // ハイブリッドで確定の字幕が止まっているなら、音声を Google に送らない
-        let stalled = self.transcription_error().is_some()
-            && self.settings().speech_engine == SpeechEngine::Hybrid;
-        if !wanted || stalled {
-            self.close_chrome();
-            return;
-        }
-        let mut browser = self.browser.lock().unwrap();
-        if browser.as_mut().is_some_and(Browser::running) {
-            return;
-        }
-        match Browser::launch(self.clone()) {
-            Ok(launched) => *browser = Some(launched),
-            Err(e) => {
-                tracing::warn!("open chrome: {e}");
-                drop(browser);
-                self.set_live_status(Some(LiveStatus {
-                    state: LiveState::Failed,
-                    detail: Some("Google Chrome が見つかりません".into()),
-                }));
-            }
-        }
-    }
-
-    /// ローカル AI に切り替えたときに Chrome を閉じる。状態はローカル AI が知らせる
-    pub fn drop_browser(&self) {
-        *self.browser.lock().unwrap() = None;
-    }
-
-    pub fn close_chrome(&self) {
-        *self.browser.lock().unwrap() = None;
-        self.set_live_status(None);
-    }
-
-    /// 開き直す。プロセスが残っていても、ページが止まっていることがある
-    pub fn reopen_chrome(self: &Arc<Self>) {
-        self.close_chrome();
-        let settings = self.settings();
-        self.sync_chrome(settings.transcription_enabled && settings.speech_engine.uses_chrome());
-    }
-
-    /// Chrome が認識した途中の文。ハイブリッドモードの字幕の処理が読む
+    /// ローカル AI が認識した途中の文。字幕の処理が読む
     pub fn send_live(&self, live: LiveText) {
         self.live.send_replace(live);
     }
 
     pub fn watch_live(&self) -> watch::Receiver<LiveText> {
         self.live.subscribe()
-    }
-
-    /// 発話の区切りをページに知らせる
-    pub fn send_speech_cut(&self) {
-        let _ = self.tx.send(ServerMsg::SpeechCut);
     }
 
     /// OpenAI の使用量を数える
@@ -378,6 +317,7 @@ mod tests {
             lang: "ja".into(),
             text: text.into(),
             enriched: None,
+            draft_source: None,
             draft: None,
             settled_at: None,
         }

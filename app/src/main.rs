@@ -5,7 +5,6 @@
 mod tray;
 
 use std::net::{Ipv4Addr, SocketAddr};
-use std::sync::Arc;
 use std::time::Duration;
 
 use overlays_core::{DEFAULT_PORT, runtime, server, settings, store::Store};
@@ -40,9 +39,11 @@ fn main() {
             let settings = settings::load(&data_dir.join(settings::FILE));
             let store = Store::new(settings, data_dir);
             let idle = store.clone();
-            app.manage(store.clone());
             #[cfg(not(target_os = "linux"))]
-            tray::install(app, store.clone())?;
+            {
+                app.manage(store.clone());
+                tray::install(app, store.clone())?;
+            }
             tauri::async_runtime::spawn(runtime::run(
                 store.clone(),
                 runtime::Options { input_file: None },
@@ -93,7 +94,7 @@ fn main() {
         })
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
-        .run(|app, event| match event {
+        .run(|_app, event| match event {
             // ウィンドウを閉じても常駐する。終了はトレイの「終了」（code がある）だけ
             #[cfg(not(target_os = "linux"))]
             tauri::RunEvent::ExitRequested {
@@ -101,9 +102,7 @@ fn main() {
             } => api.prevent_exit(),
             // Mac は Dock のアイコンを押したときに、閉じたウィンドウを開き直す
             #[cfg(target_os = "macos")]
-            tauri::RunEvent::Reopen { .. } => show_window(app),
-            // 起動した Chrome を残さない
-            tauri::RunEvent::Exit => app.state::<Arc<Store>>().sync_chrome(false),
+            tauri::RunEvent::Reopen { .. } => show_window(_app),
             _ => {}
         });
 }

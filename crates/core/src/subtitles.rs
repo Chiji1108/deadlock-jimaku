@@ -45,8 +45,12 @@ const PROMPT: &str = "Live commentary by a streamer playing the video game Deadl
 /// デッドロックモードを切ったとき（雑談の配信など）
 const PLAIN_PROMPT: &str = "Live commentary by a streamer.";
 
-/// `access` は OpenAI（文字起こし・翻訳）の送り先と鍵
-pub async fn run(store: Arc<Store>, input: audio::Input, access: Access) -> anyhow::Result<()> {
+/// `access` は OpenAI（文字起こし・翻訳）の送り先と鍵。無料のモードは使わない
+pub async fn run(
+    store: Arc<Store>,
+    input: audio::Input,
+    access: Option<Access>,
+) -> anyhow::Result<()> {
     let settings = store.settings();
 
     // 用語ヒントは Realtime のセッション開始時に 1 回しか渡せないので、辞書を少し待つ。
@@ -82,7 +86,8 @@ pub async fn run(store: Arc<Store>, input: audio::Input, access: Access) -> anyh
     // 開く・音声・閉じるは同じチャンネルで順番どおりに送る
     let (delta_tx, mut delta_rx) = mpsc::channel(256);
     // オフなら Realtime につながず、確定の字幕だけを出す
-    let realtime = if settings.wants_live_subtitles() {
+    let realtime = if let Some(access) = access.as_ref().filter(|_| settings.wants_live_subtitles())
+    {
         let (tx, rx) = mpsc::unbounded_channel();
         let config = RealtimeConfig {
             access: access.clone(),
@@ -96,43 +101,43 @@ pub async fn run(store: Arc<Store>, input: audio::Input, access: Access) -> anyh
         None
     };
 
-    // ローカル AI のモードでは、音声を補助プログラムにも渡す
-    let local = (settings.speech_engine == SpeechEngine::Local).then(|| {
+    let (done_tx, mut done_rx) = mpsc::channel(64);
+    // ローカル AI を使うモードでは、音声を補助プログラムにも渡す
+    let local = settings.speech_engine.uses_local().then(|| {
         let (tx, rx) = mpsc::unbounded_channel();
         let terms = store
             .glossary()
             .filter(|_| settings.deadlock_mode)
             .map(|l| local::terms(&l.glossary))
             .unwrap_or_default();
-        tokio::spawn(local::run(store.clone(), settings.clone(), terms, rx));
+        let finals = (settings.speech_engine == SpeechEngine::Free).then(|| done_tx.clone());
+        tokio::spawn(local::run(
+            store.clone(),
+            settings.clone(),
+            terms,
+            finals,
+            rx,
+        ));
         tx
     });
-
-    let enricher = Enricher::new(
-        access.clone(),
-        &settings.models,
-        settings.mic_language.clone(),
-        settings.translate_to.clone(),
-        settings.deadlock_mode,
-        store.meter(),
-    );
-    let (done_tx, mut done_rx) = mpsc::channel(64);
-    let batch = Arc::new(BatchContext {
-        http: crate::http().clone(),
-        access,
-        model: settings.models.batch.clone(),
-        hints,
-        meter: store.meter(),
+    let cloud = access.map(|access| Cloud {
+        enricher: Arc::new(Enricher::new(
+            access.clone(),
+            &settings.models,
+            settings.mic_language.clone(),
+            settings.translate_to.clone(),
+            settings.deadlock_mode,
+            store.meter(),
+        )),
+        batch: Arc::new(BatchContext {
+            http: crate::http().clone(),
+            access,
+            model: settings.models.batch.clone(),
+            hints,
+            meter: store.meter(),
+        }),
     });
-    let mut pipeline = Pipeline::new(
-        store,
-        &settings,
-        batch,
-        Arc::new(enricher),
-        done_tx,
-        realtime,
-        local,
-    );
+    let mut pipeline = Pipeline::new(store, &settings, cloud, done_tx, realtime, local);
 
     let mut level = LevelMeter::default();
     let mut live = pipeline.store.watch_live();
@@ -190,11 +195,17 @@ impl LevelMeter {
     }
 }
 
+/// OpenAI の確定の字幕と enrich
+struct Cloud {
+    batch: Arc<BatchContext>,
+    enricher: Arc<Enricher>,
+}
+
 struct Pipeline {
     store: Arc<Store>,
     lang: LangCode,
-    batch: Arc<BatchContext>,
-    enricher: Arc<Enricher>,
+    /// 無料のモードにはない
+    cloud: Option<Cloud>,
     done_tx: mpsc::Sender<Done>,
     history: History,
     detector: earshot::Detector,
@@ -202,6 +213,8 @@ struct Pipeline {
     /// リアルタイムの音声認識へ（途中の字幕を出さないときと、入力が終わったあとは None）
     realtime: Option<mpsc::UnboundedSender<stt::Input>>,
     local: Option<mpsc::UnboundedSender<local::Input>>,
+    /// 無料のモードで確定の字幕を待っている発話。区切った順
+    local_finals: VecDeque<String>,
     live: HashMap<String, Segment>,
     current: Option<String>,
     frame: Vec<f32>,
@@ -217,8 +230,7 @@ impl Pipeline {
     fn new(
         store: Arc<Store>,
         settings: &Settings,
-        batch: Arc<BatchContext>,
-        enricher: Arc<Enricher>,
+        cloud: Option<Cloud>,
         done_tx: mpsc::Sender<Done>,
         realtime: Option<mpsc::UnboundedSender<stt::Input>>,
         local: Option<mpsc::UnboundedSender<local::Input>>,
@@ -226,14 +238,14 @@ impl Pipeline {
         Self {
             store,
             lang: settings.mic_language.clone(),
-            batch,
-            enricher,
+            cloud,
             done_tx,
             history: History::new(60),
             detector: earshot::Detector::default(),
             segmenter: Segmenter::new(&settings.segmentation),
             realtime,
             local,
+            local_finals: VecDeque::new(),
             live: HashMap::new(),
             current: None,
             frame: Vec::with_capacity(FRAME * 2),
@@ -305,6 +317,7 @@ impl Pipeline {
                 lang: self.lang.clone(),
                 text: String::new(),
                 enriched: None,
+                draft_source: None,
                 draft: None,
                 settled_at: None,
             },
@@ -319,7 +332,11 @@ impl Pipeline {
         // 捨てる発話も閉じる（閉じないと、その音声が次の発話に混ざる）
         self.send_realtime(stt::Input::Close);
         self.send_local(local::Input::Cut);
-        self.store.send_speech_cut();
+        // 無料のモードは補助プログラムが確定の字幕も作る（捨てる発話の分も返ってくる）
+        if self.cloud.is_none() {
+            self.local_finals.push_back(id.clone());
+            self.pending += 1;
+        }
         if close.speech_ms < MIN_SPEECH_MS {
             self.discard(&id);
             return;
@@ -335,12 +352,15 @@ impl Pipeline {
         } else {
             close.end + PADDING
         };
+        let Some(cloud) = &self.cloud else {
+            return;
+        };
         let samples = self.history.slice(from, to);
         let seconds = samples.len() as f64 / f64::from(audio::SAMPLE_RATE);
         let wav = audio::wav(&samples);
         self.pending += 1;
         tokio::spawn(transcribe(
-            self.batch.clone(),
+            cloud.batch.clone(),
             id,
             wav,
             seconds,
@@ -358,11 +378,12 @@ impl Pipeline {
         }
     }
 
-    /// ハイブリッドモードで Chrome が認識した途中の文を、開いている発話に載せる
+    /// ローカル AI が認識した途中の文を、開いている発話に載せる
     fn on_live(&mut self, live: LiveText) {
         let seg = self.current.as_ref().and_then(|id| self.live.get_mut(id));
         if let Some(seg) = seg.filter(|s| s.stage == Stage::Partial) {
             seg.text = live.text;
+            seg.draft_source = Some(live.tokens);
             if !live.translations.is_empty() {
                 seg.draft = Some(live.translations);
             }
@@ -385,6 +406,10 @@ impl Pipeline {
                 self.on_transcribed(&id, text);
             }
             Done::Draft { id, translations } => self.on_draft(&id, translations),
+            Done::Local(result) => {
+                self.pending -= 1;
+                self.on_local_final(result);
+            }
             Done::Enriched { id, enriched } => {
                 self.pending -= 1;
                 self.on_enriched(&id, enriched);
@@ -408,6 +433,7 @@ impl Pipeline {
         }
         seg.stage = Stage::Final;
         seg.text = text.clone();
+        seg.draft_source = None;
         self.store.upsert_segment(seg.clone());
 
         let context: Vec<String> = self.context.iter().cloned().collect();
@@ -420,8 +446,11 @@ impl Pipeline {
         // ふりがなは出さない設定なら聞かない（字幕を止めずに切り替えられるので、そのときの設定を見る）
         let glossary = self.store.glossary().map(|l| l.glossary);
         let furigana = self.store.settings().wants_furigana();
+        let Some(cloud) = &self.cloud else {
+            return;
+        };
         tokio::spawn(enrich(
-            self.enricher.clone(),
+            cloud.enricher.clone(),
             id.to_owned(),
             text,
             context,
@@ -429,6 +458,30 @@ impl Pipeline {
             furigana,
             self.done_tx.clone(),
         ));
+    }
+
+    /// 無料のモードの確定の字幕。区切った順に届く
+    fn on_local_final(&mut self, result: local::Final) {
+        let Some(id) = self.local_finals.pop_front() else {
+            return;
+        };
+        if result.text.is_empty() {
+            self.discard(&id);
+            return;
+        }
+        if let Some(seg) = self.live.get_mut(&id) {
+            if seg.text.is_empty() {
+                seg.started_at = now_ms();
+            }
+            seg.text = result.text;
+            self.on_enriched(
+                &id,
+                Enriched {
+                    source: result.tokens,
+                    translations: result.translations,
+                },
+            );
+        }
     }
 
     fn on_draft(&mut self, id: &str, translations: Translations) {
@@ -456,6 +509,7 @@ impl Pipeline {
             enriched.translations = draft.unwrap_or_default();
         }
         seg.stage = Stage::Enriched;
+        seg.draft_source = None;
         seg.enriched = Some(enriched);
         seg.settled_at = Some(now_ms());
         self.store.upsert_segment(seg);
@@ -503,9 +557,11 @@ struct BatchContext {
     meter: Arc<Meter>,
 }
 
-enum Done {
+pub(crate) enum Done {
     /// None ならバッチが失敗した
     Transcribed { id: String, text: Option<String> },
+    /// 無料のモードで PC の中で作った確定の字幕
+    Local(local::Final),
     /// 書きかけの訳文
     Draft {
         id: String,

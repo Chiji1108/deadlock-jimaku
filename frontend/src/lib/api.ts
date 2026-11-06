@@ -1,8 +1,5 @@
-import type { LiveStatus } from "../generated/LiveStatus";
 import type { GiftStatus } from "../generated/GiftStatus";
-import type { LiveText } from "../generated/LiveText";
 import type { Provider } from "../generated/Provider";
-import type { Segment } from "../generated/Segment";
 import type { SettingsPatch } from "../generated/SettingsPatch";
 import type { SettingsView } from "../generated/SettingsView";
 import type { ShareView } from "../generated/ShareView";
@@ -16,15 +13,6 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!res.ok) throw new Error((await res.text()) || res.statusText);
   return (await res.json()) as T;
 }
-
-/** 閉じる途中のページからも届くよう keepalive にする */
-const post = (path: string, body: unknown) =>
-  fetch(path, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(body),
-    keepalive: true,
-  });
 
 export const api = {
   settings: () => request<SettingsView>("/api/settings"),
@@ -40,14 +28,6 @@ export const api = {
   /** 対応している言語のコード */
   languages: () => request<string[]>("/api/languages"),
   demo: () => fetch("/api/demo", { method: "POST" }),
-  /** 閉じられた Chrome を開き直す */
-  openChrome: () => post("/api/chrome/open", {}),
-  /** Chrome のページの状態を知らせる */
-  liveStatus: (status: LiveStatus) => post("/api/live/status", status),
-  /** ハイブリッドモードの途中の文を送る */
-  live: (live: LiveText) => post("/api/live", live),
-  /** Chrome のページが認識した字幕を送る */
-  segment: (segment: Segment) => post("/api/segments", segment),
 
   /** もらったギフトコードの状態 */
   gift: () => request<GiftStatus>("/api/gift"),

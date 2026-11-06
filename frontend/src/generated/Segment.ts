@@ -12,6 +12,10 @@ export type Segment = { id: string,
  */
 startedAt: number, stage: Stage, lang: string, text: string, enriched?: Enriched, 
 /**
+ * 途中の字幕のふりがな付きの文。確定したら消す
+ */
+draftSource?: Array<Token>, 
+/**
  * 書きかけの訳文。`enriched` が届いたら消す
  */
 draft?: { [key in string]: Array<Token> }, 

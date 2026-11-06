@@ -61,13 +61,12 @@
     window.scrollTo({ top: 0 });
   });
 
-  /** Chrome だけのモードの状態。ハイブリッドは止まったときだけ出す（確定の字幕は出続ける） */
-  function liveStatus() {
+  /** 無料のモードは字幕をすべて PC の中で作るので、ローカル AI の状態がそのまま字幕の状態になる */
+  function freeStatus() {
     switch (panel.liveStatus?.state) {
       case "listening":
         return { label: "字幕を出しています", dot: "bg-emerald-500 animate-pulse" };
       case "failed":
-      case "unsupported":
         return { label: "止まっています", dot: "bg-destructive" };
       default:
         return { label: "準備しています…", dot: "bg-sky-500 animate-pulse" };
@@ -76,7 +75,7 @@
 
   const status = $derived.by(() => {
     if (!s?.transcriptionEnabled) return { label: "停止中", dot: "bg-muted-foreground/50" };
-    if (s.speechEngine === "chrome") return liveStatus();
+    if (s.speechEngine === "free") return freeStatus();
     if (panel.transcriptionError) return { label: "止まっています", dot: "bg-destructive" };
     if (panel.silent) return { label: "音が届いていません", dot: "bg-amber-500" };
     if (panel.level === undefined)

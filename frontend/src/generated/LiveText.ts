@@ -2,6 +2,10 @@
 import type { Token } from "./Token";
 
 /**
- * ハイブリッドモードで Chrome が認識した途中の文と訳
+ * ローカル AI が認識した途中の文と訳
  */
-export type LiveText = { text: string, translations: { [key in string]: Array<Token> }, };
+export type LiveText = { text: string, 
+/**
+ * ふりがな付きの文
+ */
+tokens: Array<Token>, translations: { [key in string]: Array<Token> }, };

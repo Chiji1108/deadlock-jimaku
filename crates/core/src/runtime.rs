@@ -68,8 +68,6 @@ struct RankInput {
 struct SubtitlesInput {
     /// None なら止めている
     source: Option<Source>,
-    /// Chrome のモードでは `source` が変わらないので、止めたことはこれで分かる
-    transcription_enabled: bool,
     mic_language: LangCode,
     translate_to: Vec<LangCode>,
     /// 用語ヒントはセッションの開始時にしか渡せないので、変えたら始め直す
@@ -145,16 +143,15 @@ pub async fn run(store: Arc<Store>, options: Options) {
 
         let source = match &options.input_file {
             Some(path) => Some(Source::File(path.clone())),
-            // Chrome だけのモードでは、ページが認識した字幕を受け取るだけ
-            None => (settings.transcription_enabled
-                && settings.speech_engine != SpeechEngine::Chrome)
+            None => settings
+                .transcription_enabled
                 .then(|| Source::Mic(settings.mic_device.clone())),
         };
-        // ハイブリッドは確定の字幕を作れないなら聞かない（音声を Google に送り続けない）
-        let can_finish = settings.speech_engine == SpeechEngine::Chrome || access.is_some();
+        // 無料のモードは鍵を使わないので、鍵を変えても始め直さない
+        let needs_key = settings.speech_engine.needs_key();
+        let access = access.filter(|_| needs_key);
         let input = SubtitlesInput {
             source: source.clone(),
-            transcription_enabled: settings.transcription_enabled,
             mic_language: settings.mic_language.clone(),
             translate_to: settings.translate_to.clone(),
             deadlock_mode: settings.deadlock_mode,
@@ -171,15 +168,10 @@ pub async fn run(store: Arc<Store>, options: Options) {
             .update(input, || {
                 store.discard_unsettled();
                 let check = starting.then(|| settings.api_base.clone());
-                start_subtitles(&store, source, access, check)
+                start_subtitles(&store, source, access, needs_key, check)
             })
             .await;
 
-        if settings.speech_engine.uses_chrome() {
-            store.sync_chrome(settings.transcription_enabled && can_finish);
-        } else {
-            store.drop_browser();
-        }
         if settings_rx.changed().await.is_err() {
             return;
         }
@@ -190,6 +182,7 @@ fn start_subtitles(
     store: &Arc<Store>,
     source: Option<Source>,
     access: Option<Access>,
+    needs_key: bool,
     // Some なら、始める前にギフトコードの期限を確かめる（その API の根元）
     check_gift: Option<String>,
 ) -> Option<JoinHandle<()>> {
@@ -197,10 +190,10 @@ fn start_subtitles(
         store.set_transcription_error(None);
         return None;
     };
-    let Some(access) = access else {
+    if needs_key && access.is_none() {
         store.set_transcription_error(Some(TranscriptionError::MissingKey));
         return None;
-    };
+    }
     store.set_transcription_error(None);
     tracing::info!("transcription started");
     let (input, ended) = match source {
@@ -216,7 +209,7 @@ fn start_subtitles(
         // 黙って止まらないよう、捕まえて知らせる
         // ギフトコードの期限は始めるときだけ確かめる（配信の途中で設定を変えて作り直すときは
         // 確かめない。止めない。DESIGN.md 17.1）
-        if let (true, Some(api)) = (access.is_gift(), &check_gift)
+        if let (Some(access), Some(api)) = (access.as_ref().filter(|a| a.is_gift()), &check_gift)
             && let Err(e) = share::check_gift(api, access.token()).await
         {
             store.set_transcription_error(Some(e));

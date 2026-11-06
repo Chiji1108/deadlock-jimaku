@@ -68,6 +68,10 @@ pub struct Segment {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub enriched: Option<Enriched>,
+    /// 途中の字幕のふりがな付きの文。確定したら消す
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub draft_source: Option<Vec<Token>>,
     /// 書きかけの訳文。`enriched` が届いたら消す
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
@@ -133,18 +137,15 @@ pub enum ServerMsg {
     AudioLevel { db: f32 },
     #[serde(rename = "usage")]
     Usage { usage: crate::usage::UsageView },
-    /// 途中の字幕を作るものの状態。None は動いていない
+    /// ローカル AI の状態。None は動いていない
     #[serde(rename = "live.status")]
     LiveStatus { status: Option<LiveStatus> },
-    /// ハイブリッドモードで発話が閉じた。ページは認識を区切り、次の発話に備える
-    #[serde(rename = "speech.cut")]
-    SpeechCut,
     /// 操作パネル以外（OBS の字幕オーバーレイ、トレイ）で設定が変わった。パネルは取り直す
     #[serde(rename = "settings.changed")]
     SettingsChanged,
 }
 
-/// 途中の字幕を作るもの（Chrome のページ、ローカル AI）の状態（DESIGN.md 9.6）
+/// ローカル AI の状態（DESIGN.md 9.6）
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -153,11 +154,7 @@ pub enum LiveState {
     Preparing,
     /// 聞いている
     Listening,
-    /// 止まっている（字幕を始めるのを待っている）
-    Idle,
-    /// この Chrome では使えない
-    Unsupported,
-    /// マイクが使えないなど
+    /// 起動できない
     Failed,
 }
 
@@ -172,11 +169,14 @@ pub struct LiveStatus {
     pub detail: Option<String>,
 }
 
-/// ハイブリッドモードで Chrome が認識した途中の文と訳
+/// ローカル AI が認識した途中の文と訳
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub struct LiveText {
     pub text: String,
+    /// ふりがな付きの文
+    #[serde(default)]
+    pub tokens: Vec<Token>,
     #[serde(default)]
     pub translations: Translations,
 }
@@ -236,10 +236,9 @@ impl ServerMsg {
             Self::Snapshot { .. } | Self::SegmentUpsert { .. } => Topic::Subtitle,
             Self::GlossaryUpdated { .. } => Topic::Glossary,
             Self::RankUpdate { .. } => Topic::Rank,
-            Self::TranscriptionStatus { .. }
-            | Self::SettingsChanged
-            | Self::LiveStatus { .. }
-            | Self::SpeechCut => Topic::Status,
+            Self::TranscriptionStatus { .. } | Self::SettingsChanged | Self::LiveStatus { .. } => {
+                Topic::Status
+            }
             Self::Display { .. } => Topic::Display,
             Self::AudioLevel { .. } => Topic::Level,
             Self::Usage { .. } => Topic::Usage,

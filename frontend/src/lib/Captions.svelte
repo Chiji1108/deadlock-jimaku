@@ -35,7 +35,11 @@
           <!-- partial / final は増えた文字だけをフェードさせ、enriched ではふりがなとアイコンを足す -->
           {#if s.enriched}<span class="enriched"
               ><Rich tokens={s.enriched.source} lang={s.lang} furigana={display?.furigana} /></span
-            >{:else}<GrowingText text={s.text} />{/if}
+            >{:else}<GrowingText
+              text={s.text}
+              tokens={s.draftSource}
+              furigana={display?.furigana}
+            />{/if}
         </p>
       {/if}
       {#each Object.entries(translationsOf(s)) as [lang, tokens] (lang)}

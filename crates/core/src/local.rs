@@ -18,6 +18,7 @@ use tokio::sync::mpsc;
 
 use crate::settings::Settings;
 use crate::store::Store;
+use crate::subtitles::Done;
 use crate::types::{Glossary, LiveState, LiveStatus, LiveText, Token, Translations};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -37,8 +38,8 @@ const ARCHIVE_SHA256: Option<&str> = if cfg!(windows) {
 };
 /// 遅い回線でも、大きなファイルを受け取れるようにする
 const DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(30 * 60);
-/// SenseVoice が聞き取れる言語
-const LANGUAGES: [&str; 5] = ["ja", "en", "zh", "ko", "yue"];
+/// 翻訳できる言語。日本語から英語を経由する
+const TARGETS: [&str; 4] = ["en", "ru", "zh-Hans", "zh-Hant"];
 #[cfg(windows)]
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 const AUDIO: u8 = 1;
@@ -50,6 +51,13 @@ pub enum Input {
     Cut,
 }
 
+/// 無料のモードの確定の字幕
+pub struct Final {
+    pub text: String,
+    pub tokens: Vec<Token>,
+    pub translations: Translations,
+}
+
 /// 用語の表。翻訳の前に英語の名前へ置き換える
 pub fn terms(glossary: &Glossary) -> Vec<(String, String)> {
     glossary
@@ -59,14 +67,15 @@ pub fn terms(glossary: &Glossary) -> Vec<(String, String)> {
         .collect()
 }
 
-pub async fn run(
+pub(crate) async fn run(
     store: Arc<Store>,
     settings: Settings,
     terms: Vec<(String, String)>,
+    finals: Option<mpsc::Sender<Done>>,
     mut input: mpsc::UnboundedReceiver<Input>,
 ) {
     show(&store, LiveState::Preparing, None);
-    if let Err(e) = session(&store, &settings, &terms, &mut input).await {
+    if let Err(e) = session(&store, &settings, &terms, finals, &mut input).await {
         tracing::warn!("local ai: {e:#}");
         show(
             &store,
@@ -84,22 +93,27 @@ async fn session(
     store: &Arc<Store>,
     settings: &Settings,
     terms: &[(String, String)],
+    finals: Option<mpsc::Sender<Done>>,
     input: &mut mpsc::UnboundedReceiver<Input>,
 ) -> anyhow::Result<()> {
-    let language = settings.mic_language.split('-').next().unwrap_or_default();
-    if !LANGUAGES.contains(&language) {
-        bail!("この言語には対応していません");
+    if settings.mic_language != "ja" {
+        bail!("話す言語が日本語のときだけ使えます");
     }
     let root = store.data_dir().join("local-ai");
     tokio::fs::create_dir_all(&root).await?;
     let dir = install(store, &root).await?;
+    let targets: Vec<&str> = TARGETS
+        .into_iter()
+        .filter(|t| settings.translate_to.iter().any(|l| l == t))
+        .collect();
     let terms_path = root.join("terms.json");
     tokio::fs::write(&terms_path, serde_json::to_vec(terms)?).await?;
     let mut command = Command::new(dir.join(binary()));
     command
         .arg(root.join("models"))
-        .arg(language)
         .arg(&terms_path)
+        .arg(targets.join(","))
+        .arg(if finals.is_some() { "final" } else { "partial" })
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
@@ -113,7 +127,6 @@ async fn session(
     let (writer, rx) = mpsc::unbounded_channel();
     tokio::spawn(write_input(stdin, rx));
     let mut lines = BufReader::new(child.stdout.take().context("stdout")?).lines();
-    let translate = settings.translate_to.iter().any(|l| l == "en");
     // 準備が終わるまでの音声は渡さない（古い発話の字幕が今の発話に載る）
     let mut ready = false;
     loop {
@@ -128,7 +141,15 @@ async fn session(
                 let line = line?.context("stopped")?;
                 let message: Value = serde_json::from_str(&line)?;
                 ready |= message["type"] == "ready";
-                on_line(store, &message, translate);
+                on_line(store, &message);
+                if let (Some(finals), Some("final")) = (&finals, message["type"].as_str()) {
+                    let result = Final {
+                        text: message["text"].as_str().unwrap_or_default().to_owned(),
+                        tokens: tokens(&message["parts"]),
+                        translations: translations(&message["translations"]),
+                    };
+                    let _ = finals.send(Done::Local(result)).await;
+                }
             }
         }
     }
@@ -155,7 +176,31 @@ async fn send(stdin: &mut ChildStdin, input: Input) -> std::io::Result<()> {
     }
 }
 
-fn on_line(store: &Store, message: &Value, translate: bool) {
+fn tokens(parts: &Value) -> Vec<Token> {
+    parts
+        .as_array()
+        .into_iter()
+        .flatten()
+        .map(|part| Token::Text {
+            text: part["text"].as_str().unwrap_or_default().to_owned(),
+            ruby: part["ruby"].as_str().map(ToOwned::to_owned),
+        })
+        .collect()
+}
+
+fn translations(translations: &Value) -> Translations {
+    translations
+        .as_object()
+        .into_iter()
+        .flatten()
+        .filter_map(|(lang, text)| {
+            let text = text.as_str().filter(|t| !t.is_empty())?.to_owned();
+            Some((lang.clone(), vec![Token::Text { text, ruby: None }]))
+        })
+        .collect()
+}
+
+fn on_line(store: &Store, message: &Value) {
     match message["type"].as_str() {
         Some("progress") => {
             let percent = message["loaded"].as_u64().unwrap_or(0) * 100
@@ -170,23 +215,11 @@ fn on_line(store: &Store, message: &Value, translate: bool) {
             );
         }
         Some("ready") => show(store, LiveState::Listening, None),
-        Some("text") => {
-            let translations: Translations = message["translation"]
-                .as_str()
-                .filter(|text| translate && !text.is_empty())
-                .map(|text| {
-                    let tokens = vec![Token::Text {
-                        text: text.to_owned(),
-                        ruby: None,
-                    }];
-                    Translations::from([("en".to_owned(), tokens)])
-                })
-                .unwrap_or_default();
-            store.send_live(LiveText {
-                text: message["text"].as_str().unwrap_or_default().to_owned(),
-                translations,
-            });
-        }
+        Some("text") => store.send_live(LiveText {
+            text: message["text"].as_str().unwrap_or_default().to_owned(),
+            tokens: tokens(&message["parts"]),
+            translations: translations(&message["translations"]),
+        }),
         _ => {}
     }
 }
