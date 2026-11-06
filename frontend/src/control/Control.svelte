@@ -61,13 +61,16 @@
     window.scrollTo({ top: 0 });
   });
 
-  /** Chrome のモードの字幕は、補助プログラムと Chrome のタブの両方が動いて出る */
+  /** Chrome のモードの字幕は、Chrome のウィンドウが動いて出る */
   function chromeStatus() {
-    if (panel.liveStatus?.state === "failed" || panel.chromeStatus?.state === "failed")
+    if (panel.chromeStatus?.state === "failed")
       return { label: "止まっています", dot: "bg-destructive" };
-    if (panel.liveStatus?.state !== "listening")
-      return { label: "準備しています…", dot: "bg-sky-500 animate-pulse" };
-    if (!panel.chromeStatus) return { label: "Chrome のタブが開いていません", dot: "bg-amber-500" };
+    if (panel.chromeStatus?.state === "missing")
+      return { label: "Google Chrome が必要です", dot: "bg-destructive" };
+    if (!panel.chromeStatus)
+      return { label: "Chrome のウィンドウが開いていません", dot: "bg-amber-500" };
+    if (panel.chromeStatus.state === "blocked")
+      return { label: "音声認識につながりません", dot: "bg-amber-500" };
     if (panel.chromeStatus.state === "listening")
       return { label: "字幕を出しています", dot: "bg-emerald-500 animate-pulse" };
     return { label: "準備しています…", dot: "bg-sky-500 animate-pulse" };
@@ -115,6 +118,9 @@
           <Button variant="outline" onclick={() => panel.setTranscription(false)}>
             <SquareIcon />字幕を止める
           </Button>
+        {:else if needsKey && s.speechEngine === "hybrid"}
+          <Button variant="outline" onclick={() => (tab = "keys")}>キーを入れる</Button>
+          <Button onclick={panel.startWithChrome}>キーなしで始める（Chrome）</Button>
         {:else}
           <Button disabled={needsKey} onclick={() => panel.setTranscription(true)}>
             <MicIcon />字幕を始める
@@ -181,10 +187,8 @@
               <Alert.Title>はじめに OpenAI の API キーを設定してください</Alert.Title>
               <Alert.Description>
                 <p>
-                  文字起こしと翻訳に使います。人からギフトコードをもらった場合は、それを入れても使えます。<button
-                    class="underline"
-                    onclick={() => (tab = "keys")}
-                  >
+                  文字起こしと翻訳に使います。人からギフトコードをもらった場合は、それを入れても使えます。キーがなければ、Chrome
+                  のモードで始められます。<button class="underline" onclick={() => (tab = "keys")}>
                     API キーの設定へ
                   </button>
                 </p>

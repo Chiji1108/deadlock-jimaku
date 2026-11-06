@@ -3,4 +3,8 @@
 /**
  * Chrome が認識した文。確定で文が空なら、開いている発話を捨てる
  */
-export type Heard = { text: string, final: boolean, };
+export type Heard = { text: string, final: boolean, 
+/**
+ * 認識したときの区切りの番号（`ChromeCommand::Cut`）。区切られたあとに届いた、前の発話の文を見分ける
+ */
+cut: number, };

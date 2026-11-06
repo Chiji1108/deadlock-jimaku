@@ -31,22 +31,22 @@ const UPDATED = "2026 年 11 月 6 日";
       </li>
     </ul>
 
-    <h2>Google に送るもの（Chrome のモード）</h2>
+    <h2>Google に送るもの（ハイブリッドと Chrome のモード）</h2>
     <ul>
       <li>
-        Chrome のモードの音声認識には、Google Chrome の音声認識を使います。字幕を出している間、Chrome のタブが聞き取るマイクの音声は、Chrome を通じて Google に送られます。ハイブリッドと OpenAI のモードでは、Google に音声を送りません。
+        ハイブリッドと Chrome のモードの音声認識には、Google Chrome の音声認識を使います。字幕を出している間、アプリが開く Chrome のウィンドウが聞き取るマイクの音声は、Chrome を通じて Google に送られます。OpenAI のモードでは、Google に音声を送りません。
       </li>
       <li>
         黙っている間の音声も送られることがあります。送る間隔や保存は Chrome と Google が決めるので、本アプリでは選べません。送った内容の扱いは
         <a href="https://policies.google.com/privacy" class="underline">Google のプライバシーポリシー</a>に従います。
       </li>
-      <li>字幕を止めるか、Chrome のタブを閉じると、聞き取りは止まります。</li>
+      <li>字幕を止めるか、Chrome のウィンドウを閉じると、聞き取りは止まります。</li>
     </ul>
 
     <h2>PC の中で処理するもの</h2>
     <ul>
       <li>
-        Chrome のモードでは、翻訳、ふりがな、用語の判定を PC の中で作り、字幕の文字を本アプリから外に送りません。ハイブリッドのモードでは、途中の字幕、途中の翻訳、ふりがな、用語の判定を PC の中で作り、確定の字幕のために音声と字幕を OpenAI に送ります。
+        ふりがなと辞書の一致は PC の中で作ります。翻訳は Chrome の翻訳機能で PC の中で動きます（翻訳のモデルは Chrome が Google からダウンロードします）。Chrome のモードでは、字幕の文字を本アプリから外に送りません。ハイブリッドのモードでは、途中の翻訳を Chrome の中で作り、確定の字幕のために音声と字幕を OpenAI に送ります。
       </li>
       <li>
         モデルは初回に、GitHub と Mozilla の配信元からダウンロードします。

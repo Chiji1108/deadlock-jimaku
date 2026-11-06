@@ -11,10 +11,10 @@ use futures_util::FutureExt;
 use tokio::task::JoinHandle;
 
 use crate::openai::Access;
-use crate::settings::{Models, Region, Segmentation, Settings, SpeechEngine};
+use crate::settings::{Models, Plan, Region, Segmentation, Settings, SpeechEngine};
 use crate::store::Store;
 use crate::types::{LangCode, TranscriptionError};
-use crate::{assets, audio, rank, secrets, share, subtitles};
+use crate::{assets, audio, chrome, rank, secrets, share, subtitles};
 
 pub struct Options {
     /// 開発・検証用: マイクの代わりに WAV ファイルを流す（設定の開始・停止に関係なく流す）。
@@ -55,6 +55,8 @@ impl<K: PartialEq> Slot<K> {
 struct AssetsInput {
     languages: Vec<LangCode>,
     access: Option<Access>,
+    /// 新しい版の辞書があれば増える
+    refreshes: u64,
 }
 
 #[derive(PartialEq)]
@@ -65,15 +67,22 @@ struct RankInput {
     region: Option<Region>,
 }
 
-#[derive(PartialEq)]
-struct SubtitlesInput {
-    /// None なら止めている
-    source: Option<Source>,
+/// 字幕の処理の入力。モードごとに、使う設定だけを持つ
+#[derive(Clone, PartialEq)]
+enum SubtitlesInput {
+    Stopped,
+    Audio(Box<AudioInput>),
+    Chrome(ChromeInput),
+}
+
+#[derive(Clone, PartialEq)]
+struct AudioInput {
+    source: Source,
     mic_language: LangCode,
     translate_to: Vec<LangCode>,
     /// 用語ヒントはセッションの開始時にしか渡せないので、変えたら始め直す
     deadlock_mode: bool,
-    live_subtitles: bool,
+    plan: Plan,
     speech_engine: SpeechEngine,
     models: Models,
     realtime_delay: String,
@@ -81,12 +90,19 @@ struct SubtitlesInput {
     access: Option<Access>,
 }
 
+/// ページは準備が整い直すたびに設定を読むので、ページが使う設定もここに入れる
+#[derive(Clone, PartialEq)]
+struct ChromeInput {
+    mic_language: LangCode,
+    translate_to: Vec<LangCode>,
+    deadlock_mode: bool,
+    segmentation: Segmentation,
+}
+
 #[derive(Clone, PartialEq)]
 enum Source {
     Mic(Option<String>),
     File(PathBuf),
-    /// Chrome のページが認識した文を受け取る
-    Chrome,
 }
 
 pub async fn run(store: Arc<Store>, options: Options) {
@@ -95,6 +111,7 @@ pub async fn run(store: Arc<Store>, options: Options) {
     let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
     let meter = store.meter();
     tokio::spawn(async move { meter.persist().await });
+    tokio::spawn(assets::watch_versions(store.clone()));
     let mut settings_rx = store.watch_settings();
     let mut assets_slot = Slot::new();
     let mut rank_slot = Slot::new();
@@ -109,14 +126,15 @@ pub async fn run(store: Arc<Store>, options: Options) {
             .unwrap_or_default();
         let languages = settings.glossary_languages();
         // Chrome のモードは OpenAI に何も送らない
-        let needs_key = settings.speech_engine.needs_key();
-        let access = keys.access(&settings.api_base).filter(|_| needs_key);
+        let plan = settings.plan();
+        let access = keys.access(&settings.api_base).filter(|_| plan.needs_key());
 
         assets_slot
             .update(
                 AssetsInput {
                     languages: languages.clone(),
                     access: access.clone(),
+                    refreshes: store.glossary_refreshes(),
                 },
                 || {
                     Some(tokio::spawn(assets::load_into(
@@ -146,34 +164,20 @@ pub async fn run(store: Arc<Store>, options: Options) {
             })
             .await;
 
-        let source = match (&options.input_file, settings.speech_engine) {
-            (_, SpeechEngine::Chrome) => settings.transcription_enabled.then_some(Source::Chrome),
-            (Some(path), _) => Some(Source::File(path.clone())),
-            (None, _) => settings
-                .transcription_enabled
-                .then(|| Source::Mic(settings.mic_device.clone())),
-        };
-        let input = SubtitlesInput {
-            source: source.clone(),
-            mic_language: settings.mic_language.clone(),
-            translate_to: settings.translate_to.clone(),
-            deadlock_mode: settings.deadlock_mode,
-            live_subtitles: settings.wants_live_subtitles(),
-            speech_engine: settings.speech_engine,
-            models: settings.models.clone(),
-            realtime_delay: settings.realtime_delay.clone(),
-            segmentation: settings.segmentation.clone(),
-            access: access.clone(),
-        };
+        // 確定の字幕を作れないのに、音声だけを Google に送らない
+        let can_finish = !plan.needs_key() || access.is_some();
+        let input = subtitles_input(&settings, &options, access);
         let starting = !running;
-        running = source.is_some();
+        running = input != SubtitlesInput::Stopped;
         subtitles_slot
-            .update(input, || {
+            .update(input.clone(), || {
                 store.discard_unsettled();
                 let check = starting.then(|| settings.api_base.clone());
-                start_subtitles(&store, source, access, needs_key, check)
+                start_subtitles(&store, input, check)
             })
             .await;
+        // 設定を変えて字幕の処理を作り直しても、ウィンドウは閉じない
+        store.sync_chrome(settings.transcription_enabled && plan.uses_chrome() && can_finish);
 
         if settings_rx.changed().await.is_err() {
             return;
@@ -181,61 +185,107 @@ pub async fn run(store: Arc<Store>, options: Options) {
     }
 }
 
+fn subtitles_input(
+    settings: &Settings,
+    options: &Options,
+    access: Option<Access>,
+) -> SubtitlesInput {
+    if settings.speech_engine == SpeechEngine::Chrome {
+        if !settings.transcription_enabled {
+            return SubtitlesInput::Stopped;
+        }
+        return SubtitlesInput::Chrome(ChromeInput {
+            mic_language: settings.mic_language.clone(),
+            translate_to: settings.translate_to.clone(),
+            deadlock_mode: settings.deadlock_mode,
+            segmentation: settings.segmentation.clone(),
+        });
+    }
+    let source = match &options.input_file {
+        Some(path) => Source::File(path.clone()),
+        None if settings.transcription_enabled => Source::Mic(settings.mic_device.clone()),
+        None => return SubtitlesInput::Stopped,
+    };
+    SubtitlesInput::Audio(Box::new(AudioInput {
+        source,
+        mic_language: settings.mic_language.clone(),
+        translate_to: settings.translate_to.clone(),
+        deadlock_mode: settings.deadlock_mode,
+        plan: settings.plan(),
+        speech_engine: settings.speech_engine,
+        models: settings.models.clone(),
+        realtime_delay: settings.realtime_delay.clone(),
+        segmentation: settings.segmentation.clone(),
+        access,
+    }))
+}
+
 fn start_subtitles(
     store: &Arc<Store>,
-    source: Option<Source>,
-    access: Option<Access>,
-    needs_key: bool,
+    input: SubtitlesInput,
     // Some なら、始める前にギフトコードの期限を確かめる（その API の根元）
     check_gift: Option<String>,
 ) -> Option<JoinHandle<()>> {
-    let Some(source) = source else {
-        store.set_transcription_error(None);
-        return None;
-    };
-    if needs_key && access.is_none() {
-        store.set_transcription_error(Some(TranscriptionError::MissingKey));
-        return None;
-    }
     store.set_transcription_error(None);
-    tracing::info!("transcription started");
-    let (input, ended) = match source {
-        Source::Mic(device) => (
-            Some(audio::Input::Mic(device)),
-            Some(TranscriptionError::InputEnded),
-        ),
-        Source::File(path) => (Some(audio::Input::File(path)), None),
-        Source::Chrome => (None, None),
-    };
-    let store = store.clone();
-    Some(tokio::spawn(async move {
-        // 止まったら理由を出す（開始・停止を押し直すと始め直す）。想定外のエラー（panic）でも
-        // 黙って止まらないよう、捕まえて知らせる
-        // ギフトコードの期限は始めるときだけ確かめる（配信の途中で設定を変えて作り直すときは
-        // 確かめない。止めない。DESIGN.md 17.1）
-        if let (Some(access), Some(api)) = (access.as_ref().filter(|a| a.is_gift()), &check_gift)
-            && let Err(e) = share::check_gift(api, access.token()).await
-        {
-            store.set_transcription_error(Some(e));
-            return;
+    match input {
+        SubtitlesInput::Stopped => None,
+        SubtitlesInput::Chrome(_) => {
+            tracing::info!("transcription started");
+            let run = chrome::run(store.clone());
+            Some(tokio::spawn(supervise(store.clone(), run, None)))
         }
-        let run = AssertUnwindSafe(subtitles::run(store.clone(), input, access));
-        let error = match run.catch_unwind().await {
-            Ok(Ok(())) => ended,
-            Ok(Err(e)) => Some(TranscriptionError::from_error(&e)),
-            Err(panic) => {
-                let reason = panic
-                    .downcast_ref::<String>()
-                    .map(String::as_str)
-                    .or_else(|| panic.downcast_ref::<&str>().copied())
-                    .unwrap_or("unknown");
-                tracing::error!("transcription panicked: {reason}");
-                Some(TranscriptionError::Crashed {
-                    detail: reason.to_owned(),
-                })
-            }
-        };
-        tracing::info!("transcription ended: {error:?}");
-        store.set_transcription_error(error);
-    }))
+        SubtitlesInput::Audio(input) => {
+            let Some(access) = input.access else {
+                store.set_transcription_error(Some(TranscriptionError::MissingKey));
+                return None;
+            };
+            tracing::info!("transcription started");
+            let (input, ended) = match input.source {
+                Source::Mic(device) => (
+                    audio::Input::Mic(device),
+                    Some(TranscriptionError::InputEnded),
+                ),
+                Source::File(path) => (audio::Input::File(path), None),
+            };
+            let store = store.clone();
+            Some(tokio::spawn(async move {
+                // ギフトコードの期限は始めるときだけ確かめる（配信の途中で設定を変えて作り直すときは
+                // 確かめない。止めない。DESIGN.md 17.1）
+                if let (true, Some(api)) = (access.is_gift(), &check_gift)
+                    && let Err(e) = share::check_gift(api, access.token()).await
+                {
+                    store.set_transcription_error(Some(e));
+                    return;
+                }
+                let run = subtitles::run(store.clone(), input, access);
+                supervise(store, run, ended).await;
+            }))
+        }
+    }
+}
+
+/// 止まったら理由を出す（開始・停止を押し直すと始め直す）。想定外のエラー（panic）でも
+/// 黙って止まらないよう、捕まえて知らせる
+async fn supervise(
+    store: Arc<Store>,
+    run: impl Future<Output = anyhow::Result<()>>,
+    ended: Option<TranscriptionError>,
+) {
+    let error = match AssertUnwindSafe(run).catch_unwind().await {
+        Ok(Ok(())) => ended,
+        Ok(Err(e)) => Some(TranscriptionError::from_error(&e)),
+        Err(panic) => {
+            let reason = panic
+                .downcast_ref::<String>()
+                .map(String::as_str)
+                .or_else(|| panic.downcast_ref::<&str>().copied())
+                .unwrap_or("unknown");
+            tracing::error!("transcription panicked: {reason}");
+            Some(TranscriptionError::Crashed {
+                detail: reason.to_owned(),
+            })
+        }
+    };
+    tracing::info!("transcription ended: {error:?}");
+    store.set_transcription_error(error);
 }

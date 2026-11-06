@@ -12,7 +12,6 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use anyhow::Context;
 use futures_util::{StreamExt, future::try_join_all, stream};
 
 use crate::lang;
@@ -60,18 +59,11 @@ pub async fn load_into(store: Arc<Store>, root: PathBuf, access: Option<Access>)
             return;
         }
     };
-    let manual = match manual_readings() {
-        Ok(manual) => manual,
-        Err(e) => {
-            tracing::warn!("{e:#}");
-            readings::Manual::new()
-        }
-    };
     let cache_path = root.join(LLM_READINGS);
     let cache = readings::load_cache(&cache_path).await;
     let publish = |cache: &readings::Cache| {
         let mut glossary = (*loaded.glossary).clone();
-        readings::apply(&mut glossary, cache, &manual);
+        readings::apply(&mut glossary, cache);
         tracing::info!(
             "glossary {} ({} entities, {:?})",
             glossary.client_version,
@@ -103,7 +95,7 @@ pub async fn load_into(store: Arc<Store>, root: PathBuf, access: Option<Access>)
         reasoning_effort: settings.models.reasoning_effort.clone(),
         meter: store.meter(),
     };
-    let missing = readings::missing(&loaded.glossary, &cache, &manual);
+    let missing = readings::missing(&loaded.glossary, &cache);
     if missing.is_empty() {
         return;
     }
@@ -121,6 +113,31 @@ pub async fn load_into(store: Arc<Store>, root: PathBuf, access: Option<Access>)
         }
     }
     publish(&cache);
+}
+
+/// 字幕を始めるときに、新しい版の辞書を裏で確かめる（DESIGN.md 8.2）。トレイに常駐すると、
+/// パッチが来ても起動し直さない。字幕の開始は待たせず、できたら差し替える
+pub async fn watch_versions(store: Arc<Store>) {
+    let mut settings = store.watch_settings();
+    let mut enabled = settings.borrow_and_update().transcription_enabled;
+    while settings.changed().await.is_ok() {
+        let now = settings.borrow_and_update().transcription_enabled;
+        let started = now && !enabled;
+        enabled = now;
+        if !started {
+            continue;
+        }
+        match api::Client::default().latest_client_version().await {
+            Ok(latest) if is_newer(latest, store.glossary().as_ref()) => store.refresh_glossary(),
+            Ok(_) => {}
+            Err(e) => tracing::warn!("client-versions: {e:#}"),
+        }
+    }
+}
+
+/// 辞書がなければ起動のときの処理に任せる
+fn is_newer(latest: u32, current: Option<&Loaded>) -> bool {
+    current.is_some_and(|loaded| loaded.glossary.client_version < latest)
 }
 
 pub async fn load(root: &Path, languages: &[LangCode]) -> anyhow::Result<Loaded> {
@@ -255,19 +272,25 @@ fn read_version(root: &Path, version: u32) -> Option<Loaded> {
     })
 }
 
-/// 手で書いた読み。辞書には保存せず、読み込むたびに重ねる（名前が変わっていたら使わない）
-fn manual_readings() -> anyhow::Result<readings::Manual> {
-    serde_json::from_str(include_str!("../../../../data/readings.ja.json"))
-        .context("data/readings.ja.json")
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn bundled_readings_parse() {
-        manual_readings().unwrap();
+    fn only_a_newer_version_rebuilds_the_glossary() {
+        let loaded = |client_version| Loaded {
+            glossary: Arc::new(Glossary {
+                client_version,
+                languages: Vec::new(),
+                entities: Default::default(),
+            }),
+            requested: Vec::new(),
+            root: PathBuf::new(),
+        };
+        assert!(is_newer(6519, Some(&loaded(6518))));
+        assert!(!is_newer(6518, Some(&loaded(6518))));
+        assert!(!is_newer(6517, Some(&loaded(6518))));
+        assert!(!is_newer(6519, None));
     }
 
     #[test]

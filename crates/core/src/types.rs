@@ -68,10 +68,10 @@ pub struct Segment {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub enriched: Option<Enriched>,
-    /// PC の中で作った、ふりがなと用語の付いた文。`enriched` のあとは、途中から付いていた印に残す
+    /// `text` にふりがなと用語を付けたもの。文と同時に載せる。`enriched` のあとは、途中から付いていた印に残す
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
-    pub draft_source: Option<Vec<Token>>,
+    pub tokens: Option<Vec<Token>>,
     /// 書きかけの訳文。`enriched` が届いたら消す
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
@@ -137,7 +137,7 @@ pub enum ServerMsg {
     AudioLevel { db: f32 },
     #[serde(rename = "usage")]
     Usage { usage: crate::usage::UsageView },
-    /// 補助プログラムの状態。None は動いていない
+    /// 字幕の処理が文を受け取れるか。None は動いていない
     #[serde(rename = "live.status")]
     LiveStatus { status: Option<LiveStatus> },
     /// Chrome のページの状態。None はタブが開いていない
@@ -148,15 +148,19 @@ pub enum ServerMsg {
     SettingsChanged,
 }
 
-/// 補助プログラムや Chrome のページの状態（DESIGN.md 9.6）
+/// 字幕の処理や Chrome のページの状態（DESIGN.md 9.6）
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub enum LiveState {
-    /// モデルをダウンロードしている。Chrome のページは聞き始めるのを待っている
+    /// Chrome のページは聞き始めるのを待っている。翻訳のモデルをダウンロードしていることもある
     Preparing,
     /// 聞いている
     Listening,
+    /// 回線が戻るのを待っている。`detail` に理由が入る
+    Blocked,
+    /// Google Chrome を起動できない。インストールを案内する
+    Missing,
     /// 起動できない、または途中で止まった
     Failed,
 }
@@ -179,6 +183,7 @@ pub struct LiveStatus {
 pub enum ChromeMsg {
     Text(Heard),
     Status { status: LiveStatus },
+    Translated(Translated),
 }
 
 /// Chrome が認識した文。確定で文が空なら、開いている発話を捨てる
@@ -188,18 +193,58 @@ pub struct Heard {
     pub text: String,
     #[serde(rename = "final")]
     pub is_final: bool,
+    /// 認識したときの区切りの番号（`ChromeCommand::Cut`）。区切られたあとに届いた、前の発話の文を見分ける
+    pub cut: u32,
 }
 
-/// 補助プログラムが作った途中の文と訳
+/// core から Chrome のページへの 1 通
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[serde(tag = "type", rename_all = "lowercase")]
+#[ts(export)]
+pub enum ChromeCommand {
+    Translate(ChromeTask),
+    /// ハイブリッドの発話が閉じた。認識を区切り、すぐ聞き直す。`count` はこの区切りの番号
+    Cut {
+        count: u32,
+    },
+}
+
+/// 文を訳してもらう（Translator は Chrome の中にある）
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct ChromeTask {
+    pub id: String,
+    pub text: String,
+    pub terms: Vec<TermName>,
+    #[serde(rename = "final")]
+    pub is_final: bool,
+}
+
+/// `ChromeTask` の答え。訳せる言語がなければ `translations` は空
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct Translated {
+    pub id: String,
+    #[serde(rename = "final")]
+    pub is_final: bool,
+    pub translations: Translations,
+}
+
+/// 翻訳に渡す文。用語を英語の名前に置き換えてある（「ヘイズ」が Hayes にならない）
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, TS)]
 #[ts(export)]
-pub struct LiveText {
+pub struct Translatable {
     pub text: String,
-    /// ふりがなと用語の付いた文
-    #[serde(default)]
-    pub tokens: Vec<Token>,
-    #[serde(default)]
-    pub translations: Translations,
+    pub terms: Vec<TermName>,
+}
+
+/// 文の中で見つけた用語。訳文に残った英語の名前を用語に戻す
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct TermName {
+    #[serde(rename = "ref")]
+    pub reference: String,
+    pub en: String,
 }
 
 /// 字幕を始められなかった・止まった理由。文は操作パネルが作る（サーバーは中身だけを返す）

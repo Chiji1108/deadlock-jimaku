@@ -1,11 +1,10 @@
 //! axum: オーバーレイと操作パネルの配信、WS、REST（DESIGN.md 1, 10 章）。
 
-use std::io::ErrorKind;
 use std::sync::Arc;
 
 use axum::Json;
 use axum::Router;
-use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
+use axum::extract::ws::{CloseFrame, Message, WebSocket, WebSocketUpgrade};
 use axum::extract::{Path, Request, State};
 use axum::http::{HeaderMap, StatusCode, Uri, header};
 use axum::middleware::{self, Next};
@@ -20,9 +19,9 @@ use tokio::sync::broadcast::error::RecvError;
 use crate::secrets::{self, Provider};
 use crate::settings::SettingsPatch;
 use crate::share::{self, GiftStatus, Refused, SharedCode};
-use crate::store::Store;
-use crate::types::{ChromeMsg, ClientMsg, Heard, LangCode, ServerMsg, SettingsView, Topic};
-use crate::{audio, chrome, lang};
+use crate::store::{ChromeEvent, Store};
+use crate::types::{ChromeMsg, ClientMsg, LangCode, ServerMsg, SettingsView, Topic};
+use crate::{audio, lang};
 use ts_rs::TS;
 
 #[derive(RustEmbed)]
@@ -348,45 +347,59 @@ async fn update_code(
 
 // ---- Chrome のモード（DESIGN.md 9.6） ----
 
-/// 聞き取りのページを Chrome で開く。開いたあとはページが `/api/chrome/ws` につなぐ
-async fn open_chrome(headers: HeaderMap) -> Response {
-    let host = headers
-        .get(header::HOST)
-        .and_then(|h| h.to_str().ok())
-        .unwrap_or_default();
-    let url = format!("http://{host}/chrome");
-    match chrome::open(&url) {
-        Ok(()) => StatusCode::NO_CONTENT.into_response(),
-        Err(e) if e.kind() == ErrorKind::NotFound => {
-            let message =
-                format!("Google Chrome が見つかりません。Chrome で {url} を開いてください");
-            (StatusCode::NOT_FOUND, message).into_response()
-        }
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
-    }
+/// 新しいページに聞く役を渡したので閉じる。ページはこの値で、つなぎ直さないと分かる
+const REPLACED: u16 = 4001;
+
+/// Chrome を開き直す
+async fn open_chrome(State(store): State<Arc<Store>>) -> StatusCode {
+    store.reopen_chrome();
+    StatusCode::NO_CONTENT
 }
 
 async fn chrome_ws(upgrade: WebSocketUpgrade, State(store): State<Arc<Store>>) -> Response {
     upgrade.on_upgrade(move |socket| chrome_session(socket, store))
 }
 
-/// ページからの文と状態を受け取る。切れたらタブが閉じられたので、開いている発話を捨てる
+/// ページと文をやりとりする。聞くのは新しくつないだページだけで、古いページは閉じる
+/// （オリジンの違う 127.0.0.1 と localhost の 2 つのページでも、字幕が二重に出ない）
 async fn chrome_session(mut socket: WebSocket, store: Arc<Store>) {
-    while let Some(Ok(message)) = socket.recv().await {
-        let Message::Text(text) = message else {
-            continue;
-        };
-        match serde_json::from_str(text.as_str()) {
-            Ok(ChromeMsg::Text(heard)) => store.send_heard(heard),
-            Ok(ChromeMsg::Status { status }) => store.set_chrome_status(Some(status)),
-            Err(e) => tracing::warn!("invalid chrome message: {e}"),
+    let (id, mut tabs) = store.connect_chrome();
+    let mut commands = store.subscribe_chrome_commands();
+    loop {
+        tokio::select! {
+            biased;
+            _ = async { tabs.wait_for(|tab| tab.id != id).await.map(|_| ()) } => {
+                let frame = CloseFrame { code: REPLACED, reason: "replaced".into() };
+                let _ = socket.send(Message::Close(Some(frame))).await;
+                return;
+            }
+            command = commands.recv() => match command {
+                Ok(command) => {
+                    let text = serde_json::to_string(&command).expect("chrome command");
+                    if socket.send(Message::text(text)).await.is_err() {
+                        break;
+                    }
+                }
+                Err(RecvError::Lagged(_)) => {}
+                Err(RecvError::Closed) => break,
+            },
+            message = socket.recv() => {
+                let Some(Ok(message)) = message else { break };
+                let Message::Text(text) = message else { continue };
+                match serde_json::from_str(text.as_str()) {
+                    Ok(ChromeMsg::Text(heard)) => {
+                        store.send_chrome_event(ChromeEvent::Heard(heard));
+                    }
+                    Ok(ChromeMsg::Translated(translated)) => {
+                        store.send_chrome_event(ChromeEvent::Translated(translated));
+                    }
+                    Ok(ChromeMsg::Status { status }) => store.set_chrome_status(id, status),
+                    Err(e) => tracing::warn!("invalid chrome message: {e}"),
+                }
+            }
         }
     }
-    store.send_heard(Heard {
-        text: String::new(),
-        is_final: true,
-    });
-    store.set_chrome_status(None);
+    store.chrome_tab_closed(id);
 }
 
 async fn devices() -> Response {
@@ -570,14 +583,15 @@ async fn frontend(uri: Uri) -> Response {
 
 #[cfg(test)]
 mod tests {
+    use std::net::SocketAddr;
     use std::path::PathBuf;
 
-    use futures_util::SinkExt;
+    use futures_util::{SinkExt, StreamExt};
     use tokio_tungstenite::tungstenite::{self, client::IntoClientRequest};
 
     use super::*;
     use crate::settings::Settings;
-    use crate::types::{LiveState, LiveStatus};
+    use crate::types::{Heard, LiveState, LiveStatus};
 
     /// 手元のポートで動かす。アドレス（`127.0.0.1:…`）を返す
     async fn serve_on_any_port() -> String {
@@ -687,16 +701,13 @@ mod tests {
         let addr = listener.local_addr().unwrap();
         let store = Store::new(Ok(Settings::default()), PathBuf::new());
         tokio::spawn(serve(listener, store.clone()));
-        let mut heard = store.subscribe_heard();
+        let mut events = store.subscribe_chrome();
         let mut messages = store.subscribe();
-        let (mut socket, _) =
-            tokio_tungstenite::connect_async(format!("ws://{addr}/api/chrome/ws"))
-                .await
-                .unwrap();
+        let (mut socket, _) = page(addr).await;
 
         let status = r#"{ "type": "status", "status": { "state": "listening" } }"#;
         socket.send(status.into()).await.unwrap();
-        let text = r#"{ "type": "text", "text": "ヘイズ", "final": false }"#;
+        let text = r#"{ "type": "text", "text": "ヘイズ", "final": false, "cut": 0 }"#;
         socket.send(text.into()).await.unwrap();
         assert_eq!(
             messages.recv().await.unwrap(),
@@ -708,26 +719,76 @@ mod tests {
             }
         );
         assert_eq!(
-            heard.recv().await.unwrap(),
-            Heard {
+            events.recv().await.unwrap(),
+            ChromeEvent::Heard(Heard {
                 text: "ヘイズ".into(),
                 is_final: false,
-            }
+                cut: 0,
+            })
         );
 
         socket.close(None).await.unwrap();
         assert_eq!(
-            heard.recv().await.unwrap(),
-            Heard {
-                text: String::new(),
-                is_final: true,
-            },
+            events.recv().await.unwrap(),
+            ChromeEvent::Closed,
             "開いている発話を捨てる"
         );
         assert_eq!(
             messages.recv().await.unwrap(),
             ServerMsg::ChromeStatus { status: None }
         );
+    }
+
+    async fn page(
+        addr: SocketAddr,
+    ) -> (
+        tokio_tungstenite::WebSocketStream<
+            tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
+        >,
+        tokio_tungstenite::tungstenite::handshake::client::Response,
+    ) {
+        tokio_tungstenite::connect_async(format!("ws://{addr}/api/chrome/ws"))
+            .await
+            .unwrap()
+    }
+
+    async fn next_status(messages: &mut tokio::sync::broadcast::Receiver<ServerMsg>) -> LiveState {
+        loop {
+            if let ServerMsg::ChromeStatus { status: Some(s) } = messages.recv().await.unwrap() {
+                return s.state;
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn a_new_page_replaces_the_old_one_and_keeps_its_own_state() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let store = Store::new(Ok(Settings::default()), PathBuf::new());
+        tokio::spawn(serve(listener, store.clone()));
+        let mut messages = store.subscribe();
+
+        let (mut old, _) = page(addr).await;
+        let listening = r#"{ "type": "status", "status": { "state": "listening" } }"#;
+        old.send(listening.into()).await.unwrap();
+        assert_eq!(next_status(&mut messages).await, LiveState::Listening);
+
+        let (mut new, _) = page(addr).await;
+        let closed = loop {
+            match old.next().await.unwrap().unwrap() {
+                tungstenite::Message::Close(frame) => break frame.unwrap(),
+                _ => continue,
+            }
+        };
+        assert_eq!(u16::from(closed.code), REPLACED);
+        drop(old);
+
+        let preparing = r#"{ "type": "status", "status": { "state": "preparing" } }"#;
+        new.send(preparing.into()).await.unwrap();
+        assert_eq!(next_status(&mut messages).await, LiveState::Preparing);
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        let snapshot = store.snapshot_chrome_status();
+        assert_eq!(snapshot.map(|s| s.state), Some(LiveState::Preparing));
     }
 
     #[tokio::test]

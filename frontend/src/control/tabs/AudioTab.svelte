@@ -37,7 +37,7 @@
       label: "ハイブリッド",
       traits: "高速・高精度",
       price: "約 $0.6／時間",
-      hint: "途中の字幕は PC で作り、確定の字幕は OpenAI の高い精度に置き換えます",
+      hint: "途中の字幕は Chrome、確定の字幕は OpenAI の高い精度に置き換えます",
       recommended: true,
     },
     {
@@ -45,36 +45,35 @@
       label: "OpenAI",
       traits: "低負荷・高精度",
       price: "約 $1／時間",
-      hint: "すべて OpenAI で作ります。PC の負荷は最小です",
+      hint: "すべて OpenAI で作ります。Chrome は使いません",
     },
     {
       value: "chrome",
       label: "Chrome",
-      traits: "キー不要・Chrome のタブを開く",
+      traits: "無料・キー不要",
       price: "無料",
-      hint: "音声認識は Chrome、翻訳は PC で行います。無料でキー不要です",
+      hint: "音声認識も翻訳も Chrome で行います。無料でキー不要です",
     },
   ];
 
   const s = $derived(panel.settings!);
   const onlyTranslation = $derived(translationOnly(s));
   const engine = $derived(ENGINES.find((e) => e.value === s.speechEngine)!);
-  /** 補助プログラムが止まっている理由 */
-  const localProblem = $derived(
-    panel.liveStatus?.state === "failed" ? panel.liveStatus.detail : undefined,
+  /** Chrome のウィンドウが字幕を止めている理由。止まっているか、回線の回復を待っている */
+  const chromeProblem = $derived(
+    panel.chromeStatus?.state === "failed" ||
+      panel.chromeStatus?.state === "blocked" ||
+      panel.chromeStatus?.state === "missing"
+      ? panel.chromeStatus.detail
+      : undefined,
   );
-  /** Chrome のタブが字幕を止めている理由 */
-  const chromeProblem = $derived.by(() => {
-    if (panel.chromeStatus?.state === "failed") return panel.chromeStatus.detail;
-    return s.transcriptionEnabled && !panel.chromeStatus
-      ? "Chrome のタブが開いていません"
-      : undefined;
-  });
-  /** Chrome のタブの今の状態 */
+  /** Chrome のウィンドウの今の状態 */
   const chromeNote = $derived.by(() => {
-    if (!panel.chromeStatus) return "タブが開いていません";
-    if (panel.chromeStatus.state === "listening") return "タブが聞き取っています";
-    return "タブが開いています";
+    if (!s.transcriptionEnabled) return "字幕を始めると開きます";
+    if (!panel.chromeStatus) return "Chrome のウィンドウを開いています";
+    if (panel.chromeStatus.detail) return panel.chromeStatus.detail;
+    if (panel.chromeStatus.state === "listening") return "聞き取っています";
+    return "字幕の準備をしています";
   });
   const pause = $derived(s.segmentation.minSilenceMs);
   const preset = $derived(PAUSES.find((p) => p.ms === pause));
@@ -108,35 +107,43 @@
         {/each}
       </div>
       <p class="text-sm text-muted-foreground">{engine.hint}</p>
-      <p class="text-xs text-muted-foreground">
-        ハイブリッドは初回に約 200MB、Chrome は約 60MB をダウンロードします
-      </p>
-      {#if s.speechEngine !== "openai" && s.transcriptionEnabled && panel.liveStatus?.state === "preparing"}
-        <p class="text-sm">{panel.liveStatus.detail ?? "モデルを読み込んでいます…"}</p>
-      {/if}
-      {#if s.speechEngine === "chrome"}
+      {#if s.speechEngine !== "openai"}
         <div class="flex items-center gap-3">
-          <Button variant="outline" size="sm" onclick={panel.openChrome}>Chrome で開く</Button>
+          {#if s.transcriptionEnabled}
+            <Button variant="outline" size="sm" onclick={panel.openChrome}>Chrome を開き直す</Button
+            >
+          {/if}
           {#if !chromeProblem}<p class="text-sm text-muted-foreground">{chromeNote}</p>{/if}
         </div>
         <p class="text-xs text-muted-foreground">
-          音声は Chrome を通じて Google に送られます。字幕を出す間はタブを開いておいてください
+          字幕を始めると小さな Chrome のウィンドウが開きます。音声は Chrome を通じて Google
+          に送られます。途中の翻訳は Chrome
+          の中で動きます。字幕を出す間はウィンドウを閉じないでください
         </p>
-        {#if chromeProblem}
+        {#if s.transcriptionEnabled && chromeProblem}
           <Alert.Root variant="destructive">
             <Alert.Title>{chromeProblem}</Alert.Title>
+            {#if s.speechEngine === "hybrid" || panel.chromeStatus?.state === "missing"}
+              <Alert.Description>
+                {#if s.speechEngine === "hybrid"}
+                  確定の字幕は出ています。話している途中の字幕だけが止まっています。
+                {/if}
+                {#if panel.chromeStatus?.state === "missing"}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    class="mt-2"
+                    href="https://www.google.com/chrome/"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Google Chrome をインストールする
+                  </Button>
+                {/if}
+              </Alert.Description>
+            {/if}
           </Alert.Root>
         {/if}
-      {/if}
-      {#if s.speechEngine !== "openai" && s.transcriptionEnabled && localProblem}
-        <Alert.Root variant="destructive">
-          <Alert.Title>{localProblem}</Alert.Title>
-          {#if s.speechEngine === "hybrid"}
-            <Alert.Description>
-              確定の字幕は出ています。話している途中の字幕だけが止まっています。
-            </Alert.Description>
-          {/if}
-        </Alert.Root>
       {/if}
     </Card.Content>
   </Card.Root>
@@ -144,12 +151,15 @@
   {#if s.speechEngine === "chrome"}<Card.Root>
       <Card.Header>
         <Card.Title>マイク</Card.Title>
-        <Card.Description>マイクは Chrome の設定で選びます</Card.Description>
+        <Card.Description>Chrome は OS の既定のマイクを使います</Card.Description>
       </Card.Header>
     </Card.Root>{:else}<Card.Root>
       <Card.Header>
         <Card.Title>マイク</Card.Title>
-        <Card.Description>配信に乗せている声のマイクを選んでください</Card.Description>
+        <Card.Description>
+          配信に乗せている声のマイクを選んでください{#if s.speechEngine === "hybrid"}。Chrome は OS
+            の既定のマイクを使います。アプリのマイクを同じものにしてください{/if}
+        </Card.Description>
       </Card.Header>
       <Card.Content class="flex flex-col gap-5">
         <Field.Field>
@@ -226,10 +236,8 @@
             {/each}
           </Select.Content>
         </Select.Root>
-        {#if s.speechEngine === "hybrid" && s.micLanguage !== "ja"}
-          <Field.Description>途中の字幕は日本語のときだけ出ます</Field.Description>
-        {:else if s.speechEngine === "chrome" && s.micLanguage !== "ja"}
-          <Field.Description>Chrome のモードは日本語のときだけ使えます</Field.Description>
+        {#if s.speechEngine === "chrome" && s.micLanguage !== "ja"}
+          <Field.Description>ふりがなと用語の強調は日本語のときだけ出ます</Field.Description>
         {/if}
       </Field.Field>
 
@@ -270,9 +278,8 @@
       <Field.Field>
         <Field.Label>翻訳先</Field.Label>
         <Field.Description>
-          最大 {MAX_TRANSLATE_TO} つ（{s.translateTo.length} / {MAX_TRANSLATE_TO}）{#if s.speechEngine === "chrome"}。Chrome
-            のモードで訳せるのは英語・ロシア語・中国語です{:else}。1 つ増えるごとに、話し続けて 1
-            時間あたり約 $0.3{/if}
+          最大 {MAX_TRANSLATE_TO} つ（{s.translateTo.length} / {MAX_TRANSLATE_TO}）{#if s.speechEngine !== "chrome"}。1
+            つ増えるごとに、話し続けて 1 時間あたり約 $0.3{/if}
         </Field.Description>
         <ToggleGroup.Root
           type="multiple"

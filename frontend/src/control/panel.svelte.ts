@@ -55,9 +55,7 @@ class Panel {
   /** 最後にレベルが届いた時刻 */
   private levelAt = 0;
   now = $state(Date.now());
-  /** 補助プログラムの状態。動いていなければ undefined */
-  liveStatus = $state<LiveStatus>();
-  /** Chrome のページの状態。タブが開いていなければ undefined */
+  /** Chrome のページの状態。ページが開いていなければ undefined */
   chromeStatus = $state<LiveStatus>();
 
   get settings() {
@@ -121,8 +119,6 @@ class Panel {
   private onMessage(msg: ServerMsg) {
     if (msg.type === "transcription.status") {
       this.transcriptionError = msg.error ?? undefined;
-    } else if (msg.type === "live.status") {
-      this.liveStatus = msg.status ?? undefined;
     } else if (msg.type === "chrome.status") {
       this.chromeStatus = msg.status ?? undefined;
     } else if (msg.type === "usage") {
@@ -160,6 +156,12 @@ class Panel {
     });
 
   openChrome = () => this.run(api.openChrome);
+
+  /** 鍵がないときの入口。押した人にだけ、Chrome のモードに切り替えて始める */
+  startWithChrome = () => {
+    this.level = undefined;
+    return this.update({ speechEngine: "chrome", transcriptionEnabled: true });
+  };
 
   setTranscription(enabled: boolean) {
     this.level = undefined;

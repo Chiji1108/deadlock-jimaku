@@ -36,7 +36,7 @@
           <!-- partial / final は増えた文字だけをフェードさせ、enriched ではふりがなとアイコンを足す。
                途中から付いていたものは、出し直して見えないよう足し直さない。確定で初めて見つかった
                用語にだけ演出を付ける -->
-          {#if s.enriched}<span class:fresh={!s.draftSource}
+          {#if s.enriched}<span class:fresh={!s.tokens}
               ><Rich
                 tokens={s.enriched.source}
                 lang={s.lang}
@@ -45,7 +45,7 @@
               /></span
             >{:else}<GrowingText
               text={s.text}
-              tokens={s.draftSource}
+              tokens={s.tokens}
               furigana={display?.furigana}
             />{/if}
         </p>

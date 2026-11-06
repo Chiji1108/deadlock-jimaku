@@ -21,12 +21,9 @@ export const showsSource = (s: Segment, display?: Pick<SubtitleDisplay, "showSou
 
 const written = (token: Token) => (token.t === "text" ? token.text : (token.spoken ?? ""));
 
-/** トークンが表す文字 */
-export const textOf = (tokens: Token[]) => tokens.map(written).join("");
-
 /** 途中の字幕に付いていた用語 */
 export const draftTerms = (s: Segment) =>
-  new Set(s.draftSource?.flatMap((token) => (token.t === "entity" ? [token.ref] : [])));
+  new Set(s.tokens?.flatMap((token) => (token.t === "entity" ? [token.ref] : [])));
 
 /** 出す文字数までのトークン。途中で切れた語はただの文字にする（ふりがなもアイコンも付けない） */
 export function revealed(tokens: Token[], count: number): Token[] {

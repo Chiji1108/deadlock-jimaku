@@ -8,14 +8,8 @@ rust = "1.99"
 [env]
 _.file = ".env.local"
 
-[tasks.local]
-description = "補助プログラム（jimaku-local）をビルドする"
-run = "cargo build --release --manifest-path crates/local-ai/Cargo.toml"
-
 [tasks.dev]
 description = "Tauri アプリを開発モードで起動する（Vite の HMR 付き）"
-depends = ["local"]
-env = { JIMAKU_LOCAL_DIR = "{{config_root}}/crates/local-ai/target/release" }
 run = "frontend/node_modules/.bin/tauri dev"
 
 [tasks.headless]

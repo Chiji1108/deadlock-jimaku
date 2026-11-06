@@ -69,7 +69,7 @@ const steps = [
   { title: "ダウンロード", body: "Windows・Mac・Linux 用のアプリを入れます。" },
   {
     title: "API キーかギフトコードを設定",
-    body: "おすすめのモードは、確定の字幕に OpenAI を使います。Chrome のモードなら要りません。キーの作り方はアプリの中でも案内します。知り合いからギフトコードをもらった場合は、キーは要りません。",
+    body: "おすすめはハイブリッドで、確定の字幕に OpenAI を使います。キーがなければ、「キーなしで始める（Chrome）」で無料の Chrome のモードから始められます。キーの作り方はアプリの中でも案内します。知り合いからギフトコードをもらった場合は、キーは要りません。",
     link: { href: "#openai-key", label: "作り方を見る" },
   },
   {
@@ -94,11 +94,11 @@ const faqs = [
   },
   {
     q: "字幕はどこで作っていますか？",
-    a: "ハイブリッドは、途中の字幕を PC で作り、確定の字幕と翻訳を OpenAI で作ります。OpenAI のモードは、すべて OpenAI で作ります。Chrome のモードは、音声認識を Chrome、翻訳を PC で行います。字幕を出す間は Chrome のタブを開いておきます。話す言語が日本語のときだけ動き、翻訳先は英語・ロシア語・中国語です。初回のダウンロードは、ハイブリッドが約 200MB、Chrome が約 60MB です。",
+    a: "ハイブリッドは、途中の字幕を Chrome で作り、確定の字幕と翻訳を OpenAI で作ります。OpenAI のモードは、すべて OpenAI で作ります。Chrome のモードは、音声認識も翻訳も Chrome で行います。ハイブリッドと Chrome のモードは Google Chrome が必要で、字幕を始めると小さな Chrome のウィンドウが開きます。翻訳のモデルは初回に Chrome がダウンロードします。ふりがなと用語の速い判定は、話す言語が日本語のときだけ動きます。",
   },
   {
     q: "どんな情報が送信されますか？",
-    a: "ハイブリッドと OpenAI のモードでは、字幕を出している間の話し声と字幕の文字を OpenAI に送ります。Chrome のモードでは、話し声が Chrome を通じて Google に送られます。字幕の文字は外に送りません。ランクを出すときは、Steam のアカウント ID を deadlock-api に送ります。デドロ字幕のサーバーを通るのはおすそ分けのときだけで、音声や字幕の文字は保存しません。",
+    a: "ハイブリッドと OpenAI のモードでは、字幕を出している間の話し声と字幕の文字を OpenAI に送ります。ハイブリッドと Chrome のモードでは、話し声が Chrome を通じて Google に送られます。Chrome のモードの字幕の文字は外に送りません。ランクを出すときは、Steam のアカウント ID を deadlock-api に送ります。デドロ字幕のサーバーを通るのはおすそ分けのときだけで、音声や字幕の文字は保存しません。",
     link: { href: "/privacy", label: "プライバシーポリシーを見る" },
   },
   {
@@ -135,22 +135,22 @@ const modes = [
     badge: "おすすめ",
     traits: ["高速", "高精度"],
     price: "約 $0.6／時間",
-    body: "途中の字幕は PC で作り、確定の字幕は OpenAI の高い精度に置き換えます",
-    needs: "API キーかギフトコード",
+    body: "途中の字幕は Chrome、確定の字幕は OpenAI の高い精度に置き換えます",
+    needs: "API キーかギフトコード、Google Chrome",
   },
   {
     name: "OpenAI",
     traits: ["低負荷", "高精度"],
     price: "約 $1／時間",
-    body: "すべて OpenAI で作ります。PC の負荷は最小です",
+    body: "すべて OpenAI で作ります。Chrome は使いません",
     needs: "API キーかギフトコード",
   },
   {
     name: "Chrome",
     traits: ["無料", "キー不要"],
     price: "無料",
-    body: "音声認識は Chrome、翻訳は PC で行います。無料でキー不要です",
-    needs: "Google Chrome のタブを開いておく",
+    body: "音声認識も翻訳も Chrome で行います。無料でキー不要です",
+    needs: "Google Chrome（字幕を始めると小さなウィンドウが開く）",
   },
 ];
 
@@ -276,7 +276,7 @@ const official = [
       ゲームの<span class="band">邪魔をしない。</span>
     </h2>
     <p class="reveal mt-5 max-w-2xl text-lg leading-relaxed text-muted">
-      OpenAI モードは文字起こしをクラウドで動かすので、ゲーム中の PC に重い処理をさせません。途中の字幕を PC で作るハイブリッドも、Deadlock と同時に CPU 5% 未満、メモリ約 400MB で動きます。アプリの本体は Rust で作っているので、小さくて軽いです。
+      文字起こしをクラウドで動かすので、ゲーム中の PC に重い処理をさせません。アプリの本体は Rust で作っているので、小さくて軽いです。
     </p>
     <ul class="mt-10 grid gap-8 md:grid-cols-3">
       {
