@@ -72,8 +72,6 @@ const SOUND_LEVEL = 0.01;
 const STABLE_MS = 5000;
 /** `start(track)` が使える Chrome の版 */
 const TRACK_CHROME = 135;
-/** アプリが CDP でマイクを許可するまで待つ時間 */
-const GRANT_MS = 5000;
 /** 「既定」「通信」のデバイス ID。本物のマイクの別名で、接頭辞は Chrome の言語で変わるので ID で除く */
 const MIC_ALIASES = new Set(["default", "communications"]);
 
@@ -153,16 +151,25 @@ export async function prepare(
   return created;
 }
 
-/** 選んだマイクを使えない理由 */
+/** マイクを使えない理由 */
 export type MicProblem =
+  | { type: "unreadable" }
   | { type: "missing" }
   | { type: "unopenable"; error: string }
   | { type: "silent" }
   | { type: "ended" }
   | { type: "oldChrome"; version: number };
 
-const micReason = (name: string, problem: MicProblem) => {
+/** 使えないマイクと、その理由 */
+export interface MicTrouble {
+  name: string;
+  problem: MicProblem;
+}
+
+const micReason = ({ name, problem }: MicTrouble) => {
   switch (problem.type) {
+    case "unreadable":
+      return `マイクの許可が Chrome に届いていないので、『${name}』を探せません`;
     case "missing":
       return `Chrome に『${name}』が見つかりません`;
     case "unopenable":
@@ -176,16 +183,18 @@ const micReason = (name: string, problem: MicProblem) => {
   }
 };
 
-/** 理由と、既定のマイクで続けていることを知らせる文。Chrome の既定は OS の既定のマイク */
-export function micNotice(name: string, problem: MicProblem) {
-  return `${micReason(name, problem)}。Chrome の既定のマイクを使っています。OS の既定のマイクを『${name}』にすると揃います`;
+/** 理由と、代わりに使っているマイクを知らせる文。`using` がなければ Chrome の既定（OS の既定のマイク） */
+export function micNotice(trouble: MicTrouble, using?: string) {
+  const reason = micReason(trouble);
+  return using
+    ? `${reason}。『${using}』を使っています`
+    : `${reason}。Chrome の既定のマイクを使っています。OS の既定のマイクを『${trouble.name}』にすると揃います`;
 }
 
 const tidy = (text: string) => text.normalize("NFKC").trim().replace(/\s+/g, " ");
 
-/** Chrome がラベルの末尾に足すものを除く。Windows は (045e:0810) か (Bluetooth)、Mac は (Built-in) など */
-const withoutSuffix = (label: string) =>
-  label.replace(/\s*\((?:[0-9a-f]{4}:[0-9a-f]{4}|Bluetooth|Built-in)\)$/, "");
+/** 末尾の括弧を 1 つ除く。Chrome は機器の ID や接続の種類（(045e:0810)、(Built-in)）を足す */
+const withoutSuffix = (label: string) => label.replace(/\s*\([^()]*\)$/, "");
 
 const realMics = (inputs: MediaDeviceInfo[]) =>
   inputs.filter((d) => d.deviceId && !MIC_ALIASES.has(d.deviceId));
@@ -196,17 +205,7 @@ export function findMics(inputs: MediaDeviceInfo[], name: string) {
   const mics = realMics(inputs);
   const wanted = tidy(name);
   const exact = mics.filter((d) => tidy(d.label) === wanted);
-  return exact.length ? exact : mics.filter((d) => tidy(withoutSuffix(d.label)) === wanted);
-}
-
-/** アプリの許可が届くまで待つ。アプリの外で開いたページなら、待ったあと `getUserMedia` で許可を聞く */
-async function micPermission() {
-  const status = await navigator.permissions.query({ name: "microphone" as PermissionName });
-  if (status.state !== "prompt") return;
-  await new Promise<void>((resolve) => {
-    setTimeout(resolve, GRANT_MS);
-    status.addEventListener("change", () => resolve(), { once: true });
-  });
+  return exact.length ? exact : mics.filter((d) => withoutSuffix(tidy(d.label)) === wanted);
 }
 
 const openAudio = (audio: MediaStreamConstraints["audio"]) =>
@@ -215,7 +214,8 @@ const stopStream = (stream: MediaStream) => stream.getTracks().forEach((track) =
 const audioInputs = async () =>
   (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === "audioinput");
 
-/** マイクの一覧。ふつうのタブでは、許可のあとにしかラベルを読めない。開いたマイクはここで閉じる */
+/** マイクの一覧。許可のあとにしかラベルを読めない。アプリの外で開いたページなら、ここで許可を聞く。
+ * 開いたマイクはここで閉じる */
 async function readableInputs() {
   const inputs = await audioInputs();
   if (inputs.some((d) => d.label)) return inputs;
@@ -258,15 +258,43 @@ export interface MicChoice {
   label: string;
 }
 
+/** ウィンドウで Chrome の既定のマイクを選んだ印。ほかのマイクの `deviceId` は空にならない */
+export const DEFAULT_MIC: MicChoice = { deviceId: "", label: "" };
+
+const CHOSEN_MIC = "chosenMic";
+
+/** ウィンドウで選んだマイク。アプリのマイクを変えたら使わない。読めなければ選択なしとして続ける */
+export function chosenMic(name?: string | null): MicChoice | undefined {
+  try {
+    const saved = JSON.parse(localStorage.getItem(CHOSEN_MIC) ?? "null") as
+      | (MicChoice & { name: string })
+      | null;
+    if (saved?.name !== name) return undefined;
+    const { deviceId, label } = saved ?? {};
+    return typeof deviceId === "string" && typeof label === "string"
+      ? { deviceId, label }
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** 選んだマイクをこの Chrome の中にだけ覚える。`name` はアプリのマイク */
+export function rememberMic(mic: MicChoice, name?: string | null) {
+  localStorage.setItem(CHOSEN_MIC, JSON.stringify({ ...mic, name }));
+}
+
 export interface Microphone {
   /** 認識に渡すマイク。なければ Chrome の既定のマイクを使う */
   track?: MediaStreamTrack;
   heardSound?(): boolean;
-  /** 選んだマイクを使えない理由 */
-  problem?: MicProblem;
+  /** `track` のマイク */
+  opened?: MicChoice;
+  /** 使いたかったマイクを使えない理由 */
+  trouble?: MicTrouble;
   /** 選べるマイク */
   choices: MicChoice[];
-  /** 覚えていた選択で開いたマイク */
+  /** 覚えていた選択。`DEFAULT_MIC` のこともある */
   chosen?: MicChoice;
   /** 選んだマイクを閉じて、既定のマイクを開く */
   useDefault(): Promise<void>;
@@ -274,77 +302,88 @@ export interface Microphone {
 }
 
 /** マイクを開いたままにする。キャプチャ中のページは Chrome に凍結されない。
- * `name` があれば、`chosen`（ウィンドウで選んだマイク）か、その名前のマイクのトラックを `track` で返す。
- * 使えなければ `track` はなく、既定のマイクを開いて理由を `problem` で返す。`log` は調べるための記録 */
+ * `name` があれば、`chosen`（ウィンドウで選んだマイク）、その名前のマイクの順に開き、`track` で返す。
+ * どれも使えなければ `track` はなく、既定のマイクを開く。使いたかったマイクが使えなければ `trouble` で返す。
+ * `log` は調べるための記録 */
 export async function openMicrophone(
   name?: string | null,
   log: (line: string) => void = () => {},
   chosen?: MicChoice,
 ): Promise<Microphone> {
-  let opened = () => {};
+  let closeStream = () => {};
   let released = false;
   const close = () => {
-    opened();
-    opened = () => {};
+    closeStream();
+    closeStream = () => {};
   };
   const useDefault = async () => {
     close();
     const stream = await openAudio(true);
     if (released) stopStream(stream);
-    else opened = () => stopStream(stream);
+    else closeStream = () => stopStream(stream);
   };
   const release = () => {
     released = true;
     close();
   };
-  const fallBack = async (problem?: MicProblem, choices: MicChoice[] = []) => {
+  const fallBack = async (
+    trouble?: MicTrouble,
+    choices: MicChoice[] = [],
+    remembered?: MicChoice,
+  ) => {
     await useDefault();
-    return { problem, choices, useDefault, release };
+    return { trouble, choices, chosen: remembered, useDefault, release };
   };
 
   if (!name) return fallBack();
   const version = Number(chromeBrand()?.version);
   if (version < TRACK_CHROME) {
     log(`Chrome ${version} には start(track) がありません`);
-    return fallBack({ type: "oldChrome", version });
+    return fallBack({ name, problem: { type: "oldChrome", version } });
   }
-  await micPermission();
   const inputs = await readableInputs();
   log(`Chrome のマイク: ${inputs.map((d) => d.label || "（名前なし）").join(" / ")}`);
+  if (!inputs.some((d) => d.label)) return fallBack({ name, problem: { type: "unreadable" } });
   const choices = realMics(inputs).map(({ deviceId, label }) => ({ deviceId, label }));
+  if (chosen?.deviceId === DEFAULT_MIC.deviceId) return fallBack(undefined, choices, chosen);
   const remembered =
     choices.find((d) => d.deviceId === chosen?.deviceId) ??
     choices.find((d) => d.label === chosen?.label);
-  const mics = findMics(inputs, name);
-  const device = remembered ?? mics[0];
-  if (!device) {
-    log(`『${name}』に当たるマイクがありません`);
-    return fallBack({ type: "missing" }, choices);
-  }
+  const mics = findMics(inputs, name).filter((d) => d.deviceId !== remembered?.deviceId);
+  const candidates: MicChoice[] = remembered ? [remembered, ...mics] : mics;
   if (!remembered && mics.length > 1)
-    log(`『${name}』が ${mics.length} 個あるので、先頭を使います`);
-  let stream: MediaStream;
-  try {
-    stream = await openAudio({ deviceId: { exact: device.deviceId } });
-  } catch (e) {
-    const error = (e as Error).name;
-    log(`getUserMedia のエラー: ${error}`);
-    return fallBack({ type: "unopenable", error }, choices);
+    log(`『${name}』が ${mics.length} 個あるので、先頭から試します`);
+  let trouble: MicTrouble | undefined =
+    chosen && !remembered ? { name: chosen.label, problem: { type: "missing" } } : undefined;
+  for (const device of candidates) {
+    let stream: MediaStream;
+    try {
+      stream = await openAudio({ deviceId: { exact: device.deviceId } });
+    } catch (e) {
+      const error = (e as Error).name;
+      log(`『${device.label}』の getUserMedia のエラー: ${error}`);
+      trouble = { name: device.label, problem: { type: "unopenable", error } };
+      continue;
+    }
+    log(`開きました: ${stream.getAudioTracks()[0]?.label}`);
+    const sound = watchSound(stream);
+    closeStream = () => {
+      sound.close();
+      stopStream(stream);
+    };
+    return {
+      track: stream.getAudioTracks()[0],
+      heardSound: sound.heard,
+      opened: device,
+      trouble,
+      choices,
+      chosen: remembered,
+      useDefault,
+      release,
+    };
   }
-  log(`開きました: ${stream.getAudioTracks()[0]?.label}`);
-  const sound = watchSound(stream);
-  opened = () => {
-    sound.close();
-    stopStream(stream);
-  };
-  return {
-    track: stream.getAudioTracks()[0],
-    heardSound: sound.heard,
-    choices,
-    chosen: remembered,
-    useDefault,
-    release,
-  };
+  if (!candidates.length) log(`『${name}』に当たるマイクがありません`);
+  return fallBack(trouble ?? { name, problem: { type: "missing" } }, choices, remembered);
 }
 
 interface Listener {

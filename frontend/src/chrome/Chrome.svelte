@@ -9,13 +9,16 @@
   import { connect } from "../lib/ws";
   import {
     availability,
+    chosenMic,
+    DEFAULT_MIC,
     listen,
     micNotice,
     openMicrophone,
     prepare,
+    rememberMic,
     supported,
     type MicChoice,
-    type MicProblem,
+    type MicTrouble,
   } from "./speech";
   import { Translation } from "./translation";
 
@@ -81,8 +84,10 @@
   let micTrouble: string | undefined;
   /** 自動で見つからないときに選べるマイク。空なら選択欄を出さない */
   let micChoices = $state<MicChoice[]>([]);
-  /** 選択欄で選んでいるマイクの ID */
+  /** 選択欄のマイクの ID。空なら Chrome の既定のマイク。開き直したら、実際に開いたマイクに揃える */
   let micChosen = $state("");
+  /** 選択欄を押した回数。同じマイクを選び直しても開き直す */
+  let micPicks = 0;
   /** ハイブリッドなら、選んだマイクはアプリのマイクとずれることがある */
   let hybrid = $state(false);
   /** マイクを調べるための記録。機器の名前が入るので、外に送らず、押されたらコピーするだけ */
@@ -91,6 +96,8 @@
   /** 止めるたびに増える。待っている間に止められた処理が、あとから聞き始めないようにする */
   let runs = 0;
   let translation = new Translation(new Map(), reply);
+  /** 今の `translation` の言語。マイクだけ変えるなら作り直さない */
+  let translatorLanguages = "";
 
   function send(msg: ChromeMsg) {
     if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(msg));
@@ -158,6 +165,7 @@
       s.micLanguage,
       s.translateTo,
       s.segmentation.minSilenceMs,
+      micPicks,
     ]);
   /** 字幕を止めているか、core の準備ができていないなら聞かない（音声を Google に送らない） */
   const wanted = (s: Settings) =>
@@ -191,22 +199,14 @@
     };
   }
 
-  const CHOSEN_MIC = "chosenMic";
-
-  /** ウィンドウで選んだマイク。アプリのマイクを変えたら使わない。この Chrome の中にだけ覚える */
-  function chosenMic(name?: string | null) {
-    const saved = JSON.parse(localStorage.getItem(CHOSEN_MIC) ?? "null") as
-      | (MicChoice & { name: string })
-      | null;
-    return saved && saved.name === name ? saved : undefined;
-  }
-
   function chooseMic(deviceId: string) {
-    const device = micChoices.find((d) => d.deviceId === deviceId);
-    if (device) {
-      localStorage.setItem(CHOSEN_MIC, JSON.stringify({ ...device, name: settings?.micDevice }));
-    } else localStorage.removeItem(CHOSEN_MIC);
-    listening = "";
+    const mic = micChoices.find((d) => d.deviceId === deviceId) ?? DEFAULT_MIC;
+    try {
+      rememberMic(mic, settings?.micDevice);
+    } catch (e) {
+      logMic(`マイクの選択を覚えられません: ${(e as Error).name}`);
+    }
+    micPicks++;
     void sync();
   }
 
@@ -223,34 +223,40 @@
 
   async function run(s: Settings, targets: string[]) {
     const started = runs;
-    const translators = await prepare(s.micLanguage, targets, (loaded) =>
-      show({
-        state: "preparing",
-        detail: `翻訳のモデルをダウンロードしています（${Math.round(loaded * 100)}%）`,
-      }),
-    );
-    translation = new Translation(translators, reply);
+    // 始めたあとに届いた変更は、ここの値と比べて分かる
+    const running = key(s);
+    const languages = JSON.stringify([s.micLanguage, targets]);
+    if (languages !== translatorLanguages) {
+      const translators = await prepare(s.micLanguage, targets, (loaded) =>
+        show({
+          state: "preparing",
+          detail: `翻訳のモデルをダウンロードしています（${Math.round(loaded * 100)}%）`,
+        }),
+      );
+      translation = new Translation(translators, reply);
+      translatorLanguages = languages;
+    }
     const missing = s.translateTo.filter((target) => !targets.includes(target));
     notice = missing.length
       ? `Chrome の翻訳が対応していない言語は訳しません: ${missing.map((l) => names.of(l)).join("、")}`
       : undefined;
+    // 待っている間に止められたら、聞き始めない
+    if (started !== runs) return;
     micLog = [navigator.userAgent, `アプリのマイク: ${s.micDevice ?? "OS の既定"}`];
     copyResult = undefined;
     const microphone = await open(s);
     if (!microphone) return;
-    // 待っている間に止められたら、聞き始めない
     if (started !== runs) {
       microphone.release();
       return;
     }
-    const micName = microphone.chosen?.label ?? s.micDevice ?? "";
-    const showChoices = (problem?: MicProblem) => {
-      micTrouble = problem && micNotice(micName, problem);
-      if (problem && microphone.choices.length) micTrouble += "。Chrome のウィンドウで選べます";
-      micChoices = problem || microphone.chosen ? microphone.choices : [];
+    const showMic = (trouble?: MicTrouble, using?: MicChoice) => {
+      micTrouble = trouble && micNotice(trouble, using?.label);
+      if (trouble && microphone.choices.length) micTrouble += "。Chrome のウィンドウで選べます";
+      micChoices = trouble || microphone.chosen ? microphone.choices : [];
+      micChosen = using?.deviceId ?? DEFAULT_MIC.deviceId;
     };
-    showChoices(microphone.problem);
-    micChosen = microphone.chosen?.deviceId ?? "";
+    showMic(microphone.trouble, microphone.opened);
     hybrid = s.speechEngine === "hybrid";
     const sink = s.speechEngine === "hybrid" ? hybridSink() : chromeSink(s);
     const recognition = listen(s.micLanguage, {
@@ -267,8 +273,7 @@
       track: microphone.track,
       heardSound: microphone.heardSound,
       onDefaultMic(problem) {
-        showChoices(problem);
-        micChosen = "";
+        showMic({ name: microphone.opened?.label ?? s.micDevice ?? "", problem });
         showListening();
         microphone.useDefault().catch((e: Error) => logMic(`既定のマイクを開けません: ${e.name}`));
       },
@@ -284,7 +289,7 @@
       sink.reset();
       recognition.cut();
     };
-    listening = key(s);
+    listening = running;
     needsDownload = false;
     showListening();
   }
@@ -301,7 +306,9 @@
     }
     if (listening === key(s)) return;
     halt();
+    const started = runs;
     const { state, targets } = await availability(s.micLanguage, s.translateTo);
+    if (started !== runs) return;
     if (state === "unavailable") show({ state: "failed", detail: UNSUPPORTED });
     else if (state === "available") await run(s, targets);
     else {
@@ -328,7 +335,9 @@
     busy = true;
     const s = settings;
     try {
-      await run(s, (await availability(s.micLanguage, s.translateTo)).targets);
+      const started = runs;
+      const { targets } = await availability(s.micLanguage, s.translateTo);
+      if (started === runs) await run(s, targets);
       failures = 0;
     } catch (e) {
       failures++;
@@ -365,13 +374,6 @@
       return ready;
     };
     window.addEventListener("pagehide", halt);
-    // アプリの許可が待ちに間に合わなくても、届いたらマイクを探し直す
-    void navigator.permissions.query({ name: "microphone" as PermissionName }).then((mic) =>
-      mic.addEventListener("change", () => {
-        listening = "";
-        void sync();
-      }),
-    );
     return () => {
       disconnect();
       clearTimeout(orphan);
@@ -433,8 +435,8 @@
   {#if micChoices.length && (status.state === "listening" || status.state === "blocked")}
     <label class="mic">
       認識に使うマイク
-      <select value={micChosen} onchange={(e) => chooseMic(e.currentTarget.value)}>
-        <option value="">Chrome の既定のマイク</option>
+      <select bind:value={micChosen} onchange={(e) => chooseMic(e.currentTarget.value)}>
+        <option value={DEFAULT_MIC.deviceId}>Chrome の既定のマイク</option>
         {#each micChoices as mic (mic.deviceId)}
           <option value={mic.deviceId}>{mic.label}</option>
         {/each}

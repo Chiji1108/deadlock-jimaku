@@ -1,5 +1,14 @@
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import { findMics, listen, micNotice, openMicrophone, supported } from "./speech";
+import {
+  chosenMic,
+  DEFAULT_MIC,
+  findMics,
+  listen,
+  micNotice,
+  openMicrophone,
+  rememberMic,
+  supported,
+} from "./speech";
 
 class FakeRecognizer {
   static last: FakeRecognizer;
@@ -426,18 +435,22 @@ class FakeStream {
   getAudioTracks = () => [this.track];
 }
 
-/** `error` を渡すと、選んだマイクを開けない */
-function fakeDevices(inputs: { deviceId: string; label: string }[], error?: string) {
+/** `error` を渡すと、`refused` のマイク（省くとすべて）を開けない */
+function fakeDevices(
+  inputs: { deviceId: string; label: string }[],
+  error?: string,
+  refused?: string[],
+) {
   const streams: { audio: unknown; stream: FakeStream }[] = [];
   const getUserMedia = vi.fn(async ({ audio }: { audio: unknown }) => {
-    if (error && audio !== true) throw new DOMException("", error);
+    const id = (audio as { deviceId?: { exact: string } }).deviceId?.exact;
+    if (error && id && (!refused || refused.includes(id))) throw new DOMException("", error);
     const stream = new FakeStream();
     streams.push({ audio, stream });
     return stream;
   });
   const enumerateDevices = vi.fn(async () => inputs.map((d) => ({ ...d, kind: "audioinput" })));
   vi.stubGlobal("navigator", {
-    permissions: { query: async () => ({ state: "granted" }) },
     mediaDevices: { getUserMedia, enumerateDevices },
   });
   vi.stubGlobal(
@@ -470,14 +483,25 @@ test.each([
   expect(found(name, WINDOWS_MICS)).toEqual([id]);
 });
 
-test("機器の括弧ではない括弧は除かない", () => {
-  expect(found("Foo", [{ deviceId: "x", label: "Foo (Virtual)" }])).toEqual([]);
-  expect(found("マイク", [{ deviceId: "x", label: "マイク (Realtek Audio)" }])).toEqual([]);
+test.each([
+  ["Headset", "Headset (Bluetooth)"],
+  ["MacBook Pro Microphone", "MacBook Pro Microphone (Built-in)"],
+  ["マイク (Logitech(R) USB)", "マイク (Logitech(R) USB) (046d:0825)"],
+  ["マイク", "マイク（Virtual）"],
+])("%s を、末尾の括弧を 1 つ除いて %s に当てる", (name, label) => {
+  expect(found(name, [{ deviceId: "x", label }])).toEqual(["x"]);
 });
 
-test("Mac の接続の種類の括弧を除いて見つける", () => {
-  const mics = [{ deviceId: "m", label: "MacBook Pro Microphone (Built-in)" }];
-  expect(found("MacBook Pro Microphone", mics)).toEqual(["m"]);
+test("括弧は 1 つしか除かない", () => {
+  expect(found("Mic", [{ deviceId: "x", label: "Mic (USB) (0001:0001)" }])).toEqual([]);
+});
+
+test("全体が一致するマイクがあれば、末尾の括弧が違うだけのマイクには当てない", () => {
+  const mics = [
+    { deviceId: "virtual", label: "Mic (Virtual)" },
+    { deviceId: "real", label: "Mic" },
+  ];
+  expect(found("Mic", mics)).toEqual(["real"]);
 });
 
 test("既定と通信の別名には当てない", () => {
@@ -512,8 +536,9 @@ test("ラベルが読めるなら、既定のマイクを開かずに選んだ�
   expect(getUserMedia).toHaveBeenCalledExactlyOnceWith({
     audio: { deviceId: { exact: "u" } },
   });
-  expect(microphone.problem).toBeUndefined();
+  expect(microphone.trouble).toBeUndefined();
   expect(microphone.track).toBe(streams[0]!.stream.track);
+  expect(microphone.opened?.deviceId).toBe("u");
   microphone.release();
   expect(streams[0]!.stream.stopped).toBe(true);
 });
@@ -536,12 +561,10 @@ test("マイクが見つからなければ、既定のマイクを開いて理�
   const { streams } = fakeDevices(WINDOWS_MICS);
   const log = vi.fn();
   const microphone = await openMicrophone("抜いたマイク", log);
-  expect(microphone.problem).toEqual({ type: "missing" });
+  expect(microphone.trouble).toEqual({ name: "抜いたマイク", problem: { type: "missing" } });
   expect(microphone.track).toBeUndefined();
   expect(streams.map((s) => s.audio)).toEqual([true]);
-  expect(micNotice("抜いたマイク", microphone.problem!)).toContain(
-    "Chrome に『抜いたマイク』が見つかりません",
-  );
+  expect(micNotice(microphone.trouble!)).toContain("Chrome に『抜いたマイク』が見つかりません");
   expect(log.mock.calls.flat()[0]).toContain("マイク (Yeti Stereo) (b58e:9e84)");
 });
 
@@ -549,10 +572,77 @@ test("マイクを開けなければ、エラー名を返して既定のマイ�
   const { streams } = fakeDevices(WINDOWS_MICS, "NotReadableError");
   const log = vi.fn();
   const microphone = await openMicrophone("マイク (Yeti Stereo)", log);
-  expect(microphone.problem).toEqual({ type: "unopenable", error: "NotReadableError" });
+  expect(microphone.trouble).toEqual({
+    name: "マイク (Yeti Stereo) (b58e:9e84)",
+    problem: { type: "unopenable", error: "NotReadableError" },
+  });
   expect(streams).toHaveLength(1);
-  expect(micNotice("A", microphone.problem!)).toContain("『A』を開けません（NotReadableError）");
-  expect(log).toHaveBeenCalledWith("getUserMedia のエラー: NotReadableError");
+  expect(micNotice(microphone.trouble!)).toContain(
+    "『マイク (Yeti Stereo) (b58e:9e84)』を開けません（NotReadableError）。Chrome の既定のマイクを使っています",
+  );
+  expect(log).toHaveBeenCalledWith(
+    "『マイク (Yeti Stereo) (b58e:9e84)』の getUserMedia のエラー: NotReadableError",
+  );
+});
+
+test("覚えたマイクを開けなければ、その名前を返してアプリのマイクを開く", async () => {
+  const { streams } = fakeDevices(WINDOWS_MICS, "NotReadableError", ["r"]);
+  const microphone = await openMicrophone("マイク (Yeti Stereo)", undefined, {
+    deviceId: "r",
+    label: "マイク (Realtek Audio)",
+  });
+  expect(microphone.opened?.deviceId).toBe("u");
+  expect(microphone.track).toBe(streams[0]!.stream.track);
+  expect(microphone.trouble?.name).toBe("マイク (Realtek Audio)");
+  expect(micNotice(microphone.trouble!, microphone.opened?.label)).toBe(
+    "『マイク (Realtek Audio)』を開けません（NotReadableError）。『マイク (Yeti Stereo) (b58e:9e84)』を使っています",
+  );
+});
+
+test("同じ名前のマイクの 1 つ目を開けなければ、2 つ目を開く", async () => {
+  fakeDevices(
+    [
+      { deviceId: "a", label: "A (0001:0001)" },
+      { deviceId: "b", label: "A (0002:0002)" },
+    ],
+    "NotReadableError",
+    ["a"],
+  );
+  const microphone = await openMicrophone("A");
+  expect(microphone.opened?.deviceId).toBe("b");
+});
+
+test("どのマイクも開けなければ、アプリのマイクの理由を返して既定のマイクを開く", async () => {
+  const { streams } = fakeDevices(WINDOWS_MICS, "NotReadableError");
+  const microphone = await openMicrophone("マイク (Yeti Stereo)", undefined, {
+    deviceId: "r",
+    label: "マイク (Realtek Audio)",
+  });
+  expect(microphone.trouble?.name).toBe("マイク (Yeti Stereo) (b58e:9e84)");
+  expect(microphone.chosen?.deviceId).toBe("r");
+  expect(microphone.opened).toBeUndefined();
+  expect(streams.map((s) => s.audio)).toEqual([true]);
+});
+
+test("マイクの名前を読めないなら、見つからないではなく許可が届いていないと返す", async () => {
+  const noLabels = [{ deviceId: "", label: "" }];
+  fakeDevices(noLabels);
+  const log = vi.fn();
+  const microphone = await openMicrophone("A", log);
+  expect(microphone.trouble).toEqual({ name: "A", problem: { type: "unreadable" } });
+  expect(microphone.track).toBeUndefined();
+  expect(microphone.choices).toEqual([]);
+  expect(micNotice(microphone.trouble!)).toContain("マイクの許可が Chrome に届いていないので");
+});
+
+test("既定のマイクを選んであれば、アプリのマイクが見つかっても既定のマイクを開く", async () => {
+  const { streams } = fakeDevices(WINDOWS_MICS);
+  const microphone = await openMicrophone("マイク (Yeti Stereo)", undefined, DEFAULT_MIC);
+  expect(streams.map((s) => s.audio)).toEqual([true]);
+  expect(microphone.track).toBeUndefined();
+  expect(microphone.trouble).toBeUndefined();
+  expect(microphone.chosen).toEqual(DEFAULT_MIC);
+  expect(microphone.choices).toHaveLength(2);
 });
 
 test("名前がなければ既定のマイクを開き、一覧は見ない", async () => {
@@ -560,7 +650,7 @@ test("名前がなければ既定のマイクを開き、一覧は見ない", as
   const microphone = await openMicrophone(null);
   expect(getUserMedia).toHaveBeenCalledExactlyOnceWith({ audio: true });
   expect(enumerateDevices).not.toHaveBeenCalled();
-  expect(microphone.problem).toBeUndefined();
+  expect(microphone.trouble).toBeUndefined();
 });
 
 test("既定に戻すと選んだマイクを閉じて既定のマイクを開き、止めたら閉じる", async () => {
@@ -600,7 +690,9 @@ test("音が認識に届かないまま既定に戻す案内と、start(track) �
     "音が来ているのに結果がありません（2 回目）",
     '既定のマイクに戻します: {"type":"silent"}',
   ]);
-  expect(micNotice("A", { type: "silent" })).toContain("『A』の音が認識に届きません");
+  expect(micNotice({ name: "A", problem: { type: "silent" } })).toContain(
+    "『A』の音が認識に届きません",
+  );
 });
 
 test("見つからないときは選べるマイクを返し、別名は入れない", async () => {
@@ -613,7 +705,7 @@ test("覚えた選択を優先し、ID が変わってもラベルで見つけ�
   const { getUserMedia } = fakeDevices(WINDOWS_MICS);
   const byId = await openMicrophone("A", undefined, { deviceId: "u", label: "別の名前" });
   expect(byId.chosen?.deviceId).toBe("u");
-  expect(byId.problem).toBeUndefined();
+  expect(byId.trouble).toBeUndefined();
   const byLabel = await openMicrophone("A", undefined, {
     deviceId: "古い ID",
     label: "マイク (Realtek Audio)",
@@ -626,8 +718,20 @@ test("覚えた選択が見つからなければ理由と選択欄に戻る", as
   fakeDevices(WINDOWS_MICS);
   const microphone = await openMicrophone("A", undefined, { deviceId: "z", label: "ない" });
   expect(microphone.chosen).toBeUndefined();
-  expect(microphone.problem).toEqual({ type: "missing" });
+  expect(microphone.trouble).toEqual({ name: "ない", problem: { type: "missing" } });
   expect(microphone.choices).toHaveLength(2);
+});
+
+test("覚えた選択が見つからなくてもアプリのマイクを開き、理由を返す", async () => {
+  fakeDevices(WINDOWS_MICS);
+  const microphone = await openMicrophone("マイク (Yeti Stereo)", undefined, {
+    deviceId: "z",
+    label: "ない",
+  });
+  expect(microphone.opened?.deviceId).toBe("u");
+  expect(micNotice(microphone.trouble!, microphone.opened?.label)).toBe(
+    "Chrome に『ない』が見つかりません。『マイク (Yeti Stereo) (b58e:9e84)』を使っています",
+  );
 });
 
 test("start(track) のない Chrome では理由を返し、既定のマイクを使う", async () => {
@@ -637,9 +741,9 @@ test("start(track) のない Chrome では理由を返し、既定のマイク�
     userAgentData: { brands: [{ brand: "Google Chrome", version: "134" }] },
   });
   const microphone = await openMicrophone("A");
-  expect(microphone.problem).toEqual({ type: "oldChrome", version: 134 });
+  expect(microphone.trouble?.problem).toEqual({ type: "oldChrome", version: 134 });
   expect(enumerateDevices).not.toHaveBeenCalled();
-  expect(micNotice("A", microphone.problem!)).toContain("Chrome 135 以降");
+  expect(micNotice(microphone.trouble!)).toContain("Chrome 135 以降");
 });
 
 test("切れたマイクの理由を知らせる", () => {
@@ -650,5 +754,45 @@ test("切れたマイクの理由を知らせる", () => {
   FakeRecognizer.last.onend();
   vi.advanceTimersByTime(100);
   expect(onDefaultMic).toHaveBeenCalledWith({ type: "ended" });
-  expect(micNotice("A", { type: "ended" })).toContain("『A』が切れました");
+  expect(micNotice({ name: "A", problem: { type: "ended" } })).toContain("『A』が切れました");
+});
+
+const fakeStorage = (saved: string | null) => {
+  const storage = {
+    saved,
+    getItem: () => storage.saved,
+    setItem: (_key: string, value: string) => (storage.saved = value),
+  };
+  vi.stubGlobal("localStorage", storage);
+};
+
+test("選んだマイクを覚え、アプリのマイクが同じ間だけ返す", () => {
+  fakeStorage(null);
+  expect(chosenMic("A")).toBeUndefined();
+  rememberMic({ deviceId: "u", label: "ラベル" }, "A");
+  expect(chosenMic("A")).toEqual({ deviceId: "u", label: "ラベル" });
+  expect(chosenMic("B")).toBeUndefined();
+});
+
+test("既定のマイクの選択も覚える", () => {
+  fakeStorage(null);
+  rememberMic(DEFAULT_MIC, "A");
+  expect(chosenMic("A")).toEqual(DEFAULT_MIC);
+});
+
+test.each(["{壊れた", "1", '"文字"', "[]", '{"name":"A"}', '{"name":"A","deviceId":1,"label":""}'])(
+  "覚えた選択 %s は読めないので、選択なしとして続ける",
+  (saved) => {
+    fakeStorage(saved);
+    expect(chosenMic("A")).toBeUndefined();
+  },
+);
+
+test("localStorage が使えなくても、選択なしとして続ける", () => {
+  vi.stubGlobal("localStorage", {
+    getItem() {
+      throw new DOMException("", "SecurityError");
+    },
+  });
+  expect(chosenMic("A")).toBeUndefined();
 });
