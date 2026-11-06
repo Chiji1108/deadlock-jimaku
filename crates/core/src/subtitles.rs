@@ -34,7 +34,7 @@ const FRAME_MS: u32 = 16;
 const PADDING: u64 = SAMPLE_RATE as u64 * 300 / 1000;
 /// これより短い発話（咳やクリック）はバッチに送らず捨てる
 const MIN_SPEECH_MS: u32 = 250;
-/// ローカル AI に渡す、発話を検出する前の音声（0.3 秒）
+/// ローカルAI に渡す、発話を検出する前の音声（0.3 秒）
 const LOCAL_LEAD_SAMPLES: u64 = SAMPLE_RATE as u64 * 300 / 1000;
 /// enrich に文脈として渡す直前の確定字幕の数
 const CONTEXT_LINES: usize = 3;
@@ -45,7 +45,7 @@ const PROMPT: &str = "Live commentary by a streamer playing the video game Deadl
 /// デッドロックモードを切ったとき（雑談の配信など）
 const PLAIN_PROMPT: &str = "Live commentary by a streamer.";
 
-/// `access` は OpenAI（文字起こし・翻訳）の送り先と鍵。無料のモードは使わない
+/// `access` は OpenAI（文字起こし・翻訳）の送り先と鍵。ローカルAIのモードは使わない
 pub async fn run(
     store: Arc<Store>,
     input: audio::Input,
@@ -102,19 +102,12 @@ pub async fn run(
     };
 
     let (done_tx, mut done_rx) = mpsc::channel(64);
-    // ローカル AI を使うモードでは、音声を補助プログラムにも渡す
+    // ローカルAI を使うモードでは、音声を補助プログラムにも渡す
     let (local, local_task) = settings
-        .speech_engine
-        .uses_local()
+        .wants_local()
         .then(|| {
             let (tx, rx) = mpsc::unbounded_channel();
-            let terms = store
-                .glossary()
-                .filter(|_| settings.deadlock_mode)
-                .map(|l| local::terms(&l.glossary))
-                .unwrap_or_default();
-            let task =
-                local::Task::spawn(store.clone(), settings.clone(), terms, done_tx.clone(), rx);
+            let task = local::Task::spawn(store.clone(), settings.clone(), done_tx.clone(), rx);
             (tx, task)
         })
         .unzip();
@@ -204,7 +197,7 @@ struct Cloud {
 struct Pipeline {
     store: Arc<Store>,
     lang: LangCode,
-    /// 無料のモードにはない
+    /// ローカルAIのモードにはない
     cloud: Option<Cloud>,
     done_tx: mpsc::Sender<Done>,
     history: History,
@@ -213,7 +206,7 @@ struct Pipeline {
     /// リアルタイムの音声認識へ（途中の字幕を出さないときと、入力が終わったあとは None）
     realtime: Option<mpsc::UnboundedSender<stt::Input>>,
     local: Option<mpsc::UnboundedSender<local::Input>>,
-    /// 無料のモードで確定の字幕を待っている発話。区切った順
+    /// ローカルAIのモードで確定の字幕を待っている発話。区切った順
     local_finals: VecDeque<String>,
     /// 前の発話を無音でないところで切った
     cut_mid_speech: bool,
@@ -344,7 +337,7 @@ impl Pipeline {
         self.send_realtime(stt::Input::Close);
         self.send_local(local::Input::Cut);
         self.cut_mid_speech = close.cut_end;
-        // 無料のモードは補助プログラムが確定の字幕も作る（捨てる発話の分も返ってくる）
+        // ローカルAIのモードは補助プログラムが確定の字幕も作る（捨てる発話の分も返ってくる）
         if self.cloud.is_none() {
             self.local_finals.push_back(id.clone());
             self.pending += 1;
@@ -390,7 +383,7 @@ impl Pipeline {
         }
     }
 
-    /// ローカル AI が認識した途中の文を、開いている発話に載せる
+    /// ローカルAI が認識した途中の文を、開いている発話に載せる
     fn on_live(&mut self, live: LiveText) {
         let seg = self.current.as_ref().and_then(|id| self.live.get_mut(id));
         if let Some(seg) = seg.filter(|s| s.stage == Stage::Partial) {
@@ -434,6 +427,7 @@ impl Pipeline {
     }
 
     fn on_transcribed(&mut self, id: &str, text: Option<String>) {
+        let settings = self.store.settings();
         let Some(seg) = self.live.get_mut(id) else {
             return;
         };
@@ -449,14 +443,15 @@ impl Pipeline {
         }
         seg.stage = Stage::Final;
         seg.text = text.clone();
-        // ハイブリッドは途中の字幕の用語とふりがなを残し、確定の文のものが届いたら入れ替える。
-        // 補助プログラムが止まっていたら届かないので、確定の文を出す
-        let mark = local::Input::Mark {
-            id: id.to_owned(),
-            text: text.clone(),
-        };
-        if !self.local.as_ref().is_some_and(|tx| tx.send(mark).is_ok()) {
-            seg.draft_source = None;
+        // ハイブリッドは確定の文の用語とふりがなが届いたら入れ替える。見えないときは頼まない。
+        // 届くまでは文が同じなら途中の字幕のものが残り、違えば確定の文だけが出る
+        if settings.wants_marks()
+            && let Some(local) = &self.local
+        {
+            let _ = local.send(local::Input::Mark {
+                id: id.to_owned(),
+                text: text.clone(),
+            });
         }
         self.store.upsert_segment(seg.clone());
 
@@ -469,7 +464,7 @@ impl Pipeline {
         // 辞書は enrich のたびに store から取る（後から届いたり、作り直されたりする）。
         // ふりがなは出さない設定なら聞かない（字幕を止めずに切り替えられるので、そのときの設定を見る）
         let glossary = self.store.glossary().map(|l| l.glossary);
-        let furigana = self.store.settings().wants_furigana();
+        let furigana = settings.wants_furigana();
         let Some(cloud) = &self.cloud else {
             return;
         };
@@ -492,7 +487,7 @@ impl Pipeline {
         }
     }
 
-    /// 無料のモードの確定の字幕。区切った順に届く
+    /// ローカルAIのモードの確定の字幕。区切った順に届く
     fn on_local_final(&mut self, result: local::Final) {
         let Some(id) = self.local_finals.pop_front() else {
             return;
@@ -611,7 +606,7 @@ struct BatchContext {
 pub(crate) enum Done {
     /// None ならバッチが失敗した
     Transcribed { id: String, text: Option<String> },
-    /// 無料のモードで PC の中で作った確定の字幕
+    /// ローカルAIのモードで PC の中で作った確定の字幕
     Local(local::Final),
     /// 書きかけの訳文
     Draft {

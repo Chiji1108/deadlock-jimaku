@@ -105,7 +105,7 @@ pub async fn run(store: Arc<Store>, options: Options) {
             .await
             .unwrap_or_default();
         let languages = settings.glossary_languages();
-        // 無料のモードは OpenAI に何も送らない
+        // ローカルAIのモードは OpenAI に何も送らない
         let needs_key = settings.speech_engine.needs_key();
         let access = keys.access(&settings.api_base).filter(|_| needs_key);
 

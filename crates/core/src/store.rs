@@ -37,7 +37,7 @@ pub struct Store {
     /// マイクの入力レベル（dBFS）。1 秒に 10 回届くので、字幕などと同じ broadcast には流さない
     /// （購読していないオーバーレイを起こさず、取りこぼしの原因にもしない）
     level: watch::Sender<f32>,
-    /// ローカル AI の途中の文（最新だけあればいい）
+    /// ローカルAI の途中の文（最新だけあればいい）
     live: watch::Sender<LiveText>,
     live_status: Mutex<Option<LiveStatus>>,
     meter: Arc<Meter>,
@@ -190,7 +190,7 @@ impl Store {
         msgs
     }
 
-    /// ローカル AI の状態を受け取る。変わったときだけ知らせる
+    /// ローカルAI の状態を受け取る。変わったときだけ知らせる
     pub fn set_live_status(&self, status: Option<LiveStatus>) {
         let mut current = self.live_status.lock().unwrap();
         if *current != status {
@@ -199,7 +199,7 @@ impl Store {
         }
     }
 
-    /// ローカル AI が認識した途中の文。字幕の処理が読む
+    /// ローカルAI が認識した途中の文。字幕の処理が読む
     pub fn send_live(&self, live: LiveText) {
         self.live.send_replace(live);
     }
@@ -261,6 +261,10 @@ impl Store {
 
     pub fn glossary(&self) -> Option<Loaded> {
         self.glossary.borrow().clone()
+    }
+
+    pub fn watch_glossary(&self) -> watch::Receiver<Option<Loaded>> {
+        self.glossary.subscribe()
     }
 
     /// その言語を頼んで作った辞書ができるまで待つ（言語を変えた直後の古い辞書は使わない）。

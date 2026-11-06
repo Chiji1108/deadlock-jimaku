@@ -7,7 +7,14 @@
     tokens,
     lang,
     furigana = true,
-  }: { tokens: Token[]; lang: string; furigana?: boolean } = $props();
+    known,
+  }: {
+    tokens: Token[];
+    lang: string;
+    furigana?: boolean;
+    /** すでに見えている用語。これにない用語に `fresh` を付ける */
+    known?: Set<string>;
+  } = $props();
 </script>
 
 <!-- 日本語ではトークンの間に空白が入らないよう、ブロックの間に改行を入れない -->
@@ -17,4 +24,5 @@
       ruby={token.ruby}
       {lang}
       {furigana}
+      fresh={known && !known.has(token.ref)}
     />{:else}<Ruby text={token.text} ruby={furigana ? token.ruby : undefined} />{/if}{/each}

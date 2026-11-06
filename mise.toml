@@ -9,7 +9,7 @@ rust = "1.99"
 _.file = ".env.local"
 
 [tasks.local]
-description = "ローカル AI の補助プログラムをビルドする"
+description = "ローカルAI の補助プログラムをビルドする"
 run = "cargo build --release --manifest-path crates/local-ai/Cargo.toml"
 
 [tasks.dev]

@@ -44,8 +44,8 @@
     </summary>
     <Card.Content class="mt-5 flex flex-col gap-5">
       <p class="text-sm text-muted-foreground">
-        文字起こしと翻訳は OpenAI に頼むので、OpenAI の API
-        キーが必要です。料金は使った分だけで、話していない間はかかりません。話す時間が半分くらいの配信なら
+        ハイブリッドと OpenAI のモードは、文字起こしと翻訳を OpenAI に頼むので、OpenAI の API
+        キーが必要です。ローカルAIのモードなら要りません。料金は使った分だけで、話していない間はかかりません。話す時間が半分くらいの配信なら
         1 時間あたり約 1 ドル（翻訳 1
         言語・ふりがなあり）が目安です。使った分の目安は「料金」タブに出ます
       </p>

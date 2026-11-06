@@ -55,7 +55,7 @@ class Panel {
   /** 最後にレベルが届いた時刻 */
   private levelAt = 0;
   now = $state(Date.now());
-  /** ローカル AI の状態。動いていなければ undefined */
+  /** ローカルAI の状態。動いていなければ undefined */
   liveStatus = $state<LiveStatus>();
 
   get settings() {
@@ -67,10 +67,10 @@ class Panel {
     return this.view?.keys.openai.state === "missing" && this.view.keys.gift.state === "missing";
   }
 
-  /** 字幕を始められる鍵（自分のキーかギフトコード）がある。無料のモードは鍵が要らない */
+  /** 字幕を始められる鍵（自分のキーかギフトコード）がある。ローカルAIのモードは鍵が要らない */
   get hasAccess() {
     return (
-      this.settings?.speechEngine === "free" ||
+      this.settings?.speechEngine === "local" ||
       this.view?.keys.openai.state === "saved" ||
       this.view?.keys.gift.state === "saved"
     );

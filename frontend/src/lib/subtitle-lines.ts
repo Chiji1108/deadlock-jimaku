@@ -19,12 +19,21 @@ export const showsSource = (s: Segment, display?: Pick<SubtitleDisplay, "showSou
   display?.showSource !== false ||
   !Object.values(translationsOf(s)).some((tokens) => tokens?.length);
 
+const written = (token: Token) => (token.t === "text" ? token.text : (token.spoken ?? ""));
+
+/** トークンが表す文字 */
+export const textOf = (tokens: Token[]) => tokens.map(written).join("");
+
+/** 途中の字幕に付いていた用語 */
+export const draftTerms = (s: Segment) =>
+  new Set(s.draftSource?.flatMap((token) => (token.t === "entity" ? [token.ref] : [])));
+
 /** 出す文字数までのトークン。途中で切れた語はただの文字にする（ふりがなもアイコンも付けない） */
 export function revealed(tokens: Token[], count: number): Token[] {
   let rest = count;
   return tokens.flatMap((token): Token[] => {
     if (rest <= 0) return [];
-    const text = token.t === "text" ? token.text : (token.spoken ?? "");
+    const text = written(token);
     const cut = text.slice(0, rest);
     rest -= cut.length;
     return [cut === text ? token : { t: "text", text: cut }];
