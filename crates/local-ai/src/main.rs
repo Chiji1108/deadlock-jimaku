@@ -404,8 +404,8 @@ mod tests {
     fn magazine() -> Term {
         Term {
             reference: "item:1".into(),
-            text: "カクマガ".into(),
-            reading: "カクマガ".into(),
+            text: "基礎拡張マガジン".into(),
+            reading: "きそかくちょうマガジン".into(),
             en: "Extended Magazine".into(),
         }
     }
@@ -430,11 +430,11 @@ mod tests {
         let term = magazine();
         let found = [Found {
             start: 0,
-            end: "かくまが".len(),
+            end: "きそかくちょうまがじん".len(),
             term: &term,
         }];
         assert_eq!(
-            with_english_names("かくまがを取る", &found),
+            with_english_names("きそかくちょうまがじんを取る", &found),
             "Extended Magazineを取る"
         );
     }
@@ -474,14 +474,14 @@ mod tests {
     fn the_source_keeps_what_was_said() {
         let furigana = Furigana::new().unwrap();
         let term = magazine();
-        let sentence = "かくまがを";
+        let sentence = "きそかくちょうまがじんを";
         let found = [Found {
             start: 0,
-            end: "かくまが".len(),
+            end: "きそかくちょうまがじん".len(),
             term: &term,
         }];
         let tokens = source_tokens(sentence, &furigana.morphemes(sentence), &found);
-        assert_eq!(tokens, [entity(Some("かくまが")), text("を")]);
+        assert_eq!(tokens, [entity(Some("きそかくちょうまがじん")), text("を")]);
     }
 
     #[test]
@@ -491,8 +491,8 @@ mod tests {
             json!({ "t": "text", "text": "あ" })
         );
         assert_eq!(
-            serde_json::to_value(entity(Some("かくまが"))).unwrap(),
-            json!({ "t": "entity", "ref": "item:1", "spoken": "かくまが" })
+            serde_json::to_value(entity(Some("きそかくちょうまがじん"))).unwrap(),
+            json!({ "t": "entity", "ref": "item:1", "spoken": "きそかくちょうまがじん" })
         );
     }
 }

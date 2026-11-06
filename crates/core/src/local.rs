@@ -3,7 +3,6 @@
 //! 補助プログラム（`crates/local-ai`）は実行環境が大きいので、アプリに入れず、使う人だけ初回に
 //! ダウンロードする。別のプロセスにすると、使わない人のメモリも増えない
 
-use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::sync::Arc;
@@ -48,32 +47,6 @@ const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 const AUDIO: u8 = 1;
 const CUT: u8 = 2;
 const MARK: u8 = 3;
-/// ふつうの言葉と同じ名前。文脈を見ないと区別できないので探さない（ふつうの言葉を用語にするより、
-/// 見逃すほうがいい。ハイブリッドと OpenAI では LLM が文脈から判定する）
-const ORDINARY: [&str; 22] = [
-    "おてつだい",
-    "おひるね",
-    "エアドロップ",
-    "コンデンサー",
-    "コンプレッサー",
-    "サイレンサー",
-    "シルバー",
-    "スコーン",
-    "セブン",
-    "トラベラー",
-    "ノックダウン",
-    "パラドックス",
-    "フライト",
-    "フルオート",
-    "プロテスト",
-    "ヘッドハンター",
-    "ポケット",
-    "ラッシュ",
-    "レーキ",
-    "ロングレンジ",
-    "穴掘り",
-    "袋叩き",
-];
 
 /// 字幕の処理が持つ。落とすと補助プログラムの処理も止まる
 pub struct Task {
@@ -120,7 +93,7 @@ pub struct Final {
     pub translations: Translations,
 }
 
-/// 用語の 1 つの書き方。補助プログラムが字幕の中から探し、翻訳の前に英語の名前へ置き換える
+/// 辞書の 1 つの名前。補助プログラムが字幕の中から探し、翻訳の前に英語の名前へ置き換える
 #[derive(Debug, PartialEq, Serialize)]
 pub struct Term {
     #[serde(rename = "ref")]
@@ -131,31 +104,21 @@ pub struct Term {
     en: String,
 }
 
-/// 公式名に手で集めた別名（`data/aliases.ja.json`）を足した、用語の表
+/// 日本語と英語の公式名がある、すべての用語
 pub fn terms(glossary: &Glossary) -> Vec<Term> {
-    let aliases: BTreeMap<String, Vec<String>> =
-        serde_json::from_str(include_str!("../../../data/aliases.ja.json")).unwrap_or_default();
-    let mut terms = Vec::new();
-    for (reference, e) in &glossary.entities {
-        let (Some(name), Some(en)) = (e.names.get("ja"), e.names.get("en")) else {
-            continue;
-        };
-        let term = |text: &str, reading: String| Term {
-            reference: reference.clone(),
-            text: text.to_owned(),
-            reading,
-            en: en.clone(),
-        };
-        terms.push(term(name, reading(e).unwrap_or_else(|| name.clone())));
-        terms.extend(
-            aliases
-                .get(reference)
-                .into_iter()
-                .flatten()
-                .map(|alias| term(alias, alias.clone())),
-        );
-    }
-    terms.retain(|t| !ORDINARY.contains(&t.text.as_str()));
+    let mut terms: Vec<Term> = glossary
+        .entities
+        .iter()
+        .filter_map(|(reference, e)| {
+            let (name, en) = (e.names.get("ja")?, e.names.get("en")?);
+            Some(Term {
+                reference: reference.clone(),
+                text: name.clone(),
+                reading: reading(e).unwrap_or_else(|| name.clone()),
+                en: en.clone(),
+            })
+        })
+        .collect();
     // スキルと同じ名前のアイテムがある（ライフドレイン）。先の行が勝つので、説明を出せるアイテムを先にする
     terms.sort_by_key(|t| !t.reference.starts_with("item:"));
     terms
@@ -462,7 +425,7 @@ mod tests {
     }
 
     #[test]
-    fn terms_list_every_way_to_write_a_name() {
+    fn a_term_has_the_reading_of_its_name() {
         let ruby = vec![
             RubySegment {
                 text: "基礎拡張".into(),
@@ -476,19 +439,14 @@ mod tests {
         let terms = terms(&magazine(Some(ruby)));
         assert_eq!(terms[0].reading, "きそかくちょうマガジン");
         assert_eq!(terms[0].en, "Extended Magazine");
-        assert!(
-            terms
-                .iter()
-                .any(|t| t.text == "カクマガ" && t.reading == "カクマガ")
-        );
     }
 
     #[test]
-    fn names_that_are_ordinary_words_are_left_out() {
+    fn a_name_that_is_an_ordinary_word_is_a_term() {
         let mut glossary = magazine(None);
         let entity = glossary.entities.values_mut().next().unwrap();
         entity.names.insert("ja".into(), "ポケット".into());
-        assert!(terms(&glossary).iter().all(|t| t.text != "ポケット"));
+        assert_eq!(terms(&glossary)[0].text, "ポケット");
     }
 
     #[test]
@@ -508,7 +466,7 @@ mod tests {
     #[test]
     fn helper_tokens_become_app_tokens() {
         let message = serde_json::json!({
-            "tokens": [{ "t": "entity", "ref": "item:1", "spoken": "角磨が" }, { "t": "text", "text": "を" }],
+            "tokens": [{ "t": "entity", "ref": "item:1", "spoken": "基礎拡張マガジン" }, { "t": "text", "text": "を" }],
             "translations": { "en": [{ "t": "entity", "ref": "item:1" }], "ru": [] },
         });
         assert_eq!(
@@ -516,7 +474,7 @@ mod tests {
             [
                 Token::Entity {
                     reference: "item:1".into(),
-                    spoken: Some("角磨が".into()),
+                    spoken: Some("基礎拡張マガジン".into()),
                     ruby: None,
                 },
                 Token::Text {

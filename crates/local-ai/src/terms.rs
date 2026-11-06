@@ -1,7 +1,5 @@
-//! LLM を使わない用語の判定（DESIGN.md 9.6）。辞書の名前と別名を、形態素の区切りに沿って探す。
-//!
-//! 書き方の一致を先に見て、次に読みの一致を見る。あいまいな一致はしない。ふつうの言葉を用語に
-//! するより、見逃すほうがいいので、短すぎる読みは比べない
+//! LLM を使わない用語の判定（DESIGN.md 9.6）。形態素の区切りに沿って、書き方か読みが公式名と
+//! 同じところを探す。あいまいな一致はしない
 
 use std::collections::HashMap;
 
@@ -9,12 +7,12 @@ use serde::Deserialize;
 
 use crate::furigana::{Morpheme, Part, align, is_kana, to_hiragana};
 
-/// これより短い読みは、ふつうの言葉に当たりやすいので比べない（「かくまが」は 4 文字）
+/// これより短い読みは比べない。公式名と違う書き方の言葉に当たる（「皆」がミナ、「山と」がヤマト）
 const MIN_READING: usize = 4;
 /// 名前は長くてもこの数の形態素に収まる
 const MAX_MORPHEMES: usize = 12;
 
-/// 用語の 1 つの書き方（公式名か別名）。アプリが辞書から作る
+/// 辞書の 1 つの名前。アプリが辞書から作る
 #[derive(Debug, Deserialize)]
 pub struct Term {
     #[serde(rename = "ref")]
@@ -120,17 +118,18 @@ mod tests {
         Terms::new(vec![
             term("hero:13", "ヘイズ", "ヘイズ", "Haze"),
             term("hero:9", "ペイジ", "ペイジ", "Paige"),
+            term("hero:50", "ポケット", "ポケット", "Pocket"),
+            term("hero:52", "ミナ", "ミナ", "Mina"),
+            term("hero:17", "ヤマト", "ヤマト", "Yamato"),
             term(
                 "item:1",
                 "基礎拡張マガジン",
                 "きそかくちょうマガジン",
                 "Extended Magazine",
             ),
-            term("item:1", "カクマガ", "カクマガ", "Extended Magazine"),
-            term("item:1", "角磨が", "角磨が", "Extended Magazine"),
             term("item:2", "呪いの遺物", "のろいのいぶつ", "Cursed Relic"),
-            term("item:2", "カース", "カース", "Cursed Relic"),
             term("item:3", "カースブレイカー", "カースブレイカー", "Breaker"),
+            term("ability:1", "カース", "カース", "Curse"),
             term("hero:8", "レム", "レム", "Lemur"),
         ])
     }
@@ -162,14 +161,28 @@ mod tests {
             find("基礎拡張マガジンを買う"),
             found("基礎拡張マガジン", "item:1")
         );
-        assert_eq!(find("カースは最終盤に"), found("カース", "item:2"));
+    }
+
+    #[test]
+    fn an_ordinary_word_that_equals_a_name_matches() {
+        assert_eq!(find("ポケットに入れる"), found("ポケット", "hero:50"));
     }
 
     #[test]
     fn readings_match_other_spellings() {
         assert_eq!(find("呪いの異物だね"), found("呪いの異物", "item:2"));
-        assert_eq!(find("かくまがを取りたい"), found("かくまが", "item:1"));
-        assert_eq!(find("へいずが強い"), Vec::new(), "3 文字の読みは比べない");
+        assert_eq!(
+            find("きそかくちょうまがじんを取る"),
+            found("きそかくちょうまがじん", "item:1")
+        );
+    }
+
+    #[test]
+    fn short_readings_are_not_compared() {
+        for sentence in ["皆で行こう", "山と谷がある", "よく見な", "へいずが強い"]
+        {
+            assert_eq!(find(sentence), Vec::new(), "{sentence}");
+        }
     }
 
     #[test]
@@ -181,17 +194,12 @@ mod tests {
     }
 
     #[test]
-    fn an_observed_misrecognition_is_an_alias() {
-        assert_eq!(find("角磨がをちゃんとね"), found("角磨が", "item:1"));
-    }
-
-    #[test]
-    fn ordinary_words_stay_plain() {
+    fn words_that_are_not_official_names_stay_plain() {
         for sentence in [
+            "カクマガを取りたい",
+            "角磨がをちゃんとね",
             "次のページを見て",
-            "コンビニでカートを押す",
             "レムソンを飲む",
-            "角を磨がないと",
             "カーストの話をする",
         ] {
             assert_eq!(find(sentence), Vec::new(), "{sentence}");
