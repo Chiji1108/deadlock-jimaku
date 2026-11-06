@@ -32,7 +32,6 @@ pub struct Found<'a> {
     pub term: &'a Term,
 }
 
-#[derive(Default)]
 pub struct Terms {
     terms: Vec<Term>,
     by_text: HashMap<String, usize>,

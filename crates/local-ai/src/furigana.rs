@@ -62,13 +62,21 @@ impl Furigana {
     }
 }
 
-/// 形態素に分けた文の一部にふりがなを付ける
-pub fn annotate(text: &str, morphemes: &[Morpheme]) -> Vec<Part> {
+/// 文の `from..to` にふりがなを付ける。形態素にならなかった文字（空白など）もそのまま残す
+pub fn annotate(text: &str, morphemes: &[Morpheme], from: usize, to: usize) -> Vec<Part> {
     let mut out: Vec<Part> = Vec::new();
-    for m in morphemes {
+    let mut pos = from;
+    for m in morphemes.iter().filter(|m| from <= m.start && m.end <= to) {
+        if pos < m.start {
+            push(&mut out, plain(&text[pos..m.start]));
+        }
         for part in ruby_tokens(&text[m.start..m.end], m.reading.as_deref()) {
             push(&mut out, part);
         }
+        pos = m.end;
+    }
+    if pos < to {
+        push(&mut out, plain(&text[pos..to]));
     }
     out
 }
@@ -202,7 +210,15 @@ mod tests {
     fn reads_a_sentence_with_the_dictionary() {
         let furigana = Furigana::new().unwrap();
         let text = "実況です";
-        let parts = annotate(text, &furigana.morphemes(text));
+        let parts = annotate(text, &furigana.morphemes(text), 0, text.len());
         assert_eq!(parts, [p("実況", Some("じっきょう")), p("です", None)]);
+    }
+
+    #[test]
+    fn spaces_stay_in_the_text() {
+        let furigana = Furigana::new().unwrap();
+        let text = "Deadlock is fun";
+        let parts = annotate(text, &furigana.morphemes(text), 0, text.len());
+        assert_eq!(parts, [p(text, None)]);
     }
 }

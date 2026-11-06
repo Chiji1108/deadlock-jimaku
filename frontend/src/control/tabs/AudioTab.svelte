@@ -58,7 +58,6 @@
 
   const s = $derived(panel.settings!);
   const onlyTranslation = $derived(translationOnly(s));
-  const free = $derived(s.speechEngine === "free");
   const engine = $derived(ENGINES.find((e) => e.value === s.speechEngine)!);
   /** ローカル AI が止まっている理由 */
   const localProblem = $derived(

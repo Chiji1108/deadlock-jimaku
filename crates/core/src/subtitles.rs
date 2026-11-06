@@ -447,14 +447,18 @@ impl Pipeline {
         if seg.text.is_empty() {
             seg.started_at = now_ms();
         }
-        // ハイブリッドは途中の字幕の用語とふりがなを残し、確定の文のものが届いたら入れ替える
         seg.stage = Stage::Final;
         seg.text = text.clone();
-        self.store.upsert_segment(seg.clone());
-        self.send_local(local::Input::Mark {
+        // ハイブリッドは途中の字幕の用語とふりがなを残し、確定の文のものが届いたら入れ替える。
+        // 補助プログラムが止まっていたら届かないので、確定の文を出す
+        let mark = local::Input::Mark {
             id: id.to_owned(),
             text: text.clone(),
-        });
+        };
+        if !self.local.as_ref().is_some_and(|tx| tx.send(mark).is_ok()) {
+            seg.draft_source = None;
+        }
+        self.store.upsert_segment(seg.clone());
 
         let context: Vec<String> = self.context.iter().cloned().collect();
         self.context.push_back(text.clone());
@@ -521,7 +525,10 @@ impl Pipeline {
             // 途中の字幕の訳が出ていれば、OpenAI の訳がそれを追い越すまで残す
             let draft = seg.draft.get_or_insert_default();
             for (lang, tokens) in translations {
-                if draft.get(&lang).is_none_or(|old| old.len() <= tokens.len()) {
+                if draft
+                    .get(&lang)
+                    .is_none_or(|old| text_len(old) <= text_len(&tokens))
+                {
                     draft.insert(lang, tokens);
                 }
             }
@@ -547,6 +554,17 @@ impl Pipeline {
         seg.settled_at = Some(now_ms());
         self.store.upsert_segment(seg);
     }
+}
+
+/// 訳文の長さ。用語は言語ごとの名前が分からないので数えない
+fn text_len(tokens: &[Token]) -> usize {
+    tokens
+        .iter()
+        .map(|t| match t {
+            Token::Text { text, .. } => text.chars().count(),
+            Token::Entity { .. } => 0,
+        })
+        .sum()
 }
 
 async fn realtime_loop(

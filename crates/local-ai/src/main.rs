@@ -153,10 +153,8 @@ impl Local {
 
 /// 話した言葉はそのまま残し、用語にアイコンと色が付くようにする
 fn source_tokens(text: &str, morphemes: &[Morpheme], found: &[Found]) -> Vec<Token> {
-    let plain = |from: usize, to: usize| {
-        let first = morphemes.partition_point(|m| m.start < from);
-        let last = morphemes.partition_point(|m| m.end <= to);
-        annotate(text, &morphemes[first..last])
+    let plain = |from, to| {
+        annotate(text, morphemes, from, to)
             .into_iter()
             .map(Token::Text)
     };
@@ -194,7 +192,7 @@ fn mark_names(translation: &str, found: &[Found]) -> Vec<Token> {
     let mut rest = translation;
     while let Some((start, term)) = found
         .iter()
-        .filter_map(|f| Some((rest.find(&f.term.en)?, f.term)))
+        .filter_map(|f| Some((find_word(rest, &f.term.en)?, f.term)))
         .min_by_key(|(start, term)| (*start, std::cmp::Reverse(term.en.len())))
     {
         push_text(&mut tokens, &rest[..start]);
@@ -207,6 +205,17 @@ fn mark_names(translation: &str, found: &[Found]) -> Vec<Token> {
     }
     push_text(&mut tokens, rest);
     tokens
+}
+
+/// 別の単語の一部（Rem と Remember）は名前にしない
+fn find_word(text: &str, word: &str) -> Option<usize> {
+    let joined = |c: Option<char>| c.is_some_and(|c| c.is_ascii_alphanumeric());
+    text.match_indices(word)
+        .find(|(i, _)| {
+            !joined(text[..*i].chars().next_back())
+                && !joined(text[i + word.len()..].chars().next())
+        })
+        .map(|(i, _)| i)
 }
 
 fn push_text(tokens: &mut Vec<Token>, text: &str) {
@@ -443,6 +452,22 @@ mod tests {
             [text("Buy "), entity(None), text(" first")]
         );
         assert_eq!(mark_names("Buy a clip", &[]), [text("Buy a clip")]);
+    }
+
+    #[test]
+    fn a_name_inside_another_word_stays_plain() {
+        let mut term = magazine();
+        term.en = "Rem".into();
+        let found = [Found {
+            start: 0,
+            end: 1,
+            term: &term,
+        }];
+        assert_eq!(mark_names("Remember", &found), [text("Remember")]);
+        assert_eq!(
+            mark_names("Rem's Remember", &found),
+            [entity(None), text("'s Remember")]
+        );
     }
 
     #[test]

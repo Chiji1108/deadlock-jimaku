@@ -50,21 +50,28 @@ const CUT: u8 = 2;
 const MARK: u8 = 3;
 /// ふつうの言葉と同じ名前。文脈を見ないと区別できないので探さない（ふつうの言葉を用語にするより、
 /// 見逃すほうがいい。ハイブリッドと OpenAI では LLM が文脈から判定する）
-const ORDINARY: [&str; 15] = [
+const ORDINARY: [&str; 22] = [
+    "おてつだい",
     "おひるね",
+    "エアドロップ",
     "コンデンサー",
     "コンプレッサー",
+    "サイレンサー",
     "シルバー",
     "スコーン",
     "セブン",
     "トラベラー",
+    "ノックダウン",
     "パラドックス",
     "フライト",
+    "フルオート",
     "プロテスト",
+    "ヘッドハンター",
     "ポケット",
     "ラッシュ",
     "レーキ",
     "ロングレンジ",
+    "穴掘り",
     "袋叩き",
 ];
 
@@ -149,6 +156,8 @@ pub fn terms(glossary: &Glossary) -> Vec<Term> {
         );
     }
     terms.retain(|t| !ORDINARY.contains(&t.text.as_str()));
+    // スキルと同じ名前のアイテムがある（ライフドレイン）。先の行が勝つので、説明を出せるアイテムを先にする
+    terms.sort_by_key(|t| !t.reference.starts_with("item:"));
     terms
 }
 
@@ -480,6 +489,15 @@ mod tests {
         let entity = glossary.entities.values_mut().next().unwrap();
         entity.names.insert("ja".into(), "ポケット".into());
         assert!(terms(&glossary).iter().all(|t| t.text != "ポケット"));
+    }
+
+    #[test]
+    fn items_come_before_abilities_of_the_same_name() {
+        let mut glossary = magazine(None);
+        let mut ability = glossary.entities.values().next().unwrap().clone();
+        ability.kind = EntityKind::Ability;
+        glossary.entities.insert("ability:1".into(), ability);
+        assert_eq!(terms(&glossary)[0].reference, "item:1548066885");
     }
 
     #[test]
