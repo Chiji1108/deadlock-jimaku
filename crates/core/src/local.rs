@@ -160,7 +160,7 @@ async fn run(
         show(
             &store,
             LiveState::Failed,
-            Some(format!("ローカルAIを使えません: {e}")),
+            Some(format!("PC で字幕を作れません: {e}")),
         );
     }
     // 止まったあとも区切りには返事をする（字幕の処理が待ち続けないように）
@@ -266,11 +266,10 @@ async fn session(
                     Message::Text(Final { text, tokens, translations }) => {
                         store.send_live(LiveText { text, tokens, translations });
                     }
-                    Message::Final(result) if finals => {
+                    Message::Final(result) => {
                         *waiting -= 1;
                         let _ = done.send(Done::Local(result)).await;
                     }
-                    Message::Final(_) => {}
                     Message::Marked { id, tokens } => {
                         let _ = done.send(Done::Marked { id, tokens }).await;
                     }
@@ -337,7 +336,7 @@ async fn install(store: &Store, root: &Path) -> anyhow::Result<PathBuf> {
     show(
         store,
         LiveState::Preparing,
-        Some("ローカルAI をダウンロードしています".into()),
+        Some("PC で字幕を作るプログラムをダウンロードしています".into()),
     );
     let archive = format!(
         "jimaku-local-{}-{}.tar.gz",

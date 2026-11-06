@@ -380,11 +380,6 @@ pub enum SpeechEngine {
 }
 
 impl SpeechEngine {
-    /// PC の中のモデルを動かすか
-    pub fn uses_local(self) -> bool {
-        self != Self::OpenAi
-    }
-
     /// OpenAI の鍵が要るか
     pub fn needs_key(self) -> bool {
         self != Self::Local
@@ -498,6 +493,16 @@ impl Settings {
     /// ふりがなを聞くか。翻訳だけなら見えないので、料金をかけない
     pub fn wants_furigana(&self) -> bool {
         self.subtitle_display.furigana && !self.translation_only()
+    }
+
+    /// 補助プログラムを動かすか。ハイブリッドで使うのは途中の字幕だけなので、日本語でなければ
+    /// 動かさず、確定の字幕を OpenAI で作る
+    pub fn wants_local(&self) -> bool {
+        match self.speech_engine {
+            SpeechEngine::Hybrid => self.mic_language == "ja",
+            SpeechEngine::OpenAi => false,
+            SpeechEngine::Local => true,
+        }
     }
 
     /// 確定の文に読みと用語を付け直すか。翻訳だけなら見えず、どちらも切っていれば付くものがない
@@ -912,6 +917,22 @@ mod tests {
         assert_eq!(
             serde_json::to_value(SpeechEngine::Local).unwrap(),
             serde_json::json!("local")
+        );
+    }
+
+    #[test]
+    fn hybrid_runs_the_helper_only_for_japanese() {
+        let with = |speech_engine, mic_language: &str| Settings {
+            speech_engine,
+            mic_language: mic_language.into(),
+            ..Default::default()
+        };
+        assert!(with(SpeechEngine::Hybrid, "ja").wants_local());
+        assert!(!with(SpeechEngine::Hybrid, "en").wants_local());
+        assert!(!with(SpeechEngine::OpenAi, "ja").wants_local());
+        assert!(
+            with(SpeechEngine::Local, "en").wants_local(),
+            "ローカルAIのモードは理由を出して止まる"
         );
     }
 

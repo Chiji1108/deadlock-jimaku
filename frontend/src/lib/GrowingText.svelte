@@ -14,20 +14,20 @@
   /** 届いた分を約 0.2 秒で出し切る */
   const STEPS = 6;
   let shown = $state(0);
-  // 確定の文に読みと用語が付くまで、トークンは `text` より古い。出す長さはトークンに合わせる
-  const full = $derived(tokens.length > 0 ? textOf(tokens) : text);
-  const visible = $derived(Math.min(shown, full.length));
+  const visible = $derived(Math.min(shown, text.length));
 
+  // 確定の文に読みと用語が付くまで、トークンは `text` より古い。同じ文のときだけ使う
+  const marked = $derived(textOf(tokens) === text);
   const partial = $derived(revealed(tokens, visible));
 
   $effect(() => {
-    const rest = full.length - visible;
+    const rest = text.length - visible;
     if (rest <= 0) return;
     const timer = setTimeout(() => (shown = visible + Math.ceil(rest / STEPS)), STEP_MS);
     return () => clearTimeout(timer);
   });
 </script>
 
-{#if tokens.length > 0}<Rich tokens={partial} lang="ja" {furigana} />{:else}<span
+{#if marked}<Rich tokens={partial} lang="ja" {furigana} />{:else}<span
     >{text.slice(0, visible)}</span
   >{/if}

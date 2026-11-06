@@ -24,6 +24,7 @@
   style:--translation-size={display && `${display.translationFontSize}px`}
 >
   {#each segments as s (s.id)}
+    {@const known = draftTerms(s)}
     <li
       class="caption {s.stage}"
       animate:slide={{ duration: 200 }}
@@ -40,7 +41,7 @@
                 tokens={s.enriched.source}
                 lang={s.lang}
                 furigana={display?.furigana}
-                known={s.draftSource && draftTerms(s)}
+                {known}
               /></span
             >{:else}<GrowingText
               text={s.text}
@@ -51,7 +52,12 @@
       {/if}
       {#each Object.entries(translationsOf(s)) as [lang, tokens] (lang)}
         <p class="translation" {lang} in:fly={{ y: 8, duration: 250 }}>
-          <Rich tokens={tokens ?? []} {lang} furigana={display?.furigana} />
+          <Rich
+            tokens={tokens ?? []}
+            {lang}
+            furigana={display?.furigana}
+            known={s.enriched && known}
+          />
         </p>
       {/each}
     </li>
@@ -134,12 +140,12 @@
     color: var(--pending-color);
   }
   /* enriched になったら、ふりがな・アイコン・用語の色を後から重ねる（文字の位置は変えない） */
-  .source :global(.fresh rt),
-  .source :global(.fresh .icon) {
+  .caption :global(.fresh rt),
+  .caption :global(.fresh .icon) {
     animation: reveal 300ms ease-out;
   }
-  .source :global(.fresh .entity),
-  .source :global(.entity.fresh) {
+  .caption :global(.fresh .entity),
+  .caption :global(.entity.fresh) {
     animation: tint 400ms ease-out;
   }
   @keyframes reveal {

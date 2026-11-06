@@ -125,16 +125,12 @@ impl Local {
         let english = self
             .japanese_english
             .translate(&with_english_names(text, found));
-        let mut translations: BTreeMap<String, Vec<Token>> = self
+        let translated = self
             .from_english
             .iter()
-            .map(|(lang, engine)| (lang.clone(), mark_names(&engine.translate(&english), found)))
-            .collect();
-        if self.translate_english {
-            translations.insert("en".to_owned(), mark_names(&english, found));
-        }
-        translations.retain(|_, tokens| !tokens.is_empty());
-        translations
+            .map(|(lang, engine)| (lang.as_str(), engine.translate(&english)));
+        let english = self.translate_english.then_some(("en", english.clone()));
+        translation_tokens(translated.chain(english), found)
     }
 
     fn message(&self, kind: &str, text: &str) -> Value {
@@ -193,6 +189,17 @@ fn with_english_names(text: &str, found: &[Found]) -> String {
     }
     replaced.push_str(&text[pos..]);
     replaced
+}
+
+/// 言語ごとの訳文をトークンにする。訳が空の言語は載せない（訳文の行が空のまま出る）
+fn translation_tokens<'a>(
+    translated: impl Iterator<Item = (&'a str, String)>,
+    found: &[Found],
+) -> BTreeMap<String, Vec<Token>> {
+    translated
+        .map(|(lang, text)| (lang.to_owned(), mark_names(&text, found)))
+        .filter(|(_, tokens)| !tokens.is_empty())
+        .collect()
 }
 
 /// 訳文に残った英語名を用語にする。原文で見つけた用語だけを探す
@@ -507,6 +514,14 @@ mod tests {
         }];
         let tokens = source_tokens(sentence, &furigana.morphemes(sentence), &found);
         assert_eq!(tokens, [entity(Some("きそかくちょうまがじん")), text("を")]);
+    }
+
+    #[test]
+    fn a_language_without_a_translation_is_left_out() {
+        let translated = [("en", "Reload".to_owned()), ("ru", String::new())];
+        let tokens = translation_tokens(translated.into_iter(), &[]);
+        assert_eq!(tokens.keys().collect::<Vec<_>>(), ["en"]);
+        assert_eq!(tokens["en"], [text("Reload")]);
     }
 
     #[test]

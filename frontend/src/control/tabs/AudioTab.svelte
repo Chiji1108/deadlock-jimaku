@@ -95,6 +95,9 @@
         {/each}
       </div>
       <p class="text-sm text-muted-foreground">{engine.hint}</p>
+      <p class="text-xs text-muted-foreground">
+        ハイブリッドとローカルAIは、初回に約 200MB をダウンロードします
+      </p>
       {#if s.speechEngine !== "openai" && s.transcriptionEnabled && panel.liveStatus?.state === "preparing"}
         <p class="text-sm">{panel.liveStatus.detail ?? "モデルを読み込んでいます…"}</p>
       {/if}
@@ -190,6 +193,9 @@
             {/each}
           </Select.Content>
         </Select.Root>
+        {#if s.speechEngine === "hybrid" && s.micLanguage !== "ja"}
+          <Field.Description>途中の字幕は日本語のときだけ出ます</Field.Description>
+        {/if}
       </Field.Field>
 
       <Field.Field orientation="horizontal">
@@ -229,7 +235,7 @@
       <Field.Field>
         <Field.Label>翻訳先</Field.Label>
         <Field.Description>
-          最大 {MAX_TRANSLATE_TO} つ（{s.translateTo.length} / {MAX_TRANSLATE_TO}）{#if s.speechEngine !== "local"}。1
+          最大 {MAX_TRANSLATE_TO} つ（{s.translateTo.length} / {MAX_TRANSLATE_TO}）{#if s.speechEngine === "local"}。ローカルAIで訳せるのは英語・ロシア語・中国語です{:else}。1
             つ増えるごとに、話し続けて 1 時間あたり約 $0.3{/if}
         </Field.Description>
         <ToggleGroup.Root

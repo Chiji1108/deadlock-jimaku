@@ -104,8 +104,7 @@ pub async fn run(
     let (done_tx, mut done_rx) = mpsc::channel(64);
     // ローカルAI を使うモードでは、音声を補助プログラムにも渡す
     let (local, local_task) = settings
-        .speech_engine
-        .uses_local()
+        .wants_local()
         .then(|| {
             let (tx, rx) = mpsc::unbounded_channel();
             let task = local::Task::spawn(store.clone(), settings.clone(), done_tx.clone(), rx);
@@ -428,6 +427,7 @@ impl Pipeline {
     }
 
     fn on_transcribed(&mut self, id: &str, text: Option<String>) {
+        let settings = self.store.settings();
         let Some(seg) = self.live.get_mut(id) else {
             return;
         };
@@ -443,16 +443,15 @@ impl Pipeline {
         }
         seg.stage = Stage::Final;
         seg.text = text.clone();
-        // ハイブリッドは途中の字幕の用語とふりがなを残し、確定の文のものが届いたら入れ替える。
-        // 見えないときは頼まない。補助プログラムが止まっていたら届かない。どちらも確定の文を出す
-        let mark = local::Input::Mark {
-            id: id.to_owned(),
-            text: text.clone(),
-        };
-        let marking = self.store.settings().wants_marks()
-            && self.local.as_ref().is_some_and(|tx| tx.send(mark).is_ok());
-        if !marking {
-            seg.draft_source = None;
+        // ハイブリッドは確定の文の用語とふりがなが届いたら入れ替える。見えないときは頼まない。
+        // 届くまでは文が同じなら途中の字幕のものが残り、違えば確定の文だけが出る
+        if settings.wants_marks()
+            && let Some(local) = &self.local
+        {
+            let _ = local.send(local::Input::Mark {
+                id: id.to_owned(),
+                text: text.clone(),
+            });
         }
         self.store.upsert_segment(seg.clone());
 
@@ -465,7 +464,7 @@ impl Pipeline {
         // 辞書は enrich のたびに store から取る（後から届いたり、作り直されたりする）。
         // ふりがなは出さない設定なら聞かない（字幕を止めずに切り替えられるので、そのときの設定を見る）
         let glossary = self.store.glossary().map(|l| l.glossary);
-        let furigana = self.store.settings().wants_furigana();
+        let furigana = settings.wants_furigana();
         let Some(cloud) = &self.cloud else {
             return;
         };
