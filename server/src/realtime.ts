@@ -35,6 +35,7 @@ export async function relay(
   let model: string | undefined;
   let pending = 0;
   let flushed = Date.now();
+  let writing: Promise<void> = Promise.resolve();
   let closed = false;
   const close = (status: number, reason: string) => {
     if (closed) return;
@@ -48,20 +49,31 @@ export async function relay(
       }
     }
   };
+  // 書けた分だけ pending から引き、失敗した分は次に書く（おすそ分けをやめるとコードが消え、書けなくなる）。
+  // 同じ額を 2 度書かないよう、順番に書く
   const flush = () => {
-    const usd = pending;
-    pending = 0;
     flushed = Date.now();
-    return addUsage(db, code.id, usd, flushed);
+    writing = writing.then(async () => {
+      const usd = pending;
+      try {
+        await addUsage(db, code.id, usd, Date.now());
+        pending -= usd;
+      } catch (e) {
+        console.error("realtime usage not written", e);
+      }
+    });
+    return writing;
   };
-  // 書いてから、止められた・猶予も過ぎた・今日の上限に達したコードなら切る
-  // （配信の途中でも「止める」と上限はすぐ効かせる）
+  // 書いてから（書けなくても）、止められた・猶予も過ぎた・今日の上限に達したコードなら切る
+  // （配信の途中でも「止める」と上限はすぐ効かせる）。
+  // 上限の reason はアプリが見て、張り直さずに知らせる（stt.rs）
   const flushAndCheck = () => {
     ctx.waitUntil(
       flush()
         .then(() => codeById(db, code.id))
         .then((now) => {
-          if (!now || refusal(now, Date.now())) close(1008, "gift code is no longer usable");
+          const error = now ? refusal(now, Date.now()) : "revoked";
+          if (error) close(1008, error === "limit" ? "limit" : "gift code is no longer usable");
         }),
     );
   };

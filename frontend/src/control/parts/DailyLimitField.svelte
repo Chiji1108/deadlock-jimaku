@@ -2,6 +2,7 @@
   // ギフトコードの 1 日の上限。空欄（null）は既定の額（DESIGN.md 17.1）
   import * as Field from "$lib/components/ui/field";
   import { Input } from "$lib/components/ui/input";
+  import { LIMIT_RESET } from "../panel.svelte";
 
   let { id, value = $bindable() }: { id: string; value: number | null } = $props();
 </script>
@@ -18,6 +19,6 @@
     bind:value={() => value ?? undefined, (next) => (value = next ?? null)}
   />
   <Field.Description>
-    上限に達すると、その日は字幕が止まります。日本時間の朝 9 時（UTC の 0 時）に戻ります
+    上限に達すると字幕が止まります。{LIMIT_RESET}
   </Field.Description>
 </Field.Field>

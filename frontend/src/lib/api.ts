@@ -31,7 +31,7 @@ export const api = {
 
   /** もらったギフトコードの状態 */
   gift: () => request<GiftStatus>("/api/gift"),
-  /** 使えるコードだけ保存される。使えなければその状態を返す（投げない） */
+  /** 有効なコードだけ保存される。無効ならその状態を返す（投げない） */
   setGift: async (code: string): Promise<GiftStatus> => {
     const res = await fetch("/api/gift", {
       method: "PUT",

@@ -59,8 +59,10 @@ pub fn router(store: Arc<Store>) -> Router {
 /// Host は DNS リバインディング対策。Origin は別のサイトからの呼び出しの対策で、本文を読まない POST や
 /// WebSocket はプリフライトなしで届くので、ブラウザが付ける Origin をここで見る。
 /// Origin は呼ばれたアドレスと同じものだけを通す（Vite のプロキシは Host も Origin も `localhost:5173` のまま
-/// 渡すので、ポートの値を持たなくても通る）。`Origin: null` も通さない。Origin のないものはブラウザの
-/// 別サイトからの呼び出しではない
+/// 渡すので、ポートの値を持たなくても通る）。`Origin: null` も通さない。
+/// no-cors の GET（`<img src>` など）には Origin が付かないので、`Sec-Fetch-Site: cross-site` も断る
+/// （`same-site` は `localhost` の別のポートの開発の画面があるので Origin の判定に任せる）。
+/// どちらも付かないものは curl などで、ブラウザの別サイトからの呼び出しではない
 async fn local_only(headers: HeaderMap, request: Request, next: Next) -> Response {
     let host = headers
         .get(header::HOST)
@@ -71,7 +73,10 @@ async fn local_only(headers: HeaderMap, request: Request, next: Next) -> Respons
     let same_origin = headers.get(header::ORIGIN).is_none_or(|origin| {
         origin.to_str().ok().and_then(|o| o.strip_prefix("http://")) == Some(host)
     });
-    if local && same_origin {
+    let cross_site = headers
+        .get("sec-fetch-site")
+        .is_some_and(|site| site == "cross-site");
+    if local && same_origin && !cross_site {
         next.run(request).await
     } else {
         StatusCode::FORBIDDEN.into_response()
@@ -164,11 +169,11 @@ struct GiftBody {
     code: String,
 }
 
-/// 使えるコードだけ保存する
+/// 有効なコードだけ保存する（今日の上限に達していても、明日には使える）
 async fn put_gift(State(store): State<Arc<Store>>, Json(body): Json<GiftBody>) -> Response {
     let code = body.code.trim().to_owned();
     let status = share::gift_status(&store.settings().api_base, &code).await;
-    if !matches!(status, GiftStatus::Active { .. }) {
+    if !status.is_valid() {
         return (StatusCode::BAD_REQUEST, Json(status)).into_response();
     }
     if let Err(e) = blocking(move || secrets::set_gift(&code)).await {
@@ -543,6 +548,15 @@ mod tests {
         req.send().await.unwrap().status()
     }
 
+    /// 秘密を読まない GET。呼び出しの入り口の判定だけを見る
+    async fn get_settings_status(addr: &str, headers: &[(&str, &str)]) -> StatusCode {
+        let mut req = reqwest::Client::new().get(format!("http://{addr}/api/languages"));
+        for (name, value) in headers {
+            req = req.header(*name, *value);
+        }
+        req.send().await.unwrap().status()
+    }
+
     /// `/ws` につなぐ。断られたらその状態、つながったら 101
     async fn ws_status(addr: &str, headers: &[(&'static str, &str)]) -> StatusCode {
         let mut req = format!("ws://{addr}/ws").into_client_request().unwrap();
@@ -580,6 +594,14 @@ mod tests {
                 "{origin:?}"
             );
         }
+        // no-cors の GET には Origin が付かない
+        let cross_site = [("sec-fetch-site", "cross-site")];
+        assert_eq!(
+            get_settings_status(&addr, &cross_site).await,
+            StatusCode::FORBIDDEN
+        );
+        assert_eq!(post_demo(&addr, &cross_site).await, StatusCode::FORBIDDEN);
+        assert_eq!(ws_status(&addr, &cross_site).await, StatusCode::FORBIDDEN);
         // DNS リバインディング（Host が別の名前）は Origin が揃っていても通らない
         let rebinding = [
             ("host", "evil.example:4510"),
@@ -616,5 +638,14 @@ mod tests {
         }
         assert_eq!(post_demo(&addr, &[]).await, StatusCode::ACCEPTED);
         assert_eq!(ws_status(&addr, &[]).await, StatusCode::SWITCHING_PROTOCOLS);
+        // 操作パネルやオーバーレイ自身の呼び出しと、URL を開いたとき。same-site は Origin の判定に任せる
+        for site in ["same-origin", "none", "same-site"] {
+            let headers = [("sec-fetch-site", site)];
+            assert_eq!(post_demo(&addr, &headers).await, StatusCode::ACCEPTED);
+            assert_eq!(
+                ws_status(&addr, &headers).await,
+                StatusCode::SWITCHING_PROTOCOLS
+            );
+        }
     }
 }

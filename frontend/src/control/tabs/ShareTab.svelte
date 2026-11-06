@@ -159,9 +159,8 @@
               <span class="font-medium">{c.memo || "メモなし"}</span>
               {#if c.revoked}<Badge variant="destructive">止めています</Badge>{/if}
               <span class="ml-auto text-sm text-muted-foreground tabular-nums">
-                今日 {usd(c.dayUsd)}（上限 {usd(c.dailyLimitUsd)}）／ 今月 {usd(c.monthUsd)} ／ 合計 {usd(
-                  c.usd,
-                )}
+                今日 {usd(c.dayUsd)}（上限 {usd(c.effectiveLimitUsd)}）／ 今月 {usd(c.monthUsd)} ／ 合計
+                {usd(c.usd)}
               </span>
             </div>
             {#if c.code}

@@ -42,6 +42,13 @@ pub enum GiftStatus {
     Unreachable { detail: String },
 }
 
+impl GiftStatus {
+    /// 持っていてよいコードか。今日の上限は日が変われば戻るので、今は使えなくても有効
+    pub fn is_valid(&self) -> bool {
+        matches!(self, Self::Active { .. } | Self::Limit)
+    }
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct GiftAnswer {
@@ -63,11 +70,18 @@ impl std::fmt::Display for DailyLimit {
 
 impl std::error::Error for DailyLimit {}
 
+/// サーバーが今日の上限で断るときの理由。JSON の `error`、Realtime の close の reason、
+/// [`REFUSAL_HEADER`] で同じ値を使う
+pub const LIMIT: &str = "limit";
+
+/// サーバーが中継を断った理由のヘッダー。WebSocket のハンドシェイクでは、断られたときの本文は
+/// 届いた分しか読めないので、これで見分ける
+pub const REFUSAL_HEADER: &str = "x-gift-refusal";
+
 /// 失敗した中継の応答が、今日の上限で断られたものか
 pub fn is_daily_limit(status: StatusCode, body: &str) -> bool {
     status == StatusCode::FORBIDDEN
-        && serde_json::from_str::<GiftAnswer>(body)
-            .is_ok_and(|a| a.error.as_deref() == Some("limit"))
+        && serde_json::from_str::<GiftAnswer>(body).is_ok_and(|a| a.error.as_deref() == Some(LIMIT))
 }
 
 pub async fn gift_status(api: &str, code: &str) -> GiftStatus {
@@ -141,8 +155,10 @@ pub struct SharedCode {
     pub month_usd: f64,
     /// 今日（UTC）使われた額
     pub day_usd: f64,
-    /// 1 日（UTC）の上限（USD）
-    pub daily_limit_usd: f64,
+    /// 決めた 1 日（UTC）の上限（USD）。None は既定の額
+    pub daily_limit_usd: Option<f64>,
+    /// 実際に効く 1 日の上限（既定の額はサーバーだけが持つ）
+    pub effective_limit_usd: f64,
     #[ts(type = "number")]
     pub created_at: i64,
 }
@@ -277,6 +293,14 @@ pub async fn update(api: &str, token: &str, id: &str, body: Value) -> Result<(),
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_gift_at_its_daily_limit_stays_valid() {
+        assert!(GiftStatus::Limit.is_valid());
+        assert!(GiftStatus::Active { expires_at: None }.is_valid());
+        assert!(!GiftStatus::Revoked.is_valid());
+        assert!(!GiftStatus::Unknown.is_valid());
+    }
 
     #[test]
     fn only_the_workers_limit_answer_is_a_daily_limit() {

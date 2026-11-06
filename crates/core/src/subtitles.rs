@@ -84,6 +84,7 @@ pub async fn run(
     });
     let mut audio_rx = audio::open(input).await?;
 
+    let (done_tx, mut done_rx) = mpsc::channel(64);
     // 開く・音声・閉じるは同じチャンネルで順番どおりに送る
     let (delta_tx, mut delta_rx) = mpsc::channel(256);
     // オフなら Realtime につながず、確定の字幕だけを出す
@@ -96,13 +97,18 @@ pub async fn run(
             delay: settings.realtime_delay.clone(),
             meter: store.meter(),
         };
-        tokio::spawn(realtime_loop(config, hints.clone(), rx, delta_tx));
+        tokio::spawn(realtime_loop(
+            config,
+            hints.clone(),
+            rx,
+            delta_tx,
+            done_tx.clone(),
+        ));
         Some(tx)
     } else {
         None
     };
 
-    let (done_tx, mut done_rx) = mpsc::channel(64);
     // ローカル AI を使うモードでは、音声を補助プログラムにも渡す
     let (local, local_task) = settings
         .speech_engine
@@ -580,6 +586,7 @@ async fn realtime_loop(
     hints: Arc<Hints>,
     mut input: mpsc::UnboundedReceiver<stt::Input>,
     deltas: mpsc::Sender<stt::Delta>,
+    done: mpsc::Sender<Done>,
 ) {
     let mut speaking = stt::Speaking::default();
     let mut backoff = Duration::from_secs(1);
@@ -587,6 +594,12 @@ async fn realtime_loop(
         let started = Instant::now();
         match stt::realtime(&cfg, &hints, &mut speaking, &mut input, &deltas).await {
             Ok(()) => return,
+            // 張り直しても断られるだけなので、字幕を止めて知らせる
+            Err(e) if e.is::<share::DailyLimit>() => {
+                tracing::warn!("realtime: {e:#}");
+                let _ = done.send(Done::DailyLimit).await;
+                return;
+            }
             Err(e) => tracing::warn!("realtime: {e:#}"),
         }
         if started.elapsed() > Duration::from_secs(30) {
@@ -828,7 +841,82 @@ impl Segmenter {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::openai::Access;
     use crate::settings::Segmentation;
+    use crate::usage::Meter;
+    use axum::http::StatusCode;
+    use futures_util::{SinkExt, StreamExt};
+    use serde_json::json;
+    use tokio::net::TcpListener;
+    use tokio_tungstenite::tungstenite::Message;
+    use tokio_tungstenite::tungstenite::protocol::CloseFrame;
+    use tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode;
+
+    /// 字幕の途中で上限に達したら張り直さず、`Done::DailyLimit` を送って終わる
+    async fn stops_at_the_daily_limit(api: String) {
+        let dir = tempfile::tempdir().unwrap();
+        let config = RealtimeConfig {
+            access: Access::gift("code".into(), &api),
+            model: "gpt-live-transcribe".into(),
+            delay: "low".into(),
+            meter: Arc::new(Meter::new(dir.path().join("usage.json"))),
+        };
+        let hints = Arc::new(Hints {
+            language: "ja".into(),
+            prompt: String::new(),
+            keywords: Vec::new(),
+        });
+        let (_input, rx) = mpsc::unbounded_channel();
+        let (delta_tx, _deltas) = mpsc::channel(1);
+        let (done_tx, mut done_rx) = mpsc::channel(1);
+        let task = tokio::spawn(realtime_loop(config, hints, rx, delta_tx, done_tx));
+        let done = tokio::time::timeout(Duration::from_secs(5), done_rx.recv())
+            .await
+            .expect("the loop should not keep reconnecting");
+        assert!(matches!(done, Some(Done::DailyLimit)));
+        tokio::time::timeout(Duration::from_secs(5), task)
+            .await
+            .unwrap()
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn a_realtime_session_closed_at_the_daily_limit_does_not_reconnect() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let api = format!("http://{}", listener.local_addr().unwrap());
+        tokio::spawn(async move {
+            let (socket, _) = listener.accept().await.unwrap();
+            let mut ws = tokio_tungstenite::accept_async(socket).await.unwrap();
+            let event = |name: &str| Message::text(json!({ "type": name }).to_string());
+            ws.send(event("session.created")).await.unwrap();
+            ws.next().await.unwrap().unwrap();
+            ws.send(event("session.updated")).await.unwrap();
+            // Worker の close（server/src/realtime.ts）
+            let frame = CloseFrame {
+                code: CloseCode::Policy,
+                reason: share::LIMIT.into(),
+            };
+            ws.close(Some(frame)).await.unwrap();
+        });
+        stops_at_the_daily_limit(api).await;
+    }
+
+    #[tokio::test]
+    async fn a_realtime_handshake_refused_at_the_daily_limit_does_not_reconnect() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let api = format!("http://{}", listener.local_addr().unwrap());
+        // Worker の giftKey の答え
+        let refuse = || async {
+            (
+                StatusCode::FORBIDDEN,
+                [(share::REFUSAL_HEADER, share::LIMIT)],
+                axum::Json(json!({ "error": "limit" })),
+            )
+        };
+        let router = axum::Router::new().route("/openai/realtime", axum::routing::get(refuse));
+        tokio::spawn(async move { axum::serve(listener, router).await });
+        stops_at_the_daily_limit(api).await;
+    }
 
     #[test]
     fn level_meter_reports_peak_per_window() {

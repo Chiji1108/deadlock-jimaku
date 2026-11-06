@@ -5,8 +5,8 @@ import { normalizeCode, sha256 } from "./secrets";
 /** 期限を過ぎても、始めていた配信はこの間だけ続けられる（期限は字幕を始めるときに確かめる） */
 export const GRACE_MS = 24 * 60 * 60 * 1000;
 
-/** コードの 1 日の上限（ドル）の既定。1 人が 24 時間使い続けても届かない値（DESIGN.md 17.1） */
-export const DEFAULT_DAILY_LIMIT_USD = 40;
+/** コードの 1 日の上限（ドル）の既定。話し続ける最悪の約 $2.5/時間で 1 人が 24 時間使っても届かない値（DESIGN.md 17.1） */
+export const DEFAULT_DAILY_LIMIT_USD = 60;
 
 export interface Issuer {
   id: string;
@@ -60,10 +60,19 @@ export function refusal(code: Code, now: number): "revoked" | "expired" | "limit
   return undefined;
 }
 
+/** 実際に効く 1 日の上限 */
+export function dailyLimit(code: Pick<Code, "daily_limit_usd">): number {
+  return code.daily_limit_usd ?? DEFAULT_DAILY_LIMIT_USD;
+}
+
+/** 今日（UTC）使われた額。`day_usd` が前の日のものなら 0 */
+export function todayUsd(code: Pick<Code, "day" | "day_usd">, now: number): number {
+  return code.day === day(now) ? code.day_usd : 0;
+}
+
 /** 今日（UTC）の上限に達したか */
 export function overLimit(code: Code, now: number): boolean {
-  const spent = code.day === day(now) ? code.day_usd : 0;
-  return spent >= (code.daily_limit_usd ?? DEFAULT_DAILY_LIMIT_USD);
+  return todayUsd(code, now) >= dailyLimit(code);
 }
 
 /** コードで使われた額を足す（月の集計と今日の分） */

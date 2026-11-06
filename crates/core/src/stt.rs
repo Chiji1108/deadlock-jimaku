@@ -13,7 +13,7 @@ use base64::Engine;
 use futures_util::{SinkExt, StreamExt};
 use serde_json::{Value, json};
 use tokio::sync::mpsc;
-use tokio_tungstenite::tungstenite::{Message, client::IntoClientRequest, http::HeaderValue};
+use tokio_tungstenite::tungstenite::{self, Message, client::IntoClientRequest, http::HeaderValue};
 
 use crate::audio::{SAMPLE_RATE, to_i16};
 use crate::openai::Access;
@@ -194,6 +194,9 @@ pub async fn realtime(
             msg = stream.next() => {
                 let event = match msg {
                     Some(Ok(Message::Text(text))) => serde_json::from_str::<Value>(&text)?,
+                    Some(Ok(Message::Close(Some(frame)))) if frame.reason == share::LIMIT => {
+                        return Err(share::DailyLimit.into());
+                    }
                     Some(Ok(Message::Close(frame))) => bail!("realtime closed: {frame:?}"),
                     Some(Ok(_)) => continue,
                     Some(Err(e)) => return Err(e.into()),
@@ -244,9 +247,18 @@ async fn connect(cfg: &RealtimeConfig, hints: &Hints) -> anyhow::Result<(Sink, S
         "Authorization",
         HeaderValue::from_str(&format!("Bearer {}", cfg.access.token()))?,
     );
-    let (ws, _) = tokio_tungstenite::connect_async(request)
-        .await
-        .context("connect realtime")?;
+    let (ws, _) = match tokio_tungstenite::connect_async(request).await {
+        Ok(connected) => connected,
+        Err(tungstenite::Error::Http(res))
+            if res
+                .headers()
+                .get(share::REFUSAL_HEADER)
+                .is_some_and(|reason| reason == share::LIMIT) =>
+        {
+            return Err(share::DailyLimit.into());
+        }
+        Err(e) => return Err(e).context("connect realtime"),
+    };
     let (mut sink, mut stream) = ws.split();
     expect_event(&mut stream, "session.created").await?;
     let update = json!({

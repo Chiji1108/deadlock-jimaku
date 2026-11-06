@@ -4,12 +4,12 @@ import { Hono, type Context } from "hono";
 import {
   addUsage,
   codeByValue,
-  day,
-  DEFAULT_DAILY_LIMIT_USD,
+  dailyLimit,
   issuerByToken,
   month,
   overLimit,
   refusal,
+  todayUsd,
   type Code,
 } from "./db";
 import { openai, validKey } from "./openai";
@@ -21,6 +21,8 @@ export interface Env {
   DB: D1Database;
   /** キーを暗号化する鍵（32 バイトの base64）。`wrangler secret put SHARE_KEY` */
   SHARE_KEY: string;
+  /** コードごとの 1 分あたりの要求数の上限（値は wrangler.jsonc。DESIGN.md 17.1） */
+  GIFT_RATE: RateLimit;
 }
 
 type Ctx = Context<{ Bindings: Env }>;
@@ -111,21 +113,24 @@ app.delete("/share", async (c) => {
 app.get("/share/codes", async (c) => {
   const issuer = await admin(c);
   if (!issuer) return c.json({ error: "unauthorized" }, 401);
+  const now = Date.now();
   const { results } = await c.env.DB.prepare(
     `SELECT c.id, c.memo, c.expires_at AS expiresAt, c.revoked, c.created_at AS createdAt,
-            c.daily_limit_usd AS dailyLimitUsd,
-            CASE WHEN c.day = ? THEN c.day_usd ELSE 0 END AS dayUsd,
+            c.daily_limit_usd, c.day, c.day_usd,
             COALESCE(SUM(u.usd), 0) AS usd,
             COALESCE(SUM(CASE WHEN u.month = ? THEN u.usd END), 0) AS monthUsd
      FROM codes c LEFT JOIN code_usage u ON u.code_id = c.id
      WHERE c.issuer_id = ? GROUP BY c.id ORDER BY c.created_at DESC`,
   )
-    .bind(day(Date.now()), month(Date.now()), issuer.id)
-    .all<{ revoked: number; dailyLimitUsd: number | null }>();
-  const codes = results.map((r) => ({
+    .bind(month(now), issuer.id)
+    .all<{ revoked: number } & Pick<Code, "daily_limit_usd" | "day" | "day_usd">>();
+  // dailyLimitUsd は決めた額（null は既定）、effectiveLimitUsd は実際に効く額
+  const codes = results.map(({ daily_limit_usd, day, day_usd, ...r }) => ({
     ...r,
     revoked: !!r.revoked,
-    dailyLimitUsd: r.dailyLimitUsd ?? DEFAULT_DAILY_LIMIT_USD,
+    dayUsd: todayUsd({ day, day_usd }, now),
+    dailyLimitUsd: daily_limit_usd,
+    effectiveLimitUsd: dailyLimit({ daily_limit_usd }),
   }));
   return c.json({ codes });
 });
@@ -196,8 +201,9 @@ app.get("/gift", async (c) => {
 app.post("/openai/responses", async (c) => {
   const gift = await giftKey(c);
   if (gift instanceof Response) return gift;
-  if ((await c.req.text()).length > MAX_RESPONSES_BODY) return c.json({ error: "tooLarge" }, 413);
-  const body = (await json<Record<string, unknown>>(c)) ?? {};
+  const text = await c.req.text();
+  if (text.length > MAX_RESPONSES_BODY) return c.json({ error: "tooLarge" }, 413);
+  const body = parsed<Record<string, unknown>>(text) ?? {};
   const model = body.model;
   // input はアプリが送る文だけ（配列なら画像やファイルを渡せて、長さの上限が効かない）
   if (
@@ -225,13 +231,13 @@ app.post("/openai/responses", async (c) => {
     );
     return new Response(client, { headers: { "Content-Type": "text/event-stream" } });
   }
-  const text = await res.text();
+  const answer = await res.text();
   if (res.ok) {
-    const usage = (JSON.parse(text) as { usage?: unknown }).usage;
+    const usage = (JSON.parse(answer) as { usage?: unknown }).usage;
     const usd = tokensUsd(model, tokensOf(usage)) ?? 0;
     c.executionCtx.waitUntil(addUsage(c.env.DB, gift.code.id, usd, Date.now()));
   }
-  return new Response(text, { status: res.status, headers: { "Content-Type": "application/json" } });
+  return new Response(answer, { status: res.status, headers: { "Content-Type": "application/json" } });
 });
 
 app.post("/openai/audio/transcriptions", async (c) => {
@@ -276,19 +282,33 @@ async function giftCode(c: Ctx): Promise<Code | null> {
   return code ? codeByValue(c.env.DB, code) : null;
 }
 
-/** 中継に使えるコードと、おすそ分けした人のキー。使えなければ返す応答 */
+/**
+ * 中継に使えるコードと、おすそ分けした人のキー。使えなければ返す応答。
+ * 理由はヘッダーにも載せる（WebSocket のクライアントは、断られたときの本文を読みきれるとは限らない）。
+ * 429 は 403 のあとに見るので、止まる理由を隠さない
+ */
 async function giftKey(c: Ctx): Promise<{ code: Code; key: string } | Response> {
   const code = await giftCode(c);
   if (!code) return c.json({ error: "unknown" }, 401);
   const error = refusal(code, Date.now());
-  if (error) return c.json({ error }, 403);
+  if (error) return c.json({ error }, 403, { "X-Gift-Refusal": error });
+  const { success } = await c.env.GIFT_RATE.limit({ key: code.id });
+  if (!success) return c.json({ error: "rate" }, 429);
   return { code, key: await decrypt(code.encrypted_key, c.env.SHARE_KEY) };
 }
 
 /** JSON の本文。読めなければ undefined（400 にする） */
 async function json<T = Record<string, unknown>>(c: Ctx): Promise<T | undefined> {
-  const body: unknown = await c.req.json().catch(() => undefined);
-  return body !== null && typeof body === "object" ? (body as T) : undefined;
+  return parsed<T>(await c.req.text());
+}
+
+function parsed<T>(text: string): T | undefined {
+  try {
+    const body: unknown = JSON.parse(text);
+    return body !== null && typeof body === "object" ? (body as T) : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 interface CodeFields {

@@ -32,9 +32,15 @@ const json = (body: unknown) => ({
   headers: { "Content-Type": "application/json" },
 });
 
+const rate = vi.fn<RateLimit["limit"]>();
+
 beforeAll(async () => {
   proxy = await getPlatformProxy<{ DB: D1Database }>({ persist: false });
-  env = { DB: proxy.env.DB, SHARE_KEY: btoa(String.fromCharCode(...new Uint8Array(32).fill(7))) };
+  env = {
+    DB: proxy.env.DB,
+    SHARE_KEY: btoa(String.fromCharCode(...new Uint8Array(32).fill(7))),
+    GIFT_RATE: { limit: rate },
+  };
   const sql = (share0001 + limit0002)
     .replace(/--.*$/gm, "")
     .split(";")
@@ -51,6 +57,8 @@ beforeEach(async () => {
   }
   vi.mocked(validKey).mockImplementation(async (key) => key.startsWith("sk-"));
   vi.mocked(openai).mockReset();
+  rate.mockReset();
+  rate.mockResolvedValue({ success: true });
 });
 
 async function share(key = KEY): Promise<string> {
@@ -76,7 +84,8 @@ async function listCodes(token: string) {
       usd: number;
       monthUsd: number;
       dayUsd: number;
-      dailyLimitUsd: number;
+      dailyLimitUsd: number | null;
+      effectiveLimitUsd: number;
       revoked: boolean;
       memo: string;
       expiresAt: number | null;
@@ -383,6 +392,45 @@ describe("relay", () => {
   });
 });
 
+describe("rate limit", () => {
+  const responses = { model: "gpt-6.1-terra", input: "x" };
+
+  it("counts requests per code, and answers 429 over the rate", async () => {
+    const token = await share();
+    const { code, id } = await createCode(token);
+    rate.mockResolvedValue({ success: false });
+    for (const res of [
+      await call("/openai/responses", { method: "POST", token: code, ...json(responses) }),
+      await call("/openai/audio/transcriptions", { method: "POST", token: code, body: new FormData() }),
+      await call("/openai/realtime", { token: code, headers: { Upgrade: "websocket" } }),
+    ]) {
+      expect(res.status).toBe(429);
+    }
+    expect(rate).toHaveBeenCalledTimes(3);
+    expect(rate).toHaveBeenCalledWith({ key: id });
+    expect(openai).not.toHaveBeenCalled();
+  });
+
+  it("does not count unknown or refused codes, and does not hide why a code stopped", async () => {
+    const token = await share();
+    const { code } = await createCode(token, { dailyLimitUsd: 1 });
+    await addUsage(env.DB, (await codeByValue(env.DB, code))!.id, 1, Date.now());
+    rate.mockResolvedValue({ success: false });
+    const res = await call("/openai/responses", { method: "POST", token: code, ...json(responses) });
+    expect(res.status).toBe(403);
+    expect(res.headers.get("X-Gift-Refusal")).toBe("limit");
+    await expect(res.json()).resolves.toEqual({ error: "limit" });
+    await call("/openai/responses", { method: "POST", token: "nope", ...json(responses) });
+    expect(rate).not.toHaveBeenCalled();
+  });
+
+  it("is not asked by /gift, which only reads the state", async () => {
+    const { code } = await createCode(await share());
+    expect((await call("/gift", { token: code })).status).toBe(200);
+    expect(rate).not.toHaveBeenCalled();
+  });
+});
+
 describe("daily limit", () => {
   const NOW = Date.UTC(2026, 10, 6, 12);
   const DAY = 24 * 60 * 60 * 1000;
@@ -403,26 +451,28 @@ describe("daily limit", () => {
   });
 
   it("defaults to the same amount for codes that do not choose one", async () => {
-    expect(DEFAULT_DAILY_LIMIT_USD).toBe(40);
+    expect(DEFAULT_DAILY_LIMIT_USD).toBe(60);
     const token = await share();
     // 古いアプリは上限を送らない。マイグレーションの前からあるコードも同じ（NULL）
     await createCode(token);
     await env.DB.prepare("UPDATE codes SET daily_limit_usd = NULL").run();
     const [listed] = await listCodes(token);
-    expect(listed!.dailyLimitUsd).toBe(40);
+    // 既定か決めた額かは見分けられ、実際に効く額も分かる
+    expect(listed!.dailyLimitUsd).toBeNull();
+    expect(listed!.effectiveLimitUsd).toBe(60);
     expect(listed!.dayUsd).toBe(0);
   });
 
   it("is chosen per code, and can go back to the default", async () => {
     const token = await share();
     const { id } = await createCode(token, { dailyLimitUsd: 5 });
-    expect((await listCodes(token))[0]!.dailyLimitUsd).toBe(5);
+    expect((await listCodes(token))[0]).toMatchObject({ dailyLimitUsd: 5, effectiveLimitUsd: 5 });
     const patch = (dailyLimitUsd: unknown) =>
       call(`/share/codes/${id}`, { method: "PATCH", token, ...json({ dailyLimitUsd }) });
     await patch(12.5);
     expect((await listCodes(token))[0]!.dailyLimitUsd).toBe(12.5);
     await patch(null);
-    expect((await listCodes(token))[0]!.dailyLimitUsd).toBe(40);
+    expect((await listCodes(token))[0]).toMatchObject({ dailyLimitUsd: null, effectiveLimitUsd: 60 });
   });
 
   it("rejects a limit that is not a positive amount", async () => {
@@ -580,7 +630,7 @@ describe("realtime relay", () => {
   });
 
   async function settled() {
-    await Promise.all(pending);
+    await Promise.allSettled(pending);
     pending = [];
   }
 
@@ -650,8 +700,18 @@ describe("realtime relay", () => {
     vi.mocked(Date.now).mockReturnValue(NOW + 30_000);
     client.message(append());
     await settled();
-    expect(client.closed).toEqual({ code: 1008, reason: "gift code is no longer usable" });
+    // アプリは reason を見て、張り直さずに知らせる（crates/core/src/stt.rs）
+    expect(client.closed).toEqual({ code: 1008, reason: "limit" });
     expect(upstream.closed?.code).toBe(1008);
+  });
+
+  it("gives the general reason when a code is stopped", async () => {
+    client.message(sessionUpdate());
+    await env.DB.prepare("UPDATE codes SET revoked = 1").run();
+    vi.mocked(Date.now).mockReturnValue(NOW + 30_000);
+    client.message(append());
+    await settled();
+    expect(client.closed).toEqual({ code: 1008, reason: "gift code is no longer usable" });
   });
 
   it("keeps going under the limit", async () => {
@@ -660,6 +720,48 @@ describe("realtime relay", () => {
     client.message(append());
     await settled();
     expect(client.closed).toBeUndefined();
+  });
+
+  it("cuts the session when the code is gone, though the usage can no longer be written", async () => {
+    client.message(sessionUpdate());
+    client.message(append());
+    // 「おすそ分けをやめる」はコードも消すので、使われた額は FK 違反で書けない
+    await env.DB.prepare("DELETE FROM issuers").run();
+    vi.mocked(Date.now).mockReturnValue(NOW + 30_000);
+    client.message(append());
+    await settled();
+    expect(client.closed).toEqual({ code: 1008, reason: "gift code is no longer usable" });
+  });
+
+  it("keeps the amount when writing it fails, and writes it the next time", async () => {
+    const batch = vi
+      .fn((statements: D1PreparedStatement[]) => env.DB.batch(statements))
+      .mockRejectedValueOnce(new Error("D1 is down"));
+    const db = { prepare: (sql: string) => env.DB.prepare(sql), batch } as unknown as D1Database;
+    client = new FakeSocket();
+    upstream = new FakeSocket();
+    vi.mocked(openai).mockResolvedValue({ webSocket: upstream } as unknown as Response);
+    await relay(db, (await codeByValue(env.DB, code))!, KEY, ctx);
+    client.message(sessionUpdate());
+    client.message(append());
+    vi.mocked(Date.now).mockReturnValue(NOW + 30_000);
+    client.message(append());
+    await settled();
+    expect(batch).toHaveBeenCalledOnce();
+    expect(client.closed).toBeUndefined();
+    client.dispatchEvent(new CloseEvent("close", { code: 1000 }));
+    await settled();
+    expect((await codeByValue(env.DB, code))!.day_usd).toBeCloseTo((0.2 / 60) * 0.017, 8);
+  });
+
+  it("counts an amount once when the session closes during a write", async () => {
+    client.message(sessionUpdate());
+    client.message(append());
+    vi.mocked(Date.now).mockReturnValue(NOW + 30_000);
+    client.message(append());
+    client.dispatchEvent(new CloseEvent("close", { code: 1000 }));
+    await settled();
+    expect((await codeByValue(env.DB, code))!.day_usd).toBeCloseTo((0.2 / 60) * 0.017, 8);
   });
 });
 
