@@ -1,6 +1,9 @@
 import { beforeEach, expect, test, vi } from "vitest";
 import { api } from "../lib/api";
 import { panel } from "./panel.svelte";
+import { addFontFaces } from "../lib/overlay-fonts";
+
+vi.mock("../lib/overlay-fonts", () => ({ addFontFaces: vi.fn() }));
 
 beforeEach(() => {
   panel.fonts = "loading";
@@ -22,6 +25,20 @@ test("読み直しの間は前の一覧を出したままで、届いたら入�
   resolve(["New", "Old"]);
   await loading;
   expect(panel.fonts).toEqual(["New", "Old"]);
+});
+
+test("開いたあとに増えたフォントだけ読み込む", async () => {
+  const add = vi.mocked(addFontFaces);
+  add.mockClear();
+  vi.spyOn(api, "fonts").mockResolvedValue(["Old"]);
+  await panel.loadFonts();
+  await panel.loadFonts();
+  expect(add).not.toHaveBeenCalled();
+
+  vi.spyOn(api, "fonts").mockResolvedValue(["Installed", "Old"]);
+  await panel.loadFonts();
+  await panel.loadFonts();
+  expect(add.mock.calls).toEqual([["Installed"]]);
 });
 
 test("読み直しに失敗したら前の一覧を残す", async () => {

@@ -15,13 +15,23 @@ export function endonym(lang: string) {
   }
 }
 
+const facesUrl = (family: string) => `/api/fonts/${encodeURIComponent(family)}/faces.css`;
+
+/** 開いたあとに入ったフォントは WebView が名前で描けないので、一覧の見本のために読み込む */
+export function addFontFaces(family: string) {
+  const link = document.createElement("link");
+  link.rel = "stylesheet";
+  link.href = facesUrl(family);
+  document.head.append(link);
+}
+
 /** フォントの見本。日本語は言語名だと漢字だけになるので、かなも混ぜる */
 export const fontSample = (lang: string) => (lang === "ja" ? "あいアイ漢字" : endonym(lang));
 
 /** 選んだフォントのファイルを core から読む。入れたばかりで WebView が知らないフォントも描ける */
 const fontImports = (fonts: Fonts) =>
   [...new Set(Object.values(fonts))].map(
-    (family) => `@import url(${cssString(`/api/fonts/${encodeURIComponent(family)}/faces.css`)});`,
+    (family) => `@import url(${cssString(facesUrl(family))});`,
   );
 
 /**

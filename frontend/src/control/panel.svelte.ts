@@ -11,6 +11,7 @@ import type { MicError } from "../generated/MicError";
 import type { TranscriptionError } from "../generated/TranscriptionError";
 import type { UsageView } from "../generated/UsageView";
 import { api } from "../lib/api";
+import { addFontFaces } from "../lib/overlay-fonts";
 import { connect, type Status } from "../lib/ws";
 
 /** 選べるフォントの一覧。取れるまでと、取れなかったときは名前の配列の代わりにその状態が入る */
@@ -196,15 +197,32 @@ class Panel {
     return saved;
   };
 
+  private knownFonts: Set<string> | undefined;
+
   /** 読み直しの間も、失敗しても、すでにある一覧は出したままにする */
   loadFonts = async () => {
     if (this.fontsLoading) return;
     this.fontsLoading = true;
     const fonts = await api.fonts().catch(() => undefined);
     this.fontsLoading = false;
-    if (fonts) this.fonts = fonts;
-    else if (typeof this.fonts === "string") this.fonts = "failed";
+    if (fonts) {
+      this.addFaces(fonts);
+      this.fonts = fonts;
+    } else if (typeof this.fonts === "string") this.fonts = "failed";
   };
+
+  /** 最初の一覧は WebView が名前で描ける。そのあと増えたフォントだけ読み込む */
+  private addFaces(fonts: string[]) {
+    if (!this.knownFonts) {
+      this.knownFonts = new Set(fonts);
+      return;
+    }
+    for (const family of fonts) {
+      if (this.knownFonts.has(family)) continue;
+      this.knownFonts.add(family);
+      addFontFaces(family);
+    }
+  }
 
   refreshGift = async () => {
     this.gift = await api.gift().catch(() => undefined);

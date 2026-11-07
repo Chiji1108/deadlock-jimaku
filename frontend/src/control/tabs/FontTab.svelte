@@ -35,17 +35,11 @@
     </Card.Action>
   </Card.Header>
   <Card.Content class="flex flex-col gap-6">
-    <div class="flex flex-col gap-2">
-      <OverlayPreview
-        src="/overlay/subtitles.html"
-        title="フォントのプレビュー"
-        size={SUBTITLE_SIZE}
-      />
-      <p class="text-sm text-muted-foreground">
-        インストールしたばかりのフォントは、デドロ字幕のウィンドウを閉じて開き直し、OBS
-        を再起動すると使えます。
-      </p>
-    </div>
+    <OverlayPreview
+      src="/overlay/subtitles.html"
+      title="フォントのプレビュー"
+      size={SUBTITLE_SIZE}
+    />
 
     <Field.Group>
       {#each languages as language (language)}
