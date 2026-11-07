@@ -5,7 +5,7 @@
   import type { RankContent } from "../../generated/RankContent";
   import type { RankState } from "../../generated/RankState";
   import { placeItems } from "../../lib/anchor";
-  import { applyOverlayFonts } from "../../lib/overlay-fonts";
+  import { applyFontRules, rankFontRules } from "../../lib/overlay-fonts";
   import { fitSource, rankSize } from "../../lib/overlay-size";
   import RankBadge from "../../lib/RankBadge.svelte";
   import { connect } from "../../lib/ws";
@@ -30,7 +30,7 @@
     connect(["rank", "display"], (msg) => {
       if (msg.type === "rank.update") rank = msg.rank ?? undefined;
       if (msg.type === "display") {
-        applyOverlayFonts(msg.overlayFonts);
+        applyFontRules(rankFontRules(msg.rankFont));
         lang = msg.rankLanguage;
         content = msg.rankContent;
         anchor = msg.rankAnchor;

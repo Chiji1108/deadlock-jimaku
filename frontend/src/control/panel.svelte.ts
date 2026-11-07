@@ -18,6 +18,8 @@ import { connect, type Status } from "../lib/ws";
 
 /** 選べるフォントの一覧。取れるまでと、取れなかったときは名前の配列の代わりにその状態が入る */
 export type FontList = FontEntry[] | "loading" | "failed";
+/** フォントを選ぶ先。字幕は言語ごと、ランクは 1 つ */
+export type FontTarget = { kind: "subtitle"; language: string } | { kind: "rank" };
 
 /** OBS に貼る URL（axum。開発中に Vite から開いても同じ） */
 export const overlayUrl = (name: "subtitles" | "rank" | "items") =>
@@ -43,6 +45,9 @@ class Panel {
   /** ダウンロード中のファミリー。タブを移っても続くので、ここで持つ */
   downloadingFonts = new SvelteSet<string>();
   private fontsRead: Promise<void> | undefined;
+  /** 見本の SVG。読み終えるまでは空で、カードは名前だけで押せる */
+  fontSamples = $state.raw<Record<string, string>>({});
+  private samplesRead: Promise<void> | undefined;
   server = $state<Status>("connecting");
   /** 字幕を始められなかった・止まった理由 */
   transcriptionError = $state<TranscriptionError | undefined>();
@@ -230,12 +235,32 @@ class Panel {
     }
   }
 
+  /** 読めなければ次に開いたときに読み直す */
+  loadFontSamples = () =>
+    (this.samplesRead ??= import("./font-sample-svgs").then(
+      ({ SAMPLES }) => void (this.fontSamples = SAMPLES),
+      () => void (this.samplesRead = undefined),
+    ));
+
+  chosenFont = (target: FontTarget) =>
+    target.kind === "rank"
+      ? this.settings?.rankFont
+      : this.settings?.subtitleDisplay.fonts[target.language];
+
+  /** 空文字列なら標準に戻す */
+  setFont = (target: FontTarget, family: string) =>
+    this.update(
+      target.kind === "rank"
+        ? { rankFont: family }
+        : { subtitleDisplay: { fonts: { [target.language]: family } } },
+    );
+
   /**
-   * 裏で進め、取得できたら一覧を読み直してその言語に適用する。走行中の読み込みは取得前の一覧を
+   * 裏で進め、取得できたら一覧を読み直して選ぶ先に適用する。走行中の読み込みは取得前の一覧を
    * 返すので、終わるのを待ってから読む。待つ間に別のフォントを選んでいたら、その選択を残す
    */
-  downloadFont = async (family: string, language: string) => {
-    const chosen = this.settings?.overlayFonts[language];
+  downloadFont = async (family: string, target: FontTarget) => {
+    const chosen = this.chosenFont(target);
     const progress = toast.loading(`${family} をダウンロードしています`, {
       duration: Number.POSITIVE_INFINITY,
     });
@@ -249,9 +274,7 @@ class Panel {
     toast.dismiss(progress);
     if (!done) return;
     toast.success(`${family} をダウンロードしました`);
-    if (this.settings?.overlayFonts[language] === chosen) {
-      await this.update({ overlayFonts: { [language]: family } });
-    }
+    if (this.chosenFont(target) === chosen) await this.setFont(target, family);
   };
 
   refreshGift = async () => {

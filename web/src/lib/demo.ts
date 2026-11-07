@@ -106,6 +106,7 @@ export const display = (fontSize: number, translationFontSize: number): Subtitle
   maxWaitSeconds: 0,
   maxLines: 1,
   holdSeconds: 0,
+  fonts: {},
 });
 
 export const RANK: RankState = {

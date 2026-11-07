@@ -54,9 +54,10 @@ pub struct Settings {
     /// エターナスの順位を調べるリーダーボードの地域。None なら調べない
     #[ts(optional)]
     pub rank_region: Option<Region>,
-    /// 言語ごとに選んだフォントのファミリー名。キーがない言語は標準（`lang.css`）
-    #[serde(deserialize_with = "readable_fonts")]
-    pub overlay_fonts: BTreeMap<LangCode, String>,
+    /// ランクのフォントのファミリー名。None なら標準（`lang.css`）
+    #[ts(optional)]
+    #[serde(deserialize_with = "readable_font")]
+    pub rank_font: Option<String>,
     /// OBS のブラウザソースで字幕オーバーレイが開かれたことがある（はじめかたのチェックに使う）
     pub obs_seen: bool,
     /// はじめかたを閉じた、または全部終えた
@@ -100,6 +101,15 @@ fn readable_fonts<'de, D: Deserializer<'de>>(
             Some((language, family.to_owned()))
         })
         .collect())
+}
+
+/// 読めなければ標準に戻し、ほかの設定は残す
+fn readable_font<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Option<String>, D::Error> {
+    let raw = serde_json::Value::deserialize(deserializer)?;
+    Ok(raw
+        .as_str()
+        .filter(|f| valid_font_name(f))
+        .map(str::to_owned))
 }
 
 /// 既定値から変えたときだけ保存する項目（保存してしまうと、アプリの既定値を直しても古い値が残る）
@@ -155,6 +165,9 @@ pub struct SubtitleDisplay {
     pub max_lines: u32,
     /// 確定してから消すまでの秒数（長い文はそのぶん長く出す）
     pub hold_seconds: f32,
+    /// 言語ごとに選んだフォントのファミリー名。キーがない言語は標準（`lang.css`）
+    #[serde(deserialize_with = "readable_fonts")]
+    pub fonts: BTreeMap<LangCode, String>,
 }
 
 impl Default for SubtitleDisplay {
@@ -171,6 +184,7 @@ impl Default for SubtitleDisplay {
             max_wait_seconds: 6.0,
             max_lines: 3,
             hold_seconds: 6.0,
+            fonts: BTreeMap::new(),
         }
     }
 }
@@ -291,10 +305,26 @@ pub struct SubtitleDisplayPatch {
     pub max_lines: Option<u32>,
     #[ts(optional)]
     pub hold_seconds: Option<f32>,
+    /// 書いた言語だけを変える。空文字列なら標準に戻す
+    #[ts(optional)]
+    pub fonts: Option<BTreeMap<LangCode, String>>,
 }
 
 impl SubtitleDisplay {
     fn apply(&self, patch: SubtitleDisplayPatch) -> Result<Self, String> {
+        let mut fonts = self.fonts.clone();
+        for (language, family) in patch.fonts.into_iter().flatten() {
+            if lang::find(&language).is_none() {
+                return Err(format!("unknown language: {language}"));
+            }
+            if family.is_empty() {
+                fonts.remove(&language);
+            } else if valid_font_name(&family) {
+                fonts.insert(language, family);
+            } else {
+                return Err(format!("invalid font name: {family}"));
+            }
+        }
         let next = Self {
             show_source: patch.show_source.unwrap_or(self.show_source),
             furigana: patch.furigana.unwrap_or(self.furigana),
@@ -309,6 +339,7 @@ impl SubtitleDisplay {
             max_wait_seconds: patch.max_wait_seconds.unwrap_or(self.max_wait_seconds),
             max_lines: patch.max_lines.unwrap_or(self.max_lines),
             hold_seconds: patch.hold_seconds.unwrap_or(self.hold_seconds),
+            fonts,
         };
         next.validate()?;
         Ok(next)
@@ -517,7 +548,7 @@ impl Default for Settings {
             hybrid_hint_closed: false,
             tray_notice_seen: false,
             rank_region: None,
-            overlay_fonts: BTreeMap::new(),
+            rank_font: None,
             models: Models::default(),
             realtime_delay: "low".into(),
             segmentation: Segmentation::default(),
@@ -731,17 +762,12 @@ impl Settings {
         if let Some(anchor) = patch.rank_anchor {
             next.rank_anchor = anchor;
         }
-        for (language, family) in patch.overlay_fonts.into_iter().flatten() {
-            if lang::find(&language).is_none() {
-                return Err(format!("unknown language: {language}"));
-            }
-            if family.is_empty() {
-                next.overlay_fonts.remove(&language);
-            } else if valid_font_name(&family) {
-                next.overlay_fonts.insert(language, family);
-            } else {
-                return Err(format!("invalid font name: {family}"));
-            }
+        if let Some(family) = patch.rank_font {
+            next.rank_font = match family.as_str() {
+                "" => None,
+                name if valid_font_name(name) => Some(family),
+                name => return Err(format!("invalid font name: {name}")),
+            };
         }
         next.obs_seen = patch.obs_seen.unwrap_or(next.obs_seen);
         next.onboarding_closed = patch.onboarding_closed.unwrap_or(next.onboarding_closed);
@@ -805,9 +831,9 @@ pub struct SettingsPatch {
     pub rank_content: Option<RankContent>,
     #[ts(optional)]
     pub rank_anchor: Option<Anchor>,
-    /// 書いた言語だけを変える。空文字列なら標準に戻す
+    /// 空文字列なら標準
     #[ts(optional)]
-    pub overlay_fonts: Option<BTreeMap<LangCode, String>>,
+    pub rank_font: Option<String>,
     #[ts(optional)]
     pub obs_seen: Option<bool>,
     #[ts(optional)]
@@ -1392,12 +1418,15 @@ mod tests {
 
     fn font_patch(fonts: &[(&str, &str)]) -> SettingsPatch {
         SettingsPatch {
-            overlay_fonts: Some(
-                fonts
-                    .iter()
-                    .map(|(l, f)| ((*l).to_owned(), (*f).to_owned()))
-                    .collect(),
-            ),
+            subtitle_display: Some(SubtitleDisplayPatch {
+                fonts: Some(
+                    fonts
+                        .iter()
+                        .map(|(l, f)| ((*l).to_owned(), (*f).to_owned()))
+                        .collect(),
+                ),
+                ..Default::default()
+            }),
             ..Default::default()
         }
     }
@@ -1411,11 +1440,11 @@ mod tests {
             ]))
             .unwrap();
         let next = s.apply(font_patch(&[("en", "Verdana")])).unwrap();
-        assert_eq!(next.overlay_fonts["ja"], "Hiragino Mincho ProN");
-        assert_eq!(next.overlay_fonts["en"], "Verdana");
+        assert_eq!(next.subtitle_display.fonts["ja"], "Hiragino Mincho ProN");
+        assert_eq!(next.subtitle_display.fonts["en"], "Verdana");
         let reset = next.apply(font_patch(&[("ja", "")])).unwrap();
-        assert!(!reset.overlay_fonts.contains_key("ja"));
-        assert_eq!(reset.overlay_fonts["en"], "Verdana");
+        assert!(!reset.subtitle_display.fonts.contains_key("ja"));
+        assert_eq!(reset.subtitle_display.fonts["en"], "Verdana");
     }
 
     #[test]
@@ -1436,28 +1465,64 @@ mod tests {
     }
 
     #[test]
+    fn rank_font_patch_does_not_touch_the_subtitle_fonts() {
+        let rank = |family: &str| SettingsPatch {
+            rank_font: Some(family.to_owned()),
+            ..Default::default()
+        };
+        let s = Settings::default()
+            .apply(font_patch(&[("ja", "Hiragino Sans")]))
+            .unwrap();
+        let next = s.apply(rank("Georgia")).unwrap();
+        assert_eq!(next.rank_font.as_deref(), Some("Georgia"));
+        assert_eq!(next.subtitle_display.fonts, s.subtitle_display.fonts);
+        let subtitle = next.apply(font_patch(&[("ja", "")])).unwrap();
+        assert_eq!(subtitle.rank_font.as_deref(), Some("Georgia"));
+        assert_eq!(next.apply(rank("")).unwrap().rank_font, None);
+        assert!(next.apply(rank("a\nb")).is_err());
+    }
+
+    #[test]
+    fn fonts_from_the_rc_are_skipped() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("settings.json");
+        std::fs::write(
+            &path,
+            r#"{ "micLanguage": "en", "overlayFonts": { "ja": "Hiragino Sans" } }"#,
+        )
+        .unwrap();
+        let s = load(&path).unwrap();
+        assert_eq!(s.mic_language, "en");
+        assert!(s.subtitle_display.fonts.is_empty());
+    }
+
+    #[test]
     fn unreadable_fonts_are_dropped_one_by_one() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("settings.json");
         std::fs::write(
             &path,
             r#"{
-                "subtitleDisplay": { "fontSize": 32 },
-                "overlayFonts": {
-                    "ja": "Hiragino Sans",
-                    "zh-Hans": "bad\nname",
-                    "ko": 1,
-                    "latin": "Georgia"
-                }
+                "subtitleDisplay": {
+                    "fontSize": 32,
+                    "fonts": {
+                        "ja": "Hiragino Sans",
+                        "zh-Hans": "bad\nname",
+                        "ko": 1,
+                        "latin": "Georgia"
+                    }
+                },
+                "rankFont": "bad\nname"
             }"#,
         )
         .unwrap();
         let s = load(&path).unwrap();
         assert_eq!(
-            s.overlay_fonts,
+            s.subtitle_display.fonts,
             BTreeMap::from([("ja".to_owned(), "Hiragino Sans".to_owned())])
         );
         assert_eq!(s.subtitle_display.font_size, 32);
+        assert_eq!(s.rank_font, None);
     }
 
     #[test]
@@ -1467,7 +1532,8 @@ mod tests {
         std::fs::write(&path, r#"{ "micLanguage": "en" }"#).unwrap();
         let s = load(&path).unwrap();
         assert_eq!(s.mic_language, "en");
-        assert!(s.overlay_fonts.is_empty());
+        assert!(s.subtitle_display.fonts.is_empty());
+        assert_eq!(s.rank_font, None);
     }
 
     #[test]

@@ -10,6 +10,7 @@
   import { REGIONS } from "../../lib/regions";
   import AddToObs from "../parts/AddToObs.svelte";
   import AnchorPicker from "../parts/AnchorPicker.svelte";
+  import FontPicker from "../parts/FontPicker.svelte";
   import OverlayPreview from "../parts/OverlayPreview.svelte";
   import { rankSize } from "../../lib/overlay-size";
   import { overlayUrl, panel } from "../panel.svelte";
@@ -152,6 +153,8 @@
           </Select.Content>
         </Select.Root>
       </Field.Field>
+
+      <FontPicker target={{ kind: "rank" }} language={language || s.micLanguage} label="ランク" />
     </Card.Content>
   </Card.Root>
 

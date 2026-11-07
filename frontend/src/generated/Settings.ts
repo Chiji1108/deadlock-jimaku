@@ -63,9 +63,9 @@ rankAnchor: Anchor,
  */
 rankRegion?: Region, 
 /**
- * 言語ごとに選んだフォントのファミリー名。キーがない言語は標準（`lang.css`）
+ * ランクのフォントのファミリー名。None なら標準（`lang.css`）
  */
-overlayFonts: { [key in string]: string }, 
+rankFont?: string, 
 /**
  * OBS のブラウザソースで字幕オーバーレイが開かれたことがある（はじめかたのチェックに使う）
  */

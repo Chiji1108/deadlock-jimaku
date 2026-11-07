@@ -1,5 +1,6 @@
 <script lang="ts">
-  // 言語ごとのフォントを選ぶダイアログ。見本を大きく描いたカードを並べる
+  // フォントの 1 行と、選ぶダイアログ。ダイアログには見本を大きく描いたカードを並べる
+  import { onMount } from "svelte";
   import CheckIcon from "@lucide/svelte/icons/check";
   import { Button } from "$lib/components/ui/button";
   import * as Dialog from "$lib/components/ui/dialog";
@@ -13,32 +14,23 @@
     STANDARD,
   } from "../../lib/font-samples";
   import { cssString, fontSample } from "../../lib/overlay-fonts";
-  import { panel, type FontList } from "../panel.svelte";
+  import { panel, type FontTarget } from "../panel.svelte";
   import ConfirmDialog from "./ConfirmDialog.svelte";
 
-  /** リポジトリの中の、文字をパスにした SVG（scripts/font-samples.ts）。文字の色で描く */
-  const SAMPLES = import.meta.glob<string>("../font-samples/*.svg", {
-    eager: true,
-    query: "?raw",
-    import: "default",
-  });
-
   let {
+    target,
     language,
     label,
-    value = "",
-    families,
-    onopen,
-    onchange,
   }: {
+    target: FontTarget;
+    /** 見本の言語。Google Fonts の見出しはこの言語で絞る */
     language: string;
-    /** 言語名 */
+    /** 字幕は言語名、ランクは「ランク」 */
     label: string;
-    value?: string;
-    families: FontList;
-    onopen: () => void;
-    onchange: (family: string) => void;
   } = $props();
+
+  const families = $derived(panel.fonts);
+  const value = $derived(panel.chosenFont(target) ?? "");
 
   const HEADING = "pt-2 text-xs font-medium text-muted-foreground";
   const GRID = "grid grid-cols-1 gap-2 sm:grid-cols-2";
@@ -73,15 +65,17 @@
       return;
     }
     open = false;
-    onchange(font?.family ?? "");
+    void panel.setFont(target, font?.family ?? "");
   }
 
   /** 裏で進めるので、ダイアログはすぐ閉じる。適用と失敗の案内は panel が持つ */
   function download(family: string) {
     open = false;
-    void panel.downloadFont(family, language);
+    void panel.downloadFont(family, target);
     return Promise.resolve(true);
   }
+
+  onMount(() => void panel.loadFonts());
 
   function onkeydown(e: KeyboardEvent) {
     const cards = () => [...list!.querySelectorAll<HTMLButtonElement>("button:enabled")];
@@ -128,7 +122,7 @@
       >
     {:else}
       <span aria-hidden="true" class="flex overflow-clip text-[28px]">
-        {@html SAMPLES[`../font-samples/${fontSampleName(font.family)}`]}
+        {@html panel.fontSamples[`./font-samples/${fontSampleName(font.family)}`] ?? ""}
       </span>
     {/if}
     <span class="flex min-w-0 items-baseline justify-between gap-2 text-sm">
@@ -143,47 +137,64 @@
   </button>
 {/snippet}
 
-<Dialog.Root
-  bind:open
-  onOpenChange={(opening) => {
-    if (!opening) return;
-    query = "";
-    onopen();
-  }}
->
-  <Dialog.Trigger>
-    {#snippet child({ props })}
-      <Button variant="outline" size="sm" aria-label="{label}のフォントを変更" {...props}
-        >変更</Button
-      >
-    {/snippet}
-  </Dialog.Trigger>
-  <Dialog.Content class="flex max-h-[calc(100%-2rem)] flex-col sm:max-w-2xl" {onkeydown}>
-    <Dialog.Header>
-      <Dialog.Title>{label}のフォント</Dialog.Title>
-    </Dialog.Header>
-    <Input bind:ref={search} bind:value={query} placeholder="フォントを検索" />
-    <!-- 画面外のカードは content-visibility で描かず、見本のフォントも読み込ませない。カードの高さは固定なので、スクロールの量は変わらない -->
-    <div bind:this={list} class="-mx-2 flex min-h-0 flex-col gap-2 overflow-y-auto px-2 pb-1">
-      {#if showStandard}
-        <div class={GRID}>{@render card()}</div>
-      {/if}
-      {#if googleFonts.length > 0}
-        <p class={HEADING}>Google Fonts</p>
-        <div class={GRID}>
-          {#each googleFonts as font (font.family)}{@render card(font)}{/each}
-        </div>
-      {/if}
-      {#if others.length > 0}
-        <p class={HEADING}>この PC のフォント</p>
-        <div class={GRID}>
-          {#each others.slice(0, MAX_SHOWN) as font (font.family)}{@render card(font)}{/each}
-        </div>
-      {/if}
-      {#if note}<p class="py-1.5 text-sm text-muted-foreground">{note}</p>{/if}
-    </div>
-  </Dialog.Content>
-</Dialog.Root>
+<div class="flex items-center gap-4">
+  <div class="min-w-0 flex-1">
+    <p class="flex gap-2 text-sm">
+      <span class="shrink-0 font-medium">{label}</span>
+      <span class="truncate text-muted-foreground">{value || STANDARD}</span>
+    </p>
+    <!-- この行のフォントは --font で渡す。選んだフォントがなければ lang.css の標準の候補に落ちる -->
+    <p
+      lang={language}
+      class="truncate text-lg font-bold"
+      style:--font={value ? `${cssString(value)},` : "initial"}
+    >
+      {swatch}
+    </p>
+  </div>
+  <Dialog.Root
+    bind:open
+    onOpenChange={(opening) => {
+      if (!opening) return;
+      query = "";
+      void panel.loadFonts();
+      void panel.loadFontSamples();
+    }}
+  >
+    <Dialog.Trigger>
+      {#snippet child({ props })}
+        <Button variant="outline" size="sm" aria-label="{label}のフォントを変更" {...props}
+          >変更</Button
+        >
+      {/snippet}
+    </Dialog.Trigger>
+    <Dialog.Content class="flex max-h-[calc(100%-2rem)] flex-col sm:max-w-2xl" {onkeydown}>
+      <Dialog.Header>
+        <Dialog.Title>{label}のフォント</Dialog.Title>
+      </Dialog.Header>
+      <Input bind:ref={search} bind:value={query} placeholder="フォントを検索" />
+      <!-- 画面外のカードは content-visibility で描かず、見本のフォントも読み込ませない。カードの高さは固定なので、スクロールの量は変わらない -->
+      <div bind:this={list} class="-mx-2 flex min-h-0 flex-col gap-2 overflow-y-auto px-2 pb-1">
+        {#if showStandard}
+          <div class={GRID}>{@render card()}</div>
+        {/if}
+        {#if googleFonts.length > 0}
+          <p class={HEADING}>Google Fonts</p>
+          <div class={GRID}>
+            {#each googleFonts as font (font.family)}{@render card(font)}{/each}
+          </div>
+        {/if}
+        {#if others.length > 0}
+          <p class={HEADING}>この PC のフォント</p>
+          <div class={GRID}>
+            {#each others.slice(0, MAX_SHOWN) as font (font.family)}{@render card(font)}{/each}
+          </div>
+        {/if}
+        {#if note}<p class="py-1.5 text-sm text-muted-foreground">{note}</p>{/if}
+      </div>
+    </Dialog.Content>
+  </Dialog.Root>
+</div>
 
 {#if pending}
   <ConfirmDialog

@@ -14,6 +14,7 @@
   import AddToObs from "../parts/AddToObs.svelte";
   import OverlayPreview from "../parts/OverlayPreview.svelte";
   import DisplayTimingDialog from "../parts/DisplayTimingDialog.svelte";
+  import FontPicker from "../parts/FontPicker.svelte";
   import FontSizeDialog from "../parts/FontSizeDialog.svelte";
   import { SUBTITLE_SIZE } from "../../lib/overlay-size";
   import { overlayUrl, panel } from "../panel.svelte";
@@ -50,6 +51,7 @@
   const s = $derived(panel.settings!);
   const d = $derived(s.subtitleDisplay);
   const noTargets = $derived(s.translateTo.length === 0);
+  const languages = $derived([...new Set([s.micLanguage, ...s.translateTo])]);
   const onlyTranslation = $derived(translationOnly(s));
   /** 変えた項目だけを送る（続けて変えても、前の変更を古い値で戻さない） */
   const set = (patch: SubtitleDisplayPatch) => panel.update({ subtitleDisplay: patch });
@@ -136,6 +138,22 @@
           <Field.Description
             >{BACKGROUNDS.find((b) => b.value === d.background)?.hint}</Field.Description
           >
+        </Field.Field>
+
+        <Field.Separator />
+
+        <Field.Field>
+          <Field.Label>文字の見た目</Field.Label>
+          <Field.Description>
+            Google Fonts のフォントと、この PC に入っているフォントから言語ごとに選べます
+          </Field.Description>
+          {#each languages as language (language)}
+            <FontPicker
+              target={{ kind: "subtitle", language }}
+              {language}
+              label={panel.label(language)}
+            />
+          {/each}
         </Field.Field>
 
         <Field.Separator />

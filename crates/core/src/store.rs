@@ -498,7 +498,7 @@ fn display(settings: &Settings) -> ServerMsg {
         rank_language: settings.rank_language(),
         rank_content: settings.rank_content,
         rank_anchor: settings.rank_anchor,
-        overlay_fonts: settings.overlay_fonts.clone(),
+        rank_font: settings.rank_font.clone(),
         item_cards: ItemCardsView {
             hold_seconds: settings.item_cards.hold_seconds,
             language: crate::lang::find(&settings.item_language())
@@ -512,7 +512,7 @@ fn display(settings: &Settings) -> ServerMsg {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::settings::SpeechEngine;
+    use crate::settings::{SpeechEngine, SubtitleDisplayPatch};
     use crate::types::Stage;
 
     fn seg(id: &str, text: &str) -> Segment {
@@ -679,13 +679,23 @@ mod tests {
         let mut rx = store.subscribe();
         store
             .update_settings(SettingsPatch {
-                overlay_fonts: Some([("ja".to_owned(), "Hiragino Sans".to_owned())].into()),
+                subtitle_display: Some(SubtitleDisplayPatch {
+                    fonts: Some([("ja".to_owned(), "Hiragino Sans".to_owned())].into()),
+                    ..Default::default()
+                }),
+                rank_font: Some("Georgia".to_owned()),
                 ..Default::default()
             })
             .unwrap();
-        let ServerMsg::Display { overlay_fonts, .. } = rx.try_recv().unwrap() else {
+        let ServerMsg::Display {
+            subtitles,
+            rank_font,
+            ..
+        } = rx.try_recv().unwrap()
+        else {
             panic!("expected the display message");
         };
-        assert_eq!(overlay_fonts["ja"], "Hiragino Sans");
+        assert_eq!(subtitles.fonts["ja"], "Hiragino Sans");
+        assert_eq!(rank_font.as_deref(), Some("Georgia"));
     }
 }

@@ -49,4 +49,8 @@ maxLines: number,
 /**
  * 確定してから消すまでの秒数（長い文はそのぶん長く出す）
  */
-holdSeconds: number, };
+holdSeconds: number, 
+/**
+ * 言語ごとに選んだフォントのファミリー名。キーがない言語は標準（`lang.css`）
+ */
+fonts: { [key in string]: string }, };

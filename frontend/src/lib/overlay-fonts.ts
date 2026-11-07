@@ -1,7 +1,7 @@
 // 言語ごとに選んだフォントを lang.css の --font に渡す
-import type { Settings } from "../generated/Settings";
+import type { SubtitleDisplay } from "../generated/SubtitleDisplay";
 
-type Fonts = Settings["overlayFonts"];
+type Fonts = SubtitleDisplay["fonts"];
 
 /** 制御文字はサーバーが拒否するので、エスケープするのは引用符と \ だけ */
 export const cssString = (name: string) => `"${name.replace(/["\\]/g, "\\$&")}"`;
@@ -41,29 +41,32 @@ export function addFontFaces(family: string) {
 export const fontSample = (lang: string) => (lang === "ja" ? "あいアイ漢字" : endonym(lang));
 
 /** 選んだフォントのファイルを core から読む。入れたばかりで WebView が知らないフォントも描ける */
-const fontImports = (fonts: Fonts) =>
-  [...new Set(Object.values(fonts))].map(
-    (family) => `@import url(${cssString(facesUrl(family))});`,
-  );
+const fontImports = (families: string[]) =>
+  [...new Set(families)].map((family) => `@import url(${cssString(facesUrl(family))});`);
 
 /**
  * 値の末尾のカンマで lang.css の標準の候補につなぐ。:lang(es) は es-419 にも一致するので
  * 属性の完全一致で言語を分け、[lang] を重ねて lang.css のリセットより詳細度を上げる。
  * ファイルが読めなければ、同じ名前の PC のフォントと標準の候補に落ちる
  */
-export const fontRules = (fonts: Fonts) =>
+export const subtitleFontRules = (fonts: Fonts) =>
   [
-    ...fontImports(fonts),
+    ...fontImports(Object.values(fonts)),
     ...Object.entries(fonts).map(
       ([lang, family]) => `[lang][lang=${cssString(lang)}] { --font: ${cssString(family)}, }`,
     ),
   ].join("\n");
 
+/** ランクは 1 つのフォントなので、ランク名の言語によらず全部の言語に当てる */
+export const rankFontRules = (family?: string | null) =>
+  family
+    ? [...fontImports([family]), `[lang][lang] { --font: ${cssString(family)}, }`].join("\n")
+    : "";
+
 let sheet: HTMLStyleElement | undefined;
 
 /** display はフォント以外でも届く。@import を書き直すと読み終えるまで標準に戻るので、同じなら触らない */
-export function applyOverlayFonts(fonts: Fonts) {
+export function applyFontRules(css: string) {
   sheet ??= document.head.appendChild(document.createElement("style"));
-  const css = fontRules(fonts);
   if (sheet.textContent !== css) sheet.textContent = css;
 }
