@@ -1,5 +1,5 @@
-import { expect, test } from "vitest";
-import { endonym, fontRules, fontSample } from "./overlay-fonts";
+import { expect, test, vi } from "vitest";
+import { addFontFaces, endonym, fontRules, fontSample } from "./overlay-fonts";
 
 test("選んだ言語だけに変数を設定し、標準の候補へ続ける", () => {
   expect(fontRules({ ja: "Hiragino Mincho ProN" })).toBe(
@@ -43,4 +43,31 @@ test("読めない言語コードはそのまま返す", () => {
 test("見本は言語名で、日本語だけかなと漢字を混ぜる", () => {
   expect(fontSample("ko")).toBe("한국어");
   expect(fontSample("ja")).toMatch(/\p{Script=Hiragana}.*\p{Script=Katakana}.*\p{Script=Han}/u);
+});
+
+test("フォントの読み込みは、前が終わってから次を始める", async () => {
+  type Link = { href?: string; events: Record<string, () => void> };
+  const links: Link[] = [];
+  vi.stubGlobal("document", {
+    createElement: () => {
+      const link: Link & { addEventListener: (name: string, run: () => void) => void } = {
+        events: {},
+        addEventListener: (name, run) => (link.events[name] = run),
+      };
+      return link;
+    },
+    head: { append: (link: Link) => links.push(link) },
+  });
+  addFontFaces("A B");
+  addFontFaces("C");
+  addFontFaces("D");
+  await vi.waitFor(() => expect(links).toHaveLength(1));
+  expect(links[0]!.href).toBe("/api/fonts/A%20B/faces.css");
+
+  links[0]!.events.load!();
+  await vi.waitFor(() => expect(links).toHaveLength(2));
+  links[1]!.events.error!();
+  await vi.waitFor(() => expect(links).toHaveLength(3));
+  expect(links[2]!.href).toBe("/api/fonts/D/faces.css");
+  vi.unstubAllGlobals();
 });

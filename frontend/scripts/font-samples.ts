@@ -53,16 +53,18 @@ const PROBES: Record<string, string> = {
 
 type Entry = (typeof catalog.fonts)[number];
 
+async function download(url: string) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`${url} を取れません: ${res.status} ${res.statusText}`);
+  return Buffer.from(await res.arrayBuffer());
+}
+
 async function read(entry: Entry, file: Entry["files"][number]) {
   const local = LOCAL && join(LOCAL, file.name);
   const data =
     local && existsSync(local)
       ? readFileSync(local)
-      : Buffer.from(
-          await (
-            await fetch(`${ORIGIN}/${entry.dir}/${encodeURIComponent(file.name)}`)
-          ).arrayBuffer(),
-        );
+      : await download(`${ORIGIN}/${entry.dir}/${encodeURIComponent(file.name)}`);
   const sha256 = createHash("sha256").update(data).digest("hex");
   if (sha256 !== file.sha256) throw new Error(`${file.name} の SHA-256 が違います`);
   return data;
@@ -137,14 +139,18 @@ function svg(font: Font, text: string) {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -${top} ${width} ${height}" width="${em}em" height="1.3em" fill="currentColor"><path d="${d}"/></svg>\n`;
 }
 
-rmSync(OUTPUT, { recursive: true, force: true });
-mkdirSync(OUTPUT);
+const samples = new Map<string, string>();
 for (const entry of catalog.fonts) {
   const files = await Promise.all(entry.files.map((file) => read(entry, file)));
   for (const data of files) checkFamily(data, entry);
   const font = regular(files[0]!);
   checkLanguages(font, entry);
   const out = svg(font, entry.sample);
-  writeFileSync(join(OUTPUT, fontSampleName(entry.family)), out);
+  samples.set(fontSampleName(entry.family), out);
   console.log(entry.family, out.length);
 }
+
+// 1 つでも失敗したら、今の見本を残す
+rmSync(OUTPUT, { recursive: true, force: true });
+mkdirSync(OUTPUT);
+for (const [name, out] of samples) writeFileSync(join(OUTPUT, name), out);

@@ -17,12 +17,24 @@ export function endonym(lang: string) {
 
 const facesUrl = (family: string) => `/api/fonts/${encodeURIComponent(family)}/faces.css`;
 
-/** 開いたあとに入ったフォントは WebView が名前で描けないので、一覧の見本のために読み込む */
+let added = Promise.resolve();
+
+/**
+ * 開いたあとに入ったフォントは WebView が名前で描けないので、一覧の見本のために読み込む。
+ * faces.css は 1 回ごとに PC の全部のフォントを読むので、重ねず 1 本ずつ読む
+ */
 export function addFontFaces(family: string) {
-  const link = document.createElement("link");
-  link.rel = "stylesheet";
-  link.href = facesUrl(family);
-  document.head.append(link);
+  added = added.then(
+    () =>
+      new Promise<void>((done) => {
+        const link = document.createElement("link");
+        link.rel = "stylesheet";
+        link.href = facesUrl(family);
+        link.addEventListener("load", () => done());
+        link.addEventListener("error", () => done());
+        document.head.append(link);
+      }),
+  );
 }
 
 /** フォントの見本。日本語は言語名だと漢字だけになるので、かなも混ぜる */

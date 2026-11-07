@@ -7,7 +7,8 @@
 Zen Maru Gothic
 Copyright 2021 The Zen Maru Gothic Project Authors (https://github.com/googlefonts/zen-marugothic)
 
-Rounded Mplus 1c（Google Fonts の名前は M PLUS Rounded 1c）
+Rounded Mplus 1c
+Google Fonts の名前は M PLUS Rounded 1c
 Copyright 2016 The Rounded M+ Project Authors.
 
 Hachi Maru Pop

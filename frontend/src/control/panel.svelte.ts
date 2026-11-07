@@ -1,5 +1,6 @@
 // 操作パネルの状態。各タブはこれを読み、変更は api 経由でサーバーに送る（サーバーの返す設定で置き換える）
 import { toast } from "svelte-sonner";
+import { SvelteSet } from "svelte/reactivity";
 import type { LiveStatus } from "../generated/LiveStatus";
 import type { GiftStatus } from "../generated/GiftStatus";
 import type { Provider } from "../generated/Provider";
@@ -39,7 +40,9 @@ class Panel {
   devices = $state<string[] | undefined>();
   /** 選べるフォント */
   fonts = $state<FontList>("loading");
-  private fontsLoading = false;
+  /** ダウンロード中のファミリー。タブを移っても続くので、ここで持つ */
+  downloadingFonts = new SvelteSet<string>();
+  private fontsRead: Promise<void> | undefined;
   server = $state<Status>("connecting");
   /** 字幕を始められなかった・止まった理由 */
   transcriptionError = $state<TranscriptionError | undefined>();
@@ -200,38 +203,56 @@ class Panel {
 
   private knownFonts: Set<string> | undefined;
 
+  /** 同時には 1 回だけ読む。読んでいる間に呼んだら、その読み込みの終わりを待つ */
+  loadFonts = () =>
+    (this.fontsRead ??= this.readFonts().finally(() => (this.fontsRead = undefined)));
+
   /** 読み直しの間も、失敗しても、すでにある一覧は出したままにする */
-  loadFonts = async () => {
-    if (this.fontsLoading) return;
-    this.fontsLoading = true;
+  private async readFonts() {
     const fonts = await api.fonts().catch(() => undefined);
-    this.fontsLoading = false;
     if (fonts) {
       this.addFaces(fonts);
       this.fonts = fonts;
     } else if (typeof this.fonts === "string") this.fonts = "failed";
-  };
+  }
 
   /**
-   * 最初の一覧の PC のフォントは WebView が名前で描ける。そのあと増えたフォントと、PC に入っていない
-   * ダウンロードしたフォントは読み込む。未取得のフォントはファイルがないので読まない
+   * 最初の一覧の PC のフォントは WebView が名前で描ける。そのあと増えたフォントと、PC になく
+   * ダウンロードで置いたフォントは読み込む。未取得のフォントはファイルがないので読まない
    */
   private addFaces(fonts: FontEntry[]) {
     const first = !this.knownFonts;
     const known = (this.knownFonts ??= new Set());
-    for (const { family, languages, sizeBytes } of fonts) {
+    for (const { family, sizeBytes, downloaded } of fonts) {
       if (sizeBytes !== undefined || known.has(family)) continue;
       known.add(family);
-      if (!first || languages) addFontFaces(family);
+      if (!first || downloaded) addFontFaces(family);
     }
   }
 
-  /** 取得できたら一覧を読み直して true。一覧が見本を描けるようになる */
-  downloadFont = (family: string) =>
-    this.run(async () => {
+  /**
+   * 裏で進め、取得できたら一覧を読み直してその言語に適用する。走行中の読み込みは取得前の一覧を
+   * 返すので、終わるのを待ってから読む。待つ間に別のフォントを選んでいたら、その選択を残す
+   */
+  downloadFont = async (family: string, language: string) => {
+    const chosen = this.settings?.overlayFonts[language];
+    const progress = toast.loading(`${family} をダウンロードしています`, {
+      duration: Number.POSITIVE_INFINITY,
+    });
+    this.downloadingFonts.add(family);
+    const done = await this.run(async () => {
       await api.downloadFont(family);
+      await this.fontsRead;
       await this.loadFonts();
     });
+    this.downloadingFonts.delete(family);
+    toast.dismiss(progress);
+    if (!done) return;
+    toast.success(`${family} をダウンロードしました`);
+    if (this.settings?.overlayFonts[language] === chosen) {
+      await this.update({ overlayFonts: { [language]: family } });
+    }
+  };
 
   refreshGift = async () => {
     this.gift = await api.gift().catch(() => undefined);

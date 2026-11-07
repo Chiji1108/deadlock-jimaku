@@ -7,16 +7,18 @@ use std::path::{Path, PathBuf};
 use std::sync::{LazyLock, Mutex};
 use std::time::{Duration, UNIX_EPOCH};
 
-use anyhow::ensure;
+use anyhow::{Context, ensure};
 use fontdb::{Database, FaceInfo, Source, Stretch, Style};
 use percent_encoding::{NON_ALPHANUMERIC, utf8_percent_encode};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use tokio::time::timeout;
 use ts_rs::TS;
 
 use crate::settings::valid_font_name;
 
-/// 一覧の 1 行。`languages` があるものはおすすめで、その言語の一覧に出す。`size_bytes` があるものは未取得
+/// 一覧の 1 行。`languages` があるものはおすすめで、その言語の一覧に出す。`size_bytes` があるものは未取得。
+/// `downloaded` は PC になくダウンロードで置いたフォントで、WebView が名前で描けない
 #[derive(Debug, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -28,6 +30,7 @@ pub struct FontEntry {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[ts(optional, type = "number")]
     pub size_bytes: Option<u64>,
+    pub downloaded: bool,
 }
 
 /// `font-catalog.json` の形。frontend/scripts/font-samples.ts も同じファイルを読む
@@ -79,8 +82,19 @@ pub fn folder(data_dir: &Path) -> PathBuf {
     data_dir.join("fonts")
 }
 
-/// 遅い回線でも終わるよう、`crate::http()` の 60 秒を上書きする
-const DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(600);
+/// 1 回のダウンロードの待ち時間
+#[derive(Clone, Copy)]
+struct Limits {
+    /// ファミリーの全部のファイルを受け終えるまで。`crate::http()` の 60 秒を上書きする
+    total: Duration,
+    /// 次のデータが届くまで。回線が切れたら `total` を待たずに止める
+    stall: Duration,
+}
+
+const LIMITS: Limits = Limits {
+    total: Duration::from_secs(600),
+    stall: Duration::from_secs(30),
+};
 
 static DOWNLOADING: Mutex<BTreeSet<String>> = Mutex::new(BTreeSet::new());
 
@@ -108,40 +122,74 @@ pub enum DownloadError {
     Failed(anyhow::Error),
 }
 
+fn sha256(body: &[u8]) -> String {
+    Sha256::digest(body)
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect()
+}
+
 /// 大きさと SHA-256 がカタログと一致したものだけを返す
-async fn fetch(url: &str, file: &CatalogFile) -> anyhow::Result<Vec<u8>> {
-    let mut res = crate::http()
-        .get(url)
-        .timeout(DOWNLOAD_TIMEOUT)
-        .send()
-        .await?
+async fn fetch(url: &str, file: &CatalogFile, limits: Limits) -> anyhow::Result<Vec<u8>> {
+    let stalled = || format!("{} stalled", file.name);
+    let request = crate::http().get(url).timeout(limits.total).send();
+    let mut res = timeout(limits.stall, request)
+        .await
+        .with_context(stalled)??
         .error_for_status()?;
     let mut body = Vec::with_capacity(file.size as usize);
-    while let Some(chunk) = res.chunk().await? {
+    while let Some(chunk) = timeout(limits.stall, res.chunk())
+        .await
+        .with_context(stalled)??
+    {
         body.extend_from_slice(&chunk);
         ensure!(body.len() as u64 <= file.size, "{} is too large", file.name);
     }
-    let sha256 = format!("{:x}", Sha256::digest(&body));
-    ensure!(sha256 == file.sha256, "{} has a wrong hash", file.name);
+    ensure!(
+        sha256(&body) == file.sha256,
+        "{} has a wrong hash",
+        file.name
+    );
     Ok(body)
 }
 
-/// 全部のファイルが揃ってから置く
-async fn download_from(origin: &str, font: &CatalogFont, dir: &Path) -> anyhow::Result<()> {
+async fn fetch_all(
+    origin: &str,
+    font: &CatalogFont,
+    limits: Limits,
+) -> anyhow::Result<Vec<Vec<u8>>> {
     let mut bodies = Vec::with_capacity(font.files.len());
     for file in &font.files {
         let url = format!("{origin}/{}/{}", font.dir, file.name);
-        bodies.push(fetch(&url, file).await?);
+        bodies.push(fetch(&url, file, limits).await?);
     }
+    Ok(bodies)
+}
+
+/// 全部のファイルが揃ってから置く。書き込みは途中で切らないので、待ち時間には含めない
+async fn download_from(
+    origin: &str,
+    font: &CatalogFont,
+    dir: &Path,
+    limits: Limits,
+) -> anyhow::Result<()> {
+    let bodies = timeout(limits.total, fetch_all(origin, font, limits))
+        .await
+        .context("download took too long")??;
     for (file, body) in font.files.iter().zip(&bodies) {
         crate::write_atomic(&dir.join(&file.name), body).await?;
     }
     Ok(())
 }
 
-async fn download_once(origin: &str, font: &CatalogFont, dir: &Path) -> Result<(), DownloadError> {
+async fn download_once(
+    origin: &str,
+    font: &CatalogFont,
+    dir: &Path,
+    limits: Limits,
+) -> Result<(), DownloadError> {
     let _claim = Claim::take(&font.family).ok_or(DownloadError::Busy)?;
-    download_from(origin, font, dir)
+    download_from(origin, font, dir, limits)
         .await
         .map_err(DownloadError::Failed)
 }
@@ -151,7 +199,7 @@ pub async fn download(font: &CatalogFont, dir: &Path) -> Result<(), DownloadErro
         "https://raw.githubusercontent.com/google/fonts/{}",
         CATALOG.commit
     );
-    download_once(&origin, font, dir).await
+    download_once(&origin, font, dir, LIMITS).await
 }
 
 /// 設定に保存できて、一覧に出すファミリーか。`.` で始まる名前は macOS の内部用で、選べない
@@ -179,18 +227,23 @@ fn database(dir: &Path) -> Database {
     db
 }
 
-/// PC にあるフォントはダウンロードを勧めない。カタログの行は PC のものでもおすすめに 1 回だけ出す
+/// PC にあるフォントはダウンロードを勧めない。カタログの行は PC のものでもおすすめに 1 回だけ出す。
+/// カタログの順はおすすめの順なので保つ
 fn list(pc: Vec<String>, catalog: &[CatalogFont], dir: &Path) -> Vec<FontEntry> {
     let lower = |family: &str| family.to_lowercase();
     let on_pc: HashSet<String> = pc.iter().map(|family| lower(family)).collect();
     let listed: HashSet<String> = catalog.iter().map(|font| lower(&font.family)).collect();
     catalog
         .iter()
-        .map(|font| FontEntry {
-            family: font.family.clone(),
-            languages: Some(font.languages.clone()),
-            size_bytes: (!on_pc.contains(&lower(&font.family)) && !font.downloaded(dir))
-                .then(|| font.size_bytes()),
+        .map(|font| {
+            let elsewhere = !on_pc.contains(&lower(&font.family));
+            let saved = font.downloaded(dir);
+            FontEntry {
+                family: font.family.clone(),
+                languages: Some(font.languages.clone()),
+                size_bytes: (elsewhere && !saved).then(|| font.size_bytes()),
+                downloaded: elsewhere && saved,
+            }
         })
         .chain(
             pc.into_iter()
@@ -199,6 +252,7 @@ fn list(pc: Vec<String>, catalog: &[CatalogFont], dir: &Path) -> Vec<FontEntry> 
                     family,
                     languages: None,
                     size_bytes: None,
+                    downloaded: false,
                 }),
         )
         .collect()
@@ -720,6 +774,7 @@ mod tests {
             family: family.to_owned(),
             languages: Some(vec!["ja".to_owned()]),
             size_bytes,
+            downloaded: false,
         }
     }
 
@@ -744,7 +799,7 @@ mod tests {
         CatalogFile {
             name: name.to_owned(),
             size: body.len() as u64,
-            sha256: format!("{:x}", Sha256::digest(body)),
+            sha256: sha256(body),
         }
     }
 
@@ -770,6 +825,27 @@ mod tests {
     }
 
     #[test]
+    fn only_a_font_missing_from_the_pc_is_marked_downloaded() {
+        let dir = tempfile::tempdir().unwrap();
+        let catalog = [
+            catalog_font("On Pc", vec![catalog_file("a.ttf", b"1")]),
+            catalog_font("Saved", vec![catalog_file("b.ttf", b"1")]),
+        ];
+        std::fs::write(dir.path().join("a.ttf"), b"1").unwrap();
+        std::fs::write(dir.path().join("b.ttf"), b"1").unwrap();
+        assert_eq!(
+            list(vec!["On Pc".to_owned()], &catalog, dir.path()),
+            [
+                entry("On Pc", None),
+                FontEntry {
+                    downloaded: true,
+                    ..entry("Saved", None)
+                }
+            ]
+        );
+    }
+
+    #[test]
     fn a_family_with_a_missing_file_can_be_downloaded_again() {
         let dir = tempfile::tempdir().unwrap();
         let catalog = [catalog_font(
@@ -782,7 +858,13 @@ mod tests {
             [entry("Probe", Some(5))]
         );
         std::fs::write(dir.path().join("b.ttf"), b"345").unwrap();
-        assert_eq!(list(vec![], &catalog, dir.path()), [entry("Probe", None)]);
+        assert_eq!(
+            list(vec![], &catalog, dir.path()),
+            [FontEntry {
+                downloaded: true,
+                ..entry("Probe", None)
+            }]
+        );
     }
 
     /// 偽の配布元。`gate` があれば、それが開くまで応答を止める
@@ -813,6 +895,24 @@ mod tests {
         format!("http://{addr}")
     }
 
+    /// 4 バイトのうち 2 バイトを送ったところで黙る配布元
+    async fn stalling_origin() -> String {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move {
+            let (mut socket, _) = listener.accept().await.unwrap();
+            let request = socket.read(&mut [0; 1024]).await.unwrap();
+            assert!(request > 0);
+            socket
+                .write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 4\r\n\r\nfo")
+                .await
+                .unwrap();
+            std::future::pending::<()>().await;
+        });
+        format!("http://{addr}")
+    }
+
     fn saved(dir: &Path) -> Vec<String> {
         std::fs::read_dir(dir)
             .map(|files| {
@@ -839,7 +939,7 @@ mod tests {
         let origin = fake_origin(vec![("r[wght].ttf", regular), ("b.ttf", bold)], None).await;
         let dir = tempfile::tempdir().unwrap();
         let fonts = dir.path().join("fonts");
-        download_once(&origin, &font, &fonts).await.unwrap();
+        download_once(&origin, &font, &fonts, LIMITS).await.unwrap();
         assert_eq!(saved(&fonts), ["b.ttf", "r[wght].ttf"]);
         assert_eq!(
             sheet_files(&database(&fonts), "Download Probe"),
@@ -865,7 +965,7 @@ mod tests {
         )
         .await;
         let dir = tempfile::tempdir().unwrap();
-        let result = download_once(&origin, &font, dir.path()).await;
+        let result = download_once(&origin, &font, dir.path(), LIMITS).await;
         assert!(matches!(result, Err(DownloadError::Failed(_))));
         assert!(saved(dir.path()).is_empty());
     }
@@ -875,9 +975,62 @@ mod tests {
         let font = catalog_font("Size Probe", vec![catalog_file("big.ttf", b"1234")]);
         let origin = fake_origin(vec![("big.ttf", vec![0; 1 << 20])], None).await;
         let dir = tempfile::tempdir().unwrap();
-        let result = download_once(&origin, &font, dir.path()).await;
+        let result = download_once(&origin, &font, dir.path(), LIMITS).await;
         assert!(matches!(result, Err(DownloadError::Failed(_))));
         assert!(saved(dir.path()).is_empty());
+    }
+
+    async fn failure(origin: &str, family: &str, limits: Limits) -> String {
+        let font = catalog_font(family, vec![catalog_file("f.ttf", b"font")]);
+        let dir = tempfile::tempdir().unwrap();
+        let result = download_once(origin, &font, dir.path(), limits).await;
+        assert!(saved(dir.path()).is_empty());
+        match result {
+            Err(DownloadError::Failed(e)) => e.to_string(),
+            other => panic!("{other:?}"),
+        }
+    }
+
+    const SHORT: Duration = Duration::from_millis(100);
+
+    #[tokio::test]
+    async fn a_body_that_stops_arriving_is_given_up_before_the_total_limit() {
+        let limits = Limits {
+            total: Duration::from_secs(30),
+            stall: SHORT,
+        };
+        let origin = stalling_origin().await;
+        assert_eq!(
+            failure(&origin, "Stall Probe", limits).await,
+            "f.ttf stalled"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_server_that_never_answers_is_given_up_before_the_total_limit() {
+        let limits = Limits {
+            total: Duration::from_secs(30),
+            stall: SHORT,
+        };
+        let gate = std::sync::Arc::new(tokio::sync::Semaphore::new(0));
+        let origin = fake_origin(vec![], Some(gate)).await;
+        assert_eq!(
+            failure(&origin, "Silent Probe", limits).await,
+            "f.ttf stalled"
+        );
+    }
+
+    #[tokio::test]
+    async fn the_total_limit_covers_the_whole_download() {
+        let limits = Limits {
+            total: SHORT,
+            stall: Duration::from_secs(30),
+        };
+        let origin = stalling_origin().await;
+        assert_eq!(
+            failure(&origin, "Total Probe", limits).await,
+            "download took too long"
+        );
     }
 
     #[tokio::test]
@@ -887,10 +1040,10 @@ mod tests {
         let origin = fake_origin(vec![("f.ttf", b"font".to_vec())], Some(gate.clone())).await;
         let dir = tempfile::tempdir().unwrap();
 
-        let first = download_once(&origin, &font, dir.path());
+        let first = download_once(&origin, &font, dir.path(), LIMITS);
         let second = async {
             tokio::time::sleep(Duration::from_millis(50)).await;
-            let result = download_once(&origin, &font, dir.path()).await;
+            let result = download_once(&origin, &font, dir.path(), LIMITS).await;
             gate.add_permits(1);
             result
         };
@@ -899,7 +1052,9 @@ mod tests {
         assert!(matches!(second, Err(DownloadError::Busy)));
 
         gate.add_permits(1);
-        download_once(&origin, &font, dir.path()).await.unwrap();
+        download_once(&origin, &font, dir.path(), LIMITS)
+            .await
+            .unwrap();
     }
 
     #[tokio::test]
@@ -908,7 +1063,7 @@ mod tests {
         let origin = fake_origin(vec![("other.ttf", vec![])], None).await;
         let dir = tempfile::tempdir().unwrap();
         for _ in 0..2 {
-            let result = download_once(&origin, &font, dir.path()).await;
+            let result = download_once(&origin, &font, dir.path(), LIMITS).await;
             assert!(matches!(result, Err(DownloadError::Failed(_))));
         }
     }
@@ -946,9 +1101,9 @@ mod tests {
 
     #[test]
     fn the_notices_name_every_catalog_font() {
-        let notices = include_str!("../../../notices/fonts.txt");
+        let notices: HashSet<&str> = include_str!("../../../notices/fonts.txt").lines().collect();
         for font in &CATALOG.fonts {
-            assert!(notices.contains(&font.family), "{}", font.family);
+            assert!(notices.contains(font.family.as_str()), "{}", font.family);
         }
     }
 

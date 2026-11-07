@@ -4,7 +4,7 @@
   import CheckIcon from "@lucide/svelte/icons/check";
   import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
   import type { FontEntry } from "../../generated/FontEntry";
-  import { fontSampleName, formatSize } from "../../lib/font-samples";
+  import { fontSampleName, fontSections, formatSize } from "../../lib/font-samples";
   import { cssString, fontSample } from "../../lib/overlay-fonts";
   import { panel, type FontList } from "../panel.svelte";
   import ConfirmDialog from "./ConfirmDialog.svelte";
@@ -45,12 +45,7 @@
       ? []
       : families.filter((f) => f.family.toLowerCase().includes(words)),
   );
-  const isRecommended = (font: FontEntry) => font.languages?.includes(language) ?? false;
-  const recommended = $derived(matches.filter(isRecommended));
-  /** ほかの言語のおすすめも、取得したものや PC にあるものはここから選べる */
-  const others = $derived(
-    matches.filter((font) => !isRecommended(font) && font.sizeBytes === undefined),
-  );
+  const { recommended, others } = $derived(fontSections(matches, language));
   const note = $derived.by(() => {
     if (families === "loading") return "読み込み中…";
     if (families === "failed") return "読み込めませんでした。開き直すと読み直します";
@@ -60,7 +55,6 @@
 
   /** 確認しているフォント */
   let pending = $state<FontEntry>();
-  let downloading = $state(false);
 
   function close() {
     open = false;
@@ -78,12 +72,10 @@
     onchange("");
   }
 
-  async function download(family: string) {
-    downloading = true;
-    const done = await panel.downloadFont(family);
-    downloading = false;
-    if (done) onchange(family);
-    return done;
+  /** 裏で進めるので、ダイアログはすぐ閉じる。適用と失敗の案内は panel が持つ */
+  function download(family: string) {
+    void panel.downloadFont(family, language);
+    return Promise.resolve(true);
   }
 </script>
 
@@ -95,6 +87,7 @@
 {#snippet option(font: FontEntry)}
   <Command.Item
     value={font.family}
+    disabled={panel.downloadingFonts.has(font.family)}
     class="relative flex h-8 cursor-default items-center gap-3 rounded-sm pr-8 pl-2 text-sm leading-8 outline-hidden select-none [contain-intrinsic-size:auto_2rem] [content-visibility:auto] data-selected:bg-accent data-selected:text-accent-foreground"
     onSelect={() => choose(font)}
   >
@@ -112,7 +105,9 @@
         {@html SAMPLES[`../font-samples/${fontSampleName(font.family)}`]}
       </span>
       <span class="shrink-0 text-xs text-muted-foreground">
-        ダウンロード（{formatSize(font.sizeBytes)}）
+        {panel.downloadingFonts.has(font.family)
+          ? "ダウンロード中…"
+          : `ダウンロード（${formatSize(font.sizeBytes)}）`}
       </span>
     {/if}
     {@render check(font.family)}
@@ -178,7 +173,7 @@
   <ConfirmDialog
     bind:open={() => pending !== undefined, (next) => !next && (pending = undefined)}
     title="{pending.family} をダウンロードしますか"
-    action={downloading ? "ダウンロード中…" : "ダウンロード"}
+    action="ダウンロード"
     onconfirm={() => download(pending!.family)}
   >
     <p>大きさ: {formatSize(pending.sizeBytes!)}</p>

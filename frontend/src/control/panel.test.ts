@@ -3,10 +3,12 @@ import { api } from "../lib/api";
 import { panel } from "./panel.svelte";
 import { addFontFaces } from "../lib/overlay-fonts";
 import type { FontEntry } from "../generated/FontEntry";
+import type { SettingsView } from "../generated/SettingsView";
 
 vi.mock("../lib/overlay-fonts", () => ({ addFontFaces: vi.fn() }));
 
-const pc = (...families: string[]): FontEntry[] => families.map((family) => ({ family }));
+const pc = (...families: string[]): FontEntry[] =>
+  families.map((family) => ({ family, downloaded: false }));
 
 beforeEach(() => {
   panel.fonts = "loading";
@@ -44,21 +46,91 @@ test("開いたあとに増えたフォントだけ読み込む", async () => {
   expect(add.mock.calls).toEqual([["Installed"]]);
 });
 
-test("おすすめのフォントは、取得して初めて読み込む", async () => {
-  const add = vi.mocked(addFontFaces);
-  const fresh = new (panel.constructor as new () => typeof panel)();
-  add.mockClear();
-  const offered = { family: "Jua", languages: ["ko"], sizeBytes: 100 };
-  const saved = { family: "Gaegu", languages: ["ko"] };
-  vi.spyOn(api, "fonts").mockResolvedValue([offered, saved, ...pc("Old")]);
-  await fresh.loadFonts();
-  expect(add.mock.calls).toEqual([["Gaegu"]]);
+const freshPanel = () => new (panel.constructor as new () => typeof panel)();
 
+const offered = { family: "Jua", languages: ["ko"], sizeBytes: 100, downloaded: false };
+const saved = { family: "Jua", languages: ["ko"], downloaded: true };
+
+function withFonts(fonts: Record<string, string>) {
+  const view = { settings: { overlayFonts: fonts } } as unknown as SettingsView;
+  const next = freshPanel();
+  next.view = view;
+  const update = vi.spyOn(next, "update").mockResolvedValue(true);
+  return { next, update };
+}
+
+test("最初の一覧では、PC にないダウンロード済みのフォントだけ読み込む", async () => {
+  const add = vi.mocked(addFontFaces);
+  const fresh = freshPanel();
   add.mockClear();
-  vi.spyOn(api, "downloadFont").mockResolvedValue();
-  vi.spyOn(api, "fonts").mockResolvedValue([{ family: "Jua", languages: ["ko"] }, saved]);
-  expect(await fresh.downloadFont("Jua")).toBe(true);
+  const onPc = { family: "Gaegu", languages: ["ko"], downloaded: false };
+  vi.spyOn(api, "fonts").mockResolvedValue([saved, onPc, ...pc("Old")]);
+  await fresh.loadFonts();
   expect(add.mock.calls).toEqual([["Jua"]]);
+});
+
+test("おすすめのフォントは、取得して初めて読み込み、その言語に適用する", async () => {
+  const add = vi.mocked(addFontFaces);
+  const { next, update } = withFonts({});
+  add.mockClear();
+  vi.spyOn(api, "fonts").mockResolvedValue([offered, ...pc("Old")]);
+  await next.loadFonts();
+  expect(add).not.toHaveBeenCalled();
+
+  vi.spyOn(api, "downloadFont").mockResolvedValue();
+  vi.spyOn(api, "fonts").mockResolvedValue([saved, ...pc("Old")]);
+  await next.downloadFont("Jua", "ko");
+  expect(add.mock.calls).toEqual([["Jua"]]);
+  expect(update).toHaveBeenCalledWith({ overlayFonts: { ko: "Jua" } });
+});
+
+test("ダウンロードの間は進行中の印があり、終われば外れる", async () => {
+  const { next } = withFonts({});
+  let finish!: () => void;
+  vi.spyOn(api, "downloadFont").mockReturnValue(new Promise((r) => (finish = r)));
+  vi.spyOn(api, "fonts").mockResolvedValue([saved]);
+  const download = next.downloadFont("Jua", "ko");
+  expect(next.downloadingFonts.has("Jua")).toBe(true);
+  finish();
+  await download;
+  expect(next.downloadingFonts.has("Jua")).toBe(false);
+});
+
+test("ダウンロードを待つ間に選び直したフォントは上書きしない", async () => {
+  const { next, update } = withFonts({});
+  let finish!: () => void;
+  vi.spyOn(api, "downloadFont").mockReturnValue(new Promise((r) => (finish = r)));
+  vi.spyOn(api, "fonts").mockResolvedValue([saved]);
+  const download = next.downloadFont("Jua", "ko");
+  next.settings!.overlayFonts.ko = "Gaegu";
+  finish();
+  await download;
+  expect(update).not.toHaveBeenCalled();
+});
+
+test("失敗したダウンロードは適用せず、印を外す", async () => {
+  const { next, update } = withFonts({});
+  vi.spyOn(api, "downloadFont").mockRejectedValue(new Error("boom"));
+  await next.downloadFont("Jua", "ko");
+  expect(update).not.toHaveBeenCalled();
+  expect(next.downloadingFonts.has("Jua")).toBe(false);
+});
+
+test("読み込みの途中で終わったダウンロードは、その読み込みのあとに読み直して反映する", async () => {
+  const { next } = withFonts({});
+  const { fonts, resolve } = pendingFonts();
+  const running = next.loadFonts();
+  vi.spyOn(api, "downloadFont").mockResolvedValue();
+  const download = next.downloadFont("Jua", "ko");
+  await vi.waitFor(() => expect(api.downloadFont).toHaveBeenCalled());
+  await Promise.resolve();
+
+  fonts.mockResolvedValue([saved]);
+  resolve([offered]);
+  await running;
+  await download;
+  expect(fonts).toHaveBeenCalledTimes(2);
+  expect(next.fonts).toEqual([saved]);
 });
 
 test("読み直しに失敗したら前の一覧を残す", async () => {
@@ -80,10 +152,10 @@ test("一覧がないときの失敗は、次に読めれば直る", async () =>
 test("読んでいる間に呼んでも 1 回しか読まず、終われば次を読める", async () => {
   const { fonts, resolve } = pendingFonts();
   const first = panel.loadFonts();
-  await panel.loadFonts();
+  const second = panel.loadFonts();
   expect(fonts).toHaveBeenCalledTimes(1);
   resolve(pc("A"));
-  await first;
+  await Promise.all([first, second]);
   fonts.mockResolvedValue(pc("A", "B"));
   await panel.loadFonts();
   expect(fonts).toHaveBeenCalledTimes(2);
