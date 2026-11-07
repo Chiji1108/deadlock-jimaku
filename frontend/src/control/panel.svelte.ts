@@ -1,5 +1,6 @@
 // 操作パネルの状態。各タブはこれを読み、変更は api 経由でサーバーに送る（サーバーの返す設定で置き換える）
 import { toast } from "svelte-sonner";
+import type { LiveStatus } from "../generated/LiveStatus";
 import type { GiftStatus } from "../generated/GiftStatus";
 import type { Provider } from "../generated/Provider";
 import type { ServerMsg } from "../generated/ServerMsg";
@@ -54,6 +55,8 @@ class Panel {
   /** 最後にレベルが届いた時刻 */
   private levelAt = 0;
   now = $state(Date.now());
+  /** Chrome のページの状態。ページが開いていなければ undefined */
+  chromeStatus = $state<LiveStatus>();
 
   get settings() {
     return this.view?.settings;
@@ -64,9 +67,18 @@ class Panel {
     return this.view?.keys.openai.state === "missing" && this.view.keys.gift.state === "missing";
   }
 
-  /** 字幕を始められる鍵（自分のキーかギフトコード）がある */
+  /** 字幕を始められる鍵（自分のキーかギフトコード）がある。Chrome のモードは鍵が要らない */
   get hasAccess() {
-    return this.view?.keys.openai.state === "saved" || this.view?.keys.gift.state === "saved";
+    return (
+      this.settings?.speechEngine === "chrome" ||
+      this.view?.keys.openai.state === "saved" ||
+      this.view?.keys.gift.state === "saved"
+    );
+  }
+
+  /** ハイブリッドで使える鍵（自分のキーか、期限内のギフトコード）がある */
+  get hybridReady() {
+    return this.view?.keys.openai.state === "saved" || giftValid(this.gift);
   }
 
   /** 字幕を始める操作をしていて、止まった理由もない */
@@ -74,9 +86,14 @@ class Panel {
     return !!this.settings?.transcriptionEnabled && !this.transcriptionError;
   }
 
-  /** 動いているのに、しばらく音が来ていない */
+  /** 動いているのに、しばらく音が来ていない。Chrome のモードのマイクはページが開く */
   get silent() {
-    return this.running && this.level !== undefined && this.now - this.heardAt > SILENT_MS;
+    return (
+      this.running &&
+      this.settings?.speechEngine !== "chrome" &&
+      this.level !== undefined &&
+      this.now - this.heardAt > SILENT_MS
+    );
   }
 
   label = (code: string) => languageNames.of(NAME_CODE[code] ?? code) ?? code;
@@ -107,6 +124,8 @@ class Panel {
   private onMessage(msg: ServerMsg) {
     if (msg.type === "transcription.status") {
       this.transcriptionError = msg.error ?? undefined;
+    } else if (msg.type === "chrome.status") {
+      this.chromeStatus = msg.status ?? undefined;
     } else if (msg.type === "usage") {
       this.usage = msg.usage;
     } else if (msg.type === "settings.changed") {
@@ -141,6 +160,20 @@ class Panel {
       if (id === this.updates) this.view = view;
     });
 
+  openChrome = () => this.run(api.openChrome);
+
+  resetChrome = () =>
+    this.run(async () => {
+      await api.resetChrome();
+      toast.success("Chrome をリセットしました");
+    });
+
+  /** 鍵がないときの入口。押した人にだけ、Chrome のモードに切り替えて始める */
+  startWithChrome = () => {
+    this.level = undefined;
+    return this.update({ speechEngine: "chrome", transcriptionEnabled: true });
+  };
+
   setTranscription(enabled: boolean) {
     this.level = undefined;
     return this.update({ transcriptionEnabled: enabled });
@@ -161,11 +194,11 @@ class Panel {
     this.gift = await api.gift().catch(() => undefined);
   };
 
-  /** 使えるコードなら保存する。保存できたら true */
+  /** 有効なコードなら保存する。保存できたら true */
   setGift = (code: string) =>
     this.run(async () => {
       const status = await api.setGift(code);
-      if (status.state !== "active") throw new Error(giftStatusText(status));
+      if (!giftValid(status)) throw new Error(giftStatusText(status));
       this.gift = status;
       this.view = await api.settings();
       toast.success("ギフトコードを保存しました");
@@ -216,6 +249,9 @@ class Panel {
 
 export const panel = new Panel();
 
+/** ギフトコードの 1 日の上限は UTC の日で区切る */
+export const LIMIT_RESET = "日本時間の朝 9 時（UTC の 0 時）にまた使えます";
+
 /** 字幕が止まった理由を文にする（サーバーは種類と中身だけを返す） */
 export function transcriptionErrorText(e: TranscriptionError): string {
   switch (e.code) {
@@ -225,6 +261,8 @@ export function transcriptionErrorText(e: TranscriptionError): string {
       return `ギフトコードの期限が切れました（${dateTime(e.expiresAt)} まで）`;
     case "giftRevoked":
       return "ギフトコードが止められています。おすそ分けしてくれた人に確かめてください";
+    case "giftLimit":
+      return `ギフトコードの今日の上限に達しました。${LIMIT_RESET}`;
     case "giftUnknown":
       return "ギフトコードが見つかりません。おすそ分けしてくれた人に確かめてください";
     case "inputEnded":
@@ -258,6 +296,10 @@ function micErrorText(e: MicError): string {
 /** 種類を足したら、ここで型エラーになる（版の違うサーバーから届いたときは中身を出す） */
 const unknown = (e: never) => `止まりました（${JSON.stringify(e)}）`;
 
+/** 有効なコードか。今日の上限は日が変われば戻るので、今は使えなくても有効 */
+export const giftValid = (s: GiftStatus | undefined) =>
+  s?.state === "active" || s?.state === "limit";
+
 /** ギフトコードの状態を文にする（使えるときは期限） */
 export function giftStatusText(s: GiftStatus): string {
   switch (s.state) {
@@ -269,6 +311,8 @@ export function giftStatusText(s: GiftStatus): string {
       return `期限が切れています（${dateTime(s.expiresAt)} まで）`;
     case "revoked":
       return "おすそ分けした人が止めています";
+    case "limit":
+      return `今日の上限に達しました。${LIMIT_RESET}`;
     case "unknown":
       return "このコードは見つかりません。打ち間違いがないか確かめてください";
     case "unreachable":

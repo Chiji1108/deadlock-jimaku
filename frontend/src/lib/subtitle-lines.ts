@@ -1,6 +1,7 @@
 import type { Segment } from "../generated/Segment";
 import type { Settings } from "../generated/Settings";
 import type { SubtitleDisplay } from "../generated/SubtitleDisplay";
+import type { Token } from "../generated/Token";
 
 /** 翻訳だけを出すか。翻訳先がなければ、話した言葉を出す */
 export const translationOnly = (s: Settings) =>
@@ -17,6 +18,24 @@ export const isReady = (s: Segment, { showSource }: Pick<SubtitleDisplay, "showS
 export const showsSource = (s: Segment, display?: Pick<SubtitleDisplay, "showSource">) =>
   display?.showSource !== false ||
   !Object.values(translationsOf(s)).some((tokens) => tokens?.length);
+
+const written = (token: Token) => (token.t === "text" ? token.text : (token.spoken ?? ""));
+
+/** 途中の字幕に付いていた用語 */
+export const draftTerms = (s: Segment) =>
+  new Set(s.tokens?.flatMap((token) => (token.t === "entity" ? [token.ref] : [])));
+
+/** 出す文字数までのトークン。途中で切れた語はただの文字にする（ふりがなもアイコンも付けない） */
+export function revealed(tokens: Token[], count: number): Token[] {
+  let rest = count;
+  return tokens.flatMap((token): Token[] => {
+    if (rest <= 0) return [];
+    const text = written(token);
+    const cut = text.slice(0, rest);
+    rest -= cut.length;
+    return [cut === text ? token : { t: "text", text: cut }];
+  });
+}
 
 type Timing = Pick<SubtitleDisplay, "maxLines" | "minReadSeconds" | "maxWaitSeconds">;
 

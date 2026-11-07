@@ -14,6 +14,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await res.json()) as T;
 }
 
+async function post(path: string) {
+  const res = await fetch(path, { method: "POST" });
+  if (!res.ok) throw new Error((await res.text()) || res.statusText);
+}
+
 export const api = {
   settings: () => request<SettingsView>("/api/settings"),
   updateSettings: (patch: SettingsPatch) =>
@@ -28,10 +33,14 @@ export const api = {
   /** 対応している言語のコード */
   languages: () => request<string[]>("/api/languages"),
   demo: () => fetch("/api/demo", { method: "POST" }),
+  /** 聞き取りのページを Chrome で開く */
+  openChrome: () => post("/api/chrome/open"),
+  /** Chrome の専用のデータを消して始め直す */
+  resetChrome: () => post("/api/chrome/reset"),
 
   /** もらったギフトコードの状態 */
   gift: () => request<GiftStatus>("/api/gift"),
-  /** 使えるコードだけ保存される。使えなければその状態を返す（投げない） */
+  /** 有効なコードだけ保存される。無効ならその状態を返す（投げない） */
   setGift: async (code: string): Promise<GiftStatus> => {
     const res = await fetch("/api/gift", {
       method: "PUT",
@@ -51,9 +60,17 @@ export const api = {
   enableShare: () => request<ShareView>("/api/share", { method: "POST" }),
   disableShare: () => request<ShareView>("/api/share", { method: "DELETE" }),
   /** `expiresAt` はミリ秒。null は期限なし */
-  createCode: (body: { memo: string; expiresAt: number | null }) =>
+  createCode: (body: { memo: string; expiresAt: number | null; dailyLimitUsd: number | null }) =>
     request<ShareView>("/api/share/codes", { method: "POST", body: JSON.stringify(body) }),
-  updateCode: (id: string, body: { memo?: string; expiresAt?: number | null; revoked?: boolean }) =>
+  updateCode: (
+    id: string,
+    body: {
+      memo?: string;
+      expiresAt?: number | null;
+      dailyLimitUsd?: number | null;
+      revoked?: boolean;
+    },
+  ) =>
     request<ShareView>(`/api/share/codes/${encodeURIComponent(id)}`, {
       method: "PATCH",
       body: JSON.stringify(body),

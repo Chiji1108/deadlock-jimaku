@@ -5,6 +5,7 @@ import type { Models } from "./Models";
 import type { RankContent } from "./RankContent";
 import type { Region } from "./Region";
 import type { Segmentation } from "./Segmentation";
+import type { SpeechEngine } from "./SpeechEngine";
 import type { SubtitleDisplay } from "./SubtitleDisplay";
 
 export type Settings = { 
@@ -12,6 +13,10 @@ export type Settings = {
  * マイクを字幕にするか（操作パネルの開始・停止）
  */
 transcriptionEnabled: boolean, 
+/**
+ * 音声認識と翻訳をどこで動かすか
+ */
+speechEngine: SpeechEngine, 
 /**
  * 配信者が話す言語
  */
@@ -41,7 +46,8 @@ subtitleDisplay: SubtitleDisplay,
  */
 itemCards: ItemCards, 
 /**
- * ランク名の言語。None なら話す言語
+ * ランク名の言語。None なら話す言語に合わせる。
+ * 既定は None のまま（前の版の設定ファイルを変えない）で、新しく使い始める人は英語（`load`）
  */
 rankLanguage?: string, 
 /**
@@ -67,7 +73,11 @@ onboardingClosed: boolean,
 /**
  * ウィンドウを閉じても動き続けることを知らせた
  */
-trayNoticeSeen: boolean, models: Models, 
+trayNoticeSeen: boolean, 
+/**
+ * Chrome のモードの「ハイブリッドにする」の提案を閉じた
+ */
+hybridHintClosed: boolean, models: Models, 
 /**
  * リアルタイムの音声認識の遅れ（`minimal` / `low` / `medium` / `high` / `xhigh`。
  * 低いほど早く字幕が出て、高いほど正確）

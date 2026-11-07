@@ -1,7 +1,9 @@
 //! 状態ストア + broadcast（DESIGN.md 10 章）。状態はサーバーが持ち、変更は最新の状態をそのまま流す。
 
 use std::collections::VecDeque;
+use std::io;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -9,12 +11,41 @@ use bytes::Bytes;
 use tokio::sync::{broadcast, watch};
 
 use crate::assets::Loaded;
-use crate::settings::{self, Settings, SettingsPatch, SubtitleDisplay};
-use crate::types::{ItemCardsView, RankState, Segment, ServerMsg, Stage, TranscriptionError};
+use crate::chrome::{self, Browser};
+use crate::settings::{self, Settings, SettingsPatch, SpeechEngine, SubtitleDisplay};
+use crate::types::{
+    ChromeCommand, Heard, ItemCardsView, LiveState, LiveStatus, RankState, Segment, ServerMsg,
+    Stage, TranscriptionError, Translated,
+};
 use crate::usage::Meter;
 
 /// snapshot で送る直近の Segment の数
 const KEEP_SEGMENTS: usize = 50;
+
+/// Chrome のページから字幕の処理へ（確定の文を落とさない）。字幕を止めていれば誰も受け取らない
+#[derive(Clone, Debug, PartialEq)]
+pub enum ChromeEvent {
+    Heard(Heard),
+    Translated(Translated),
+    /// ページが閉じられた
+    Closed,
+}
+
+/// 聞いているページ（DESIGN.md 9.6）
+#[derive(Default)]
+pub struct ChromeTab {
+    /// つなぐたびに増える。今より古いページは閉じる
+    pub id: u64,
+    status: Option<LiveStatus>,
+    /// ウィンドウを開けない、閉じられた理由。ページがつながっている間は出さない
+    window: Option<LiveStatus>,
+}
+
+impl ChromeTab {
+    fn view(&self) -> Option<LiveStatus> {
+        self.status.clone().or_else(|| self.window.clone())
+    }
+}
 
 pub struct Store {
     /// 変わったら `runtime` が処理を張り直す
@@ -28,6 +59,8 @@ pub struct Store {
     transcription_error: Mutex<Option<TranscriptionError>>,
     segments: Mutex<VecDeque<Segment>>,
     glossary: watch::Sender<Option<Loaded>>,
+    /// 新しい版の辞書を作り直すよう頼んだ回数。変わると `runtime` が辞書の処理を張り直す
+    glossary_refreshes: AtomicU64,
     rank: Mutex<Option<RankState>>,
     /// バッジ → アイコン（webp）。バッジごとに持ち、別のバッジのアイコンを配信しない
     rank_image: Mutex<Option<(u32, Bytes)>>,
@@ -35,6 +68,16 @@ pub struct Store {
     /// マイクの入力レベル（dBFS）。1 秒に 10 回届くので、字幕などと同じ broadcast には流さない
     /// （購読していないオーバーレイを起こさず、取りこぼしの原因にもしない）
     level: watch::Sender<f32>,
+    live_status: Mutex<Option<LiveStatus>>,
+    chrome_events: broadcast::Sender<ChromeEvent>,
+    chrome_commands: broadcast::Sender<ChromeCommand>,
+    chrome_tab: watch::Sender<ChromeTab>,
+    /// 字幕を出している間の Chrome。落とすと閉じる
+    browser: Mutex<Option<Browser>>,
+    /// Chrome を開いておくか（`runtime` が決める）
+    chrome_wanted: AtomicBool,
+    /// ハイブリッドの発話を閉じた回数
+    chrome_cuts: AtomicU32,
     meter: Arc<Meter>,
 }
 
@@ -56,10 +99,18 @@ impl Store {
             transcription_error: Mutex::new(None),
             segments: Mutex::new(VecDeque::new()),
             glossary: watch::Sender::new(None),
+            glossary_refreshes: AtomicU64::new(0),
             rank: Mutex::new(None),
             rank_image: Mutex::new(None),
             tx: broadcast::channel(256).0,
             level: watch::Sender::new(f32::NEG_INFINITY),
+            live_status: Mutex::new(None),
+            chrome_events: broadcast::channel(256).0,
+            chrome_commands: broadcast::channel(256).0,
+            chrome_tab: watch::Sender::new(ChromeTab::default()),
+            browser: Mutex::new(None),
+            chrome_wanted: AtomicBool::new(false),
+            chrome_cuts: AtomicU32::new(0),
             meter,
         })
     }
@@ -112,6 +163,10 @@ impl Store {
     }
 
     pub fn set_transcription_error(&self, error: Option<TranscriptionError>) {
+        // ハイブリッドで確定の字幕が止まったら、音声を Google に送り続けない
+        if error.is_some() && self.settings().speech_engine == SpeechEngine::Hybrid {
+            self.close_chrome();
+        }
         *self.transcription_error.lock().unwrap() = error.clone();
         let _ = self.tx.send(ServerMsg::TranscriptionStatus { error });
     }
@@ -173,11 +228,165 @@ impl Store {
         msgs.push(ServerMsg::TranscriptionStatus {
             error: self.transcription_error(),
         });
+        msgs.push(ServerMsg::LiveStatus {
+            status: self.live_status.lock().unwrap().clone(),
+        });
+        msgs.push(ServerMsg::ChromeStatus {
+            status: self.chrome_tab.borrow().view(),
+        });
         msgs.push(display(&self.settings()));
         msgs.push(ServerMsg::Usage {
             usage: self.meter.watch().borrow().clone(),
         });
         msgs
+    }
+
+    /// 字幕の処理が文を受け取れるか。変わったときだけ知らせる
+    pub fn set_live_status(&self, status: Option<LiveStatus>) {
+        let mut current = self.live_status.lock().unwrap();
+        if *current != status {
+            current.clone_from(&status);
+            let _ = self.tx.send(ServerMsg::LiveStatus { status });
+        }
+    }
+
+    /// 変わったときだけ知らせる
+    fn change_chrome_tab(&self, change: impl FnOnce(&mut ChromeTab)) {
+        self.chrome_tab.send_modify(|tab| {
+            let before = tab.view();
+            change(tab);
+            let status = tab.view();
+            if status != before {
+                let _ = self.tx.send(ServerMsg::ChromeStatus { status });
+            }
+        });
+    }
+
+    /// ページがつながった。聞くのは 1 つだけなので、今のページに代わる（聞いているページはこれで閉じる）。
+    /// 戻り値はこのページの番号と、代わられたと分かるもの
+    pub fn connect_chrome(&self) -> (u64, watch::Receiver<ChromeTab>) {
+        let mut replaced = false;
+        let mut id = 0;
+        self.chrome_tab.send_modify(|tab| {
+            tab.id += 1;
+            id = tab.id;
+            replaced = tab.status.is_some();
+        });
+        if replaced {
+            self.send_chrome_event(ChromeEvent::Closed);
+        }
+        (id, self.chrome_tab.subscribe())
+    }
+
+    /// 古いページの知らせは捨てる
+    pub fn set_chrome_status(&self, id: u64, status: LiveStatus) {
+        self.change_chrome_tab(|tab| {
+            if tab.id == id {
+                tab.status = Some(status);
+            }
+        });
+    }
+
+    /// ページが切れた。代わられたあとの古いページなら、今のページの状態を消さない
+    pub fn chrome_tab_closed(&self, id: u64) {
+        self.change_chrome_tab(|tab| {
+            if tab.id == id {
+                tab.status = None;
+                self.send_chrome_event(ChromeEvent::Closed);
+            }
+        });
+    }
+
+    /// ハイブリッドの発話を閉じた。番号は字幕の処理を作り直しても戻らないので、ページとずれない
+    pub fn cut_chrome(&self) {
+        let count = self.chrome_cuts.fetch_add(1, Ordering::Relaxed) + 1;
+        self.send_chrome_command(ChromeCommand::Cut { count });
+    }
+
+    pub fn chrome_cuts(&self) -> u32 {
+        self.chrome_cuts.load(Ordering::Relaxed)
+    }
+
+    /// 今操作パネルに出している、ページの状態
+    pub fn snapshot_chrome_status(&self) -> Option<LiveStatus> {
+        self.chrome_tab.borrow().view()
+    }
+
+    pub fn send_chrome_event(&self, event: ChromeEvent) {
+        let _ = self.chrome_events.send(event);
+    }
+
+    pub fn subscribe_chrome(&self) -> broadcast::Receiver<ChromeEvent> {
+        self.chrome_events.subscribe()
+    }
+
+    /// ページが開いていなければ false
+    pub fn send_chrome_command(&self, command: ChromeCommand) -> bool {
+        self.chrome_commands.send(command).is_ok()
+    }
+
+    pub fn subscribe_chrome_commands(&self) -> broadcast::Receiver<ChromeCommand> {
+        self.chrome_commands.subscribe()
+    }
+
+    /// Chrome のウィンドウの問題を操作パネルに出す
+    pub fn set_chrome_window(&self, problem: Option<LiveStatus>) {
+        self.change_chrome_tab(|tab| tab.window = problem);
+    }
+
+    /// 字幕を始めるなら Chrome を起動し、止めるなら閉じる（DESIGN.md 9.6）
+    pub fn sync_chrome(self: &Arc<Self>, wanted: bool) {
+        self.chrome_wanted.store(wanted, Ordering::Relaxed);
+        // ハイブリッドで確定の字幕が止まっているなら、音声を Google に送らない
+        let stalled = self.transcription_error.lock().unwrap().is_some()
+            && self.settings().speech_engine == SpeechEngine::Hybrid;
+        if !wanted || stalled {
+            self.close_chrome();
+            return;
+        }
+        let mut browser = self.browser.lock().unwrap();
+        if browser.as_mut().is_some_and(Browser::running) {
+            return;
+        }
+        match Browser::launch(self.clone()) {
+            Ok(launched) => {
+                *browser = Some(launched);
+                drop(browser);
+                self.set_chrome_window(None);
+            }
+            Err(e) => {
+                tracing::warn!("open chrome: {e}");
+                drop(browser);
+                self.set_chrome_window(Some(LiveStatus {
+                    state: LiveState::Missing,
+                    detail: Some("Google Chrome が必要です".into()),
+                }));
+            }
+        }
+    }
+
+    pub fn close_chrome(&self) {
+        *self.browser.lock().unwrap() = None;
+        self.set_chrome_window(None);
+    }
+
+    /// 開き直す。プロセスが残っていても、ページが止まっていることがある
+    pub fn reopen_chrome(self: &Arc<Self>) {
+        self.close_chrome();
+        self.sync_chrome(self.chrome_wanted.load(Ordering::Relaxed));
+    }
+
+    /// Chrome を止めてプロファイルを消し、字幕が動いていれば起動し直す（DESIGN.md 9.6）。
+    /// 消し終わるまで `browser` を持ち、消している間に `sync_chrome` が起動しないようにする。
+    /// 消せなくても、字幕を止めたままにしない
+    pub fn reset_chrome(self: &Arc<Self>) -> io::Result<()> {
+        let removed = {
+            let mut browser = self.browser.lock().unwrap();
+            *browser = None;
+            chrome::remove_profile(&self.data_dir)
+        };
+        self.sync_chrome(self.chrome_wanted.load(Ordering::Relaxed));
+        removed
     }
 
     /// OpenAI の使用量を数える
@@ -231,8 +440,22 @@ impl Store {
         let _ = self.tx.send(ServerMsg::GlossaryUpdated { client_version });
     }
 
+    /// 辞書を作り直す。できたら `set_glossary` が知らせ、用語の表も差し替わる
+    pub fn refresh_glossary(&self) {
+        self.glossary_refreshes.fetch_add(1, Ordering::Relaxed);
+        self.restart();
+    }
+
+    pub fn glossary_refreshes(&self) -> u64 {
+        self.glossary_refreshes.load(Ordering::Relaxed)
+    }
+
     pub fn glossary(&self) -> Option<Loaded> {
         self.glossary.borrow().clone()
+    }
+
+    pub fn watch_glossary(&self) -> watch::Receiver<Option<Loaded>> {
+        self.glossary.subscribe()
     }
 
     /// その言語を頼んで作った辞書ができるまで待つ（言語を変えた直後の古い辞書は使わない）。
@@ -260,7 +483,7 @@ fn display(settings: &Settings) -> ServerMsg {
     ServerMsg::Display {
         // 翻訳先がなければ話した言葉を出す
         subtitles: SubtitleDisplay {
-            show_source: !settings.translation_only(),
+            show_source: !settings.plan().translation_only,
             ..settings.subtitle_display.clone()
         },
         rank_language: settings.rank_language(),
@@ -289,6 +512,7 @@ mod tests {
             lang: "ja".into(),
             text: text.into(),
             enriched: None,
+            tokens: None,
             draft: None,
             settled_at: None,
         }

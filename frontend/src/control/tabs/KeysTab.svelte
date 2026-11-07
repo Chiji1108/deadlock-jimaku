@@ -6,13 +6,13 @@
   import { Input } from "$lib/components/ui/input";
   import type { Provider } from "../../generated/Provider";
   import OpenAiKeyGuide from "../parts/OpenAiKeyGuide.svelte";
-  import { giftStatusText, panel } from "../panel.svelte";
+  import { giftStatusText, giftValid, panel } from "../panel.svelte";
 
   const providers: { provider: Provider; name: string; use: string }[] = [
     {
       provider: "openai",
       name: "OpenAI",
-      use: "文字起こし・翻訳・ふりがなに使います。作り方は上にあります",
+      use: "ハイブリッドと OpenAI のモードの文字起こし・翻訳・ふりがなに使います。作り方は上にあります",
     },
   ];
 
@@ -110,15 +110,15 @@
           <div class="flex items-center gap-2">
             <Field.Label for="gift">コード</Field.Label>
             {#if giftSaved}
-              <Badge variant={panel.gift?.state === "active" ? "secondary" : "destructive"}>
-                {panel.gift?.state === "active" ? "保存済み" : "使えません"}
+              <Badge variant={giftValid(panel.gift) ? "secondary" : "destructive"}>
+                {giftValid(panel.gift) ? "保存済み" : "使えません"}
               </Badge>
             {:else}
               <Badge variant="outline">未設定</Badge>
             {/if}
           </div>
           {#if giftSaved && panel.gift}
-            <Field.Description class={panel.gift.state === "active" ? "" : "text-destructive"}>
+            <Field.Description class={giftValid(panel.gift) ? "" : "text-destructive"}>
               {giftStatusText(panel.gift)}
             </Field.Description>
           {/if}

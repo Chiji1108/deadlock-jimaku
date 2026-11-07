@@ -2,6 +2,7 @@
 import type { Anchor } from "./Anchor";
 import type { ItemCardsPatch } from "./ItemCardsPatch";
 import type { RankContent } from "./RankContent";
+import type { SpeechEngine } from "./SpeechEngine";
 import type { SubtitleDisplayPatch } from "./SubtitleDisplayPatch";
 
 /**
@@ -11,7 +12,7 @@ export type SettingsPatch = { transcriptionEnabled?: boolean,
 /**
  * 空文字列なら OS の既定の入力デバイス
  */
-micDevice?: string, micLanguage?: string, translateTo?: Array<string>, deadlockMode?: boolean, liveSubtitles?: boolean, 
+micDevice?: string, micLanguage?: string, translateTo?: Array<string>, deadlockMode?: boolean, liveSubtitles?: boolean, speechEngine?: SpeechEngine, 
 /**
  * SteamID64 か 32bit のアカウント ID。空文字列ならランクを表示しない
  */
@@ -23,7 +24,7 @@ minSilenceMs?: number,
 /**
  * 空文字列なら話す言語
  */
-rankLanguage?: string, rankContent?: RankContent, rankAnchor?: Anchor, obsSeen?: boolean, onboardingClosed?: boolean, trayNoticeSeen?: boolean, 
+rankLanguage?: string, rankContent?: RankContent, rankAnchor?: Anchor, obsSeen?: boolean, onboardingClosed?: boolean, hybridHintClosed?: boolean, trayNoticeSeen?: boolean, 
 /**
  * 地域（`Region`）。空文字列なら順位を調べない
  */

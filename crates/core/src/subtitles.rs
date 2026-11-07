@@ -5,6 +5,8 @@
 //!                        └→ Segment が閉じたら区間を切り出して GPT-Transcribe（final）
 //!                             → ふりがな・翻訳・固有名詞（enriched）
 //!
+//! Chrome のモードの経路は `chrome.rs` にある。発話の形とオーバーレイへの出力だけを共有する。
+//!
 //! Segment の状態を書き換えるのは `Pipeline` だけにする。バッチや enrich の結果もチャンネルで受け取って反映する。
 
 use std::collections::{HashMap, VecDeque};
@@ -13,15 +15,21 @@ use std::time::{Duration, Instant};
 
 use tokio::sync::mpsc;
 
+use crate::annotate::Annotator;
 use crate::audio::{self, History, SAMPLE_RATE};
+use crate::chrome;
 use crate::enrich::Enricher;
 use crate::lang;
 use crate::now_ms;
 use crate::openai::Access;
-use crate::settings::Settings;
-use crate::store::Store;
+use crate::settings::{Settings, TextSource};
+use crate::share;
+use crate::store::{ChromeEvent, Store};
 use crate::stt::{self, BatchRequest, Hints, RealtimeConfig};
-use crate::types::{Enriched, EntityKind, Glossary, LangCode, Segment, Stage, Translations};
+use crate::types::{
+    ChromeCommand, Enriched, EntityKind, Glossary, Heard, LangCode, Segment, Stage, Token,
+    Translated, Translations,
+};
 use crate::usage::Meter;
 
 /// earshot が受け取るフレームの長さ（16ms）
@@ -72,12 +80,17 @@ pub async fn run(store: Arc<Store>, input: audio::Input, access: Access) -> anyh
         .to_owned(),
         keywords,
     });
+    // 文を受け取ったら読みと用語を付ける。ハイブリッドの途中の文は Chrome から届く
+    let mut chrome_events = store.subscribe_chrome();
+    let annotator = Annotator::new(store.clone(), &settings).await;
     let mut audio_rx = audio::open(input).await?;
 
+    let (done_tx, mut done_rx) = mpsc::channel(64);
     // 開く・音声・閉じるは同じチャンネルで順番どおりに送る
     let (delta_tx, mut delta_rx) = mpsc::channel(256);
     // オフなら Realtime につながず、確定の字幕だけを出す
-    let realtime = if settings.wants_live_subtitles() {
+    let plan = settings.plan();
+    let realtime = if plan.partial.text == Some(TextSource::GptLiveTranscribe) {
         let (tx, rx) = mpsc::unbounded_channel();
         let config = RealtimeConfig {
             access: access.clone(),
@@ -85,39 +98,39 @@ pub async fn run(store: Arc<Store>, input: audio::Input, access: Access) -> anyh
             delay: settings.realtime_delay.clone(),
             meter: store.meter(),
         };
-        tokio::spawn(realtime_loop(config, hints.clone(), rx, delta_tx));
+        tokio::spawn(realtime_loop(
+            config,
+            hints.clone(),
+            rx,
+            delta_tx,
+            done_tx.clone(),
+        ));
         Some(tx)
     } else {
         None
     };
 
-    let enricher = Enricher::new(
-        access.clone(),
-        &settings.models,
-        settings.mic_language.clone(),
-        settings.translate_to.clone(),
-        settings.deadlock_mode,
-        store.meter(),
-    );
-    let (done_tx, mut done_rx) = mpsc::channel(64);
-    let batch = Arc::new(BatchContext {
-        http: crate::http().clone(),
-        access,
-        model: settings.models.batch.clone(),
-        hints,
-        meter: store.meter(),
-    });
-    let mut pipeline = Pipeline::new(
-        store,
-        &settings,
-        batch,
-        Arc::new(enricher),
-        done_tx,
-        realtime,
-    );
+    let cloud = Cloud {
+        enricher: Arc::new(Enricher::new(
+            access.clone(),
+            &settings.models,
+            settings.mic_language.clone(),
+            settings.translate_to.clone(),
+            settings.deadlock_mode,
+            store.meter(),
+        )),
+        batch: Arc::new(BatchContext {
+            http: crate::http().clone(),
+            access,
+            model: settings.models.batch.clone(),
+            hints,
+            meter: store.meter(),
+        }),
+    };
+    let mut pipeline = Pipeline::new(store, &settings, cloud, done_tx, realtime, annotator);
 
     let mut level = LevelMeter::default();
-    loop {
+    while !pipeline.daily_limit {
         tokio::select! {
             chunk = audio_rx.recv() => {
                 let Some(chunk) = chunk else { break };
@@ -128,6 +141,7 @@ pub async fn run(store: Arc<Store>, input: audio::Input, access: Access) -> anyh
             }
             Some(delta) = delta_rx.recv() => pipeline.on_delta(delta),
             Some(done) = done_rx.recv() => pipeline.on_done(done),
+            Ok(event) = chrome_events.recv() => pipeline.on_chrome(event),
         }
     }
 
@@ -138,6 +152,9 @@ pub async fn run(store: Arc<Store>, input: audio::Input, access: Access) -> anyh
             Some(done) = done_rx.recv() => pipeline.on_done(done),
             Some(delta) = delta_rx.recv() => pipeline.on_delta(delta),
         }
+    }
+    if pipeline.daily_limit {
+        return Err(share::DailyLimit.into());
     }
     Ok(())
 }
@@ -166,17 +183,23 @@ impl LevelMeter {
     }
 }
 
+/// OpenAI の確定の字幕と enrich
+struct Cloud {
+    batch: Arc<BatchContext>,
+    enricher: Arc<Enricher>,
+}
+
 struct Pipeline {
     store: Arc<Store>,
     lang: LangCode,
-    batch: Arc<BatchContext>,
-    enricher: Arc<Enricher>,
+    cloud: Cloud,
     done_tx: mpsc::Sender<Done>,
     history: History,
     detector: earshot::Detector,
     segmenter: Segmenter,
     /// リアルタイムの音声認識へ（途中の字幕を出さないときと、入力が終わったあとは None）
     realtime: Option<mpsc::UnboundedSender<stt::Input>>,
+    annotator: Annotator,
     live: HashMap<String, Segment>,
     current: Option<String>,
     frame: Vec<f32>,
@@ -186,27 +209,29 @@ struct Pipeline {
     context: VecDeque<String>,
     /// バッチか enrich の結果を待っている数
     pending: usize,
+    /// ギフトコードの今日の上限に達した。確定の字幕は発話ごとに送るので、これで気づける
+    daily_limit: bool,
 }
 
 impl Pipeline {
     fn new(
         store: Arc<Store>,
         settings: &Settings,
-        batch: Arc<BatchContext>,
-        enricher: Arc<Enricher>,
+        cloud: Cloud,
         done_tx: mpsc::Sender<Done>,
         realtime: Option<mpsc::UnboundedSender<stt::Input>>,
+        annotator: Annotator,
     ) -> Self {
         Self {
             store,
             lang: settings.mic_language.clone(),
-            batch,
-            enricher,
+            cloud,
             done_tx,
             history: History::new(60),
             detector: earshot::Detector::default(),
             segmenter: Segmenter::new(&settings.segmentation),
             realtime,
+            annotator,
             live: HashMap::new(),
             current: None,
             frame: Vec::with_capacity(FRAME * 2),
@@ -214,6 +239,7 @@ impl Pipeline {
             seq: 0,
             context: VecDeque::new(),
             pending: 0,
+            daily_limit: false,
         }
     }
 
@@ -252,22 +278,12 @@ impl Pipeline {
 
     fn open(&mut self) {
         self.seq += 1;
-        let started_at = now_ms();
-        let id = format!("mic-{started_at}-{}", self.seq);
+        let segment = partial_segment(self.seq, &self.lang);
+        let id = segment.id.clone();
         self.send_realtime(stt::Input::Open(id.clone()));
-        self.live.insert(
-            id.clone(),
-            Segment {
-                id: id.clone(),
-                started_at,
-                stage: Stage::Partial,
-                lang: self.lang.clone(),
-                text: String::new(),
-                enriched: None,
-                draft: None,
-                settled_at: None,
-            },
-        );
+        // 発話が開く前に Chrome が確定した文は、この発話の文ではない
+        self.store.send_chrome_command(ChromeCommand::Open);
+        self.live.insert(id.clone(), segment);
         self.current = Some(id);
     }
 
@@ -277,6 +293,8 @@ impl Pipeline {
         };
         // 捨てる発話も閉じる（閉じないと、その音声が次の発話に混ざる）
         self.send_realtime(stt::Input::Close);
+        // Chrome の文を次の発話に持ち越さない
+        self.store.cut_chrome();
         if close.speech_ms < MIN_SPEECH_MS {
             self.discard(&id);
             return;
@@ -297,7 +315,7 @@ impl Pipeline {
         let wav = audio::wav(&samples);
         self.pending += 1;
         tokio::spawn(transcribe(
-            self.batch.clone(),
+            self.cloud.batch.clone(),
             id,
             wav,
             seconds,
@@ -306,12 +324,50 @@ impl Pipeline {
     }
 
     fn discard(&mut self, id: &str) {
-        if let Some(mut seg) = self.live.remove(id) {
-            // まだ表示していなければ流す必要もない
-            if !seg.text.is_empty() {
-                seg.stage = Stage::Discarded;
-                self.store.upsert_segment(seg);
+        if let Some(seg) = self.live.remove(id) {
+            discard(&self.store, seg);
+        }
+    }
+
+    /// Chrome の途中の文と訳を、開いている発話に載せる。確定の文は OpenAI が作る
+    fn on_chrome(&mut self, event: ChromeEvent) {
+        match event {
+            ChromeEvent::Heard(heard) => self.on_heard(heard),
+            ChromeEvent::Translated(Translated {
+                id,
+                is_final: false,
+                translations,
+            }) => {
+                if let Some(seg) = self.live.get_mut(&id) {
+                    let translation_only = self.store.settings().plan().translation_only;
+                    if apply_draft(seg, translations, translation_only) {
+                        self.store.upsert_segment(seg.clone());
+                    }
+                }
             }
+            ChromeEvent::Translated(_) | ChromeEvent::Closed => {}
+        }
+    }
+
+    /// 区切られたあとに届いた、前の発話の文は捨てる
+    fn on_heard(&mut self, Heard { text, cut, .. }: Heard) {
+        let Some(id) = self.current.clone() else {
+            return;
+        };
+        if cut != self.store.chrome_cuts() || text.is_empty() {
+            return;
+        }
+        let seg = self.live.get_mut(&id);
+        let Some(seg) = seg.filter(|s| s.stage == Stage::Partial) else {
+            return;
+        };
+        let phase = self.store.settings().plan().partial;
+        let (tokens, translate) = self.annotator.annotate(&text, &phase);
+        seg.text = text;
+        seg.tokens = phase.marks().then_some(tokens);
+        self.store.upsert_segment(seg.clone());
+        if phase.translation.is_some() {
+            chrome::ask_translation(&self.store, id, translate, false);
         }
     }
 
@@ -319,6 +375,10 @@ impl Pipeline {
         let seg = self.live.get_mut(&delta.segment);
         if let Some(seg) = seg.filter(|s| s.stage == Stage::Partial) {
             seg.text.push_str(&delta.text);
+            let phase = self.store.settings().plan().partial;
+            seg.tokens = phase
+                .marks()
+                .then(|| self.annotator.annotate(&seg.text, &phase).0);
             self.store.upsert_segment(seg.clone());
         }
     }
@@ -329,6 +389,7 @@ impl Pipeline {
                 self.pending -= 1;
                 self.on_transcribed(&id, text);
             }
+            Done::DailyLimit => self.daily_limit = true,
             Done::Draft { id, translations } => self.on_draft(&id, translations),
             Done::Enriched { id, enriched } => {
                 self.pending -= 1;
@@ -338,6 +399,7 @@ impl Pipeline {
     }
 
     fn on_transcribed(&mut self, id: &str, text: Option<String>) {
+        let plan = self.store.settings().plan();
         let Some(seg) = self.live.get_mut(id) else {
             return;
         };
@@ -353,6 +415,11 @@ impl Pipeline {
         }
         seg.stage = Stage::Final;
         seg.text = text.clone();
+        // 文と読みを同時に入れ替えるので、途中の字幕のふりがなやアイコンが消える瞬間がない
+        seg.tokens = plan
+            .partial
+            .marks()
+            .then(|| self.annotator.annotate(&text, &plan.partial).0);
         self.store.upsert_segment(seg.clone());
 
         let context: Vec<String> = self.context.iter().cloned().collect();
@@ -364,9 +431,9 @@ impl Pipeline {
         // 辞書は enrich のたびに store から取る（後から届いたり、作り直されたりする）。
         // ふりがなは出さない設定なら聞かない（字幕を止めずに切り替えられるので、そのときの設定を見る）
         let glossary = self.store.glossary().map(|l| l.glossary);
-        let furigana = self.store.settings().wants_furigana();
+        let furigana = plan.finals.ruby.is_some();
         tokio::spawn(enrich(
-            self.enricher.clone(),
+            self.cloud.enricher.clone(),
             id.to_owned(),
             text,
             context,
@@ -379,32 +446,98 @@ impl Pipeline {
     fn on_draft(&mut self, id: &str, translations: Translations) {
         if let Some(seg) = self.live.get_mut(id) {
             // 翻訳だけなら届いて初めて表示する。読む時間と並びはこの時刻から数える
-            if seg.draft.is_none() && self.store.settings().translation_only() {
+            if seg.draft.is_none() && self.store.settings().plan().translation_only {
                 seg.started_at = now_ms();
             }
-            seg.draft = Some(translations);
+            // 途中の字幕の訳が出ていれば、OpenAI の訳がそれを追い越すまで残す
+            let draft = seg.draft.get_or_insert_default();
+            for (lang, tokens) in translations {
+                if draft
+                    .get(&lang)
+                    .is_none_or(|old| text_len(old) <= text_len(&tokens))
+                {
+                    draft.insert(lang, tokens);
+                }
+            }
             self.store.upsert_segment(seg.clone());
         }
     }
 
-    fn on_enriched(&mut self, id: &str, mut enriched: Enriched) {
-        let Some(mut seg) = self.live.remove(id) else {
-            return;
-        };
-        // 訳文が 1 文字も届かなかったときも、翻訳だけならここで初めて表示する
-        let draft = seg.draft.take();
-        if draft.is_none() && self.store.settings().translation_only() {
-            seg.started_at = now_ms();
+    fn on_enriched(&mut self, id: &str, enriched: Enriched) {
+        if let Some(seg) = self.live.remove(id) {
+            let translation_only = self.store.settings().plan().translation_only;
+            self.store
+                .upsert_segment(settled(seg, enriched, translation_only));
         }
-        // 訳文のあとで失敗しても、出ている訳文は消さない
-        if enriched.translations.is_empty() {
-            enriched.translations = draft.unwrap_or_default();
-        }
-        seg.stage = Stage::Enriched;
-        seg.enriched = Some(enriched);
-        seg.settled_at = Some(now_ms());
-        self.store.upsert_segment(seg);
     }
+}
+
+/// 話し始めた発話
+pub(crate) fn partial_segment(seq: u64, lang: &str) -> Segment {
+    let started_at = now_ms();
+    Segment {
+        id: format!("mic-{started_at}-{seq}"),
+        started_at,
+        stage: Stage::Partial,
+        lang: lang.to_owned(),
+        text: String::new(),
+        enriched: None,
+        tokens: None,
+        draft: None,
+        settled_at: None,
+    }
+}
+
+/// ページの途中の訳を載せる。確定したあとに届いた途中の訳は使わない。載せたら true
+pub(crate) fn apply_draft(
+    seg: &mut Segment,
+    translations: Translations,
+    translation_only: bool,
+) -> bool {
+    if seg.stage != Stage::Partial || translations.is_empty() {
+        return false;
+    }
+    if seg.draft.is_none() && translation_only {
+        seg.started_at = now_ms();
+    }
+    seg.draft = Some(translations);
+    true
+}
+
+/// まだ表示していなければ流す必要もない
+pub(crate) fn discard(store: &Store, mut seg: Segment) {
+    if !seg.text.is_empty() {
+        seg.stage = Stage::Discarded;
+        store.upsert_segment(seg);
+    }
+}
+
+/// 字幕を完成させる
+pub(crate) fn settled(mut seg: Segment, mut enriched: Enriched, translation_only: bool) -> Segment {
+    // 訳文が 1 文字も届かなかったときも、翻訳だけならここで初めて表示する
+    let draft = seg.draft.take();
+    if draft.is_none() && translation_only {
+        seg.started_at = now_ms();
+    }
+    // 訳文のあとで失敗しても、出ている訳文は消さない
+    if enriched.translations.is_empty() {
+        enriched.translations = draft.unwrap_or_default();
+    }
+    seg.stage = Stage::Enriched;
+    seg.enriched = Some(enriched);
+    seg.settled_at = Some(now_ms());
+    seg
+}
+
+/// 訳文の長さ。用語は言語ごとの名前が分からないので数えない
+fn text_len(tokens: &[Token]) -> usize {
+    tokens
+        .iter()
+        .map(|t| match t {
+            Token::Text { text, .. } => text.chars().count(),
+            Token::Entity { .. } => 0,
+        })
+        .sum()
 }
 
 async fn realtime_loop(
@@ -412,6 +545,7 @@ async fn realtime_loop(
     hints: Arc<Hints>,
     mut input: mpsc::UnboundedReceiver<stt::Input>,
     deltas: mpsc::Sender<stt::Delta>,
+    done: mpsc::Sender<Done>,
 ) {
     let mut speaking = stt::Speaking::default();
     let mut backoff = Duration::from_secs(1);
@@ -419,6 +553,12 @@ async fn realtime_loop(
         let started = Instant::now();
         match stt::realtime(&cfg, &hints, &mut speaking, &mut input, &deltas).await {
             Ok(()) => return,
+            // 張り直しても断られるだけなので、字幕を止めて知らせる
+            Err(e) if e.is::<share::DailyLimit>() => {
+                tracing::warn!("realtime: {e:#}");
+                let _ = done.send(Done::DailyLimit).await;
+                return;
+            }
             Err(e) => tracing::warn!("realtime: {e:#}"),
         }
         if started.elapsed() > Duration::from_secs(30) {
@@ -456,6 +596,8 @@ enum Done {
         id: String,
         translations: Translations,
     },
+    /// サーバーがギフトコードの今日の上限で断った
+    DailyLimit,
     /// 翻訳に失敗しても、固有名詞とふりがなは付いている
     Enriched { id: String, enriched: Enriched },
 }
@@ -479,6 +621,9 @@ async fn transcribe(
         Ok(text) => Some(text),
         Err(e) => {
             tracing::warn!("batch transcription: {e:#}");
+            if e.is::<share::DailyLimit>() {
+                let _ = done.send(Done::DailyLimit).await;
+            }
             None
         }
     };
@@ -651,7 +796,183 @@ impl Segmenter {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::openai::Access;
     use crate::settings::Segmentation;
+    use crate::usage::Meter;
+    use axum::http::StatusCode;
+    use futures_util::{SinkExt, StreamExt};
+    use serde_json::json;
+    use tokio::net::TcpListener;
+    use tokio_tungstenite::tungstenite::Message;
+    use tokio_tungstenite::tungstenite::protocol::CloseFrame;
+    use tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode;
+
+    async fn hybrid_pipeline() -> (
+        Pipeline,
+        tokio::sync::broadcast::Receiver<crate::types::ServerMsg>,
+    ) {
+        let settings = Settings {
+            speech_engine: crate::settings::SpeechEngine::Hybrid,
+            ..Settings::default()
+        };
+        let store = Store::new(Ok(settings.clone()), std::path::PathBuf::new());
+        let messages = store.subscribe();
+        let access = Access::gift("code".into(), "http://127.0.0.1:9");
+        let cloud = Cloud {
+            enricher: Arc::new(Enricher::new(
+                access.clone(),
+                &settings.models,
+                settings.mic_language.clone(),
+                settings.translate_to.clone(),
+                settings.deadlock_mode,
+                store.meter(),
+            )),
+            batch: Arc::new(BatchContext {
+                http: crate::http().clone(),
+                access,
+                model: settings.models.batch.clone(),
+                hints: Arc::new(Hints {
+                    language: "ja".into(),
+                    prompt: String::new(),
+                    keywords: Vec::new(),
+                }),
+                meter: store.meter(),
+            }),
+        };
+        let (done_tx, _done) = mpsc::channel(1);
+        let annotator = Annotator::new(store.clone(), &settings).await;
+        let pipeline = Pipeline::new(store, &settings, cloud, done_tx, None, annotator);
+        (pipeline, messages)
+    }
+
+    fn heard(text: &str, cut: u32) -> crate::types::Heard {
+        crate::types::Heard {
+            text: text.into(),
+            is_final: false,
+            cut,
+        }
+    }
+
+    fn close() -> Close {
+        Close {
+            start: 0,
+            end: 0,
+            speech_ms: 0,
+            cut_start: false,
+            cut_end: false,
+        }
+    }
+
+    /// 流れた字幕の文
+    fn last_text(
+        messages: &mut tokio::sync::broadcast::Receiver<crate::types::ServerMsg>,
+    ) -> Option<String> {
+        let mut last = None;
+        while let Ok(message) = messages.try_recv() {
+            if let crate::types::ServerMsg::SegmentUpsert { segment } = message {
+                last = Some(segment.text);
+            }
+        }
+        last
+    }
+
+    #[tokio::test]
+    async fn a_late_chrome_text_of_the_previous_utterance_is_dropped() {
+        let (mut pipeline, mut messages) = hybrid_pipeline().await;
+        pipeline.open();
+        pipeline.on_chrome(ChromeEvent::Heard(heard("前の文", 0)));
+        assert_eq!(last_text(&mut messages).as_deref(), Some("前の文"));
+
+        // 区切ったあとに、区切る前の文が届く
+        pipeline.close(close());
+        last_text(&mut messages);
+        pipeline.open();
+        pipeline.on_chrome(ChromeEvent::Heard(heard("前の文の続き", 0)));
+        assert_eq!(last_text(&mut messages), None);
+        pipeline.on_chrome(ChromeEvent::Heard(heard("次の文", 1)));
+        assert_eq!(last_text(&mut messages).as_deref(), Some("次の文"));
+    }
+
+    #[tokio::test]
+    async fn the_chrome_text_and_its_tokens_arrive_together() {
+        let (mut pipeline, mut messages) = hybrid_pipeline().await;
+        pipeline.open();
+        pipeline.on_chrome(ChromeEvent::Heard(heard("呪い", 0)));
+        let segment = std::iter::from_fn(|| messages.try_recv().ok())
+            .find_map(|message| match message {
+                crate::types::ServerMsg::SegmentUpsert { segment } => Some(segment),
+                _ => None,
+            })
+            .expect("no segment");
+        assert_eq!(segment.text, "呪い");
+        assert!(segment.tokens.is_some_and(|tokens| !tokens.is_empty()));
+    }
+
+    /// 字幕の途中で上限に達したら張り直さず、`Done::DailyLimit` を送って終わる
+    async fn stops_at_the_daily_limit(api: String) {
+        let dir = tempfile::tempdir().unwrap();
+        let config = RealtimeConfig {
+            access: Access::gift("code".into(), &api),
+            model: "gpt-live-transcribe".into(),
+            delay: "low".into(),
+            meter: Arc::new(Meter::new(dir.path().join("usage.json"))),
+        };
+        let hints = Arc::new(Hints {
+            language: "ja".into(),
+            prompt: String::new(),
+            keywords: Vec::new(),
+        });
+        let (_input, rx) = mpsc::unbounded_channel();
+        let (delta_tx, _deltas) = mpsc::channel(1);
+        let (done_tx, mut done_rx) = mpsc::channel(1);
+        let task = tokio::spawn(realtime_loop(config, hints, rx, delta_tx, done_tx));
+        let done = tokio::time::timeout(Duration::from_secs(5), done_rx.recv())
+            .await
+            .expect("the loop should not keep reconnecting");
+        assert!(matches!(done, Some(Done::DailyLimit)));
+        tokio::time::timeout(Duration::from_secs(5), task)
+            .await
+            .unwrap()
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn a_realtime_session_closed_at_the_daily_limit_does_not_reconnect() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let api = format!("http://{}", listener.local_addr().unwrap());
+        tokio::spawn(async move {
+            let (socket, _) = listener.accept().await.unwrap();
+            let mut ws = tokio_tungstenite::accept_async(socket).await.unwrap();
+            let event = |name: &str| Message::text(json!({ "type": name }).to_string());
+            ws.send(event("session.created")).await.unwrap();
+            ws.next().await.unwrap().unwrap();
+            ws.send(event("session.updated")).await.unwrap();
+            // Worker の close（server/src/realtime.ts）
+            let frame = CloseFrame {
+                code: CloseCode::Policy,
+                reason: share::LIMIT.into(),
+            };
+            ws.close(Some(frame)).await.unwrap();
+        });
+        stops_at_the_daily_limit(api).await;
+    }
+
+    #[tokio::test]
+    async fn a_realtime_handshake_refused_at_the_daily_limit_does_not_reconnect() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let api = format!("http://{}", listener.local_addr().unwrap());
+        // Worker の giftKey の答え
+        let refuse = || async {
+            (
+                StatusCode::FORBIDDEN,
+                [(share::REFUSAL_HEADER, share::LIMIT)],
+                axum::Json(json!({ "error": "limit" })),
+            )
+        };
+        let router = axum::Router::new().route("/openai/realtime", axum::routing::get(refuse));
+        tokio::spawn(async move { axum::serve(listener, router).await });
+        stops_at_the_daily_limit(api).await;
+    }
 
     #[test]
     fn level_meter_reports_peak_per_window() {

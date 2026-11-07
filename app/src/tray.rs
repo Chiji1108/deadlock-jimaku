@@ -120,8 +120,13 @@ pub fn install(app: &App, store: Arc<Store>) -> tauri::Result<()> {
 /// キーがないと字幕は始められないので、始める代わりに操作パネルを開く
 fn toggle_subtitles(app: AppHandle, store: Arc<Store>) {
     tauri::async_runtime::spawn_blocking(move || {
-        let start = !store.settings().transcription_enabled;
-        if start && secrets::openai().is_none() && secrets::gift().is_none() {
+        let settings = store.settings();
+        let start = !settings.transcription_enabled;
+        if start
+            && settings.plan().needs_key()
+            && secrets::openai().is_none()
+            && secrets::gift().is_none()
+        {
             show_window(&app);
             return;
         }

@@ -119,6 +119,7 @@ fn new_segment() -> Segment {
         lang: "ja".into(),
         text: String::new(),
         enriched: None,
+        tokens: None,
         draft: None,
         settled_at: None,
     }

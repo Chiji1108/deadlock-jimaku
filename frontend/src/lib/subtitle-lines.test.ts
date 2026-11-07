@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Segment } from "../generated/Segment";
-import { isReady, showsSource, visibleLines } from "./subtitle-lines";
+import { draftTerms, isReady, revealed, showsSource, visibleLines } from "./subtitle-lines";
 
 const NOW = 100_000;
 const TIMING = { minReadSeconds: 3, maxWaitSeconds: 6 };
@@ -15,6 +15,34 @@ const shown = (lines: Segment[], maxLines: number, timing = TIMING) =>
   visibleLines(lines, NOW, { maxLines, ...timing })
     .map((s) => s.id)
     .join("");
+
+describe("draftTerms", () => {
+  it("lists the terms of the live subtitle", () => {
+    const tokens = [
+      { t: "text", text: "武器" },
+      { t: "entity", ref: "item:1" },
+    ] as Segment["tokens"];
+    expect([...draftTerms({ tokens } as Segment)]).toEqual(["item:1"]);
+    expect([...draftTerms({} as Segment)]).toEqual([]);
+  });
+});
+
+describe("revealed", () => {
+  const word = { t: "text", text: "武器", ruby: "ぶき" } as const;
+  const term = { t: "entity", ref: "item:1", spoken: "拡マガ" } as const;
+
+  it("keeps whole terms", () => {
+    expect(revealed([word, term], 5)).toEqual([word, term]);
+  });
+
+  it("shows a term as plain text until all of it is out", () => {
+    expect(revealed([word, term], 3)).toEqual([word, { t: "text", text: "拡" }]);
+  });
+
+  it("drops what is not out yet", () => {
+    expect(revealed([term, word], 3)).toEqual([term]);
+  });
+});
 
 describe("visibleLines", () => {
   it("shows everything while there is room", () => {

@@ -1,5 +1,7 @@
+pub mod annotate;
 pub mod assets;
 pub mod audio;
+pub mod chrome;
 pub mod demo;
 pub mod enrich;
 pub mod furigana;
@@ -8,6 +10,7 @@ pub mod llm;
 pub mod markup;
 pub mod openai;
 pub mod rank;
+pub mod reading;
 pub mod runtime;
 pub mod secrets;
 pub mod server;
@@ -16,6 +19,7 @@ pub mod share;
 pub mod store;
 pub mod stt;
 pub mod subtitles;
+pub mod terms;
 pub mod types;
 pub mod usage;
 

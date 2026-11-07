@@ -17,6 +17,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         control: "control.html",
+        chrome: "chrome.html",
         subtitles: "overlay/subtitles.html",
         rank: "overlay/rank.html",
         items: "overlay/items.html",
@@ -28,7 +29,8 @@ export default defineConfig({
     strictPort: true,
     proxy: {
       "/ws": { target: `ws://${core}`, ws: true },
-      "/api": `http://${core}`,
+      // Host をそのまま渡す（文字列の形だと書き換わり、axum の Origin の確かめに通らない）
+      "/api": { target: `http://${core}`, ws: true },
       "/assets": `http://${core}`,
     },
   },

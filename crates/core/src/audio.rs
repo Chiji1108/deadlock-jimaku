@@ -11,6 +11,7 @@ use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use rubato::{Async, FixedAsync, Indexing, PolynomialDegree, Resampler as _};
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
+use tokio::sync::mpsc::error::TrySendError;
 use tokio::time::MissedTickBehavior;
 use ts_rs::TS;
 
@@ -141,7 +142,8 @@ fn build_mic_stream(
     let mut on_samples = move |mono: &[f32]| {
         let out = resampler.process(mono);
         // 処理が詰まったら古い音声より今の音声を優先して捨てる
-        if !out.is_empty() && tx.try_send(out).is_err() {
+        // 閉じているのは字幕を止めたときなので、知らせることはない
+        if !out.is_empty() && matches!(tx.try_send(out), Err(TrySendError::Full(_))) {
             tracing::warn!("audio dropped");
         }
     };

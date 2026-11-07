@@ -26,6 +26,10 @@ chrome="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 tiffutil -cathidpicheck "$tmp/bg.png" "$tmp/bg@2x.png" -out app/dmg/background.tiff
 """
 
+[tasks.notices]
+description = "配布物に入る第三者のライセンス表示（notices/third-party.txt）を作り直す"
+run = "node frontend/scripts/notices.ts"
+
 [tasks.check]
 description = "整形・リント・型チェック・テストをまとめて実行する"
 run = [
@@ -39,4 +43,5 @@ run = [
   "cargo fmt --all --check",
   "cargo clippy --workspace --all-targets -- -D warnings",
   "cargo test --workspace",
+  "node frontend/scripts/notices.ts --check",
 ]

@@ -14,6 +14,8 @@
       "database_id": "946da22e-8b7f-4caa-93e2-f4a0bf37508c",
       "migrations_dir": "migrations"
     }
-  ]
+  ],
+  // コードごとの 1 分あたりの要求数（giftKey）。根拠は DESIGN.md 17.1。場所ごとの近似の値
+  "ratelimits": [{ "name": "GIFT_RATE", "namespace_id": "1006", "simple": { "limit": 600, "period": 60 } }]
   // SHARE_KEY（キーを暗号化する鍵）は `wrangler secret put SHARE_KEY` で入れる
 }

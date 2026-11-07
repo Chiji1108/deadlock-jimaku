@@ -22,6 +22,8 @@ pub const MAX_TRANSLATE_TO: usize = 4;
 pub struct Settings {
     /// マイクを字幕にするか（操作パネルの開始・停止）
     pub transcription_enabled: bool,
+    /// 音声認識と翻訳をどこで動かすか
+    pub speech_engine: SpeechEngine,
     /// 配信者が話す言語
     pub mic_language: LangCode,
     /// マイクのデバイス名。None なら OS の既定の入力デバイス
@@ -37,7 +39,8 @@ pub struct Settings {
     pub subtitle_display: SubtitleDisplay,
     /// アイテム説明のオーバーレイ（字幕でアイテム名が出たら説明のカードを出す）
     pub item_cards: ItemCards,
-    /// ランク名の言語。None なら話す言語
+    /// ランク名の言語。None なら話す言語に合わせる。
+    /// 既定は None のまま（前の版の設定ファイルを変えない）で、新しく使い始める人は英語（`load`）
     #[ts(optional)]
     pub rank_language: Option<LangCode>,
     /// ランクのオーバーレイに出すもの
@@ -53,6 +56,8 @@ pub struct Settings {
     pub onboarding_closed: bool,
     /// ウィンドウを閉じても動き続けることを知らせた
     pub tray_notice_seen: bool,
+    /// Chrome のモードの「ハイブリッドにする」の提案を閉じた
+    pub hybrid_hint_closed: bool,
     // 以下の詳細項目は操作パネルで変えない（`ADVANCED`）
     pub models: Models,
     /// リアルタイムの音声認識の遅れ（`minimal` / `low` / `medium` / `high` / `xhigh`。
@@ -359,6 +364,91 @@ pub enum Background {
     Band,
 }
 
+/// 音声認識と翻訳をどこで動かすか（DESIGN.md 9.6）
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "lowercase")]
+#[ts(export)]
+pub enum SpeechEngine {
+    /// 途中の字幕は Chrome、確定は OpenAI の高い精度の結果に置き換える
+    Hybrid,
+    /// すべて OpenAI。Chrome が要らず、PC の負荷が小さい。
+    /// 0.3 より前の設定ファイルはこの値になる（Chrome のウィンドウを黙って開かない）。
+    /// 新しく使い始める人は Chrome から始める（`load`）
+    #[default]
+    OpenAi,
+    /// 音声認識と翻訳は Chrome、読みと用語は中核。無料で、用語の判定も LLM を使わない。
+    /// 0.3 の rc には `local` や `free` で保存した版がある
+    #[serde(alias = "local", alias = "free")]
+    Chrome,
+}
+
+/// 字幕の文字の出どころ
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TextSource {
+    Chrome,
+    GptLiveTranscribe,
+    GptTranscribe,
+}
+
+/// 翻訳の出どころ
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TranslationSource {
+    ChromeTranslator,
+    Llm,
+}
+
+/// ふりがなの出どころ
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RubySource {
+    Lindera,
+    Llm,
+}
+
+/// 用語の強調の出どころ
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EmphasisSource {
+    Terms,
+    Llm,
+}
+
+/// 字幕の途中か確定で、それぞれを何で作るか。None は作らない
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Phase {
+    pub text: Option<TextSource>,
+    pub translation: Option<TranslationSource>,
+    pub ruby: Option<RubySource>,
+    pub emphasis: Option<EmphasisSource>,
+}
+
+/// モードと設定から決まる、字幕の作り方。README の「しくみ」の表を写したもの。
+/// 呼び出し側はモードではなくこれを見る（DESIGN.md 9.6）
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Plan {
+    pub partial: Phase,
+    pub finals: Phase,
+    /// 翻訳だけを見せる
+    pub translation_only: bool,
+}
+
+impl Phase {
+    /// PC の中で読みか用語を付けるか
+    pub fn marks(&self) -> bool {
+        self.ruby == Some(RubySource::Lindera) || self.emphasis == Some(EmphasisSource::Terms)
+    }
+}
+
+impl Plan {
+    /// Chrome を起動するか
+    pub fn uses_chrome(&self) -> bool {
+        self.partial.text == Some(TextSource::Chrome)
+    }
+
+    /// API キーかギフトコードが要るか
+    pub fn needs_key(&self) -> bool {
+        self.finals.text == Some(TextSource::GptTranscribe)
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "lowercase")]
 #[ts(export)]
@@ -383,6 +473,7 @@ impl Default for Settings {
     fn default() -> Self {
         Self {
             transcription_enabled: false,
+            speech_engine: SpeechEngine::default(),
             mic_language: "ja".into(),
             mic_device: None,
             translate_to: vec!["en".into()],
@@ -395,6 +486,7 @@ impl Default for Settings {
             rank_anchor: Anchor::TopLeft,
             obs_seen: false,
             onboarding_closed: false,
+            hybrid_hint_closed: false,
             tray_notice_seen: false,
             rank_region: None,
             models: Models::default(),
@@ -450,19 +542,52 @@ impl Settings {
             .unwrap_or_else(|| self.mic_language.clone())
     }
 
-    /// 翻訳だけを出すか。翻訳先がなければ、話した言葉を出す
-    pub fn translation_only(&self) -> bool {
-        !self.subtitle_display.show_source && !self.translate_to.is_empty()
-    }
+    /// モードと設定から決まる、字幕の作り方
+    pub fn plan(&self) -> Plan {
+        use EmphasisSource as Emphasis;
+        use RubySource as Ruby;
+        use TextSource as Text;
+        use TranslationSource as Translation;
 
-    /// 途中の字幕を動かすか。翻訳だけなら見えないので、料金をかけない
-    pub fn wants_live_subtitles(&self) -> bool {
-        self.live_subtitles && !self.translation_only()
-    }
-
-    /// ふりがなを聞くか。翻訳だけなら見えないので、料金をかけない
-    pub fn wants_furigana(&self) -> bool {
-        self.subtitle_display.furigana && !self.translation_only()
+        let translates = !self.translate_to.is_empty();
+        let translation_only = translates && !self.subtitle_display.show_source;
+        // 翻訳だけなら見えないので、作らない。形態素解析の辞書は日本語だけ
+        let ruby = self.subtitle_display.furigana && !translation_only;
+        let lindera = (ruby && self.mic_language == "ja").then_some(Ruby::Lindera);
+        let terms = (self.deadlock_mode && self.mic_language == "ja").then_some(Emphasis::Terms);
+        let chrome_translation = translates.then_some(Translation::ChromeTranslator);
+        let llm = Phase {
+            text: Some(Text::GptTranscribe),
+            translation: translates.then_some(Translation::Llm),
+            ruby: ruby.then_some(Ruby::Llm),
+            emphasis: self.deadlock_mode.then_some(Emphasis::Llm),
+        };
+        let chrome = Phase {
+            text: Some(Text::Chrome),
+            translation: chrome_translation,
+            ruby: lindera,
+            emphasis: terms,
+        };
+        let (partial, finals) = match self.speech_engine {
+            SpeechEngine::Hybrid => (chrome, llm),
+            SpeechEngine::Chrome => (chrome, chrome),
+            SpeechEngine::OpenAi => {
+                // 翻訳だけなら途中の字幕は見えないので、料金をかけない
+                let live = self.live_subtitles && !translation_only;
+                let partial = Phase {
+                    text: live.then_some(Text::GptLiveTranscribe),
+                    translation: None,
+                    ruby: lindera.filter(|_| live),
+                    emphasis: terms.filter(|_| live),
+                };
+                (partial, llm)
+            }
+        };
+        Plan {
+            partial,
+            finals,
+            translation_only,
+        }
     }
 
     /// 辞書に名前を載せる言語（DESIGN.md 8.2）
@@ -565,6 +690,9 @@ impl Settings {
         if let Some(enabled) = patch.deadlock_mode {
             next.deadlock_mode = enabled;
         }
+        if let Some(engine) = patch.speech_engine {
+            next.speech_engine = engine;
+        }
         if let Some(enabled) = patch.live_subtitles {
             next.live_subtitles = enabled;
         }
@@ -576,6 +704,7 @@ impl Settings {
         }
         next.obs_seen = patch.obs_seen.unwrap_or(next.obs_seen);
         next.onboarding_closed = patch.onboarding_closed.unwrap_or(next.onboarding_closed);
+        next.hybrid_hint_closed = patch.hybrid_hint_closed.unwrap_or(next.hybrid_hint_closed);
         next.tray_notice_seen = patch.tray_notice_seen.unwrap_or(next.tray_notice_seen);
         if let Some(region) = patch.rank_region {
             next.rank_region = match region.as_str() {
@@ -616,6 +745,8 @@ pub struct SettingsPatch {
     pub deadlock_mode: Option<bool>,
     #[ts(optional)]
     pub live_subtitles: Option<bool>,
+    #[ts(optional)]
+    pub speech_engine: Option<SpeechEngine>,
     /// SteamID64 か 32bit のアカウント ID。空文字列ならランクを表示しない
     #[ts(optional)]
     pub rank_account: Option<String>,
@@ -637,6 +768,8 @@ pub struct SettingsPatch {
     pub obs_seen: Option<bool>,
     #[ts(optional)]
     pub onboarding_closed: Option<bool>,
+    #[ts(optional)]
+    pub hybrid_hint_closed: Option<bool>,
     #[ts(optional)]
     pub tray_notice_seen: Option<bool>,
     /// 地域（`Region`）。空文字列なら順位を調べない
@@ -666,7 +799,13 @@ fn parse(bytes: &[u8]) -> serde_json::Result<Settings> {
 pub fn load(path: &Path) -> std::io::Result<Settings> {
     let bytes = match std::fs::read(path) {
         Ok(bytes) => bytes,
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Settings::default()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            return Ok(Settings {
+                speech_engine: SpeechEngine::Chrome,
+                rank_language: Some("en".into()),
+                ..Settings::default()
+            });
+        }
         Err(e) => return Err(e),
     };
     match parse(&bytes) {
@@ -730,6 +869,21 @@ mod tests {
             .unwrap();
         assert_eq!(cleared.rank_account, None);
         assert_eq!(cleared.mic_device, None);
+    }
+
+    #[test]
+    fn closing_the_hybrid_hint_is_saved_and_other_patches_keep_it() {
+        let closed = Settings::default()
+            .apply(SettingsPatch {
+                hybrid_hint_closed: Some(true),
+                ..SettingsPatch::default()
+            })
+            .unwrap();
+        let saved = serde_json::to_string(&closed).unwrap();
+        let loaded: Settings = serde_json::from_str(&saved).unwrap();
+        let next = loaded.apply(SettingsPatch::default()).unwrap();
+        assert!(next.hybrid_hint_closed);
+        assert!(!Settings::default().hybrid_hint_closed);
     }
 
     #[test]
@@ -824,6 +978,7 @@ mod tests {
     fn translation_only_needs_a_translation_target() {
         let hide = |translate_to: Vec<LangCode>| Settings {
             translate_to,
+            speech_engine: SpeechEngine::OpenAi,
             subtitle_display: SubtitleDisplay {
                 show_source: false,
                 ..Default::default()
@@ -831,14 +986,172 @@ mod tests {
             ..Default::default()
         };
         let only = hide(vec!["en".into()]);
-        assert!(only.translation_only());
-        assert!(!only.wants_live_subtitles());
-        assert!(!only.wants_furigana());
+        assert!(only.plan().translation_only);
+        assert_eq!(only.plan().partial.text, None);
+        assert_eq!(only.plan().finals.ruby, None);
 
         let source = hide(Vec::new());
-        assert!(!source.translation_only());
-        assert!(source.wants_live_subtitles());
-        assert!(source.wants_furigana());
+        assert!(!source.plan().translation_only);
+        assert_eq!(
+            source.plan().partial.text,
+            Some(TextSource::GptLiveTranscribe)
+        );
+        assert_eq!(source.plan().finals.ruby, Some(RubySource::Llm));
+    }
+
+    #[test]
+    fn only_the_openai_engine_uses_realtime() {
+        let with = |speech_engine| Settings {
+            speech_engine,
+            ..Default::default()
+        };
+        assert_eq!(
+            with(SpeechEngine::OpenAi).plan().partial.text,
+            Some(TextSource::GptLiveTranscribe)
+        );
+        assert_eq!(
+            with(SpeechEngine::Hybrid).plan().partial.text,
+            Some(TextSource::Chrome)
+        );
+        assert_eq!(
+            with(SpeechEngine::Chrome).plan().partial.text,
+            Some(TextSource::Chrome)
+        );
+    }
+
+    #[test]
+    fn the_rc_names_of_the_chrome_engine_are_read() {
+        for saved in ["chrome", "local", "free"] {
+            let engine: SpeechEngine = serde_json::from_value(saved.into()).unwrap();
+            assert_eq!(engine, SpeechEngine::Chrome);
+        }
+        assert_eq!(
+            serde_json::to_value(SpeechEngine::Chrome).unwrap(),
+            serde_json::json!("chrome")
+        );
+    }
+
+    fn plan_of(speech_engine: SpeechEngine) -> Plan {
+        Settings {
+            speech_engine,
+            translate_to: vec!["en".into()],
+            deadlock_mode: true,
+            live_subtitles: true,
+            ..Default::default()
+        }
+        .plan()
+    }
+
+    /// README の「しくみ」の表と同じ値。表を変えたら、ここも変える
+    #[test]
+    fn the_plan_matches_the_table_in_the_readme() {
+        use EmphasisSource as E;
+        use RubySource as R;
+        use TextSource as T;
+        use TranslationSource as Tr;
+        let phase = |text, translation, ruby, emphasis| Phase {
+            text: Some(text),
+            translation,
+            ruby: Some(ruby),
+            emphasis: Some(emphasis),
+        };
+        let chrome = phase(T::Chrome, Some(Tr::ChromeTranslator), R::Lindera, E::Terms);
+        let llm = phase(T::GptTranscribe, Some(Tr::Llm), R::Llm, E::Llm);
+        let live = phase(T::GptLiveTranscribe, None, R::Lindera, E::Terms);
+
+        let hybrid = plan_of(SpeechEngine::Hybrid);
+        assert_eq!((hybrid.partial, hybrid.finals), (chrome, llm));
+        let openai = plan_of(SpeechEngine::OpenAi);
+        assert_eq!((openai.partial, openai.finals), (live, llm));
+        let free = plan_of(SpeechEngine::Chrome);
+        assert_eq!((free.partial, free.finals), (chrome, chrome));
+    }
+
+    #[test]
+    fn chrome_and_keys_follow_the_plan() {
+        assert!(plan_of(SpeechEngine::Hybrid).uses_chrome());
+        assert!(plan_of(SpeechEngine::Hybrid).needs_key());
+        assert!(plan_of(SpeechEngine::Chrome).uses_chrome());
+        assert!(!plan_of(SpeechEngine::Chrome).needs_key());
+        assert!(!plan_of(SpeechEngine::OpenAi).uses_chrome());
+        assert!(plan_of(SpeechEngine::OpenAi).needs_key());
+    }
+
+    #[test]
+    fn settings_turn_items_off_in_the_plan() {
+        let with = |change: fn(&mut Settings)| {
+            let mut settings = Settings {
+                speech_engine: SpeechEngine::Chrome,
+                translate_to: vec!["en".into()],
+                deadlock_mode: true,
+                ..Default::default()
+            };
+            change(&mut settings);
+            settings.plan()
+        };
+        let no_furigana = with(|s| s.subtitle_display.furigana = false);
+        assert_eq!(no_furigana.partial.ruby, None);
+        let no_terms = with(|s| s.deadlock_mode = false);
+        assert_eq!(no_terms.finals.emphasis, None);
+        let no_targets = with(|s| s.translate_to.clear());
+        assert_eq!(no_targets.partial.translation, None);
+        let english = with(|s| s.mic_language = "en".into());
+        assert_eq!(english.partial.ruby, None);
+        assert_eq!(english.partial.emphasis, None);
+        assert!(english.partial.text.is_some(), "Chrome は認識できる");
+        let translation_only = with(|s| s.subtitle_display.show_source = false);
+        assert_eq!(translation_only.partial.ruby, None);
+        assert!(
+            translation_only.partial.emphasis.is_some(),
+            "訳の用語に要る"
+        );
+    }
+
+    #[test]
+    fn chrome_is_only_for_new_users() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join(FILE);
+        assert_eq!(load(&path).unwrap().speech_engine, SpeechEngine::Chrome);
+        // 前の版の設定ファイルには `speechEngine` がない
+        std::fs::write(&path, r#"{ "micLanguage": "ja" }"#).unwrap();
+        assert_eq!(load(&path).unwrap().speech_engine, SpeechEngine::OpenAi);
+        // 選んだモードは保存される
+        let hybrid = Settings {
+            speech_engine: SpeechEngine::Hybrid,
+            ..Default::default()
+        };
+        save(&path, &hybrid).unwrap();
+        assert_eq!(load(&path).unwrap().speech_engine, SpeechEngine::Hybrid);
+    }
+
+    #[test]
+    fn english_rank_names_are_only_for_new_users() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join(FILE);
+        let new_user = load(&path).unwrap();
+        assert_eq!(new_user.rank_language, Some("en".into()));
+        assert_eq!(new_user.rank_language(), "en");
+        // 前の版の設定ファイルには `rankLanguage` がない。話す言語に合わせたまま
+        std::fs::write(&path, r#"{ "micLanguage": "ja" }"#).unwrap();
+        let existing = load(&path).unwrap();
+        assert_eq!(existing.rank_language, None);
+        assert_eq!(existing.rank_language(), "ja");
+        // 「話す言語に合わせる」を選んだ人も、保存して読み直して変わらない
+        let follow = new_user
+            .apply(SettingsPatch {
+                rank_language: Some(String::new()),
+                ..Default::default()
+            })
+            .unwrap();
+        save(&path, &follow).unwrap();
+        assert_eq!(load(&path).unwrap().rank_language, None);
+        // 選んだ言語はそのまま
+        let korean = Settings {
+            rank_language: Some("ko".into()),
+            ..Default::default()
+        };
+        save(&path, &korean).unwrap();
+        assert_eq!(load(&path).unwrap().rank_language, Some("ko".into()));
     }
 
     #[test]

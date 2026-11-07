@@ -68,6 +68,10 @@ pub struct Segment {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub enriched: Option<Enriched>,
+    /// `text` にふりがなと用語を付けたもの。文と同時に載せる。`enriched` のあとは、途中から付いていた印に残す
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub tokens: Option<Vec<Token>>,
     /// 書きかけの訳文。`enriched` が届いたら消す
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
@@ -133,9 +137,117 @@ pub enum ServerMsg {
     AudioLevel { db: f32 },
     #[serde(rename = "usage")]
     Usage { usage: crate::usage::UsageView },
+    /// 字幕の処理が文を受け取れるか。None は動いていない
+    #[serde(rename = "live.status")]
+    LiveStatus { status: Option<LiveStatus> },
+    /// Chrome のページの状態。None はタブが開いていない
+    #[serde(rename = "chrome.status")]
+    ChromeStatus { status: Option<LiveStatus> },
     /// 操作パネル以外（OBS の字幕オーバーレイ、トレイ）で設定が変わった。パネルは取り直す
     #[serde(rename = "settings.changed")]
     SettingsChanged,
+}
+
+/// 字幕の処理や Chrome のページの状態（DESIGN.md 9.6）
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum LiveState {
+    /// Chrome のページは聞き始めるのを待っている。翻訳のモデルをダウンロードしていることもある
+    Preparing,
+    /// 聞いている
+    Listening,
+    /// 回線やマイクが戻るのを待っている。`detail` に理由が入る
+    Blocked,
+    /// Google Chrome を起動できない。インストールを案内する
+    Missing,
+    /// 起動できない、または途中で止まった
+    Failed,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct LiveStatus {
+    pub state: LiveState,
+    /// 利用者に見せる説明
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub detail: Option<String>,
+}
+
+/// Chrome のページから core への 1 通（WS `/api/chrome/ws`）
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[serde(tag = "type", rename_all = "lowercase")]
+#[ts(export)]
+pub enum ChromeMsg {
+    Text(Heard),
+    Status { status: LiveStatus },
+    Translated(Translated),
+}
+
+/// Chrome が認識した文。確定で文が空なら、開いている発話を捨てる
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct Heard {
+    pub text: String,
+    #[serde(rename = "final")]
+    pub is_final: bool,
+    /// 認識したときの区切りの番号（`ChromeCommand::Cut`）。区切られたあとに届いた、前の発話の文を見分ける
+    pub cut: u32,
+}
+
+/// core から Chrome のページへの 1 通
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[serde(tag = "type", rename_all = "lowercase")]
+#[ts(export)]
+pub enum ChromeCommand {
+    Translate(ChromeTask),
+    /// ハイブリッドの発話が開いた。ページがつなげていた文を捨てる
+    Open,
+    /// ハイブリッドの発話が閉じた。認識を区切り、すぐ聞き直す。`count` はこの区切りの番号で、
+    /// つないだときにも今の番号を知らせる
+    Cut {
+        count: u32,
+    },
+}
+
+/// 文を訳してもらう（Translator は Chrome の中にある）
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct ChromeTask {
+    pub id: String,
+    pub text: String,
+    pub terms: Vec<TermName>,
+    #[serde(rename = "final")]
+    pub is_final: bool,
+}
+
+/// `ChromeTask` の答え。訳せる言語がなければ `translations` は空
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct Translated {
+    pub id: String,
+    #[serde(rename = "final")]
+    pub is_final: bool,
+    pub translations: Translations,
+}
+
+/// 翻訳に渡す文。用語を英語の名前に置き換えてある（「ヘイズ」が Hayes にならない）
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct Translatable {
+    pub text: String,
+    pub terms: Vec<TermName>,
+}
+
+/// 文の中で見つけた用語。訳文に残った英語の名前を用語に戻す
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct TermName {
+    #[serde(rename = "ref")]
+    pub reference: String,
+    pub en: String,
 }
 
 /// 字幕を始められなかった・止まった理由。文は操作パネルが作る（サーバーは中身だけを返す）
@@ -155,6 +267,8 @@ pub enum TranscriptionError {
     },
     /// おすそ分けした人がギフトコードを止めた
     GiftRevoked,
+    /// ギフトコードの今日（UTC）の上限に達した
+    GiftLimit,
     /// ないギフトコード（おすそ分けをやめたなど）
     GiftUnknown,
     /// マイクの入力が途切れた
@@ -176,6 +290,9 @@ pub enum TranscriptionError {
 
 impl TranscriptionError {
     pub fn from_error(e: &anyhow::Error) -> Self {
+        if e.is::<crate::share::DailyLimit>() {
+            return Self::GiftLimit;
+        }
         match e.downcast_ref::<crate::audio::MicError>() {
             Some(error) => Self::Microphone {
                 error: error.clone(),
@@ -193,7 +310,10 @@ impl ServerMsg {
             Self::Snapshot { .. } | Self::SegmentUpsert { .. } => Topic::Subtitle,
             Self::GlossaryUpdated { .. } => Topic::Glossary,
             Self::RankUpdate { .. } => Topic::Rank,
-            Self::TranscriptionStatus { .. } | Self::SettingsChanged => Topic::Status,
+            Self::TranscriptionStatus { .. }
+            | Self::SettingsChanged
+            | Self::LiveStatus { .. }
+            | Self::ChromeStatus { .. } => Topic::Status,
             Self::Display { .. } => Topic::Display,
             Self::AudioLevel { .. } => Topic::Level,
             Self::Usage { .. } => Topic::Usage,

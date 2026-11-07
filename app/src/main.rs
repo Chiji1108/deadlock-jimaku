@@ -39,11 +39,9 @@ fn main() {
             let settings = settings::load(&data_dir.join(settings::FILE));
             let store = Store::new(settings, data_dir);
             let idle = store.clone();
+            app.manage(store.clone());
             #[cfg(not(target_os = "linux"))]
-            {
-                app.manage(store.clone());
-                tray::install(app, store.clone())?;
-            }
+            tray::install(app, store.clone())?;
             tauri::async_runtime::spawn(runtime::run(
                 store.clone(),
                 runtime::Options { input_file: None },
@@ -100,6 +98,8 @@ fn main() {
             tauri::RunEvent::ExitRequested {
                 api, code: None, ..
             } => api.prevent_exit(),
+            // 終了しても Chrome を残さない（残ると、次の起動で同じプロファイルを開けない）
+            tauri::RunEvent::Exit => _app.state::<std::sync::Arc<Store>>().close_chrome(),
             // Mac は Dock のアイコンを押したときに、閉じたウィンドウを開き直す
             #[cfg(target_os = "macos")]
             tauri::RunEvent::Reopen { .. } => show_window(_app),

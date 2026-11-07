@@ -63,7 +63,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev libasound2-dev patchelf
+          sudo apt-get install -y libwebkit2gtk-4.1-dev librsvg2-dev libxdo-dev libssl-dev libasound2-dev patchelf
       - uses: jdx/mise-action@v2
         with:
           install_args: rust node pnpm
@@ -71,9 +71,18 @@ jobs:
         run: rustup target add ${{ matrix.rust-targets }}
       - uses: Swatinem/rust-cache@v2
       - run: pnpm install --frozen-lockfile
+      # 依存を変えたのに notices/third-party.txt を作り直し忘れたら気づく（OS によらず同じ結果なので Linux だけ）
+      - if: runner.os == 'Linux'
+        run: node frontend/scripts/notices.ts --check
       # Tauri の CLI はリポジトリのルートから動かす（app/tauri.conf.json を探す）
+      # RPM は版のハイフンを受け付けないので、プレリリースでは作らない
+      - name: 作るものを決める
+        run: |
+          args="${{ matrix.args }}"
+          grep -q '^version = ".*-' Cargo.toml && args="${args/deb,rpm,appimage/deb,appimage}"
+          echo "BUILD_ARGS=$args" >> "$GITHUB_ENV"
       - if: ${{ !inputs.sign }}
-        run: frontend/node_modules/.bin/tauri build ${{ matrix.args }}
+        run: frontend/node_modules/.bin/tauri build $BUILD_ARGS
       # リリースのとき: 自動更新のファイル（署名つき）も作る。Mac は Developer ID で署名して公証する
       # （証明書は Tauri が一時的なキーチェーンに読み込み、App Store Connect の API キーで公証する）。
       # 鍵はこの手順にだけ渡す（Apple の鍵は Mac にだけ）
@@ -89,7 +98,7 @@ jobs:
             export APPLE_API_KEY_PATH="$RUNNER_TEMP/AuthKey.p8"
             printf '%s' "$APPLE_API_KEY_P8" > "$APPLE_API_KEY_PATH"
           fi
-          frontend/node_modules/.bin/tauri build ${{ matrix.args }} \
+          frontend/node_modules/.bin/tauri build $BUILD_ARGS \
             --config '{"bundle":{"createUpdaterArtifacts":true}}'
           if [ "$RUNNER_OS" = macOS ]; then
             # Tauri が公証するのは中のアプリだけなので、ダウンロードして開く dmg も公証して印を付ける
