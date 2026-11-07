@@ -6,7 +6,7 @@ type Fonts = Partial<Record<FontGroup, string>>;
 /** フォントを選ぶ区分（lang.css と同じ）と、操作パネルで字形を確かめる見本の文 */
 export const FONT_SAMPLES = {
   latin: "My favorite is Haze. Мой любимый герой Хейз.",
-  ja: "僕の一番好きなキャラはヘイズです",
+  ja: "私の一番好きなキャラはヘイズです",
   "zh-Hans": "我最喜欢的角色是海兹",
   "zh-Hant": "我最喜歡的角色是海茲",
   ko: "제가 가장 좋아하는 캐릭터는 헤이즈입니다",
