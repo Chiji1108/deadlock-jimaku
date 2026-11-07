@@ -87,10 +87,6 @@ impl Browser {
         });
         Ok(Self { child, watcher })
     }
-
-    pub fn running(&mut self) -> bool {
-        matches!(self.child.try_wait(), Ok(None))
-    }
 }
 
 #[cfg(test)]
@@ -105,6 +101,10 @@ impl Browser {
         child.wait().unwrap();
         let watcher = tokio::spawn(async {});
         Self { child, watcher }
+    }
+
+    pub fn pid(&self) -> u32 {
+        self.child.id()
     }
 }
 

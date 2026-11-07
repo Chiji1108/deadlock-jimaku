@@ -72,7 +72,7 @@ pub struct Store {
     chrome_events: broadcast::Sender<ChromeEvent>,
     chrome_commands: broadcast::Sender<ChromeCommand>,
     chrome_tab: watch::Sender<ChromeTab>,
-    /// 字幕を出している間の Chrome。落とすと閉じる
+    /// 字幕を出している間の Chrome。落とすと閉じる。利用者が閉じても、字幕を始め直すか開き直すまで持つ
     browser: Mutex<Option<Browser>>,
     /// ハイブリッドの発話を閉じた回数
     chrome_cuts: AtomicU32,
@@ -348,7 +348,8 @@ impl Store {
             self.close_chrome();
             return;
         }
-        if browser.as_mut().is_some_and(Browser::running) {
+        // 閉じられた Chrome も残るので、設定を変えただけでは起動し直さない
+        if browser.is_some() {
             return;
         }
         match Browser::launch(self.clone()) {
@@ -567,6 +568,31 @@ mod tests {
             detail: "panic".into(),
         }));
         assert!(store.browser.lock().unwrap().is_some());
+    }
+
+    /// 閉じられたままなら、起動されて `Browser` が入れ替わることもない
+    #[tokio::test]
+    async fn a_closed_chrome_stays_closed_when_settings_change() {
+        let (_dir, store) = chrome_store(SpeechEngine::Chrome);
+        let closed = Browser::exited();
+        let pid = closed.pid();
+        *store.browser.lock().unwrap() = Some(closed);
+        store.sync_chrome();
+        let browser = store.browser.lock().unwrap();
+        assert_eq!(browser.as_ref().map(Browser::pid), Some(pid));
+    }
+
+    #[tokio::test]
+    async fn stopping_forgets_the_closed_chrome() {
+        let (_dir, store) = chrome_store(SpeechEngine::Chrome);
+        *store.browser.lock().unwrap() = Some(Browser::exited());
+        let stop = SettingsPatch {
+            transcription_enabled: Some(false),
+            ..Default::default()
+        };
+        store.update_settings(stop).unwrap();
+        store.sync_chrome();
+        assert!(store.browser.lock().unwrap().is_none());
     }
 
     #[test]
