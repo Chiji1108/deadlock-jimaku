@@ -155,9 +155,7 @@ pub struct SharedCode {
     pub month_usd: f64,
     /// 今日（UTC）使われた額
     pub day_usd: f64,
-    /// 決めた 1 日（UTC）の上限（USD）。None は既定の額
-    pub daily_limit_usd: Option<f64>,
-    /// 実際に効く 1 日の上限（既定の額はサーバーだけが持つ）
+    /// 実際に効く 1 日（UTC）の上限（USD）
     pub effective_limit_usd: f64,
     #[ts(type = "number")]
     pub created_at: i64,

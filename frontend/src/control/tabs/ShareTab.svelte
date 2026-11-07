@@ -8,6 +8,7 @@
   import { api } from "../../lib/api";
   import ConfirmDialog from "../parts/ConfirmDialog.svelte";
   import CodeFields, { validCode } from "../parts/CodeFields.svelte";
+  import { DEFAULT_LIMIT, validLimit } from "../parts/DailyLimitField.svelte";
   import MaskedCode from "../parts/MaskedCode.svelte";
   import SettingsDialog from "../parts/SettingsDialog.svelte";
   import { dateTime, panel } from "../panel.svelte";
@@ -20,13 +21,13 @@
   const threeDays = () => Date.now() + 3 * 24 * 60 * 60 * 1000;
   let memo = $state("");
   let expiresAt = $state<number | null>(threeDays());
-  // 空欄は既定の額（サーバーが決める）
-  let dailyLimit = $state<number | null>(null);
+  let dailyLimit = $state<number | null>(DEFAULT_LIMIT);
   const valid = $derived(validCode(expiresAt, dailyLimit, panel.now));
 
   let creating = $state(false);
 
   async function create() {
+    if (!validLimit(dailyLimit)) return false;
     creating = true;
     const body = { memo: memo.trim(), expiresAt, dailyLimitUsd: dailyLimit };
     const created = await panel.shareAction(() => api.createCode(body), "ギフトコードを作りました");
@@ -34,7 +35,7 @@
     if (created) {
       memo = "";
       expiresAt = threeDays();
-      dailyLimit = null;
+      dailyLimit = DEFAULT_LIMIT;
     }
     return created;
   }
@@ -53,6 +54,13 @@
     expiresAt: null as number | null,
     dailyLimit: null as number | null,
   });
+
+  async function saveEdit(id: string) {
+    const limit = editing.dailyLimit;
+    if (!validLimit(limit)) return false;
+    const body = { memo: editing.memo.trim(), expiresAt: editing.expiresAt, dailyLimitUsd: limit };
+    return panel.shareAction(() => api.updateCode(id, body), "設定を変えました");
+  }
 
   function expiry(c: SharedCode) {
     if (c.expiresAt === null) return "期限なし";
@@ -161,18 +169,9 @@
                     (editing = {
                       memo: c.memo,
                       expiresAt: c.expiresAt,
-                      dailyLimit: c.dailyLimitUsd,
+                      dailyLimit: c.effectiveLimitUsd,
                     })}
-                  onsave={() =>
-                    panel.shareAction(
-                      () =>
-                        api.updateCode(c.id, {
-                          memo: editing.memo.trim(),
-                          expiresAt: editing.expiresAt,
-                          dailyLimitUsd: editing.dailyLimit,
-                        }),
-                      "設定を変えました",
-                    )}
+                  onsave={() => saveEdit(c.id)}
                 >
                   <CodeFields
                     id="edit-{c.id}"

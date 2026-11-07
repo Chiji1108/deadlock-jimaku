@@ -60,14 +60,14 @@ export const api = {
   enableShare: () => request<ShareView>("/api/share", { method: "POST" }),
   disableShare: () => request<ShareView>("/api/share", { method: "DELETE" }),
   /** `expiresAt` はミリ秒。null は期限なし */
-  createCode: (body: { memo: string; expiresAt: number | null; dailyLimitUsd: number | null }) =>
+  createCode: (body: { memo: string; expiresAt: number | null; dailyLimitUsd: number }) =>
     request<ShareView>("/api/share/codes", { method: "POST", body: JSON.stringify(body) }),
   updateCode: (
     id: string,
     body: {
       memo?: string;
       expiresAt?: number | null;
-      dailyLimitUsd?: number | null;
+      dailyLimitUsd?: number;
       revoked?: boolean;
     },
   ) =>

@@ -25,10 +25,6 @@ monthUsd: number,
  */
 dayUsd: number, 
 /**
- * 決めた 1 日（UTC）の上限（USD）。None は既定の額
- */
-dailyLimitUsd: number | null, 
-/**
- * 実際に効く 1 日の上限（既定の額はサーバーだけが持つ）
+ * 実際に効く 1 日（UTC）の上限（USD）
  */
 effectiveLimitUsd: number, createdAt: number, };
