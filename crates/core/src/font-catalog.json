@@ -467,48 +467,6 @@
       ]
     },
     {
-      "family": "Poor Story",
-      "dir": "ofl/poorstory",
-      "license": "OFL-1.1",
-      "languages": ["en", "id"],
-      "sample": "Abc",
-      "files": [
-        {
-          "name": "PoorStory-Regular.ttf",
-          "size": 3966768,
-          "sha256": "831ab87f7b5463f9cd83ac249bf386816f3a478f1d226427c88cac907adb7ee2"
-        }
-      ]
-    },
-    {
-      "family": "Hi Melody",
-      "dir": "ofl/himelody",
-      "license": "OFL-1.1",
-      "languages": ["en", "id"],
-      "sample": "Abc",
-      "files": [
-        {
-          "name": "HiMelody-Regular.ttf",
-          "size": 12623412,
-          "sha256": "360d2c0a880918aa48328d1d9219f5390788d09a1c9353e12b471de018673ae6"
-        }
-      ]
-    },
-    {
-      "family": "Gamja Flower",
-      "dir": "ofl/gamjaflower",
-      "license": "OFL-1.1",
-      "languages": ["en", "id"],
-      "sample": "Abc",
-      "files": [
-        {
-          "name": "GamjaFlower-Regular.ttf",
-          "size": 12615444,
-          "sha256": "ece32819ed58536355a49a095b0cdfdd3b8ef9081c5ed9ca1cef8f5d999ae1ac"
-        }
-      ]
-    },
-    {
       "family": "Sofia",
       "dir": "ofl/sofia",
       "license": "OFL-1.1",
