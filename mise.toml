@@ -30,6 +30,10 @@ tiffutil -cathidpicheck "$tmp/bg.png" "$tmp/bg@2x.png" -out app/dmg/background.t
 description = "配布物に入る第三者のライセンス表示（notices/third-party.txt）を作り直す"
 run = "node frontend/scripts/notices.ts"
 
+[tasks.font-samples]
+description = "おすすめのフォントの見本の SVG を作り直し、カタログの言語と名前を確かめる（GitHub からフォントを取る）"
+run = "node frontend/scripts/font-samples.ts"
+
 [tasks.check]
 description = "整形・リント・型チェック・テストをまとめて実行する"
 run = [

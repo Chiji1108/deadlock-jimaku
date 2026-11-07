@@ -3,8 +3,18 @@
   import { Command, Popover } from "bits-ui";
   import CheckIcon from "@lucide/svelte/icons/check";
   import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
+  import type { FontEntry } from "../../generated/FontEntry";
+  import { fontSampleName, formatSize } from "../../lib/font-samples";
   import { cssString, fontSample } from "../../lib/overlay-fonts";
-  import type { FontList } from "../panel.svelte";
+  import { panel, type FontList } from "../panel.svelte";
+  import ConfirmDialog from "./ConfirmDialog.svelte";
+
+  /** リポジトリの中の、文字をパスにした SVG（scripts/font-samples.ts）。文字の色で描く */
+  const SAMPLES = import.meta.glob<string>("../font-samples/*.svg", {
+    eager: true,
+    query: "?raw",
+    import: "default",
+  });
 
   let {
     id,
@@ -23,6 +33,7 @@
   } = $props();
 
   const STANDARD = "標準";
+  const HEADING = "px-2 pt-2 pb-1 text-xs font-medium text-muted-foreground";
   const swatch = $derived(fontSample(language));
   /** 一度に描く数。Command は項目が増えると 1 文字ごとに固まるので、多い PC では検索で絞ってもらう */
   const MAX_SHOWN = 500;
@@ -30,41 +41,81 @@
   let query = $state("");
   const words = $derived(query.trim().toLowerCase());
   const matches = $derived(
-    typeof families === "string" ? [] : families.filter((f) => f.toLowerCase().includes(words)),
+    typeof families === "string"
+      ? []
+      : families.filter((f) => f.family.toLowerCase().includes(words)),
+  );
+  const isRecommended = (font: FontEntry) => font.languages?.includes(language) ?? false;
+  const recommended = $derived(matches.filter(isRecommended));
+  /** ほかの言語のおすすめも、取得したものや PC にあるものはここから選べる */
+  const others = $derived(
+    matches.filter((font) => !isRecommended(font) && font.sizeBytes === undefined),
   );
   const note = $derived.by(() => {
     if (families === "loading") return "読み込み中…";
     if (families === "failed") return "読み込めませんでした。開き直すと読み直します";
-    if (families.length === 0) return "この PC のフォントが見つかりません";
-    if (matches.length === 0) return "見つかりません";
-    return matches.length > MAX_SHOWN ? "検索するとほかのフォントも出ます" : undefined;
+    if (recommended.length + others.length === 0) return "見つかりません";
+    return others.length > MAX_SHOWN ? "検索するとほかのフォントも出ます" : undefined;
   });
 
-  function choose(family: string) {
+  /** 確認しているフォント */
+  let pending = $state<FontEntry>();
+  let downloading = $state(false);
+
+  function close() {
     open = false;
     query = "";
-    onchange(family);
+  }
+
+  function choose(font: FontEntry) {
+    close();
+    if (font.sizeBytes === undefined) onchange(font.family);
+    else pending = font;
+  }
+
+  function chooseStandard() {
+    close();
+    onchange("");
+  }
+
+  async function download(family: string) {
+    downloading = true;
+    const done = await panel.downloadFont(family);
+    downloading = false;
+    if (done) onchange(family);
+    return done;
   }
 </script>
 
+{#snippet check(family: string)}
+  {#if family === value}<CheckIcon class="absolute top-2 right-2 size-4" />{/if}
+{/snippet}
+
 <!-- 画面外の行は content-visibility で描かず、見本のフォントも読み込ませない。行の高さは固定なので、スクロールの量は変わらない -->
-{#snippet option(family: string, label: string)}
+{#snippet option(font: FontEntry)}
   <Command.Item
-    value={label}
-    class="relative flex h-8 cursor-default items-baseline gap-3 rounded-sm pr-8 pl-2 text-sm leading-8 outline-hidden select-none [contain-intrinsic-size:auto_2rem] [content-visibility:auto] data-selected:bg-accent data-selected:text-accent-foreground"
-    onSelect={() => choose(family)}
+    value={font.family}
+    class="relative flex h-8 cursor-default items-center gap-3 rounded-sm pr-8 pl-2 text-sm leading-8 outline-hidden select-none [contain-intrinsic-size:auto_2rem] [content-visibility:auto] data-selected:bg-accent data-selected:text-accent-foreground"
+    onSelect={() => choose(font)}
   >
-    <span class="min-w-0 flex-1 truncate">{label}</span>
-    {#if family}
+    <span class="min-w-0 flex-1 truncate">{font.family}</span>
+    {#if font.sizeBytes === undefined}
       <!-- 標準の候補に続けない。無い字が別のフォントで描かれると、このフォントの見本に見える -->
       <span
         aria-hidden="true"
         lang={language}
         class="max-w-1/2 shrink-0 overflow-clip text-base/8 whitespace-nowrap"
-        style:font-family={cssString(family)}>{swatch}</span
+        style:font-family={cssString(font.family)}>{swatch}</span
       >
+    {:else}
+      <span aria-hidden="true" class="flex max-w-1/3 shrink-0 overflow-clip text-base">
+        {@html SAMPLES[`../font-samples/${fontSampleName(font.family)}`]}
+      </span>
+      <span class="shrink-0 text-xs text-muted-foreground">
+        ダウンロード（{formatSize(font.sizeBytes)}）
+      </span>
     {/if}
-    {#if family === value}<CheckIcon class="absolute top-2 right-2 size-4" />{/if}
+    {@render check(font.family)}
   </Command.Item>
 {/snippet}
 
@@ -95,10 +146,26 @@
         />
         <Command.List class="max-h-64 overflow-y-auto p-1">
           <Command.Viewport>
-            {#if !words}{@render option("", STANDARD)}{/if}
-            {#each matches.slice(0, MAX_SHOWN) as family (family)}
-              {@render option(family, family)}
-            {/each}
+            {#if !words}
+              <Command.Item
+                value={STANDARD}
+                class="relative flex h-8 cursor-default items-center rounded-sm pr-8 pl-2 text-sm outline-hidden select-none data-selected:bg-accent data-selected:text-accent-foreground"
+                onSelect={chooseStandard}
+              >
+                {STANDARD}
+                {@render check("")}
+              </Command.Item>
+            {/if}
+            {#if recommended.length > 0}
+              <p class={HEADING}>おすすめ</p>
+              {#each recommended as font (font.family)}{@render option(font)}{/each}
+            {/if}
+            {#if others.length > 0}
+              <p class={HEADING}>この PC のフォント</p>
+              {#each others.slice(0, MAX_SHOWN) as font (font.family)}
+                {@render option(font)}
+              {/each}
+            {/if}
             {#if note}<p class="px-2 py-1.5 text-sm text-muted-foreground">{note}</p>{/if}
           </Command.Viewport>
         </Command.List>
@@ -106,3 +173,16 @@
     </Popover.Content>
   </Popover.Portal>
 </Popover.Root>
+
+{#if pending}
+  <ConfirmDialog
+    bind:open={() => pending !== undefined, (next) => !next && (pending = undefined)}
+    title="{pending.family} をダウンロードしますか"
+    action={downloading ? "ダウンロード中…" : "ダウンロード"}
+    onconfirm={() => download(pending!.family)}
+  >
+    <p>大きさ: {formatSize(pending.sizeBytes!)}</p>
+    <p>配布元: Google Fonts（GitHub の google/fonts）</p>
+    <p>ダウンロードしたフォントはこの PC に保存し、OBS の字幕とランクにも使います。</p>
+  </ConfirmDialog>
+{/if}

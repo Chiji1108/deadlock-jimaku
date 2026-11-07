@@ -25,7 +25,7 @@
   <Card.Header>
     <Card.Title>フォント</Card.Title>
     <Card.Description>
-      字幕とランクに共通です。この PC
+      字幕とランクに共通です。おすすめのフォントと、この PC
       に入っているフォントから言語ごとに選べます。アイテム説明のカードはゲームと同じ見た目にするので変わりません
     </Card.Description>
     <Card.Action>

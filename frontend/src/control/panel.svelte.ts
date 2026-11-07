@@ -12,10 +12,11 @@ import type { TranscriptionError } from "../generated/TranscriptionError";
 import type { UsageView } from "../generated/UsageView";
 import { api } from "../lib/api";
 import { addFontFaces } from "../lib/overlay-fonts";
+import type { FontEntry } from "../generated/FontEntry";
 import { connect, type Status } from "../lib/ws";
 
 /** 選べるフォントの一覧。取れるまでと、取れなかったときは名前の配列の代わりにその状態が入る */
-export type FontList = string[] | "loading" | "failed";
+export type FontList = FontEntry[] | "loading" | "failed";
 
 /** OBS に貼る URL（axum。開発中に Vite から開いても同じ） */
 export const overlayUrl = (name: "subtitles" | "rank" | "items") =>
@@ -211,18 +212,26 @@ class Panel {
     } else if (typeof this.fonts === "string") this.fonts = "failed";
   };
 
-  /** 最初の一覧は WebView が名前で描ける。そのあと増えたフォントだけ読み込む */
-  private addFaces(fonts: string[]) {
-    if (!this.knownFonts) {
-      this.knownFonts = new Set(fonts);
-      return;
-    }
-    for (const family of fonts) {
-      if (this.knownFonts.has(family)) continue;
-      this.knownFonts.add(family);
-      addFontFaces(family);
+  /**
+   * 最初の一覧の PC のフォントは WebView が名前で描ける。そのあと増えたフォントと、PC に入っていない
+   * ダウンロードしたフォントは読み込む。未取得のフォントはファイルがないので読まない
+   */
+  private addFaces(fonts: FontEntry[]) {
+    const first = !this.knownFonts;
+    const known = (this.knownFonts ??= new Set());
+    for (const { family, languages, sizeBytes } of fonts) {
+      if (sizeBytes !== undefined || known.has(family)) continue;
+      known.add(family);
+      if (!first || languages) addFontFaces(family);
     }
   }
+
+  /** 取得できたら一覧を読み直して true。一覧が見本を描けるようになる */
+  downloadFont = (family: string) =>
+    this.run(async () => {
+      await api.downloadFont(family);
+      await this.loadFonts();
+    });
 
   refreshGift = async () => {
     this.gift = await api.gift().catch(() => undefined);

@@ -1,0 +1,404 @@
+{
+  "commit": "86aced91de05cd4f96a06838124cca45be337b2b",
+  "fonts": [
+    {
+      "family": "Zen Maru Gothic",
+      "dir": "ofl/zenmarugothic",
+      "license": "OFL-1.1",
+      "languages": ["ja"],
+      "sample": "あいアイ漢字",
+      "files": [
+        {
+          "name": "ZenMaruGothic-Regular.ttf",
+          "size": 3832756,
+          "sha256": "a0c0b53543e0993ae2225e629c833f3d51495ad31720694ff112ce4ce11111ef"
+        },
+        {
+          "name": "ZenMaruGothic-Bold.ttf",
+          "size": 3779008,
+          "sha256": "fe24426b9c8b5523a0146a8235c8674eccf0493af354a53ec895c3596d9eb745"
+        },
+        {
+          "name": "ZenMaruGothic-Black.ttf",
+          "size": 3710324,
+          "sha256": "6bd74fe76cd39ee0ec18775c3661d845343fb3f6f8fa09a3076638417baf741f"
+        }
+      ]
+    },
+    {
+      "family": "Rounded Mplus 1c",
+      "dir": "ofl/mplusrounded1c",
+      "license": "OFL-1.1",
+      "languages": ["ja", "el"],
+      "sample": "あいアイ漢字",
+      "files": [
+        {
+          "name": "MPLUSRounded1c-Regular.ttf",
+          "size": 3389792,
+          "sha256": "b75708b53e45b06d17d470aeeca5b766e3d1b3999f03f13ec4eb863ca846c14c"
+        },
+        {
+          "name": "MPLUSRounded1c-ExtraBold.ttf",
+          "size": 3628512,
+          "sha256": "8e7c15901dca87f1451b356dda594f7d092ba252a5dcc47da74523a242493c36"
+        }
+      ]
+    },
+    {
+      "family": "Hachi Maru Pop",
+      "dir": "ofl/hachimarupop",
+      "license": "OFL-1.1",
+      "languages": ["ja"],
+      "sample": "あいアイ漢字",
+      "files": [
+        {
+          "name": "HachiMaruPop-Regular.ttf",
+          "size": 4385624,
+          "sha256": "78408910c8f1a2f174a279cbc1484b48b71780039eba3fe1be2bfcc5d4df3f98"
+        }
+      ]
+    },
+    {
+      "family": "Potta One",
+      "dir": "ofl/pottaone",
+      "license": "OFL-1.1",
+      "languages": ["ja"],
+      "sample": "あいアイ漢字",
+      "files": [
+        {
+          "name": "PottaOne-Regular.ttf",
+          "size": 4918516,
+          "sha256": "bde843868b56e429e1c863da2efa76df533162b226d990efcb96d533b0ca2a93"
+        }
+      ]
+    },
+    {
+      "family": "Noto Sans JP",
+      "dir": "ofl/notosansjp",
+      "license": "OFL-1.1",
+      "languages": ["ja"],
+      "sample": "あいアイ漢字",
+      "files": [
+        {
+          "name": "NotoSansJP[wght].ttf",
+          "size": 9589900,
+          "sha256": "c2f3b4d463500a2ddcd3849cded1fceeb9fd6d1c32e6cbecd568453ba50fc68f"
+        }
+      ]
+    },
+    {
+      "family": "Jua",
+      "dir": "ofl/jua",
+      "license": "OFL-1.1",
+      "languages": ["ko"],
+      "sample": "한국어",
+      "files": [
+        {
+          "name": "Jua-Regular.ttf",
+          "size": 2119352,
+          "sha256": "769677aef240bfc3b9965f2b50748075bff885e6c6992fc591a3fb268279f898"
+        }
+      ]
+    },
+    {
+      "family": "Do Hyeon",
+      "dir": "ofl/dohyeon",
+      "license": "OFL-1.1",
+      "languages": ["ko"],
+      "sample": "한국어",
+      "files": [
+        {
+          "name": "DoHyeon-Regular.ttf",
+          "size": 879764,
+          "sha256": "35644be7f28e0a68a447b1f7af351dcde5674b870f24f7b5f43e26d00b4ab653"
+        }
+      ]
+    },
+    {
+      "family": "Gaegu",
+      "dir": "ofl/gaegu",
+      "license": "OFL-1.1",
+      "languages": ["ko"],
+      "sample": "한국어",
+      "files": [
+        {
+          "name": "Gaegu-Regular.ttf",
+          "size": 3165816,
+          "sha256": "aa52c98336f7c62e2896fc8b12b56a75d5b476d88a2f104b0980f4f7ce0adfc3"
+        },
+        {
+          "name": "Gaegu-Bold.ttf",
+          "size": 2962664,
+          "sha256": "cc38a4af9506a45254d1ce07c589ec473d9e5f0be319e5a77b17c214903f8c1c"
+        }
+      ]
+    },
+    {
+      "family": "Noto Sans KR",
+      "dir": "ofl/notosanskr",
+      "license": "OFL-1.1",
+      "languages": ["ko"],
+      "sample": "한국어",
+      "files": [
+        {
+          "name": "NotoSansKR[wght].ttf",
+          "size": 10414588,
+          "sha256": "194018e6b2b293a7964f037b25c0249ce1418bc9ab3c971060a03aa57861e252"
+        }
+      ]
+    },
+    {
+      "family": "ZCOOL KuaiLe",
+      "dir": "ofl/zcoolkuaile",
+      "license": "OFL-1.1",
+      "languages": ["zh-Hans"],
+      "sample": "简体中文",
+      "files": [
+        {
+          "name": "ZCOOLKuaiLe-Regular.ttf",
+          "size": 1514968,
+          "sha256": "812a6fc1fe54b6d73a419245c32dfeba8aa33104d5be90d1cf6af082007cb71d"
+        }
+      ]
+    },
+    {
+      "family": "LXGW Marker Gothic",
+      "dir": "ofl/lxgwmarkergothic",
+      "license": "OFL-1.1",
+      "languages": ["zh-Hans", "zh-Hant"],
+      "sample": "简体中文",
+      "files": [
+        {
+          "name": "LXGWMarkerGothic-Regular.ttf",
+          "size": 3187360,
+          "sha256": "e6a55cfd5f18dc393f92670a164397a69242cb4eabe1d3feb5dc22fc4947a8ba"
+        }
+      ]
+    },
+    {
+      "family": "Ma Shan Zheng",
+      "dir": "ofl/mashanzheng",
+      "license": "OFL-1.1",
+      "languages": ["zh-Hans"],
+      "sample": "简体中文",
+      "files": [
+        {
+          "name": "MaShanZheng-Regular.ttf",
+          "size": 5857936,
+          "sha256": "6d2546bb189c732a8ca29af9e22457b152387d158aa459e4ac2ce1e51788b7fb"
+        }
+      ]
+    },
+    {
+      "family": "Noto Sans SC",
+      "dir": "ofl/notosanssc",
+      "license": "OFL-1.1",
+      "languages": ["zh-Hans"],
+      "sample": "简体中文",
+      "files": [
+        {
+          "name": "NotoSansSC[wght].ttf",
+          "size": 17772300,
+          "sha256": "a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da"
+        }
+      ]
+    },
+    {
+      "family": "Huninn",
+      "dir": "ofl/huninn",
+      "license": "OFL-1.1",
+      "languages": ["zh-Hant"],
+      "sample": "繁體中文",
+      "files": [
+        {
+          "name": "Huninn-Regular.ttf",
+          "size": 4683972,
+          "sha256": "1bd770a5ffc0c06723b567686f8b5db5abf9ab54227f3bbc4e6fd648f4698805"
+        }
+      ]
+    },
+    {
+      "family": "Iansui",
+      "dir": "ofl/iansui",
+      "license": "OFL-1.1",
+      "languages": ["zh-Hant"],
+      "sample": "繁體中文",
+      "files": [
+        {
+          "name": "Iansui-Regular.ttf",
+          "size": 9420560,
+          "sha256": "6e6340d80d618a42b48ade9370c34fa37a8210750c6fbc8efe65f23716538a2b"
+        }
+      ]
+    },
+    {
+      "family": "Noto Sans TC",
+      "dir": "ofl/notosanstc",
+      "license": "OFL-1.1",
+      "languages": ["zh-Hant"],
+      "sample": "繁體中文",
+      "files": [
+        {
+          "name": "NotoSansTC[wght].ttf",
+          "size": 11941968,
+          "sha256": "864727d210d54f2537bbe23b3a839436c3992af72de9322af5270897246bd44f"
+        }
+      ]
+    },
+    {
+      "family": "Itim",
+      "dir": "ofl/itim",
+      "license": "OFL-1.1",
+      "languages": ["th"],
+      "sample": "ไทย",
+      "files": [
+        {
+          "name": "Itim-Regular.ttf",
+          "size": 371384,
+          "sha256": "9164d7eb92ca717b53b07193e3445c96782222d24215151b8d2851b576b17645"
+        }
+      ]
+    },
+    {
+      "family": "Mali",
+      "dir": "ofl/mali",
+      "license": "OFL-1.1",
+      "languages": ["th"],
+      "sample": "ไทย",
+      "files": [
+        {
+          "name": "Mali-Regular.ttf",
+          "size": 112756,
+          "sha256": "e3212f0f9be130743d32a4f174b7d79628daa5db0d72ca4c63c799ae465597bb"
+        },
+        {
+          "name": "Mali-Bold.ttf",
+          "size": 112176,
+          "sha256": "3e2f421036c3f91eb5ef34650a5cd2116c737a542147769437a9856a455d4462"
+        }
+      ]
+    },
+    {
+      "family": "Sriracha",
+      "dir": "ofl/sriracha",
+      "license": "OFL-1.1",
+      "languages": ["th"],
+      "sample": "ไทย",
+      "files": [
+        {
+          "name": "Sriracha-Regular.ttf",
+          "size": 319896,
+          "sha256": "c3128c30cb21e8724b792586c87059d1b5eceae10d9957ba2ab26c80bbed3669"
+        }
+      ]
+    },
+    {
+      "family": "Kanit",
+      "dir": "ofl/kanit",
+      "license": "OFL-1.1",
+      "languages": ["th"],
+      "sample": "ไทย",
+      "files": [
+        {
+          "name": "Kanit-Regular.ttf",
+          "size": 173148,
+          "sha256": "27170c049660b2f962d3ed28441fd20f4c743503ca031fec9c2b4542d6c52736"
+        },
+        {
+          "name": "Kanit-Bold.ttf",
+          "size": 176136,
+          "sha256": "5dec5b080dab13de9d2295437c0ff3ec05c9e75587dfc31358c005eb4efa5e70"
+        },
+        {
+          "name": "Kanit-ExtraBold.ttf",
+          "size": 177836,
+          "sha256": "70082870d1f5bb6ae9faa708572b2c36de3c076caae187edae753f709d0de984"
+        }
+      ]
+    },
+    {
+      "family": "Noto Sans Thai",
+      "dir": "ofl/notosansthai",
+      "license": "OFL-1.1",
+      "languages": ["th"],
+      "sample": "ไทย",
+      "files": [
+        {
+          "name": "NotoSansThai[wdth,wght].ttf",
+          "size": 218652,
+          "sha256": "5a1c559bb539583c8a1fd99d1c5b9491e5e14478c9cd2bd0970d5c3096cc9ef8"
+        }
+      ]
+    },
+    {
+      "family": "Nunito",
+      "dir": "ofl/nunito",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi", "ru", "uk", "bg"],
+      "sample": "Aa",
+      "files": [
+        {
+          "name": "Nunito[wght].ttf",
+          "size": 276932,
+          "sha256": "bb55a5ca5c2042335b3991af27c4d0705d0ef41cac6164ac737fd8f2a1e85207"
+        }
+      ]
+    },
+    {
+      "family": "Fredoka",
+      "dir": "ofl/fredoka",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id"],
+      "sample": "Aa",
+      "files": [
+        {
+          "name": "Fredoka[wdth,wght].ttf",
+          "size": 159184,
+          "sha256": "2ba02e68b152868aef9ba28e24b3648c7d457fe6f25c761f2c2c53fb61a73fc8"
+        }
+      ]
+    },
+    {
+      "family": "Comfortaa",
+      "dir": "ofl/comfortaa",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi", "ru", "uk", "bg", "el"],
+      "sample": "Aa",
+      "files": [
+        {
+          "name": "Comfortaa[wght].ttf",
+          "size": 201756,
+          "sha256": "0fc3f45dc48b614db9c39181502544b37217ecbf8bee2fb35886992bc96c5bd3"
+        }
+      ]
+    },
+    {
+      "family": "Oswald",
+      "dir": "ofl/oswald",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi", "ru", "uk", "bg"],
+      "sample": "Aa",
+      "files": [
+        {
+          "name": "Oswald[wght].ttf",
+          "size": 172088,
+          "sha256": "5b38c246e255a12f5712d640d56bcced0472466fc68983d2d0410ec0457c2817"
+        }
+      ]
+    },
+    {
+      "family": "Noto Sans",
+      "dir": "ofl/notosans",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi", "ru", "uk", "bg", "el"],
+      "sample": "Aa",
+      "files": [
+        {
+          "name": "NotoSans[wdth,wght].ttf",
+          "size": 2049096,
+          "sha256": "bfb7bb691513f12e734dc346c03a03f784912432d7e3fa8e56efcf906fe86b3d"
+        }
+      ]
+    }
+  ]
+}

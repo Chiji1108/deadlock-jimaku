@@ -47,6 +47,7 @@ pub fn router(store: Arc<Store>) -> Router {
         .route("/languages", get(languages))
         .route("/fonts", get(fonts))
         .route("/fonts/{family}/faces.css", get(font_faces))
+        .route("/fonts/{family}/download", post(download_font))
         .route("/fonts/{family}/{postscript}", get(font_file))
         .route("/chrome/open", post(open_chrome))
         .route("/chrome/reset", post(reset_chrome))
@@ -440,8 +441,29 @@ async fn languages() -> Json<Vec<LangCode>> {
     Json(lang::LANGUAGES.iter().map(|l| l.code.to_owned()).collect())
 }
 
-async fn fonts() -> Json<Vec<String>> {
-    Json(fonts::installed().await)
+async fn fonts(State(store): State<Arc<Store>>) -> Json<Vec<fonts::FontEntry>> {
+    Json(fonts::listed(fonts::folder(store.data_dir())).await)
+}
+
+/// カタログの名前だけを受け付ける。別の URL やパスは渡せない
+async fn download_font(State(store): State<Arc<Store>>, Path(family): Path<String>) -> Response {
+    let Some(font) = fonts::find(&family) else {
+        return StatusCode::NOT_FOUND.into_response();
+    };
+    match fonts::download(font, &fonts::folder(store.data_dir())).await {
+        Ok(()) => StatusCode::NO_CONTENT.into_response(),
+        Err(fonts::DownloadError::Busy) => {
+            (StatusCode::CONFLICT, "ダウンロード中です").into_response()
+        }
+        Err(fonts::DownloadError::Failed(e)) => {
+            tracing::warn!("font download failed: {e:#}");
+            (
+                StatusCode::BAD_GATEWAY,
+                "フォントをダウンロードできませんでした。時間をおいて試してください",
+            )
+                .into_response()
+        }
+    }
 }
 
 /// URL に版を含めず、毎回確かめさせる。フォントを入れ替えても同じ URL で新しい面が届く
@@ -464,8 +486,12 @@ fn font_response(
     ([(header::CONTENT_TYPE, mime), FONT_CACHE], etag, body).into_response()
 }
 
-async fn font_faces(Path(family): Path<String>, headers: HeaderMap) -> Response {
-    match fonts::faces_css(family).await {
+async fn font_faces(
+    State(store): State<Arc<Store>>,
+    Path(family): Path<String>,
+    headers: HeaderMap,
+) -> Response {
+    match fonts::faces_css(fonts::folder(store.data_dir()), family).await {
         Some(css) => font_response(
             &headers,
             fonts::content_etag(&css),
@@ -477,10 +503,11 @@ async fn font_faces(Path(family): Path<String>, headers: HeaderMap) -> Response 
 }
 
 async fn font_file(
+    State(store): State<Arc<Store>>,
     Path((family, postscript)): Path<(String, String)>,
     headers: HeaderMap,
 ) -> Response {
-    match fonts::face_file(family, postscript).await {
+    match fonts::face_file(fonts::folder(store.data_dir()), family, postscript).await {
         Some(face) => font_response(&headers, face.etag, "font/sfnt", face.data),
         None => StatusCode::NOT_FOUND.into_response(),
     }
@@ -678,14 +705,28 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn serves_the_fonts_as_a_list_of_names() {
+    async fn serves_the_fonts_as_a_list() {
         let addr = serve_on_any_port().await;
         let res = reqwest::get(format!("http://{addr}/api/fonts"))
             .await
             .unwrap();
         assert_eq!(res.status(), StatusCode::OK);
-        // 中身は PC によるので、一覧の作り方は fonts.rs のテストで確かめる
-        let _: Vec<String> = res.json().await.unwrap();
+        // PC のフォントは PC によるので、一覧の作り方は fonts.rs のテストで確かめる
+        let list: Vec<Value> = res.json().await.unwrap();
+        assert!(list.iter().any(|font| font["family"] == "Zen Maru Gothic"));
+    }
+
+    #[tokio::test]
+    async fn only_catalog_fonts_can_be_downloaded() {
+        let addr = serve_on_any_port().await;
+        for family in ["Arial", "No%20Such%20Font", "..%2F..%2Fetc%2Fpasswd"] {
+            let res = reqwest::Client::new()
+                .post(format!("http://{addr}/api/fonts/{family}/download"))
+                .send()
+                .await
+                .unwrap();
+            assert_eq!(res.status(), StatusCode::NOT_FOUND, "{family}");
+        }
     }
 
     fn font_request(sent: &str) -> Response {

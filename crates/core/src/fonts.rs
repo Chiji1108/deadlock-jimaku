@@ -1,13 +1,158 @@
-//! オーバーレイで選べるフォントの一覧と、そのファイルの配信（DESIGN.md 6.3）。
+//! オーバーレイで選べるフォントの一覧、ファイルの配信、おすすめのフォントのダウンロード（DESIGN.md 6.3）。
 
 use std::collections::hash_map::DefaultHasher;
+use std::collections::{BTreeSet, HashSet};
 use std::hash::{Hash, Hasher};
-use std::time::UNIX_EPOCH;
+use std::path::{Path, PathBuf};
+use std::sync::{LazyLock, Mutex};
+use std::time::{Duration, UNIX_EPOCH};
 
+use anyhow::ensure;
 use fontdb::{Database, FaceInfo, Source, Stretch, Style};
 use percent_encoding::{NON_ALPHANUMERIC, utf8_percent_encode};
+use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
+use ts_rs::TS;
 
 use crate::settings::valid_font_name;
+
+/// 一覧の 1 行。`languages` があるものはおすすめで、その言語の一覧に出す。`size_bytes` があるものは未取得
+#[derive(Debug, PartialEq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct FontEntry {
+    pub family: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub languages: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional, type = "number")]
+    pub size_bytes: Option<u64>,
+}
+
+/// `font-catalog.json` の形。frontend/scripts/font-samples.ts も同じファイルを読む
+#[derive(Deserialize)]
+struct Catalog {
+    commit: String,
+    fonts: Vec<CatalogFont>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CatalogFont {
+    family: String,
+    /// `google/fonts` の中のフォルダ
+    dir: String,
+    pub license: String,
+    languages: Vec<String>,
+    files: Vec<CatalogFile>,
+}
+
+#[derive(Debug, Deserialize)]
+struct CatalogFile {
+    name: String,
+    size: u64,
+    sha256: String,
+}
+
+static CATALOG: LazyLock<Catalog> = LazyLock::new(|| {
+    serde_json::from_str(include_str!("font-catalog.json")).expect("valid font catalog")
+});
+
+impl CatalogFont {
+    fn size_bytes(&self) -> u64 {
+        self.files.iter().map(|file| file.size).sum()
+    }
+
+    /// 途中で失敗して欠けたファミリーは、未取得のまま出して取り直せるようにする
+    fn downloaded(&self, dir: &Path) -> bool {
+        self.files.iter().all(|file| dir.join(&file.name).is_file())
+    }
+}
+
+/// カタログの名前だけをダウンロードできる。URL は受け取らない
+pub fn find(family: &str) -> Option<&'static CatalogFont> {
+    CATALOG.fonts.iter().find(|font| font.family == family)
+}
+
+/// ダウンロードしたフォントの置き場所
+pub fn folder(data_dir: &Path) -> PathBuf {
+    data_dir.join("fonts")
+}
+
+/// 遅い回線でも終わるよう、`crate::http()` の 60 秒を上書きする
+const DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(600);
+
+static DOWNLOADING: Mutex<BTreeSet<String>> = Mutex::new(BTreeSet::new());
+
+/// ダウンロード中の印。途中で失敗しても `Drop` で外れる
+struct Claim(String);
+
+impl Claim {
+    fn take(family: &str) -> Option<Self> {
+        let mut running = DOWNLOADING.lock().expect("lock");
+        running
+            .insert(family.to_owned())
+            .then(|| Self(family.to_owned()))
+    }
+}
+
+impl Drop for Claim {
+    fn drop(&mut self) {
+        DOWNLOADING.lock().expect("lock").remove(&self.0);
+    }
+}
+
+#[derive(Debug)]
+pub enum DownloadError {
+    Busy,
+    Failed(anyhow::Error),
+}
+
+/// 大きさと SHA-256 がカタログと一致したものだけを返す
+async fn fetch(url: &str, file: &CatalogFile) -> anyhow::Result<Vec<u8>> {
+    let mut res = crate::http()
+        .get(url)
+        .timeout(DOWNLOAD_TIMEOUT)
+        .send()
+        .await?
+        .error_for_status()?;
+    let mut body = Vec::with_capacity(file.size as usize);
+    while let Some(chunk) = res.chunk().await? {
+        body.extend_from_slice(&chunk);
+        ensure!(body.len() as u64 <= file.size, "{} is too large", file.name);
+    }
+    let sha256 = format!("{:x}", Sha256::digest(&body));
+    ensure!(sha256 == file.sha256, "{} has a wrong hash", file.name);
+    Ok(body)
+}
+
+/// 全部のファイルが揃ってから置く
+async fn download_from(origin: &str, font: &CatalogFont, dir: &Path) -> anyhow::Result<()> {
+    let mut bodies = Vec::with_capacity(font.files.len());
+    for file in &font.files {
+        let url = format!("{origin}/{}/{}", font.dir, file.name);
+        bodies.push(fetch(&url, file).await?);
+    }
+    for (file, body) in font.files.iter().zip(&bodies) {
+        crate::write_atomic(&dir.join(&file.name), body).await?;
+    }
+    Ok(())
+}
+
+async fn download_once(origin: &str, font: &CatalogFont, dir: &Path) -> Result<(), DownloadError> {
+    let _claim = Claim::take(&font.family).ok_or(DownloadError::Busy)?;
+    download_from(origin, font, dir)
+        .await
+        .map_err(DownloadError::Failed)
+}
+
+pub async fn download(font: &CatalogFont, dir: &Path) -> Result<(), DownloadError> {
+    let origin = format!(
+        "https://raw.githubusercontent.com/google/fonts/{}",
+        CATALOG.commit
+    );
+    download_once(&origin, font, dir).await
+}
 
 /// 設定に保存できて、一覧に出すファミリーか。`.` で始まる名前は macOS の内部用で、選べない
 fn selectable(family: &str) -> bool {
@@ -27,25 +172,53 @@ fn entries<'a>(families: impl IntoIterator<Item = &'a str>) -> Vec<String> {
     families
 }
 
-fn database() -> Database {
+fn database(dir: &Path) -> Database {
     let mut db = Database::new();
     db.load_system_fonts();
+    db.load_fonts_dir(dir);
     db
 }
 
-fn scan() -> Vec<String> {
-    let db = database();
+/// PC にあるフォントはダウンロードを勧めない。カタログの行は PC のものでもおすすめに 1 回だけ出す
+fn list(pc: Vec<String>, catalog: &[CatalogFont], dir: &Path) -> Vec<FontEntry> {
+    let lower = |family: &str| family.to_lowercase();
+    let on_pc: HashSet<String> = pc.iter().map(|family| lower(family)).collect();
+    let listed: HashSet<String> = catalog.iter().map(|font| lower(&font.family)).collect();
+    catalog
+        .iter()
+        .map(|font| FontEntry {
+            family: font.family.clone(),
+            languages: Some(font.languages.clone()),
+            size_bytes: (!on_pc.contains(&lower(&font.family)) && !font.downloaded(dir))
+                .then(|| font.size_bytes()),
+        })
+        .chain(
+            pc.into_iter()
+                .filter(|family| !listed.contains(&lower(family)))
+                .map(|family| FontEntry {
+                    family,
+                    languages: None,
+                    size_bytes: None,
+                }),
+        )
+        .collect()
+}
+
+fn scan(dir: &Path) -> Vec<FontEntry> {
+    let mut db = Database::new();
+    db.load_system_fonts();
     // 先頭は英語の名前。どの OS でも CSS の font-family に書ける
-    entries(
+    let pc = entries(
         db.faces()
             .filter_map(|face| face.families.first())
             .map(|(family, _)| family.as_str()),
-    )
+    );
+    list(pc, &CATALOG.fonts, dir)
 }
 
 /// PC のフォントを全部開くので別のスレッドで読む。入れたばかりのフォントも出るよう、毎回読み直す
-pub async fn installed() -> Vec<String> {
-    tokio::task::spawn_blocking(scan)
+pub async fn listed(dir: PathBuf) -> Vec<FontEntry> {
+    tokio::task::spawn_blocking(move || scan(&dir))
         .await
         .expect("blocking task")
 }
@@ -142,15 +315,15 @@ fn file(db: &Database, family: &str, postscript: &str) -> Option<FaceFile> {
 }
 
 /// そのファミリーの `@font-face`。一覧にないファミリーは `None`
-pub async fn faces_css(family: String) -> Option<String> {
-    tokio::task::spawn_blocking(move || css(&database(), &family))
+pub async fn faces_css(dir: PathBuf, family: String) -> Option<String> {
+    tokio::task::spawn_blocking(move || css(&database(&dir), &family))
         .await
         .expect("blocking task")
 }
 
 /// `faces_css` に書いた面のファイル
-pub async fn face_file(family: String, postscript: String) -> Option<FaceFile> {
-    tokio::task::spawn_blocking(move || file(&database(), &family, &postscript))
+pub async fn face_file(dir: PathBuf, family: String, postscript: String) -> Option<FaceFile> {
+    tokio::task::spawn_blocking(move || file(&database(&dir), &family, &postscript))
         .await
         .expect("blocking task")
 }
@@ -540,6 +713,243 @@ mod tests {
         assert_eq!(served(&db, "Probe", "Probe-Regular"), Some(regular));
         assert_eq!(served(&db, "Probe", "Probe-Bold"), Some(bold));
         assert!(css(&db, "Probe").unwrap().contains("font-weight: 300 800;"));
+    }
+
+    fn entry(family: &str, size_bytes: Option<u64>) -> FontEntry {
+        FontEntry {
+            family: family.to_owned(),
+            languages: Some(vec!["ja".to_owned()]),
+            size_bytes,
+        }
+    }
+
+    fn pc_entry(family: &str) -> FontEntry {
+        FontEntry {
+            languages: None,
+            ..entry(family, None)
+        }
+    }
+
+    fn catalog_font(family: &str, files: Vec<CatalogFile>) -> CatalogFont {
+        CatalogFont {
+            family: family.to_owned(),
+            dir: "ofl/probe".to_owned(),
+            license: "OFL-1.1".to_owned(),
+            languages: vec!["ja".to_owned()],
+            files,
+        }
+    }
+
+    fn catalog_file(name: &str, body: &[u8]) -> CatalogFile {
+        CatalogFile {
+            name: name.to_owned(),
+            size: body.len() as u64,
+            sha256: format!("{:x}", Sha256::digest(body)),
+        }
+    }
+
+    #[test]
+    fn a_font_on_the_pc_is_recommended_once_and_never_offered_for_download() {
+        let dir = tempfile::tempdir().unwrap();
+        let catalog = [
+            catalog_font("Probe", vec![catalog_file("a.ttf", b"12")]),
+            catalog_font("Other", vec![catalog_file("b.ttf", b"1234")]),
+        ];
+        assert_eq!(
+            list(
+                vec!["probe".to_owned(), "Arial".to_owned()],
+                &catalog,
+                dir.path()
+            ),
+            [
+                entry("Probe", None),
+                entry("Other", Some(4)),
+                pc_entry("Arial")
+            ]
+        );
+    }
+
+    #[test]
+    fn a_family_with_a_missing_file_can_be_downloaded_again() {
+        let dir = tempfile::tempdir().unwrap();
+        let catalog = [catalog_font(
+            "Probe",
+            vec![catalog_file("a.ttf", b"12"), catalog_file("b.ttf", b"345")],
+        )];
+        std::fs::write(dir.path().join("a.ttf"), b"12").unwrap();
+        assert_eq!(
+            list(vec![], &catalog, dir.path()),
+            [entry("Probe", Some(5))]
+        );
+        std::fs::write(dir.path().join("b.ttf"), b"345").unwrap();
+        assert_eq!(list(vec![], &catalog, dir.path()), [entry("Probe", None)]);
+    }
+
+    /// 偽の配布元。`gate` があれば、それが開くまで応答を止める
+    async fn fake_origin(
+        files: Vec<(&'static str, Vec<u8>)>,
+        gate: Option<std::sync::Arc<tokio::sync::Semaphore>>,
+    ) -> String {
+        use axum::extract::Path as UrlPath;
+        let files = std::sync::Arc::new(files);
+        let app = axum::Router::new().route(
+            "/{*path}",
+            axum::routing::get(move |UrlPath(path): UrlPath<String>| {
+                let (files, gate) = (files.clone(), gate.clone());
+                async move {
+                    if let Some(gate) = gate {
+                        let _open = gate.acquire().await.unwrap();
+                    }
+                    let found = files.iter().find(|(name, _)| path.ends_with(name));
+                    found
+                        .map(|(_, body)| body.clone())
+                        .ok_or(axum::http::StatusCode::NOT_FOUND)
+                }
+            }),
+        );
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move { axum::serve(listener, app).await });
+        format!("http://{addr}")
+    }
+
+    fn saved(dir: &Path) -> Vec<String> {
+        std::fs::read_dir(dir)
+            .map(|files| {
+                let mut names: Vec<String> = files
+                    .map(|file| file.unwrap().file_name().into_string().unwrap())
+                    .collect();
+                names.sort();
+                names
+            })
+            .unwrap_or_default()
+    }
+
+    #[tokio::test]
+    async fn saves_every_file_of_a_family_and_serves_it() {
+        let regular = face("Download Probe", "Probe-Regular", 400);
+        let bold = face("Download Probe", "Probe-Bold", 700);
+        let font = catalog_font(
+            "Download Probe",
+            vec![
+                catalog_file("r[wght].ttf", &regular),
+                catalog_file("b.ttf", &bold),
+            ],
+        );
+        let origin = fake_origin(vec![("r[wght].ttf", regular), ("b.ttf", bold)], None).await;
+        let dir = tempfile::tempdir().unwrap();
+        let fonts = dir.path().join("fonts");
+        download_once(&origin, &font, &fonts).await.unwrap();
+        assert_eq!(saved(&fonts), ["b.ttf", "r[wght].ttf"]);
+        assert_eq!(
+            sheet_files(&database(&fonts), "Download Probe"),
+            ["Probe-Regular", "Probe-Bold"]
+        );
+    }
+
+    #[tokio::test]
+    async fn a_wrong_hash_saves_nothing_of_the_family() {
+        let font = catalog_font(
+            "Hash Probe",
+            vec![
+                catalog_file("good.ttf", b"good"),
+                catalog_file("bad.ttf", b"real"),
+            ],
+        );
+        let origin = fake_origin(
+            vec![
+                ("good.ttf", b"good".to_vec()),
+                ("bad.ttf", b"evil".to_vec()),
+            ],
+            None,
+        )
+        .await;
+        let dir = tempfile::tempdir().unwrap();
+        let result = download_once(&origin, &font, dir.path()).await;
+        assert!(matches!(result, Err(DownloadError::Failed(_))));
+        assert!(saved(dir.path()).is_empty());
+    }
+
+    #[tokio::test]
+    async fn a_file_larger_than_the_catalog_says_is_refused() {
+        let font = catalog_font("Size Probe", vec![catalog_file("big.ttf", b"1234")]);
+        let origin = fake_origin(vec![("big.ttf", vec![0; 1 << 20])], None).await;
+        let dir = tempfile::tempdir().unwrap();
+        let result = download_once(&origin, &font, dir.path()).await;
+        assert!(matches!(result, Err(DownloadError::Failed(_))));
+        assert!(saved(dir.path()).is_empty());
+    }
+
+    #[tokio::test]
+    async fn the_same_font_is_downloaded_once_at_a_time() {
+        let font = catalog_font("Busy Probe", vec![catalog_file("f.ttf", b"font")]);
+        let gate = std::sync::Arc::new(tokio::sync::Semaphore::new(0));
+        let origin = fake_origin(vec![("f.ttf", b"font".to_vec())], Some(gate.clone())).await;
+        let dir = tempfile::tempdir().unwrap();
+
+        let first = download_once(&origin, &font, dir.path());
+        let second = async {
+            tokio::time::sleep(Duration::from_millis(50)).await;
+            let result = download_once(&origin, &font, dir.path()).await;
+            gate.add_permits(1);
+            result
+        };
+        let (first, second) = tokio::join!(first, second);
+        first.unwrap();
+        assert!(matches!(second, Err(DownloadError::Busy)));
+
+        gate.add_permits(1);
+        download_once(&origin, &font, dir.path()).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn a_failed_download_can_be_retried() {
+        let font = catalog_font("Retry Probe", vec![catalog_file("f.ttf", b"font")]);
+        let origin = fake_origin(vec![("other.ttf", vec![])], None).await;
+        let dir = tempfile::tempdir().unwrap();
+        for _ in 0..2 {
+            let result = download_once(&origin, &font, dir.path()).await;
+            assert!(matches!(result, Err(DownloadError::Failed(_))));
+        }
+    }
+
+    #[test]
+    fn the_catalog_holds_only_open_font_license_fonts_for_known_languages() {
+        let mut families = HashSet::new();
+        for font in &CATALOG.fonts {
+            assert!(selectable(&font.family), "{}", font.family);
+            assert!(families.insert(&font.family), "{}", font.family);
+            assert_eq!(font.license, "OFL-1.1", "{}", font.family);
+            assert!(font.dir.starts_with("ofl/"), "{}", font.family);
+            assert!(!font.files.is_empty(), "{}", font.family);
+            for language in &font.languages {
+                assert!(crate::lang::find(language).is_some(), "{language}");
+            }
+            for file in &font.files {
+                assert!(!file.name.contains(['/', '\\']), "{}", file.name);
+                assert_eq!(file.sha256.len(), 64, "{}", file.name);
+            }
+        }
+    }
+
+    #[test]
+    fn every_language_has_recommended_fonts() {
+        for language in crate::lang::LANGUAGES {
+            let count = CATALOG
+                .fonts
+                .iter()
+                .filter(|font| font.languages.iter().any(|code| code == language.code))
+                .count();
+            assert!((3..=5).contains(&count), "{}: {count}", language.code);
+        }
+    }
+
+    #[test]
+    fn the_notices_name_every_catalog_font() {
+        let notices = include_str!("../../../notices/fonts.txt");
+        for font in &CATALOG.fonts {
+            assert!(notices.contains(&font.family), "{}", font.family);
+        }
     }
 
     #[test]
