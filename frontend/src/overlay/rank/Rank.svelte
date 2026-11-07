@@ -10,7 +10,6 @@
   import { fitSource, rankSize } from "../../lib/overlay-size";
   import RankBadge from "../../lib/RankBadge.svelte";
   import { connect } from "../../lib/ws";
-  import sampleImage from "../../../../web/public/media/rank-badge.webp";
 
   let rank = $state<RankState | undefined>();
   /** ランク名の言語と、出すもの。操作パネルで変え、サーバーから届く（名前がなければ英語） */
@@ -20,6 +19,10 @@
   let anchor = $state<Anchor>("top-left");
   let look = $state<RankStyle | undefined>();
 
+  /** ゲームの画像は配布物に入れないので、プレビューの見本は仮の形にする */
+  const SAMPLE_IMAGE =
+    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Cpath fill='%23a8a29e' d='M48 6 82 20v28c0 20-14 34-34 42C28 82 14 68 14 48V20Z'/%3E%3C/svg%3E";
+
   /** 操作パネルのプレビュー（`?preview`）では、アカウントを入れる前でも見本を出しておく。OBS には出さない */
   const SAMPLE: RankState | undefined = new URLSearchParams(location.search).has("preview")
     ? {
@@ -27,7 +30,7 @@
         tier: 7,
         subrank: 3,
         names: { ja: "エミッサリー", en: "Emissary" },
-        image: sampleImage,
+        image: SAMPLE_IMAGE,
         progress: { value: 1240, max: 2000 },
       }
     : undefined;
