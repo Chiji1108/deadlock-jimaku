@@ -25,7 +25,7 @@
 
   /** ブロックしたあとは確認が出ない。OS で止めていても同じエラーになる */
   const MIC_DENIED =
-    "マイクを使えません。Chrome のウィンドウのメニューの「サイトの設定」でマイクを許可してから、Chrome を開き直してください。許可しているなら、OS の設定で Google Chrome のマイクを許可してください";
+    "マイクを使えません。Chrome の確認でブロックしたなら、操作パネルの「マイクと翻訳」にある「Chrome をリセット」を押すと、もう一度確認が出ます。許可しているなら、OS の設定で Google Chrome のマイクを許可してください";
   /** 認識を続けられない理由ごとの案内 */
   const FATAL: Record<string, string> = {
     "not-allowed": MIC_DENIED,

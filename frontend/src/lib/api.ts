@@ -14,6 +14,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await res.json()) as T;
 }
 
+async function post(path: string) {
+  const res = await fetch(path, { method: "POST" });
+  if (!res.ok) throw new Error((await res.text()) || res.statusText);
+}
+
 export const api = {
   settings: () => request<SettingsView>("/api/settings"),
   updateSettings: (patch: SettingsPatch) =>
@@ -29,10 +34,9 @@ export const api = {
   languages: () => request<string[]>("/api/languages"),
   demo: () => fetch("/api/demo", { method: "POST" }),
   /** 聞き取りのページを Chrome で開く */
-  openChrome: async () => {
-    const res = await fetch("/api/chrome/open", { method: "POST" });
-    if (!res.ok) throw new Error((await res.text()) || res.statusText);
-  },
+  openChrome: () => post("/api/chrome/open"),
+  /** Chrome の専用のデータを消して始め直す */
+  resetChrome: () => post("/api/chrome/reset"),
 
   /** もらったギフトコードの状態 */
   gift: () => request<GiftStatus>("/api/gift"),

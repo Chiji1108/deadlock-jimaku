@@ -11,7 +11,7 @@
 use std::collections::HashMap;
 use std::fs;
 use std::io;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::Arc;
 use std::time::Duration;
@@ -46,6 +46,8 @@ const WINDOW_SIZE: &str = "--window-size=460,320";
 /// Chrome が CDP の窓口を開くまで、ページが読み込まれるまでの待ち時間
 const ATTEMPTS: u32 = 100;
 const RETRY: Duration = Duration::from_millis(200);
+/// 子プロセスは本体より遅れて終わる。Windows では、それまでプロファイルのファイルを消せない
+const REMOVE_ATTEMPTS: u32 = 25;
 /// ページの準備が要らないか確かめる間隔
 const CHECK_INTERVAL: Duration = Duration::from_secs(1);
 
@@ -58,7 +60,7 @@ pub struct Browser {
 impl Browser {
     /// Chrome が見つからなければ `NotFound`
     pub fn launch(store: Arc<Store>) -> io::Result<Self> {
-        let profile = store.data_dir().join("chrome-profile");
+        let profile = profile_dir(store.data_dir());
         let _ = fs::remove_file(profile.join("DevToolsActivePort"));
         let child = command(&arguments(&profile))?
             .stdin(Stdio::null())
@@ -98,6 +100,28 @@ impl Drop for Browser {
         let _ = self.child.kill();
         let _ = self.child.wait();
     }
+}
+
+fn profile_dir(data_dir: &Path) -> PathBuf {
+    data_dir.join("chrome-profile")
+}
+
+/// 専用のプロファイルを消す。なければ何もしない。Chrome を止めてから呼ぶ
+pub(crate) fn remove_profile(data_dir: &Path) -> io::Result<()> {
+    let profile = profile_dir(data_dir);
+    let remove = || match fs::remove_dir_all(&profile) {
+        Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(()),
+        result => result,
+    };
+    let mut removed = remove();
+    for _ in 1..REMOVE_ATTEMPTS {
+        if removed.is_ok() {
+            break;
+        }
+        std::thread::sleep(RETRY);
+        removed = remove();
+    }
+    removed
 }
 
 fn page_url() -> String {

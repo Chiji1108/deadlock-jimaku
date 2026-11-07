@@ -7,6 +7,7 @@
   import * as Select from "$lib/components/ui/select";
   import { Switch } from "$lib/components/ui/switch";
   import * as ToggleGroup from "$lib/components/ui/toggle-group";
+  import ConfirmDialog from "../parts/ConfirmDialog.svelte";
   import DeadlockModeDialog from "../parts/DeadlockModeDialog.svelte";
   import LevelMeter from "../parts/LevelMeter.svelte";
   import PauseDialog from "../parts/PauseDialog.svelte";
@@ -78,6 +79,7 @@
   const preset = $derived(PAUSES.find((p) => p.ms === pause));
 
   const DEFAULT_DEVICE = "__default__";
+  let confirmingReset = $state(false);
 </script>
 
 <div class="flex flex-col gap-6">
@@ -128,11 +130,14 @@
         </div>
       {/if}
       {#if s.speechEngine !== "openai"}
-        <div class="flex items-center gap-3">
+        <div class="flex flex-wrap items-center gap-3">
           {#if s.transcriptionEnabled}
             <Button variant="outline" size="sm" onclick={panel.openChrome}>Chrome を開き直す</Button
             >
           {/if}
+          <Button variant="outline" size="sm" onclick={() => (confirmingReset = true)}>
+            Chrome をリセット
+          </Button>
           {#if !chromeProblem}<p class="text-sm text-muted-foreground">{chromeNote}</p>{/if}
         </div>
         <p class="text-xs text-muted-foreground">
@@ -346,3 +351,20 @@
     </Card.Content>
   </Card.Root>
 </div>
+
+<ConfirmDialog
+  bind:open={confirmingReset}
+  title="Chrome をリセットしますか？"
+  action="リセットする"
+  destructive
+  onconfirm={panel.resetChrome}
+>
+  <p>
+    字幕に使う Chrome のウィンドウを閉じて、専用のデータを消します。ふだん使っている Chrome
+    には影響しません。
+  </p>
+  <p>
+    マイクの許可はもう一度聞かれ、ウィンドウで選んだマイクは戻ります。翻訳のモデルもダウンロードし直すことがあります。
+  </p>
+  {#if s.transcriptionEnabled}<p>字幕を出している間なら、Chrome は自動で起動し直します。</p>{/if}
+</ConfirmDialog>

@@ -1,6 +1,7 @@
 //! 状態ストア + broadcast（DESIGN.md 10 章）。状態はサーバーが持ち、変更は最新の状態をそのまま流す。
 
 use std::collections::VecDeque;
+use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
@@ -10,7 +11,7 @@ use bytes::Bytes;
 use tokio::sync::{broadcast, watch};
 
 use crate::assets::Loaded;
-use crate::chrome::Browser;
+use crate::chrome::{self, Browser};
 use crate::settings::{self, Settings, SettingsPatch, SpeechEngine, SubtitleDisplay};
 use crate::types::{
     ChromeCommand, Heard, ItemCardsView, LiveState, LiveStatus, RankState, Segment, ServerMsg,
@@ -373,6 +374,19 @@ impl Store {
     pub fn reopen_chrome(self: &Arc<Self>) {
         self.close_chrome();
         self.sync_chrome(self.chrome_wanted.load(Ordering::Relaxed));
+    }
+
+    /// Chrome を止めてプロファイルを消し、字幕が動いていれば起動し直す（DESIGN.md 9.6）。
+    /// 消し終わるまで `browser` を持ち、消している間に `sync_chrome` が起動しないようにする。
+    /// 消せなくても、字幕を止めたままにしない
+    pub fn reset_chrome(self: &Arc<Self>) -> io::Result<()> {
+        let removed = {
+            let mut browser = self.browser.lock().unwrap();
+            *browser = None;
+            chrome::remove_profile(&self.data_dir)
+        };
+        self.sync_chrome(self.chrome_wanted.load(Ordering::Relaxed));
+        removed
     }
 
     /// OpenAI の使用量を数える
