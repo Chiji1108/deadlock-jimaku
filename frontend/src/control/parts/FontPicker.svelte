@@ -3,7 +3,7 @@
   import { Command, Popover } from "bits-ui";
   import CheckIcon from "@lucide/svelte/icons/check";
   import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
-  import { cssString, endonym } from "../../lib/overlay-fonts";
+  import { cssString, fontSample } from "../../lib/overlay-fonts";
   import type { FontList } from "../panel.svelte";
 
   let {
@@ -23,7 +23,7 @@
   } = $props();
 
   const STANDARD = "標準";
-  const swatch = $derived(endonym(language));
+  const swatch = $derived(fontSample(language));
   /** 一度に描く数。Command は項目が増えると 1 文字ごとに固まるので、多い PC では検索で絞ってもらう */
   const MAX_SHOWN = 500;
   let open = $state(false);

@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { endonym, fontRules } from "./overlay-fonts";
+import { endonym, fontRules, fontSample } from "./overlay-fonts";
 
 test("選んだ言語だけに変数を設定し、標準の候補へ続ける", () => {
   expect(fontRules({ ja: "Hiragino Mincho ProN" })).toBe(
@@ -22,4 +22,9 @@ test("言語名はその言語で書く", () => {
 
 test("読めない言語コードはそのまま返す", () => {
   expect(endonym("not a language")).toBe("not a language");
+});
+
+test("見本は言語名で、日本語だけかなと漢字を混ぜる", () => {
+  expect(fontSample("ko")).toBe("한국어");
+  expect(fontSample("ja")).toMatch(/\p{Script=Hiragana}.*\p{Script=Katakana}.*\p{Script=Han}/u);
 });

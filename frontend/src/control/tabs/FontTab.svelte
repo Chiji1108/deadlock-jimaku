@@ -5,7 +5,7 @@
   import * as Card from "$lib/components/ui/card";
   import * as Field from "$lib/components/ui/field";
   import { SUBTITLE_SIZE } from "../../lib/overlay-size";
-  import { applyOverlayFonts, endonym } from "../../lib/overlay-fonts";
+  import { applyOverlayFonts, fontSample } from "../../lib/overlay-fonts";
   import FontPicker from "../parts/FontPicker.svelte";
   import OverlayPreview from "../parts/OverlayPreview.svelte";
   import { panel } from "../panel.svelte";
@@ -59,7 +59,7 @@
             onopen={panel.loadFonts}
             onchange={(family) => panel.update({ overlayFonts: { [language]: family } })}
           />
-          <p lang={language} class="truncate text-lg font-bold">{endonym(language)}</p>
+          <p lang={language} class="truncate text-lg font-bold">{fontSample(language)}</p>
         </Field.Field>
       {/each}
     </Field.Group>

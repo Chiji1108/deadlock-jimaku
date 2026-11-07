@@ -15,6 +15,9 @@ export function endonym(lang: string) {
   }
 }
 
+/** フォントの見本。日本語は言語名だと漢字だけになるので、かなも混ぜる */
+export const fontSample = (lang: string) => (lang === "ja" ? "あいアイ漢字" : endonym(lang));
+
 /**
  * 値の末尾のカンマで lang.css の標準の候補につなぐ。:lang(es) は es-419 にも一致するので
  * 属性の完全一致で言語を分け、[lang] を重ねて lang.css のリセットより詳細度を上げる
