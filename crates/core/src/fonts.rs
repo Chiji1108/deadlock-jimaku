@@ -1101,15 +1101,21 @@ mod tests {
         for language in crate::lang::LANGUAGES {
             let count = recommended(language.code).len();
             assert!(count >= 3, "{}: {count}", language.code);
-            assert!(count <= 5 || language.code == "ja", "{}", language.code);
+            let few_fonts = matches!(language.code, "ko" | "zh-Hans" | "zh-Hant" | "th");
+            assert!(count <= 5 || !few_fonts, "{}", language.code);
         }
     }
 
     #[test]
-    fn japanese_recommendations_start_rounded_and_end_with_the_body_font() {
-        let families = recommended("ja");
-        assert_eq!(families.first(), Some(&"Zen Maru Gothic"));
-        assert_eq!(families.last(), Some(&"Noto Sans JP"));
+    fn recommendations_start_rounded_and_end_with_the_body_font() {
+        for (language, first, last) in [
+            ("ja", "Zen Maru Gothic", "Noto Sans JP"),
+            ("en", "Nunito", "Noto Sans"),
+        ] {
+            let families = recommended(language);
+            assert_eq!(families.first(), Some(&first));
+            assert_eq!(families.last(), Some(&last));
+        }
     }
 
     #[test]

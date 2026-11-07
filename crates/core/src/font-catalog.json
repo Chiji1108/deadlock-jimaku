@@ -45,30 +45,255 @@
       ]
     },
     {
-      "family": "Mochiy Pop One",
-      "dir": "ofl/mochiypopone",
+      "family": "Kiwi Maru",
+      "dir": "ofl/kiwimaru",
       "license": "OFL-1.1",
       "languages": ["ja"],
       "sample": "あいアイ漢字",
       "files": [
         {
-          "name": "MochiyPopOne-Regular.ttf",
-          "size": 5163948,
-          "sha256": "9e009430e1316c271a5f34759c6b65fc343c4e806f193042528887e7235a92c6"
+          "name": "KiwiMaru-Regular.ttf",
+          "size": 5065572,
+          "sha256": "b0c3103b2639f690c1fcb44e060058383174bfd2eb72e6635bc9869b374dee87"
         }
       ]
     },
     {
-      "family": "Potta One",
-      "dir": "ofl/pottaone",
+      "family": "Huninn",
+      "dir": "ofl/huninn",
       "license": "OFL-1.1",
-      "languages": ["ja"],
-      "sample": "あいアイ漢字",
+      "languages": ["zh-Hant"],
+      "sample": "繁體中文",
       "files": [
         {
-          "name": "PottaOne-Regular.ttf",
-          "size": 4918516,
-          "sha256": "bde843868b56e429e1c863da2efa76df533162b226d990efcb96d533b0ca2a93"
+          "name": "Huninn-Regular.ttf",
+          "size": 4683972,
+          "sha256": "1bd770a5ffc0c06723b567686f8b5db5abf9ab54227f3bbc4e6fd648f4698805"
+        }
+      ]
+    },
+    {
+      "family": "Jua",
+      "dir": "ofl/jua",
+      "license": "OFL-1.1",
+      "languages": ["ko"],
+      "sample": "한국어",
+      "files": [
+        {
+          "name": "Jua-Regular.ttf",
+          "size": 2119352,
+          "sha256": "769677aef240bfc3b9965f2b50748075bff885e6c6992fc591a3fb268279f898"
+        }
+      ]
+    },
+    {
+      "family": "Nunito",
+      "dir": "ofl/nunito",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi", "ru", "uk", "bg"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Nunito[wght].ttf",
+          "size": 276932,
+          "sha256": "bb55a5ca5c2042335b3991af27c4d0705d0ef41cac6164ac737fd8f2a1e85207"
+        }
+      ]
+    },
+    {
+      "family": "Fredoka",
+      "dir": "ofl/fredoka",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Fredoka[wdth,wght].ttf",
+          "size": 159184,
+          "sha256": "2ba02e68b152868aef9ba28e24b3648c7d457fe6f25c761f2c2c53fb61a73fc8"
+        }
+      ]
+    },
+    {
+      "family": "Comfortaa",
+      "dir": "ofl/comfortaa",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi", "ru", "uk", "bg", "el"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Comfortaa[wght].ttf",
+          "size": 201756,
+          "sha256": "0fc3f45dc48b614db9c39181502544b37217ecbf8bee2fb35886992bc96c5bd3"
+        }
+      ]
+    },
+    {
+      "family": "Quicksand",
+      "dir": "ofl/quicksand",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Quicksand[wght].ttf",
+          "size": 124824,
+          "sha256": "39c9b64223561f56aaff6062a6f04063c4fc86809ad6768722c06614d977e1cc"
+        }
+      ]
+    },
+    {
+      "family": "Varela Round",
+      "dir": "ofl/varelaround",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "VarelaRound-Regular.ttf",
+          "size": 132748,
+          "sha256": "e1e47eb66dbc2ddc106661338e712d9176c9e83c669a82fde155324823d03aa2"
+        }
+      ]
+    },
+    {
+      "family": "Baloo 2",
+      "dir": "ofl/baloo2",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Baloo2[wght].ttf",
+          "size": 683200,
+          "sha256": "d47a6852548059b1db49a1319d06d499d546c3fa2237cf9eee9c43c8abb025c2"
+        }
+      ]
+    },
+    {
+      "family": "Sniglet",
+      "dir": "ofl/sniglet",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Sniglet-Regular.ttf",
+          "size": 75212,
+          "sha256": "2856a975b9c0ac0402e8402ac4bd126cd97d6c90490435b6198d77e6384ae4f0"
+        },
+        {
+          "name": "Sniglet-ExtraBold.ttf",
+          "size": 74228,
+          "sha256": "fb92a118e14b4bde101a0143895f570a54b070a307b359510b7703b5a94bb18c"
+        }
+      ]
+    },
+    {
+      "family": "Dosis",
+      "dir": "ofl/dosis",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "vi"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Dosis[wght].ttf",
+          "size": 117280,
+          "sha256": "b2238eef0b3464904fed097ef274c704bc63d21407369b7d7a5be7b0821a0e82"
+        }
+      ]
+    },
+    {
+      "family": "Hubballi",
+      "dir": "ofl/hubballi",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Hubballi-Regular.ttf",
+          "size": 187464,
+          "sha256": "e51ad77d40b5adccd6c6ca537863ef4e364bd374c56593e007fbf5402a9a1cdd"
+        }
+      ]
+    },
+    {
+      "family": "Bellota",
+      "dir": "ofl/bellota",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi", "ru", "bg"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Bellota-Regular.ttf",
+          "size": 194464,
+          "sha256": "d46806f9c5fd46cd6bf1c261bfa46b2d22503130d585451dc7863d8ce80524fc"
+        },
+        {
+          "name": "Bellota-Bold.ttf",
+          "size": 201076,
+          "sha256": "2120a9b5c3c92e7fe7cf4e964e925ac04cb013c63ac72da4a756ae6ed872e97b"
+        }
+      ]
+    },
+    {
+      "family": "Sulphur Point",
+      "dir": "ofl/sulphurpoint",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "hu"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "SulphurPoint-Regular.ttf",
+          "size": 54060,
+          "sha256": "46d6d54960c777007434e2a992b0ecf63c9f554c2b27f059321f4204662dcb6a"
+        },
+        {
+          "name": "SulphurPoint-Bold.ttf",
+          "size": 56188,
+          "sha256": "6c486637421b3b7507ade75795ca51abd5063fb74f2811618f393fae6d9ce8cb"
+        }
+      ]
+    },
+    {
+      "family": "Autour One",
+      "dir": "ofl/autourone",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "AutourOne-Regular.ttf",
+          "size": 87060,
+          "sha256": "6a3f5bf27e9398c25bd8c4edaee8bd503d8074553537a2bf3b1d724353aab252"
+        }
+      ]
+    },
+    {
+      "family": "Coiny",
+      "dir": "ofl/coiny",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Coiny-Regular.ttf",
+          "size": 156520,
+          "sha256": "ef02d723a54abe4819bea54ea8b2ecf72d77d258010bb336cd4862a37705eac7"
+        }
+      ]
+    },
+    {
+      "family": "Nova Round",
+      "dir": "ofl/novaround",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "NovaRound.ttf",
+          "size": 93212,
+          "sha256": "9f427a08e6367f847d4b9452ab56252d99436b6a567206c1734d5cb4de895d95"
         }
       ]
     },
@@ -87,30 +312,465 @@
       ]
     },
     {
-      "family": "RocknRoll One",
-      "dir": "ofl/rocknrollone",
+      "family": "Potta One",
+      "dir": "ofl/pottaone",
       "license": "OFL-1.1",
       "languages": ["ja"],
       "sample": "あいアイ漢字",
       "files": [
         {
-          "name": "RocknRollOne-Regular.ttf",
-          "size": 2682824,
-          "sha256": "dc0f5ff975851827f63f2c6bfed128ffbca14b6399a10fb5e1711215c0108526"
+          "name": "PottaOne-Regular.ttf",
+          "size": 4918516,
+          "sha256": "bde843868b56e429e1c863da2efa76df533162b226d990efcb96d533b0ca2a93"
         }
       ]
     },
     {
-      "family": "Yusei Magic",
-      "dir": "ofl/yuseimagic",
+      "family": "Kaisei Decol",
+      "dir": "ofl/kaiseidecol",
       "license": "OFL-1.1",
       "languages": ["ja"],
       "sample": "あいアイ漢字",
       "files": [
         {
-          "name": "YuseiMagic-Regular.ttf",
-          "size": 3134968,
-          "sha256": "82098615f39ed9da6a8ccc674b9006e49c70dd5b775a7a1697f6bedd22ce25a2"
+          "name": "KaiseiDecol-Regular.ttf",
+          "size": 4503152,
+          "sha256": "fb9202b97944fa00b5f145ad4701def5c306bcd0d26407917baef9e01b042056"
+        },
+        {
+          "name": "KaiseiDecol-Bold.ttf",
+          "size": 4286896,
+          "sha256": "0e3a6da5145fdbba32cfb1c806812d95457506e1698f5d61e8f834fb847f0d6f"
+        }
+      ]
+    },
+    {
+      "family": "Hina Mincho",
+      "dir": "ofl/hinamincho",
+      "license": "OFL-1.1",
+      "languages": ["ja"],
+      "sample": "あいアイ漢字",
+      "files": [
+        {
+          "name": "HinaMincho-Regular.ttf",
+          "size": 6451924,
+          "sha256": "8395fafa0c2721b4b5c274031e1336fea0f703d908b175ee21f8ba2f1ad566a0"
+        }
+      ]
+    },
+    {
+      "family": "ZCOOL KuaiLe",
+      "dir": "ofl/zcoolkuaile",
+      "license": "OFL-1.1",
+      "languages": ["zh-Hans"],
+      "sample": "简体中文",
+      "files": [
+        {
+          "name": "ZCOOLKuaiLe-Regular.ttf",
+          "size": 1514968,
+          "sha256": "812a6fc1fe54b6d73a419245c32dfeba8aa33104d5be90d1cf6af082007cb71d"
+        }
+      ]
+    },
+    {
+      "family": "Mali",
+      "dir": "ofl/mali",
+      "license": "OFL-1.1",
+      "languages": ["th"],
+      "sample": "ไทย",
+      "files": [
+        {
+          "name": "Mali-Regular.ttf",
+          "size": 112756,
+          "sha256": "e3212f0f9be130743d32a4f174b7d79628daa5db0d72ca4c63c799ae465597bb"
+        },
+        {
+          "name": "Mali-Bold.ttf",
+          "size": 112176,
+          "sha256": "3e2f421036c3f91eb5ef34650a5cd2116c737a542147769437a9856a455d4462"
+        }
+      ]
+    },
+    {
+      "family": "Itim",
+      "dir": "ofl/itim",
+      "license": "OFL-1.1",
+      "languages": ["th", "en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi"],
+      "sample": "ไทย",
+      "files": [
+        {
+          "name": "Itim-Regular.ttf",
+          "size": 371384,
+          "sha256": "9164d7eb92ca717b53b07193e3445c96782222d24215151b8d2851b576b17645"
+        }
+      ]
+    },
+    {
+      "family": "Cagliostro",
+      "dir": "ofl/cagliostro",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Cagliostro-Regular.ttf",
+          "size": 37820,
+          "sha256": "0d205e9a9b34691dca50064ea681404157f1747e39b592fce978b2a32bd5fb61"
+        }
+      ]
+    },
+    {
+      "family": "Supermercado",
+      "dir": "ofl/supermercadoone",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "SupermercadoOne-Regular.ttf",
+          "size": 143180,
+          "sha256": "73e1f6c46e4f94949df8394a5dc207a5ae4c75b94d19b012c7b8eaa67dca3750"
+        }
+      ]
+    },
+    {
+      "family": "Life Savers",
+      "dir": "ofl/lifesavers",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "LifeSavers-Regular.ttf",
+          "size": 217792,
+          "sha256": "9cfbf78067b2f17079be543d38bc614ddad23cc6e9c61f119b2ad96289236056"
+        },
+        {
+          "name": "LifeSavers-Bold.ttf",
+          "size": 222528,
+          "sha256": "cbcc2ded1b108aca167abc1a8d752b1deb975c445611c0fb725d32d21dcfb000"
+        }
+      ]
+    },
+    {
+      "family": "Love Ya Like A Sister",
+      "dir": "ofl/loveyalikeasister",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "tr", "hu"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "LoveYaLikeASister.ttf",
+          "size": 271924,
+          "sha256": "4fbe2c1fa647de5a415acac7b2b6491542fe9767b6199719a3bd77a7cf35eb0d"
+        }
+      ]
+    },
+    {
+      "family": "Poor Story",
+      "dir": "ofl/poorstory",
+      "license": "OFL-1.1",
+      "languages": ["en", "id"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "PoorStory-Regular.ttf",
+          "size": 3966768,
+          "sha256": "831ab87f7b5463f9cd83ac249bf386816f3a478f1d226427c88cac907adb7ee2"
+        }
+      ]
+    },
+    {
+      "family": "Hi Melody",
+      "dir": "ofl/himelody",
+      "license": "OFL-1.1",
+      "languages": ["en", "id"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "HiMelody-Regular.ttf",
+          "size": 12623412,
+          "sha256": "360d2c0a880918aa48328d1d9219f5390788d09a1c9353e12b471de018673ae6"
+        }
+      ]
+    },
+    {
+      "family": "Gamja Flower",
+      "dir": "ofl/gamjaflower",
+      "license": "OFL-1.1",
+      "languages": ["en", "id"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "GamjaFlower-Regular.ttf",
+          "size": 12615444,
+          "sha256": "ece32819ed58536355a49a095b0cdfdd3b8ef9081c5ed9ca1cef8f5d999ae1ac"
+        }
+      ]
+    },
+    {
+      "family": "Sofia",
+      "dir": "ofl/sofia",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Sofia-Regular.ttf",
+          "size": 29796,
+          "sha256": "5634c4ecf066fba2fa11645a3c5b41e830ca240e1eeab81e10b9d476101b1eea"
+        }
+      ]
+    },
+    {
+      "family": "Cookie",
+      "dir": "ofl/cookie",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Cookie-Regular.ttf",
+          "size": 43800,
+          "sha256": "9daf3cc9e5efe1b65094cdf1f14729ef6f07a70c27ee0679bf7f544a828b080e"
+        }
+      ]
+    },
+    {
+      "family": "Sail",
+      "dir": "ofl/sail",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Sail-Regular.ttf",
+          "size": 32656,
+          "sha256": "0ec9a9e84f5570258d319a26bce92adadc4998ceacc4d95b63687c9da4164f65"
+        }
+      ]
+    },
+    {
+      "family": "Bonbon",
+      "dir": "ofl/bonbon",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Bonbon-Regular.ttf",
+          "size": 81772,
+          "sha256": "718753f714468e878b2af1c82ec65b68c60ce81732308957c3e90d59bce7ce98"
+        }
+      ]
+    },
+    {
+      "family": "Spirax",
+      "dir": "ofl/spirax",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Spirax-Regular.ttf",
+          "size": 49064,
+          "sha256": "e509975c0680e447e6be89467f7f0bebec6d4cb0a8b75d7b6bb6d6fd7e2d5b65"
+        }
+      ]
+    },
+    {
+      "family": "Henny Penny",
+      "dir": "ofl/hennypenny",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "HennyPenny-Regular.ttf",
+          "size": 92596,
+          "sha256": "9c8550665827dbd341e5d54ea2e686fa4f4a9de3f8b2ed202b96a41e27ab4e19"
+        }
+      ]
+    },
+    {
+      "family": "Mystery Quest",
+      "dir": "ofl/mysteryquest",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "MysteryQuest-Regular.ttf",
+          "size": 42124,
+          "sha256": "fc3fba61be98d7de03964b41175ee5629bcc6958b251f8037ef13eabb5431eb2"
+        }
+      ]
+    },
+    {
+      "family": "Pacifico",
+      "dir": "ofl/pacifico",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi", "ru", "uk", "bg"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Pacifico-Regular.ttf",
+          "size": 329380,
+          "sha256": "5b6c0d5334a7bf77dea52b975c5a0c408878c0f7115ed5b6fb151f634b7bf701"
+        }
+      ]
+    },
+    {
+      "family": "Lobster",
+      "dir": "ofl/lobster",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi", "ru", "uk", "bg"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Lobster-Regular.ttf",
+          "size": 406076,
+          "sha256": "d6568e697fd50cedc0be04d8aae4127fe95add607e7bff954ca88604be80c205"
+        }
+      ]
+    },
+    {
+      "family": "Sonsie One",
+      "dir": "ofl/sonsieone",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "SonsieOne-Regular.ttf",
+          "size": 75992,
+          "sha256": "af927e627f54066390d6433631106defec38541255083ea36e4c4da27dad7525"
+        }
+      ]
+    },
+    {
+      "family": "Sarina",
+      "dir": "ofl/sarina",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Sarina-Regular.ttf",
+          "size": 96104,
+          "sha256": "89c6e14d7638e48463cc6c61b2e463e3dcc5780a26197bcf7f4412d70048a4a6"
+        }
+      ]
+    },
+    {
+      "family": "Leckerli One",
+      "dir": "ofl/leckerlione",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "LeckerliOne-Regular.ttf",
+          "size": 43212,
+          "sha256": "3f38ed99a07ab426eaa64c7d5773850a5dc8e6719b03125efce2cfbc82b083d7"
+        }
+      ]
+    },
+    {
+      "family": "Grand Hotel",
+      "dir": "ofl/grandhotel",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "GrandHotel-Regular.ttf",
+          "size": 65012,
+          "sha256": "ec7ae65d49c936cb5ed32534ab74dbd40c56733de5145ac3aae9da362e02b50f"
+        }
+      ]
+    },
+    {
+      "family": "Norican",
+      "dir": "ofl/norican",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Norican-Regular.ttf",
+          "size": 83416,
+          "sha256": "71ee99002e70bb69f8f613bd29d646d6044aaf34612efcff689a11afa4291d04"
+        }
+      ]
+    },
+    {
+      "family": "Niconne",
+      "dir": "ofl/niconne",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Niconne-Regular.ttf",
+          "size": 45616,
+          "sha256": "dc70580a25914aeec39a9460b7858ee08eb4ad0bbbcd1d7c9cb888a6ea989a27"
+        }
+      ]
+    },
+    {
+      "family": "Yesteryear",
+      "dir": "ofl/yesteryear",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Yesteryear-Regular.ttf",
+          "size": 64856,
+          "sha256": "17d1b2c57ec648ff9b13d2000bdd9b5c1c326ba14acff4597afe3a730d0a2c94"
+        }
+      ]
+    },
+    {
+      "family": "Vampiro One",
+      "dir": "ofl/vampiroone",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "VampiroOne-Regular.ttf",
+          "size": 27920,
+          "sha256": "6e1920a4bbbc66552f793ecc686313ef09469ae75b6b25878bf8923fdfecb2a2"
+        }
+      ]
+    },
+    {
+      "family": "Playball",
+      "dir": "ofl/playball",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "vi"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Playball-Regular.ttf",
+          "size": 190720,
+          "sha256": "130654dd192f4ccd1c4fa2dc516d03cca93dc8ecdaf30d458283e54dcaef8f40"
+        }
+      ]
+    },
+    {
+      "family": "Send Flowers",
+      "dir": "ofl/sendflowers",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "SendFlowers-Regular.ttf",
+          "size": 127692,
+          "sha256": "4c667e639f9c8a37c3d46663be0885245c3b0fbc283138cfa5d83135f3386c91"
         }
       ]
     },
@@ -129,16 +789,367 @@
       ]
     },
     {
-      "family": "Stick",
-      "dir": "ofl/stick",
+      "family": "Yusei Magic",
+      "dir": "ofl/yuseimagic",
       "license": "OFL-1.1",
       "languages": ["ja"],
       "sample": "あいアイ漢字",
       "files": [
         {
-          "name": "Stick-Regular.ttf",
-          "size": 2215036,
-          "sha256": "0e582d72b5125c7847d1c46b658333194f7a3f70bfa210d2f8cae1a596a17857"
+          "name": "YuseiMagic-Regular.ttf",
+          "size": 3134968,
+          "sha256": "82098615f39ed9da6a8ccc674b9006e49c70dd5b775a7a1697f6bedd22ce25a2"
+        }
+      ]
+    },
+    {
+      "family": "Klee One",
+      "dir": "ofl/kleeone",
+      "license": "OFL-1.1",
+      "languages": ["ja"],
+      "sample": "あいアイ漢字",
+      "files": [
+        {
+          "name": "KleeOne-Regular.ttf",
+          "size": 8724204,
+          "sha256": "bf4063f030cc2ae6adf0a11424a1888e5c0eb4438f1f6d02f52294af868e9b3a"
+        },
+        {
+          "name": "KleeOne-SemiBold.ttf",
+          "size": 8905128,
+          "sha256": "b031ec426c23ca1143ef1f7d58bee7a79efe119ed654152f121c922202b303fd"
+        }
+      ]
+    },
+    {
+      "family": "Zen Kurenaido",
+      "dir": "ofl/zenkurenaido",
+      "license": "OFL-1.1",
+      "languages": ["ja"],
+      "sample": "あいアイ漢字",
+      "files": [
+        {
+          "name": "ZenKurenaido-Regular.ttf",
+          "size": 4303112,
+          "sha256": "58b8d930d9fc10c8a5810c085bae378dacb98d0779073ee6d53d919f19ee6a4f"
+        }
+      ]
+    },
+    {
+      "family": "New Tegomin",
+      "dir": "ofl/newtegomin",
+      "license": "OFL-1.1",
+      "languages": ["ja"],
+      "sample": "あいアイ漢字",
+      "files": [
+        {
+          "name": "NewTegomin-Regular.ttf",
+          "size": 7450688,
+          "sha256": "bcae8775f0f9b88e12e40434918c56817e96e3a291e2a6595a34fb38fe3e58fb"
+        }
+      ]
+    },
+    {
+      "family": "Yuji Boku",
+      "dir": "ofl/yujiboku",
+      "license": "OFL-1.1",
+      "languages": ["ja"],
+      "sample": "あいアイ漢字",
+      "files": [
+        {
+          "name": "YujiBoku-Regular.ttf",
+          "size": 8525588,
+          "sha256": "94fda16384f3bdac24376a000c57e99abfa314961bd89ef27badfb7410322003"
+        }
+      ]
+    },
+    {
+      "family": "Yuji Mai",
+      "dir": "ofl/yujimai",
+      "license": "OFL-1.1",
+      "languages": ["ja"],
+      "sample": "あいアイ漢字",
+      "files": [
+        {
+          "name": "YujiMai-Regular.ttf",
+          "size": 8496292,
+          "sha256": "05d83b65204a5de6fc34c222057fc082f8c6e2e44c05a0d28f4189b3e54c54c2"
+        }
+      ]
+    },
+    {
+      "family": "Yuji Syuku",
+      "dir": "ofl/yujisyuku",
+      "license": "OFL-1.1",
+      "languages": ["ja"],
+      "sample": "あいアイ漢字",
+      "files": [
+        {
+          "name": "YujiSyuku-Regular.ttf",
+          "size": 8430348,
+          "sha256": "82728ebafc8c97391e2dab633414a806f344b8e4e2227d307179f07b548fca61"
+        }
+      ]
+    },
+    {
+      "family": "Gaegu",
+      "dir": "ofl/gaegu",
+      "license": "OFL-1.1",
+      "languages": ["ko"],
+      "sample": "한국어",
+      "files": [
+        {
+          "name": "Gaegu-Regular.ttf",
+          "size": 3165816,
+          "sha256": "aa52c98336f7c62e2896fc8b12b56a75d5b476d88a2f104b0980f4f7ce0adfc3"
+        },
+        {
+          "name": "Gaegu-Bold.ttf",
+          "size": 2962664,
+          "sha256": "cc38a4af9506a45254d1ce07c589ec473d9e5f0be319e5a77b17c214903f8c1c"
+        }
+      ]
+    },
+    {
+      "family": "Ma Shan Zheng",
+      "dir": "ofl/mashanzheng",
+      "license": "OFL-1.1",
+      "languages": ["zh-Hans"],
+      "sample": "简体中文",
+      "files": [
+        {
+          "name": "MaShanZheng-Regular.ttf",
+          "size": 5857936,
+          "sha256": "6d2546bb189c732a8ca29af9e22457b152387d158aa459e4ac2ce1e51788b7fb"
+        }
+      ]
+    },
+    {
+      "family": "Iansui",
+      "dir": "ofl/iansui",
+      "license": "OFL-1.1",
+      "languages": ["zh-Hant"],
+      "sample": "繁體中文",
+      "files": [
+        {
+          "name": "Iansui-Regular.ttf",
+          "size": 9420560,
+          "sha256": "6e6340d80d618a42b48ade9370c34fa37a8210750c6fbc8efe65f23716538a2b"
+        }
+      ]
+    },
+    {
+      "family": "LXGW Marker Gothic",
+      "dir": "ofl/lxgwmarkergothic",
+      "license": "OFL-1.1",
+      "languages": ["zh-Hans", "zh-Hant"],
+      "sample": "简体中文",
+      "files": [
+        {
+          "name": "LXGWMarkerGothic-Regular.ttf",
+          "size": 3187360,
+          "sha256": "e6a55cfd5f18dc393f92670a164397a69242cb4eabe1d3feb5dc22fc4947a8ba"
+        }
+      ]
+    },
+    {
+      "family": "Sriracha",
+      "dir": "ofl/sriracha",
+      "license": "OFL-1.1",
+      "languages": ["th"],
+      "sample": "ไทย",
+      "files": [
+        {
+          "name": "Sriracha-Regular.ttf",
+          "size": 319896,
+          "sha256": "c3128c30cb21e8724b792586c87059d1b5eceae10d9957ba2ab26c80bbed3669"
+        }
+      ]
+    },
+    {
+      "family": "Caveat",
+      "dir": "ofl/caveat",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "ru", "uk", "bg"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Caveat[wght].ttf",
+          "size": 403648,
+          "sha256": "0bdb6b660482d31531b3945849fba5916b3ef8695da7024a9e6b9ee3c4157988"
+        }
+      ]
+    },
+    {
+      "family": "Kalam",
+      "dir": "ofl/kalam",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Kalam-Regular.ttf",
+          "size": 427360,
+          "sha256": "57cecb63d4608019371954274ae1d8c397764debd5b19d4a33c1efa4dc923c0b"
+        },
+        {
+          "name": "Kalam-Bold.ttf",
+          "size": 460896,
+          "sha256": "2f6576601db015d4f6c08678120277fc8510b98c06e932ce7a6a9cbff4cbdded"
+        }
+      ]
+    },
+    {
+      "family": "Gloria Hallelujah",
+      "dir": "ofl/gloriahallelujah",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "GloriaHallelujah.ttf",
+          "size": 59812,
+          "sha256": "eb59f2762ce8785a292bebb2af3b3e6aa21454913d791f5f25441d1d57ead9fc"
+        }
+      ]
+    },
+    {
+      "family": "Dancing Script",
+      "dir": "ofl/dancingscript",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "DancingScript[wght].ttf",
+          "size": 133636,
+          "sha256": "21808625578fe8d8cd10cb684be546dca077b27cd03a53a2f1ec11dc743c924c"
+        }
+      ]
+    },
+    {
+      "family": "Sacramento",
+      "dir": "ofl/sacramento",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Sacramento-Regular.ttf",
+          "size": 79696,
+          "sha256": "9341fda10adbfeb7efc94302b34507a3e227d7e7f5c432df3f5ac8753ff73d24"
+        }
+      ]
+    },
+    {
+      "family": "Cedarville Cursive",
+      "dir": "ofl/cedarvillecursive",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "tr", "hu"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Cedarville-Cursive.ttf",
+          "size": 69436,
+          "sha256": "5f86d71d08a68605d5912b9bcb639a060ce9c0debd7e0b715f5e268d4a4bc317"
+        }
+      ]
+    },
+    {
+      "family": "La Belle Aurore",
+      "dir": "ofl/labelleaurore",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "hu"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "LaBelleAurore.ttf",
+          "size": 59364,
+          "sha256": "ed67462999e05f0cdac92f686374661e4d68c56fdcd7d05725c6df7b41eabd2a"
+        }
+      ]
+    },
+    {
+      "family": "Beth Ellen",
+      "dir": "ofl/bethellen",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "BethEllen-Regular.ttf",
+          "size": 116988,
+          "sha256": "ca49471aec90a19df63f583f5a60d514f012559a8a2d17f62f8a389fe90726d7"
+        }
+      ]
+    },
+    {
+      "family": "Ms Madi",
+      "dir": "ofl/msmadi",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "MsMadi-Regular.ttf",
+          "size": 144208,
+          "sha256": "08dfe959077490d11a4dd0d3097b48daafdecef821e290c973cd1893595cc208"
+        }
+      ]
+    },
+    {
+      "family": "Style Script",
+      "dir": "ofl/stylescript",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "StyleScript-Regular.ttf",
+          "size": 603164,
+          "sha256": "4f285aa7b2e87de9ea8fc3d3a571cc428257c42ac77b5f786d99d9949ac4ed9a"
+        }
+      ]
+    },
+    {
+      "family": "Ephesis",
+      "dir": "ofl/ephesis",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Ephesis-Regular.ttf",
+          "size": 142188,
+          "sha256": "8fb4729a918f992a37ab45f1466783c78ea8caa77a7b0e69545322e1dbe9c5f9"
+        }
+      ]
+    },
+    {
+      "family": "Mochiy Pop One",
+      "dir": "ofl/mochiypopone",
+      "license": "OFL-1.1",
+      "languages": ["ja"],
+      "sample": "あいアイ漢字",
+      "files": [
+        {
+          "name": "MochiyPopOne-Regular.ttf",
+          "size": 5163948,
+          "sha256": "9e009430e1316c271a5f34759c6b65fc343c4e806f193042528887e7235a92c6"
+        }
+      ]
+    },
+    {
+      "family": "RocknRoll One",
+      "dir": "ofl/rocknrollone",
+      "license": "OFL-1.1",
+      "languages": ["ja"],
+      "sample": "あいアイ漢字",
+      "files": [
+        {
+          "name": "RocknRollOne-Regular.ttf",
+          "size": 2682824,
+          "sha256": "dc0f5ff975851827f63f2c6bfed128ffbca14b6399a10fb5e1711215c0108526"
         }
       ]
     },
@@ -153,20 +1164,6 @@
           "name": "ReggaeOne-Regular.ttf",
           "size": 2153256,
           "sha256": "aebe62598732d76036f30ec11bb0ec5f68938e373a06d1b4ceb6b9cf1abf3db2"
-        }
-      ]
-    },
-    {
-      "family": "Dela Gothic One",
-      "dir": "ofl/delagothicone",
-      "license": "OFL-1.1",
-      "languages": ["ja"],
-      "sample": "あいアイ漢字",
-      "files": [
-        {
-          "name": "DelaGothicOne-Regular.ttf",
-          "size": 2508848,
-          "sha256": "4ff87a0965f1b0505e5a2c58424bc6ad3cff27e56a82f21c2fc9d6b0e3857ee2"
         }
       ]
     },
@@ -195,6 +1192,492 @@
           "name": "TrainOne-Regular.ttf",
           "size": 2152516,
           "sha256": "07d67ad14231a4a41f0ee501b14bd6f9c7a9beada5ee6af2924114863a034623"
+        }
+      ]
+    },
+    {
+      "family": "Stick",
+      "dir": "ofl/stick",
+      "license": "OFL-1.1",
+      "languages": ["ja"],
+      "sample": "あいアイ漢字",
+      "files": [
+        {
+          "name": "Stick-Regular.ttf",
+          "size": 2215036,
+          "sha256": "0e582d72b5125c7847d1c46b658333194f7a3f70bfa210d2f8cae1a596a17857"
+        }
+      ]
+    },
+    {
+      "family": "Bangers",
+      "dir": "ofl/bangers",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Bangers-Regular.ttf",
+          "size": 93148,
+          "sha256": "4160a7311de9342674cce9160cde9fcbb30f48190397d86ff1b70b455af65824"
+        }
+      ]
+    },
+    {
+      "family": "Lilita One",
+      "dir": "ofl/lilitaone",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "LilitaOne-Regular.ttf",
+          "size": 28092,
+          "sha256": "f5b641c45c69d772ee4eda687bc9fda411d5cad6b0b45371491da4580cbc8d59"
+        }
+      ]
+    },
+    {
+      "family": "Concert One",
+      "dir": "ofl/concertone",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "ConcertOne-Regular.ttf",
+          "size": 71028,
+          "sha256": "54e934724b90a9c20d53b25a8d17574a7631f8461e29c8462bd7b36d49fc1e78"
+        }
+      ]
+    },
+    {
+      "family": "Ranchers",
+      "dir": "ofl/ranchers",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Ranchers-Regular.ttf",
+          "size": 167420,
+          "sha256": "19568aba8965664d1bc6f5a48c24d269c97501eed87af26b912f42b6e6f22adc"
+        }
+      ]
+    },
+    {
+      "family": "Fugaz One",
+      "dir": "ofl/fugazone",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "FugazOne-Regular.ttf",
+          "size": 27868,
+          "sha256": "14fd5becce8b0ae987e44b3f9fa9e3e6c87463e9585ac15db6c8271462068a62"
+        }
+      ]
+    },
+    {
+      "family": "Skranji",
+      "dir": "ofl/skranji",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Skranji-Regular.ttf",
+          "size": 207924,
+          "sha256": "75a25bc56f04606dd4e050686831a6587d69a5365e7001bc862b08cf86dd4ea1"
+        },
+        {
+          "name": "Skranji-Bold.ttf",
+          "size": 207292,
+          "sha256": "cfe2e3847d4c4d63efb207533539933b1acaaa7ea71e8df86758c01b7de6e9ab"
+        }
+      ]
+    },
+    {
+      "family": "Fascinate",
+      "dir": "ofl/fascinate",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Fascinate-Regular.ttf",
+          "size": 51900,
+          "sha256": "2f3d4e1d3b1f58ba4700eba078c07d9f05d9f39513f6d29b0306ddc007bd7fec"
+        }
+      ]
+    },
+    {
+      "family": "Ribeye Marrow",
+      "dir": "ofl/ribeyemarrow",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "RibeyeMarrow-Regular.ttf",
+          "size": 84896,
+          "sha256": "4b19d54b86a068bb5b8a060938d87d1e6028d566c8efb68fa9c7debaa19987d0"
+        }
+      ]
+    },
+    {
+      "family": "Rubik Vinyl",
+      "dir": "ofl/rubikvinyl",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "ru", "uk", "bg"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "RubikVinyl-Regular.ttf",
+          "size": 414752,
+          "sha256": "64f1d1636851d814a9031a945bc6ca6b7bc26a29009eb316176d27f00f2b7d4e"
+        }
+      ]
+    },
+    {
+      "family": "Monofett",
+      "dir": "ofl/monofett",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Monofett-Regular.ttf",
+          "size": 72328,
+          "sha256": "1483f18841a24238172d6f3462a3ea790b7a3e6ca8bb55d404dede93669238d5"
+        }
+      ]
+    },
+    {
+      "family": "Cabin Sketch",
+      "dir": "ofl/cabinsketch",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "CabinSketch-Regular.ttf",
+          "size": 156232,
+          "sha256": "a6f989fcc910ca321e06cd6a20dbcab20f9e41bce084911432857cfe286355e7"
+        },
+        {
+          "name": "CabinSketch-Bold.ttf",
+          "size": 271012,
+          "sha256": "0961688037b97947495c2e35e6e5a93f2b234490514e33346605ffedf9c7e6be"
+        }
+      ]
+    },
+    {
+      "family": "Creepster",
+      "dir": "ofl/creepster",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Creepster-Regular.ttf",
+          "size": 62724,
+          "sha256": "402aeb734586c74aecd3dbdc454589b1fb12e2e1c71f782fd019ae68066d9f44"
+        }
+      ]
+    },
+    {
+      "family": "Nosifer",
+      "dir": "ofl/nosifer",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Nosifer-Regular.ttf",
+          "size": 43272,
+          "sha256": "09c5ac35e34dc7a397d5f698b703c5640b59cf93d4d343ebae4f16f3859d09b8"
+        }
+      ]
+    },
+    {
+      "family": "Plaster",
+      "dir": "ofl/plaster",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Plaster-Regular.ttf",
+          "size": 32852,
+          "sha256": "f8b2d7d1d56abd4f20ae962b9f0559e9072a0926b5963d9eed040929ca07dc2d"
+        }
+      ]
+    },
+    {
+      "family": "Emblema One",
+      "dir": "ofl/emblemaone",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "EmblemaOne-Regular.ttf",
+          "size": 61832,
+          "sha256": "068ab584fb9868c299776adb871cf693b21123ccfb6ed5fab98ff861d1d42bee"
+        }
+      ]
+    },
+    {
+      "family": "Zen Tokyo Zoo",
+      "dir": "ofl/zentokyozoo",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "ZenTokyoZoo-Regular.ttf",
+          "size": 92176,
+          "sha256": "9dd9dc1a5eba800aca9b0bf4671bda880b7caa6d19174c82776256f6732d604a"
+        }
+      ]
+    },
+    {
+      "family": "Dela Gothic One",
+      "dir": "ofl/delagothicone",
+      "license": "OFL-1.1",
+      "languages": ["ja"],
+      "sample": "あいアイ漢字",
+      "files": [
+        {
+          "name": "DelaGothicOne-Regular.ttf",
+          "size": 2508848,
+          "sha256": "4ff87a0965f1b0505e5a2c58424bc6ad3cff27e56a82f21c2fc9d6b0e3857ee2"
+        }
+      ]
+    },
+    {
+      "family": "WDXL Lubrifont JP N",
+      "dir": "ofl/wdxllubrifontjpn",
+      "license": "OFL-1.1",
+      "languages": ["ja"],
+      "sample": "あいアイ漢字",
+      "files": [
+        {
+          "name": "WDXLLubrifontJPN-Regular.ttf",
+          "size": 10344400,
+          "sha256": "f7a95e761a2d2c2ee6a90f8536e42ea9e50bae8840695f01704986e2bce34869"
+        }
+      ]
+    },
+    {
+      "family": "Do Hyeon",
+      "dir": "ofl/dohyeon",
+      "license": "OFL-1.1",
+      "languages": ["ko"],
+      "sample": "한국어",
+      "files": [
+        {
+          "name": "DoHyeon-Regular.ttf",
+          "size": 879764,
+          "sha256": "35644be7f28e0a68a447b1f7af351dcde5674b870f24f7b5f43e26d00b4ab653"
+        }
+      ]
+    },
+    {
+      "family": "Gugi",
+      "dir": "ofl/gugi",
+      "license": "OFL-1.1",
+      "languages": ["ko", "en", "id"],
+      "sample": "한국어",
+      "files": [
+        {
+          "name": "Gugi-Regular.ttf",
+          "size": 990856,
+          "sha256": "c0b1f979979cfc309fb2438fa9464f96173353e0c4842cc7a5919658184ed9d3"
+        }
+      ]
+    },
+    {
+      "family": "Russo One",
+      "dir": "ofl/russoone",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ru", "uk", "bg"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "RussoOne-Regular.ttf",
+          "size": 39124,
+          "sha256": "bc0abcc660bd8b7ad3000ecb2898a27c58a29a50f7ec81652fa12e75148d09df"
+        }
+      ]
+    },
+    {
+      "family": "Righteous",
+      "dir": "ofl/righteous",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Righteous-Regular.ttf",
+          "size": 43104,
+          "sha256": "2ffb3fe5c27d7e6571210b800448c4e234e651b46c6b4426c1bb567e5341348a"
+        }
+      ]
+    },
+    {
+      "family": "Oswald",
+      "dir": "ofl/oswald",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi", "ru", "uk", "bg"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Oswald[wght].ttf",
+          "size": 172088,
+          "sha256": "5b38c246e255a12f5712d640d56bcced0472466fc68983d2d0410ec0457c2817"
+        }
+      ]
+    },
+    {
+      "family": "Anton",
+      "dir": "ofl/anton",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Anton-Regular.ttf",
+          "size": 170812,
+          "sha256": "a4ba3a92350ebb031da0cb47630ac49eb265082ca1bc0450442f4a83ab947cab"
+        }
+      ]
+    },
+    {
+      "family": "Bebas Neue",
+      "dir": "ofl/bebasneue",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "BebasNeue-Regular.ttf",
+          "size": 61400,
+          "sha256": "08e4623805102d819f58601e46e345648846075e363b2ceb23313c2d1c83ec73"
+        }
+      ]
+    },
+    {
+      "family": "Abril Fatface",
+      "dir": "ofl/abrilfatface",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "AbrilFatface-Regular.ttf",
+          "size": 67364,
+          "sha256": "5971d4a3758a922a9fedc7f6fb825a96341a2e718c45a4b2c9a6b417c8c4dbe9"
+        }
+      ]
+    },
+    {
+      "family": "Notable",
+      "dir": "ofl/notable",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Notable-Regular.ttf",
+          "size": 38216,
+          "sha256": "fe5105a1e0b5c4daf1ea10730aac2fbbeaec3a6431e67eb827bf56e3a966d3c6"
+        }
+      ]
+    },
+    {
+      "family": "Black Ops One",
+      "dir": "ofl/blackopsone",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "BlackOpsOne-Regular.ttf",
+          "size": 166532,
+          "sha256": "282a825b5f294377387e3969f765408157dbea8da0f5d0aae68c6bc704b145b3"
+        }
+      ]
+    },
+    {
+      "family": "Kumar One",
+      "dir": "ofl/kumarone",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "hu"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "KumarOne-Regular.ttf",
+          "size": 95852,
+          "sha256": "04d6479721639f0d00aa34cfaa18d940eacf84060b427433edb70100b6d01100"
+        }
+      ]
+    },
+    {
+      "family": "Kumar One Outline",
+      "dir": "ofl/kumaroneoutline",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "hu"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "KumarOneOutline-Regular.ttf",
+          "size": 128948,
+          "sha256": "571c34cfa9c533f34de71081ddc7c7593d244d183a6114b8bac1a83a59e2f7ed"
+        }
+      ]
+    },
+    {
+      "family": "Poller One",
+      "dir": "ofl/pollerone",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "PollerOne.ttf",
+          "size": 31588,
+          "sha256": "49c5128cb550156e9384453906b869b830aafacfc3a9332ccf989c8ed146d773"
+        }
+      ]
+    },
+    {
+      "family": "Vast Shadow",
+      "dir": "ofl/vastshadow",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "VastShadow-Regular.ttf",
+          "size": 62364,
+          "sha256": "98bdf7f93c2330697078ece27e48dea7d97b253a547d699bf7afc4bdfa641a93"
+        }
+      ]
+    },
+    {
+      "family": "Gravitas One",
+      "dir": "ofl/gravitasone",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "GravitasOne.ttf",
+          "size": 41448,
+          "sha256": "b40dc45f3354f282107286acf1542072d258c717c8edf1d118ef0105f25e627b"
         }
       ]
     },
@@ -232,6 +1715,581 @@
       ]
     },
     {
+      "family": "Press Start 2P",
+      "dir": "ofl/pressstart2p",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ru", "uk", "bg", "el"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "PressStart2P-Regular.ttf",
+          "size": 118204,
+          "sha256": "034c77f1f05ec89421e4a63f0e3a4ca1ecf852cc6d2bf611f126f275728e017d"
+        }
+      ]
+    },
+    {
+      "family": "VT323",
+      "dir": "ofl/vt323",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "VT323-Regular.ttf",
+          "size": 153116,
+          "sha256": "cf4de751ada78ceac033dbe16a687742939995b77bc2a052ae17a4957958594d"
+        }
+      ]
+    },
+    {
+      "family": "Silkscreen",
+      "dir": "ofl/silkscreen",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Silkscreen-Regular.ttf",
+          "size": 32220,
+          "sha256": "c845473330b94c2079ce9af01c51ac8ba2d99c24f4d14c039843bbb8e642ebd8"
+        },
+        {
+          "name": "Silkscreen-Bold.ttf",
+          "size": 30632,
+          "sha256": "768476aa712d4f5c3e18d3bce80f980a8bd3f72b7094d22ec5e768df3acfed61"
+        }
+      ]
+    },
+    {
+      "family": "Orbitron",
+      "dir": "ofl/orbitron",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "fi", "id"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Orbitron[wght].ttf",
+          "size": 38576,
+          "sha256": "f42db2dd16e642258e35782916eceb1dcdbea06fb958d77ad71dc5963587e8fd"
+        }
+      ]
+    },
+    {
+      "family": "Audiowide",
+      "dir": "ofl/audiowide",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Audiowide-Regular.ttf",
+          "size": 69916,
+          "sha256": "c7c0f2b0f6fad8c623e31772ce79f94a4edb9321ffce9fce978ea892d20ae730"
+        }
+      ]
+    },
+    {
+      "family": "Zen Dots",
+      "dir": "ofl/zendots",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "ZenDots-Regular.ttf",
+          "size": 37112,
+          "sha256": "2f81a9f4c26f302d87a40792e048cd7193c886aa50fa6792a4b4fb6266c25609"
+        }
+      ]
+    },
+    {
+      "family": "Bruno Ace",
+      "dir": "ofl/brunoace",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "BrunoAce-Regular.ttf",
+          "size": 56748,
+          "sha256": "2ebb34cae30afcb6859757b8c0cc49c49203781216e4446e07a77046c633cc2b"
+        }
+      ]
+    },
+    {
+      "family": "Quantico",
+      "dir": "ofl/quantico",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Quantico-Regular.ttf",
+          "size": 20940,
+          "sha256": "7f27dfb0658914ac570bf1da36a2527f10eefd41d25a8f9603d52957d61c075d"
+        },
+        {
+          "name": "Quantico-Bold.ttf",
+          "size": 20896,
+          "sha256": "e3a88a18c85bfa8c08577abb07e3d490e9264fc09c3c690c6de382c8628901ff"
+        }
+      ]
+    },
+    {
+      "family": "Wallpoet",
+      "dir": "ofl/wallpoet",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Wallpoet-Regular.ttf",
+          "size": 39904,
+          "sha256": "0d8dc36abe195fa455a5a9f60a29f0aa29c7404bf880a67ec71f047dabefb02b"
+        }
+      ]
+    },
+    {
+      "family": "Geo",
+      "dir": "ofl/geo",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Geo-Regular.ttf",
+          "size": 38680,
+          "sha256": "38669ed77c0ffe1859f45143c63614c0f1953074331536cb35d3caca944be605"
+        }
+      ]
+    },
+    {
+      "family": "Geostar",
+      "dir": "ofl/geostar",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Geostar-Regular.ttf",
+          "size": 41288,
+          "sha256": "891b92c124bbe4ac006c0b8b7402215486b7cb7951488178f415694a5898d12b"
+        }
+      ]
+    },
+    {
+      "family": "Nova Square",
+      "dir": "ofl/novasquare",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "NovaSquare.ttf",
+          "size": 87968,
+          "sha256": "bf7d8725e2fed1984cadbcb4e54d67cd898f042e11c14e9c30074b14dab6963f"
+        }
+      ]
+    },
+    {
+      "family": "Nova Cut",
+      "dir": "ofl/novacut",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "NovaCut.ttf",
+          "size": 94488,
+          "sha256": "09b4238312770fb6a4405027dc33feef1bb1c9283d3c907fe7282960da4eb5f7"
+        }
+      ]
+    },
+    {
+      "family": "Nova Slim",
+      "dir": "ofl/novaslim",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "NovaSlim.ttf",
+          "size": 93956,
+          "sha256": "78cf188017f211f64ea14fd1c946cc15dcfdec867f4759a50aff0b4350e38eed"
+        }
+      ]
+    },
+    {
+      "family": "NovaMono",
+      "dir": "ofl/novamono",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "el"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "NovaMono.ttf",
+          "size": 302380,
+          "sha256": "648eadb6648c0801b186d3dcef60ee6aa84a791b1e09c726935c0712508b4807"
+        }
+      ]
+    },
+    {
+      "family": "Genos",
+      "dir": "ofl/genos",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Genos[wght].ttf",
+          "size": 135320,
+          "sha256": "88a32589d9d8615ab728977d647f5e5010dbf789050d4cf25d6607b14d49a1f1"
+        }
+      ]
+    },
+    {
+      "family": "Megrim",
+      "dir": "ofl/megrim",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Megrim.ttf",
+          "size": 57872,
+          "sha256": "88d30544a63121ab021f4cf60f57257c81caaeddeeb2eb4d6ec1a600ae779cfd"
+        }
+      ]
+    },
+    {
+      "family": "Monoton",
+      "dir": "ofl/monoton",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Monoton-Regular.ttf",
+          "size": 51604,
+          "sha256": "951c4cea65ffede784a7c9672feec5d329a7e1e12216c42d53ecf36c90d04dea"
+        }
+      ]
+    },
+    {
+      "family": "Codystar",
+      "dir": "ofl/codystar",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Codystar-Regular.ttf",
+          "size": 106500,
+          "sha256": "99f059a3e31afdaf3fea53d39bc62b15df38a5d882104ae1d1a5ca2df547c10a"
+        }
+      ]
+    },
+    {
+      "family": "Raleway Dots",
+      "dir": "ofl/ralewaydots",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "RalewayDots-Regular.ttf",
+          "size": 464888,
+          "sha256": "a35582c11e29d5d40bf5ed263f4be18c42264376b51b6b8a7a1b79252b853e09"
+        }
+      ]
+    },
+    {
+      "family": "Bungee Hairline",
+      "dir": "ofl/bungeehairline",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "BungeeHairline-Regular.ttf",
+          "size": 104700,
+          "sha256": "fa720052780a73c9e8ba196bbb5332d361d366624f13f486beff125097fdbfb2"
+        }
+      ]
+    },
+    {
+      "family": "Bungee Outline",
+      "dir": "ofl/bungeeoutline",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "BungeeOutline-Regular.ttf",
+          "size": 202152,
+          "sha256": "9232000ff85fdbb68987007305f2de877486d63d31450f81b403461bbe721f1f"
+        }
+      ]
+    },
+    {
+      "family": "Offside",
+      "dir": "ofl/offside",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Offside-Regular.ttf",
+          "size": 61824,
+          "sha256": "996d1eb52d4922d9fdab7bb6d0b3525e99396254d4a7e1d5c3b182c6bf5450a9"
+        }
+      ]
+    },
+    {
+      "family": "Stick No Bills",
+      "dir": "ofl/sticknobills",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "StickNoBills[wght].ttf",
+          "size": 279212,
+          "sha256": "4754d337fbf0cffac744b58316c3d091b7abc668d7b9fb5df082e1905b27c027"
+        }
+      ]
+    },
+    {
+      "family": "BhuTuka Expanded One",
+      "dir": "ofl/bhutukaexpandedone",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "BhuTukaExpandedOne-Regular.ttf",
+          "size": 138740,
+          "sha256": "66b52f1013bf977571c08217fc851b9988f264b065be611880b90909fb3c274d"
+        }
+      ]
+    },
+    {
+      "family": "Tourney",
+      "dir": "ofl/tourney",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Tourney[wdth,wght].ttf",
+          "size": 163380,
+          "sha256": "ee686a1a657ca9397d4d1e9ba3ada1c10a5d9b6da53aeb94411cd62b1b793377"
+        }
+      ]
+    },
+    {
+      "family": "Germania One",
+      "dir": "ofl/germaniaone",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "hu"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "GermaniaOne-Regular.ttf",
+          "size": 33240,
+          "sha256": "3ee3d56584bab8c9e3f59cc3360aa8a36e219dcf0a9f3c8928e3da5a19277e3f"
+        }
+      ]
+    },
+    {
+      "family": "MedievalSharp",
+      "dir": "ofl/medievalsharp",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "MedievalSharp.ttf",
+          "size": 148712,
+          "sha256": "74cb2e6738bd7703adf120802f68fba0c9ddb9147a08e6847f1005b1e55df5a5"
+        }
+      ]
+    },
+    {
+      "family": "UnifrakturCook",
+      "dir": "ofl/unifrakturcook",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "UnifrakturCook-Bold.ttf",
+          "size": 42688,
+          "sha256": "ea002fa9c65f1a612af100e00d87ab65f16381f450020ec3d021f3dbf79a6dcd"
+        }
+      ]
+    },
+    {
+      "family": "New Rocker",
+      "dir": "ofl/newrocker",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "NewRocker-Regular.ttf",
+          "size": 173224,
+          "sha256": "28a499ce5b8bcf0652f8b2e25135183eaddf0c3c8c3e251259b075c71d1ef14c"
+        }
+      ]
+    },
+    {
+      "family": "Pirata One",
+      "dir": "ofl/pirataone",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "PirataOne-Regular.ttf",
+          "size": 56316,
+          "sha256": "5347a2e155589ecf667d4b766613c8ee003edde9f83717fd24c09599a4b1ecc0"
+        }
+      ]
+    },
+    {
+      "family": "Rye",
+      "dir": "ofl/rye",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Rye-Regular.ttf",
+          "size": 183244,
+          "sha256": "b7edee5e615ae1b6b07e9d030c1309152bf3672a0e8a2a46293e273730f5adba"
+        }
+      ]
+    },
+    {
+      "family": "Miltonian",
+      "dir": "ofl/miltonian",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Miltonian-Regular.ttf",
+          "size": 126804,
+          "sha256": "bd4ada3764e6774964efe097463533b2759755e390f68e3d16974264f8dd2d98"
+        }
+      ]
+    },
+    {
+      "family": "Miltonian Tattoo",
+      "dir": "ofl/miltoniantattoo",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "MiltonianTattoo-Regular.ttf",
+          "size": 107880,
+          "sha256": "b4e9f4c263fc1e7beb14b09572ecb21ba893ce8d5e5cec1e5727c79d5c8583dc"
+        }
+      ]
+    },
+    {
+      "family": "SirinStencil",
+      "dir": "ofl/sirinstencil",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "SirinStencil-Regular.ttf",
+          "size": 69332,
+          "sha256": "0e231c6220787179588fe8b1c8921bff70207f1f556a6ef7e35e46ae04352b2d"
+        }
+      ]
+    },
+    {
+      "family": "Federo",
+      "dir": "ofl/federo",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Federo-Regular.ttf",
+          "size": 145056,
+          "sha256": "5284628c38309ec5046a6bf231e038eaf84c46df03602690607af56cac2b9bc7"
+        }
+      ]
+    },
+    {
+      "family": "Limelight",
+      "dir": "ofl/limelight",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Limelight-Regular.ttf",
+          "size": 132292,
+          "sha256": "f5bf8a9159adfc5b9c756c85d812a4fd1299b8916fefdf39ad4b24ade6d8d0cf"
+        }
+      ]
+    },
+    {
+      "family": "Expletus Sans",
+      "dir": "ofl/expletussans",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "ExpletusSans[wght].ttf",
+          "size": 38884,
+          "sha256": "33508b3b477c548ac00179d97c6deaca1e98dab4cc1d869dec5815931e7540f8"
+        }
+      ]
+    },
+    {
+      "family": "Lekton",
+      "dir": "ofl/lekton",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Lekton-Regular.ttf",
+          "size": 114320,
+          "sha256": "ccbb465d255a4bd0242af595d5f5410e635bd0dbf2f4b612b390e508a93d7a3a"
+        },
+        {
+          "name": "Lekton-Bold.ttf",
+          "size": 113684,
+          "sha256": "9aab5a281f3428d882e67d9a945930822380f5b28ad00f5fbf79e21dadee375f"
+        }
+      ]
+    },
+    {
+      "family": "Kufam",
+      "dir": "ofl/kufam",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Kufam[wght].ttf",
+          "size": 428544,
+          "sha256": "f17a89b518c833de289598d0662bb9a07d09cc7d75b7079a15f1305f624bbcda"
+        }
+      ]
+    },
+    {
       "family": "Kaisei Tokumin",
       "dir": "ofl/kaiseitokumin",
       "license": "OFL-1.1",
@@ -256,21 +2314,396 @@
       ]
     },
     {
-      "family": "Kaisei Decol",
-      "dir": "ofl/kaiseidecol",
+      "family": "Shippori Mincho",
+      "dir": "ofl/shipporimincho",
       "license": "OFL-1.1",
       "languages": ["ja"],
       "sample": "あいアイ漢字",
       "files": [
         {
-          "name": "KaiseiDecol-Regular.ttf",
-          "size": 4503152,
-          "sha256": "fb9202b97944fa00b5f145ad4701def5c306bcd0d26407917baef9e01b042056"
+          "name": "ShipporiMincho-Regular.ttf",
+          "size": 8677284,
+          "sha256": "769b5269f0f9bc6534b352c0e6bd856a566e03ff788f107191c2d835863570b2"
         },
         {
-          "name": "KaiseiDecol-Bold.ttf",
-          "size": 4286896,
-          "sha256": "0e3a6da5145fdbba32cfb1c806812d95457506e1698f5d61e8f834fb847f0d6f"
+          "name": "ShipporiMincho-Bold.ttf",
+          "size": 8563788,
+          "sha256": "63bc4eddc74793f671c3ab827c5175e773ffbe569d0bf50ee65375ea9e3bc286"
+        }
+      ]
+    },
+    {
+      "family": "Zen Old Mincho",
+      "dir": "ofl/zenoldmincho",
+      "license": "OFL-1.1",
+      "languages": ["ja"],
+      "sample": "あいアイ漢字",
+      "files": [
+        {
+          "name": "ZenOldMincho-Regular.ttf",
+          "size": 5442512,
+          "sha256": "4c051a78a21c4e8e9dccf1c754776d33f356b8cc6ef95d9b64761b9bae814b84"
+        },
+        {
+          "name": "ZenOldMincho-Bold.ttf",
+          "size": 5436460,
+          "sha256": "d6b95c1ff45c8dac153d28961e4c37d7d03b648330c71f884d124dc652a13c0d"
+        }
+      ]
+    },
+    {
+      "family": "Sawarabi Mincho",
+      "dir": "ofl/sawarabimincho",
+      "license": "OFL-1.1",
+      "languages": ["ja"],
+      "sample": "あいアイ漢字",
+      "files": [
+        {
+          "name": "SawarabiMincho-Regular.ttf",
+          "size": 3662996,
+          "sha256": "1f27e6b0c2543a311c31d2ba3e895e50028069bd24b5e0d20a5b6e0a0b03e9c4"
+        }
+      ]
+    },
+    {
+      "family": "Noto Serif JP",
+      "dir": "ofl/notoserifjp",
+      "license": "OFL-1.1",
+      "languages": ["ja"],
+      "sample": "あいアイ漢字",
+      "files": [
+        {
+          "name": "NotoSerifJP[wght].ttf",
+          "size": 13574352,
+          "sha256": "2fd527ba12b6a44ec30d796d633360da0aeba6c5d4af1304ce12bb4dc15a7dfc"
+        }
+      ]
+    },
+    {
+      "family": "Cinzel",
+      "dir": "ofl/cinzel",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Cinzel[wght].ttf",
+          "size": 125468,
+          "sha256": "f4d83d34d1f6c741193e4acf4b3dff9531e5a67b6aa65228d00a7db72a4e0f34"
+        }
+      ]
+    },
+    {
+      "family": "Poiret One",
+      "dir": "ofl/poiretone",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi", "ru", "uk", "bg"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "PoiretOne-Regular.ttf",
+          "size": 130176,
+          "sha256": "457f2d03263f58e5a6dbcc1b607b10dff6581e7cf9c4ebdf330ec3e6772a3558"
+        }
+      ]
+    },
+    {
+      "family": "Italiana",
+      "dir": "ofl/italiana",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Italiana-Regular.ttf",
+          "size": 31828,
+          "sha256": "0ad271d9cd42a57cd5c5fa483ae2406a8138b95acb2a43eb73a8d37b7291fee9"
+        }
+      ]
+    },
+    {
+      "family": "Lora",
+      "dir": "ofl/lora",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi", "ru", "uk", "bg"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Lora[wght].ttf",
+          "size": 212196,
+          "sha256": "822a6621ccbe8d97d20ac88c1c41f5615c9c2c202eaa75f272cd452aac6475a7"
+        }
+      ]
+    },
+    {
+      "family": "Sorts Mill Goudy",
+      "dir": "ofl/sortsmillgoudy",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "SortsMillGoudy-Regular.ttf",
+          "size": 121372,
+          "sha256": "3a1fdc0d151b29c562ad3f3b7d7cabf007783ba4dc69444d3a98666bb614352d"
+        }
+      ]
+    },
+    {
+      "family": "Merriweather",
+      "dir": "ofl/merriweather",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi", "ru", "uk", "bg"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Merriweather[opsz,wdth,wght].ttf",
+          "size": 4628080,
+          "sha256": "d0ed0e359e396af7ad05e73dffd11a3a4c326ea0d0283c56bd9361cb2cc86a96"
+        }
+      ]
+    },
+    {
+      "family": "Ysabeau",
+      "dir": "ofl/ysabeau",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi", "ru", "uk", "bg", "el"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Ysabeau[wght].ttf",
+          "size": 431992,
+          "sha256": "aa6df9f1f6cb1180f7c00fffb5ae2734ba66aa5f58defd173a9247ca11dffcf4"
+        }
+      ]
+    },
+    {
+      "family": "Josefin Sans",
+      "dir": "ofl/josefinsans",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "JosefinSans[wght].ttf",
+          "size": 118588,
+          "sha256": "9255abdb5f393bc51e101abbd07a716a977fd3e15472b1b84b260f426a342bfd"
+        }
+      ]
+    },
+    {
+      "family": "Petit Formal Script",
+      "dir": "ofl/petitformalscript",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "PetitFormalScript-Regular.ttf",
+          "size": 175068,
+          "sha256": "9b80a05170bac7f372b7e00bc762fe14bafd4abdeb013747b189f66525cffe89"
+        }
+      ]
+    },
+    {
+      "family": "Allura",
+      "dir": "ofl/allura",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Allura-Regular.ttf",
+          "size": 246632,
+          "sha256": "9c142b2e515832c0dfc4ff8b8ea18f40314943bf937b72e2b23c4661bac14cc6"
+        }
+      ]
+    },
+    {
+      "family": "Parisienne",
+      "dir": "ofl/parisienne",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Parisienne-Regular.ttf",
+          "size": 61248,
+          "sha256": "bc9ee17f022e20bc700797e5f557d14bfa43af0c98d9e6c9c5c1ca4ec7aacd57"
+        }
+      ]
+    },
+    {
+      "family": "Tangerine",
+      "dir": "ofl/tangerine",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Tangerine-Regular.ttf",
+          "size": 60648,
+          "sha256": "3f5db6010de48f7173939f16621c0e0e794b589eec04e3b04e0a81be848dfab9"
+        },
+        {
+          "name": "Tangerine-Bold.ttf",
+          "size": 65464,
+          "sha256": "a35368c814c71c15928ffc60cbac32bc81461f03b895a4a607df9c64b3d1548b"
+        }
+      ]
+    },
+    {
+      "family": "Italianno",
+      "dir": "ofl/italianno",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Italianno-Regular.ttf",
+          "size": 223708,
+          "sha256": "f6ae96dea0da46c73370eb0575848ab0eda190315bdfda3f5b252bba3dc9173c"
+        }
+      ]
+    },
+    {
+      "family": "Pinyon Script",
+      "dir": "ofl/pinyonscript",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "PinyonScript-Regular.ttf",
+          "size": 151412,
+          "sha256": "4aab130a6ed27f8b8117738c84a5602edf9300cdcc0651a9a65bf96f451ac29a"
+        }
+      ]
+    },
+    {
+      "family": "MonteCarlo",
+      "dir": "ofl/montecarlo",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "vi"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "MonteCarlo-Regular.ttf",
+          "size": 393456,
+          "sha256": "11d397212722b5ddd1e3190c3812139035e7acffb01da8ceaec96eaf985e12b5"
+        }
+      ]
+    },
+    {
+      "family": "Estonia",
+      "dir": "ofl/estonia",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Estonia-Regular.ttf",
+          "size": 1470272,
+          "sha256": "03087597ea24879c19d51ca4622f8c4e9cd867d081e7ad0ad3e7dccfdb1933b2"
+        }
+      ]
+    },
+    {
+      "family": "Charmonman",
+      "dir": "ofl/charmonman",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Charmonman-Regular.ttf",
+          "size": 117644,
+          "sha256": "7ec5575c6c87a6be69de7839b3ecd1027b7ba6510ad3e49bc30b73cc9ee1bce0"
+        },
+        {
+          "name": "Charmonman-Bold.ttf",
+          "size": 117384,
+          "sha256": "8bf4f82298997010662de35cec504c0504456e51d3d9a9a6b4f3788e4b04abee"
+        }
+      ]
+    },
+    {
+      "family": "Miniver",
+      "dir": "ofl/miniver",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Miniver-Regular.ttf",
+          "size": 45824,
+          "sha256": "0637ff653a9113189d196434f2055388638083dde397964b83aa2c1800d5b5b7"
+        }
+      ]
+    },
+    {
+      "family": "Zen Loop",
+      "dir": "ofl/zenloop",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "ZenLoop-Regular.ttf",
+          "size": 43064,
+          "sha256": "06c4de349ee28ef965f9a5361ef2c28841628adcc3e86490b9811584acb2378b"
+        }
+      ]
+    },
+    {
+      "family": "M PLUS 1p",
+      "dir": "ofl/mplus1p",
+      "license": "OFL-1.1",
+      "languages": ["ja"],
+      "sample": "あいアイ漢字",
+      "files": [
+        {
+          "name": "MPLUS1p-Regular.ttf",
+          "size": 1758688,
+          "sha256": "2f294ad496432b1608f070d310e3aa2adcf1de4af429f4901df97ec4bd361ed1"
+        },
+        {
+          "name": "MPLUS1p-Bold.ttf",
+          "size": 1766552,
+          "sha256": "76eb077b0a31ca33ca40238e47da5a17e2786741607cec09678d7d2e5ab1afc1"
+        }
+      ]
+    },
+    {
+      "family": "Zen Kaku Gothic New",
+      "dir": "ofl/zenkakugothicnew",
+      "license": "OFL-1.1",
+      "languages": ["ja"],
+      "sample": "あいアイ漢字",
+      "files": [
+        {
+          "name": "ZenKakuGothicNew-Regular.ttf",
+          "size": 2360248,
+          "sha256": "b840cd07a67d89cacca44249ae49aa99ee7640eb5ce623be8d8983d6aabac801"
+        },
+        {
+          "name": "ZenKakuGothicNew-Bold.ttf",
+          "size": 2314424,
+          "sha256": "0081cedabc4921982fcd061f845a005664ac7fb642af2dd34b4007bc63ccd235"
+        }
+      ]
+    },
+    {
+      "family": "Sawarabi Gothic",
+      "dir": "ofl/sawarabigothic",
+      "license": "OFL-1.1",
+      "languages": ["ja"],
+      "sample": "あいアイ漢字",
+      "files": [
+        {
+          "name": "SawarabiGothic-Regular.ttf",
+          "size": 1902848,
+          "sha256": "04f2f9111bb69cb8d3706c27b44879c2c0fac593a11edf5cfe8cec1efc92c789"
         }
       ]
     },
@@ -289,53 +2722,6 @@
       ]
     },
     {
-      "family": "Jua",
-      "dir": "ofl/jua",
-      "license": "OFL-1.1",
-      "languages": ["ko"],
-      "sample": "한국어",
-      "files": [
-        {
-          "name": "Jua-Regular.ttf",
-          "size": 2119352,
-          "sha256": "769677aef240bfc3b9965f2b50748075bff885e6c6992fc591a3fb268279f898"
-        }
-      ]
-    },
-    {
-      "family": "Do Hyeon",
-      "dir": "ofl/dohyeon",
-      "license": "OFL-1.1",
-      "languages": ["ko"],
-      "sample": "한국어",
-      "files": [
-        {
-          "name": "DoHyeon-Regular.ttf",
-          "size": 879764,
-          "sha256": "35644be7f28e0a68a447b1f7af351dcde5674b870f24f7b5f43e26d00b4ab653"
-        }
-      ]
-    },
-    {
-      "family": "Gaegu",
-      "dir": "ofl/gaegu",
-      "license": "OFL-1.1",
-      "languages": ["ko"],
-      "sample": "한국어",
-      "files": [
-        {
-          "name": "Gaegu-Regular.ttf",
-          "size": 3165816,
-          "sha256": "aa52c98336f7c62e2896fc8b12b56a75d5b476d88a2f104b0980f4f7ce0adfc3"
-        },
-        {
-          "name": "Gaegu-Bold.ttf",
-          "size": 2962664,
-          "sha256": "cc38a4af9506a45254d1ce07c589ec473d9e5f0be319e5a77b17c214903f8c1c"
-        }
-      ]
-    },
-    {
       "family": "Noto Sans KR",
       "dir": "ofl/notosanskr",
       "license": "OFL-1.1",
@@ -346,48 +2732,6 @@
           "name": "NotoSansKR[wght].ttf",
           "size": 10414588,
           "sha256": "194018e6b2b293a7964f037b25c0249ce1418bc9ab3c971060a03aa57861e252"
-        }
-      ]
-    },
-    {
-      "family": "ZCOOL KuaiLe",
-      "dir": "ofl/zcoolkuaile",
-      "license": "OFL-1.1",
-      "languages": ["zh-Hans"],
-      "sample": "简体中文",
-      "files": [
-        {
-          "name": "ZCOOLKuaiLe-Regular.ttf",
-          "size": 1514968,
-          "sha256": "812a6fc1fe54b6d73a419245c32dfeba8aa33104d5be90d1cf6af082007cb71d"
-        }
-      ]
-    },
-    {
-      "family": "LXGW Marker Gothic",
-      "dir": "ofl/lxgwmarkergothic",
-      "license": "OFL-1.1",
-      "languages": ["zh-Hans", "zh-Hant"],
-      "sample": "简体中文",
-      "files": [
-        {
-          "name": "LXGWMarkerGothic-Regular.ttf",
-          "size": 3187360,
-          "sha256": "e6a55cfd5f18dc393f92670a164397a69242cb4eabe1d3feb5dc22fc4947a8ba"
-        }
-      ]
-    },
-    {
-      "family": "Ma Shan Zheng",
-      "dir": "ofl/mashanzheng",
-      "license": "OFL-1.1",
-      "languages": ["zh-Hans"],
-      "sample": "简体中文",
-      "files": [
-        {
-          "name": "MaShanZheng-Regular.ttf",
-          "size": 5857936,
-          "sha256": "6d2546bb189c732a8ca29af9e22457b152387d158aa459e4ac2ce1e51788b7fb"
         }
       ]
     },
@@ -406,34 +2750,6 @@
       ]
     },
     {
-      "family": "Huninn",
-      "dir": "ofl/huninn",
-      "license": "OFL-1.1",
-      "languages": ["zh-Hant"],
-      "sample": "繁體中文",
-      "files": [
-        {
-          "name": "Huninn-Regular.ttf",
-          "size": 4683972,
-          "sha256": "1bd770a5ffc0c06723b567686f8b5db5abf9ab54227f3bbc4e6fd648f4698805"
-        }
-      ]
-    },
-    {
-      "family": "Iansui",
-      "dir": "ofl/iansui",
-      "license": "OFL-1.1",
-      "languages": ["zh-Hant"],
-      "sample": "繁體中文",
-      "files": [
-        {
-          "name": "Iansui-Regular.ttf",
-          "size": 9420560,
-          "sha256": "6e6340d80d618a42b48ade9370c34fa37a8210750c6fbc8efe65f23716538a2b"
-        }
-      ]
-    },
-    {
       "family": "Noto Sans TC",
       "dir": "ofl/notosanstc",
       "license": "OFL-1.1",
@@ -448,57 +2764,10 @@
       ]
     },
     {
-      "family": "Itim",
-      "dir": "ofl/itim",
-      "license": "OFL-1.1",
-      "languages": ["th"],
-      "sample": "ไทย",
-      "files": [
-        {
-          "name": "Itim-Regular.ttf",
-          "size": 371384,
-          "sha256": "9164d7eb92ca717b53b07193e3445c96782222d24215151b8d2851b576b17645"
-        }
-      ]
-    },
-    {
-      "family": "Mali",
-      "dir": "ofl/mali",
-      "license": "OFL-1.1",
-      "languages": ["th"],
-      "sample": "ไทย",
-      "files": [
-        {
-          "name": "Mali-Regular.ttf",
-          "size": 112756,
-          "sha256": "e3212f0f9be130743d32a4f174b7d79628daa5db0d72ca4c63c799ae465597bb"
-        },
-        {
-          "name": "Mali-Bold.ttf",
-          "size": 112176,
-          "sha256": "3e2f421036c3f91eb5ef34650a5cd2116c737a542147769437a9856a455d4462"
-        }
-      ]
-    },
-    {
-      "family": "Sriracha",
-      "dir": "ofl/sriracha",
-      "license": "OFL-1.1",
-      "languages": ["th"],
-      "sample": "ไทย",
-      "files": [
-        {
-          "name": "Sriracha-Regular.ttf",
-          "size": 319896,
-          "sha256": "c3128c30cb21e8724b792586c87059d1b5eceae10d9957ba2ab26c80bbed3669"
-        }
-      ]
-    },
-    {
       "family": "Kanit",
       "dir": "ofl/kanit",
       "license": "OFL-1.1",
-      "languages": ["th"],
+      "languages": ["th", "en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi"],
       "sample": "ไทย",
       "files": [
         {
@@ -533,58 +2802,171 @@
       ]
     },
     {
-      "family": "Nunito",
-      "dir": "ofl/nunito",
+      "family": "Alumni Sans Pinstripe",
+      "dir": "ofl/alumnisanspinstripe",
       "license": "OFL-1.1",
-      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi", "ru", "uk", "bg"],
-      "sample": "Aa",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi", "ru", "bg"],
+      "sample": "Abc",
       "files": [
         {
-          "name": "Nunito[wght].ttf",
-          "size": 276932,
-          "sha256": "bb55a5ca5c2042335b3991af27c4d0705d0ef41cac6164ac737fd8f2a1e85207"
+          "name": "AlumniSansPinstripe-Regular.ttf",
+          "size": 104716,
+          "sha256": "c00bc8d641f2ddc444bbb9a07125f4eb1e6eda0384a896196ad0c7be0a9cfeea"
         }
       ]
     },
     {
-      "family": "Fredoka",
-      "dir": "ofl/fredoka",
+      "family": "Rajdhani",
+      "dir": "ofl/rajdhani",
       "license": "OFL-1.1",
-      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id"],
-      "sample": "Aa",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu"],
+      "sample": "Abc",
       "files": [
         {
-          "name": "Fredoka[wdth,wght].ttf",
-          "size": 159184,
-          "sha256": "2ba02e68b152868aef9ba28e24b3648c7d457fe6f25c761f2c2c53fb61a73fc8"
+          "name": "Rajdhani-Regular.ttf",
+          "size": 377860,
+          "sha256": "6e1fc228a8318251a6e569502ec57bac1e4656c582f92f59ccecc4688e039b98"
+        },
+        {
+          "name": "Rajdhani-Bold.ttf",
+          "size": 400680,
+          "sha256": "691470dd3286a14e9677940d0bf75796179841ba5215cbda1a2c8910a3226afd"
         }
       ]
     },
     {
-      "family": "Comfortaa",
-      "dir": "ofl/comfortaa",
+      "family": "Signika Negative",
+      "dir": "ofl/signikanegative",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "SignikaNegative[wght].ttf",
+          "size": 428416,
+          "sha256": "2d111b1f760fdf84739371f11c88d47d47f642ad643039d3e639466606a5cdec"
+        }
+      ]
+    },
+    {
+      "family": "Rubik",
+      "dir": "ofl/rubik",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "ru", "uk", "bg"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Rubik[wght].ttf",
+          "size": 359804,
+          "sha256": "1b3a7437ba2af80e465e773ed60c5036d1ba6ace492d89046dbcf18fb31e4e88"
+        }
+      ]
+    },
+    {
+      "family": "Lato",
+      "dir": "ofl/lato",
       "license": "OFL-1.1",
       "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi", "ru", "uk", "bg", "el"],
-      "sample": "Aa",
+      "sample": "Abc",
       "files": [
         {
-          "name": "Comfortaa[wght].ttf",
-          "size": 201756,
-          "sha256": "0fc3f45dc48b614db9c39181502544b37217ecbf8bee2fb35886992bc96c5bd3"
+          "name": "Lato-Regular.ttf",
+          "size": 656568,
+          "sha256": "d636e4683231f931eda222d588e944d082bfd3bdba02f928bee461c0f185b251"
+        },
+        {
+          "name": "Lato-Bold.ttf",
+          "size": 656544,
+          "sha256": "8a0aace75d33794eece4b28187bfc1df0bbd2888b5d8a56e01788c8d65d16be1"
         }
       ]
     },
     {
-      "family": "Oswald",
-      "dir": "ofl/oswald",
+      "family": "PT Sans",
+      "dir": "ofl/ptsans",
       "license": "OFL-1.1",
-      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi", "ru", "uk", "bg"],
-      "sample": "Aa",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "ru", "uk", "bg"],
+      "sample": "Abc",
       "files": [
         {
-          "name": "Oswald[wght].ttf",
-          "size": 172088,
-          "sha256": "5b38c246e255a12f5712d640d56bcced0472466fc68983d2d0410ec0457c2817"
+          "name": "PT_Sans-Web-Regular.ttf",
+          "size": 442960,
+          "sha256": "9cc831490532009bae2b3ce0d39c62adfc889060beb421593bfd9d2396d0f10a"
+        },
+        {
+          "name": "PT_Sans-Web-Bold.ttf",
+          "size": 470240,
+          "sha256": "3128bd5ecf01816e59a23d54c57a7a6b14615b07db53ff277c77376010265b05"
+        }
+      ]
+    },
+    {
+      "family": "Raleway",
+      "dir": "ofl/raleway",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi", "ru", "uk", "bg"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Raleway[wght].ttf",
+          "size": 312352,
+          "sha256": "8bbcc3eb8275c388f4bcd998832f8a4b943eadbaf6a595205312774b5951aefb"
+        }
+      ]
+    },
+    {
+      "family": "Montserrat",
+      "dir": "ofl/montserrat",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi", "ru", "uk", "bg"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Montserrat[wght].ttf",
+          "size": 744936,
+          "sha256": "0f7b311b2f3279e4eef9b2f968bcdbab6e28f4daeb1f049f4f278a902bcd82f7"
+        }
+      ]
+    },
+    {
+      "family": "Roboto",
+      "dir": "ofl/roboto",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi", "ru", "uk", "bg", "el"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "Roboto[wdth,wght].ttf",
+          "size": 488584,
+          "sha256": "d7598e12c5dbef095ff8272cfc55da0250bd07fbdecbac8a530b9b277872a134"
+        }
+      ]
+    },
+    {
+      "family": "Roboto Mono",
+      "dir": "ofl/robotomono",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi", "ru", "uk", "bg", "el"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "RobotoMono[wght].ttf",
+          "size": 183700,
+          "sha256": "66a80e79d17e4c7cabd162e2916578a4cc08fd19eef6e2a643305eae9c567b2b"
+        }
+      ]
+    },
+    {
+      "family": "Open Sans",
+      "dir": "ofl/opensans",
+      "license": "OFL-1.1",
+      "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi", "ru", "uk", "bg", "el"],
+      "sample": "Abc",
+      "files": [
+        {
+          "name": "OpenSans[wdth,wght].ttf",
+          "size": 532636,
+          "sha256": "36643644f318a812aab2d2ed3bb98f8cf0872527f835fe9398d95fe6b9adb878"
         }
       ]
     },
@@ -593,7 +2975,7 @@
       "dir": "ofl/notosans",
       "license": "OFL-1.1",
       "languages": ["en", "de", "fr", "es", "es-419", "pt-PT", "pt-BR", "it", "nl", "sv", "da", "no", "fi", "id", "pl", "cs", "tr", "hu", "ro", "vi", "ru", "uk", "bg", "el"],
-      "sample": "Aa",
+      "sample": "Abc",
       "files": [
         {
           "name": "NotoSans[wdth,wght].ttf",

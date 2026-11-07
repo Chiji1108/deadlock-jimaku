@@ -4,15 +4,17 @@
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { create, type Font } from "fontkit";
+import { create, type Font, type GlyphRun } from "fontkit";
 import catalog from "../../crates/core/src/font-catalog.json" with { type: "json" };
 import { fontSampleName } from "../src/lib/font-samples.ts";
 
 const OUTPUT = resolve(import.meta.dirname, "../src/control/font-samples");
 const ORIGIN = `https://raw.githubusercontent.com/google/fonts/${catalog.commit}`;
 const LOCAL = process.argv[2];
-/** 1em を分ける数。一覧の 1 行の高さなら、これで輪郭の違いは見えない */
+/** 字の高さを分ける数。一覧の 1 行の高さなら、これで輪郭の違いは見えない */
 const UNITS = 128;
+/** 字の上下の余白 */
+const MARGIN = Math.round(UNITS * 0.15);
 
 const LATIN = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const CYRILLIC = "абвгдежзийклмнопрстуфхцчшщъыьэюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ";
@@ -110,14 +112,16 @@ const COMMANDS: Record<string, string> = {
 };
 
 /** 全部の字を 1 つのパスに、整数の相対座標で書く。z のあとの現在地は、その輪郭の始点に戻る */
-function outline(font: Font, text: string, scale: number) {
-  const { glyphs, positions } = font.layout(text);
+function outline(font: Font, { glyphs, positions }: GlyphRun, scale: number) {
   let at = [0, 0];
   let start = at;
   let pen = 0;
   let d = "";
   glyphs.forEach((glyph, i) => {
-    if (glyph.id === 0) throw new Error(`${font.familyName} に「${text}」の字がありません`);
+    if (glyph.id === 0) {
+      const char = String.fromCodePoint(...glyph.codePoints);
+      throw new Error(`${font.familyName} に「${char}」の字がありません`);
+    }
     const x = pen + positions[i]!.xOffset;
     for (const { command, args } of glyph.path.commands) {
       if (command === "closePath") {
@@ -136,15 +140,20 @@ function outline(font: Font, text: string, scale: number) {
     }
     pen += positions[i]!.xAdvance;
   });
-  return { d, width: Math.round(pen * scale) };
+  return d;
 }
 
+/** 実際の字の高さで揃える。em で揃えると、VT323 のように字の小さいフォントが潰れ、Pacifico のように高い字が切れる */
 function svg(font: Font, text: string) {
-  const { d, width } = outline(font, text, UNITS / font.unitsPerEm);
-  const top = Math.round(UNITS * 1.0);
-  const height = Math.round(UNITS * 1.3);
+  const run = font.layout(text);
+  const { minX, maxX, minY, maxY } = run.bbox;
+  const scale = UNITS / (maxY - minY);
+  const left = Math.floor(minX * scale);
+  const top = Math.floor(-maxY * scale) - MARGIN;
+  const width = Math.ceil(maxX * scale) - left;
+  const height = UNITS + MARGIN * 2;
   const em = ((width / height) * 1.3).toFixed(2);
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -${top} ${width} ${height}" width="${em}em" height="1.3em" fill="currentColor"><path d="${d}"/></svg>\n`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${left} ${top} ${width} ${height}" width="${em}em" height="1.3em" fill="currentColor"><path d="${outline(font, run, scale)}"/></svg>\n`;
 }
 
 const samples = new Map<string, string>();
