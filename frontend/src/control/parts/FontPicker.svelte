@@ -5,6 +5,7 @@
   import { Button } from "$lib/components/ui/button";
   import * as Dialog from "$lib/components/ui/dialog";
   import { Input } from "$lib/components/ui/input";
+  import * as Select from "$lib/components/ui/select";
   import type { FontEntry } from "../../generated/FontEntry";
   import {
     cardTarget,
@@ -14,6 +15,7 @@
     STANDARD,
   } from "../../lib/font-samples";
   import { cssString, fontSample } from "../../lib/overlay-fonts";
+  import { weightChoices } from "../../lib/text-style";
   import { panel, type FontTarget } from "../panel.svelte";
   import ConfirmDialog from "./ConfirmDialog.svelte";
 
@@ -21,16 +23,32 @@
     target,
     language,
     label,
+    standardWeight,
   }: {
     target: FontTarget;
     /** 見本の言語。Google Fonts の見出しはこの言語で絞る */
     language: string;
     /** 字幕は言語名、ランクは「ランク」 */
     label: string;
+    /** 太さの標準 */
+    standardWeight: number;
   } = $props();
 
   const families = $derived(panel.fonts);
   const value = $derived(panel.chosenFont(target) ?? "");
+  const weight = $derived(panel.fontStyle(target)?.weight ?? undefined);
+  const faces = $derived(panel.weights.get(value));
+  const weights = $derived(weightChoices(faces, standardWeight, weight));
+  /** 面がないと分かっている太さは、太字を合成する */
+  const synthetic = (w: number) => faces?.length && !faces.includes(w);
+  const weightLabel = (w: number) => `${w}${synthetic(w) ? "（合成）" : ""}`;
+  const standardLabel = $derived(
+    `標準（${standardWeight}${synthetic(standardWeight) ? "・合成" : ""}）`,
+  );
+
+  $effect(() => {
+    if (value) void panel.loadWeights(value);
+  });
 
   const HEADING = "pt-2 text-xs font-medium text-muted-foreground";
   const GRID = "grid grid-cols-1 gap-2 sm:grid-cols-2";
@@ -148,10 +166,26 @@
       lang={language}
       class="truncate text-lg font-bold"
       style:--font={value ? `${cssString(value)},` : "initial"}
+      style:font-weight={weight ?? standardWeight}
     >
       {swatch}
     </p>
   </div>
+  <Select.Root
+    type="single"
+    value={weight ? String(weight) : ""}
+    onValueChange={(v) => void panel.setFontStyle(target, { weight: v ? Number(v) : null })}
+  >
+    <Select.Trigger class="w-36 shrink-0" aria-label="{label}の太さ">
+      {weight ? weightLabel(weight) : standardLabel}
+    </Select.Trigger>
+    <Select.Content>
+      <Select.Item value="">{standardLabel}</Select.Item>
+      {#each weights as w (w)}
+        <Select.Item value={String(w)}>{weightLabel(w)}</Select.Item>
+      {/each}
+    </Select.Content>
+  </Select.Root>
   <Dialog.Root
     bind:open
     onOpenChange={(opening) => {

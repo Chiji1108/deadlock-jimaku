@@ -2,13 +2,22 @@ import { expect, test, vi } from "vitest";
 import {
   addFontFaces,
   endonym,
+  faceWeights,
   fontSample,
   rankFontRules,
   subtitleFontRules,
 } from "./overlay-fonts";
 
+const fonts = (families: Record<string, string>) =>
+  Object.fromEntries(
+    Object.entries(families).map(([lang, font]) => [
+      lang,
+      { font, weight: null, letterSpacing: null },
+    ]),
+  );
+
 test("選んだ言語だけに変数を設定し、標準の候補へ続ける", () => {
-  expect(subtitleFontRules({ ja: "Hiragino Mincho ProN" })).toBe(
+  expect(subtitleFontRules(fonts({ ja: "Hiragino Mincho ProN" }))).toBe(
     [
       '@import url("/api/fonts/Hiragino%20Mincho%20ProN/faces.css");',
       '[lang][lang="ja"] { --font: "Hiragino Mincho ProN", }',
@@ -17,7 +26,7 @@ test("選んだ言語だけに変数を設定し、標準の候補へ続ける",
 });
 
 test("@import はシートの先頭に、同じフォントは 1 つだけ書く", () => {
-  const rules = subtitleFontRules({ ja: "Meiryo", ko: "Meiryo", en: "Arial" }).split("\n");
+  const rules = subtitleFontRules(fonts({ ja: "Meiryo", ko: "Meiryo", en: "Arial" })).split("\n");
   expect(rules.filter((rule) => rule.startsWith("@import"))).toEqual([
     '@import url("/api/fonts/Meiryo/faces.css");',
     '@import url("/api/fonts/Arial/faces.css");',
@@ -26,15 +35,20 @@ test("@import はシートの先頭に、同じフォントは 1 つだけ書く
 });
 
 test("URL に書けない文字はパスの 1 区切りに収める", () => {
-  expect(subtitleFontRules({ ja: 'A/B"C' })).toContain('url("/api/fonts/A%2FB%22C/faces.css")');
+  expect(subtitleFontRules(fonts({ ja: 'A/B"C' }))).toContain(
+    'url("/api/fonts/A%2FB%22C/faces.css")',
+  );
 });
 
 test("引用符と \\ を含む名前は CSS の文字列にエスケープする", () => {
-  expect(subtitleFontRules({ ja: String.raw`A"B\C` })).toContain(String.raw`--font: "A\"B\\C",`);
+  expect(subtitleFontRules(fonts({ ja: String.raw`A"B\C` }))).toContain(
+    String.raw`--font: "A\"B\\C",`,
+  );
 });
 
 test("何も選んでいなければ規則を作らない", () => {
   expect(subtitleFontRules({})).toBe("");
+  expect(subtitleFontRules({ ja: { font: null, weight: 500, letterSpacing: null } })).toBe("");
 });
 
 test("ランクのフォントは全部の言語に当て、読み込みは 1 つだけ書く", () => {
@@ -90,4 +104,13 @@ test("フォントの読み込みは、前が終わってから次を始める",
   await vi.waitFor(() => expect(links).toHaveLength(3));
   expect(links[2]!.href).toBe("/api/fonts/D/faces.css");
   vi.unstubAllGlobals();
+});
+
+test("faces.css から太さを読む", () => {
+  const css = (min: number, max: number) =>
+    `@font-face { font-family: "A"; font-weight: ${min} ${max}; font-display: swap; src: url("A"); }`;
+  expect(faceWeights([css(400, 400), css(700, 700)].join("\n"))).toEqual([400, 700]);
+  expect(faceWeights(css(350, 350))).toEqual([350]);
+  expect(faceWeights(css(250, 620))).toEqual([300, 400, 500, 600]);
+  expect(faceWeights("")).toEqual([]);
 });

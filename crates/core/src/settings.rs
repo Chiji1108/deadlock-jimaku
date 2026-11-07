@@ -5,7 +5,9 @@
 use std::collections::BTreeMap;
 use std::path::Path;
 
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use ts_rs::TS;
 
 use crate::lang;
@@ -41,6 +43,8 @@ pub struct Settings {
     pub live_subtitles: bool,
     /// 字幕オーバーレイの見せ方。変えると表示中のオーバーレイにそのまま届く
     pub subtitle_display: SubtitleDisplay,
+    /// 字幕の文字の見た目
+    pub subtitle_style: SubtitleStyle,
     /// アイテム説明のオーバーレイ（字幕でアイテム名が出たら説明のカードを出す）
     pub item_cards: ItemCards,
     /// ランク名の言語。None なら話す言語に合わせる。
@@ -54,10 +58,8 @@ pub struct Settings {
     /// エターナスの順位を調べるリーダーボードの地域。None なら調べない
     #[ts(optional)]
     pub rank_region: Option<Region>,
-    /// ランクのフォントのファミリー名。None なら標準（`lang.css`）
-    #[ts(optional)]
-    #[serde(deserialize_with = "readable_font")]
-    pub rank_font: Option<String>,
+    /// ランクの文字の見た目
+    pub rank_style: RankStyle,
     /// OBS のブラウザソースで字幕オーバーレイが開かれたことがある（はじめかたのチェックに使う）
     pub obs_seen: bool,
     /// はじめかたを閉じた、または全部終えた
@@ -86,30 +88,6 @@ pub struct Settings {
 /// 引用符と `\` は `overlay-fonts.ts` がエスケープする
 pub(crate) fn valid_font_name(name: &str) -> bool {
     !name.is_empty() && name.chars().count() <= MAX_FONT_NAME && !name.chars().any(char::is_control)
-}
-
-/// 手で編集された設定でも、読めない項目だけを捨てて残りの言語の選択は残す
-fn readable_fonts<'de, D: Deserializer<'de>>(
-    deserializer: D,
-) -> Result<BTreeMap<LangCode, String>, D::Error> {
-    let raw = BTreeMap::<LangCode, serde_json::Value>::deserialize(deserializer)?;
-    Ok(raw
-        .into_iter()
-        .filter_map(|(language, family)| {
-            lang::find(&language)?;
-            let family = family.as_str().filter(|f| valid_font_name(f))?;
-            Some((language, family.to_owned()))
-        })
-        .collect())
-}
-
-/// 読めなければ標準に戻し、ほかの設定は残す
-fn readable_font<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Option<String>, D::Error> {
-    let raw = serde_json::Value::deserialize(deserializer)?;
-    Ok(raw
-        .as_str()
-        .filter(|f| valid_font_name(f))
-        .map(str::to_owned))
 }
 
 /// 既定値から変えたときだけ保存する項目（保存してしまうと、アプリの既定値を直しても古い値が残る）
@@ -153,8 +131,6 @@ pub struct SubtitleDisplay {
     pub font_size: u32,
     /// 訳文の文字の大きさ（px）
     pub translation_font_size: u32,
-    /// 文字の後ろ。明るい場面でも読めるよう、半透明の帯も選べる
-    pub background: Background,
     /// 長い文に足す秒数（1 文字あたり）
     pub per_char_seconds: f32,
     /// 翻訳が届いてから、次の字幕に押し出すまでの秒数（DESIGN.md 11 章）
@@ -165,9 +141,6 @@ pub struct SubtitleDisplay {
     pub max_lines: u32,
     /// 確定してから消すまでの秒数（長い文はそのぶん長く出す）
     pub hold_seconds: f32,
-    /// 言語ごとに選んだフォントのファミリー名。キーがない言語は標準（`lang.css`）
-    #[serde(deserialize_with = "readable_fonts")]
-    pub fonts: BTreeMap<LangCode, String>,
 }
 
 impl Default for SubtitleDisplay {
@@ -178,13 +151,11 @@ impl Default for SubtitleDisplay {
             align: Align::Center,
             font_size: 40,
             translation_font_size: 26,
-            background: Background::Outline,
             per_char_seconds: 0.15,
             min_read_seconds: 3.0,
             max_wait_seconds: 6.0,
             max_lines: 3,
             hold_seconds: 6.0,
-            fonts: BTreeMap::new(),
         }
     }
 }
@@ -294,8 +265,6 @@ pub struct SubtitleDisplayPatch {
     #[ts(optional)]
     pub translation_font_size: Option<u32>,
     #[ts(optional)]
-    pub background: Option<Background>,
-    #[ts(optional)]
     pub per_char_seconds: Option<f32>,
     #[ts(optional)]
     pub min_read_seconds: Option<f32>,
@@ -305,26 +274,10 @@ pub struct SubtitleDisplayPatch {
     pub max_lines: Option<u32>,
     #[ts(optional)]
     pub hold_seconds: Option<f32>,
-    /// 書いた言語だけを変える。空文字列なら標準に戻す
-    #[ts(optional)]
-    pub fonts: Option<BTreeMap<LangCode, String>>,
 }
 
 impl SubtitleDisplay {
     fn apply(&self, patch: SubtitleDisplayPatch) -> Result<Self, String> {
-        let mut fonts = self.fonts.clone();
-        for (language, family) in patch.fonts.into_iter().flatten() {
-            if lang::find(&language).is_none() {
-                return Err(format!("unknown language: {language}"));
-            }
-            if family.is_empty() {
-                fonts.remove(&language);
-            } else if valid_font_name(&family) {
-                fonts.insert(language, family);
-            } else {
-                return Err(format!("invalid font name: {family}"));
-            }
-        }
         let next = Self {
             show_source: patch.show_source.unwrap_or(self.show_source),
             furigana: patch.furigana.unwrap_or(self.furigana),
@@ -333,17 +286,226 @@ impl SubtitleDisplay {
             translation_font_size: patch
                 .translation_font_size
                 .unwrap_or(self.translation_font_size),
-            background: patch.background.unwrap_or(self.background),
             per_char_seconds: patch.per_char_seconds.unwrap_or(self.per_char_seconds),
             min_read_seconds: patch.min_read_seconds.unwrap_or(self.min_read_seconds),
             max_wait_seconds: patch.max_wait_seconds.unwrap_or(self.max_wait_seconds),
             max_lines: patch.max_lines.unwrap_or(self.max_lines),
             hold_seconds: patch.hold_seconds.unwrap_or(self.hold_seconds),
-            fonts,
         };
         next.validate()?;
         Ok(next)
     }
+}
+
+/// 字幕とランクの文字の見た目（DESIGN.md 11 章）。None は標準で、オーバーレイに値を渡さず、
+/// CSS の既定の見た目と OBS のカスタム CSS で上書きした変数をそのまま使う
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, TS)]
+#[serde(default, rename_all = "camelCase")]
+#[ts(export)]
+pub struct TextLook {
+    /// 通常の文字の色。ヒーロー名などの色分けは変えない
+    pub color: Option<String>,
+    pub outline: Outline,
+    pub shadow: Shadow,
+    pub background: Background,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, TS)]
+#[serde(default, rename_all = "camelCase")]
+#[ts(export)]
+pub struct Outline {
+    /// 文字の大きさとの比（em）
+    pub width: Option<f64>,
+    pub color: Option<String>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, TS)]
+#[serde(default, rename_all = "camelCase")]
+#[ts(export)]
+pub struct Shadow {
+    /// None なら帯のないときだけ影を付ける
+    pub enabled: Option<bool>,
+    /// ぼかしの半径（em）
+    pub blur: Option<f64>,
+    pub color: Option<String>,
+}
+
+/// 文字の後ろの半透明の帯。字幕は行ごと、ランクは全体に敷く
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, TS)]
+#[serde(default, rename_all = "camelCase")]
+#[ts(export)]
+pub struct Background {
+    pub enabled: bool,
+    pub color: Option<String>,
+    /// 濃さ（0〜1）
+    pub opacity: Option<f64>,
+}
+
+/// フォントに付く項目。字幕は言語ごと、ランクは 1 つ
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, TS)]
+#[serde(default, rename_all = "camelCase")]
+#[ts(export)]
+pub struct FontStyle {
+    /// ファミリー名
+    pub font: Option<String>,
+    pub weight: Option<u16>,
+    /// 字間（em）
+    pub letter_spacing: Option<f64>,
+}
+
+/// 字幕の文字の見た目。言語ごとに色なども変えられるようにするなら `FontStyle` の隣に足す
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, TS)]
+#[serde(default, rename_all = "camelCase")]
+#[ts(export)]
+pub struct SubtitleStyle {
+    #[serde(flatten)]
+    pub look: TextLook,
+    pub line_height: Option<f64>,
+    /// キーがない言語は標準
+    pub languages: BTreeMap<LangCode, FontStyle>,
+}
+
+/// ランクの文字の見た目
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, TS)]
+#[serde(default, rename_all = "camelCase")]
+#[ts(export)]
+pub struct RankStyle {
+    #[serde(flatten)]
+    pub look: TextLook,
+    #[serde(flatten)]
+    pub font: FontStyle,
+}
+
+const OUTLINE_WIDTH: std::ops::RangeInclusive<f64> = 0.0..=0.5;
+const SHADOW_BLUR: std::ops::RangeInclusive<f64> = 0.0..=1.0;
+const OPACITY: std::ops::RangeInclusive<f64> = 0.0..=1.0;
+const LINE_HEIGHT: std::ops::RangeInclusive<f64> = 1.0..=3.0;
+const WEIGHT: std::ops::RangeInclusive<u16> = 100..=900;
+const LETTER_SPACING: std::ops::RangeInclusive<f64> = -0.1..=0.5;
+/// ランクの既定の箱（幅 400）に、長い名前が収まる字間
+const RANK_LETTER_SPACING: std::ops::RangeInclusive<f64> = -0.1..=0.1;
+
+fn valid_color(color: &Option<String>) -> bool {
+    color.as_deref().is_none_or(|c| {
+        c.len() == 7 && c.starts_with('#') && c[1..].bytes().all(|b| b.is_ascii_hexdigit())
+    })
+}
+
+fn within<T: PartialOrd>(value: Option<T>, range: &std::ops::RangeInclusive<T>) -> bool {
+    value.is_none_or(|v| range.contains(&v))
+}
+
+impl TextLook {
+    fn validate(&self) -> Result<(), String> {
+        let valid = valid_color(&self.color)
+            && valid_color(&self.outline.color)
+            && valid_color(&self.shadow.color)
+            && valid_color(&self.background.color)
+            && within(self.outline.width, &OUTLINE_WIDTH)
+            && within(self.shadow.blur, &SHADOW_BLUR)
+            && within(self.background.opacity, &OPACITY);
+        valid
+            .then_some(())
+            .ok_or("text style is out of range".into())
+    }
+}
+
+impl FontStyle {
+    fn validate(&self) -> Result<(), String> {
+        if let Some(name) = self.font.as_deref().filter(|f| !valid_font_name(f)) {
+            return Err(format!("invalid font name: {name}"));
+        }
+        let valid = within(self.weight, &WEIGHT) && within(self.letter_spacing, &LETTER_SPACING);
+        valid
+            .then_some(())
+            .ok_or("font style is out of range".into())
+    }
+}
+
+impl SubtitleStyle {
+    fn validate(&self) -> Result<(), String> {
+        self.look.validate()?;
+        if !within(self.line_height, &LINE_HEIGHT) {
+            return Err("lineHeight is out of range".into());
+        }
+        for (language, font) in &self.languages {
+            if lang::find(language).is_none() {
+                return Err(format!("unknown language: {language}"));
+            }
+            font.validate()?;
+        }
+        Ok(())
+    }
+
+    fn apply(&self, patch: &Value) -> Result<Self, String> {
+        let mut next: Self = merged(self, patch)?;
+        next.languages
+            .retain(|_, font| *font != FontStyle::default());
+        next.validate()?;
+        Ok(next)
+    }
+
+    /// 手で壊した値は、その部分だけ標準に戻す。言語ごとの項目は `parse` が選り分ける
+    fn sanitized(mut self) -> Self {
+        if self.look.validate().is_err() {
+            self.look = TextLook::default();
+        }
+        if !within(self.line_height, &LINE_HEIGHT) {
+            self.line_height = None;
+        }
+        self
+    }
+}
+
+impl RankStyle {
+    fn validate_font(&self) -> Result<(), String> {
+        self.font.validate()?;
+        within(self.font.letter_spacing, &RANK_LETTER_SPACING)
+            .then_some(())
+            .ok_or("letterSpacing is out of range".into())
+    }
+
+    fn apply(&self, patch: &Value) -> Result<Self, String> {
+        let next: Self = merged(self, patch)?;
+        next.look.validate()?;
+        next.validate_font()?;
+        Ok(next)
+    }
+
+    fn sanitized(mut self) -> Self {
+        if self.look.validate().is_err() {
+            self.look = TextLook::default();
+        }
+        if self.validate_font().is_err() {
+            self.font = FontStyle::default();
+        }
+        self
+    }
+}
+
+/// JSON Merge Patch（RFC 7386）。書いた項目だけを変え、null は標準に戻す
+fn merge(target: &mut Value, patch: &Value) {
+    let Value::Object(fields) = patch else {
+        *target = patch.clone();
+        return;
+    };
+    if !target.is_object() {
+        *target = Value::Object(serde_json::Map::new());
+    }
+    let target = target.as_object_mut().expect("is an object");
+    for (key, value) in fields {
+        if value.is_null() {
+            target.remove(key);
+        } else {
+            merge(target.entry(key).or_insert(Value::Null), value);
+        }
+    }
+}
+
+fn merged<T: Serialize + DeserializeOwned>(current: &T, patch: &Value) -> Result<T, String> {
+    let mut json = serde_json::to_value(current).map_err(|e| e.to_string())?;
+    merge(&mut json, patch);
+    serde_json::from_value(json).map_err(|e| e.to_string())
 }
 
 /// ランクのオーバーレイに出すもの
@@ -411,16 +573,6 @@ impl Region {
     fn from_api(name: &str) -> Option<Region> {
         Self::ALL.into_iter().find(|r| r.as_api() == name)
     }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
-#[serde(rename_all = "lowercase")]
-#[ts(export)]
-pub enum Background {
-    /// 文字の縁取りだけ
-    Outline,
-    /// 行ごとに半透明の黒い帯を敷く
-    Band,
 }
 
 /// 音声認識と翻訳をどこで動かすか（DESIGN.md 9.6）
@@ -539,6 +691,7 @@ impl Default for Settings {
             deadlock_mode: true,
             live_subtitles: true,
             subtitle_display: SubtitleDisplay::default(),
+            subtitle_style: SubtitleStyle::default(),
             item_cards: ItemCards::default(),
             rank_language: None,
             rank_content: RankContent::Gauge,
@@ -548,7 +701,7 @@ impl Default for Settings {
             hybrid_hint_closed: false,
             tray_notice_seen: false,
             rank_region: None,
-            rank_font: None,
+            rank_style: RankStyle::default(),
             models: Models::default(),
             realtime_delay: "low".into(),
             segmentation: Segmentation::default(),
@@ -684,6 +837,8 @@ impl Settings {
         if self.subtitle_display.validate().is_err() {
             self.subtitle_display = SubtitleDisplay::default();
         }
+        self.subtitle_style = self.subtitle_style.sanitized();
+        self.rank_style = self.rank_style.sanitized();
         // 範囲外の秒数や知らない言語は、変更のときと同じ規則で読み直し、通らなければ既定値
         let cards = ItemCardsPatch {
             hold_seconds: Some(self.item_cards.hold_seconds),
@@ -726,6 +881,12 @@ impl Settings {
         if let Some(display) = patch.subtitle_display {
             next.subtitle_display = next.subtitle_display.apply(display)?;
         }
+        if let Some(style) = patch.subtitle_style {
+            next.subtitle_style = next.subtitle_style.apply(&style)?;
+        }
+        if let Some(style) = patch.rank_style {
+            next.rank_style = next.rank_style.apply(&style)?;
+        }
         if let Some(cards) = patch.item_cards {
             next.item_cards = next.item_cards.apply(cards)?;
         }
@@ -761,13 +922,6 @@ impl Settings {
         }
         if let Some(anchor) = patch.rank_anchor {
             next.rank_anchor = anchor;
-        }
-        if let Some(family) = patch.rank_font {
-            next.rank_font = match family.as_str() {
-                "" => None,
-                name if valid_font_name(name) => Some(family),
-                name => return Err(format!("invalid font name: {name}")),
-            };
         }
         next.obs_seen = patch.obs_seen.unwrap_or(next.obs_seen);
         next.onboarding_closed = patch.onboarding_closed.unwrap_or(next.onboarding_closed);
@@ -819,6 +973,18 @@ pub struct SettingsPatch {
     pub rank_account: Option<String>,
     #[ts(optional)]
     pub subtitle_display: Option<SubtitleDisplayPatch>,
+    /// JSON Merge Patch。書いた項目だけを変え、null は標準に戻す
+    #[ts(
+        optional,
+        type = r#"import("../lib/text-style").MergePatch<import("./SubtitleStyle").SubtitleStyle>"#
+    )]
+    pub subtitle_style: Option<Value>,
+    /// `subtitle_style` と同じ
+    #[ts(
+        optional,
+        type = r#"import("../lib/text-style").MergePatch<import("./RankStyle").RankStyle>"#
+    )]
+    pub rank_style: Option<Value>,
     #[ts(optional)]
     pub item_cards: Option<ItemCardsPatch>,
     /// 何 ms 黙ったら区切るか
@@ -831,9 +997,6 @@ pub struct SettingsPatch {
     pub rank_content: Option<RankContent>,
     #[ts(optional)]
     pub rank_anchor: Option<Anchor>,
-    /// 空文字列なら標準
-    #[ts(optional)]
-    pub rank_font: Option<String>,
     #[ts(optional)]
     pub obs_seen: Option<bool>,
     #[ts(optional)]
@@ -847,12 +1010,39 @@ pub struct SettingsPatch {
     pub rank_region: Option<String>,
 }
 
+/// 0.3 は帯を `subtitleDisplay.background` に持っていた。帯を選んでいた人の見た目を保つ
+fn migrate(json: &mut Value) {
+    let band = json
+        .get_mut("subtitleDisplay")
+        .and_then(Value::as_object_mut)
+        .and_then(|display| display.remove("background"));
+    if band.is_some_and(|b| b == "band") && json.get("subtitleStyle").is_none() {
+        json["subtitleStyle"] = serde_json::json!({ "background": { "enabled": true } });
+    }
+}
+
+/// 手で編集された設定でも、読めない言語の行だけを捨てて、残りの言語の選択は残す
+fn drop_unreadable_languages(json: &mut Value) {
+    let languages = json
+        .pointer_mut("/subtitleStyle/languages")
+        .and_then(Value::as_object_mut);
+    if let Some(languages) = languages {
+        languages.retain(|language, font| {
+            lang::find(language).is_some()
+                && serde_json::from_value::<FontStyle>(font.clone())
+                    .is_ok_and(|font| font.validate().is_ok())
+        });
+    }
+}
+
 /// ファイルがなければ既定値。壊れていたら脇に退けて既定値から始める。
 /// 読めない（ほかのアプリが掴んでいるなど）ときは Err: 既定値で上書き保存しないため
 /// 手で書き換えて読めなくなった項目があっても、ほかの設定まで失わないよう、その項目だけ既定値にする。
 /// JSON として読めなければ Err
 fn parse(bytes: &[u8]) -> serde_json::Result<Settings> {
-    let mut json: serde_json::Value = serde_json::from_slice(bytes)?;
+    let mut json: Value = serde_json::from_slice(bytes)?;
+    migrate(&mut json);
+    drop_unreadable_languages(&mut json);
     if let Some(fields) = json.as_object_mut() {
         fields.retain(|key, value| {
             let one = serde_json::json!({ key.as_str(): value.clone() });
@@ -910,6 +1100,8 @@ pub fn parse_account_id(s: &str) -> Option<u32> {
 
 #[cfg(test)]
 mod tests {
+    use serde_json::json;
+
     use super::*;
 
     #[test]
@@ -1327,13 +1519,13 @@ mod tests {
         let next = Settings::default()
             .apply(SettingsPatch {
                 subtitle_display: Some(SubtitleDisplayPatch {
-                    background: Some(Background::Band),
+                    align: Some(Align::Left),
                     ..Default::default()
                 }),
                 ..Default::default()
             })
             .unwrap();
-        assert_eq!(next.subtitle_display.background, Background::Band);
+        assert_eq!(next.subtitle_display.align, Align::Left);
         assert_eq!(
             next.subtitle_display.font_size,
             SubtitleDisplay::default().font_size
@@ -1386,7 +1578,7 @@ mod tests {
         let path = dir.path().join("settings.json");
         std::fs::write(
             &path,
-            r#"{ "rankAccount": 308386819, "subtitleDisplay": { "background": "none" } }"#,
+            r#"{ "rankAccount": 308386819, "subtitleDisplay": { "align": "none" } }"#,
         )
         .unwrap();
         let s = load(&path).unwrap();
@@ -1416,132 +1608,310 @@ mod tests {
         );
     }
 
-    fn font_patch(fonts: &[(&str, &str)]) -> SettingsPatch {
+    fn subtitle_style(patch: serde_json::Value) -> SettingsPatch {
         SettingsPatch {
-            subtitle_display: Some(SubtitleDisplayPatch {
-                fonts: Some(
-                    fonts
-                        .iter()
-                        .map(|(l, f)| ((*l).to_owned(), (*f).to_owned()))
-                        .collect(),
-                ),
-                ..Default::default()
-            }),
+            subtitle_style: Some(patch),
             ..Default::default()
         }
     }
 
+    fn rank_style(patch: serde_json::Value) -> SettingsPatch {
+        SettingsPatch {
+            rank_style: Some(patch),
+            ..Default::default()
+        }
+    }
+
+    fn font_of(s: &Settings, language: &str) -> Option<String> {
+        s.subtitle_style
+            .languages
+            .get(language)
+            .and_then(|f| f.font.clone())
+    }
+
     #[test]
-    fn font_patch_changes_only_the_named_languages() {
+    fn a_style_patch_changes_only_what_it_names() {
         let s = Settings::default()
-            .apply(font_patch(&[
-                ("ja", "Hiragino Mincho ProN"),
-                ("en", "Georgia"),
-            ]))
+            .apply(subtitle_style(json!({
+                "color": "#ffe066",
+                "outline": { "width": 0.3, "color": "#102030" },
+                "languages": {
+                    "ja": { "font": "Hiragino Mincho ProN", "weight": 500 },
+                    "en": { "font": "Georgia" }
+                }
+            })))
             .unwrap();
-        let next = s.apply(font_patch(&[("en", "Verdana")])).unwrap();
-        assert_eq!(next.subtitle_display.fonts["ja"], "Hiragino Mincho ProN");
-        assert_eq!(next.subtitle_display.fonts["en"], "Verdana");
-        let reset = next.apply(font_patch(&[("ja", "")])).unwrap();
-        assert!(!reset.subtitle_display.fonts.contains_key("ja"));
-        assert_eq!(reset.subtitle_display.fonts["en"], "Verdana");
+        let next = s
+            .apply(subtitle_style(json!({
+                "outline": { "width": 0.1 },
+                "languages": { "ja": { "letterSpacing": 0.05 } }
+            })))
+            .unwrap();
+        assert_eq!(next.subtitle_style.look.color.as_deref(), Some("#ffe066"));
+        assert_eq!(next.subtitle_style.look.outline.width, Some(0.1));
+        assert_eq!(
+            next.subtitle_style.look.outline.color.as_deref(),
+            Some("#102030")
+        );
+        let ja = &next.subtitle_style.languages["ja"];
+        assert_eq!(ja.font.as_deref(), Some("Hiragino Mincho ProN"));
+        assert_eq!((ja.weight, ja.letter_spacing), (Some(500), Some(0.05)));
+        assert_eq!(font_of(&next, "en").as_deref(), Some("Georgia"));
+        assert_eq!(next.rank_style, RankStyle::default());
     }
 
     #[test]
-    fn font_patch_rejects_unknown_languages() {
-        let s = Settings::default();
-        assert!(s.apply(font_patch(&[("latin", "Georgia")])).is_err());
+    fn null_returns_a_style_item_to_the_standard() {
+        let s = Settings::default()
+            .apply(subtitle_style(json!({
+                "color": "#ffe066",
+                "shadow": { "enabled": false, "blur": 0.4 },
+                "lineHeight": 2.0,
+                "background": { "enabled": true, "opacity": 0.3 },
+                "languages": { "ja": { "font": "Hiragino Sans" }, "en": { "font": "Georgia" } }
+            })))
+            .unwrap();
+        let next = s
+            .apply(subtitle_style(json!({
+                "color": null,
+                "shadow": { "blur": null },
+                "languages": { "ja": { "font": null } }
+            })))
+            .unwrap();
+        assert_eq!(next.subtitle_style.look.color, None);
+        assert_eq!(next.subtitle_style.look.shadow.enabled, Some(false));
+        assert_eq!(next.subtitle_style.look.shadow.blur, None);
+        assert!(!next.subtitle_style.languages.contains_key("ja"));
+        assert_eq!(font_of(&next, "en").as_deref(), Some("Georgia"));
+
+        let reset = next
+            .apply(subtitle_style(json!({
+                "color": null, "outline": null, "shadow": null, "lineHeight": null,
+                "background": null, "languages": null
+            })))
+            .unwrap();
+        assert_eq!(reset.subtitle_style, SubtitleStyle::default());
     }
 
     #[test]
-    fn font_patch_checks_the_length_and_control_characters() {
+    fn rank_style_takes_one_font_and_leaves_the_subtitle_style_alone() {
+        let s = Settings::default()
+            .apply(subtitle_style(
+                json!({ "languages": { "ja": { "font": "Hiragino Sans" } } }),
+            ))
+            .unwrap();
+        let next = s
+            .apply(rank_style(json!({
+                "font": "Georgia", "weight": 900, "letterSpacing": 0.02,
+                "color": "#ffe066", "background": { "enabled": true }
+            })))
+            .unwrap();
+        assert_eq!(next.rank_style.font.font.as_deref(), Some("Georgia"));
+        assert_eq!(next.rank_style.font.weight, Some(900));
+        assert_eq!(next.rank_style.look.color.as_deref(), Some("#ffe066"));
+        assert!(next.rank_style.look.background.enabled);
+        assert_eq!(next.subtitle_style, s.subtitle_style);
+        let back = next.apply(rank_style(json!({ "font": null }))).unwrap();
+        assert_eq!(back.rank_style.font.font, None);
+        assert_eq!(back.rank_style.font.weight, Some(900));
+    }
+
+    #[test]
+    fn style_patches_reject_values_out_of_range_and_change_nothing() {
         let s = Settings::default();
+        for bad in [
+            json!({ "color": "red" }),
+            json!({ "color": "#ffe06" }),
+            json!({ "color": "#ffe06g" }),
+            json!({ "color": "#ffffffff" }),
+            json!({ "color": "#ｆｆ" }),
+            json!({ "color": 1 }),
+            json!({ "outline": { "width": 0.51 } }),
+            json!({ "outline": { "width": -0.1 } }),
+            json!({ "outline": { "color": "url(x)" } }),
+            json!({ "shadow": { "blur": 1.1 } }),
+            json!({ "shadow": { "color": "x" } }),
+            json!({ "shadow": { "enabled": "yes" } }),
+            json!({ "lineHeight": 0.9 }),
+            json!({ "lineHeight": 3.1 }),
+            json!({ "background": { "opacity": 1.1 } }),
+            json!({ "background": { "color": "black" } }),
+            json!({ "languages": { "latin": { "font": "Georgia" } } }),
+            json!({ "languages": { "ja": { "weight": 99 } } }),
+            json!({ "languages": { "ja": { "weight": 901 } } }),
+            json!({ "languages": { "ja": { "letterSpacing": 0.6 } } }),
+            json!({ "languages": { "ja": { "letterSpacing": -0.2 } } }),
+            json!({ "languages": { "ja": { "font": "a\nb" } } }),
+        ] {
+            assert!(s.apply(subtitle_style(bad.clone())).is_err(), "{bad}");
+        }
+        for bad in [
+            json!({ "color": "red" }),
+            json!({ "font": "a\nb" }),
+            json!({ "weight": 1000 }),
+            json!({ "letterSpacing": 0.11 }),
+        ] {
+            assert!(s.apply(rank_style(bad.clone())).is_err(), "{bad}");
+        }
+    }
+
+    #[test]
+    fn font_names_keep_the_length_and_control_character_rules() {
+        let s = Settings::default();
+        let font = |name: &str| subtitle_style(json!({ "languages": { "ja": { "font": name } } }));
         for good in ["あ".repeat(256), "a\"b".to_owned(), "a\\b".to_owned()] {
-            assert!(s.apply(font_patch(&[("ja", &good)])).is_ok(), "{good}");
+            assert!(s.apply(font(&good)).is_ok(), "{good}");
         }
-        for bad in ["あ".repeat(257), "a\nb".to_owned(), "a\u{7f}b".to_owned()] {
-            assert!(s.apply(font_patch(&[("ja", &bad)])).is_err(), "{bad}");
+        for bad in ["あ".repeat(257), "a\u{7f}b".to_owned(), String::new()] {
+            assert!(s.apply(font(&bad)).is_err(), "{bad}");
         }
     }
 
     #[test]
-    fn rank_font_patch_does_not_touch_the_subtitle_fonts() {
-        let rank = |family: &str| SettingsPatch {
-            rank_font: Some(family.to_owned()),
-            ..Default::default()
+    fn the_standard_style_has_no_values_for_the_overlays_to_apply() {
+        let json = serde_json::to_value(Settings::default()).unwrap();
+        assert_eq!(
+            json["subtitleStyle"],
+            json!({
+                "color": null,
+                "outline": { "width": null, "color": null },
+                "shadow": { "enabled": null, "blur": null, "color": null },
+                "background": { "enabled": false, "color": null, "opacity": null },
+                "lineHeight": null,
+                "languages": {}
+            })
+        );
+        assert_eq!(
+            json["rankStyle"],
+            json!({
+                "color": null,
+                "outline": { "width": null, "color": null },
+                "shadow": { "enabled": null, "blur": null, "color": null },
+                "background": { "enabled": false, "color": null, "opacity": null },
+                "font": null,
+                "weight": null,
+                "letterSpacing": null
+            })
+        );
+    }
+
+    #[test]
+    fn settings_from_0_3_keep_their_display_and_look() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("settings.json");
+        let old = |background: &str| {
+            format!(
+                r#"{{
+                    "overlayFonts": {{ "ja": "Old Font" }},
+                    "subtitleDisplay": {{
+                        "align": "left", "fontSize": 52, "translationFontSize": 30,
+                        "background": "{background}", "maxLines": 2, "holdSeconds": 9
+                    }}
+                }}"#
+            )
         };
-        let s = Settings::default()
-            .apply(font_patch(&[("ja", "Hiragino Sans")]))
-            .unwrap();
-        let next = s.apply(rank("Georgia")).unwrap();
-        assert_eq!(next.rank_font.as_deref(), Some("Georgia"));
-        assert_eq!(next.subtitle_display.fonts, s.subtitle_display.fonts);
-        let subtitle = next.apply(font_patch(&[("ja", "")])).unwrap();
-        assert_eq!(subtitle.rank_font.as_deref(), Some("Georgia"));
-        assert_eq!(next.apply(rank("")).unwrap().rank_font, None);
-        assert!(next.apply(rank("a\nb")).is_err());
-    }
-
-    #[test]
-    fn fonts_from_the_rc_are_skipped() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("settings.json");
-        std::fs::write(
-            &path,
-            r#"{ "micLanguage": "en", "overlayFonts": { "ja": "Hiragino Sans" } }"#,
-        )
-        .unwrap();
+        std::fs::write(&path, old("band")).unwrap();
         let s = load(&path).unwrap();
-        assert_eq!(s.mic_language, "en");
-        assert!(s.subtitle_display.fonts.is_empty());
+        assert_eq!(s.subtitle_display.align, Align::Left);
+        assert_eq!(s.subtitle_display.font_size, 52);
+        assert_eq!(s.subtitle_display.translation_font_size, 30);
+        assert_eq!(s.subtitle_display.max_lines, 2);
+        assert_eq!(s.subtitle_display.hold_seconds, 9.0);
+        assert_eq!(
+            s.subtitle_style,
+            SubtitleStyle {
+                look: TextLook {
+                    background: Background {
+                        enabled: true,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                ..Default::default()
+            }
+        );
+
+        // 保存し直しても帯は残る
+        save(&path, &s).unwrap();
+        assert_eq!(load(&path).unwrap(), s);
+
+        std::fs::write(&path, old("outline")).unwrap();
+        let s = load(&path).unwrap();
+        assert_eq!(s.subtitle_display.font_size, 52);
+        assert_eq!(s.subtitle_style, SubtitleStyle::default());
+        assert_eq!(s.rank_style, RankStyle::default());
     }
 
     #[test]
-    fn unreadable_fonts_are_dropped_one_by_one() {
+    fn broken_style_values_fall_back_without_losing_the_rest() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("settings.json");
         std::fs::write(
             &path,
-            r#"{
-                "subtitleDisplay": {
-                    "fontSize": 32,
-                    "fonts": {
-                        "ja": "Hiragino Sans",
-                        "zh-Hans": "bad\nname",
+            r##"{
+                "subtitleDisplay": { "fontSize": 32 },
+                "subtitleStyle": {
+                    "color": "red",
+                    "lineHeight": 9,
+                    "languages": {
+                        "ja": { "font": "Hiragino Sans", "weight": 500 },
+                        "zh-Hans": { "font": "bad\nname" },
                         "ko": 1,
-                        "latin": "Georgia"
+                        "en": { "weight": 5000 },
+                        "latin": { "font": "Georgia" }
                     }
                 },
-                "rankFont": "bad\nname"
-            }"#,
+                "rankStyle": { "font": "bad\nname", "color": "#ffe066" }
+            }"##,
         )
         .unwrap();
         let s = load(&path).unwrap();
-        assert_eq!(
-            s.subtitle_display.fonts,
-            BTreeMap::from([("ja".to_owned(), "Hiragino Sans".to_owned())])
-        );
         assert_eq!(s.subtitle_display.font_size, 32);
-        assert_eq!(s.rank_font, None);
+        assert_eq!(s.subtitle_style.look, TextLook::default());
+        assert_eq!(s.subtitle_style.line_height, None);
+        assert_eq!(
+            s.subtitle_style.languages,
+            BTreeMap::from([(
+                "ja".to_owned(),
+                FontStyle {
+                    font: Some("Hiragino Sans".to_owned()),
+                    weight: Some(500),
+                    letter_spacing: None,
+                }
+            )])
+        );
+        assert_eq!(s.rank_style.font, FontStyle::default());
+        assert_eq!(s.rank_style.look.color.as_deref(), Some("#ffe066"));
     }
 
     #[test]
-    fn settings_saved_before_fonts_use_the_standard_fonts() {
+    fn an_unreadable_style_keeps_the_other_settings() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("settings.json");
-        std::fs::write(&path, r#"{ "micLanguage": "en" }"#).unwrap();
+        std::fs::write(
+            &path,
+            r#"{ "rankAccount": 308386819, "subtitleStyle": { "color": 1 }, "rankStyle": 1 }"#,
+        )
+        .unwrap();
         let s = load(&path).unwrap();
-        assert_eq!(s.mic_language, "en");
-        assert!(s.subtitle_display.fonts.is_empty());
-        assert_eq!(s.rank_font, None);
+        assert_eq!(s.rank_account, Some(308_386_819));
+        assert_eq!(s.subtitle_style, SubtitleStyle::default());
+        assert_eq!(s.rank_style, RankStyle::default());
     }
 
     #[test]
-    fn chosen_fonts_survive_a_save() {
+    fn chosen_styles_survive_a_save() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join(FILE);
         let s = Settings::default()
-            .apply(font_patch(&[("zh-Hant", "PingFang TC")]))
+            .apply(subtitle_style(json!({
+                "outline": { "width": 0.07 },
+                "languages": { "zh-Hant": { "font": "PingFang TC", "letterSpacing": 0.03 } }
+            })))
+            .unwrap()
+            .apply(rank_style(
+                json!({ "shadow": { "blur": 0.1 }, "font": "Georgia" }),
+            ))
             .unwrap();
         save(&path, &s).unwrap();
         assert_eq!(load(&path).unwrap(), s);

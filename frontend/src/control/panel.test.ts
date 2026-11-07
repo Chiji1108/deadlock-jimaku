@@ -54,7 +54,10 @@ const saved = { family: "Jua", languages: ["ko"], downloaded: true };
 const KO: FontTarget = { kind: "subtitle", language: "ko" };
 
 function withFonts(fonts: Record<string, string>) {
-  const view = { settings: { subtitleDisplay: { fonts } } } as unknown as SettingsView;
+  const languages = Object.fromEntries(
+    Object.entries(fonts).map(([lang, font]) => [lang, { font }]),
+  );
+  const view = { settings: { subtitleStyle: { languages } } } as unknown as SettingsView;
   const next = freshPanel();
   next.view = view;
   const update = vi.spyOn(next, "update").mockResolvedValue(true);
@@ -83,7 +86,9 @@ test("Google Fonts のフォントは、取得して初めて読み込み、そ�
   vi.spyOn(api, "fonts").mockResolvedValue([saved, ...pc("Old")]);
   await next.downloadFont("Jua", KO);
   expect(add.mock.calls).toEqual([["Jua"]]);
-  expect(update).toHaveBeenCalledWith({ subtitleDisplay: { fonts: { ko: "Jua" } } });
+  expect(update).toHaveBeenCalledWith({
+    subtitleStyle: { languages: { ko: { font: "Jua" } } },
+  });
 });
 
 test("ダウンロードの間は進行中の印があり、終われば外れる", async () => {
@@ -104,7 +109,7 @@ test("ダウンロードを待つ間に選び直したフォントは上書き�
   vi.spyOn(api, "downloadFont").mockReturnValue(new Promise((r) => (finish = r)));
   vi.spyOn(api, "fonts").mockResolvedValue([saved]);
   const download = next.downloadFont("Jua", KO);
-  next.settings!.subtitleDisplay.fonts.ko = "Gaegu";
+  next.settings!.subtitleStyle.languages.ko = { font: "Gaegu", weight: null, letterSpacing: null };
   finish();
   await download;
   expect(update).not.toHaveBeenCalled();
@@ -115,7 +120,7 @@ test("ランクのフォントを取得したら、ランクにだけ適用す�
   vi.spyOn(api, "downloadFont").mockResolvedValue();
   vi.spyOn(api, "fonts").mockResolvedValue([saved]);
   await next.downloadFont("Jua", { kind: "rank" });
-  expect(update).toHaveBeenCalledWith({ rankFont: "Jua" });
+  expect(update).toHaveBeenCalledWith({ rankStyle: { font: "Jua" } });
 });
 
 test("失敗したダウンロードは適用せず、印を外す", async () => {

@@ -4,9 +4,20 @@
   import type { LeaderboardRank } from "../generated/LeaderboardRank";
   import type { RankContent } from "../generated/RankContent";
   import type { RankState } from "../generated/RankState";
+  import type { RankStyle } from "../generated/RankStyle";
   import { REGIONS } from "./regions";
+  import { fontCss, textVars } from "./text-style";
 
-  let { rank, lang, content }: { rank: RankState; lang: string; content: RankContent } = $props();
+  let {
+    rank,
+    lang,
+    content,
+    look,
+  }: { rank: RankState; lang: string; content: RankContent; look?: RankStyle } = $props();
+
+  /** 標準の縁取りと影に合わせ、em は --scale に比例する 16px を元にする */
+  const EM = "calc(16px * var(--scale))";
+  const font = $derived(fontCss(look));
 
   /** リーダーボードの順位。ランク名と同じ言語にそろえる（日本語は「アジア 12位」、ほかは「#12 Asia」） */
   const placement = (l: LeaderboardRank) =>
@@ -27,21 +38,26 @@
   const number = (n: number) => n.toLocaleString("en-US");
 </script>
 
-<div class="rank" lang={shown}>
+<div
+  class="rank"
+  lang={shown}
+  data-background={look?.background.enabled ? "band" : undefined}
+  style={look && textVars(look, EM)}
+>
   {#if rank.image}<img class="badge" src={rank.image} alt="" />{/if}
   <!-- 1 行目: ランク名、2 行目: ゲージ（ポイントを重ねるか、数字なしで細くする）。出すものは操作パネルで選ぶ -->
   {#if content !== "icon"}<div class="text">
-      {#if label}<p class="name">{label}</p>{/if}
+      {#if label}<p class="name" style={font}>{label}</p>{/if}
       {#if content === "name"}
         <!-- 名前だけ -->
       {:else if rank.leaderboard}
         <!-- エターナスは上のティアがないので、リーダーボードの順位を出す -->
-        <p class="points">{placement(rank.leaderboard)}</p>
+        <p class="points" style={font}>{placement(rank.leaderboard)}</p>
       {:else if rank.progress}
         <div class="bar" class:thin={content === "gauge"}>
           <div class="fill" style:width="{ratio * 100}%"></div>
           {#if content === "full"}
-            <p class="points">
+            <p class="points" style={font}>
               <!-- ポイントが変わったら桁ごとに数字を動かす -->
               <TextMorph text={number(rank.progress.value)} numbers as="span" duration={600} /><span
                 class="max">{` / ${number(rank.progress.max)}`}</span
@@ -51,7 +67,7 @@
         </div>
       {:else if rank.points !== undefined}
         <!-- 順位が取れないエターナスは、累積のポイントを出す -->
-        <p class="points">
+        <p class="points" style={font}>
           <TextMorph text={number(rank.points)} numbers as="span" duration={600} />
           <span class="unit">RP</span>
         </p>
@@ -75,9 +91,17 @@
     gap: calc(14px * var(--scale));
     padding: calc(8px * var(--scale));
     color: var(--text-color);
-    -webkit-text-stroke: 0.16em var(--outline-color);
+    -webkit-text-stroke: var(--outline-width, 0.16em) var(--outline-color);
     paint-order: stroke fill;
-    text-shadow: 0 calc(2px * var(--scale)) calc(6px * var(--scale)) rgb(0 0 0 / 0.6);
+    text-shadow: var(
+      --text-shadow,
+      0 calc(2px * var(--scale)) var(--shadow-blur, calc(6px * var(--scale)))
+        var(--shadow-color, rgb(0 0 0 / 0.6))
+    );
+  }
+  .rank[data-background="band"] {
+    border-radius: calc(12px * var(--scale));
+    background: var(--band-color, rgb(0 0 0 / 0.62));
   }
   .badge {
     width: var(--badge-size, calc(96px * var(--scale)));

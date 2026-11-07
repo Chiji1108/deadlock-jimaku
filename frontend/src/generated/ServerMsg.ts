@@ -4,9 +4,11 @@ import type { ItemCardsView } from "./ItemCardsView";
 import type { LiveStatus } from "./LiveStatus";
 import type { RankContent } from "./RankContent";
 import type { RankState } from "./RankState";
+import type { RankStyle } from "./RankStyle";
 import type { Segment } from "./Segment";
 import type { SubtitleDisplay } from "./SubtitleDisplay";
+import type { SubtitleStyle } from "./SubtitleStyle";
 import type { TranscriptionError } from "./TranscriptionError";
 import type { UsageView } from "./UsageView";
 
-export type ServerMsg = { "type": "snapshot", segments: Array<Segment>, } | { "type": "segment.upsert", segment: Segment, } | { "type": "glossary.updated", clientVersion: number, } | { "type": "rank.update", rank: RankState | null, } | { "type": "transcription.status", error: TranscriptionError | null, } | { "type": "display", subtitles: SubtitleDisplay, rankLanguage: string, rankContent: RankContent, rankAnchor: Anchor, rankFont: string | null, itemCards: ItemCardsView, } | { "type": "audio.level", db: number, } | { "type": "usage", usage: UsageView, } | { "type": "live.status", status: LiveStatus | null, } | { "type": "chrome.status", status: LiveStatus | null, } | { "type": "settings.changed" };
+export type ServerMsg = { "type": "snapshot", segments: Array<Segment>, } | { "type": "segment.upsert", segment: Segment, } | { "type": "glossary.updated", clientVersion: number, } | { "type": "rank.update", rank: RankState | null, } | { "type": "transcription.status", error: TranscriptionError | null, } | { "type": "display", subtitles: SubtitleDisplay, subtitleStyle: SubtitleStyle, rankLanguage: string, rankContent: RankContent, rankAnchor: Anchor, rankStyle: RankStyle, itemCards: ItemCardsView, } | { "type": "audio.level", db: number, } | { "type": "usage", usage: UsageView, } | { "type": "live.status", status: LiveStatus | null, } | { "type": "chrome.status", status: LiveStatus | null, } | { "type": "settings.changed" };

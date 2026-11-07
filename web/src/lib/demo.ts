@@ -100,13 +100,11 @@ export const display = (fontSize: number, translationFontSize: number): Subtitle
   align: "center",
   fontSize,
   translationFontSize,
-  background: "outline",
   perCharSeconds: 0,
   minReadSeconds: 0,
   maxWaitSeconds: 0,
   maxLines: 1,
   holdSeconds: 0,
-  fonts: {},
 });
 
 export const RANK: RankState = {

@@ -3,10 +3,12 @@ import type { Anchor } from "./Anchor";
 import type { ItemCards } from "./ItemCards";
 import type { Models } from "./Models";
 import type { RankContent } from "./RankContent";
+import type { RankStyle } from "./RankStyle";
 import type { Region } from "./Region";
 import type { Segmentation } from "./Segmentation";
 import type { SpeechEngine } from "./SpeechEngine";
 import type { SubtitleDisplay } from "./SubtitleDisplay";
+import type { SubtitleStyle } from "./SubtitleStyle";
 
 export type Settings = { 
 /**
@@ -42,6 +44,10 @@ liveSubtitles: boolean,
  */
 subtitleDisplay: SubtitleDisplay, 
 /**
+ * 字幕の文字の見た目
+ */
+subtitleStyle: SubtitleStyle, 
+/**
  * アイテム説明のオーバーレイ（字幕でアイテム名が出たら説明のカードを出す）
  */
 itemCards: ItemCards, 
@@ -63,9 +69,9 @@ rankAnchor: Anchor,
  */
 rankRegion?: Region, 
 /**
- * ランクのフォントのファミリー名。None なら標準（`lang.css`）
+ * ランクの文字の見た目
  */
-rankFont?: string, 
+rankStyle: RankStyle, 
 /**
  * OBS のブラウザソースで字幕オーバーレイが開かれたことがある（はじめかたのチェックに使う）
  */

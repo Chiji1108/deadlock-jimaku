@@ -1,6 +1,6 @@
 // 操作パネルの状態。各タブはこれを読み、変更は api 経由でサーバーに送る（サーバーの返す設定で置き換える）
 import { toast } from "svelte-sonner";
-import { SvelteSet } from "svelte/reactivity";
+import { SvelteMap, SvelteSet } from "svelte/reactivity";
 import type { LiveStatus } from "../generated/LiveStatus";
 import type { GiftStatus } from "../generated/GiftStatus";
 import type { Provider } from "../generated/Provider";
@@ -12,8 +12,10 @@ import type { MicError } from "../generated/MicError";
 import type { TranscriptionError } from "../generated/TranscriptionError";
 import type { UsageView } from "../generated/UsageView";
 import { api } from "../lib/api";
-import { addFontFaces } from "../lib/overlay-fonts";
+import { addFontFaces, fontWeights } from "../lib/overlay-fonts";
+import type { MergePatch } from "../lib/text-style";
 import type { FontEntry } from "../generated/FontEntry";
+import type { FontStyle } from "../generated/FontStyle";
 import { connect, type Status } from "../lib/ws";
 
 /** 選べるフォントの一覧。取れるまでと、取れなかったときは名前の配列の代わりにその状態が入る */
@@ -242,18 +244,30 @@ class Panel {
       () => void (this.samplesRead = undefined),
     ));
 
-  chosenFont = (target: FontTarget) =>
+  /** フォントの持つ太さ。読み終えるまでは undefined */
+  weights = new SvelteMap<string, number[]>();
+
+  loadWeights = async (family: string) => {
+    if (!this.weights.has(family)) this.weights.set(family, await fontWeights(family));
+  };
+
+  fontStyle = (target: FontTarget): FontStyle | undefined =>
     target.kind === "rank"
-      ? this.settings?.rankFont
-      : this.settings?.subtitleDisplay.fonts[target.language];
+      ? this.settings?.rankStyle
+      : this.settings?.subtitleStyle.languages[target.language];
+
+  chosenFont = (target: FontTarget) => this.fontStyle(target)?.font ?? undefined;
+
+  setFontStyle = (target: FontTarget, patch: MergePatch<FontStyle>) =>
+    this.update(
+      target.kind === "rank"
+        ? { rankStyle: patch }
+        : { subtitleStyle: { languages: { [target.language]: patch } } },
+    );
 
   /** 空文字列なら標準に戻す */
   setFont = (target: FontTarget, family: string) =>
-    this.update(
-      target.kind === "rank"
-        ? { rankFont: family }
-        : { subtitleDisplay: { fonts: { [target.language]: family } } },
-    );
+    this.setFontStyle(target, { font: family || null });
 
   /**
    * 裏で進め、取得できたら一覧を読み直して選ぶ先に適用する。走行中の読み込みは取得前の一覧を

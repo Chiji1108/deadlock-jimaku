@@ -495,10 +495,11 @@ fn display(settings: &Settings) -> ServerMsg {
             show_source: !settings.plan().translation_only,
             ..settings.subtitle_display.clone()
         },
+        subtitle_style: Box::new(settings.subtitle_style.clone()),
         rank_language: settings.rank_language(),
         rank_content: settings.rank_content,
         rank_anchor: settings.rank_anchor,
-        rank_font: settings.rank_font.clone(),
+        rank_style: Box::new(settings.rank_style.clone()),
         item_cards: ItemCardsView {
             hold_seconds: settings.item_cards.hold_seconds,
             language: crate::lang::find(&settings.item_language())
@@ -512,7 +513,9 @@ fn display(settings: &Settings) -> ServerMsg {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::settings::{SpeechEngine, SubtitleDisplayPatch};
+    use serde_json::json;
+
+    use crate::settings::SpeechEngine;
     use crate::types::Stage;
 
     fn seg(id: &str, text: &str) -> Segment {
@@ -679,23 +682,23 @@ mod tests {
         let mut rx = store.subscribe();
         store
             .update_settings(SettingsPatch {
-                subtitle_display: Some(SubtitleDisplayPatch {
-                    fonts: Some([("ja".to_owned(), "Hiragino Sans".to_owned())].into()),
-                    ..Default::default()
-                }),
-                rank_font: Some("Georgia".to_owned()),
+                subtitle_style: Some(json!({ "languages": { "ja": { "font": "Hiragino Sans" } } })),
+                rank_style: Some(json!({ "font": "Georgia" })),
                 ..Default::default()
             })
             .unwrap();
         let ServerMsg::Display {
-            subtitles,
-            rank_font,
+            subtitle_style,
+            rank_style,
             ..
         } = rx.try_recv().unwrap()
         else {
             panic!("expected the display message");
         };
-        assert_eq!(subtitles.fonts["ja"], "Hiragino Sans");
-        assert_eq!(rank_font.as_deref(), Some("Georgia"));
+        assert_eq!(
+            subtitle_style.languages["ja"].font.as_deref(),
+            Some("Hiragino Sans")
+        );
+        assert_eq!(rank_style.font.font.as_deref(), Some("Georgia"));
     }
 }

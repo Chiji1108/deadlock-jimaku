@@ -4,6 +4,7 @@
   import type { Anchor } from "../../generated/Anchor";
   import type { RankContent } from "../../generated/RankContent";
   import type { RankState } from "../../generated/RankState";
+  import type { RankStyle } from "../../generated/RankStyle";
   import { placeItems } from "../../lib/anchor";
   import { applyFontRules, rankFontRules } from "../../lib/overlay-fonts";
   import { fitSource, rankSize } from "../../lib/overlay-size";
@@ -16,6 +17,19 @@
   /** 表示の設定が届くまでは描かない（設定と違う形で一瞬出さない） */
   let content = $state<RankContent | undefined>();
   let anchor = $state<Anchor>("top-left");
+  let look = $state<RankStyle | undefined>();
+
+  /** 操作パネルのプレビュー（`?preview`）では、アカウントを入れる前でも見本を出しておく。OBS には出さない */
+  const SAMPLE: RankState | undefined = new URLSearchParams(location.search).has("preview")
+    ? {
+        badge: 0,
+        tier: 7,
+        subrank: 3,
+        names: { ja: "アルカニスト", en: "Arcanist" },
+        progress: { value: 1240, max: 2000 },
+      }
+    : undefined;
+  const shown = $derived(rank ?? SAMPLE);
 
   // 大きさは --scale で描く（zoom だとポイントの数字のアニメーションの位置がずれる）
   $effect(() =>
@@ -30,7 +44,8 @@
     connect(["rank", "display"], (msg) => {
       if (msg.type === "rank.update") rank = msg.rank ?? undefined;
       if (msg.type === "display") {
-        applyFontRules(rankFontRules(msg.rankFont));
+        applyFontRules(rankFontRules(msg.rankStyle.font));
+        look = msg.rankStyle;
         lang = msg.rankLanguage;
         content = msg.rankContent;
         anchor = msg.rankAnchor;
@@ -41,11 +56,11 @@
 
 <!-- ソースの箱の中で、操作パネルで選んだ位置に寄せる -->
 <div class="stage" style:place-items={placeItems(anchor)}>
-  {#if rank && content}
+  {#if shown && content}
     <!-- バッジが変わったら作り直してアニメーションさせる -->
-    {#key rank.badge}
+    {#key shown.badge}
       <div class="card" in:scale={{ start: 0.8, duration: 400 }}>
-        <RankBadge {rank} {lang} {content} />
+        <RankBadge rank={shown} {lang} {content} {look} />
       </div>
     {/key}
   {/if}

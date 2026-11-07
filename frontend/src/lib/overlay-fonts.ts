@@ -1,7 +1,5 @@
 // 言語ごとに選んだフォントを lang.css の --font に渡す
-import type { SubtitleDisplay } from "../generated/SubtitleDisplay";
-
-type Fonts = SubtitleDisplay["fonts"];
+import type { SubtitleStyle } from "../generated/SubtitleStyle";
 
 /** 制御文字はサーバーが拒否するので、エスケープするのは引用符と \ だけ */
 export const cssString = (name: string) => `"${name.replace(/["\\]/g, "\\$&")}"`;
@@ -37,6 +35,25 @@ export function addFontFaces(family: string) {
   );
 }
 
+const WEIGHT_STEPS = [100, 200, 300, 400, 500, 600, 700, 800, 900];
+
+/** faces.css に書いてある太さ。可変フォントは範囲の中の 100 刻み */
+export function faceWeights(css: string) {
+  const ranges = [...css.matchAll(/font-weight: (\d+) (\d+);/g)].map(
+    ([, min, max]) => [Number(min), Number(max)] as const,
+  );
+  const weights = ranges.flatMap(([min, max]) =>
+    min === max ? [min] : WEIGHT_STEPS.filter((weight) => weight >= min && weight <= max),
+  );
+  return [...new Set(weights)].toSorted((a, b) => a - b);
+}
+
+/** そのフォントの持つ太さ。読めなければ空 */
+export const fontWeights = (family: string) =>
+  fetch(facesUrl(family))
+    .then((res) => (res.ok ? res.text() : ""))
+    .then(faceWeights, () => []);
+
 /** フォントの見本。日本語は言語名だと漢字だけになるので、かなも混ぜる */
 export const fontSample = (lang: string) => (lang === "ja" ? "あいアイ漢字" : endonym(lang));
 
@@ -49,13 +66,17 @@ const fontImports = (families: string[]) =>
  * 属性の完全一致で言語を分け、[lang] を重ねて lang.css のリセットより詳細度を上げる。
  * ファイルが読めなければ、同じ名前の PC のフォントと標準の候補に落ちる
  */
-export const subtitleFontRules = (fonts: Fonts) =>
-  [
-    ...fontImports(Object.values(fonts)),
-    ...Object.entries(fonts).map(
+export function subtitleFontRules(languages: SubtitleStyle["languages"]) {
+  const fonts = Object.entries(languages).flatMap(([lang, { font }]) =>
+    font ? [[lang, font] as const] : [],
+  );
+  return [
+    ...fontImports(fonts.map(([, family]) => family)),
+    ...fonts.map(
       ([lang, family]) => `[lang][lang=${cssString(lang)}] { --font: ${cssString(family)}, }`,
     ),
   ].join("\n");
+}
 
 /** ランクは 1 つのフォントなので、ランク名の言語によらず全部の言語に当てる */
 export const rankFontRules = (family?: string | null) =>
