@@ -39,7 +39,6 @@ tracing-subscriber = "0.3.23"
 ts-rs = "12.0.1"
 fontdb = "0.24.0"
 percent-encoding = "2.3.2"
-tokio-util = { version = "0.7.20", features = ["io"] }
 
 [dev-dependencies]
 tempfile = "3.27.0"

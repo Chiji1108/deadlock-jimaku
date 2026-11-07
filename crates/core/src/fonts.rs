@@ -1,5 +1,9 @@
 //! オーバーレイで選べるフォントの一覧と、そのファイルの配信（DESIGN.md 6.3）。
 
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
+use std::time::UNIX_EPOCH;
+
 use fontdb::{Database, FaceInfo, Source, Stretch, Style};
 use percent_encoding::{NON_ALPHANUMERIC, utf8_percent_encode};
 
@@ -46,21 +50,39 @@ pub async fn installed() -> Vec<String> {
         .expect("blocking task")
 }
 
-/// 配ってよい面。URL から受け取った名前は `fontdb` の結果と比べるだけで、パスには使わない
-fn faces_of<'a>(db: &'a Database, family: &'a str) -> impl Iterator<Item = &'a FaceInfo> {
-    db.faces().filter(move |face| {
-        face.families
-            .first()
-            .is_some_and(|(name, _)| selectable(name) && name.eq_ignore_ascii_case(family))
-            && face.style == Style::Normal
-            && face.stretch == Stretch::Normal
-            && !face.post_script_name.is_empty()
-    })
+/// 配る面。URL から受け取った名前は `fontdb` の結果と比べるだけで、パスには使わない。
+/// 直立で標準幅の面があればそれだけ、なければ全部の面が候補。`@font-face` は太さしか書かず、
+/// 同じ太さの規則は後が前を隠すので、太さごとに通常の面に近い 1 面を、太さの順に残す
+fn faces_of<'a>(db: &'a Database, family: &str) -> Vec<&'a FaceInfo> {
+    let mut faces: Vec<&FaceInfo> = db
+        .faces()
+        .filter(|face| {
+            face.families
+                .first()
+                .is_some_and(|(name, _)| selectable(name) && name.eq_ignore_ascii_case(family))
+                && !face.post_script_name.is_empty()
+        })
+        .collect();
+    let upright = |face: &FaceInfo| face.style == Style::Normal && face.stretch == Stretch::Normal;
+    if faces.iter().any(|face| upright(face)) {
+        faces.retain(|face| upright(face));
+    }
+    faces.sort_by_key(|&face| {
+        (
+            face.weight,
+            face.style != Style::Normal,
+            face.post_script_name.len(),
+            &face.post_script_name,
+        )
+    });
+    faces.dedup_by_key(|face| face.weight);
+    faces
 }
 
 fn css(db: &Database, family: &str) -> Option<String> {
     let name = format!(r#""{}""#, family.replace('\\', r"\\").replace('"', r#"\""#));
     let rules: Vec<String> = faces_of(db, family)
+        .into_iter()
         .filter_map(|face| {
             let axis = db.with_face_data(face.id, weight_axis)?;
             let (min, max) = axis.unwrap_or((face.weight.0, face.weight.0));
@@ -74,25 +96,49 @@ fn css(db: &Database, family: &str) -> Option<String> {
     (!rules.is_empty()).then(|| rules.join("\n"))
 }
 
-/// 1 面のファイル。切り出しの要らないフォントは、メモリに載せずにそのまま流す
-pub enum FaceFile {
-    Whole(tokio::fs::File),
-    Extracted(Vec<u8>),
+/// 1 面の sfnt。ローカルの配信で、組み直す面はどのみちメモリに載るので、どの面も同じ形で返す
+pub struct FaceFile {
+    pub etag: String,
+    pub data: Vec<u8>,
+}
+
+/// ファイルの大きさと更新時刻で版を表す。URL が同じなら、入れ替えたフォントだけが別の版になる
+fn etag(face: &FaceInfo) -> Option<String> {
+    let Source::File(path) = &face.source else {
+        return None;
+    };
+    let meta = std::fs::metadata(path).ok()?;
+    let modified = meta.modified().ok()?.duration_since(UNIX_EPOCH).ok()?;
+    Some(format!(
+        r#""{:x}-{:x}-{:x}""#,
+        meta.len(),
+        modified.as_nanos(),
+        face.index
+    ))
+}
+
+/// 中身から作る版
+pub fn content_etag(content: &str) -> String {
+    let mut hasher = DefaultHasher::new();
+    content.hash(&mut hasher);
+    format!(r#""{:x}""#, hasher.finish())
 }
 
 fn file(db: &Database, family: &str, postscript: &str) -> Option<FaceFile> {
-    let face = faces_of(db, family).find(|face| face.post_script_name == postscript)?;
-    let collection = db.with_face_data(face.id, |data, index| {
-        data.starts_with(COLLECTION).then(|| extract(data, index))
-    })?;
-    match (collection, &face.source) {
-        (Some(extracted), _) => extracted.map(FaceFile::Extracted),
-        (None, Source::File(path)) => {
-            let file = std::fs::File::open(path).ok()?;
-            Some(FaceFile::Whole(tokio::fs::File::from_std(file)))
+    let face = faces_of(db, family)
+        .into_iter()
+        .find(|face| face.post_script_name == postscript)?;
+    let data = db.with_face_data(face.id, |data, index| {
+        if data.starts_with(COLLECTION) {
+            extract(data, index)
+        } else {
+            Some(data.to_vec())
         }
-        (None, _) => None,
-    }
+    })??;
+    Some(FaceFile {
+        etag: etag(face)?,
+        data,
+    })
 }
 
 /// そのファミリーの `@font-face`。一覧にないファミリーは `None`
@@ -165,7 +211,8 @@ fn extract(data: &[u8], index: u32) -> Option<Vec<u8>> {
 
 #[cfg(test)]
 mod tests {
-    use tokio::io::AsyncReadExt;
+    use std::fs::File;
+    use std::time::{Duration, SystemTime};
 
     use super::*;
 
@@ -288,15 +335,27 @@ mod tests {
         (dir, db)
     }
 
-    async fn served(db: &Database, family: &str, postscript: &str) -> Option<Vec<u8>> {
-        Some(match file(db, family, postscript)? {
-            FaceFile::Extracted(data) => data,
-            FaceFile::Whole(mut file) => {
-                let mut data = Vec::new();
-                file.read_to_end(&mut data).await.unwrap();
-                data
-            }
-        })
+    fn served(db: &Database, family: &str, postscript: &str) -> Option<Vec<u8>> {
+        Some(file(db, family, postscript)?.data)
+    }
+
+    /// `faces.css` に書かれた面の名前
+    fn sheet_files(db: &Database, family: &str) -> Vec<String> {
+        css(db, family)
+            .unwrap_or_default()
+            .lines()
+            .map(|rule| {
+                let (_, file) = rule.split_once(r#"url(""#).unwrap();
+                file.split_once('"').unwrap().0.replace("%2D", "-")
+            })
+            .collect()
+    }
+
+    fn styled(postscript: &str, weight: u16, stretch: u16, italic: bool) -> Vec<u8> {
+        sfnt(&[
+            (b"OS/2", os2(weight, stretch, italic)),
+            (b"name", name_table("Probe", postscript)),
+        ])
     }
 
     #[test]
@@ -304,26 +363,12 @@ mod tests {
         let (_dir, db) = installed_fonts(&[
             ("regular.ttf", face("Probe", "Probe-Regular", 400)),
             ("bold.ttf", face("Probe", "Probe-Bold", 700)),
-            (
-                "italic.ttf",
-                sfnt(&[
-                    (b"OS/2", os2(400, 5, true)),
-                    (b"name", name_table("Probe", "Probe-Italic")),
-                ]),
-            ),
-            (
-                "condensed.ttf",
-                sfnt(&[
-                    (b"OS/2", os2(400, 3, false)),
-                    (b"name", name_table("Probe", "Probe-Condensed")),
-                ]),
-            ),
+            ("italic.ttf", styled("Probe-Italic", 400, 5, true)),
+            ("condensed.ttf", styled("Probe-Condensed", 400, 3, false)),
         ]);
         let css = css(&db, "probe").unwrap();
-        let mut rules: Vec<&str> = css.lines().collect();
-        rules.sort_unstable();
         assert_eq!(
-            rules,
+            css.lines().collect::<Vec<_>>(),
             [
                 r#"@font-face { font-family: "probe"; font-weight: 400 400; font-display: swap; src: url("Probe%2DRegular"); }"#,
                 r#"@font-face { font-family: "probe"; font-weight: 700 700; font-display: swap; src: url("Probe%2DBold"); }"#,
@@ -359,36 +404,131 @@ mod tests {
         assert!(css.contains(r#"url("A%2FB")"#), "{css}");
     }
 
-    #[tokio::test]
-    async fn serves_only_faces_the_list_would_show() {
+    #[test]
+    fn serves_only_faces_the_list_would_show() {
         let data = face("Probe", "Probe-Regular", 400);
         let (_dir, db) = installed_fonts(&[
             ("probe.ttf", data.clone()),
             ("hidden.ttf", face(".Hidden", "Hidden-Regular", 400)),
         ]);
-        assert_eq!(served(&db, "Probe", "Probe-Regular").await, Some(data));
-        assert!(served(&db, "Probe", "Probe-Bold").await.is_none());
-        assert!(served(&db, "Other", "Probe-Regular").await.is_none());
-        assert!(served(&db, ".Hidden", "Hidden-Regular").await.is_none());
+        assert_eq!(served(&db, "Probe", "Probe-Regular"), Some(data));
+        assert!(served(&db, "Probe", "Probe-Bold").is_none());
+        assert!(served(&db, "Other", "Probe-Regular").is_none());
+        assert!(served(&db, ".Hidden", "Hidden-Regular").is_none());
         assert_eq!(css(&db, ".Hidden"), None);
         assert_eq!(css(&db, "Other"), None);
     }
 
-    #[tokio::test]
-    async fn an_italic_face_is_not_served() {
-        let (_dir, db) = installed_fonts(&[(
-            "italic.ttf",
-            sfnt(&[
-                (b"OS/2", os2(400, 5, true)),
-                (b"name", name_table("Probe", "Probe-Italic")),
-            ]),
-        )]);
-        assert!(served(&db, "Probe", "Probe-Italic").await.is_none());
-        assert_eq!(css(&db, "Probe"), None);
+    #[test]
+    fn a_path_in_the_url_reaches_no_file() {
+        let (dir, db) = installed_fonts(&[("probe.ttf", face("Probe", "Probe-Regular", 400))]);
+        let path = dir.path().join("probe.ttf");
+        for postscript in [path.to_str().unwrap(), "../probe.ttf", "probe.ttf"] {
+            assert!(served(&db, "Probe", postscript).is_none(), "{postscript}");
+        }
+        assert!(served(&db, path.to_str().unwrap(), "Probe-Regular").is_none());
     }
 
-    #[tokio::test]
-    async fn rebuilds_each_face_of_a_collection() {
+    #[test]
+    fn keeps_the_regular_face_of_a_weight_whatever_the_load_order() {
+        let files = [
+            ("a.ttf", styled("Probe-Regular-Ornaments", 400, 5, false)),
+            ("b.ttf", styled("Probe", 400, 5, false)),
+            ("c.ttf", styled("Probe-Bold", 400, 5, false)),
+            ("d.ttf", styled("Probe-Black", 900, 5, false)),
+        ];
+        let (_dir, forward) = installed_fonts(&files);
+        let (_dir, backward) = installed_fonts(&[
+            ("a.ttf", files[3].1.clone()),
+            ("b.ttf", files[2].1.clone()),
+            ("c.ttf", files[1].1.clone()),
+            ("d.ttf", files[0].1.clone()),
+        ]);
+        for db in [&forward, &backward] {
+            assert_eq!(sheet_files(db, "Probe"), ["Probe", "Probe-Black"]);
+            assert!(served(db, "Probe", "Probe").is_some());
+            assert!(served(db, "Probe", "Probe-Bold").is_none());
+        }
+    }
+
+    #[test]
+    fn names_of_the_same_length_are_broken_by_name() {
+        let (_dir, db) = installed_fonts(&[
+            ("a.ttf", styled("Probe-B", 400, 5, false)),
+            ("b.ttf", styled("Probe-A", 400, 5, false)),
+        ]);
+        assert_eq!(sheet_files(&db, "Probe"), ["Probe-A"]);
+    }
+
+    #[test]
+    fn a_family_of_only_condensed_faces_is_served() {
+        let (_dir, db) = installed_fonts(&[
+            ("regular.ttf", styled("Narrow-Regular", 400, 3, false)),
+            ("italic.ttf", styled("Narrow-Italic", 400, 3, true)),
+            ("bold.ttf", styled("Narrow-Bold", 700, 3, false)),
+        ]);
+        assert_eq!(sheet_files(&db, "Probe"), ["Narrow-Regular", "Narrow-Bold"]);
+        assert!(served(&db, "Probe", "Narrow-Regular").is_some());
+        assert!(served(&db, "Probe", "Narrow-Italic").is_none());
+    }
+
+    #[test]
+    fn a_family_of_only_italic_faces_is_served() {
+        let (_dir, db) = installed_fonts(&[("italic.ttf", styled("Probe-Italic", 400, 5, true))]);
+        assert_eq!(sheet_files(&db, "Probe"), ["Probe-Italic"]);
+        assert!(served(&db, "Probe", "Probe-Italic").is_some());
+    }
+
+    #[test]
+    fn the_etag_follows_the_file() {
+        let (dir, db) = installed_fonts(&[("probe.ttf", face("Probe", "Probe-Regular", 400))]);
+        let path = dir.path().join("probe.ttf");
+        let etag = || file(&db, "Probe", "Probe-Regular").unwrap().etag;
+        let first = etag();
+        assert!(first.starts_with('"') && first.ends_with('"'), "{first}");
+        assert_eq!(first, etag());
+
+        let touched = SystemTime::UNIX_EPOCH + Duration::from_secs(1_000_000);
+        File::options()
+            .write(true)
+            .open(&path)
+            .unwrap()
+            .set_modified(touched)
+            .unwrap();
+        let second = etag();
+        assert_ne!(first, second);
+
+        let longer = File::options().append(true).open(&path).unwrap();
+        longer
+            .set_len(longer.metadata().unwrap().len() + 4)
+            .unwrap();
+        longer.set_modified(touched).unwrap();
+        assert_ne!(second, etag());
+    }
+
+    #[test]
+    fn faces_of_a_collection_have_their_own_etag() {
+        let (_dir, db) = installed_fonts(&[(
+            "probe.ttc",
+            collection(&[
+                face("Probe", "Probe-Regular", 400),
+                face("Probe", "Probe-Bold", 700),
+            ]),
+        )]);
+        assert_ne!(
+            file(&db, "Probe", "Probe-Regular").unwrap().etag,
+            file(&db, "Probe", "Probe-Bold").unwrap().etag
+        );
+    }
+
+    #[test]
+    fn the_sheet_etag_follows_its_content() {
+        assert_eq!(content_etag("a"), content_etag("a"));
+        assert_ne!(content_etag("a"), content_etag("b"));
+    }
+
+    #[test]
+    fn rebuilds_each_face_of_a_collection() {
         let regular = face("Probe", "Probe-Regular", 400);
         let bold = sfnt(&[
             (b"OS/2", os2(700, 5, false)),
@@ -397,8 +537,8 @@ mod tests {
         ]);
         let (_dir, db) =
             installed_fonts(&[("probe.ttc", collection(&[regular.clone(), bold.clone()]))]);
-        assert_eq!(served(&db, "Probe", "Probe-Regular").await, Some(regular));
-        assert_eq!(served(&db, "Probe", "Probe-Bold").await, Some(bold));
+        assert_eq!(served(&db, "Probe", "Probe-Regular"), Some(regular));
+        assert_eq!(served(&db, "Probe", "Probe-Bold"), Some(bold));
         assert!(css(&db, "Probe").unwrap().contains("font-weight: 300 800;"));
     }
 

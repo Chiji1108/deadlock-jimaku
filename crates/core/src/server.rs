@@ -4,7 +4,6 @@ use std::sync::Arc;
 
 use axum::Json;
 use axum::Router;
-use axum::body::Body;
 use axum::extract::ws::{CloseFrame, Message, WebSocket, WebSocketUpgrade};
 use axum::extract::{Path, Request, State};
 use axum::http::{HeaderMap, StatusCode, Uri, header};
@@ -16,9 +15,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tokio::net::TcpListener;
 use tokio::sync::broadcast::error::RecvError;
-use tokio_util::io::ReaderStream;
 
-use crate::fonts::{self, FaceFile};
+use crate::fonts;
 use crate::secrets::{self, Provider};
 use crate::settings::SettingsPatch;
 use crate::share::{self, GiftStatus, Refused, SharedCode};
@@ -449,27 +447,43 @@ async fn fonts() -> Json<Vec<String>> {
 /// URL に版を含めず、毎回確かめさせる。フォントを入れ替えても同じ URL で新しい面が届く
 const FONT_CACHE: (header::HeaderName, &str) = (header::CACHE_CONTROL, "no-cache");
 
-async fn font_faces(Path(family): Path<String>) -> Response {
+/// ブラウザは受け取った `ETag` をそのまま返すので、完全な一致だけを見る。外れても本体を送るだけ
+fn font_response(
+    request: &HeaderMap,
+    etag: String,
+    mime: &'static str,
+    body: impl IntoResponse,
+) -> Response {
+    let unchanged = request
+        .get(header::IF_NONE_MATCH)
+        .is_some_and(|sent| sent == etag.as_str());
+    let etag = [(header::ETAG, etag)];
+    if unchanged {
+        return (StatusCode::NOT_MODIFIED, [FONT_CACHE], etag).into_response();
+    }
+    ([(header::CONTENT_TYPE, mime), FONT_CACHE], etag, body).into_response()
+}
+
+async fn font_faces(Path(family): Path<String>, headers: HeaderMap) -> Response {
     match fonts::faces_css(family).await {
-        Some(css) => (
-            [
-                (header::CONTENT_TYPE, "text/css; charset=utf-8"),
-                FONT_CACHE,
-            ],
+        Some(css) => font_response(
+            &headers,
+            fonts::content_etag(&css),
+            "text/css; charset=utf-8",
             css,
-        )
-            .into_response(),
+        ),
         None => StatusCode::NOT_FOUND.into_response(),
     }
 }
 
-async fn font_file(Path((family, postscript)): Path<(String, String)>) -> Response {
-    let body = match fonts::face_file(family, postscript).await {
-        Some(FaceFile::Whole(file)) => Body::from_stream(ReaderStream::new(file)),
-        Some(FaceFile::Extracted(data)) => Body::from(data),
-        None => return StatusCode::NOT_FOUND.into_response(),
-    };
-    ([(header::CONTENT_TYPE, "font/sfnt"), FONT_CACHE], body).into_response()
+async fn font_file(
+    Path((family, postscript)): Path<(String, String)>,
+    headers: HeaderMap,
+) -> Response {
+    match fonts::face_file(family, postscript).await {
+        Some(face) => font_response(&headers, face.etag, "font/sfnt", face.data),
+        None => StatusCode::NOT_FOUND.into_response(),
+    }
 }
 
 pub async fn serve(listener: TcpListener, store: Arc<Store>) -> std::io::Result<()> {
@@ -674,45 +688,41 @@ mod tests {
         let _: Vec<String> = res.json().await.unwrap();
     }
 
-    #[tokio::test]
-    async fn serves_a_face_of_an_installed_font() {
-        let addr = serve_on_any_port().await;
-        let families: Vec<String> = reqwest::get(format!("http://{addr}/api/fonts"))
-            .await
-            .unwrap()
-            .json()
-            .await
-            .unwrap();
-        // 中身は PC による。どのフォントでも、シートの URL から sfnt が届く
-        for family in families {
-            let base = format!("http://{addr}/api/fonts/{}", family.replace(' ', "%20"));
-            let res = reqwest::get(format!("{base}/faces.css")).await.unwrap();
-            if res.status() != StatusCode::OK {
-                continue;
-            }
-            assert_eq!(res.headers()[header::CACHE_CONTROL], "no-cache");
-            let css = res.text().await.unwrap();
-            let (_, file) = css.split_once(r#"url(""#).unwrap();
-            let (file, _) = file.split_once('"').unwrap();
-            let res = reqwest::get(format!("{base}/{file}")).await.unwrap();
-            assert_eq!(res.status(), StatusCode::OK, "{family}");
-            assert_eq!(res.headers()[header::CONTENT_TYPE], "font/sfnt");
-            assert_ne!(&res.bytes().await.unwrap()[..4], b"ttcf");
-            return;
-        }
+    fn font_request(sent: &str) -> Response {
+        let mut request = HeaderMap::new();
+        request.insert(header::IF_NONE_MATCH, sent.parse().unwrap());
+        font_response(&request, r#""v2""#.to_owned(), "font/sfnt", "body")
+    }
+
+    #[test]
+    fn a_font_the_browser_has_is_not_sent_again() {
+        let res = font_request(r#""v2""#);
+        assert_eq!(res.status(), StatusCode::NOT_MODIFIED);
+        assert_eq!(res.headers()[header::ETAG], r#""v2""#);
+        assert_eq!(res.headers()[header::CACHE_CONTROL], "no-cache");
     }
 
     #[tokio::test]
-    async fn font_urls_cannot_reach_other_files() {
+    async fn a_changed_font_is_sent_with_its_new_etag() {
+        let res = font_request(r#""v1""#);
+        assert_eq!(res.status(), StatusCode::OK);
+        assert_eq!(res.headers()[header::ETAG], r#""v2""#);
+        assert_eq!(res.headers()[header::CACHE_CONTROL], "no-cache");
+        assert_eq!(res.headers()[header::CONTENT_TYPE], "font/sfnt");
+        let body = axum::body::to_bytes(res.into_body(), 16).await.unwrap();
+        assert_eq!(&body[..], b"body");
+    }
+
+    #[tokio::test]
+    async fn font_urls_of_unknown_fonts_are_not_found() {
         let addr = serve_on_any_port().await;
         for path in [
             "No%20Such%20Font/faces.css",
             "No%20Such%20Font/Regular",
             "..%2F..%2F..%2Fetc/passwd",
             "%2Fetc%2Fpasswd/faces.css",
-            "Helvetica/..%2F..%2F..%2Fetc%2Fpasswd",
-            "Helvetica/%2Fetc%2Fhosts",
-            "Arial/C:%5CWindows%5Cwin.ini",
+            "No%20Such%20Font/..%2F..%2F..%2Fetc%2Fpasswd",
+            "No%20Such%20Font/C:%5CWindows%5Cwin.ini",
         ] {
             let res = reqwest::get(format!("http://{addr}/api/fonts/{path}"))
                 .await
