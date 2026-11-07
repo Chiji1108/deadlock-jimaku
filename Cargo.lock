@@ -1113,7 +1113,7 @@ dependencies = [
 
 [[package]]
 name = "deadlock-jimaku"
-version = "0.3.2"
+version = "0.4.0-rc.1"
 dependencies = [
  "overlays-core",
  "serde_json",
@@ -3453,7 +3453,7 @@ dependencies = [
 
 [[package]]
 name = "overlays-core"
-version = "0.3.2"
+version = "0.4.0-rc.1"
 dependencies = [
  "anyhow",
  "audioadapter-buffers",
@@ -3470,12 +3470,14 @@ dependencies = [
  "keyring",
  "lindera",
  "mime_guess",
+ "percent-encoding",
  "reqwest",
  "rubato",
  "rust-embed",
  "rustls",
  "serde",
  "serde_json",
+ "sha2 0.11.1",
  "tempfile",
  "tokio",
  "tokio-tungstenite 0.30.0",

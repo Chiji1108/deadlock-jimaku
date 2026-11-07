@@ -1,0 +1,698 @@
+Google Fonts のフォント
+
+アプリには含まれていません。選んだ人が確認のうえ、Google Fonts の配布物（GitHub の google/fonts、コミット 86aced91de05cd4f96a06838124cca45be337b2b）から PC にダウンロードします。すべて SIL Open Font License 1.1 です。各フォントの表示のあとに、ライセンスの本文を 1 度だけ載せます。
+
+操作パネルの見本の画像は、これらのフォントで数文字を描き、輪郭にしたものです。フォントとしては使えません。フォントを使って作った文書にライセンスは及びません（本文の TERMINATION の前の段落）が、出所を示すためここに載せます。
+
+Zen Maru Gothic
+Copyright 2021 The Zen Maru Gothic Project Authors (https://github.com/googlefonts/zen-marugothic)
+
+Rounded Mplus 1c
+Google Fonts の名前は M PLUS Rounded 1c
+Copyright 2016 The Rounded M+ Project Authors.
+
+Hachi Maru Pop
+Copyright 2020 The Hachi Maru Pop Project Authors (https://github.com/noriokanisawa/HachiMaruPop)
+
+Potta One
+Copyright 2020 The Potta Project Authors (https://github.com/go108go/Potta)
+
+Mochiy Pop One
+Copyright 2020 The Mochiypop Project Authors (https://github.com/fontdasu/Mochiypop)
+
+RocknRoll One
+Copyright 2020 The RocknRoll Project Authors (https://github.com/fontworks-fonts/RocknRoll)
+
+Yusei Magic
+Copyright 2020 The Yusei Magic Project Authors (https://github.com/tanukifont/YuseiMagic)
+
+Yomogi
+Copyright 2020 The Yomogi Project Authors (https://github.com/satsuyako/YomogiFont), all rights reserved.
+
+Stick
+Copyright 2020 The Stick Project Authors (https://github.com/fontworks-fonts/Stick)
+
+Reggae One
+Copyright 2020 The Reggae Project Authors (https://github.com/fontworks-fonts/Reggae)
+
+Dela Gothic One
+Copyright 2020 The Dela Gothic Project Authors (https://github.com/syakuzen/DelaGothic)
+
+Rampart One
+Copyright 2020 The Rampart Project Authors (https://github.com/fontworks-fonts/Rampart)
+
+Train One
+Copyright 2020 The Train Project Authors (https://github.com/fontworks-fonts/Train)
+
+DotGothic16
+Copyright 2020 The DotGothic16 Project Authors (https://github.com/fontworks-fonts/DotGothic16)
+
+Kaisei Opti
+Copyright 2020 The Kaisei Project Authors (https://github.com/Font-Kai/Kaisei)
+
+Kaisei Tokumin
+Copyright 2020 The Kaisei Project Authors (https://github.com/Font-Kai/Kaisei)
+
+Kaisei Decol
+Copyright 2020 The Kaisei Project Authors (https://github.com/Font-Kai/Kaisei)
+
+Noto Sans JP
+Copyright 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'
+
+Jua
+Copyright 2018 The Jua Project Authors
+
+Do Hyeon
+Copyright 2018 The Do Hyeon Project Authors
+
+Gaegu
+Copyright 2018 The Gaegu Project Authors
+
+Noto Sans KR
+Copyright 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'
+
+ZCOOL KuaiLe
+Copyright 2018 The ZCOOL KuaiLe Project Authors (https://github.com/googlefonts/zcool-kuaile)
+
+LXGW Marker Gothic
+Copyright 2024 The LXGW Marker Gothic Project Authors (https://github.com/lxgw/LxgwMarkerGothic)
+
+Ma Shan Zheng
+Copyright 2018 The Ma Shan Zheng Project Authors (https://github.com/googlefonts/mashanzheng)
+
+Noto Sans SC
+Copyright 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'
+
+Huninn
+Copyright 2025 The Huninn Project Authors (https://github.com/justfont/Huninn)
+
+Iansui
+Copyright 2022 The Iansui Project Authors (https://github.com/ButTaiwan/iansui).
+
+Noto Sans TC
+Copyright 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'
+
+Itim
+Copyright (c) 2015, Cadson Demak (info@cadsondemak.com), Copyright (c) 2014, Pablo Impallari (www.impallari.com|impallari@gmail.com)
+
+Mali
+Copyright 2018 The Mali Project Authors (https://github.com/cadsondemak/Mali)
+
+Sriracha
+Copyright (c) 2015, Cadson Demak (info@cadsondemak.com), Copyright (c) 2014, Pablo Impallari (www.impallari.com|impallari@gmail.com)
+
+Kanit
+Copyright 2020 The Kanit Project Authors (https://github.com/cadsondemak/kanit)
+
+Noto Sans Thai
+Copyright 2022 The Noto Project Authors (https://github.com/notofonts/thai)
+
+Nunito
+Copyright 2014 The Nunito Project Authors (https://github.com/googlefonts/nunito)
+
+Fredoka
+Copyright 2016 The Fredoka Project Authors (https://github.com/hafontia/Fredoka-One)
+
+Comfortaa
+Copyright 2011 The Comfortaa Project Authors (https://github.com/alexeiva/comfortaa), with Reserved Font Name "Comfortaa".
+
+Oswald
+Copyright 2016 The Oswald Project Authors (https://github.com/googlefonts/OswaldFont)
+
+Kiwi Maru
+Copyright 2020 The Kiwi Maru Project Authors (https://github.com/Kiwi-KawagotoKajiru/Kiwi-Maru)
+
+Quicksand
+Copyright 2011 The Quicksand Project Authors (https://github.com/andrew-paglinawan/QuicksandFamily), with Reserved Font Name “Quicksand”.
+
+Varela Round
+Copyright 2023 The Varela Round Project Authors (https://github.com/alefalefalef/Varela-Round-Hebrew/), with Reserved Font Names 'Varela' and ‘Varela Round’.
+
+Baloo 2
+Copyright 2019 The Baloo 2 Project Authors (https://github.com/EkType/Baloo2)
+
+Sniglet
+Copyright (c) 2008, Haley Fiege (haley@kingdomofawesome.com), Copyright (c) 2012, Brenda Gallo (gbrenda1987@gmail.com), Copyright (c) 2013, Pablo Impallari (www.impallari.com|impallari@gmail.com)
+
+Dosis
+Copyright 2011 The Dosis Project Authors (https://github.com/googlefonts/dosis-vf)
+
+Hubballi
+Copyright 2016 The Hubballi Project Authors (https://github.com/erinmclaughlin/Hubballi)
+
+Bellota
+Copyright 2019 The Bellota Project Authors (https://github.com/kemie/Bellota-Font)
+
+Sulphur Point
+Copyright 2016 Michal Sahar. All rights reserved.
+
+Autour One
+Copyright (c) 2012, Sorkin Type Co (www.sorkintype.com), with Reserved Font Name 'Autour'
+
+Coiny
+Copyright 2015 Marcelo Magalhaes (marcelommp@gmail.com @marcelommp)
+
+Nova Round
+Copyright (c) 2011, wmk69 (wmk69@o2.pl), with Reserved Font Name NovaRound.
+
+Hina Mincho
+Copyright 2020 The Hina Mincho Project Authors (https://github.com/satsuyako/Hina-Mincho)
+
+Cagliostro
+Copyright (c) 2011, Matthew Desmond (http://www.madtype.com | mattdesmond@gmail.com),with Reserved Font Name Cagliostro.
+
+Supermercado
+Google Fonts の名前は Supermercado One
+Copyright (c) 2011-2012 by Sorkin Type Co (www.sorkintype.com), with Reserved Font Name "Supermercado".
+
+Life Savers
+Copyright 2012 The Life Savers Project Authors (https://github.com/googlefonts/life-savers)
+
+Love Ya Like A Sister
+Copyright (c) 2010, Kimberly Geswein (kimberlygeswein.com)
+
+Sofia
+Copyright (c) 2011 by LatinoType Limitada (luciano@latinotype.com), with Reserved Font Names "Sofia"
+
+Cookie
+Copyright (c) 2011 by Ania Kruk (hello@aniakruk.com), with Reserved Font Name "Cookie".
+
+Sail
+Copyright (c) 2011 by LatinoType Limitada (luciano@latinotype.com), with Reserved Font Names "Sail"
+
+Bonbon
+Copyright (c) 2011, Cyreal (www.cyreal.org), with Reserved Font Name "Bonbon".
+
+Spirax
+Copyright (c) 2011 by Brenda Gallo (gbrenda1987@gmail.com), with Reserved Font Name Spirax.
+
+Henny Penny
+Copyright (c) 2011, BrownFox (gayaneh.b@gmail.com|www.brownfox.org), with Reserved Font Names "Henny Penny"
+
+Mystery Quest
+Copyright (c) 2012, Font Diner (www.fontdiner.com), with Reserved Font Name "Mystery Quest".
+
+Pacifico
+Copyright 2018 The Pacifico Project Authors (https://github.com/googlefonts/Pacifico)
+
+Lobster
+Copyright 2010 The Lobster Project Authors (https://github.com/impallari/The-Lobster-Font), with Reserved Font Name "Lobster".
+
+Sonsie One
+Copyright (c) 2011 by Sorkin Type Co (www.sorkintype.com), with Reserved Font Names "Sonsie" and "Sonsie One"
+
+Sarina
+Copyright (c) 2011 by Sorkin Type Co (www.sorkintype.com), with Reserved Font Name "Sarina".
+
+Leckerli One
+Copyright (c) 2011 Gesine Todt  (www.gesine-todt.de), with Reserved Font Names "Leckerli" and "Leckerli One".
+
+Grand Hotel
+Copyright (c) 2012 by Brian J. Bonislawsky and Jim Lyles DBA Astigmatic (AOETI) (astigma@astigmatic.com), with Reserved Font Name "Grand Hotel"
+
+Norican
+Copyright 2011 The Norican Project Authors (https://github.com/googlefonts/NoricanFont)
+
+Niconne
+Copyright (c) 2011, Vernon Adams (vern@newtypography.co.uk), with Reserved Font Name Nicone
+
+Yesteryear
+Copyright (c) 2011 by Brian J. Bonislawsky DBA Astigmatic (AOETI) (astigma@astigmatic.com), with Reserved Font Names "Yesteryear"
+
+Vampiro One
+Copyright (c) 2012 by Sorkin Type Co (www.sorkintype.com), with Reserved Font Name 'Vampiro'
+
+Playball
+Copyright 2011 The Playball Project Authors (https://github.com/googlefonts/play-ball)
+
+Send Flowers
+Copyright 1998-2021 The Send Flowers Project Authors (https://github.com/googlefonts/send-flowers)
+
+Klee One
+Copyright 2020 The Klee Project Authors (https://github.com/fontworks-fonts/Klee)
+
+Zen Kurenaido
+Copyright 2021 The Zen Kurenaido Project Authors (https://github.com/googlefonts/zen-kurenaido)
+
+New Tegomin
+Copyright 2020 The New Tegomin Project Authors (https://github.com/nagamaki008/NewTegomin)
+
+Yuji Boku
+Copyright 2021 The Yuji Project Authors (https://github.com/Kinutafontfactory/Yuji)
+
+Yuji Mai
+Copyright 2021 The Yuji Project Authors (https://github.com/Kinutafontfactory/Yuji)
+
+Yuji Syuku
+Copyright 2021 The Yuji Project Authors (https://github.com/Kinutafontfactory/Yuji)
+
+Caveat
+Copyright 2014 The Caveat Project Authors (https://github.com/googlefonts/caveat)
+
+Kalam
+Copyright (c) 2014, Indian Type Foundry (info@indiantypefoundry.com).
+
+Gloria Hallelujah
+Copyright (c) 2010, Kimberly Geswein (kimberlygeswein.com)
+
+Dancing Script
+Copyright 2016 The Dancing Script Project Authors (https://github.com/googlefonts/DancingScript), with Reserved Font Name 'Dancing Script'.
+
+Sacramento
+Copyright (c) 2012, Brian J. Bonislawsky DBA Astigmatic (AOETI) (astigma@astigmatic.com), with Reserved Font Names 'Sacramento'
+
+Cedarville Cursive
+Copyright (c) 2010, Kimberly Geswein (kimberlygeswein.com)
+
+La Belle Aurore
+Copyright (c) 2010, Kimberly Geswein (kimberlygeswein.com)
+
+Beth Ellen
+Copyright 2018 The Beth Ellen Project Authors (https://github.com/googlefonts/BethEllen)
+
+Ms Madi
+Copyright 2018 The Ms Madi Project Authors (https://github.com/googlefonts/ms-madi)
+
+Style Script
+Copyright 2013 The Style Script Project Authors (https://github.com/googlefonts/style-script)
+
+Ephesis
+Copyright 2004-2021 The Ephesis Project Authors (https://github.com/googlefonts/ephesis)
+
+Bangers
+Copyright 2010 The Bangers Project Authors (https://github.com/googlefonts/bangers)
+
+Lilita One
+Copyright (c) 2011 Juan Montoreano (juan@remolacha.biz), with Reserved Font Name Lilita
+
+Concert One
+Copyright (c) 2011 Johan Kallas (johankallas@gmail.com), Copyright (c) 2011 Mihkel Virkus (mihkelvirkus@gmail.com), with Reserved Font Names "Concert" and "Concert One".
+
+Ranchers
+Copyright (c) 2012, Pablo Impallari (www.impallari.com|impallari@gmail.com), Copyright (c) 2012, Brenda Gallo. (gbrenda1987@gmail.com), with Reserved Font Name Ranchers.
+
+Fugaz One
+Copyright (c) 2011 by LatinoType Limitada (luciano@latinotype.com), with Reserved Font Names "Fugaz One"
+
+Skranji
+Copyright (c) 2012, Font Diner (www.fontdiner.com), with Reserved Font Name "Skranji".
+
+Fascinate
+Copyright (c) 2011 by Brian J. Bonislawsky DBA Astigmatic (AOETI) (astigma@astigmatic.com), with Reserved Font Names "Fascinate" and "Fascinate Inline"
+
+Ribeye Marrow
+Copyright (c) 2011 by Brian J. Bonislawsky DBA Astigmatic (AOETI) (astigma@astigmatic.com), with Reserved Font Names "Ribeye" and "Ribeye Marrow"
+
+Rubik Vinyl
+Copyright 2020 The Rubik Filtered Project Authors (https://https://github.com/NaN-xyz/Rubik-Filtered)
+
+Monofett
+Copyright 2010 The Monofett Project Authors (https://github.com/googlefonts/monofett), with Reserved Font Name Monofett.
+
+Cabin Sketch
+Copyright 2011 The Cabin Project Authors (impallari@gmail.com), with Reserved Font Name "Cabin", "Cabin Sketch".
+
+Creepster
+Copyright (c) 2011, Font Diner, Inc (diner@fontdiner.com), with Reserved Font Names "Creepster"
+
+Nosifer
+Copyright (c) 2011, Typomondo, with Reserved Font Name "Nosifer".
+
+Plaster
+Copyright (c) 2011 by Sorkin Type Co (www.sorkintype.com), with Reserved Font Name "Plaster".
+
+Emblema One
+Copyright (c) 2011 by Sorkin Type Co (www.sorkintype.com), with Reserved Font Names "Emblema" and "Emblema One"
+
+Zen Tokyo Zoo
+Copyright 2021 The TokyoZoo Project Authors (https://github.com/googlefonts/zen-tokyo-zoo)
+
+WDXL Lubrifont JP N
+Copyright 2025 The WDXL Lubrifont Project Authors (https://github.com/NightFurySL2001/WD-XL-font) Copyright 2018-2020 The ZCOOL QingKe HuangYou Project Authors (https://www.github.com/googlefonts/zcool-qingke-huangyou)
+
+Gugi
+Copyright (c) 2017 by TAE System & Typefaces Co.. All rights reserved.
+
+Russo One
+Copyright (c) 2011-2012, Jovanny Lemonad (jovanny.ru), with Reserved Font Name "Russo"
+
+Righteous
+Copyright (c) 2011 by Brian J. Bonislawsky DBA Astigmatic (AOETI) (astigma@astigmatic.com), with Reserved Font Names "Righteous"
+
+Anton
+Copyright 2020 The Anton Project Authors (https://github.com/googlefonts/AntonFont.git)
+
+Bebas Neue
+Copyright © 2010 by Dharma Type.
+
+Abril Fatface
+Copyright (c) 2011, TypeTogether (www.type-together.com), with Reserved Font Names "Abril" and "Abril Fatface"
+
+Notable
+Copyright 2018 The Notable Project Authors (https://github.com/googlefonts/notable)
+
+Black Ops One
+Copyright 2022 The Black-Ops Project Authors (https://github.com/googlefonts/googlefonts-project-template)
+
+Kumar One
+Copyright (c) 2015 Indian Type Foundry (info@indiantypefoundry.com)
+
+Kumar One Outline
+Copyright (c) 2016 Indian Type Foundry (info@indiantypefoundry.com)
+
+Poller One
+Copyright (c) 2011 by Sorkin Type Co (www.sorkintype.com), with Reserved Font Names "Poller" and "Poller One".
+
+Vast Shadow
+Copyright (c) 2011 by Sorkin Type Co (www.sorkintype.com), with Reserved Font Names "Vast" and "Vast Shadow".
+
+Gravitas One
+Copyright (c) 2011 by Sorkin Type Co (www.sorkintype.com), with Reserved Font Name "Gravitas".
+
+Press Start 2P
+Copyright 2012 The Press Start 2P Project Authors (cody@zone38.net), with Reserved Font Name "Press Start 2P".
+
+VT323
+Copyright 2011, The VT323 Project Authors (peter.hull@oikoi.com)
+
+Silkscreen
+Copyright 2001 The Silkscreen Project Authors (https://github.com/googlefonts/silkscreen)
+
+Orbitron
+Copyright 2018 The Orbitron Project Authors (https://github.com/theleagueof/orbitron), with Reserved Font Name: "Orbitron"
+
+Audiowide
+Copyright (c) 2012, Brian J. Bonislawsky DBA Astigmatic (AOETI) (astigma@astigmatic.com), with Reserved Font Names "Audiowide"
+
+Zen Dots
+Copyright 2021 The Dots Project Authors (https://github.com/googlefonts/zen-dots)
+
+Bruno Ace
+Copyright 2023 The Bruno Ace Project Authors (https://github.com/googlefonts/Bruno-ace)
+
+Quantico
+Copyright (c) 2011, Matthew Desmond (http://www.madtype.com | mattdesmond@gmail.com),with Reserved Font Name Quantico.
+
+Wallpoet
+Copyright (c) 6 April 2011, Lars Berggren (lars@punktlars.se), with Reserved Font Name Wallpoet.
+
+Geo
+Copyright (c) 2000-2010, Ben Weiner (ben@readingtype.org.uk), with Reserved Font Name Geo.
+
+Geostar
+Copyright (c) 2011, Joe Prince, Admix Designs (http://www.admixdesigns.com/), with Reserved Font Names "Geostar" and "Geostar Fill".
+
+Nova Square
+Copyright (c) 2011, wmk69 (wmk69@o2.pl), with Reserved Font Name NovaSquare.
+
+Nova Cut
+Copyright (c) 2011, wmk69 (wmk69@o2.pl), with Reserved Font Name NovaCut.
+
+Nova Slim
+Copyright (c) 2011, wmk69 (wmk69@o2.pl), with Reserved Font Name NovaSlim.
+
+NovaMono
+Google Fonts の名前は Nova Mono
+Copyright (c) 2011, wmk69 (wmk69@o2.pl), with Reserved Font Name NovaMono.
+
+Genos
+Copyright 2011 The Genos Project Authors (https://github.com/googlefonts/genos)
+
+Megrim
+Copyright (c) 2009, 2010, 2011 Daniel Johnson (<il.basso.buffo@gmail.com>).
+
+Monoton
+Copyright (c) 2011 by vernon adams (vern@newtypography.co.uk), with Reserved Font Names "Monoton"
+
+Codystar
+Copyright (c) 2012, Font Diner (www.fontdiner.com), with Reserved Font Name "Codystar".
+
+Raleway Dots
+Copyright (c) 2010, Matt McInerney (matt@pixelspread.com), Copyright (c) 2012, Pablo Impallari (www.impallari.com|impallari@gmail.com), Copyright (c) 2012, Brenda Gallo. (gbrenda1987@gmail.com), Copyright (c) 2012, Rodrigo Fuenzalida (www.rfuenzalida.com|hello@rfuenzalida.com), with Reserved Font Name "Raleway"
+
+Bungee Hairline
+Copyright 2023 The Bungee Project Authors (https://github.com/djrrb/Bungee)
+
+Bungee Outline
+Copyright 2023 The Bungee Project Authors (https://github.com/djrrb/Bungee)
+
+Offside
+Copyright 2012 The Offside Project Authors (https://github.com/etunni/offside) with Reserved Font Name 'Offside'
+
+Stick No Bills
+Copyright 2021 The Stick No Bills Project Authors (https://github.com/mooniak/stick-no-bills-font)
+
+BhuTuka Expanded One
+Copyright 2017 The BhuTuka Expanded One Project Authors (https://github.com/erinmclaughlin/BhuTuka-Extended-One)
+
+Tourney
+Copyright 2020 The Tourney Project Authors (https://github.com/Etcetera-Type-Co/Tourney)
+
+Germania One
+Copyright (c) 2011, John Vargas Beltr�n (www.johnvargasbeltran.com|john.vargasbeltran@gmail.com), with Reserved Font Name "Germania".
+
+MedievalSharp
+Copyright (c) 2011, wmk69 (wmk69@o2.pl), with Reserved Font Name MedievalSharp.
+
+UnifrakturCook
+Copyright (c) 2010, j. 'mach' wust, with Reserved Font Name UnifrakturCook. Copyright (c) 2009, Peter Wiegel.
+
+New Rocker
+Copyright (c) 2011, Pablo Impallari (www.impallari.com|impallari@gmail.com), Copyright (c) 2011, Brenda Gallo (gbrenda1987@gmail.com), Copyright (c) 2011, Rodrigo Fuenzalida (www.rfuenzalida.com|hello@rfuenzalida.com), with Reserved Font Name 'New Rocker'
+
+Pirata One
+Copyright (c) 2012, Rodrigo Fuenzalida, Nicolas Massi (www.taip.com.ar / abc.taip.com.ar), with Reserved Font Name 'Pirata'
+
+Rye
+Copyright (c) 2011 by Sorkin Type Co (www.sorkintype.com), with Reserved Font Name "Rye".
+
+Miltonian
+Copyright (c) 2011 by Pablo Impallari (www.impallari.com impallari@gmail.com). Igino Marini (www.ikern.com)
+
+Miltonian Tattoo
+Copyright (c) 2011 by Pablo Impallari (www.impallari.com impallari@gmail.com). Igino Marini (www.ikern.com)
+
+SirinStencil
+Google Fonts の名前は Sirin Stencil
+Copyright (c) 2011, Cyreal (www.cyreal.org), with Reserved Font Name "Sirin" and "Sirin Stencil".
+
+Federo
+Copyright (c) 2011, Cyreal (www.cyreal.org), with Reserved Font Name "Federo".
+
+Limelight
+Copyright (c) 2011 by Sorkin Type Co (www.sorkintype.com), with Reserved Font Name "Limelight".
+
+Expletus Sans
+Copyright 2018 The Expletus Sans Project Authors (https://github.com/googlefonts/Expletus-Sans)
+
+Lekton
+Copyright (c) 2008-2010, Isia Urbino (http://www.isiaurbino.net)
+
+Kufam
+Copyright 2019 The Kufam Project Authors (https://github.com/originaltype/kufam)
+
+Shippori Mincho
+Copyright 2021 The Shippori Mincho Project Authors (https://github.com/fontdasu/ShipporiMincho)
+
+Zen Old Mincho
+Copyright 2021 The Zen Old Mincho Project Authors (https://github.com/googlefonts/zen-oldmincho)
+
+Sawarabi Mincho
+Copyright 2024 The Sawarabi Mincho Project Authors (https://github.com/googlefonts/sawarabi-mincho/)
+
+Noto Serif JP
+Copyright 2012 Google Inc. All Rights Reserved.
+
+Cinzel
+Copyright 2020 The Cinzel Project Authors (https://github.com/NDISCOVER/Cinzel)
+
+Poiret One
+Copyright 2011 The Poiret One Project Authors (https://github.com/alexeiva/poiretone)
+
+Italiana
+Copyright (c) 2011, Santiago Orozco (hi@typemade.mx), with Reserved Font Name "Italiana".
+
+Lora
+Copyright 2011 The Lora Project Authors (https://github.com/cyrealtype/Lora-Cyrillic), with Reserved Font Name "Lora".
+
+Sorts Mill Goudy
+Copyright (c) 2010, Barry Schwartz (chemoelectric@chemoelectric.org)
+
+Merriweather
+Copyright 2020 The Merriweather Project Authors (https://github.com/EbenSorkin/Merriweather4) with Reserved Font Name "Merriweather".
+
+Ysabeau
+Copyright 2023 The Ysabeau Project Authors (https://github.com/CatharsisFonts/Ysabeau)
+
+Josefin Sans
+Copyright 2010 The Josefin Sans Project Authors (https://github.com/ThomasJockin/JosefinSansFont-master), with Reserved Font Name "Josefin Sans".
+
+Petit Formal Script
+Copyright (c) 2011, Pablo Impallari (www.impallari.com|impallari@gmail.com), Copyright (c) 2011, Brenda Gallo. (gbrenda1987@gmail.com), Copyright (c) 2011, Rodrigo Fuenzalida (www.rfuenzalida.com|hello@rfuenzalida.com), with Reserved Font Name Petit Formal Script.
+
+Allura
+Copyright 2010 The Allura Project Authors (https://github.com/googlefonts/allura)
+
+Parisienne
+Copyright (c) 2012 by Brian J. Bonislawsky DBA Astigmatic (AOETI) (astigma@astigmatic.com), with Reserved Font Names "Parisienne"
+
+Tangerine
+Copyright (c) 2010, Toshi Omagari (tosche@mac.com)
+
+Italianno
+Copyright 2009 The Italianno Project Authors (https://github.com/googlefonts/italianno)
+
+Pinyon Script
+Copyright 2024 The Pinyon Project Authors (https://github.com/SorkinType/Pinyon)
+
+MonteCarlo
+Copyright 2011 The MonteCarlo Project Authors (https://github.com/googlefonts/monte-carlo)
+
+Estonia
+Copyright 2010-2021 The Estonia Project Authors (https://github.com/googlefonts/estonia)
+
+Charmonman
+Copyright 2018 The Charmonman Project Authors (https://github.com/cadsondemak/Charmonman)
+
+Miniver
+Copyright (c) 2011, Open Window (https://profiles.google.com/openwindowfonts/about), with Reserved Font Name "Miniver".
+
+Zen Loop
+Copyright 2021 The Zen-Loop Project Authors (https://github.com/googlefonts/zen-loop)
+
+M PLUS 1p
+Copyright 2016 The M+ Project Authors.
+
+Zen Kaku Gothic New
+Copyright 2022 The Zen Kaku Gothic Project Authors (https://github.com/googlefonts/zen-kakugothic)
+
+Sawarabi Gothic
+Copyright 2016 The Sawarabi Gothic Project Authors.
+
+Alumni Sans Pinstripe
+Copyright 2014 The Alumni Sans Pinstripe Project Authors (https://github.com/googlefonts/alumni-sans-pinstripe)
+
+Rajdhani
+Copyright (c) 2014, Indian Type Foundry (info@indiantypefoundry.com).
+
+Signika Negative
+Copyright 2018 The Signika Project Authors (https://github.com/googlefonts/Signika).
+
+Rubik
+Copyright 2015 The Rubik Project Authors (https://github.com/googlefonts/rubik)
+
+Lato
+Copyright (c) 2010-2014 by tyPoland Lukasz Dziedzic (team@latofonts.com) with Reserved Font Name "Lato"
+
+PT Sans
+Copyright (c) 2010, ParaType Ltd. (http://www.paratype.com/public), with Reserved Font Names "PT Sans" and "ParaType".
+
+Raleway
+Copyright 2010 The Raleway Project Authors (impallari@gmail.com), with Reserved Font Name "Raleway".
+
+Montserrat
+Copyright 2024 The Montserrat.Git Project Authors (https://github.com/JulietaUla/Montserrat.git)
+
+Roboto
+Copyright 2011 The Roboto Project Authors (https://github.com/googlefonts/roboto-classic)
+
+Roboto Mono
+Copyright 2015 The Roboto Mono Project Authors (https://github.com/googlefonts/robotomono)
+
+Open Sans
+Copyright 2020 The Open Sans Project Authors (https://github.com/googlefonts/opensans)
+
+Noto Sans
+Copyright 2022 The Noto Project Authors (https://github.com/notofonts/latin-greek-cyrillic)
+
+This Font Software is licensed under the SIL Open Font License, Version 1.1.
+This license is copied below, and is also available with a FAQ at:
+https://scripts.sil.org/OFL
+
+
+-----------------------------------------------------------
+SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007
+-----------------------------------------------------------
+
+PREAMBLE
+The goals of the Open Font License (OFL) are to stimulate worldwide
+development of collaborative font projects, to support the font creation
+efforts of academic and linguistic communities, and to provide a free and
+open framework in which fonts may be shared and improved in partnership
+with others.
+
+The OFL allows the licensed fonts to be used, studied, modified and
+redistributed freely as long as they are not sold by themselves. The
+fonts, including any derivative works, can be bundled, embedded, 
+redistributed and/or sold with any software provided that any reserved
+names are not used by derivative works. The fonts and derivatives,
+however, cannot be released under any other type of license. The
+requirement for fonts to remain under this license does not apply
+to any document created using the fonts or their derivatives.
+
+DEFINITIONS
+"Font Software" refers to the set of files released by the Copyright
+Holder(s) under this license and clearly marked as such. This may
+include source files, build scripts and documentation.
+
+"Reserved Font Name" refers to any names specified as such after the
+copyright statement(s).
+
+"Original Version" refers to the collection of Font Software components as
+distributed by the Copyright Holder(s).
+
+"Modified Version" refers to any derivative made by adding to, deleting,
+or substituting -- in part or in whole -- any of the components of the
+Original Version, by changing formats or by porting the Font Software to a
+new environment.
+
+"Author" refers to any designer, engineer, programmer, technical
+writer or other person who contributed to the Font Software.
+
+PERMISSION & CONDITIONS
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of the Font Software, to use, study, copy, merge, embed, modify,
+redistribute, and sell modified and unmodified copies of the Font
+Software, subject to the following conditions:
+
+1) Neither the Font Software nor any of its individual components,
+in Original or Modified Versions, may be sold by itself.
+
+2) Original or Modified Versions of the Font Software may be bundled,
+redistributed and/or sold with any software, provided that each copy
+contains the above copyright notice and this license. These can be
+included either as stand-alone text files, human-readable headers or
+in the appropriate machine-readable metadata fields within text or
+binary files as long as those fields can be easily viewed by the user.
+
+3) No Modified Version of the Font Software may use the Reserved Font
+Name(s) unless explicit written permission is granted by the corresponding
+Copyright Holder. This restriction only applies to the primary font name as
+presented to the users.
+
+4) The name(s) of the Copyright Holder(s) or the Author(s) of the Font
+Software shall not be used to promote, endorse or advertise any
+Modified Version, except to acknowledge the contribution(s) of the
+Copyright Holder(s) and the Author(s) or with their explicit written
+permission.
+
+5) The Font Software, modified or unmodified, in part or in whole,
+must be distributed entirely under this license, and must not be
+distributed under any other license. The requirement for fonts to
+remain under this license does not apply to any document created
+using the Font Software.
+
+TERMINATION
+This license becomes null and void if any of the above conditions are
+not met.
+
+DISCLAIMER
+THE FONT SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT
+OF COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL THE
+COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL
+DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
+OTHER DEALINGS IN THE FONT SOFTWARE.

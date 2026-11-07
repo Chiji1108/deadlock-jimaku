@@ -3,10 +3,12 @@
   import { SvelteMap } from "svelte/reactivity";
   import type { Segment } from "../../generated/Segment";
   import type { SubtitleDisplay } from "../../generated/SubtitleDisplay";
+  import type { SubtitleStyle } from "../../generated/SubtitleStyle";
+  import type { Token } from "../../generated/Token";
   import Captions from "../../lib/Captions.svelte";
   import { api } from "../../lib/api";
   import { loadGlossary } from "../../lib/glossary.svelte";
-  import { applyOverlayFonts } from "../../lib/overlay-fonts";
+  import { applyFontRules, fontSample, subtitleFontRules } from "../../lib/overlay-fonts";
   import { isReady, visibleLines } from "../../lib/subtitle-lines";
   import { connect } from "../../lib/ws";
 
@@ -14,6 +16,27 @@
   let now = $state(Date.now());
   /** 見せ方は操作パネルで変え、サーバーから届く（接続直後にも届く） */
   let display = $state<SubtitleDisplay | undefined>();
+  let look = $state<SubtitleStyle | undefined>();
+
+  /** 操作パネルのプレビュー（`?preview=ja,en`）では、字幕がなくても言語ごとの見本を出しておく。OBS には出さない */
+  const [sampleLang, ...sampleTargets] =
+    new URLSearchParams(location.search).get("preview")?.split(",") ?? [];
+  const sampleLine = (lang: string): Token[] => [{ t: "text", text: fontSample(lang) }];
+  const SAMPLE: Segment[] = sampleLang
+    ? [
+        {
+          id: "sample",
+          startedAt: 0,
+          stage: "enriched",
+          lang: sampleLang,
+          text: fontSample(sampleLang),
+          enriched: {
+            source: sampleLine(sampleLang),
+            translations: Object.fromEntries(sampleTargets.map((t) => [t, sampleLine(t)])),
+          },
+        },
+      ]
+    : [];
 
   /** 表示時間は settledAt から数える。partial / final の間は消さない */
   const expiresAt = (s: Segment) =>
@@ -58,8 +81,9 @@
           void loadGlossary();
           break;
         case "display":
-          applyOverlayFonts(msg.overlayFonts);
+          applyFontRules(subtitleFontRules(msg.subtitleStyle.languages));
           display = msg.subtitles;
+          look = msg.subtitleStyle;
           break;
       }
     });
@@ -70,7 +94,9 @@
   });
 </script>
 
-<div class="box"><Captions segments={visible} {display} /></div>
+<div class="box">
+  <Captions segments={visible.length > 0 || !display ? visible : SAMPLE} {display} {look} />
+</div>
 
 <style>
   :global(html, body) {

@@ -4,8 +4,9 @@
   import type { Anchor } from "../../generated/Anchor";
   import type { RankContent } from "../../generated/RankContent";
   import type { RankState } from "../../generated/RankState";
+  import type { RankStyle } from "../../generated/RankStyle";
   import { placeItems } from "../../lib/anchor";
-  import { applyOverlayFonts } from "../../lib/overlay-fonts";
+  import { applyFontRules, rankFontRules } from "../../lib/overlay-fonts";
   import { fitSource, rankSize } from "../../lib/overlay-size";
   import RankBadge from "../../lib/RankBadge.svelte";
   import { connect } from "../../lib/ws";
@@ -16,6 +17,24 @@
   /** 表示の設定が届くまでは描かない（設定と違う形で一瞬出さない） */
   let content = $state<RankContent | undefined>();
   let anchor = $state<Anchor>("top-left");
+  let look = $state<RankStyle | undefined>();
+
+  /** ゲームの画像は配布物に入れないので、プレビューの見本は仮の形にする */
+  const SAMPLE_IMAGE =
+    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Cpath fill='%23a8a29e' d='M48 6 82 20v28c0 20-14 34-34 42C28 82 14 68 14 48V20Z'/%3E%3C/svg%3E";
+
+  /** 操作パネルのプレビュー（`?preview`）では、アカウントを入れる前でも見本を出しておく。OBS には出さない */
+  const SAMPLE: RankState | undefined = new URLSearchParams(location.search).has("preview")
+    ? {
+        badge: 73,
+        tier: 7,
+        subrank: 3,
+        names: { ja: "エミッサリー", en: "Emissary" },
+        image: SAMPLE_IMAGE,
+        progress: { value: 1240, max: 2000 },
+      }
+    : undefined;
+  const shown = $derived(rank ?? SAMPLE);
 
   // 大きさは --scale で描く（zoom だとポイントの数字のアニメーションの位置がずれる）
   $effect(() =>
@@ -30,7 +49,8 @@
     connect(["rank", "display"], (msg) => {
       if (msg.type === "rank.update") rank = msg.rank ?? undefined;
       if (msg.type === "display") {
-        applyOverlayFonts(msg.overlayFonts);
+        applyFontRules(rankFontRules(msg.rankStyle.font));
+        look = msg.rankStyle;
         lang = msg.rankLanguage;
         content = msg.rankContent;
         anchor = msg.rankAnchor;
@@ -41,11 +61,11 @@
 
 <!-- ソースの箱の中で、操作パネルで選んだ位置に寄せる -->
 <div class="stage" style:place-items={placeItems(anchor)}>
-  {#if rank && content}
+  {#if shown && content}
     <!-- バッジが変わったら作り直してアニメーションさせる -->
-    {#key rank.badge}
+    {#key shown.badge}
       <div class="card" in:scale={{ start: 0.8, duration: 400 }}>
-        <RankBadge {rank} {lang} {content} />
+        <RankBadge rank={shown} {lang} {content} {look} />
       </div>
     {/key}
   {/if}

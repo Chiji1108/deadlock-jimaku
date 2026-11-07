@@ -46,6 +46,9 @@ pub fn router(store: Arc<Store>) -> Router {
         .route("/devices", get(devices))
         .route("/languages", get(languages))
         .route("/fonts", get(fonts))
+        .route("/fonts/{family}/faces.css", get(font_faces))
+        .route("/fonts/{family}/download", post(download_font))
+        .route("/fonts/{family}/{postscript}", get(font_file))
         .route("/chrome/open", post(open_chrome))
         .route("/chrome/reset", post(reset_chrome))
         .route("/chrome/ws", get(chrome_ws));
@@ -438,8 +441,76 @@ async fn languages() -> Json<Vec<LangCode>> {
     Json(lang::LANGUAGES.iter().map(|l| l.code.to_owned()).collect())
 }
 
-async fn fonts() -> Json<Vec<String>> {
-    Json(fonts::installed().await)
+async fn fonts(State(store): State<Arc<Store>>) -> Json<Vec<fonts::FontEntry>> {
+    Json(fonts::listed(fonts::folder(store.data_dir())).await)
+}
+
+/// カタログの名前だけを受け付ける。別の URL やパスは渡せない
+async fn download_font(State(store): State<Arc<Store>>, Path(family): Path<String>) -> Response {
+    let Some(font) = fonts::find(&family) else {
+        return StatusCode::NOT_FOUND.into_response();
+    };
+    match fonts::download(font, &fonts::folder(store.data_dir())).await {
+        Ok(()) => StatusCode::NO_CONTENT.into_response(),
+        Err(fonts::DownloadError::Busy) => {
+            (StatusCode::CONFLICT, "ダウンロード中です").into_response()
+        }
+        Err(fonts::DownloadError::Failed(e)) => {
+            tracing::warn!("font download failed: {e:#}");
+            (
+                StatusCode::BAD_GATEWAY,
+                "フォントをダウンロードできませんでした。時間をおいて試してください",
+            )
+                .into_response()
+        }
+    }
+}
+
+/// URL に版を含めず、毎回確かめさせる。フォントを入れ替えても同じ URL で新しい面が届く
+const FONT_CACHE: (header::HeaderName, &str) = (header::CACHE_CONTROL, "no-cache");
+
+/// ブラウザは受け取った `ETag` をそのまま返すので、完全な一致だけを見る。外れても本体を送るだけ
+fn font_response(
+    request: &HeaderMap,
+    etag: String,
+    mime: &'static str,
+    body: impl IntoResponse,
+) -> Response {
+    let unchanged = request
+        .get(header::IF_NONE_MATCH)
+        .is_some_and(|sent| sent == etag.as_str());
+    let etag = [(header::ETAG, etag)];
+    if unchanged {
+        return (StatusCode::NOT_MODIFIED, [FONT_CACHE], etag).into_response();
+    }
+    ([(header::CONTENT_TYPE, mime), FONT_CACHE], etag, body).into_response()
+}
+
+async fn font_faces(
+    State(store): State<Arc<Store>>,
+    Path(family): Path<String>,
+    headers: HeaderMap,
+) -> Response {
+    match fonts::faces_css(fonts::folder(store.data_dir()), family).await {
+        Some(css) => font_response(
+            &headers,
+            fonts::content_etag(&css),
+            "text/css; charset=utf-8",
+            css,
+        ),
+        None => StatusCode::NOT_FOUND.into_response(),
+    }
+}
+
+async fn font_file(
+    State(store): State<Arc<Store>>,
+    Path((family, postscript)): Path<(String, String)>,
+    headers: HeaderMap,
+) -> Response {
+    match fonts::face_file(fonts::folder(store.data_dir()), family, postscript).await {
+        Some(face) => font_response(&headers, face.etag, "font/sfnt", face.data),
+        None => StatusCode::NOT_FOUND.into_response(),
+    }
 }
 
 pub async fn serve(listener: TcpListener, store: Arc<Store>) -> std::io::Result<()> {
@@ -634,14 +705,83 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn serves_the_fonts_as_a_list_of_names() {
+    async fn serves_the_fonts_as_a_list() {
         let addr = serve_on_any_port().await;
         let res = reqwest::get(format!("http://{addr}/api/fonts"))
             .await
             .unwrap();
         assert_eq!(res.status(), StatusCode::OK);
-        // 中身は PC によるので、一覧の作り方は fonts.rs のテストで確かめる
-        let _: Vec<String> = res.json().await.unwrap();
+        // PC のフォントは PC によるので、一覧の作り方は fonts.rs のテストで確かめる
+        let list: Vec<Value> = res.json().await.unwrap();
+        assert!(list.iter().any(|font| font["family"] == "Zen Maru Gothic"));
+    }
+
+    #[tokio::test]
+    async fn only_catalog_fonts_can_be_downloaded() {
+        let addr = serve_on_any_port().await;
+        for family in ["Arial", "No%20Such%20Font", "..%2F..%2Fetc%2Fpasswd"] {
+            let res = reqwest::Client::new()
+                .post(format!("http://{addr}/api/fonts/{family}/download"))
+                .send()
+                .await
+                .unwrap();
+            assert_eq!(res.status(), StatusCode::NOT_FOUND, "{family}");
+        }
+    }
+
+    fn font_request(sent: &str) -> Response {
+        let mut request = HeaderMap::new();
+        request.insert(header::IF_NONE_MATCH, sent.parse().unwrap());
+        font_response(&request, r#""v2""#.to_owned(), "font/sfnt", "body")
+    }
+
+    #[test]
+    fn a_font_the_browser_has_is_not_sent_again() {
+        let res = font_request(r#""v2""#);
+        assert_eq!(res.status(), StatusCode::NOT_MODIFIED);
+        assert_eq!(res.headers()[header::ETAG], r#""v2""#);
+        assert_eq!(res.headers()[header::CACHE_CONTROL], "no-cache");
+    }
+
+    #[tokio::test]
+    async fn a_changed_font_is_sent_with_its_new_etag() {
+        let res = font_request(r#""v1""#);
+        assert_eq!(res.status(), StatusCode::OK);
+        assert_eq!(res.headers()[header::ETAG], r#""v2""#);
+        assert_eq!(res.headers()[header::CACHE_CONTROL], "no-cache");
+        assert_eq!(res.headers()[header::CONTENT_TYPE], "font/sfnt");
+        let body = axum::body::to_bytes(res.into_body(), 16).await.unwrap();
+        assert_eq!(&body[..], b"body");
+    }
+
+    #[tokio::test]
+    async fn font_urls_of_unknown_fonts_are_not_found() {
+        let addr = serve_on_any_port().await;
+        for path in [
+            "No%20Such%20Font/faces.css",
+            "No%20Such%20Font/Regular",
+            "..%2F..%2F..%2Fetc/passwd",
+            "%2Fetc%2Fpasswd/faces.css",
+            "No%20Such%20Font/..%2F..%2F..%2Fetc%2Fpasswd",
+            "No%20Such%20Font/C:%5CWindows%5Cwin.ini",
+        ] {
+            let res = reqwest::get(format!("http://{addr}/api/fonts/{path}"))
+                .await
+                .unwrap();
+            assert_eq!(res.status(), StatusCode::NOT_FOUND, "{path}");
+        }
+    }
+
+    #[tokio::test]
+    async fn fonts_are_not_served_to_other_sites() {
+        let addr = serve_on_any_port().await;
+        let res = reqwest::Client::new()
+            .get(format!("http://{addr}/api/fonts/Arial/faces.css"))
+            .header("sec-fetch-site", "cross-site")
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::FORBIDDEN);
     }
 
     async fn post_reset(addr: &str) -> reqwest::Response {

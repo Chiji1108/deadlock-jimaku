@@ -15,9 +15,10 @@ use crate::types::{LangCode, LeaderboardRank, RankProgress, RankState};
 
 const API: &str = "https://api.deadlock-api.com/v1";
 
-/// サブランク 1 つ分のポイント。6 番目だけ 2 倍（1 ティア = 1000 × 5 + 2000）
+/// サブランク 1 つ分のポイント（2026-11-05 のシーズン 2 から、6 番目は次のティアまで 1500）
 const SUBRANK_POINTS: u32 = 1000;
-const TIER_POINTS: u32 = SUBRANK_POINTS * 7;
+const LAST_SUBRANK_POINTS: u32 = 1500;
+const TIER_POINTS: u32 = SUBRANK_POINTS * 5 + LAST_SUBRANK_POINTS;
 /// 最上位。上のティアがないのでゲージを出さず、リーダーボードの順位を出す
 const ETERNUS: u32 = 11;
 /// リーダーボードを取りに行く間隔（Valve の更新は 1 時間ごと）
@@ -122,7 +123,8 @@ fn state(player: &PlayerRank, tiers: &Tiers, has_image: bool) -> RankState {
         badge: player.badge,
         tier: player.rank,
         subrank: player.subrank,
-        points,
+        // ゲージのないエターナスだけ累積のポイントを出す
+        points: points.filter(|_| player.rank >= ETERNUS),
         names: tiers.names.get(&player.rank).cloned().unwrap_or_default(),
         image: has_image.then(|| format!("/assets/rank/{}.webp", player.badge)),
         progress: points.and_then(|p| progress(player.rank, player.subrank, p)),
@@ -171,7 +173,7 @@ fn progress(tier: u32, subrank: u32, points: u32) -> Option<RankProgress> {
     }
     let start = (tier - 1) * TIER_POINTS + (subrank - 1) * SUBRANK_POINTS;
     let max = if subrank == 6 {
-        SUBRANK_POINTS * 2
+        LAST_SUBRANK_POINTS
     } else {
         SUBRANK_POINTS
     };
@@ -268,8 +270,8 @@ mod tests {
             names: BTreeMap::from([(7, BTreeMap::from([("ja".into(), "エミッサリー".into())]))]),
             ..Tiers::default()
         };
-        let s = state(&player(73, Some(44000)), &tiers, true);
-        assert_eq!(s.points, Some(44000));
+        let s = state(&player(73, Some(41000)), &tiers, true);
+        assert_eq!(s.points, None);
         assert_eq!(s.names["ja"], "エミッサリー");
         assert_eq!(s.image.as_deref(), Some("/assets/rank/73.webp"));
         assert_eq!(
@@ -282,6 +284,16 @@ mod tests {
     }
 
     #[test]
+    fn only_eternus_shows_points() {
+        let tiers = Tiers::default();
+        let eternus = state(&player(110, Some(72_000)), &tiers, false);
+        assert_eq!(eternus.points, Some(72_000));
+        let below_its_subrank = state(&player(43, Some(1_000)), &tiers, false);
+        assert_eq!(below_its_subrank.points, None);
+        assert_eq!(below_its_subrank.progress, None);
+    }
+
+    #[test]
     fn no_image_url_until_the_icon_is_fetched() {
         let s = state(&player(73, Some(44000)), &Tiers::default(), false);
         assert_eq!(s.image, None);
@@ -289,20 +301,28 @@ mod tests {
 
     #[test]
     fn progress_within_subrank() {
-        // 7-3 の始まりは 6 ティア分（42000）+ 2 サブランク分（2000）
+        // 7-3 の始まりは 6 ティア分（39000）+ 2 サブランク分（2000）
         assert_eq!(
-            progress(7, 3, 44_650),
+            progress(7, 3, 41_650),
             Some(RankProgress {
                 value: 650,
                 max: 1000
             })
         );
-        // 6 番目のサブランクは 2000
+        // 6 番目のサブランクは 1500
         assert_eq!(
             progress(1, 6, 5_500),
             Some(RankProgress {
                 value: 500,
-                max: 2000
+                max: 1500
+            })
+        );
+        // 2026-11-05 の実際の配信者: Sentinel III、22125 ポイント
+        assert_eq!(
+            progress(4, 3, 22_125),
+            Some(RankProgress {
+                value: 625,
+                max: 1000
             })
         );
         // エターナスと未ランクはゲージなし

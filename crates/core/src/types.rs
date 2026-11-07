@@ -127,10 +127,11 @@ pub enum ServerMsg {
     #[serde(rename = "display", rename_all = "camelCase")]
     Display {
         subtitles: crate::settings::SubtitleDisplay,
+        subtitle_style: Box<crate::settings::SubtitleStyle>,
         rank_language: LangCode,
         rank_content: crate::settings::RankContent,
         rank_anchor: crate::settings::Anchor,
-        overlay_fonts: BTreeMap<LangCode, String>,
+        rank_style: Box<crate::settings::RankStyle>,
         item_cards: ItemCardsView,
     },
     /// 直近のピーク（dBFS）。1 秒に 10 回ほど

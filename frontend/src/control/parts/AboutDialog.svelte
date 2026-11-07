@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Button } from "$lib/components/ui/button";
   import * as Dialog from "$lib/components/ui/dialog";
+  import fonts from "../../../../notices/fonts.txt?raw";
   import lindera from "../../../../notices/lindera.txt?raw";
   import mecabIpadic from "../../../../notices/mecab-ipadic.txt?raw";
   import { panel } from "../panel.svelte";
@@ -21,6 +22,8 @@
   const NOTICES = [
     { name: "mecab-ipadic", text: mecabIpadic },
     { name: "Lindera", text: lindera },
+    // アプリには含まず、選んだ人だけがダウンロードする
+    { name: "Google Fonts のフォント", text: fonts },
   ];
   // 全文は 300KB あるので、開いたときに読み込む（毎日開くページのバンドルに入れない）
   let thirdParty = $state<Promise<string>>();

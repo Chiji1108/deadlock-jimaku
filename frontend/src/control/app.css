@@ -1,4 +1,4 @@
-/* フォントのタブの見本に使う。Tailwind より低い layer なので <html lang> のフォントは Inter のまま */
+/* フォントの行の見本に使う。Tailwind より低い layer なので <html lang> のフォントは Inter のまま */
 @import "../lib/lang.css" layer(lang);
 @import "tailwindcss";
 @import "tw-animate-css";

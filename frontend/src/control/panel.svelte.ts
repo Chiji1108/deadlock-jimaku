@@ -1,5 +1,6 @@
 // 操作パネルの状態。各タブはこれを読み、変更は api 経由でサーバーに送る（サーバーの返す設定で置き換える）
 import { toast } from "svelte-sonner";
+import { SvelteMap, SvelteSet } from "svelte/reactivity";
 import type { LiveStatus } from "../generated/LiveStatus";
 import type { GiftStatus } from "../generated/GiftStatus";
 import type { Provider } from "../generated/Provider";
@@ -11,10 +12,16 @@ import type { MicError } from "../generated/MicError";
 import type { TranscriptionError } from "../generated/TranscriptionError";
 import type { UsageView } from "../generated/UsageView";
 import { api } from "../lib/api";
+import { addFontFaces, fontWeights } from "../lib/overlay-fonts";
+import type { MergePatch } from "../lib/text-style";
+import type { FontEntry } from "../generated/FontEntry";
+import type { FontStyle } from "../generated/FontStyle";
 import { connect, type Status } from "../lib/ws";
 
 /** 選べるフォントの一覧。取れるまでと、取れなかったときは名前の配列の代わりにその状態が入る */
-export type FontList = string[] | "loading" | "failed";
+export type FontList = FontEntry[] | "loading" | "failed";
+/** フォントを選ぶ先。字幕は言語ごと、ランクは 1 つ */
+export type FontTarget = { kind: "subtitle"; language: string } | { kind: "rank" };
 
 /** OBS に貼る URL（axum。開発中に Vite から開いても同じ） */
 export const overlayUrl = (name: "subtitles" | "rank" | "items") =>
@@ -37,7 +44,12 @@ class Panel {
   devices = $state<string[] | undefined>();
   /** 選べるフォント */
   fonts = $state<FontList>("loading");
-  private fontsLoading = false;
+  /** ダウンロード中のファミリー。タブを移っても続くので、ここで持つ */
+  downloadingFonts = new SvelteSet<string>();
+  private fontsRead: Promise<void> | undefined;
+  /** 見本の SVG。読み終えるまでは空で、カードは名前だけで押せる */
+  fontSamples = $state.raw<Record<string, string>>({});
+  private samplesRead: Promise<void> | undefined;
   server = $state<Status>("connecting");
   /** 字幕を始められなかった・止まった理由 */
   transcriptionError = $state<TranscriptionError | undefined>();
@@ -196,14 +208,94 @@ class Panel {
     return saved;
   };
 
+  private knownFonts: Set<string> | undefined;
+
+  /** 同時には 1 回だけ読む。読んでいる間に呼んだら、その読み込みの終わりを待つ */
+  loadFonts = () =>
+    (this.fontsRead ??= this.readFonts().finally(() => (this.fontsRead = undefined)));
+
   /** 読み直しの間も、失敗しても、すでにある一覧は出したままにする */
-  loadFonts = async () => {
-    if (this.fontsLoading) return;
-    this.fontsLoading = true;
+  private async readFonts() {
     const fonts = await api.fonts().catch(() => undefined);
-    this.fontsLoading = false;
-    if (fonts) this.fonts = fonts;
-    else if (typeof this.fonts === "string") this.fonts = "failed";
+    if (fonts) {
+      this.addFaces(fonts);
+      this.fonts = fonts;
+    } else if (typeof this.fonts === "string") this.fonts = "failed";
+  }
+
+  /**
+   * 最初の一覧の PC のフォントは WebView が名前で描ける。そのあと増えたフォントと、PC になく
+   * ダウンロードで置いたフォントは読み込む。未取得のフォントはファイルがないので読まない
+   */
+  private addFaces(fonts: FontEntry[]) {
+    const first = !this.knownFonts;
+    const known = (this.knownFonts ??= new Set());
+    for (const { family, sizeBytes, downloaded } of fonts) {
+      if (sizeBytes !== undefined || known.has(family)) continue;
+      known.add(family);
+      if (!first || downloaded) addFontFaces(family);
+    }
+  }
+
+  /** 読めなければ次に開いたときに読み直す */
+  loadFontSamples = () =>
+    (this.samplesRead ??= import("./font-sample-svgs").then(
+      ({ SAMPLES }) => void (this.fontSamples = SAMPLES),
+      () => void (this.samplesRead = undefined),
+    ));
+
+  /** フォントの持つ太さ。読み終えるまでは undefined */
+  weights = new SvelteMap<string, number[]>();
+
+  private readingWeights = new Set<string>();
+
+  /** 読めなければ覚えず、次に開いたときに読み直す */
+  loadWeights = async (family: string) => {
+    if (this.weights.has(family) || this.readingWeights.has(family)) return;
+    this.readingWeights.add(family);
+    const weights = await fontWeights(family).catch(() => undefined);
+    this.readingWeights.delete(family);
+    if (weights) this.weights.set(family, weights);
+  };
+
+  fontStyle = (target: FontTarget): FontStyle | undefined =>
+    target.kind === "rank"
+      ? this.settings?.rankStyle
+      : this.settings?.subtitleStyle.languages[target.language];
+
+  chosenFont = (target: FontTarget) => this.fontStyle(target)?.font ?? undefined;
+
+  setFontStyle = (target: FontTarget, patch: MergePatch<FontStyle>) =>
+    this.update(
+      target.kind === "rank"
+        ? { rankStyle: patch }
+        : { subtitleStyle: { languages: { [target.language]: patch } } },
+    );
+
+  /** 空文字列なら標準に戻す */
+  setFont = (target: FontTarget, family: string) =>
+    this.setFontStyle(target, { font: family || null });
+
+  /**
+   * 裏で進め、取得できたら一覧を読み直して選ぶ先に適用する。走行中の読み込みは取得前の一覧を
+   * 返すので、終わるのを待ってから読む。待つ間に別のフォントを選んでいたら、その選択を残す
+   */
+  downloadFont = async (family: string, target: FontTarget) => {
+    const chosen = this.chosenFont(target);
+    const progress = toast.loading(`${family} をダウンロードしています`, {
+      duration: Number.POSITIVE_INFINITY,
+    });
+    this.downloadingFonts.add(family);
+    const done = await this.run(async () => {
+      await api.downloadFont(family);
+      await this.fontsRead;
+      await this.loadFonts();
+    });
+    this.downloadingFonts.delete(family);
+    toast.dismiss(progress);
+    if (!done) return;
+    toast.success(`${family} をダウンロードしました`);
+    if (this.chosenFont(target) === chosen) await this.setFont(target, family);
   };
 
   refreshGift = async () => {

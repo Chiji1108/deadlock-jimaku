@@ -10,8 +10,14 @@
   import { REGIONS } from "../../lib/regions";
   import AddToObs from "../parts/AddToObs.svelte";
   import AnchorPicker from "../parts/AnchorPicker.svelte";
+  import FontPicker from "../parts/FontPicker.svelte";
   import OverlayPreview from "../parts/OverlayPreview.svelte";
+  import StyleNumber from "../parts/StyleNumber.svelte";
+  import TextStyleFields from "../parts/TextStyleFields.svelte";
   import { rankSize } from "../../lib/overlay-size";
+  import type { MergePatch } from "../../lib/text-style";
+  import { cleared, RANK_TEXT } from "../../lib/text-style";
+  import type { RankStyle } from "../../generated/RankStyle";
   import { overlayUrl, panel } from "../panel.svelte";
 
   const CONTENTS: { value: RankContent; label: string }[] = [
@@ -33,6 +39,8 @@
     s.rankLanguage && languages.includes(s.rankLanguage) ? s.rankLanguage : FOLLOW,
   );
 
+  const setStyle = (patch: MergePatch<RankStyle>) => panel.update({ rankStyle: patch });
+
   const saved = () => panel.settings?.rankAccount?.toString() ?? "";
   let account = $state(saved());
 
@@ -52,7 +60,11 @@
       </Card.Description>
     </Card.Header>
     <Card.Content class="flex flex-col gap-6">
-      <OverlayPreview src="/overlay/rank.html" title="ランクオーバーレイのプレビュー" {size} />
+      <OverlayPreview
+        src="/overlay/rank.html?preview"
+        title="ランクオーバーレイのプレビュー"
+        {size}
+      />
 
       <form
         onsubmit={(e) => {
@@ -152,6 +164,36 @@
           </Select.Content>
         </Select.Root>
       </Field.Field>
+
+      <Field.Separator />
+
+      <TextStyleFields
+        look={s.rankStyle}
+        standard={RANK_TEXT}
+        bandHint="明るい場面でも読めるよう、ランクの後ろに帯を敷きます"
+        onchange={setStyle}
+        onreset={() => setStyle(cleared(s.rankStyle))}
+      >
+        {#snippet fonts()}
+          <FontPicker
+            target={{ kind: "rank" }}
+            language={language || s.micLanguage}
+            label="ランク"
+            standardWeight={RANK_TEXT.weight}
+          />
+        {/snippet}
+        {#snippet details()}
+          <StyleNumber
+            label="字間"
+            value={s.rankStyle.letterSpacing}
+            standard={RANK_TEXT.letterSpacing}
+            presets={[0, 0.02, 0.05, 0.1]}
+            percent
+            range={{ min: -10, max: 10, step: 1 }}
+            onchange={(letterSpacing) => setStyle({ letterSpacing })}
+          />
+        {/snippet}
+      </TextStyleFields>
     </Card.Content>
   </Card.Root>
 
