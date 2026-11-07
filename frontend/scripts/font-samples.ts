@@ -77,6 +77,14 @@ function checkFamily(data: Buffer, entry: Entry) {
   if (family !== entry.family) throw new Error(`${entry.family} の中の名前は ${family} です`);
 }
 
+/** @font-face は太さしか書かないので、同じ太さのファイルがあると core は片方しか配らない */
+function checkWeights(files: Buffer[], entry: Entry) {
+  const weights = files.map((data) => (create(data) as Font)["OS/2"].usWeightClass);
+  if (new Set(weights).size !== weights.length) {
+    throw new Error(`${entry.family} の太さが重なっています: ${weights.join(", ")}`);
+  }
+}
+
 /** 見本の太さは通常の 400。可変フォントの既定は Noto の 100 のように細いことがある */
 function regular(data: Buffer) {
   const font = create(data) as Font;
@@ -143,6 +151,7 @@ const samples = new Map<string, string>();
 for (const entry of catalog.fonts) {
   const files = await Promise.all(entry.files.map((file) => read(entry, file)));
   for (const data of files) checkFamily(data, entry);
+  checkWeights(files, entry);
   const font = regular(files[0]!);
   checkLanguages(font, entry);
   const out = svg(font, entry.sample);

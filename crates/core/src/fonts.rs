@@ -1087,16 +1087,29 @@ mod tests {
         }
     }
 
+    fn recommended(language: &str) -> Vec<&'static str> {
+        CATALOG
+            .fonts
+            .iter()
+            .filter(|font| font.languages.iter().any(|code| code == language))
+            .map(|font| font.family.as_str())
+            .collect()
+    }
+
     #[test]
     fn every_language_has_recommended_fonts() {
         for language in crate::lang::LANGUAGES {
-            let count = CATALOG
-                .fonts
-                .iter()
-                .filter(|font| font.languages.iter().any(|code| code == language.code))
-                .count();
-            assert!((3..=5).contains(&count), "{}: {count}", language.code);
+            let count = recommended(language.code).len();
+            assert!(count >= 3, "{}: {count}", language.code);
+            assert!(count <= 5 || language.code == "ja", "{}", language.code);
         }
+    }
+
+    #[test]
+    fn japanese_recommendations_start_rounded_and_end_with_the_body_font() {
+        let families = recommended("ja");
+        assert_eq!(families.first(), Some(&"Zen Maru Gothic"));
+        assert_eq!(families.last(), Some(&"Noto Sans JP"));
     }
 
     #[test]

@@ -45,16 +45,16 @@
       ]
     },
     {
-      "family": "Hachi Maru Pop",
-      "dir": "ofl/hachimarupop",
+      "family": "Mochiy Pop One",
+      "dir": "ofl/mochiypopone",
       "license": "OFL-1.1",
       "languages": ["ja"],
       "sample": "あいアイ漢字",
       "files": [
         {
-          "name": "HachiMaruPop-Regular.ttf",
-          "size": 4385624,
-          "sha256": "78408910c8f1a2f174a279cbc1484b48b71780039eba3fe1be2bfcc5d4df3f98"
+          "name": "MochiyPopOne-Regular.ttf",
+          "size": 5163948,
+          "sha256": "9e009430e1316c271a5f34759c6b65fc343c4e806f193042528887e7235a92c6"
         }
       ]
     },
@@ -69,6 +69,208 @@
           "name": "PottaOne-Regular.ttf",
           "size": 4918516,
           "sha256": "bde843868b56e429e1c863da2efa76df533162b226d990efcb96d533b0ca2a93"
+        }
+      ]
+    },
+    {
+      "family": "Hachi Maru Pop",
+      "dir": "ofl/hachimarupop",
+      "license": "OFL-1.1",
+      "languages": ["ja"],
+      "sample": "あいアイ漢字",
+      "files": [
+        {
+          "name": "HachiMaruPop-Regular.ttf",
+          "size": 4385624,
+          "sha256": "78408910c8f1a2f174a279cbc1484b48b71780039eba3fe1be2bfcc5d4df3f98"
+        }
+      ]
+    },
+    {
+      "family": "RocknRoll One",
+      "dir": "ofl/rocknrollone",
+      "license": "OFL-1.1",
+      "languages": ["ja"],
+      "sample": "あいアイ漢字",
+      "files": [
+        {
+          "name": "RocknRollOne-Regular.ttf",
+          "size": 2682824,
+          "sha256": "dc0f5ff975851827f63f2c6bfed128ffbca14b6399a10fb5e1711215c0108526"
+        }
+      ]
+    },
+    {
+      "family": "Yusei Magic",
+      "dir": "ofl/yuseimagic",
+      "license": "OFL-1.1",
+      "languages": ["ja"],
+      "sample": "あいアイ漢字",
+      "files": [
+        {
+          "name": "YuseiMagic-Regular.ttf",
+          "size": 3134968,
+          "sha256": "82098615f39ed9da6a8ccc674b9006e49c70dd5b775a7a1697f6bedd22ce25a2"
+        }
+      ]
+    },
+    {
+      "family": "Yomogi",
+      "dir": "ofl/yomogi",
+      "license": "OFL-1.1",
+      "languages": ["ja"],
+      "sample": "あいアイ漢字",
+      "files": [
+        {
+          "name": "Yomogi-Regular.ttf",
+          "size": 4045904,
+          "sha256": "ec280f473a03187292905618f24fdb08a6dcbf8620b52637e3b589fe745259b9"
+        }
+      ]
+    },
+    {
+      "family": "Stick",
+      "dir": "ofl/stick",
+      "license": "OFL-1.1",
+      "languages": ["ja"],
+      "sample": "あいアイ漢字",
+      "files": [
+        {
+          "name": "Stick-Regular.ttf",
+          "size": 2215036,
+          "sha256": "0e582d72b5125c7847d1c46b658333194f7a3f70bfa210d2f8cae1a596a17857"
+        }
+      ]
+    },
+    {
+      "family": "Reggae One",
+      "dir": "ofl/reggaeone",
+      "license": "OFL-1.1",
+      "languages": ["ja"],
+      "sample": "あいアイ漢字",
+      "files": [
+        {
+          "name": "ReggaeOne-Regular.ttf",
+          "size": 2153256,
+          "sha256": "aebe62598732d76036f30ec11bb0ec5f68938e373a06d1b4ceb6b9cf1abf3db2"
+        }
+      ]
+    },
+    {
+      "family": "Dela Gothic One",
+      "dir": "ofl/delagothicone",
+      "license": "OFL-1.1",
+      "languages": ["ja"],
+      "sample": "あいアイ漢字",
+      "files": [
+        {
+          "name": "DelaGothicOne-Regular.ttf",
+          "size": 2508848,
+          "sha256": "4ff87a0965f1b0505e5a2c58424bc6ad3cff27e56a82f21c2fc9d6b0e3857ee2"
+        }
+      ]
+    },
+    {
+      "family": "Rampart One",
+      "dir": "ofl/rampartone",
+      "license": "OFL-1.1",
+      "languages": ["ja"],
+      "sample": "あいアイ漢字",
+      "files": [
+        {
+          "name": "RampartOne-Regular.ttf",
+          "size": 3722352,
+          "sha256": "a4c60ee835175fa147eb483fac0dd8ff9007c37884ef77af86b0a868fa554d49"
+        }
+      ]
+    },
+    {
+      "family": "Train One",
+      "dir": "ofl/trainone",
+      "license": "OFL-1.1",
+      "languages": ["ja"],
+      "sample": "あいアイ漢字",
+      "files": [
+        {
+          "name": "TrainOne-Regular.ttf",
+          "size": 2152516,
+          "sha256": "07d67ad14231a4a41f0ee501b14bd6f9c7a9beada5ee6af2924114863a034623"
+        }
+      ]
+    },
+    {
+      "family": "DotGothic16",
+      "dir": "ofl/dotgothic16",
+      "license": "OFL-1.1",
+      "languages": ["ja"],
+      "sample": "あいアイ漢字",
+      "files": [
+        {
+          "name": "DotGothic16-Regular.ttf",
+          "size": 2069236,
+          "sha256": "3ad9af88726d42b40f7f365f0dcac785af73cf20ea6f1d5b44e57cc21150b8f1"
+        }
+      ]
+    },
+    {
+      "family": "Kaisei Opti",
+      "dir": "ofl/kaiseiopti",
+      "license": "OFL-1.1",
+      "languages": ["ja"],
+      "sample": "あいアイ漢字",
+      "files": [
+        {
+          "name": "KaiseiOpti-Regular.ttf",
+          "size": 4503024,
+          "sha256": "990cfb1fb00f311c8975c2c5f4778b2fe5462fd5eabf0884828a323dad3f18c0"
+        },
+        {
+          "name": "KaiseiOpti-Bold.ttf",
+          "size": 4287516,
+          "sha256": "48e0a6e35903eeaea2b9559ac62cbe83dac701b2c9355c7cff8927722c965acc"
+        }
+      ]
+    },
+    {
+      "family": "Kaisei Tokumin",
+      "dir": "ofl/kaiseitokumin",
+      "license": "OFL-1.1",
+      "languages": ["ja"],
+      "sample": "あいアイ漢字",
+      "files": [
+        {
+          "name": "KaiseiTokumin-Regular.ttf",
+          "size": 4581732,
+          "sha256": "3fbdbec539369aed11bb1fa0cdda1d19ea246e795107357383dfa561848a427d"
+        },
+        {
+          "name": "KaiseiTokumin-Bold.ttf",
+          "size": 4366200,
+          "sha256": "4540f6b5c32724acc9c4ba77692195078de43a4ee762d436e39d32fa8d1a73c9"
+        },
+        {
+          "name": "KaiseiTokumin-ExtraBold.ttf",
+          "size": 4564000,
+          "sha256": "bf44bb3e23cc703bfb19111833f78e651998d0a2b1863eff9e88cecb38a8bc53"
+        }
+      ]
+    },
+    {
+      "family": "Kaisei Decol",
+      "dir": "ofl/kaiseidecol",
+      "license": "OFL-1.1",
+      "languages": ["ja"],
+      "sample": "あいアイ漢字",
+      "files": [
+        {
+          "name": "KaiseiDecol-Regular.ttf",
+          "size": 4503152,
+          "sha256": "fb9202b97944fa00b5f145ad4701def5c306bcd0d26407917baef9e01b042056"
+        },
+        {
+          "name": "KaiseiDecol-Bold.ttf",
+          "size": 4286896,
+          "sha256": "0e3a6da5145fdbba32cfb1c806812d95457506e1698f5d61e8f834fb847f0d6f"
         }
       ]
     },
