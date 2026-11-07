@@ -1,4 +1,4 @@
-おすすめのフォント
+Google Fonts のフォント
 
 アプリには含まれていません。選んだ人が確認のうえ、Google Fonts の配布物（GitHub の google/fonts、コミット 86aced91de05cd4f96a06838124cca45be337b2b）から PC にダウンロードします。すべて SIL Open Font License 1.1 です。各フォントの表示のあとに、ライセンスの本文を 1 度だけ載せます。
 

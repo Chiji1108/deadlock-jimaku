@@ -1,4 +1,4 @@
-// おすすめのフォントの見本を、文字をパスにした SVG として frontend/src/control/font-samples に作る（DESIGN.md 6.3）。
+// Google Fonts のフォントの見本を、文字をパスにした SVG として frontend/src/control/font-samples に作る（DESIGN.md 6.3）。
 // 同時に、カタログの languages の言語の文字がそのフォントにあることを確かめる。
 // 引数にフォントのファイルを置いたフォルダを渡すと、GitHub から取らずに使う
 import { createHash } from "node:crypto";
@@ -11,12 +11,12 @@ import { fontSampleName } from "../src/lib/font-samples.ts";
 const OUTPUT = resolve(import.meta.dirname, "../src/control/font-samples");
 const ORIGIN = `https://raw.githubusercontent.com/google/fonts/${catalog.commit}`;
 const LOCAL = process.argv[2];
-/** 1em を分ける数。一覧の 1 行の高さなら、これで輪郭の違いは見えない */
+/** 1em を分ける数。ダイアログのカードの 28px でも、これで輪郭の違いは見えない */
 const UNITS = 128;
 
 const LATIN = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const CYRILLIC = "абвгдежзийклмнопрстуфхцчшщъыьэюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ";
-/** その言語でよく使う文字。全部あるフォントだけを、その言語のおすすめに載せられる */
+/** その言語でよく使う文字。全部あるフォントだけを、その言語の Google Fonts に載せられる */
 const PROBES: Record<string, string> = {
   ja: "あいうえおかきくけこさしすせそたちつてとアイウエオカキクケコサシスセソー日本語漢字学校先生話聞",
   en: LATIN,

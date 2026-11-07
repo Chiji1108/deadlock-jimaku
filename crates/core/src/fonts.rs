@@ -1,4 +1,4 @@
-//! オーバーレイで選べるフォントの一覧、ファイルの配信、おすすめのフォントのダウンロード（DESIGN.md 6.3）。
+//! オーバーレイで選べるフォントの一覧、ファイルの配信、Google Fonts のフォントのダウンロード（DESIGN.md 6.3）。
 
 use std::collections::hash_map::DefaultHasher;
 use std::collections::{BTreeSet, HashSet};
@@ -17,7 +17,7 @@ use ts_rs::TS;
 
 use crate::settings::valid_font_name;
 
-/// 一覧の 1 行。`languages` があるものはおすすめで、その言語の一覧に出す。`size_bytes` があるものは未取得。
+/// 一覧の 1 行。`languages` があるものはカタログの Google Fonts のフォントで、その言語の一覧に出す。`size_bytes` があるものは未取得。
 /// `downloaded` は PC になくダウンロードで置いたフォントで、WebView が名前で描けない
 #[derive(Debug, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
@@ -227,8 +227,8 @@ fn database(dir: &Path) -> Database {
     db
 }
 
-/// PC にあるフォントはダウンロードを勧めない。カタログの行は PC のものでもおすすめに 1 回だけ出す。
-/// カタログの順はおすすめの順なので保つ
+/// PC にあるフォントはダウンロードを勧めない。カタログの行は PC のものでも Google Fonts に 1 回だけ出す。
+/// カタログの順は勧める順なので保つ
 fn list(pc: Vec<String>, catalog: &[CatalogFont], dir: &Path) -> Vec<FontEntry> {
     let lower = |family: &str| family.to_lowercase();
     let on_pc: HashSet<String> = pc.iter().map(|family| lower(family)).collect();

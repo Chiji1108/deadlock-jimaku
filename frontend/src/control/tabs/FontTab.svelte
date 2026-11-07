@@ -4,6 +4,7 @@
   import { Button } from "$lib/components/ui/button";
   import * as Card from "$lib/components/ui/card";
   import * as Field from "$lib/components/ui/field";
+  import { STANDARD } from "../../lib/font-samples";
   import { SUBTITLE_SIZE } from "../../lib/overlay-size";
   import { applyOverlayFonts, fontSample } from "../../lib/overlay-fonts";
   import FontPicker from "../parts/FontPicker.svelte";
@@ -25,7 +26,7 @@
   <Card.Header>
     <Card.Title>フォント</Card.Title>
     <Card.Description>
-      字幕とランクに共通です。おすすめのフォントと、この PC
+      字幕とランクに共通です。Google Fonts のフォントと、この PC
       に入っているフォントから言語ごとに選べます。アイテム説明のカードはゲームと同じ見た目にするので変わりません
     </Card.Description>
     <Card.Action>
@@ -43,18 +44,25 @@
 
     <Field.Group>
       {#each languages as language (language)}
-        <Field.Field>
-          <Field.Label for="font-{language}">{panel.label(language)}</Field.Label>
+        <div class="flex items-center gap-4">
+          <div class="min-w-0 flex-1">
+            <p class="flex gap-2 text-sm">
+              <span class="shrink-0 font-medium">{panel.label(language)}</span>
+              <span class="truncate text-muted-foreground">
+                {s.overlayFonts[language] || STANDARD}
+              </span>
+            </p>
+            <p lang={language} class="truncate text-lg font-bold">{fontSample(language)}</p>
+          </div>
           <FontPicker
-            id="font-{language}"
             {language}
+            label={panel.label(language)}
             value={s.overlayFonts[language]}
             families={panel.fonts}
             onopen={panel.loadFonts}
             onchange={(family) => panel.update({ overlayFonts: { [language]: family } })}
           />
-          <p lang={language} class="truncate text-lg font-bold">{fontSample(language)}</p>
-        </Field.Field>
+        </div>
       {/each}
     </Field.Group>
   </Card.Content>

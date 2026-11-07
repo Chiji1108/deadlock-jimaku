@@ -69,7 +69,7 @@ test("最初の一覧では、PC にないダウンロード済みのフォン�
   expect(add.mock.calls).toEqual([["Jua"]]);
 });
 
-test("おすすめのフォントは、取得して初めて読み込み、その言語に適用する", async () => {
+test("Google Fonts のフォントは、取得して初めて読み込み、その言語に適用する", async () => {
   const add = vi.mocked(addFontFaces);
   const { next, update } = withFonts({});
   add.mockClear();

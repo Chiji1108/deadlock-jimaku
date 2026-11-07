@@ -35,7 +35,7 @@ export const api = {
   languages: () => request<string[]>("/api/languages"),
   /** 選べるフォント */
   fonts: () => request<FontEntry[]>("/api/fonts"),
-  /** おすすめのフォントを取得する。終わるまで返らない */
+  /** Google Fonts のフォントを取得する。終わるまで返らない */
   downloadFont: (family: string) => post(`/api/fonts/${encodeURIComponent(family)}/download`),
   demo: () => fetch("/api/demo", { method: "POST" }),
   /** 聞き取りのページを Chrome で開く */

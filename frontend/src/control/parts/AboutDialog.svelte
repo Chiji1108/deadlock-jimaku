@@ -23,7 +23,7 @@
     { name: "mecab-ipadic", text: mecabIpadic },
     { name: "Lindera", text: lindera },
     // アプリには含まず、選んだ人だけがダウンロードする
-    { name: "おすすめのフォント", text: fonts },
+    { name: "Google Fonts のフォント", text: fonts },
   ];
   // 全文は 300KB あるので、開いたときに読み込む（毎日開くページのバンドルに入れない）
   let thirdParty = $state<Promise<string>>();

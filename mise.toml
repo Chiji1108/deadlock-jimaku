@@ -31,7 +31,7 @@ description = "配布物に入る第三者のライセンス表示（notices/thi
 run = "node frontend/scripts/notices.ts"
 
 [tasks.font-samples]
-description = "おすすめのフォントの見本の SVG を作り直し、カタログの言語と名前を確かめる（GitHub からフォントを取る）"
+description = "Google Fonts のフォントの見本の SVG を作り直し、カタログの言語と名前を確かめる（GitHub からフォントを取る）"
 run = "node frontend/scripts/font-samples.ts"
 
 [tasks.check]
