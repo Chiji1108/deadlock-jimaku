@@ -32,15 +32,13 @@ use crate::types::{
     Translatable, Translated, Translations,
 };
 
-const FLAGS: [&str; 8] = [
+const FLAGS: [&str; 7] = [
     "--disable-features=CalculateNativeWinOcclusion,UseEcoQoSForBackgroundProcess",
     "--disable-background-timer-throttling",
     "--disable-backgrounding-occluded-windows",
     "--disable-renderer-backgrounding",
     "--no-first-run",
     "--no-default-browser-check",
-    // 専用のプロファイルで字幕のページしか開かないので、毎回マイクを聞かれないようにする
-    "--auto-accept-camera-and-microphone-capture",
     "--remote-debugging-port=0",
 ];
 /// タブやアドレスバーのない小さなウィンドウにする
@@ -102,12 +100,8 @@ impl Drop for Browser {
     }
 }
 
-fn page_origin() -> String {
-    format!("http://127.0.0.1:{DEFAULT_PORT}")
-}
-
 fn page_url() -> String {
-    format!("{}/chrome", page_origin())
+    format!("http://127.0.0.1:{DEFAULT_PORT}/chrome")
 }
 
 fn arguments(profile: &Path) -> Vec<String> {
@@ -122,7 +116,7 @@ fn arguments(profile: &Path) -> Vec<String> {
         .collect()
 }
 
-/// ページのタブにつなぎ、マイクを許可する。許せなくても、つながっていれば続ける
+/// ページのタブにつなぐ
 async fn connect(profile: &Path) -> anyhow::Result<(Cdp, String)> {
     let port = active_port(profile).await?;
     let version: Value = crate::http()
@@ -137,9 +131,6 @@ async fn connect(profile: &Path) -> anyhow::Result<(Cdp, String)> {
     let (socket, _) = tokio_tungstenite::connect_async(url).await?;
     let mut cdp = Cdp { socket, id: 0 };
     let session = cdp.page_session().await?;
-    if let Err(e) = allow_microphones(&mut cdp, &session).await {
-        tracing::warn!("chrome: {e:#}");
-    }
     Ok((cdp, session))
 }
 
@@ -155,27 +146,6 @@ async fn drive(mut cdp: Cdp, session: &str) -> anyhow::Result<std::convert::Infa
         .await?;
         tokio::time::sleep(CHECK_INTERVAL).await;
     }
-}
-
-/// `--auto-accept-camera-and-microphone-capture` はマイクを開かせるだけで、権限として残さない。
-/// 権限がないと `enumerateDevices` がマイクの名前も ID も隠すので、選んだマイクを探せない。
-/// `grantPermissions` はほかの権限を拒むので使わない。ページは許可より先に動き始めるので、許可してから読み直す。
-/// 許せなくても、ページは既定のマイクで動いて理由を出す
-async fn allow_microphones(cdp: &mut Cdp, session: &str) -> anyhow::Result<()> {
-    cdp.call(None, "Browser.setPermission", mic_permission())
-        .await?;
-    // `Page.reload` と違い、読み直しが確定してから返るので、次の `Runtime.evaluate` が新しいページに届く
-    cdp.call(Some(session), "Page.navigate", json!({ "url": page_url() }))
-        .await?;
-    Ok(())
-}
-
-fn mic_permission() -> Value {
-    json!({
-        "origin": page_origin(),
-        "permission": { "name": "microphone" },
-        "setting": "granted",
-    })
 }
 
 /// Chrome が開いた CDP のポートはプロファイルのファイルに書かれる
@@ -456,66 +426,9 @@ mod tests {
         assert!(args.contains(&"--user-data-dir=/data/chrome-profile".to_owned()));
     }
 
+    /// 全画面のゲームに隠れても止まらない形で起動する。マイクの許可は利用者に聞く
     #[test]
-    fn allows_only_the_page_to_read_the_microphones() {
-        let permission = mic_permission();
-        assert_eq!(permission["permission"]["name"], "microphone");
-        assert_eq!(
-            page_url(),
-            format!("{}/chrome", permission["origin"].as_str().unwrap())
-        );
-    }
-
-    /// 届いた呼び出しを記録する CDP。`refused` の呼び出しにはエラーを返す
-    async fn fake_cdp(refused: &'static str) -> (Cdp, JoinHandle<Vec<String>>) {
-        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let addr = listener.local_addr().unwrap();
-        let server = tokio::spawn(async move {
-            let (stream, _) = listener.accept().await.unwrap();
-            let mut socket = tokio_tungstenite::accept_async(stream).await.unwrap();
-            let mut methods = Vec::new();
-            while let Some(Ok(Message::Text(text))) = socket.next().await {
-                let call: Value = serde_json::from_str(&text).unwrap();
-                let method = call["method"].as_str().unwrap().to_owned();
-                let reply = if method == refused {
-                    json!({ "id": call["id"], "error": { "message": "refused" } })
-                } else {
-                    json!({ "id": call["id"], "result": {} })
-                };
-                methods.push(method);
-                socket.send(Message::text(reply.to_string())).await.unwrap();
-            }
-            methods
-        });
-        let (socket, _) = tokio_tungstenite::connect_async(format!("ws://{addr}"))
-            .await
-            .unwrap();
-        (Cdp { socket, id: 0 }, server)
-    }
-
-    #[tokio::test]
-    async fn reloads_the_page_after_allowing_the_microphones() {
-        let (mut cdp, server) = fake_cdp("").await;
-        allow_microphones(&mut cdp, "page").await.unwrap();
-        drop(cdp);
-        assert_eq!(
-            server.await.unwrap(),
-            ["Browser.setPermission", "Page.navigate"]
-        );
-    }
-
-    /// 読み直しても許可はないので、ページは動いたまま理由を出す
-    #[tokio::test]
-    async fn keeps_the_page_when_the_microphones_are_refused() {
-        let (mut cdp, server) = fake_cdp("Browser.setPermission").await;
-        assert!(allow_microphones(&mut cdp, "page").await.is_err());
-        drop(cdp);
-        assert_eq!(server.await.unwrap(), ["Browser.setPermission"]);
-    }
-
-    /// 全画面のゲームに隠れても止まらず、確認も出さない形で起動する
-    #[test]
-    fn starts_chrome_without_throttling_or_prompts() {
+    fn starts_chrome_without_throttling() {
         let args = arguments(Path::new("/data/chrome-profile"));
         for flag in [
             "--disable-features=CalculateNativeWinOcclusion,UseEcoQoSForBackgroundProcess",
@@ -524,12 +437,12 @@ mod tests {
             "--disable-renderer-backgrounding",
             "--no-first-run",
             "--no-default-browser-check",
-            "--auto-accept-camera-and-microphone-capture",
             "--remote-debugging-port=0",
             "--window-size=460,320",
         ] {
             assert!(args.iter().any(|a| a == flag), "{flag}");
         }
+        assert!(!args.iter().any(|a| a.contains("auto-accept")));
     }
 
     async fn subtitles() -> (Subtitles, tokio::sync::broadcast::Receiver<ServerMsg>) {
