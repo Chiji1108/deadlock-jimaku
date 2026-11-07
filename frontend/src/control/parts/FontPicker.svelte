@@ -36,6 +36,7 @@
 
   function choose(family: string) {
     open = false;
+    query = "";
     onchange(family);
   }
 </script>
