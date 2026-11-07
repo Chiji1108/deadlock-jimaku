@@ -6,6 +6,7 @@
   import MicIcon from "@lucide/svelte/icons/mic";
   import PackageIcon from "@lucide/svelte/icons/package";
   import SquareIcon from "@lucide/svelte/icons/square";
+  import TypeIcon from "@lucide/svelte/icons/type";
   import TrophyIcon from "@lucide/svelte/icons/trophy";
   import WalletIcon from "@lucide/svelte/icons/wallet";
   import { ModeWatcher } from "mode-watcher";
@@ -21,6 +22,7 @@
   import { total, unpriced, usd } from "./usage";
   import AudioTab from "./tabs/AudioTab.svelte";
   import DisplayTab from "./tabs/DisplayTab.svelte";
+  import FontTab from "./tabs/FontTab.svelte";
   import ItemsTab from "./tabs/ItemsTab.svelte";
   import KeysTab from "./tabs/KeysTab.svelte";
   import RankTab from "./tabs/RankTab.svelte";
@@ -46,7 +48,8 @@
     },
     { value: "items", label: "アイテム説明", icon: PackageIcon, page: ItemsTab },
     { value: "rank", label: "ランク", icon: TrophyIcon, page: RankTab },
-    { value: "keys", label: "API キー", icon: KeyRoundIcon, page: KeysTab, heading: "" },
+    { value: "fonts", label: "フォント", icon: TypeIcon, page: FontTab, heading: "" },
+    { value: "keys", label: "API キー", icon: KeyRoundIcon, page: KeysTab },
     { value: "share", label: "おすそ分け", icon: GiftIcon, page: ShareTab },
     { value: "usage", label: "料金", icon: WalletIcon, page: UsageTab },
   ];

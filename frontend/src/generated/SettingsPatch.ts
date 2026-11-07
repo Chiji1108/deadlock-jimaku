@@ -24,7 +24,11 @@ minSilenceMs?: number,
 /**
  * 空文字列なら話す言語
  */
-rankLanguage?: string, rankContent?: RankContent, rankAnchor?: Anchor, obsSeen?: boolean, onboardingClosed?: boolean, hybridHintClosed?: boolean, trayNoticeSeen?: boolean, 
+rankLanguage?: string, rankContent?: RankContent, rankAnchor?: Anchor, 
+/**
+ * 書いた言語だけを変える。空文字列なら標準に戻す
+ */
+overlayFonts?: { [key in string]: string }, obsSeen?: boolean, onboardingClosed?: boolean, hybridHintClosed?: boolean, trayNoticeSeen?: boolean, 
 /**
  * 地域（`Region`）。空文字列なら順位を調べない
  */

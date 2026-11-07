@@ -37,6 +37,7 @@ tokio-tungstenite = { version = "0.30.0", features = ["rustls-tls-webpki-roots"]
 tracing = "0.1.44"
 tracing-subscriber = "0.3.23"
 ts-rs = "12.0.1"
+fontdb = "0.24.0"
 
 [dev-dependencies]
 tempfile = "3.27.0"

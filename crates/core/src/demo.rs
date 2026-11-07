@@ -26,7 +26,7 @@ const LINES: &[Line] = &[
         ru: "Итак, начинаем! Это стрим по Deadlock.",
     },
     Line {
-        source: "[僕|ぼく]の[一番|いちばん][好|す]きなキャラは{hero:13|ヘイズ}ですね。",
+        source: "[私|わたし]の[一番|いちばん][好|す]きなキャラは{hero:13|ヘイズ}ですね。",
         en: "My favorite character is {hero:13|Haze}.",
         ru: "Мой любимый персонаж — {hero:13|Haze}.",
     },

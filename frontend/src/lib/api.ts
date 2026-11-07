@@ -32,6 +32,8 @@ export const api = {
   devices: () => request<string[]>("/api/devices"),
   /** 対応している言語のコード */
   languages: () => request<string[]>("/api/languages"),
+  /** 選べるフォント */
+  fonts: () => request<string[]>("/api/fonts"),
   demo: () => fetch("/api/demo", { method: "POST" }),
   /** 聞き取りのページを Chrome で開く */
   openChrome: () => post("/api/chrome/open"),

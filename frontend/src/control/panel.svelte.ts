@@ -13,6 +13,9 @@ import type { UsageView } from "../generated/UsageView";
 import { api } from "../lib/api";
 import { connect, type Status } from "../lib/ws";
 
+/** 選べるフォントの一覧。取れるまでと、取れなかったときは名前の配列の代わりにその状態が入る */
+export type FontList = string[] | "loading" | "failed";
+
 /** OBS に貼る URL（axum。開発中に Vite から開いても同じ） */
 export const overlayUrl = (name: "subtitles" | "rank" | "items") =>
   `${import.meta.env.CORE_ORIGIN}/overlay/${name}`;
@@ -32,6 +35,9 @@ class Panel {
   languages = $state<string[]>([]);
   /** 取れるまでは undefined */
   devices = $state<string[] | undefined>();
+  /** 選べるフォント */
+  fonts = $state<FontList>("loading");
+  private fontsLoading = false;
   server = $state<Status>("connecting");
   /** 字幕を始められなかった・止まった理由 */
   transcriptionError = $state<TranscriptionError | undefined>();
@@ -188,6 +194,16 @@ class Panel {
     if (!saved) this.view = await api.settings().catch(() => this.view);
     void this.refreshShare();
     return saved;
+  };
+
+  /** 読み直しの間も、失敗しても、すでにある一覧は出したままにする */
+  loadFonts = async () => {
+    if (this.fontsLoading) return;
+    this.fontsLoading = true;
+    const fonts = await api.fonts().catch(() => undefined);
+    this.fontsLoading = false;
+    if (fonts) this.fonts = fonts;
+    else if (typeof this.fonts === "string") this.fonts = "failed";
   };
 
   refreshGift = async () => {

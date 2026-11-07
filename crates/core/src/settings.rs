@@ -2,9 +2,10 @@
 //!
 //! API キーはここには入れない（`secrets`。OS の資格情報ストアに保存する）。
 
+use std::collections::BTreeMap;
 use std::path::Path;
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use ts_rs::TS;
 
 use crate::lang;
@@ -15,6 +16,9 @@ pub const FILE: &str = "settings.json";
 
 /// 翻訳先の上限（多いほど出力が増えて遅くなる）
 pub const MAX_TRANSLATE_TO: usize = 4;
+
+/// オーバーレイのフォント名の上限（文字数）
+const MAX_FONT_NAME: usize = 256;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
 #[serde(default, rename_all = "camelCase")]
@@ -50,6 +54,9 @@ pub struct Settings {
     /// エターナスの順位を調べるリーダーボードの地域。None なら調べない
     #[ts(optional)]
     pub rank_region: Option<Region>,
+    /// 言語ごとに選んだフォントのファミリー名。キーがない言語は標準（`lang.css`）
+    #[serde(deserialize_with = "readable_fonts")]
+    pub overlay_fonts: BTreeMap<LangCode, String>,
     /// OBS のブラウザソースで字幕オーバーレイが開かれたことがある（はじめかたのチェックに使う）
     pub obs_seen: bool,
     /// はじめかたを閉じた、または全部終えた
@@ -72,6 +79,27 @@ pub struct Settings {
     pub rank_poll_seconds: u64,
     /// 開発者のサーバー（おすそ分け。DESIGN.md 17.1）の根元。手元で試すときに `wrangler dev` に向ける
     pub api_base: String,
+}
+
+/// 無いフォントは CSS が次の候補に落とすので、確かめるのは名前の形だけ。
+/// 引用符と `\` は `overlay-fonts.ts` がエスケープする
+pub(crate) fn valid_font_name(name: &str) -> bool {
+    !name.is_empty() && name.chars().count() <= MAX_FONT_NAME && !name.chars().any(char::is_control)
+}
+
+/// 手で編集された設定でも、読めない項目だけを捨てて残りの言語の選択は残す
+fn readable_fonts<'de, D: Deserializer<'de>>(
+    deserializer: D,
+) -> Result<BTreeMap<LangCode, String>, D::Error> {
+    let raw = BTreeMap::<LangCode, serde_json::Value>::deserialize(deserializer)?;
+    Ok(raw
+        .into_iter()
+        .filter_map(|(language, family)| {
+            lang::find(&language)?;
+            let family = family.as_str().filter(|f| valid_font_name(f))?;
+            Some((language, family.to_owned()))
+        })
+        .collect())
 }
 
 /// 既定値から変えたときだけ保存する項目（保存してしまうと、アプリの既定値を直しても古い値が残る）
@@ -489,6 +517,7 @@ impl Default for Settings {
             hybrid_hint_closed: false,
             tray_notice_seen: false,
             rank_region: None,
+            overlay_fonts: BTreeMap::new(),
             models: Models::default(),
             realtime_delay: "low".into(),
             segmentation: Segmentation::default(),
@@ -702,6 +731,18 @@ impl Settings {
         if let Some(anchor) = patch.rank_anchor {
             next.rank_anchor = anchor;
         }
+        for (language, family) in patch.overlay_fonts.into_iter().flatten() {
+            if lang::find(&language).is_none() {
+                return Err(format!("unknown language: {language}"));
+            }
+            if family.is_empty() {
+                next.overlay_fonts.remove(&language);
+            } else if valid_font_name(&family) {
+                next.overlay_fonts.insert(language, family);
+            } else {
+                return Err(format!("invalid font name: {family}"));
+            }
+        }
         next.obs_seen = patch.obs_seen.unwrap_or(next.obs_seen);
         next.onboarding_closed = patch.onboarding_closed.unwrap_or(next.onboarding_closed);
         next.hybrid_hint_closed = patch.hybrid_hint_closed.unwrap_or(next.hybrid_hint_closed);
@@ -764,6 +805,9 @@ pub struct SettingsPatch {
     pub rank_content: Option<RankContent>,
     #[ts(optional)]
     pub rank_anchor: Option<Anchor>,
+    /// 書いた言語だけを変える。空文字列なら標準に戻す
+    #[ts(optional)]
+    pub overlay_fonts: Option<BTreeMap<LangCode, String>>,
     #[ts(optional)]
     pub obs_seen: Option<bool>,
     #[ts(optional)]
@@ -1344,6 +1388,97 @@ mod tests {
             (s.item_cards.hold_seconds, s.item_language().as_str()),
             (12.0, "ja")
         );
+    }
+
+    fn font_patch(fonts: &[(&str, &str)]) -> SettingsPatch {
+        SettingsPatch {
+            overlay_fonts: Some(
+                fonts
+                    .iter()
+                    .map(|(l, f)| ((*l).to_owned(), (*f).to_owned()))
+                    .collect(),
+            ),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn font_patch_changes_only_the_named_languages() {
+        let s = Settings::default()
+            .apply(font_patch(&[
+                ("ja", "Hiragino Mincho ProN"),
+                ("en", "Georgia"),
+            ]))
+            .unwrap();
+        let next = s.apply(font_patch(&[("en", "Verdana")])).unwrap();
+        assert_eq!(next.overlay_fonts["ja"], "Hiragino Mincho ProN");
+        assert_eq!(next.overlay_fonts["en"], "Verdana");
+        let reset = next.apply(font_patch(&[("ja", "")])).unwrap();
+        assert!(!reset.overlay_fonts.contains_key("ja"));
+        assert_eq!(reset.overlay_fonts["en"], "Verdana");
+    }
+
+    #[test]
+    fn font_patch_rejects_unknown_languages() {
+        let s = Settings::default();
+        assert!(s.apply(font_patch(&[("latin", "Georgia")])).is_err());
+    }
+
+    #[test]
+    fn font_patch_checks_the_length_and_control_characters() {
+        let s = Settings::default();
+        for good in ["あ".repeat(256), "a\"b".to_owned(), "a\\b".to_owned()] {
+            assert!(s.apply(font_patch(&[("ja", &good)])).is_ok(), "{good}");
+        }
+        for bad in ["あ".repeat(257), "a\nb".to_owned(), "a\u{7f}b".to_owned()] {
+            assert!(s.apply(font_patch(&[("ja", &bad)])).is_err(), "{bad}");
+        }
+    }
+
+    #[test]
+    fn unreadable_fonts_are_dropped_one_by_one() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("settings.json");
+        std::fs::write(
+            &path,
+            r#"{
+                "subtitleDisplay": { "fontSize": 32 },
+                "overlayFonts": {
+                    "ja": "Hiragino Sans",
+                    "zh-Hans": "bad\nname",
+                    "ko": 1,
+                    "latin": "Georgia"
+                }
+            }"#,
+        )
+        .unwrap();
+        let s = load(&path).unwrap();
+        assert_eq!(
+            s.overlay_fonts,
+            BTreeMap::from([("ja".to_owned(), "Hiragino Sans".to_owned())])
+        );
+        assert_eq!(s.subtitle_display.font_size, 32);
+    }
+
+    #[test]
+    fn settings_saved_before_fonts_use_the_standard_fonts() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("settings.json");
+        std::fs::write(&path, r#"{ "micLanguage": "en" }"#).unwrap();
+        let s = load(&path).unwrap();
+        assert_eq!(s.mic_language, "en");
+        assert!(s.overlay_fonts.is_empty());
+    }
+
+    #[test]
+    fn chosen_fonts_survive_a_save() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join(FILE);
+        let s = Settings::default()
+            .apply(font_patch(&[("zh-Hant", "PingFang TC")]))
+            .unwrap();
+        save(&path, &s).unwrap();
+        assert_eq!(load(&path).unwrap(), s);
     }
 
     #[test]
