@@ -20,6 +20,7 @@ use anyhow::Context;
 use futures_util::{SinkExt, StreamExt};
 use serde_json::{Value, json};
 use tokio::task::JoinHandle;
+use tokio::time::MissedTickBehavior;
 use tokio_tungstenite::tungstenite::Message;
 
 use crate::DEFAULT_PORT;
@@ -51,7 +52,7 @@ const REMOVE_ATTEMPTS: u32 = 25;
 /// ページの準備が要らないか確かめる間隔
 const CHECK_INTERVAL: Duration = Duration::from_secs(1);
 /// ページが落ちたときに操作パネルに出す案内
-const CRASHED: &str = "Chrome のページが落ちました。「Chrome を開き直す」で戻せます";
+pub(crate) const CRASHED: &str = "Chrome のページが落ちました。「Chrome を開き直す」で戻せます";
 
 /// 落とすと Chrome を閉じる
 pub struct Browser {
@@ -196,6 +197,7 @@ async fn drive(
     store: &Store,
 ) -> anyhow::Result<std::convert::Infallible> {
     let mut check = tokio::time::interval(CHECK_INTERVAL);
+    check.set_missed_tick_behavior(MissedTickBehavior::Delay);
     loop {
         tokio::select! {
             _ = check.tick() => {

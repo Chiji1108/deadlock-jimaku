@@ -263,12 +263,15 @@ impl Store {
     pub fn connect_chrome(&self) -> (u64, watch::Receiver<ChromeTab>) {
         let mut replaced = false;
         let mut id = 0;
-        self.chrome_tab.send_modify(|tab| {
+        self.change_chrome_tab(|tab| {
             tab.id += 1;
             id = tab.id;
             replaced = tab.status.is_some();
-            // ページが読み込まれたので、前のウィンドウの問題はもうない
-            tab.window = None;
+            // 読み込み直されたので、落ちたという案内は要らない。ほかの案内は開き直すまで残す
+            let crashed = |window: &LiveStatus| window.detail.as_deref() == Some(chrome::CRASHED);
+            if tab.window.as_ref().is_some_and(crashed) {
+                tab.window = None;
+            }
         });
         if replaced {
             self.send_chrome_event(ChromeEvent::Closed);
@@ -595,6 +598,33 @@ mod tests {
         store.update_settings(stop).unwrap();
         store.sync_chrome();
         assert!(store.browser.lock().unwrap().is_none());
+    }
+
+    /// ページの読み込みで消えるのは落ちたという案内だけで、消えたことは操作パネルに届く
+    #[tokio::test]
+    async fn a_loaded_page_clears_only_the_crash_notice() {
+        let store = Store::new(Ok(Settings::default()), PathBuf::new());
+        let window = |detail: &str| {
+            Some(LiveStatus {
+                state: LiveState::Failed,
+                detail: Some(detail.into()),
+            })
+        };
+        store.set_chrome_window(window("Chrome が閉じられました"));
+        store.connect_chrome();
+        assert_eq!(
+            store.snapshot_chrome_status(),
+            window("Chrome が閉じられました")
+        );
+
+        store.set_chrome_window(window(chrome::CRASHED));
+        let mut rx = store.subscribe();
+        store.connect_chrome();
+        assert_eq!(store.snapshot_chrome_status(), None);
+        assert_eq!(
+            rx.try_recv().unwrap(),
+            ServerMsg::ChromeStatus { status: None }
+        );
     }
 
     #[test]
