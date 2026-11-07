@@ -1,11 +1,11 @@
 import { beforeEach, expect, test, vi } from "vitest";
 import { api } from "../lib/api";
 import { panel, type FontTarget } from "./panel.svelte";
-import { addFontFaces } from "../lib/overlay-fonts";
+import { addFontFaces, fontWeights } from "../lib/overlay-fonts";
 import type { FontEntry } from "../generated/FontEntry";
 import type { SettingsView } from "../generated/SettingsView";
 
-vi.mock("../lib/overlay-fonts", () => ({ addFontFaces: vi.fn() }));
+vi.mock("../lib/overlay-fonts", () => ({ addFontFaces: vi.fn(), fontWeights: vi.fn() }));
 
 const pc = (...families: string[]): FontEntry[] =>
   families.map((family) => ({ family, downloaded: false }));
@@ -175,4 +175,24 @@ test("読んでいる間に呼んでも 1 回しか読まず、終われば次�
   await panel.loadFonts();
   expect(fonts).toHaveBeenCalledTimes(2);
   expect(panel.fonts).toEqual(pc("A", "B"));
+});
+
+test("太さは 1 回だけ読み、読めなければ覚えずに読み直す", async () => {
+  const read = vi.mocked(fontWeights);
+  read.mockReset();
+  const fresh = freshPanel();
+  let fail!: (reason: Error) => void;
+  read.mockReturnValueOnce(new Promise((_, reject) => (fail = reject)));
+  const first = fresh.loadWeights("Jua");
+  void fresh.loadWeights("Jua");
+  expect(read).toHaveBeenCalledTimes(1);
+  fail(new Error("offline"));
+  await first;
+  expect(fresh.weights.has("Jua")).toBe(false);
+
+  read.mockResolvedValueOnce([400]);
+  await fresh.loadWeights("Jua");
+  await fresh.loadWeights("Jua");
+  expect(fresh.weights.get("Jua")).toEqual([400]);
+  expect(read).toHaveBeenCalledTimes(2);
 });

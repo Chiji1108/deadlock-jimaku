@@ -247,8 +247,15 @@ class Panel {
   /** フォントの持つ太さ。読み終えるまでは undefined */
   weights = new SvelteMap<string, number[]>();
 
+  private readingWeights = new Set<string>();
+
+  /** 読めなければ覚えず、次に開いたときに読み直す */
   loadWeights = async (family: string) => {
-    if (!this.weights.has(family)) this.weights.set(family, await fontWeights(family));
+    if (this.weights.has(family) || this.readingWeights.has(family)) return;
+    this.readingWeights.add(family);
+    const weights = await fontWeights(family).catch(() => undefined);
+    this.readingWeights.delete(family);
+    if (weights) this.weights.set(family, weights);
   };
 
   fontStyle = (target: FontTarget): FontStyle | undefined =>

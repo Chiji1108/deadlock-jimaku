@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import type { TextLook } from "../generated/TextLook";
-import { cleared, fontCss, shadowOn, textVars, weightChoices } from "./text-style";
+import { cleared, fontCss, shadowOn, syntheticBold, textVars, weightChoices } from "./text-style";
 
 const standard = (): TextLook => ({
   color: null,
@@ -30,7 +30,7 @@ test("選んだ値だけを変数にする", () => {
     "--outline-width": "calc(0.3 * 1em)",
     "--shadow-blur": "calc(0.4 * 1em)",
     "--shadow-color": "#ff0000",
-    "--edge": "calc(0.55 * 1em)",
+    "--edge": "calc(0.15 * 1em + 0.4 * 1em)",
   });
 });
 
@@ -51,7 +51,7 @@ test("帯でも選んだ縁取りと影を優先する", () => {
   look.shadow.enabled = true;
   expect(vars(textVars(look))).toEqual({
     "--outline-width": "calc(0.2 * 1em)",
-    "--edge": "calc(0.1 * 1em)",
+    "--edge": "calc(0.1 * 1em + 0 * 1em)",
   });
 });
 
@@ -71,12 +71,14 @@ test("帯の色と濃さは 1 つの色にする", () => {
   expect(vars(textVars(look))["--band-color"]).toBe("#1122339e");
 });
 
-test("ランクは --scale に比例する単位で渡す", () => {
+test("ランクは標準と同じく、ぼかしだけを --scale に比例させる", () => {
   const look = standard();
   look.outline.width = 0.25;
-  expect(vars(textVars(look, "calc(16px * var(--scale))"))["--outline-width"]).toBe(
-    "calc(0.25 * calc(16px * var(--scale)))",
-  );
+  look.shadow.blur = 0.5;
+  const rank = vars(textVars(look, "calc(16px * var(--scale))"));
+  expect(rank["--outline-width"]).toBe("calc(0.25 * 1em)");
+  expect(rank["--shadow-blur"]).toBe("calc(0.5 * calc(16px * var(--scale)))");
+  expect(rank["--edge"]).toBe("calc(0.125 * 1em + 0.5 * calc(16px * var(--scale)))");
 });
 
 test("太さと字間は p に直に書く", () => {
@@ -90,6 +92,16 @@ test("太さの選択肢に標準と選んでいる太さを足す", () => {
   expect(weightChoices([400, 900], 700, 500)).toEqual([400, 500, 700, 900]);
   expect(weightChoices(undefined, 700)).toEqual([400, 500, 700, 800, 900]);
   expect(weightChoices([], 700, 300)).toEqual([300, 400, 500, 700, 800, 900]);
+});
+
+test("太字を合成するのは、600 以上を求めて 600 以上の面がないときだけ", () => {
+  expect(syntheticBold([400], 700)).toBe(true);
+  expect(syntheticBold([400, 500], 600)).toBe(true);
+  expect(syntheticBold([400], 500)).toBe(false);
+  expect(syntheticBold([400, 600], 800)).toBe(false);
+  expect(syntheticBold([400, 900], 700)).toBe(false);
+  expect(syntheticBold([], 700)).toBe(false);
+  expect(syntheticBold(undefined, 700)).toBe(false);
 });
 
 test("標準に戻す差分は全部の項目を null にする", () => {

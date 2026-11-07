@@ -211,26 +211,26 @@ impl Default for ItemCards {
 impl ItemCards {
     pub const HOLD_SECONDS: std::ops::RangeInclusive<f32> = 3.0..=30.0;
 
+    fn validate(&self) -> Result<(), String> {
+        if !Self::HOLD_SECONDS.contains(&self.hold_seconds) {
+            return Err(format!("holdSeconds must be in {:?}", Self::HOLD_SECONDS));
+        }
+        match self.language.as_deref() {
+            Some(code) if lang::find(code).is_none() => Err(format!("unknown language: {code}")),
+            _ => Ok(()),
+        }
+    }
+
     fn apply(&self, patch: ItemCardsPatch) -> Result<Self, String> {
-        let mut next = self.clone();
-        if let Some(seconds) = patch.hold_seconds {
-            if !Self::HOLD_SECONDS.contains(&seconds) {
-                return Err(format!("holdSeconds must be in {:?}", Self::HOLD_SECONDS));
-            }
-            next.hold_seconds = seconds;
-        }
-        if let Some(code) = patch.language {
-            next.language = match code.as_str() {
-                "" => None,
-                _ if lang::find(&code).is_none() => {
-                    return Err(format!("unknown language: {code}"));
-                }
-                _ => Some(code),
-            };
-        }
-        if let Some(anchor) = patch.anchor {
-            next.anchor = anchor;
-        }
+        let next = Self {
+            hold_seconds: patch.hold_seconds.unwrap_or(self.hold_seconds),
+            language: match patch.language {
+                Some(code) => Some(code).filter(|c| !c.is_empty()),
+                None => self.language.clone(),
+            },
+            anchor: patch.anchor.unwrap_or(self.anchor),
+        };
+        next.validate()?;
         Ok(next)
     }
 }
@@ -444,21 +444,11 @@ impl SubtitleStyle {
         next.validate()?;
         Ok(next)
     }
-
-    /// 手で壊した値は、その部分だけ標準に戻す。言語ごとの項目は `parse` が選り分ける
-    fn sanitized(mut self) -> Self {
-        if self.look.validate().is_err() {
-            self.look = TextLook::default();
-        }
-        if !within(self.line_height, &LINE_HEIGHT) {
-            self.line_height = None;
-        }
-        self
-    }
 }
 
 impl RankStyle {
-    fn validate_font(&self) -> Result<(), String> {
+    fn validate(&self) -> Result<(), String> {
+        self.look.validate()?;
         self.font.validate()?;
         within(self.font.letter_spacing, &RANK_LETTER_SPACING)
             .then_some(())
@@ -467,19 +457,8 @@ impl RankStyle {
 
     fn apply(&self, patch: &Value) -> Result<Self, String> {
         let next: Self = merged(self, patch)?;
-        next.look.validate()?;
-        next.validate_font()?;
+        next.validate()?;
         Ok(next)
-    }
-
-    fn sanitized(mut self) -> Self {
-        if self.look.validate().is_err() {
-            self.look = TextLook::default();
-        }
-        if self.validate_font().is_err() {
-            self.font = FontStyle::default();
-        }
-        self
     }
 }
 
@@ -833,20 +812,18 @@ impl Settings {
                 *model = default;
             }
         }
-        // 読めない値が残っていると、ほかの項目を変えるときの検証も通らなくなる
-        if self.subtitle_display.validate().is_err() {
-            self.subtitle_display = SubtitleDisplay::default();
-        }
-        self.subtitle_style = self.subtitle_style.sanitized();
-        self.rank_style = self.rank_style.sanitized();
-        // 範囲外の秒数や知らない言語は、変更のときと同じ規則で読み直し、通らなければ既定値
-        let cards = ItemCardsPatch {
-            hold_seconds: Some(self.item_cards.hold_seconds),
-            language: Some(self.item_cards.language.clone().unwrap_or_default()),
-            anchor: Some(self.item_cards.anchor),
-        };
-        self.item_cards = ItemCards::default().apply(cards).unwrap_or_default();
+        self.subtitle_style
+            .languages
+            .retain(|_, font| *font != FontStyle::default());
         self
+    }
+
+    /// 変更と同じ範囲に収まっているか。読めない値が残ると、ほかの項目を変えるときの検証も通らない
+    fn valid(&self) -> bool {
+        self.subtitle_display.validate().is_ok()
+            && self.subtitle_style.validate().is_ok()
+            && self.rank_style.validate().is_ok()
+            && self.item_cards.validate().is_ok()
     }
 
     /// 操作パネルからの変更を当てる。読めない値はエラーにして何も変えない
@@ -1010,29 +987,57 @@ pub struct SettingsPatch {
     pub rank_region: Option<String>,
 }
 
-/// 0.3 は帯を `subtitleDisplay.background` に持っていた。帯を選んでいた人の見た目を保つ
-fn migrate(json: &mut Value) {
-    let band = json
+/// 0.3 は帯を `subtitleDisplay.background`、フォントを `overlayFonts` に持っていた。
+/// `subtitleStyle` があるファイルは移したあとなので変えない。フォントを移したら true
+fn migrate(json: &mut Value) -> bool {
+    let Some(settings) = json.as_object_mut() else {
+        return false;
+    };
+    let band = settings
         .get_mut("subtitleDisplay")
         .and_then(Value::as_object_mut)
         .and_then(|display| display.remove("background"));
-    if band.is_some_and(|b| b == "band") && json.get("subtitleStyle").is_none() {
-        json["subtitleStyle"] = serde_json::json!({ "background": { "enabled": true } });
+    let fonts = settings.remove("overlayFonts");
+    if settings.contains_key("subtitleStyle") {
+        return false;
     }
+    let languages: serde_json::Map<_, _> = fonts
+        .iter()
+        .filter_map(Value::as_object)
+        .flatten()
+        .map(|(language, font)| (language.clone(), serde_json::json!({ "font": font })))
+        .collect();
+    let moved = !languages.is_empty();
+    settings.insert(
+        "subtitleStyle".into(),
+        serde_json::json!({
+            "background": { "enabled": band.is_some_and(|b| b == "band") },
+            "languages": languages,
+        }),
+    );
+    moved
 }
 
-/// 手で編集された設定でも、読めない言語の行だけを捨てて、残りの言語の選択は残す
-fn drop_unreadable_languages(json: &mut Value) {
-    let languages = json
-        .pointer_mut("/subtitleStyle/languages")
-        .and_then(Value::as_object_mut);
-    if let Some(languages) = languages {
-        languages.retain(|language, font| {
-            lang::find(language).is_some()
-                && serde_json::from_value::<FontStyle>(font.clone())
-                    .is_ok_and(|font| font.validate().is_ok())
+/// 読めない項目だけを捨てて、ほかの項目は残す。項目を 1 つだけ書いた設定として、葉から順に確かめる
+fn keep_readable(value: &mut Value, path: &mut Vec<String>) -> bool {
+    if let Value::Object(fields) = value {
+        fields.retain(|key, field| {
+            path.push(key.clone());
+            let readable = keep_readable(field, path);
+            if !readable {
+                tracing::warn!(
+                    "ignoring unreadable setting {}; using the default",
+                    path.join(".")
+                );
+            }
+            path.pop();
+            readable
         });
     }
+    let only = path.iter().rev().fold(value.clone(), |inner, key| {
+        Value::Object(serde_json::Map::from_iter([(key.clone(), inner)]))
+    });
+    serde_json::from_value::<Settings>(only).is_ok_and(|settings| settings.valid())
 }
 
 /// ファイルがなければ既定値。壊れていたら脇に退けて既定値から始める。
@@ -1041,19 +1046,18 @@ fn drop_unreadable_languages(json: &mut Value) {
 /// JSON として読めなければ Err
 fn parse(bytes: &[u8]) -> serde_json::Result<Settings> {
     let mut json: Value = serde_json::from_slice(bytes)?;
-    migrate(&mut json);
-    drop_unreadable_languages(&mut json);
-    if let Some(fields) = json.as_object_mut() {
-        fields.retain(|key, value| {
-            let one = serde_json::json!({ key.as_str(): value.clone() });
-            let readable = serde_json::from_value::<Settings>(one).is_ok();
-            if !readable {
-                tracing::warn!("ignoring unreadable setting {key}; using the default");
-            }
-            readable
-        });
+    let moved_fonts = migrate(&mut json);
+    keep_readable(&mut json, &mut Vec::new());
+    let mut settings: Settings = serde_json::from_value(json)?;
+    if moved_fonts {
+        // 0.3 はランクも `overlayFonts` のランク名の言語のフォントで描いていた
+        let font = settings
+            .subtitle_style
+            .languages
+            .get(&settings.rank_language());
+        settings.rank_style.font.font = font.and_then(|font| font.font.clone());
     }
-    serde_json::from_value(json)
+    Ok(settings)
 }
 
 pub fn load(path: &Path) -> std::io::Result<Settings> {
@@ -1817,6 +1821,15 @@ mod tests {
         assert_eq!(s.subtitle_display.translation_font_size, 30);
         assert_eq!(s.subtitle_display.max_lines, 2);
         assert_eq!(s.subtitle_display.hold_seconds, 9.0);
+        let languages = || {
+            BTreeMap::from([(
+                "ja".to_owned(),
+                FontStyle {
+                    font: Some("Old Font".to_owned()),
+                    ..Default::default()
+                },
+            )])
+        };
         assert_eq!(
             s.subtitle_style,
             SubtitleStyle {
@@ -1827,19 +1840,125 @@ mod tests {
                     },
                     ..Default::default()
                 },
+                languages: languages(),
                 ..Default::default()
             }
         );
 
-        // 保存し直しても帯は残る
+        // 保存し直しても帯とフォントは残る
         save(&path, &s).unwrap();
         assert_eq!(load(&path).unwrap(), s);
 
         std::fs::write(&path, old("outline")).unwrap();
         let s = load(&path).unwrap();
         assert_eq!(s.subtitle_display.font_size, 52);
-        assert_eq!(s.subtitle_style, SubtitleStyle::default());
-        assert_eq!(s.rank_style, RankStyle::default());
+        assert_eq!(
+            s.subtitle_style,
+            SubtitleStyle {
+                languages: languages(),
+                ..Default::default()
+            }
+        );
+        assert_eq!(s.rank_style.look, TextLook::default());
+    }
+
+    #[test]
+    fn overlay_fonts_from_0_3_move_to_the_styles() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("settings.json");
+        let load_old = |settings: serde_json::Value| {
+            std::fs::write(&path, settings.to_string()).unwrap();
+            load(&path).unwrap()
+        };
+        let fonts = json!({ "ja": "Mincho", "en": "Georgia", "ko": "Jua" });
+        let rank_font = |s: &Settings| s.rank_style.font.font.clone();
+
+        let s = load_old(json!({ "overlayFonts": fonts, "micLanguage": "ja" }));
+        assert_eq!(font_of(&s, "ja").as_deref(), Some("Mincho"));
+        assert_eq!(font_of(&s, "en").as_deref(), Some("Georgia"));
+        assert_eq!(font_of(&s, "ko").as_deref(), Some("Jua"));
+        assert_eq!(
+            rank_font(&s).as_deref(),
+            Some("Mincho"),
+            "the spoken language"
+        );
+
+        let s = load_old(json!({ "overlayFonts": fonts, "rankLanguage": "en" }));
+        assert_eq!(
+            rank_font(&s).as_deref(),
+            Some("Georgia"),
+            "the rank language"
+        );
+
+        // 翻訳先から外した言語の名前は取らないので、0.3 も話す言語で描いていた
+        let s = load_old(json!({ "overlayFonts": fonts, "rankLanguage": "ko" }));
+        assert_eq!(rank_font(&s).as_deref(), Some("Mincho"));
+        let s = load_old(json!({
+            "overlayFonts": fonts, "rankLanguage": "ko", "translateTo": ["ko"]
+        }));
+        assert_eq!(rank_font(&s).as_deref(), Some("Jua"));
+
+        let s = load_old(json!({ "overlayFonts": { "en": "Georgia" }, "micLanguage": "ja" }));
+        assert_eq!(rank_font(&s), None, "no font for the rank language");
+
+        // 保存すると今の形だけが残り、読み直しても同じ
+        let s = load_old(json!({ "overlayFonts": fonts, "rankLanguage": "en" }));
+        save(&path, &s).unwrap();
+        let file = std::fs::read_to_string(&path).unwrap();
+        assert!(!file.contains("overlayFonts"));
+        assert_eq!(load(&path).unwrap(), s);
+    }
+
+    #[test]
+    fn broken_overlay_fonts_from_0_3_are_dropped_one_by_one() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("settings.json");
+        std::fs::write(
+            &path,
+            json!({
+                "micLanguage": "ko",
+                "rankAccount": 308_386_819,
+                "overlayFonts": {
+                    "ja": "Mincho",
+                    "ko": "bad\nname",
+                    "en": 1,
+                    "latin": "Georgia"
+                }
+            })
+            .to_string(),
+        )
+        .unwrap();
+        let s = load(&path).unwrap();
+        assert_eq!(s.rank_account, Some(308_386_819));
+        assert_eq!(
+            s.subtitle_style.languages.keys().collect::<Vec<_>>(),
+            ["ja"]
+        );
+        assert_eq!(font_of(&s, "ja").as_deref(), Some("Mincho"));
+        assert_eq!(s.rank_style.font.font, None);
+
+        std::fs::write(&path, r#"{ "overlayFonts": 1, "micLanguage": "en" }"#).unwrap();
+        let s = load(&path).unwrap();
+        assert_eq!(s.mic_language, "en");
+        assert!(s.subtitle_style.languages.is_empty());
+    }
+
+    #[test]
+    fn saved_styles_are_not_migrated_again() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("settings.json");
+        std::fs::write(
+            &path,
+            r#"{
+                "overlayFonts": { "ja": "Old Font" },
+                "subtitleStyle": { "languages": { "ja": { "font": "New Font" } } },
+                "rankStyle": { "font": "Rank Font" }
+            }"#,
+        )
+        .unwrap();
+        let s = load(&path).unwrap();
+        assert_eq!(font_of(&s, "ja").as_deref(), Some("New Font"));
+        assert_eq!(s.rank_style.font.font.as_deref(), Some("Rank Font"));
     }
 
     #[test]
@@ -1849,39 +1968,86 @@ mod tests {
         std::fs::write(
             &path,
             r##"{
-                "subtitleDisplay": { "fontSize": 32 },
+                "subtitleDisplay": { "fontSize": 200, "maxLines": 2 },
                 "subtitleStyle": {
                     "color": "red",
                     "lineHeight": 9,
+                    "outline": { "width": 9, "color": "#102030" },
+                    "shadow": { "enabled": "yes", "blur": 0.5 },
+                    "background": { "enabled": true, "opacity": 2 },
                     "languages": {
                         "ja": { "font": "Hiragino Sans", "weight": 500 },
-                        "zh-Hans": { "font": "bad\nname" },
+                        "zh-Hans": { "font": "bad\nname", "letterSpacing": 0.2 },
                         "ko": 1,
                         "en": { "weight": 5000 },
                         "latin": { "font": "Georgia" }
                     }
                 },
-                "rankStyle": { "font": "bad\nname", "color": "#ffe066" }
+                "rankStyle": {
+                    "font": "bad\nname",
+                    "weight": 500,
+                    "letterSpacing": 0.3,
+                    "color": "#ffe066",
+                    "outline": { "color": 1 }
+                },
+                "itemCards": { "holdSeconds": 0, "language": "en" }
             }"##,
         )
         .unwrap();
         let s = load(&path).unwrap();
-        assert_eq!(s.subtitle_display.font_size, 32);
-        assert_eq!(s.subtitle_style.look, TextLook::default());
-        assert_eq!(s.subtitle_style.line_height, None);
+        assert_eq!(s.subtitle_display.font_size, 40);
+        assert_eq!(s.subtitle_display.max_lines, 2);
         assert_eq!(
-            s.subtitle_style.languages,
-            BTreeMap::from([(
-                "ja".to_owned(),
-                FontStyle {
-                    font: Some("Hiragino Sans".to_owned()),
-                    weight: Some(500),
-                    letter_spacing: None,
-                }
-            )])
+            s.subtitle_style,
+            SubtitleStyle {
+                look: TextLook {
+                    outline: Outline {
+                        color: Some("#102030".to_owned()),
+                        ..Default::default()
+                    },
+                    shadow: Shadow {
+                        blur: Some(0.5),
+                        ..Default::default()
+                    },
+                    background: Background {
+                        enabled: true,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                languages: BTreeMap::from([
+                    (
+                        "ja".to_owned(),
+                        FontStyle {
+                            font: Some("Hiragino Sans".to_owned()),
+                            weight: Some(500),
+                            letter_spacing: None,
+                        }
+                    ),
+                    (
+                        "zh-Hans".to_owned(),
+                        FontStyle {
+                            letter_spacing: Some(0.2),
+                            ..Default::default()
+                        }
+                    ),
+                ]),
+                ..Default::default()
+            }
         );
-        assert_eq!(s.rank_style.font, FontStyle::default());
+        assert_eq!(
+            s.rank_style.font,
+            FontStyle {
+                weight: Some(500),
+                ..Default::default()
+            }
+        );
         assert_eq!(s.rank_style.look.color.as_deref(), Some("#ffe066"));
+        assert_eq!(s.item_cards.hold_seconds, ItemCards::default().hold_seconds);
+        assert_eq!(s.item_cards.language.as_deref(), Some("en"));
+        // 残った値は変更の検証を通る
+        s.apply(subtitle_style(json!({ "color": "#ffffff" })))
+            .unwrap();
     }
 
     #[test]

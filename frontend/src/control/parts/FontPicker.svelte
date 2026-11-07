@@ -15,7 +15,7 @@
     STANDARD,
   } from "../../lib/font-samples";
   import { cssString, fontSample } from "../../lib/overlay-fonts";
-  import { weightChoices } from "../../lib/text-style";
+  import { syntheticBold, weightChoices } from "../../lib/text-style";
   import { panel, type FontTarget } from "../panel.svelte";
   import ConfirmDialog from "./ConfirmDialog.svelte";
 
@@ -39,11 +39,9 @@
   const weight = $derived(panel.fontStyle(target)?.weight ?? undefined);
   const faces = $derived(panel.weights.get(value));
   const weights = $derived(weightChoices(faces, standardWeight, weight));
-  /** 面がないと分かっている太さは、太字を合成する */
-  const synthetic = (w: number) => faces?.length && !faces.includes(w);
-  const weightLabel = (w: number) => `${w}${synthetic(w) ? "（合成）" : ""}`;
+  const weightLabel = (w: number) => `${w}${syntheticBold(faces, w) ? "（合成）" : ""}`;
   const standardLabel = $derived(
-    `標準（${standardWeight}${synthetic(standardWeight) ? "・合成" : ""}）`,
+    `標準（${standardWeight}${syntheticBold(faces, standardWeight) ? "・合成" : ""}）`,
   );
 
   $effect(() => {
@@ -175,6 +173,9 @@
     type="single"
     value={weight ? String(weight) : ""}
     onValueChange={(v) => void panel.setFontStyle(target, { weight: v ? Number(v) : null })}
+    onOpenChange={(opening) => {
+      if (opening && value) void panel.loadWeights(value);
+    }}
   >
     <Select.Trigger class="w-36 shrink-0" aria-label="{label}の太さ">
       {weight ? weightLabel(weight) : standardLabel}

@@ -10,6 +10,7 @@
   import { fitSource, rankSize } from "../../lib/overlay-size";
   import RankBadge from "../../lib/RankBadge.svelte";
   import { connect } from "../../lib/ws";
+  import sampleImage from "../../../../web/public/media/rank-badge.webp";
 
   let rank = $state<RankState | undefined>();
   /** ランク名の言語と、出すもの。操作パネルで変え、サーバーから届く（名前がなければ英語） */
@@ -22,10 +23,11 @@
   /** 操作パネルのプレビュー（`?preview`）では、アカウントを入れる前でも見本を出しておく。OBS には出さない */
   const SAMPLE: RankState | undefined = new URLSearchParams(location.search).has("preview")
     ? {
-        badge: 0,
+        badge: 73,
         tier: 7,
         subrank: 3,
-        names: { ja: "アルカニスト", en: "Arcanist" },
+        names: { ja: "エミッサリー", en: "Emissary" },
+        image: sampleImage,
         progress: { value: 1240, max: 2000 },
       }
     : undefined;

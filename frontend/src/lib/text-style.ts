@@ -46,25 +46,27 @@ const alpha = (opacity: number) =>
 /** 確定前の文字は、選んだ色を落として見せる（標準の #c8c8c8 と同じくらいの比） */
 const PENDING_ALPHA = alpha(0.78);
 
+const scaled = (value: number | null | undefined, unit = "1em") =>
+  value === null || value === undefined ? undefined : `calc(${value} * ${unit})`;
+
 /**
- * オーバーレイに渡す CSS 変数。em の値は `unit` を掛ける。em を置くのは var() を使う要素なので、
- * 行ごとの文字の大きさに合う。ランクは標準の縁取りが根の要素の文字の大きさなので、そこに合わせる
+ * オーバーレイに渡す CSS 変数。em を置くのは var() を使う要素なので、行ごとの文字の大きさに合う。
+ * 影のぼかしは `blurUnit` を掛ける（ランクの標準の影は、縁取りと違って --scale に比例する）
  */
-export function textVars(look: TextLook, unit = "1em") {
+export function textVars(look: TextLook, blurUnit = "1em") {
   const { color, outline, shadow, background } = look;
   const on = shadowOn(look);
   const width = outline.width ?? (background.enabled ? BAND_OUTLINE : undefined);
-  const edge = (outline.width ?? 0) / 2 + (on ? (shadow.blur ?? 0) : 0);
+  const stroke = (outline.width ?? 0) / 2;
+  const blur = on ? (shadow.blur ?? 0) : 0;
   const custom = background.color !== null || background.opacity !== null;
-  const scaled = (value: number | null | undefined) =>
-    value === null || value === undefined ? undefined : `calc(${value} * ${unit})`;
   return declarations([
     ["--text-color", color],
     ["--pending-color", color && `${color}${PENDING_ALPHA}`],
     ["--outline-color", outline.color],
     ["--outline-width", scaled(width)],
     ["--text-shadow", on ? undefined : "none"],
-    ["--shadow-blur", on ? scaled(shadow.blur) : undefined],
+    ["--shadow-blur", on ? scaled(shadow.blur, blurUnit) : undefined],
     ["--shadow-color", on ? shadow.color : undefined],
     [
       "--band-color",
@@ -72,7 +74,7 @@ export function textVars(look: TextLook, unit = "1em") {
         ? `${background.color ?? COMMON.bandColor}${alpha(background.opacity ?? COMMON.bandOpacity)}`
         : undefined,
     ],
-    ["--edge", edge > 0 ? scaled(edge) : undefined],
+    ["--edge", stroke + blur > 0 ? `calc(${stroke} * 1em + ${blur} * ${blurUnit})` : undefined],
   ]);
 }
 
@@ -87,7 +89,11 @@ export const fontCss = (font?: FontStyle) =>
 /** フォントの面が分からないとき（標準のフォント）に並べる太さ */
 const COMMON_WEIGHTS = [400, 500, 700, 800, 900];
 
-/** 太さの選択肢。フォントの持つ面に、標準の太さと選んでいる太さを足す（なければ太字を合成する） */
+/** ブラウザが太字を合成するのは、600 以上を求めて 600 以上の面がないときだけ。ほかは近い面に置き換わる */
+export const syntheticBold = (faces: number[] | undefined, weight: number) =>
+  faces?.length ? weight >= 600 && faces.every((face) => face < 600) : false;
+
+/** 太さの選択肢。フォントの持つ面に、標準の太さと選んでいる太さを足す */
 export const weightChoices = (
   faces: number[] | undefined,
   standard: number,

@@ -15,8 +15,8 @@
     look,
   }: { rank: RankState; lang: string; content: RankContent; look?: RankStyle } = $props();
 
-  /** 標準の縁取りと影に合わせ、em は --scale に比例する 16px を元にする */
-  const EM = "calc(16px * var(--scale))";
+  /** 標準の影に合わせ、ぼかしは --scale に比例する 16px を元にする */
+  const BLUR_EM = "calc(16px * var(--scale))";
   const font = $derived(fontCss(look));
 
   /** リーダーボードの順位。ランク名と同じ言語にそろえる（日本語は「アジア 12位」、ほかは「#12 Asia」） */
@@ -42,7 +42,7 @@
   class="rank"
   lang={shown}
   data-background={look?.background.enabled ? "band" : undefined}
-  style={look && textVars(look, EM)}
+  style={look && textVars(look, BLUR_EM)}
 >
   {#if rank.image}<img class="badge" src={rank.image} alt="" />{/if}
   <!-- 1 行目: ランク名、2 行目: ゲージ（ポイントを重ねるか、数字なしで細くする）。出すものは操作パネルで選ぶ -->
@@ -90,6 +90,8 @@
     align-items: center;
     gap: calc(14px * var(--scale));
     padding: calc(8px * var(--scale));
+    /* 太い縁取りや大きな影が箱の右端で切れないよう、余白を超えた分だけ広げる */
+    padding-inline-end: max(calc(8px * var(--scale)), var(--edge, 0px));
     color: var(--text-color);
     -webkit-text-stroke: var(--outline-width, 0.16em) var(--outline-color);
     paint-order: stroke fill;

@@ -4,6 +4,7 @@ import {
   endonym,
   faceWeights,
   fontSample,
+  fontWeights,
   rankFontRules,
   subtitleFontRules,
 } from "./overlay-fonts";
@@ -103,6 +104,26 @@ test("フォントの読み込みは、前が終わってから次を始める",
   links[1]!.events.error!();
   await vi.waitFor(() => expect(links).toHaveLength(3));
   expect(links[2]!.href).toBe("/api/fonts/D/faces.css");
+  links[2]!.events.load!();
+  vi.unstubAllGlobals();
+});
+
+test("太さの読み込みも 1 本ずつで、失敗しても次へ進む", async () => {
+  const replies = [
+    { ok: false, status: 404 },
+    { ok: true, text: async () => "font-weight: 400 400;" },
+  ];
+  const finish: (() => void)[] = [];
+  const fetchFaces = vi.fn(() => new Promise((reply) => finish.push(() => reply(replies.shift()))));
+  vi.stubGlobal("fetch", fetchFaces);
+  const missing = fontWeights("A");
+  const found = fontWeights("B");
+  await vi.waitFor(() => expect(fetchFaces).toHaveBeenCalledTimes(1));
+  finish[0]!();
+  await expect(missing).rejects.toThrow("404");
+  await vi.waitFor(() => expect(fetchFaces).toHaveBeenCalledTimes(2));
+  finish[1]!();
+  await expect(found).resolves.toEqual([400]);
   vi.unstubAllGlobals();
 });
 

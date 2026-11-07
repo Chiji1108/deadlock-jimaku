@@ -47,7 +47,7 @@
   <Field.Field>
     <Field.Label>文字の見た目</Field.Label>
     {@render fonts()}
-    <Field.Description>フォントにない太さは、太字を合成して描きます</Field.Description>
+    <Field.Description>太字の面がないフォントは、太字を合成して描きます</Field.Description>
   </Field.Field>
 
   <ColorField
