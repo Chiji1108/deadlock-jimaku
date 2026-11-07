@@ -153,7 +153,6 @@ export async function prepare(
 
 /** マイクを使えない理由 */
 export type MicProblem =
-  | { type: "unreadable" }
   | { type: "missing" }
   | { type: "unopenable"; error: string }
   | { type: "silent" }
@@ -168,8 +167,6 @@ export interface MicTrouble {
 
 const micReason = ({ name, problem }: MicTrouble) => {
   switch (problem.type) {
-    case "unreadable":
-      return `マイクの許可が Chrome に届いていないので、『${name}』を探せません`;
     case "missing":
       return `Chrome に『${name}』が見つかりません`;
     case "unopenable":
@@ -214,7 +211,13 @@ const stopStream = (stream: MediaStream) => stream.getTracks().forEach((track) =
 const audioInputs = async () =>
   (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === "audioinput");
 
-/** マイクの一覧。許可のあとにしかラベルを読めない。アプリの外で開いたページなら、ここで許可を聞く。
+/** マイクの確認がまだ出ていない。出すと、利用者が答えるまで `getUserMedia` は返らない */
+export async function micUnanswered() {
+  const { state } = await navigator.permissions.query({ name: "microphone" as PermissionName });
+  return state === "prompt";
+}
+
+/** マイクの一覧。許可のあとにしかラベルを読めないので、まだならここで許可を聞く。
  * 開いたマイクはここで閉じる */
 async function readableInputs() {
   const inputs = await audioInputs();
@@ -343,7 +346,6 @@ export async function openMicrophone(
   }
   const inputs = await readableInputs();
   log(`Chrome のマイク: ${inputs.map((d) => d.label || "（名前なし）").join(" / ")}`);
-  if (!inputs.some((d) => d.label)) return fallBack({ name, problem: { type: "unreadable" } });
   const choices = realMics(inputs).map(({ deviceId, label }) => ({ deviceId, label }));
   if (chosen?.deviceId === DEFAULT_MIC.deviceId) return fallBack(undefined, choices, chosen);
   const remembered =

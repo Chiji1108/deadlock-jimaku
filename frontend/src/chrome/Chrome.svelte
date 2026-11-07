@@ -13,6 +13,7 @@
     DEFAULT_MIC,
     listen,
     micNotice,
+    micUnanswered,
     openMicrophone,
     prepare,
     rememberMic,
@@ -22,11 +23,13 @@
   } from "./speech";
   import { Translation } from "./translation";
 
+  /** ブロックしたあとは確認が出ない。OS で止めていても同じエラーになる */
+  const MIC_DENIED =
+    "マイクを使えません。このウィンドウのメニューの「サイトの設定」でマイクを許可してください。許可しているなら、OS の設定で Google Chrome のマイクを許可してください";
   /** 認識を続けられない理由ごとの案内 */
   const FATAL: Record<string, string> = {
-    "not-allowed": "マイクを使えません。OS の設定で Google Chrome のマイクを許可してください",
-    "service-not-allowed":
-      "マイクを使えません。OS の設定で Google Chrome のマイクを許可してください",
+    "not-allowed": MIC_DENIED,
+    "service-not-allowed": MIC_DENIED,
     "audio-capture": "マイクが見つかりません。つないでから、字幕を始め直してください",
     "language-not-supported": "この言語は Chrome の音声認識に対応していません",
   };
@@ -212,6 +215,9 @@
 
   async function open(s: Settings) {
     try {
+      if (await micUnanswered()) {
+        show({ state: "preparing", detail: "Chrome のウィンドウでマイクを「許可」してください" });
+      }
       return await openMicrophone(s.micDevice, logMic, chosenMic(s.micDevice));
     } catch (e) {
       const denied = e instanceof DOMException && e.name === "NotAllowedError";

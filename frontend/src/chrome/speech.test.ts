@@ -624,17 +624,6 @@ test("どのマイクも開けなければ、アプリのマイクの理由を�
   expect(streams.map((s) => s.audio)).toEqual([true]);
 });
 
-test("マイクの名前を読めないなら、見つからないではなく許可が届いていないと返す", async () => {
-  const noLabels = [{ deviceId: "", label: "" }];
-  fakeDevices(noLabels);
-  const log = vi.fn();
-  const microphone = await openMicrophone("A", log);
-  expect(microphone.trouble).toEqual({ name: "A", problem: { type: "unreadable" } });
-  expect(microphone.track).toBeUndefined();
-  expect(microphone.choices).toEqual([]);
-  expect(micNotice(microphone.trouble!)).toContain("マイクの許可が Chrome に届いていないので");
-});
-
 test("既定のマイクを選んであれば、アプリのマイクが見つかっても既定のマイクを開く", async () => {
   const { streams } = fakeDevices(WINDOWS_MICS);
   const microphone = await openMicrophone("マイク (Yeti Stereo)", undefined, DEFAULT_MIC);

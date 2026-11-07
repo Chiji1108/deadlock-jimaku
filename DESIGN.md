@@ -568,7 +568,11 @@ interface Enriched {
 
 **起動:** `transcriptionEnabled` がオンで Chrome を使うモードなら、アプリが Chrome を起動し、止めたら閉じる（`Store::sync_chrome`。字幕の処理とは別に持つので、設定を変えて字幕の処理を作り直してもウィンドウは閉じない）。全画面のゲームに隠れると Chrome が処理を絞ることがあるので、省電力の働きを切るフラグを付ける。フラグは起動時にしか効かないので、専用のプロファイル（`chrome-profile`）を使う。`--app` で、タブのない小さなウィンドウにする。Chrome を起動できなければ、操作パネルに「Google Chrome が必要です」とインストールのページへのボタンを出す（`LiveState::Missing`）。字幕の途中で閉じられたら「Chrome が閉じられました」と出し、「Chrome を開き直す」で戻せる。ハイブリッドで確定の字幕が止まったら Chrome も閉じる（確定の字幕にならない音声を Google に送らない）。
 
-**自動化:** マイクは `--auto-accept-camera-and-microphone-capture` で開けるようにする（専用のプロファイルで字幕のページしか開かない）。このフラグは権限として残さず、権限がないと `enumerateDevices` がマイクの名前と ID を隠すので、CDP の `Browser.setPermission` でページの origin に `microphone` も許す（`grantPermissions` はほかの権限を拒み、`--use-fake-ui-for-media-stream` はこのフラグと併用できず Chrome の警告の対象）。ページは許可より先に動き始めるので、許可してから `Page.navigate` で読み直す（待ちのタイマーや権限の変更の監視を持たない）。許せなかったらラベルが空のままなので、ページは既定のマイクで動いて「許可が届いていない」と出す。翻訳モデルのダウンロードにはユーザーの操作が要るので、開発者ツールの仕組み（CDP。`--remote-debugging-port=0`）の `userGesture` で満たす。翻訳先を増やすとまた要るので、Chrome が閉じるまで 1 秒ごとに確かめ、切れたら閉じられたと分かる。失敗したときのために、ページに手で押せるボタンも置く。
+**マイクの許可:** 初回に Chrome の確認で利用者が「許可」を押す。許可は専用のプロファイルに保存されるので、次回からは聞かれない。権限がないと `enumerateDevices` がマイクの名前と ID を隠すので、ページは一覧を読む前に `getUserMedia` で確認を出し、答えを待つ間は「許可してください」と出す。ブロックしたら確認は出なくなるので、サイトの設定か OS の設定で許可するよう案内する。
+
+- CDP で許可しない。`--auto-accept-camera-and-microphone-capture` は権限として残らず、`Browser.setPermission` の許可は CDP の接続が切れると消える。さらに、ページは許可より先に動き始めるので読み直しが要るが、最初のページの読み込み中に `Page.navigate` が当たると renderer が `STATUS_ACCESS_VIOLATION` で落ちた（Windows の Chrome 158。起動から 226〜236 ms の送信で落ち、246 ms 以降は 16 回落ちなかった）
+
+**自動化:** 翻訳モデルのダウンロードにはユーザーの操作が要るので、開発者ツールの仕組み（CDP。`--remote-debugging-port=0`）の `userGesture` で満たす。翻訳先を増やすとまた要るので、Chrome が閉じるまで 1 秒ごとに確かめ、切れたら閉じられたと分かる。失敗したときのために、ページに手で押せるボタンも置く。
 
 **ページ:** `core` が配る `/chrome` のページが `SpeechRecognition`（`continuous`、`interimResults`、`lang` は話す言語）と `Translator` を動かす。文は WS `/api/chrome/ws` でやりとりする（`ChromeMsg`、`ChromeCommand`）。順番が保たれ、切れたらページが閉じられたと分かるので、WS にする。`/ws` と同じ `local_only` の内側に置く。
 
