@@ -69,9 +69,9 @@ impl Browser {
             .spawn()?;
         let watcher = tokio::spawn(async move {
             let (detail, error) = match connect(&profile).await {
-                Ok((cdp, session)) => (
+                Ok((cdp, page)) => (
                     "Chrome が閉じられました",
-                    drive(cdp, &session).await.unwrap_err(),
+                    drive(cdp, &page).await.unwrap_err(),
                 ),
                 Err(e) => ("Chrome に接続できません", e),
             };
@@ -141,7 +141,7 @@ fn arguments(profile: &Path) -> Vec<String> {
 }
 
 /// ページのタブにつなぐ
-async fn connect(profile: &Path) -> anyhow::Result<(Cdp, String)> {
+async fn connect(profile: &Path) -> anyhow::Result<(Cdp, Page)> {
     let port = active_port(profile).await?;
     let version: Value = crate::http()
         .get(format!("http://127.0.0.1:{port}/json/version"))
@@ -154,22 +154,44 @@ async fn connect(profile: &Path) -> anyhow::Result<(Cdp, String)> {
         .context("no debugger url")?;
     let (socket, _) = tokio_tungstenite::connect_async(url).await?;
     let mut cdp = Cdp { socket, id: 0 };
-    let session = cdp.page_session().await?;
-    Ok((cdp, session))
+    // つなぐ前に頼むので、つないだあとにタブが閉じられれば必ず知らせが届く
+    cdp.call(
+        None,
+        "Target.setDiscoverTargets",
+        json!({ "discover": true }),
+    )
+    .await?;
+    let page = cdp.page().await?;
+    Ok((cdp, page))
 }
 
 /// ページの準備（クリックが要るモデルのダウンロード）を始めさせる。翻訳先を増やすと
-/// またダウンロードが要るので、Chrome が閉じるまで続ける（閉じたことも、これで分かる）
-async fn drive(mut cdp: Cdp, session: &str) -> anyhow::Result<std::convert::Infallible> {
+/// またダウンロードが要るので、Chrome が閉じるまで続ける。応答では閉じたと判断しない。
+/// ページが落ちると応答は来ず、読み込み直すと `Target crashed` が返る（DESIGN.md 9.6）
+async fn drive(mut cdp: Cdp, page: &Page) -> anyhow::Result<std::convert::Infallible> {
+    let mut check = tokio::time::interval(CHECK_INTERVAL);
     loop {
-        cdp.call(
-            Some(session),
-            "Runtime.evaluate",
-            json!({ "expression": "window.jimakuStart?.()", "userGesture": true }),
-        )
-        .await?;
-        tokio::time::sleep(CHECK_INTERVAL).await;
+        tokio::select! {
+            _ = check.tick() => {
+                let start = json!({ "expression": "window.jimakuStart?.()", "userGesture": true });
+                cdp.send(Some(&page.session), "Runtime.evaluate", start).await?;
+            }
+            message = cdp.socket.next() => {
+                let Message::Text(text) = message.context("chrome closed")?? else {
+                    continue;
+                };
+                if destroyed(&text, &page.target) {
+                    anyhow::bail!("the page was closed");
+                }
+            }
+        }
     }
+}
+
+fn destroyed(message: &str, target: &str) -> bool {
+    serde_json::from_str::<Value>(message).is_ok_and(|event| {
+        event["method"] == "Target.targetDestroyed" && event["params"]["targetId"] == target
+    })
 }
 
 /// Chrome が開いた CDP のポートはプロファイルのファイルに書かれる
@@ -193,19 +215,35 @@ struct Cdp {
     id: u64,
 }
 
+/// 字幕のページのタブ
+struct Page {
+    target: String,
+    session: String,
+}
+
 impl Cdp {
-    async fn call(
+    async fn send(
         &mut self,
         session: Option<&str>,
         method: &str,
         params: Value,
-    ) -> anyhow::Result<Value> {
+    ) -> anyhow::Result<()> {
         self.id += 1;
         let mut message = json!({ "id": self.id, "method": method, "params": params });
         if let Some(session) = session {
             message["sessionId"] = json!(session);
         }
         self.socket.send(Message::text(message.to_string())).await?;
+        Ok(())
+    }
+
+    async fn call(
+        &mut self,
+        session: Option<&str>,
+        method: &str,
+        params: Value,
+    ) -> anyhow::Result<Value> {
+        self.send(session, method, params).await?;
         while let Some(message) = self.socket.next().await {
             let Message::Text(text) = message? else {
                 continue;
@@ -220,7 +258,7 @@ impl Cdp {
     }
 
     /// 字幕のページのタブにつなぐ
-    async fn page_session(&mut self) -> anyhow::Result<String> {
+    async fn page(&mut self) -> anyhow::Result<Page> {
         for _ in 0..ATTEMPTS {
             let targets = self.call(None, "Target.getTargets", json!({})).await?;
             let target = targets["targetInfos"]
@@ -236,10 +274,13 @@ impl Cdp {
                         json!({ "targetId": target["targetId"], "flatten": true }),
                     )
                     .await?;
-                return session["sessionId"]
-                    .as_str()
-                    .map(ToOwned::to_owned)
-                    .context("no session");
+                return Ok(Page {
+                    target: target["targetId"].as_str().context("no target")?.to_owned(),
+                    session: session["sessionId"]
+                        .as_str()
+                        .context("no session")?
+                        .to_owned(),
+                });
             }
             tokio::time::sleep(RETRY).await;
         }
@@ -467,6 +508,78 @@ mod tests {
             assert!(args.iter().any(|a| a == flag), "{flag}");
         }
         assert!(!args.iter().any(|a| a.contains("auto-accept")));
+    }
+
+    /// 偽の Chrome を `drive` で見張る
+    async fn watch_fake_chrome() -> (JoinHandle<anyhow::Error>, FakeChrome) {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("ws://{}", listener.local_addr().unwrap());
+        let client = tokio::spawn(async move {
+            let (socket, _) = tokio_tungstenite::connect_async(url).await.unwrap();
+            let page = Page {
+                target: "page".into(),
+                session: "session".into(),
+            };
+            drive(Cdp { socket, id: 0 }, &page).await.unwrap_err()
+        });
+        let (socket, _) = listener.accept().await.unwrap();
+        let chrome = tokio_tungstenite::accept_async(socket).await.unwrap();
+        (client, chrome)
+    }
+
+    type FakeChrome = tokio_tungstenite::WebSocketStream<tokio::net::TcpStream>;
+
+    async fn next_check(chrome: &mut FakeChrome) -> Value {
+        let Some(Ok(Message::Text(text))) = chrome.next().await else {
+            panic!("no command");
+        };
+        let command: Value = serde_json::from_str(&text).unwrap();
+        assert_eq!(command["method"], "Runtime.evaluate");
+        assert_eq!(command["sessionId"], "session");
+        command["id"].clone()
+    }
+
+    fn target_destroyed(target: &str) -> Message {
+        let event = json!({
+            "method": "Target.targetDestroyed",
+            "params": { "targetId": target },
+        });
+        Message::text(event.to_string())
+    }
+
+    /// Chrome 156 の測定: ページが落ちると応答は来ず、読み込み直すと `Target crashed` が返る
+    #[tokio::test]
+    async fn a_failed_or_silent_page_is_not_a_closed_window() {
+        let (client, mut chrome) = watch_fake_chrome().await;
+        let id = next_check(&mut chrome).await;
+        let crashed = json!({ "id": id, "error": { "code": -32000, "message": "Target crashed" } });
+        chrome
+            .send(Message::text(crashed.to_string()))
+            .await
+            .unwrap();
+        next_check(&mut chrome).await;
+        // 応答しなくても、次も確かめる
+        next_check(&mut chrome).await;
+        chrome.send(target_destroyed("another")).await.unwrap();
+        next_check(&mut chrome).await;
+        assert!(!client.is_finished());
+
+        chrome.send(target_destroyed("page")).await.unwrap();
+        tokio::time::timeout(Duration::from_secs(5), client)
+            .await
+            .expect("the closed page ends the watch")
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn the_end_of_chrome_ends_the_watch() {
+        let (client, mut chrome) = watch_fake_chrome().await;
+        next_check(&mut chrome).await;
+        drop(chrome);
+        tokio::time::timeout(Duration::from_secs(5), client)
+            .await
+            .expect("the lost connection ends the watch")
+            .unwrap();
     }
 
     async fn subtitles() -> (Subtitles, tokio::sync::broadcast::Receiver<ServerMsg>) {

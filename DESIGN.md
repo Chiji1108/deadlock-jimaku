@@ -577,7 +577,10 @@ interface Enriched {
 
 - CDP で許可しない。`--auto-accept-camera-and-microphone-capture` は権限として残らず、`Browser.setPermission` の許可は CDP の接続が切れると消える。さらに、ページは許可より先に動き始めるので読み直しが要るが、最初のページの読み込み中に `Page.navigate` が当たると renderer が `STATUS_ACCESS_VIOLATION` で落ちた（Windows の Chrome 158。起動から 226〜236 ms の送信で落ち、246 ms 以降は 16 回落ちなかった）
 
-**自動化:** 翻訳モデルのダウンロードにはユーザーの操作が要るので、開発者ツールの仕組み（CDP。`--remote-debugging-port=0`）の `userGesture` で満たす。翻訳先を増やすとまた要るので、Chrome が閉じるまで 1 秒ごとに確かめ、切れたら閉じられたと分かる。失敗したときのために、ページに手で押せるボタンも置く。
+**自動化:** 翻訳モデルのダウンロードにはユーザーの操作が要るので、開発者ツールの仕組み（CDP。`--remote-debugging-port=0`）の `userGesture` で満たす。翻訳先を増やすとまた要るので、Chrome が閉じるまで 1 秒ごとに確かめる。失敗したときのために、ページに手で押せるボタンも置く。
+
+- 閉じられたと判断するのは、ページのタブの `Target.targetDestroyed` か CDP の接続が切れたときだけ（`drive`）。`Runtime.evaluate` の応答は読まない。Chrome 156（Mac）の実測では、ページの再読み込みでは失敗しない（1 シナリオ約 550 回）。ページが落ちると応答が来なくなり、そのあと読み込み直すと、待っていた応答に `-32000 Target crashed` が返る。このときプロセス、タブ、セッションはどれも生きていて、同じセッションで動き続ける。ページが固まったままウィンドウを閉じると応答はそのまま来ず、Mac ではウィンドウを閉じてもプロセスと接続が残る。つまり、応答を待つ形では、落ちたページで見張りが止まり、閉じたことにも気づけず、読み込み直すと閉じたと誤る
+- ページが落ちただけのときは閉じたと扱わない。Chrome のウィンドウの「再読み込み」か「Chrome を開き直す」で戻る
 
 **ページ:** `core` が配る `/chrome` のページが `SpeechRecognition`（`continuous`、`interimResults`、`lang` は話す言語）と `Translator` を動かす。文は WS `/api/chrome/ws` でやりとりする（`ChromeMsg`、`ChromeCommand`）。順番が保たれ、切れたらページが閉じられたと分かるので、WS にする。`/ws` と同じ `local_only` の内側に置く。
 
