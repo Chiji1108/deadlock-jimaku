@@ -35,11 +35,16 @@
     </Card.Action>
   </Card.Header>
   <Card.Content class="flex flex-col gap-6">
-    <OverlayPreview
-      src="/overlay/subtitles.html"
-      title="フォントのプレビュー"
-      size={SUBTITLE_SIZE}
-    />
+    <div class="flex flex-col gap-2">
+      <OverlayPreview
+        src="/overlay/subtitles.html"
+        title="フォントのプレビュー"
+        size={SUBTITLE_SIZE}
+      />
+      <p class="text-sm text-muted-foreground">
+        インストールしたばかりのフォントは、OBS を再起動すると配信に出ます。
+      </p>
+    </div>
 
     <Field.Group>
       {#each languages as language (language)}
@@ -57,8 +62,5 @@
         </Field.Field>
       {/each}
     </Field.Group>
-    <p class="text-sm text-muted-foreground">
-      インストールしたばかりのフォントは、OBS を再起動すると配信に出ます。
-    </p>
   </Card.Content>
 </Card.Root>
