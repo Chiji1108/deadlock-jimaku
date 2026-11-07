@@ -438,7 +438,7 @@ async fn languages() -> Json<Vec<LangCode>> {
     Json(lang::LANGUAGES.iter().map(|l| l.code.to_owned()).collect())
 }
 
-async fn fonts() -> Json<&'static [String]> {
+async fn fonts() -> Json<Vec<String>> {
     Json(fonts::installed().await)
 }
 

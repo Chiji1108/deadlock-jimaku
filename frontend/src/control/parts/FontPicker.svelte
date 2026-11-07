@@ -3,17 +3,23 @@
   import { Command, Popover } from "bits-ui";
   import CheckIcon from "@lucide/svelte/icons/check";
   import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
+  import type { FontGroup } from "../../generated/FontGroup";
+  import { cssString, FONT_SWATCHES, groupLang } from "../../lib/overlay-fonts";
   import type { FontList } from "../panel.svelte";
 
   let {
     id,
+    group,
     value = "",
     families,
+    onopen,
     onchange,
   }: {
     id: string;
+    group: FontGroup;
     value?: string;
     families: FontList;
+    onopen: () => void;
     onchange: (family: string) => void;
   } = $props();
 
@@ -28,7 +34,7 @@
   );
   const note = $derived.by(() => {
     if (families === "loading") return "読み込み中…";
-    if (families === "failed") return "読み込めませんでした。アプリを開き直してください";
+    if (families === "failed") return "読み込めませんでした。開き直すと読み直します";
     if (families.length === 0) return "この PC のフォントが見つかりません";
     if (matches.length === 0) return "見つかりません";
     return matches.length > MAX_SHOWN ? "検索するとほかのフォントも出ます" : undefined;
@@ -41,18 +47,34 @@
   }
 </script>
 
+<!-- 画面外の行は content-visibility で描かず、見本のフォントも読み込ませない。行の高さは固定なので、スクロールの量は変わらない -->
 {#snippet option(family: string, label: string)}
   <Command.Item
     value={label}
-    class="relative flex cursor-default items-center rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden select-none data-selected:bg-accent data-selected:text-accent-foreground"
+    class="relative flex h-8 cursor-default items-baseline gap-3 rounded-sm pr-8 pl-2 text-sm leading-8 outline-hidden select-none [contain-intrinsic-size:auto_2rem] [content-visibility:auto] data-selected:bg-accent data-selected:text-accent-foreground"
     onSelect={() => choose(family)}
   >
-    {label}
-    {#if family === value}<CheckIcon class="absolute right-2 size-4" />{/if}
+    <span class="min-w-0 flex-1 truncate">{label}</span>
+    {#if family}
+      <!-- 標準の候補に続けない。無い字が別のフォントで描かれると、このフォントの見本に見える -->
+      <span
+        aria-hidden="true"
+        lang={groupLang(group)}
+        class="max-w-1/2 shrink-0 overflow-clip text-base/8 whitespace-nowrap"
+        style:font-family={cssString(family)}>{FONT_SWATCHES[group]}</span
+      >
+    {/if}
+    {#if family === value}<CheckIcon class="absolute top-2 right-2 size-4" />{/if}
   </Command.Item>
 {/snippet}
 
-<Popover.Root bind:open onOpenChange={() => (query = "")}>
+<Popover.Root
+  bind:open
+  onOpenChange={(opening) => {
+    query = "";
+    if (opening) onopen();
+  }}
+>
   <Popover.Trigger
     {id}
     class="flex h-9 w-full items-center justify-between gap-1.5 rounded-md border border-input bg-transparent py-2 pr-2 pl-2.5 text-sm whitespace-nowrap shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30 dark:hover:bg-input/50"

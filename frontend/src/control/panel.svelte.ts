@@ -37,6 +37,7 @@ class Panel {
   devices = $state<string[] | undefined>();
   /** 選べるフォント */
   fonts = $state<FontList>("loading");
+  private fontsLoading = false;
   server = $state<Status>("connecting");
   /** 字幕を始められなかった・止まった理由 */
   transcriptionError = $state<TranscriptionError | undefined>();
@@ -195,8 +196,14 @@ class Panel {
     return saved;
   };
 
+  /** 読み直しの間も、失敗しても、すでにある一覧は出したままにする */
   loadFonts = async () => {
-    this.fonts = await api.fonts().catch(() => "failed" as const);
+    if (this.fontsLoading) return;
+    this.fontsLoading = true;
+    const fonts = await api.fonts().catch(() => undefined);
+    this.fontsLoading = false;
+    if (fonts) this.fonts = fonts;
+    else if (typeof this.fonts === "string") this.fonts = "failed";
   };
 
   refreshGift = async () => {

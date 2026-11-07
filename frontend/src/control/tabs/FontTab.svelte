@@ -6,7 +6,7 @@
   import * as Field from "$lib/components/ui/field";
   import type { FontGroup } from "../../generated/FontGroup";
   import { SUBTITLE_SIZE } from "../../lib/overlay-size";
-  import { applyOverlayFonts, FONT_SAMPLES, fontGroup } from "../../lib/overlay-fonts";
+  import { applyOverlayFonts, FONT_SAMPLES, fontGroup, groupLang } from "../../lib/overlay-fonts";
   import FontPicker from "../parts/FontPicker.svelte";
   import OverlayPreview from "../parts/OverlayPreview.svelte";
   import { panel } from "../panel.svelte";
@@ -52,11 +52,13 @@
           <Field.Label for="font-{group}">{label(group)}</Field.Label>
           <FontPicker
             id="font-{group}"
+            {group}
             value={s.overlayFonts[group]}
             families={panel.fonts}
+            onopen={panel.loadFonts}
             onchange={(family) => panel.update({ overlayFonts: { [group]: family } })}
           />
-          <p lang={group === "latin" ? "en" : group} class="truncate text-lg font-bold">
+          <p lang={groupLang(group)} class="truncate text-lg font-bold">
             {FONT_SAMPLES[group]}
           </p>
         </Field.Field>

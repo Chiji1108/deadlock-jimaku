@@ -13,13 +13,26 @@ export const FONT_SAMPLES = {
   th: "ตัวละครที่ฉันชอบที่สุดคือเฮซ",
 } satisfies Record<FontGroup, string>;
 
+/** フォントの一覧の行に添える、字形を比べるための短い見本 */
+export const FONT_SWATCHES = {
+  latin: "Aa",
+  ja: "あア亜",
+  "zh-Hans": "汉字",
+  "zh-Hant": "漢字",
+  ko: "한글",
+  th: "ไทย",
+} satisfies Record<FontGroup, string>;
+
 const GROUPS = Object.keys(FONT_SAMPLES) as FontGroup[];
 
 /** その言語の文字をどのフォントで描くか（lang.css の区分） */
 export const fontGroup = (lang: string): FontGroup => GROUPS.find((g) => g === lang) ?? "latin";
 
+/** 見本の文字に付ける lang */
+export const groupLang = (group: FontGroup) => (group === "latin" ? "en" : group);
+
 /** 制御文字はサーバーが拒否するので、エスケープするのは引用符と \ だけ */
-const cssString = (name: string) => `"${name.replace(/["\\]/g, "\\$&")}"`;
+export const cssString = (name: string) => `"${name.replace(/["\\]/g, "\\$&")}"`;
 
 export function applyOverlayFonts(
   fonts: Fonts,

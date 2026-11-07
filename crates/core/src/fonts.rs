@@ -1,7 +1,5 @@
 //! オーバーレイで選べるフォントの一覧（DESIGN.md 6.3）。
 
-use tokio::sync::OnceCell;
-
 use crate::settings::valid_font_name;
 
 /// 設定に保存できる名前だけを、同じ名前（CSS は大文字と小文字を区別しない）は 1 つにまとめて
@@ -28,16 +26,11 @@ fn scan() -> Vec<String> {
     )
 }
 
-/// PC のフォントを全部開くので、最初に呼ばれたときに 1 回だけ読む（入れたフォントは再起動で増える）
-pub async fn installed() -> &'static [String] {
-    static FONTS: OnceCell<Vec<String>> = OnceCell::const_new();
-    FONTS
-        .get_or_init(|| async {
-            tokio::task::spawn_blocking(scan)
-                .await
-                .expect("blocking task")
-        })
+/// PC のフォントを全部開くので別のスレッドで読む。入れたばかりのフォントも出るよう、毎回読み直す
+pub async fn installed() -> Vec<String> {
+    tokio::task::spawn_blocking(scan)
         .await
+        .expect("blocking task")
 }
 
 #[cfg(test)]
