@@ -24,6 +24,12 @@ test("選んだ言語だけに変数を設定し、標準の候補へ続ける",
   expect([...style.values]).toEqual([["--font-ja", '"Hiragino Mincho ProN",']]);
 });
 
+test("引用符と \\ を含む名前は CSS の文字列にエスケープする", () => {
+  const style = fakeStyle();
+  applyOverlayFonts({ ja: String.raw`A"B\C` }, style);
+  expect(style.values.get("--font-ja")).toBe(String.raw`"A\"B\\C",`);
+});
+
 test("標準に戻すと変数を消す", () => {
   const style = fakeStyle();
   applyOverlayFonts({ ja: "Hiragino Sans", latin: "Georgia" }, style);

@@ -3,6 +3,7 @@
   import { Command, Popover } from "bits-ui";
   import CheckIcon from "@lucide/svelte/icons/check";
   import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
+  import type { FontList } from "../panel.svelte";
 
   let {
     id,
@@ -12,7 +13,7 @@
   }: {
     id: string;
     value?: string;
-    families: string[];
+    families: FontList;
     onchange: (family: string) => void;
   } = $props();
 
@@ -22,7 +23,16 @@
   let open = $state(false);
   let query = $state("");
   const words = $derived(query.trim().toLowerCase());
-  const matches = $derived(families.filter((f) => f.toLowerCase().includes(words)));
+  const matches = $derived(
+    typeof families === "string" ? [] : families.filter((f) => f.toLowerCase().includes(words)),
+  );
+  const note = $derived.by(() => {
+    if (families === "loading") return "読み込み中…";
+    if (families === "failed") return "読み込めませんでした。アプリを開き直してください";
+    if (families.length === 0) return "この PC のフォントが見つかりません";
+    if (matches.length === 0) return "見つかりません";
+    return matches.length > MAX_SHOWN ? "検索するとほかのフォントも出ます" : undefined;
+  });
 
   function choose(family: string) {
     open = false;
@@ -66,11 +76,7 @@
             {#each matches.slice(0, MAX_SHOWN) as family (family)}
               {@render option(family, family)}
             {/each}
-            {#if matches.length === 0 || matches.length > MAX_SHOWN}
-              <p class="px-2 py-1.5 text-sm text-muted-foreground">
-                {matches.length === 0 ? "見つかりません" : "検索するとほかのフォントも出ます"}
-              </p>
-            {/if}
+            {#if note}<p class="px-2 py-1.5 text-sm text-muted-foreground">{note}</p>{/if}
           </Command.Viewport>
         </Command.List>
       </Command.Root>

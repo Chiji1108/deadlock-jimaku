@@ -27,11 +27,11 @@
   const number = (n: number) => n.toLocaleString("en-US");
 </script>
 
-<div class="rank">
+<div class="rank" lang={shown}>
   {#if rank.image}<img class="badge" src={rank.image} alt="" />{/if}
   <!-- 1 行目: ランク名、2 行目: ゲージ（ポイントを重ねるか、数字なしで細くする）。出すものは操作パネルで選ぶ -->
   {#if content !== "icon"}<div class="text">
-      {#if label}<p class="name" lang={shown}>{label}</p>{/if}
+      {#if label}<p class="name">{label}</p>{/if}
       {#if content === "name"}
         <!-- 名前だけ -->
       {:else if rank.leaderboard}

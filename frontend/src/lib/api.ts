@@ -1,4 +1,3 @@
-import type { FontEntry } from "../generated/FontEntry";
 import type { GiftStatus } from "../generated/GiftStatus";
 import type { Provider } from "../generated/Provider";
 import type { SettingsPatch } from "../generated/SettingsPatch";
@@ -34,7 +33,7 @@ export const api = {
   /** 対応している言語のコード */
   languages: () => request<string[]>("/api/languages"),
   /** 選べるフォント */
-  fonts: () => request<FontEntry[]>("/api/fonts"),
+  fonts: () => request<string[]>("/api/fonts"),
   demo: () => fetch("/api/demo", { method: "POST" }),
   /** 聞き取りのページを Chrome で開く */
   openChrome: () => post("/api/chrome/open"),

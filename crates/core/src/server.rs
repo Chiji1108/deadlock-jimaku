@@ -16,7 +16,7 @@ use serde_json::Value;
 use tokio::net::TcpListener;
 use tokio::sync::broadcast::error::RecvError;
 
-use crate::fonts::{self, FontEntry};
+use crate::fonts;
 use crate::secrets::{self, Provider};
 use crate::settings::SettingsPatch;
 use crate::share::{self, GiftStatus, Refused, SharedCode};
@@ -438,7 +438,7 @@ async fn languages() -> Json<Vec<LangCode>> {
     Json(lang::LANGUAGES.iter().map(|l| l.code.to_owned()).collect())
 }
 
-async fn fonts() -> Json<&'static [FontEntry]> {
+async fn fonts() -> Json<&'static [String]> {
     Json(fonts::installed().await)
 }
 
@@ -634,14 +634,14 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn lists_the_fonts_of_this_pc() {
+    async fn serves_the_fonts_as_a_list_of_names() {
         let addr = serve_on_any_port().await;
         let res = reqwest::get(format!("http://{addr}/api/fonts"))
             .await
             .unwrap();
         assert_eq!(res.status(), StatusCode::OK);
-        let fonts: Vec<Value> = res.json().await.unwrap();
-        assert!(fonts.iter().all(|f| f["source"] == "installed"));
+        // 中身は PC によるので、一覧の作り方は fonts.rs のテストで確かめる
+        let _: Vec<String> = res.json().await.unwrap();
     }
 
     async fn post_reset(addr: &str) -> reqwest::Response {

@@ -1,47 +1,23 @@
 //! オーバーレイで選べるフォントの一覧（DESIGN.md 6.3）。
 
-use serde::Serialize;
 use tokio::sync::OnceCell;
-use ts_rs::TS;
 
-#[derive(Clone, Debug, PartialEq, Serialize, TS)]
-#[serde(rename_all = "camelCase")]
-#[ts(export)]
-pub struct FontEntry {
-    pub family: String,
-    pub source: FontSource,
-    /// すぐ使えるか
-    pub ready: bool,
-}
+use crate::settings::valid_font_name;
 
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, TS)]
-#[serde(rename_all = "camelCase")]
-#[ts(export)]
-pub enum FontSource {
-    /// PC に入っている
-    Installed,
-}
-
-/// 同じ名前（CSS は大文字と小文字を区別しない）は 1 つにまとめて名前順に並べる。
-/// `.` で始まる名前は macOS の内部用で、選べない
-fn entries<'a>(families: impl IntoIterator<Item = &'a str>) -> Vec<FontEntry> {
-    let mut families: Vec<&str> = families
+/// 設定に保存できる名前だけを、同じ名前（CSS は大文字と小文字を区別しない）は 1 つにまとめて
+/// 名前順に並べる。`.` で始まる名前は macOS の内部用で、選べない
+fn entries<'a>(families: impl IntoIterator<Item = &'a str>) -> Vec<String> {
+    let mut families: Vec<String> = families
         .into_iter()
-        .filter(|family| !family.is_empty() && !family.starts_with('.'))
+        .filter(|family| valid_font_name(family) && !family.starts_with('.'))
+        .map(str::to_owned)
         .collect();
     families.sort_by_cached_key(|family| family.to_lowercase());
     families.dedup_by_key(|family| family.to_lowercase());
     families
-        .into_iter()
-        .map(|family| FontEntry {
-            family: family.to_owned(),
-            source: FontSource::Installed,
-            ready: true,
-        })
-        .collect()
 }
 
-fn scan() -> Vec<FontEntry> {
+fn scan() -> Vec<String> {
     let mut db = fontdb::Database::new();
     db.load_system_fonts();
     // 先頭は英語の名前。どの OS でも CSS の font-family に書ける
@@ -53,8 +29,8 @@ fn scan() -> Vec<FontEntry> {
 }
 
 /// PC のフォントを全部開くので、最初に呼ばれたときに 1 回だけ読む（入れたフォントは再起動で増える）
-pub async fn installed() -> &'static [FontEntry] {
-    static FONTS: OnceCell<Vec<FontEntry>> = OnceCell::const_new();
+pub async fn installed() -> &'static [String] {
+    static FONTS: OnceCell<Vec<String>> = OnceCell::const_new();
     FONTS
         .get_or_init(|| async {
             tokio::task::spawn_blocking(scan)
@@ -68,31 +44,25 @@ pub async fn installed() -> &'static [FontEntry] {
 mod tests {
     use super::*;
 
-    fn names(families: &[&'static str]) -> Vec<String> {
-        entries(families.iter().copied())
-            .into_iter()
-            .map(|e| e.family)
-            .collect()
-    }
-
     #[test]
     fn lists_each_family_once_in_name_order() {
         assert_eq!(
-            names(&["Yu Gothic", "arial", "Meiryo", "Yu Gothic", "Arial"]),
+            entries(["Yu Gothic", "arial", "Meiryo", "Yu Gothic", "Arial"]),
             ["arial", "Meiryo", "Yu Gothic"]
         );
     }
 
     #[test]
-    fn serializes_for_the_control_panel() {
+    fn hides_families_that_cannot_be_chosen() {
+        let too_long = "a".repeat(257);
         assert_eq!(
-            serde_json::to_value(&entries(["Meiryo"])[0]).unwrap(),
-            serde_json::json!({ "family": "Meiryo", "source": "installed", "ready": true })
+            entries([".SF NS", "", "bad\nname", &too_long, "Helvetica"]),
+            ["Helvetica"]
         );
     }
 
     #[test]
-    fn hides_families_that_cannot_be_chosen() {
-        assert_eq!(names(&[".SF NS", "", "Helvetica"]), ["Helvetica"]);
+    fn keeps_names_with_quotes() {
+        assert_eq!(entries(["Foo \"Bar\""]), ["Foo \"Bar\""]);
     }
 }

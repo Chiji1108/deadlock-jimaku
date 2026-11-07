@@ -18,7 +18,7 @@ pub const FILE: &str = "settings.json";
 pub const MAX_TRANSLATE_TO: usize = 4;
 
 /// オーバーレイのフォント名の上限（文字数）
-const MAX_FONT_NAME: usize = 100;
+const MAX_FONT_NAME: usize = 256;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
 #[serde(default, rename_all = "camelCase")]
@@ -100,13 +100,10 @@ pub enum FontGroup {
     Th,
 }
 
-/// 無いフォントは CSS が次の候補に落とすので、確かめるのは CSS の文字列に入れられる形かどうかだけ
-fn valid_font_name(name: &str) -> bool {
-    !name.is_empty()
-        && name.chars().count() <= MAX_FONT_NAME
-        && !name
-            .chars()
-            .any(|c| c.is_control() || matches!(c, '"' | '\\'))
+/// 無いフォントは CSS が次の候補に落とすので、確かめるのは名前の形だけ。
+/// 引用符と `\` は `overlay-fonts.ts` がエスケープする
+pub(crate) fn valid_font_name(name: &str) -> bool {
+    !name.is_empty() && name.chars().count() <= MAX_FONT_NAME && !name.chars().any(char::is_control)
 }
 
 /// 手で編集された設定でも、読めない項目だけを捨てて残りの言語の選択は残す
@@ -1435,18 +1432,15 @@ mod tests {
     }
 
     #[test]
-    fn font_patch_rejects_names_that_cannot_go_into_css() {
+    fn font_patch_checks_the_length_and_control_characters() {
         let s = Settings::default();
-        assert!(
-            s.apply(font_patch(&[(FontGroup::Ja, &"あ".repeat(100))]))
-                .is_ok()
-        );
-        for bad in [
-            "あ".repeat(101),
-            "a\"b".to_owned(),
-            "a\\b".to_owned(),
-            "a\nb".to_owned(),
-        ] {
+        for good in ["あ".repeat(256), "a\"b".to_owned(), "a\\b".to_owned()] {
+            assert!(
+                s.apply(font_patch(&[(FontGroup::Ja, &good)])).is_ok(),
+                "{good}"
+            );
+        }
+        for bad in ["あ".repeat(257), "a\nb".to_owned(), "a\u{7f}b".to_owned()] {
             assert!(
                 s.apply(font_patch(&[(FontGroup::Ja, &bad)])).is_err(),
                 "{bad}"
@@ -1464,7 +1458,7 @@ mod tests {
                 "subtitleDisplay": { "fontSize": 32 },
                 "overlayFonts": {
                     "ja": "Hiragino Sans",
-                    "zh-Hans": "bad\"name",
+                    "zh-Hans": "bad\nname",
                     "ko": 1,
                     "klingon": "pIqaD"
                 }

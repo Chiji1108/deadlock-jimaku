@@ -1,7 +1,6 @@
 // 操作パネルの状態。各タブはこれを読み、変更は api 経由でサーバーに送る（サーバーの返す設定で置き換える）
 import { toast } from "svelte-sonner";
 import type { LiveStatus } from "../generated/LiveStatus";
-import type { FontEntry } from "../generated/FontEntry";
 import type { GiftStatus } from "../generated/GiftStatus";
 import type { Provider } from "../generated/Provider";
 import type { ServerMsg } from "../generated/ServerMsg";
@@ -13,6 +12,9 @@ import type { TranscriptionError } from "../generated/TranscriptionError";
 import type { UsageView } from "../generated/UsageView";
 import { api } from "../lib/api";
 import { connect, type Status } from "../lib/ws";
+
+/** 選べるフォントの一覧。取れるまでと、取れなかったときは名前の配列の代わりにその状態が入る */
+export type FontList = string[] | "loading" | "failed";
 
 /** OBS に貼る URL（axum。開発中に Vite から開いても同じ） */
 export const overlayUrl = (name: "subtitles" | "rank" | "items") =>
@@ -33,8 +35,8 @@ class Panel {
   languages = $state<string[]>([]);
   /** 取れるまでは undefined */
   devices = $state<string[] | undefined>();
-  /** 選べるフォント。フォントのタブを開いたときに取る */
-  fonts = $state<FontEntry[]>([]);
+  /** 選べるフォント */
+  fonts = $state<FontList>("loading");
   server = $state<Status>("connecting");
   /** 字幕を始められなかった・止まった理由 */
   transcriptionError = $state<TranscriptionError | undefined>();
@@ -194,10 +196,7 @@ class Panel {
   };
 
   loadFonts = async () => {
-    if (this.fonts.length > 0) return;
-    await this.run(async () => {
-      this.fonts = await api.fonts();
-    });
+    this.fonts = await api.fonts().catch(() => "failed" as const);
   };
 
   refreshGift = async () => {

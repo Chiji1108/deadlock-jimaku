@@ -57,11 +57,9 @@
   const wide = new MediaQuery("min-width: 768px");
 
   // タブを変えたら（サイドバーからでも、料金や注意のリンクからでも）先頭から見せる。
-  // おすそ分けで使われた額はサーバーにあるので、それを出すタブを開いたら取り直す。
-  // フォントの一覧は PC のフォントを全部開くので、タブを開くまで頼まない
+  // おすそ分けで使われた額はサーバーにあるので、それを出すタブを開いたら取り直す
   $effect(() => {
     if (tab === "share" || tab === "usage") void panel.refreshShare();
-    if (tab === "fonts") void panel.loadFonts();
     content?.scrollTo({ top: 0 });
     window.scrollTo({ top: 0 });
   });

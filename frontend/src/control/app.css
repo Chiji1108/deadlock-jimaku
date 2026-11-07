@@ -1,3 +1,5 @@
+/* フォントのタブの見本に使う。Tailwind より低い layer なので <html lang> のフォントは Inter のまま */
+@import "../lib/lang.css" layer(lang);
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn-svelte/tailwind.css";
