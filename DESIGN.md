@@ -787,6 +787,7 @@ API（すべて `/api`）:
 - 単一起動にする。閉じているときにもう一度起動すると、ポートを取り合わずにウィンドウを出す
 - Mac は Dock のアイコンを押しても戻る
 - Linux はトレイの出ない環境があり、閉じると戻せなくなるので、今までどおり閉じたら終了する
+- Linux では `tray-icon` を有効にしない（`app/Cargo.toml`）。有効にすると GPL-3 の libayatana-indicator と ayatana-ido が AppImage に入る。Tauri の CLI は `Cargo.toml` の `tauri` の features を OS を区別せずに読み、`tray-icon` があれば deb の依存と AppImage に libayatana-appindicator を足す。`workspace = true` の依存の features は読まないので、`tauri` は workspace の依存にする
 
 ## 13.5 自動更新（`app/src/main.rs`、tauri-plugin-updater）
 

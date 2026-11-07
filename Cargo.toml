@@ -6,3 +6,6 @@ members = ["crates/core", "app"]
 edition = "2024"
 version = "0.3.0-rc.7"
 license-file = "LICENSE.md"
+
+[workspace.dependencies]
+tauri = "2.12.5"

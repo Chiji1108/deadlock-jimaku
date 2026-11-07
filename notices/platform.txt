@@ -62,8 +62,7 @@ Ubuntu 22.04 のパッケージから取った共有ライブラリを、動的�
   LGPL 系: GTK 3、GDK-Pixbuf、GLib、Pango、ATK、AT-SPI、Cairo、WebKitGTK、libsoup、
     GStreamer（core、plugins-base）、librsvg、libsecret、libmanette、libgudev、libproxy、
     Enchant、Avahi、GnuTLS、Nettle、libgcrypt、libtasn1、libidn2、libunistring、p11-kit、
-    libseccomp、libsystemd、libudev、libblkid、libmount、libdw、libelf、libdbusmenu、
-    libayatana-appindicator、libthai、libdatrie、colord
-  GPL-3: libayatana-indicator、ayatana-ido の一部
+    libseccomp、libsystemd、libudev、libblkid、libmount、libdw、libelf、libthai、
+    libdatrie、colord
   そのほか（MIT、BSD、Apache-2.0 など）: ICU、HarfBuzz、libxml2、libxslt、SQLite、libpng、
     libjpeg-turbo、libwebp、libtiff、Wayland、X11 の各ライブラリ、CUPS など

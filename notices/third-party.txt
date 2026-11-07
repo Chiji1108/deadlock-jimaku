@@ -13,7 +13,7 @@ mise run notices で生成します。手で編集しないでください。
   Copyright (c) 2021-present Floating UI contributors
 @fontsource-variable/inter 5.3.0  OFL-1.1 [54]
   Copyright 2016 The Inter Project Authors (https://github.com/rsms/inter) Inter-Italic[opsz,wght].ttf: Copyright 2016 The Inter Project Authors (https://github.com/rsms/inter)
-@lucide/svelte 1.66.0  ISC [37]
+@lucide/svelte 1.66.0  ISC [36]
   Copyright (c) 2026 Lucide Icons and Contributors
   Copyright (c) 2013-present Cole Bemis
 bits-ui 2.20.2  MIT [1]
@@ -66,9 +66,9 @@ torph 0.1.3  MIT [1]
 tw-animate-css 1.4.0  MIT [1]
   Copyright (c) 2025 Wombosvideo
 
-=== Rust の crate（429 件）===
+=== Rust の crate（426 件）===
 
-adler2 2.0.1  0BSD OR MIT OR Apache-2.0 [45][22][1]
+adler2 2.0.1  0BSD OR MIT OR Apache-2.0 [45][21][1]
   Copyright (C) Jonas Schievink <jonasschievink@gmail.com>
 aes 0.9.4  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2018-2024 The RustCrypto Project Developers
@@ -88,7 +88,7 @@ anyhow 1.0.104  MIT OR Apache-2.0 [2][1]
 apple-native-keyring-store 1.0.2  MIT OR Apache-2.0 [2][1]
   Copyright [2017] [keyring developers]
   Copyright (c) 2016 keyring Developers
-async-broadcast 0.7.2  MIT OR Apache-2.0 [24][1]
+async-broadcast 0.7.2  MIT OR Apache-2.0 [23][1]
   Copyright 2020 Yoshua Wuyts
   Copyright (c) 2020 Yoshua Wuyts
 async-channel 2.5.0  Apache-2.0 OR MIT [2][1]
@@ -115,7 +115,7 @@ atk-sys 0.18.2  MIT [1]
 atomic-waker 1.1.2  Apache-2.0 OR MIT [2][1][17]
   Copyright (c) 2016 Alex Crichton
   Copyright (c) 2017 The Tokio Authors
-audio-codec-algorithms 0.8.1  0BSD OR Apache-2.0 [29][2]
+audio-codec-algorithms 0.8.1  0BSD OR Apache-2.0 [28][2]
   Copyright (c) 2024-2025 The Contributors of Audio Codec Algorithms
 audioadapter 5.0.0  MIT OR Apache-2.0 [2][1][13]
   Copyright (c) 2026 Henrik Enquist
@@ -125,7 +125,7 @@ audioadapter-sample 5.2.0  MIT OR Apache-2.0 [2][1][13]
   Copyright (c) 2026 Henrik Enquist
 aws-lc-rs 1.19.0  ISC AND (Apache-2.0 OR ISC) [52]
   Author: AWS-LibCrypto
-aws-lc-sys 0.47.0  ISC AND (Apache-2.0 OR ISC) AND Apache-2.0 AND MIT AND BSD-3-Clause AND (Apache-2.0 OR ISC OR MIT) AND (Apache-2.0 OR ISC OR MIT-0) [26][36]
+aws-lc-sys 0.47.0  ISC AND (Apache-2.0 OR ISC) AND Apache-2.0 AND MIT AND BSD-3-Clause AND (Apache-2.0 OR ISC OR MIT) AND (Apache-2.0 OR ISC OR MIT-0) [25][35]
   Copyright (c) 2014-2024 Google Inc.
   Copyright (c) 2025-2026 Google Inc.
   Copyright (c) 1998-2011 The OpenSSL Project. All rights reserved.
@@ -228,7 +228,7 @@ crawdad 0.4.1  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2022 legalforce-research
 crc32fast 1.5.4  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2018 Sam Rijs, Alex Crichton and contributors
-crossbeam-channel 0.5.17  MIT OR Apache-2.0 [2][1][39]
+crossbeam-channel 0.5.17  MIT OR Apache-2.0 [2][1][38]
   Copyright (c) 2019 The Crossbeam Project Developers
   Copyright (c) 2009 The Go Authors. All rights reserved.
 crossbeam-deque 0.8.8  MIT OR Apache-2.0 [2][1]
@@ -288,7 +288,7 @@ dpi 0.1.2  Apache-2.0 AND MIT [2][48]
   Copyright © 2003-2009 Bruce D. Evans or
   Copyright © 2008 Stephen L. Moshier or
   Copyright © 2017-2018 Arm Limited
-dunce 1.0.5  CC0-1.0 OR MIT-0 OR Apache-2.0 [33]
+dunce 1.0.5  CC0-1.0 OR MIT-0 OR Apache-2.0 [32]
   Author: Kornel <kornel@geekhood.net>
 earshot 1.2.2  MIT OR Apache-2.0
   Author: Carson M <carson@pyke.io>
@@ -296,13 +296,13 @@ either 1.19.0  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2015
 embed_plist 1.2.2  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2020 Nikolai Vazquez
-encoding_rs 0.8.44  (Apache-2.0 OR MIT) AND BSD-3-Clause [34][2][10][20]
+encoding_rs 0.8.44  (Apache-2.0 OR MIT) AND BSD-3-Clause [33][2][10][19]
   Copyright © WHATWG (Apple, Google, Mozilla, Microsoft).
 encoding_rs_io 0.1.8  MIT OR Apache-2.0 [57][2][1]
   Copyright (c) 2015 Andrew Gallant
 endi 1.1.1  MIT [1]
   Author: Zeeshan Ali Khan <zeenix@gmail.com>
-enumflags2 0.7.12  MIT OR Apache-2.0 [25][1]
+enumflags2 0.7.12  MIT OR Apache-2.0 [24][1]
   Copyright 2017-2023 Maik Klein, Maja Kądziołka
   Copyright (c) 2017-2023 Maik Klein, Maja Kądziołka
 equivalent 1.0.3  Apache-2.0 OR MIT [2][1]
@@ -504,17 +504,11 @@ lexical-parse-integer 1.0.6  MIT/Apache-2.0 [2][1][18]
   Copyright (c) 2013 Andreas Samoljuk
 lexical-util 1.0.7  MIT/Apache-2.0 [2][1]
   Author: Alex Huszagh <ahuszagh@gmail.com>
-libappindicator 0.9.0  Apache-2.0 OR MIT [2][1]
-  Copyright (c) 2017-2021 qDot
-  Copyright (c) 2021 Tauri Apps Contributors
-libappindicator-sys 0.9.0  Apache-2.0 OR MIT
 libc 0.2.191  MIT OR Apache-2.0 [2][1]
   Copyright (c) The Rust Project Developers
 libdbus-sys 0.2.7  Apache-2.0/MIT [2][1]
   Copyright 2014-2018 David Henningsson <diwic@ubuntu.com> and other contributors
   Copyright (c) 2014-2018 David Henningsson <diwic@ubuntu.com> and other contributors
-libloading 0.7.4  ISC [19]
-  Copyright © 2015, Simonas Kazlauskas
 lindera 6.2.0  MIT
 lindera-dictionary 6.2.0  MIT
 lindera-ipadic 6.2.0  MIT
@@ -526,9 +520,9 @@ lock_api 0.4.14  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2016 The Rust Project Developers
 log 0.4.35  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2014 The Rust Project Developers
-mach2 0.6.0  BSD-2-Clause OR MIT OR Apache-2.0 [2][21][1]
+mach2 0.6.0  BSD-2-Clause OR MIT OR Apache-2.0 [2][20][1]
   Copyright (c) 2019 Nick Fitzgerald, 2021 Yuki Okushi
-matchit 0.8.4  MIT AND BSD-3-Clause [1][28]
+matchit 0.8.4  MIT AND BSD-3-Clause [1][27]
   Copyright (c) 2022 Ibraheem Ahmed
   Copyright (c) 2013, Julien Schmidt
 memchr 2.8.3  Unlicense OR MIT [6][1][5]
@@ -543,7 +537,7 @@ mime 0.3.17  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2014 Sean McArthur
 mime_guess 2.0.5  MIT [1]
   Copyright (c) 2015 Austin Bonander
-minisign-verify 0.3.0  MIT [43]
+minisign-verify 0.3.0  MIT [42]
   Copyright (c) 2019-2025 Frank Denis
   Copyright (c) 2006-2009 Graydon Hoare
   Copyright (c) 2009-2013 Mozilla Foundation
@@ -606,7 +600,7 @@ open 5.4.5  MIT [1]
   Copyright © `2015` `Sebastian Thiel`
 openssl-probe 0.2.2  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2014 Alex Crichton
-option-ext 0.2.0  MPL-2.0 [41]
+option-ext 0.2.0  MPL-2.0 [40]
   Author: Simon Ochsenreither <simon@ochsenreither.de>
 ordered-stream 0.2.0  MIT OR Apache-2.0 [2][1]
   Author: Daniel De Graaf <code@danieldg.net>
@@ -672,7 +666,7 @@ rand 0.9.5  MIT OR Apache-2.0 [7][2][1]
 rand_chacha 0.9.0  MIT OR Apache-2.0 [7][2][1]
   Copyright 2018 Developers of the Rand project
   Copyright (c) 2014 The Rust Project Developers
-rand_core 0.10.1  MIT OR Apache-2.0 [32][15][1]
+rand_core 0.10.1  MIT OR Apache-2.0 [31][15][1]
   Copyright (c) 2018-2026 The Rand Project Developers
 rand_core 0.9.5  MIT OR Apache-2.0 [7][15][1]
   Copyright 2018 Developers of the Rand project
@@ -701,7 +695,7 @@ reqwest 0.13.5  MIT OR Apache-2.0 [2][1]
 rfd 0.17.2  MIT [1]
   Copyright (c) 2022 Bartłomiej Maryńczak
   Copyright (c) 2020 Bilal Elmoussaoui
-ring 0.17.14  Apache-2.0 AND ISC [47][23][19][2][42][53]
+ring 0.17.14  Apache-2.0 AND ISC [47][22][43][2][41][53]
   Copyright (c) 2009 The Go Authors. All rights reserved.
   Copyright 2015 The Chromium Authors. All rights reserved.
   Copyright 2015-2025 Brian Smith.
@@ -730,9 +724,9 @@ rustls-pki-types 1.15.1  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2023 Dirkjan Ochtman <dirkjan@ochtman.nl>
 rustls-platform-verifier 0.7.1  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2022 1Password
-rustls-webpki 0.103.16  ISC [35]
+rustls-webpki 0.103.16  ISC [34]
   Copyright 2015 Brian Smith.
-ryu 1.0.23  Apache-2.0 OR BSL-1.0 [2][27]
+ryu 1.0.23  Apache-2.0 OR BSL-1.0 [2][26]
   Author: David Tolnay <dtolnay@gmail.com>
 same-file 1.0.6  Unlicense/MIT [6][1][5]
   Copyright (c) 2017 Andrew Gallant
@@ -787,7 +781,7 @@ simd-adler32 0.3.10  MIT [1]
   Copyright (c) [2021] [Marvin Countryman]
 simdutf8 0.1.5  MIT OR Apache-2.0 [2][1]
   Author: Hans Kratz <hans@appfour.com>
-siphasher 1.0.4  MIT OR Apache-2.0 [38][2][1]
+siphasher 1.0.4  MIT OR Apache-2.0 [37][2][1]
   Copyright 2012-2016 The Rust Project Developers.
   Copyright 2016-2026 Frank Denis.
 slab 0.4.12  MIT [1]
@@ -808,7 +802,7 @@ strength_reduce 0.2.4  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2015 The RustFFT Developers
 strum 0.28.0  MIT [1]
   Copyright (c) 2019 Peter Glotfelty
-subtle 2.6.1  BSD-3-Clause [20]
+subtle 2.6.1  BSD-3-Clause [19]
   Copyright (c) 2016-2017 Isis Agora Lovecruft, Henry de Valence. All rights reserved.
   Copyright (c) 2016-2024 Isis Agora Lovecruft. All rights reserved.
 syn 3.0.9  MIT OR Apache-2.0 [2][1]
@@ -918,7 +912,7 @@ typed-path 0.13.0  MIT OR Apache-2.0 [2][1]
   Author: Chip Senkbeil <chip@senkbeil.org>
 typeid 1.0.3  MIT OR Apache-2.0 [2][1]
   Author: David Tolnay <dtolnay@gmail.com>
-typenum 1.20.1  MIT OR Apache-2.0 [40][2][1]
+typenum 1.20.1  MIT OR Apache-2.0 [39][2][1]
   Copyright 2014 Paho Lurie-Gregg
   Copyright (c) 2014 Paho Lurie-Gregg
 unicase 2.10.0  MIT OR Apache-2.0 [2][1]
@@ -933,9 +927,9 @@ url 2.5.8  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2013-2025 The rust-url developers
 urlpattern 0.6.0  MIT [1]
   Copyright (c) 2021 the Deno authors
-utf8_iter 1.1.0  Apache-2.0 OR MIT [31][2][10]
+utf8_iter 1.1.0  Apache-2.0 OR MIT [30][2][10]
   Author: Henri Sivonen <hsivonen@hsivonen.fi>
-utf_types 1.0.0  Apache-2.0 OR MIT [30][2][10]
+utf_types 1.0.0  Apache-2.0 OR MIT [29][2][10]
   Author: Henri Sivonen <hsivonen@hsivonen.fi>
 uuid 1.29.0  Apache-2.0 OR MIT [2][1]
   Copyright (c) 2014 The Rust Project Developers
@@ -1103,13 +1097,12 @@ Ubuntu 22.04 のパッケージから取った共有ライブラリを、動的�
   LGPL 系: GTK 3、GDK-Pixbuf、GLib、Pango、ATK、AT-SPI、Cairo、WebKitGTK、libsoup、
     GStreamer（core、plugins-base）、librsvg、libsecret、libmanette、libgudev、libproxy、
     Enchant、Avahi、GnuTLS、Nettle、libgcrypt、libtasn1、libidn2、libunistring、p11-kit、
-    libseccomp、libsystemd、libudev、libblkid、libmount、libdw、libelf、libdbusmenu、
-    libayatana-appindicator、libthai、libdatrie、colord
-  GPL-3: libayatana-indicator、ayatana-ido の一部
+    libseccomp、libsystemd、libudev、libblkid、libmount、libdw、libelf、libthai、
+    libdatrie、colord
   そのほか（MIT、BSD、Apache-2.0 など）: ICU、HarfBuzz、libxml2、libxslt、SQLite、libpng、
     libjpeg-turbo、libwebp、libtiff、Wayland、X11 の各ライブラリ、CUPS など
 
-=== パッケージにライセンスファイルがないもの（27 件）===
+=== パッケージにライセンスファイルがないもの（26 件）===
 
 ライセンスはパッケージのメタデータの記載です。
 
@@ -1120,7 +1113,6 @@ dasp_sample 0.11.0  MIT OR Apache-2.0
 dispatch2 0.3.1  Zlib OR Apache-2.0 OR MIT
 dlopen2 0.8.2  MIT
 earshot 1.2.2  MIT OR Apache-2.0
-libappindicator-sys 0.9.0  Apache-2.0 OR MIT
 lindera 6.2.0  MIT
 lindera-dictionary 6.2.0  MIT
 lindera-ipadic 6.2.0  MIT
@@ -2512,19 +2504,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 --- [19]
 
-Permission to use, copy, modify, and/or distribute this software for any purpose with or without
-fee is hereby granted, provided that the above copyright notice and this permission notice appear
-in all copies.
-
-THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
-SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
-AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT,
-NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
-THIS SOFTWARE.
-
---- [20]
-
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
 
@@ -2550,7 +2529,7 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
---- [21]
+--- [20]
 
 Copyright (c) 2019 Nick Fitzgerald, 2021 Yuki Okushi
 All rights reserved.
@@ -2576,7 +2555,7 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
---- [22]
+--- [21]
 
 Apache License
                         Version 2.0, January 2004
@@ -2780,7 +2759,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
---- [23]
+--- [22]
 
 Apache License
                            Version 2.0, January 2004
@@ -3054,7 +3033,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
---- [24]
+--- [23]
 
 Apache License
                            Version 2.0, January 2004
@@ -3247,7 +3226,7 @@ Apache License
    See the License for the specific language governing permissions and
    limitations under the License.
 
---- [25]
+--- [24]
 
 Apache License
 
@@ -3318,7 +3297,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
---- [26]
+--- [25]
 
 AWS Libcrypto (AWS-LC)
 
@@ -3637,7 +3616,7 @@ Permission is hereby granted, free of charge, to any person obtaining a copy of 
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
---- [27]
+--- [26]
 
 Boost Software License - Version 1.0 - August 17th, 2003
 
@@ -3663,7 +3642,7 @@ FOR ANY DAMAGES OR OTHER LIABILITY, WHETHER IN CONTRACT, TORT OR OTHERWISE,
 ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 
---- [28]
+--- [27]
 
 BSD 3-Clause License
 
@@ -3695,7 +3674,7 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
---- [29]
+--- [28]
 
 BSD Zero Clause License
 
@@ -3712,7 +3691,7 @@ LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
 OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 PERFORMANCE OF THIS SOFTWARE.
 
---- [30]
+--- [29]
 
 Copyright Mozilla Foundation
 
@@ -3735,7 +3714,7 @@ limitations under the Licenses.
 Test code is dedicated to the Public Domain when so designated (see
 the individual files for PD/CC0-dedicated sections).
 
---- [31]
+--- [30]
 
 Copyright Mozilla Foundation
 
@@ -3780,7 +3759,7 @@ licensed under the Apache License, Version 2.0 <LICENSE-APACHE> or
 <http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
 <LICENSE-MIT> or <http://opensource.org/licenses/MIT>, at your option.
 
---- [32]
+--- [31]
 
 Copyrights in the Rand project are retained by their contributors. No
 copyright assignment is required to contribute to the Rand project.
@@ -3792,7 +3771,7 @@ licensed under the Apache License, Version 2.0 <LICENSE-APACHE> or
 <http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
 <LICENSE-MIT> or <http://opensource.org/licenses/MIT>, at your option.
 
---- [33]
+--- [32]
 
 Creative Commons Legal Code
 
@@ -3916,7 +3895,7 @@ express Statement of Purpose.
     party to this document and has no duty or obligation with respect to
     this CC0 or use of the Work.
 
---- [34]
+--- [33]
 
 encoding_rs is copyright Mozilla Foundation.
 
@@ -3936,7 +3915,7 @@ source code, are licensed under the BSD 3-Clause License
 Test code within encoding_rs is dedicated to the Public Domain when so
 designated (see the individual files for PD/CC0-dedicated sections).
 
---- [35]
+--- [34]
 
 Except as otherwise noted, this project is licensed under the following
 (ISC-style) terms:
@@ -3958,7 +3937,7 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 The files under third-party/chromium are licensed as described in
 third-party/chromium/LICENSE.
 
---- [36]
+--- [35]
 
 The MIT License (MIT)
 
@@ -3983,7 +3962,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
---- [37]
+--- [36]
 
 ISC License
 
@@ -4029,7 +4008,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
---- [38]
+--- [37]
 
 Copyright 2012-2016 The Rust Project Developers.
 Copyright 2016-2026 Frank Denis.
@@ -4039,7 +4018,7 @@ http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
 <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
 option.
 
---- [39]
+--- [38]
 
 ===============================================================================
 
@@ -4635,11 +4614,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
---- [40]
+--- [39]
 
 MIT OR Apache-2.0
 
---- [41]
+--- [40]
 
 Mozilla Public License Version 2.0
 ==================================
@@ -5015,7 +4994,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   This Source Code Form is "Incompatible With Secondary Licenses", as
   defined by the Mozilla Public License, v. 2.0.
 
---- [42]
+--- [41]
 
 Permission is hereby granted, free of charge, to any
 person obtaining a copy of this software and associated
@@ -5041,7 +5020,7 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
 IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 
---- [43]
+--- [42]
 
 Copyright (c) 2019-2025 Frank Denis
 
@@ -5102,6 +5081,22 @@ CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
 IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
+
+--- [43]
+
+Copyright 2015-2025 Brian Smith.
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
+OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
+CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 --- [44]
 
