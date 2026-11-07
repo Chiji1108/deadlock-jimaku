@@ -805,7 +805,7 @@ API（すべて `/api`）:
 - 載せるのは配るものだけ。Rust は `cargo tree --edges normal,no-proc-macro` を build.yml の 4 つのターゲットごとに解決し、リンクされる crate を集める（dev-dependencies、build-dependencies、proc-macro は成果物に入らない）。フロントはほぼ全部が devDependencies なので、`vite build` の結果に実際に残ったモジュール、フォントなどのアセット、CSS の `@import` から取る
 - 外の道具（`cargo-about` など）は使わない。フロントの分と NOTICE は結局自分で書くので、Node のスクリプト 1 つのほうが単純で、版の固定も要らない
 - 著作権表示はパッケージの中のライセンスファイル（サブフォルダの分も）から取る。同じ本文は 1 度だけ書く。`OR` のものも選り分けず全部のファイルを載せる（本文は重ねないので大きくならず、SPDX の式を読まなくて済む）。ファイルがないものは、推測で埋めず一覧に分けて出す
-- 対象は Rust の crate とフロントのバンドル。AppImage が同梱する GTK・WebKitGTK など OS のライブラリと、Windows の WebView2Loader（Microsoft のバイナリ）はこの一覧に入らない
+- crate とバンドルから分からないもの（Rust の標準ライブラリ、WebView2 SDK の静的ライブラリ、NSIS、AppImage のランタイムと同梱ライブラリ）は `notices/platform.txt` に手で書き、生成のときに差し込む。WebView2 SDK や Ubuntu の版を上げたら見直す
 - About からは開いたときに読み込む（`import("...?raw")`。全文を初期のバンドルに入れない）
 - `mise run check` と build.yml（Linux）が `--check` で作り直して比べ、古ければ失敗する。3 秒ほどで済む
 

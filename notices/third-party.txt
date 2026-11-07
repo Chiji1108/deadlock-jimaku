@@ -1039,6 +1039,76 @@ zvariant_utils 4.2.0  MIT [1]
   Author: Zeeshan Ali Khan <zeeshanak@gnome.org>
   Author: turbocooler <turbocooler@cocaine.ninja>
 
+=== 実行ファイルやインストーラーに含まれる、そのほかのもの ===
+
+Rust の標準ライブラリ（すべての実行ファイルに静的リンク）  MIT OR Apache-2.0
+
+--- Windows
+
+Microsoft WebView2 SDK 1.0.3800.47（WebView2LoaderStatic.lib を実行ファイルに静的リンク）
+
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+   * Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+   * Redistributions in binary form must reproduce the above
+copyright notice, this list of conditions and the following disclaimer
+in the documentation and/or other materials provided with the
+distribution.
+   * The name of Microsoft Corporation, or the names of its contributors
+may not be used to endorse or promote products derived from this
+software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+NSIS 3.13（インストーラーとアンインストーラー、プラグイン）  zlib/libpng License
+  Copyright (C) 1999-2026 Contributors
+  LZMA の圧縮モジュールは Common Public License 1.0（リンクするコードへの例外つき）
+  https://nsis.sourceforge.io/License
+
+nsis-tauri-utils（インストーラーのプラグイン）  Apache-2.0 OR MIT
+  https://github.com/tauri-apps/nsis-tauri-utils
+
+--- Linux の AppImage
+
+AppImage のランタイム（type2-runtime）  MIT
+  次のものを静的リンクしている。ソースの入手方法は https://github.com/AppImage/type2-runtime
+  musl libc  MIT
+  libfuse  LGPL-2.1
+  squashfuse  BSD 系（配布物の LICENSE の独自の表記）
+  zstd  BSD-3-Clause
+  zlib  Zlib
+AppRun（AppImageKit）  MIT
+linuxdeploy-plugin-gtk の起動スクリプト  MIT
+
+Ubuntu 22.04 のパッケージから取った共有ライブラリを、動的リンクのまま同梱している。
+パッケージごとの著作権表示は AppImage の中の usr/share/doc/<パッケージ名>/copyright にある。
+ソースは Ubuntu のソースパッケージ（https://packages.ubuntu.com/jammy/）から入手できる。
+主なものは次のとおり。
+
+  LGPL 系: GTK 3、GDK-Pixbuf、GLib、Pango、ATK、AT-SPI、Cairo、WebKitGTK、libsoup、
+    GStreamer（core、plugins-base）、librsvg、libsecret、libmanette、libgudev、libproxy、
+    Enchant、Avahi、GnuTLS、Nettle、libgcrypt、libtasn1、libidn2、libunistring、p11-kit、
+    libseccomp、libsystemd、libudev、libblkid、libmount、libdw、libelf、libdbusmenu、
+    libayatana-appindicator、libthai、libdatrie、colord
+  GPL-3: libayatana-indicator、ayatana-ido の一部
+  そのほか（MIT、BSD、Apache-2.0 など）: ICU、HarfBuzz、libxml2、libxslt、SQLite、libpng、
+    libjpeg-turbo、libwebp、libtiff、Wayland、X11 の各ライブラリ、CUPS など
+
 === パッケージにライセンスファイルがないもの（27 件）===
 
 ライセンスはパッケージのメタデータの記載です。

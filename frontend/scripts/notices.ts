@@ -10,6 +10,8 @@ type Package = { name: string; version: string; license: string; dir: string; au
 const ROOT = resolve(import.meta.dirname, "../..");
 const FRONTEND = join(ROOT, "frontend");
 const OUTPUT = join(ROOT, "notices/third-party.txt");
+// crate の情報からは分からないもの（標準ライブラリ、WebView2 SDK、NSIS、AppImage の中身）。手で管理する
+const PLATFORM = join(ROOT, "notices/platform.txt");
 // build.yml で配るターゲット。cfg で分かれる依存を漏らさないよう、手元の OS によらず全部を解決する
 const TARGETS = [
   "aarch64-apple-darwin",
@@ -22,6 +24,11 @@ const NOTICE_FILE = /^notice/i;
 const SKIPPED_EXTENSION = /\.(rs|spdx|c|h|cmake|[cm]?[jt]s|map|json|css|svelte|svg|py)$/;
 // features で vendored を選ばないので、ビルドされない（システムの libdbus を使う）
 const UNBUILT = /\/libdbus-sys-[^/]+\/vendor\//;
+
+// Windows でも同じ結果にする（パスの区切りと、Git が変える改行をそろえる）
+const posix = (path: string) => path.replaceAll("\\", "/");
+const readText = (path: string) => readFileSync(path, "utf8").replaceAll("\r\n", "\n").trim();
+
 function cargo(args: string[]) {
   return execFileSync("cargo", ["--locked", ...args], {
     cwd: ROOT,
@@ -79,7 +86,9 @@ function rustPackages(): Package[] {
 async function frontendPackages(): Promise<Package[]> {
   const dirs = new Set<string>();
   const collect = (file: string) => {
-    const dir = /^.*\/node_modules\/(@[^/]+\/)?[^/]+(?=\/|$)/.exec(resolve(FRONTEND, file))?.[0];
+    const dir = /^.*\/node_modules\/(@[^/]+\/)?[^/]+(?=\/|$)/.exec(
+      posix(resolve(FRONTEND, file)),
+    )?.[0];
     if (dir) dirs.add(dir);
   };
   const collector: Plugin = {
@@ -125,10 +134,11 @@ async function frontendPackages(): Promise<Package[]> {
 // 取り込んだコードの LICENSE はサブフォルダにあるので、下の階層まで見る（ring、regex-syntax など）
 function textFiles(dir: string, pattern: RegExp) {
   return readdirSync(dir, { recursive: true, encoding: "utf8" })
+    .map(posix)
     .filter((path) => pattern.test(basename(path)) && !SKIPPED_EXTENSION.test(path))
-    .filter((path) => !UNBUILT.test(join(dir, path)) && statSync(join(dir, path)).isFile())
+    .filter((path) => !UNBUILT.test(posix(join(dir, path))) && statSync(join(dir, path)).isFile())
     .toSorted()
-    .map((path) => readFileSync(join(dir, path), "utf8").replaceAll("\r\n", "\n").trim());
+    .map((path) => readText(join(dir, path)));
 }
 
 function isCopyright(line: string) {
@@ -218,6 +228,7 @@ function render(sections: { title: string; packages: Package[] }[]) {
     }
     lines.push("");
   }
+  lines.push(readText(PLATFORM), "");
   if (missing.length > 0) {
     lines.push(
       `=== パッケージにライセンスファイルがないもの（${missing.length} 件）===`,
@@ -247,7 +258,7 @@ const output = render([
 ]);
 
 if (process.argv.includes("--check")) {
-  if (readFileSync(OUTPUT, "utf8") !== output) {
+  if (`${readText(OUTPUT)}\n` !== output) {
     console.error("notices/third-party.txt が古い。mise run notices で作り直す");
     process.exit(1);
   }
