@@ -42,7 +42,8 @@
         size={SUBTITLE_SIZE}
       />
       <p class="text-sm text-muted-foreground">
-        インストールしたばかりのフォントは、OBS を再起動すると配信に出ます。
+        インストールしたばかりのフォントは、デドロ字幕のウィンドウを閉じて開き直し、OBS
+        を再起動すると使えます。
       </p>
     </div>
 
