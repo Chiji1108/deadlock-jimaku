@@ -4,7 +4,7 @@ use std::collections::hash_map::DefaultHasher;
 use std::collections::{BTreeSet, HashSet};
 use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
-use std::sync::{LazyLock, Mutex};
+use std::sync::{LazyLock, Mutex, OnceLock};
 use std::time::{Duration, UNIX_EPOCH};
 
 use anyhow::{Context, ensure};
@@ -85,7 +85,7 @@ pub fn folder(data_dir: &Path) -> PathBuf {
 /// 1 回のダウンロードの待ち時間
 #[derive(Clone, Copy)]
 struct Limits {
-    /// ファミリーの全部のファイルを受け終えるまで。`crate::http()` の 60 秒を上書きする
+    /// ファミリーの全部のファイルを受け終えるまで
     total: Duration,
     /// 次のデータが届くまで。回線が切れたら `total` を待たずに止める
     stall: Duration,
@@ -95,6 +95,17 @@ const LIMITS: Limits = Limits {
     total: Duration::from_secs(600),
     stall: Duration::from_secs(30),
 };
+
+/// 全体の時間は `download_from` の 1 か所で切るので、`crate::http()` の 60 秒は持たない
+fn client() -> &'static reqwest::Client {
+    static CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
+    CLIENT.get_or_init(|| {
+        reqwest::Client::builder()
+            .connect_timeout(Duration::from_secs(10))
+            .build()
+            .expect("valid client config")
+    })
+}
 
 static DOWNLOADING: Mutex<BTreeSet<String>> = Mutex::new(BTreeSet::new());
 
@@ -132,8 +143,7 @@ fn sha256(body: &[u8]) -> String {
 /// 大きさと SHA-256 がカタログと一致したものだけを返す
 async fn fetch(url: &str, file: &CatalogFile, limits: Limits) -> anyhow::Result<Vec<u8>> {
     let stalled = || format!("{} stalled", file.name);
-    let request = crate::http().get(url).timeout(limits.total).send();
-    let mut res = timeout(limits.stall, request)
+    let mut res = timeout(limits.stall, client().get(url).send())
         .await
         .with_context(stalled)??
         .error_for_status()?;
