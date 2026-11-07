@@ -93,6 +93,21 @@ impl Browser {
     }
 }
 
+#[cfg(test)]
+impl Browser {
+    /// もう終わったプロセスの Chrome
+    pub fn exited() -> Self {
+        let mut child = Command::new(std::env::current_exe().unwrap())
+            .arg("--list")
+            .stdout(Stdio::null())
+            .spawn()
+            .unwrap();
+        child.wait().unwrap();
+        let watcher = tokio::spawn(async {});
+        Self { child, watcher }
+    }
+}
+
 impl Drop for Browser {
     fn drop(&mut self) {
         // 閉じたのはアプリなので、閉じられたと知らせない

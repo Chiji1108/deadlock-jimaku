@@ -75,6 +75,14 @@ enum SubtitlesInput {
     Chrome(ChromeInput),
 }
 
+impl SubtitlesInput {
+    /// ギフトコードを確かめる先の API の根元。OpenAI の鍵を使い始めるときだけ確かめる
+    /// （配信の途中で設定を変えて作り直すときは確かめない。止めない。DESIGN.md 17.1）
+    fn gift_check_after(&self, api: &str) -> Option<String> {
+        (!matches!(self, Self::Audio(_))).then(|| api.to_owned())
+    }
+}
+
 #[derive(Clone, PartialEq)]
 struct AudioInput {
     source: Source,
@@ -119,8 +127,7 @@ pub async fn run(store: Arc<Store>, options: Options) {
     let mut rank_slot = Slot::new();
     let mut subtitles_slot = Slot::new();
     let mut rank_account = None;
-    // 字幕を出していたか（止めた状態から始めるときだけギフトコードの期限を確かめる）
-    let mut running = false;
+    let mut current = SubtitlesInput::Stopped;
     loop {
         let settings: Settings = settings_rx.borrow_and_update().clone();
         let keys = tokio::task::spawn_blocking(secrets::load)
@@ -166,20 +173,17 @@ pub async fn run(store: Arc<Store>, options: Options) {
             })
             .await;
 
-        // 確定の字幕を作れないのに、音声だけを Google に送らない
-        let can_finish = !plan.needs_key() || access.is_some();
         let input = subtitles_input(&settings, &options, access);
-        let starting = !running;
-        running = input != SubtitlesInput::Stopped;
+        let check = current.gift_check_after(&settings.api_base);
+        current = input.clone();
         subtitles_slot
             .update(input.clone(), || {
                 store.discard_unsettled();
-                let check = starting.then(|| settings.api_base.clone());
                 start_subtitles(&store, input, check)
             })
             .await;
         // 設定を変えて字幕の処理を作り直しても、ウィンドウは閉じない
-        store.sync_chrome(settings.transcription_enabled && plan.uses_chrome() && can_finish);
+        store.sync_chrome();
 
         if settings_rx.changed().await.is_err() {
             return;
@@ -252,8 +256,6 @@ fn start_subtitles(
             };
             let store = store.clone();
             Some(tokio::spawn(async move {
-                // ギフトコードの期限は始めるときだけ確かめる（配信の途中で設定を変えて作り直すときは
-                // 確かめない。止めない。DESIGN.md 17.1）
                 if let (true, Some(api)) = (access.is_gift(), &check_gift)
                     && let Err(e) = share::check_gift(api, access.token()).await
                 {
@@ -291,4 +293,78 @@ async fn supervise(
     };
     tracing::info!("transcription ended: {error:?}");
     store.set_transcription_error(error);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn audio() -> SubtitlesInput {
+        SubtitlesInput::Audio(Box::new(AudioInput {
+            source: Source::Mic(None),
+            mic_language: "ja".into(),
+            translate_to: Vec::new(),
+            deadlock_mode: true,
+            partial_text: Some(TextSource::Chrome),
+            speech_engine: SpeechEngine::Hybrid,
+            models: Settings::default().models,
+            realtime_delay: "low".into(),
+            segmentation: Settings::default().segmentation,
+            access: Some(Access::gift("code".into(), "http://worker")),
+        }))
+    }
+
+    /// 字幕の動作中に Chrome のモードから切り替えるのも、OpenAI の鍵の使い始め
+    #[test]
+    fn the_gift_is_checked_when_the_key_comes_into_use() {
+        let chrome = SubtitlesInput::Chrome(ChromeInput {
+            mic_device: None,
+            mic_language: "ja".into(),
+            translate_to: Vec::new(),
+            deadlock_mode: true,
+            segmentation: Settings::default().segmentation,
+        });
+        let api = Some("http://worker".to_owned());
+        assert_eq!(
+            SubtitlesInput::Stopped.gift_check_after("http://worker"),
+            api
+        );
+        assert_eq!(chrome.gift_check_after("http://worker"), api);
+        assert_eq!(audio().gift_check_after("http://worker"), None);
+    }
+
+    #[tokio::test]
+    async fn a_refused_gift_is_reported_before_the_subtitles_start() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let api = format!("http://{}", listener.local_addr().unwrap());
+        let refuse = || async {
+            (
+                axum::http::StatusCode::FORBIDDEN,
+                axum::Json(serde_json::json!({ "error": "revoked" })),
+            )
+        };
+        let router = axum::Router::new().route("/gift", axum::routing::get(refuse));
+        tokio::spawn(async move { axum::serve(listener, router).await });
+
+        let dir = tempfile::tempdir().unwrap();
+        let store = Store::new(Ok(Settings::default()), dir.path().to_owned());
+        let task = start_subtitles(&store, audio(), Some(api)).unwrap();
+        task.await.unwrap();
+        assert_eq!(
+            store.transcription_error(),
+            Some(TranscriptionError::GiftRevoked)
+        );
+    }
+
+    #[tokio::test]
+    async fn the_reason_a_key_was_refused_reaches_the_panel() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = Store::new(Ok(Settings::default()), dir.path().to_owned());
+        let refused = async { Err(TranscriptionError::GiftRevoked.into()) };
+        supervise(store.clone(), refused, None).await;
+        assert_eq!(
+            store.transcription_error(),
+            Some(TranscriptionError::GiftRevoked)
+        );
+    }
 }
