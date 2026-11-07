@@ -5,7 +5,7 @@
 
 use std::panic::AssertUnwindSafe;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use futures_util::FutureExt;
 use tokio::task::JoinHandle;
@@ -50,11 +50,9 @@ impl<K: PartialEq> Slot<K> {
         self.task = start();
     }
 
-    /// 動いている処理の入力。エラーや入力の終わりで止まった処理は動いていない
-    fn running(&self) -> Option<&K> {
-        let task = self.task.as_ref();
-        task.filter(|task| !task.is_finished())?;
-        self.input.as_ref()
+    /// エラーや入力の終わりで止まった処理は動いていない
+    fn is_running(&self) -> bool {
+        self.task.as_ref().is_some_and(|task| !task.is_finished())
     }
 }
 
@@ -80,42 +78,6 @@ enum SubtitlesInput {
     Stopped,
     Audio(Box<AudioInput>),
     Chrome(ChromeInput),
-}
-
-impl SubtitlesInput {
-    fn access(&self) -> Option<&Access> {
-        match self {
-            Self::Audio(input) => input.access.as_ref(),
-            Self::Stopped | Self::Chrome(_) => None,
-        }
-    }
-
-    /// この入力で始めるときのギフトコードの確かめ方。止まっている状態からの再開と鍵の使い始めで
-    /// 確かめる。同じ鍵のまま作り直すなら、前の処理が確かめ終えていない分（`owed`）だけ確かめる
-    /// （配信の途中で設定を変えて止めない。DESIGN.md 17.1）
-    fn gift_check(&self, running: Option<&Self>, owed: Option<GiftCheck>) -> Option<GiftCheck> {
-        self.access().filter(|access| access.is_gift())?;
-        match running {
-            None => Some(GiftCheck::Starting),
-            Some(running) if running.access() == self.access() => owed,
-            Some(_) => Some(GiftCheck::Running),
-        }
-    }
-}
-
-/// ギフトコードの確かめ方
-#[derive(Clone, Copy, Debug, PartialEq)]
-enum GiftCheck {
-    /// 止まっている状態から始める。確かめられなければ始めない
-    Starting,
-    /// 字幕の動作中に鍵を使い始める。配信を止めないよう、回線の失敗では止めない
-    Running,
-}
-
-impl GiftCheck {
-    fn stops_on(self, error: &TranscriptionError) -> bool {
-        self == Self::Starting || !matches!(error, TranscriptionError::Failed { .. })
-    }
 }
 
 #[derive(Clone, PartialEq)]
@@ -150,35 +112,6 @@ enum Source {
     File(PathBuf),
 }
 
-/// 字幕の処理
-struct SubtitlesTask {
-    slot: Slot<SubtitlesInput>,
-    /// 動いている処理がまだ確かめ終えていない分。確かめの途中で作り直しても抜けないように持つ
-    owed: Arc<Mutex<Option<GiftCheck>>>,
-}
-
-impl SubtitlesTask {
-    fn new() -> Self {
-        Self {
-            slot: Slot::new(),
-            owed: Arc::default(),
-        }
-    }
-
-    async fn update(&mut self, store: &Arc<Store>, input: SubtitlesInput, api: &str) {
-        let owed = *self.owed.lock().unwrap();
-        let check = input.gift_check(self.slot.running(), owed);
-        let started = input.clone();
-        self.slot
-            .update(input, || {
-                store.discard_unsettled();
-                *self.owed.lock().unwrap() = check;
-                start_subtitles(store, started, check, api.to_owned(), self.owed.clone())
-            })
-            .await;
-    }
-}
-
 pub async fn run(store: Arc<Store>, options: Options) {
     // 依存が ring と aws-lc の両方を有効にするので、rustls は TLS の実装を自分では選べない。
     // 選ばないと、Realtime につなぐときに panic する（reqwest と同じ aws-lc にする）
@@ -189,7 +122,7 @@ pub async fn run(store: Arc<Store>, options: Options) {
     let mut settings_rx = store.watch_settings();
     let mut assets_slot = Slot::new();
     let mut rank_slot = Slot::new();
-    let mut subtitles_task = SubtitlesTask::new();
+    let mut subtitles_slot = Slot::new();
     let mut rank_account = None;
     loop {
         let settings: Settings = settings_rx.borrow_and_update().clone();
@@ -237,9 +170,7 @@ pub async fn run(store: Arc<Store>, options: Options) {
             .await;
 
         let input = subtitles_input(&settings, &options, access);
-        subtitles_task
-            .update(&store, input, &settings.api_base)
-            .await;
+        update_subtitles(&mut subtitles_slot, &store, input, &settings.api_base).await;
         // 設定を変えて字幕の処理を作り直しても、ウィンドウは閉じない
         store.sync_chrome();
 
@@ -285,13 +216,26 @@ fn subtitles_input(
     }))
 }
 
+/// 動いていない状態から始めるときだけ、ギフトコードを確かめる（DESIGN.md 17.1）
+async fn update_subtitles(
+    slot: &mut Slot<SubtitlesInput>,
+    store: &Arc<Store>,
+    input: SubtitlesInput,
+    api: &str,
+) {
+    let check = (!slot.is_running()).then(|| api.to_owned());
+    slot.update(input.clone(), || {
+        store.discard_unsettled();
+        start_subtitles(store, input, check)
+    })
+    .await;
+}
+
 fn start_subtitles(
     store: &Arc<Store>,
     input: SubtitlesInput,
-    // Some なら、始める前にギフトコードを確かめる（`api` はその API の根元）
-    check: Option<GiftCheck>,
-    api: String,
-    owed: Arc<Mutex<Option<GiftCheck>>>,
+    // Some なら、始める前にギフトコードを確かめる（その API の根元）
+    check_gift: Option<String>,
 ) -> Option<JoinHandle<()>> {
     store.set_transcription_error(None);
     match input {
@@ -316,16 +260,11 @@ fn start_subtitles(
             };
             let store = store.clone();
             Some(tokio::spawn(async move {
-                if let Some(check) = check {
-                    match share::check_gift(&api, access.token()).await {
-                        Err(e) if check.stops_on(&e) => {
-                            store.set_transcription_error(Some(e));
-                            return;
-                        }
-                        Err(e) => tracing::warn!("gift check: {e}"),
-                        Ok(()) => {}
-                    }
-                    *owed.lock().unwrap() = None;
+                if let (true, Some(api)) = (access.is_gift(), &check_gift)
+                    && let Err(e) = share::check_gift(api, access.token()).await
+                {
+                    store.set_transcription_error(Some(e));
+                    return;
                 }
                 let run = subtitles::run(store.clone(), input, access);
                 supervise(store, run, ended).await;
@@ -370,8 +309,8 @@ mod tests {
 
     use super::*;
 
-    /// 確かめている途中で設定を変えられるよう、答えを遅らせるコードの待ち時間
-    const SLOW: Duration = Duration::from_millis(300);
+    /// 確かめの答えが処理に届くまでの待ち時間
+    const SETTLE: Duration = Duration::from_millis(300);
 
     fn chrome() -> SubtitlesInput {
         SubtitlesInput::Chrome(ChromeInput {
@@ -394,11 +333,7 @@ mod tests {
             async move {
                 hits.fetch_add(1, Ordering::SeqCst);
                 let code = headers["authorization"].to_str().unwrap();
-                let code = code.trim_start_matches("Bearer ").to_owned();
-                if code.starts_with("slow") {
-                    tokio::time::sleep(SLOW).await;
-                }
-                gift_answer(&code)
+                gift_answer(code.trim_start_matches("Bearer "))
             }
         };
         let router = axum::Router::new().route("/gift", axum::routing::get(answer));
@@ -412,8 +347,8 @@ mod tests {
             axum::Json(serde_json::json!({ "error": "revoked" })),
         );
         match code {
-            "revoked" | "slow-revoked" => refused.into_response(),
-            "down" | "slow-down" => StatusCode::BAD_GATEWAY.into_response(),
+            "revoked" => refused.into_response(),
+            "down" => StatusCode::BAD_GATEWAY.into_response(),
             _ => axum::Json(serde_json::json!({})).into_response(),
         }
     }
@@ -421,7 +356,7 @@ mod tests {
     /// 無音の WAV を 30 秒流す字幕の処理と、偽の Worker
     struct App {
         store: Arc<Store>,
-        task: SubtitlesTask,
+        slot: Slot<SubtitlesInput>,
         api: String,
         checks: Arc<AtomicUsize>,
         dir: tempfile::TempDir,
@@ -441,7 +376,7 @@ mod tests {
             let (api, checks) = gift_server().await;
             Self {
                 store: Store::new(Ok(settings), dir.path().to_owned()),
-                task: SubtitlesTask::new(),
+                slot: Slot::new(),
                 api,
                 checks,
                 dir,
@@ -464,23 +399,18 @@ mod tests {
         }
 
         async fn update(&mut self, input: SubtitlesInput) {
-            self.task.update(&self.store, input, &self.api).await;
+            update_subtitles(&mut self.slot, &self.store, input, &self.api).await;
         }
 
-        /// `/gift` がこの回数呼ばれるまで待つ
-        async fn reached(&self, checks: usize) {
+        /// `/gift` がこの回数呼ばれ、答えが処理に届くまで待つ
+        async fn settle(&self, checks: usize) {
             for _ in 0..500 {
                 if self.checks() >= checks {
                     break;
                 }
                 tokio::time::sleep(Duration::from_millis(10)).await;
             }
-        }
-
-        /// `/gift` がこの回数呼ばれ、答えが処理に届くまで待つ
-        async fn settle(&self, checks: usize) {
-            self.reached(checks).await;
-            tokio::time::sleep(SLOW * 2).await;
+            tokio::time::sleep(SETTLE).await;
         }
 
         fn checks(&self) -> usize {
@@ -489,11 +419,6 @@ mod tests {
 
         fn error(&self) -> Option<TranscriptionError> {
             self.store.transcription_error()
-        }
-
-        fn is_running(&self) -> bool {
-            let task = self.task.slot.task.as_ref();
-            task.is_some_and(|task| !task.is_finished())
         }
     }
 
@@ -510,7 +435,7 @@ mod tests {
         app.settle(2).await;
         assert_eq!(app.checks(), 2);
         assert_eq!(app.error(), Some(TranscriptionError::GiftRevoked));
-        assert!(!app.is_running());
+        assert!(!app.slot.is_running());
     }
 
     #[tokio::test]
@@ -526,83 +451,23 @@ mod tests {
         assert_eq!(app.error(), Some(TranscriptionError::GiftRevoked));
     }
 
+    /// 動いている間に断られるようになっても、関連の要求で止まる（DESIGN.md 17.1）
     #[tokio::test]
-    async fn a_code_swapped_in_while_running_is_checked() {
-        let mut app = App::new().await;
-        let input = app.audio(Some("good"), "ja");
-        app.update(input).await;
-        app.settle(1).await;
-
-        let input = app.audio(Some("revoked"), "ja");
-        app.update(input).await;
-        app.settle(2).await;
-        assert_eq!(app.checks(), 2);
-        assert_eq!(app.error(), Some(TranscriptionError::GiftRevoked));
-    }
-
-    /// 配信の途中で設定を変えても、期限切れの猶予の間は止めない（DESIGN.md 17.1）
-    #[tokio::test]
-    async fn changing_a_setting_while_running_does_not_check_the_gift() {
-        let mut app = App::new().await;
-        let input = app.audio(Some("good"), "ja");
-        app.update(input).await;
-        app.settle(1).await;
-
-        let input = app.audio(Some("good"), "en");
-        app.update(input).await;
-        app.settle(1).await;
-        assert_eq!(app.checks(), 1);
-        assert!(app.is_running());
-    }
-
-    #[tokio::test]
-    async fn a_setting_changed_during_the_check_does_not_skip_it() {
-        let mut app = App::new().await;
-        let input = app.audio(Some("slow-revoked"), "ja");
-        app.update(input).await;
-        app.reached(1).await;
-        assert_eq!(app.checks(), 1);
-
-        let input = app.audio(Some("slow-revoked"), "en");
-        app.update(input).await;
-        app.settle(2).await;
-        assert_eq!(app.checks(), 2);
-        assert_eq!(app.error(), Some(TranscriptionError::GiftRevoked));
-    }
-
-    /// 回線の失敗で配信を止めない。断られたら止める
-    #[tokio::test]
-    async fn the_key_coming_into_use_while_running_stops_only_on_a_refusal() {
+    async fn changes_while_running_do_not_check_the_gift() {
         let mut app = App::new().await;
         app.update(chrome()).await;
-        let input = app.audio(Some("down"), "ja");
-        app.update(input).await;
-        app.settle(1).await;
-        assert_eq!(app.checks(), 1);
-        assert_eq!(app.error(), None);
-        assert!(app.is_running());
-
-        app.update(chrome()).await;
-        let input = app.audio(Some("revoked"), "ja");
-        app.update(input).await;
-        app.settle(2).await;
-        assert_eq!(app.error(), Some(TranscriptionError::GiftRevoked));
-    }
-
-    #[tokio::test]
-    async fn a_setting_changed_during_a_check_while_running_keeps_it_lenient() {
-        let mut app = App::new().await;
-        app.update(chrome()).await;
-        let input = app.audio(Some("slow-down"), "ja");
-        app.update(input).await;
-        app.reached(1).await;
-
-        let input = app.audio(Some("slow-down"), "en");
-        app.update(input).await;
-        app.settle(2).await;
-        assert_eq!(app.checks(), 2);
-        assert_eq!(app.error(), None);
-        assert!(app.is_running());
+        let changes = [
+            app.audio(Some("good"), "ja"),
+            app.audio(Some("good"), "en"),
+            app.audio(Some("down"), "en"),
+        ];
+        for input in changes {
+            app.update(input).await;
+            app.settle(0).await;
+            assert_eq!(app.checks(), 0);
+            assert_eq!(app.error(), None);
+            assert!(app.slot.is_running());
+        }
     }
 
     #[tokio::test]
@@ -615,7 +480,7 @@ mod tests {
             app.error(),
             Some(TranscriptionError::Failed { .. })
         ));
-        assert!(!app.is_running());
+        assert!(!app.slot.is_running());
     }
 
     #[tokio::test]

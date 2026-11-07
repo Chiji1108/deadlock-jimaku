@@ -128,7 +128,7 @@ pub async fn gift_status(api: &str, code: &str) -> GiftStatus {
     }
 }
 
-/// 字幕を始めるときと鍵を使い始めるときに、ギフトコードがまだ使えるか確かめる
+/// 動いていない字幕を始めるときに、ギフトコードがまだ使えるか確かめる
 pub async fn check_gift(api: &str, code: &str) -> Result<(), TranscriptionError> {
     match gift_status(api, code).await {
         GiftStatus::Active { .. } => Ok(()),
