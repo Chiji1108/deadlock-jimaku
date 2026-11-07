@@ -39,11 +39,9 @@ fn main() {
             let settings = settings::load(&data_dir.join(settings::FILE));
             let store = Store::new(settings, data_dir);
             let idle = store.clone();
+            app.manage(store.clone());
             #[cfg(not(target_os = "linux"))]
-            {
-                app.manage(store.clone());
-                tray::install(app, store.clone())?;
-            }
+            tray::install(app, store.clone())?;
             tauri::async_runtime::spawn(runtime::run(
                 store.clone(),
                 runtime::Options { input_file: None },
