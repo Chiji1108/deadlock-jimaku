@@ -69,11 +69,11 @@ const steps = [
   { title: "ダウンロード", body: "Windows・Mac・Linux 用のアプリを入れます。" },
   {
     title: "OBS に追加",
-    body: "アプリの画面のボタンを OBS にドラッグするだけです。見せ方はアプリの画面で変えられます。",
+    body: "アプリの画面のボタンを OBS にドラッグするだけです。",
   },
   {
     title: "字幕を始める",
-    body: "まず無料の Chrome のモードで、キーなしで始められます（Google Chrome が必要です）。API キーかギフトコードを入れると、おすすめのハイブリッドに切り替えられます。確定の字幕に OpenAI を使い、精度が上がります。",
+    body: "まずは無料の Chrome のモードで始められます（Google Chrome が必要です）。API キーかギフトコードを入れると、ハイブリッドに切り替えられます。",
     link: { href: "#openai-key", label: "キーの作り方を見る" },
   },
 ];
@@ -149,7 +149,7 @@ const modes = [
     name: "Chrome",
     traits: ["無料", "キー不要"],
     price: "無料",
-    body: "音声認識も翻訳も Chrome で行います。ほかの字幕ソフトでも使われている、ブラウザの音声認識の仕組みを使います。無料でキー不要です",
+    body: "音声認識も翻訳も Chrome で行います。ほかの字幕ソフトでも使われている、ブラウザの音声認識の仕組みを使います",
     needs: "Google Chrome（字幕を始めると小さなウィンドウが開く）",
   },
 ];
@@ -158,7 +158,7 @@ const line = LINES[0]!;
 /** 手元の測定（M5 Pro）とリリースのファイルの大きさ */
 const lightness = [
   { value: "約 1%", label: "CPU", note: "OpenAI モードで字幕を出している間の、1 コアに対する割合" },
-  { value: "約 20MB", label: "メモリ", note: "OpenAI モード。Windows でウィンドウを閉じて、字幕を出しているとき" },
+  { value: "約 20MB", label: "メモリ", note: "OpenAI モード。Windows でウィンドウを閉じて、字幕を出しているとき。Chrome のモードは、Chrome のウィンドウの分が約 200MB 増えます" },
   { value: "約 13MB", label: "インストーラー", note: "Windows 版" },
 ];
 const cards = await fetchCards();
@@ -187,7 +187,7 @@ const official = [
         聞き取りの<br /><span class="band">精度が違う。</span>
       </h2>
       <p class="reveal mt-5 text-lg leading-relaxed text-muted">
-        ハイブリッドと OpenAI のモードでは、OpenAI の最新モデルで文字起こしします。略して呼んでも、どのアイテムやスキルのことか見分けます。
+        OpenAI を使うモードでは、最新モデルで文字起こしします。略して呼んでも、どのアイテムやスキルのことか見分けます。
       </p>
     </div>
     <div class="reveal plate relative h-64 overflow-hidden">
@@ -214,7 +214,7 @@ const official = [
       <span class="band">デッドロック特化。</span>
     </h2>
     <p class="reveal mt-5 max-w-2xl text-lg leading-relaxed text-muted">
-      ヒーロー・スキル・アイテムの名前は色とアイコンで強調します。アイテムの名前が出たら、ゲーム内と同じカードで説明も出します。ハイブリッドと OpenAI のモードでは、略して話しても、翻訳はゲーム内の正式な名前になります。
+      ヒーロー・スキル・アイテムの名前は色とアイコンで強調します。アイテムの名前が出たら、ゲーム内と同じカードで説明も出します。OpenAI を使うモードでは、略して話しても、翻訳はゲーム内の正式な名前になります。
     </p>
     <div class="mt-10 grid gap-4 md:grid-cols-2">
       <figure class="reveal">
