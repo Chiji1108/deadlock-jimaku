@@ -1,13 +1,15 @@
 <script lang="ts" module>
+  import DailyLimitField, { validLimit } from "./DailyLimitField.svelte";
+
   const expired = (expiresAt: number | null, now: number) => expiresAt !== null && expiresAt <= now;
-  /** 期限が過ぎていなくて、1 日の上限が正の数か空欄（既定の額）。
+  /** 期限が過ぎていなくて、1 日の上限が正の数。
    * 保存済みの期限（`saved`）のままなら、過ぎていてもメモと上限を変えられる */
   export const validCode = (
     expiresAt: number | null,
     limit: number | null,
     now: number,
     saved?: number | null,
-  ) => (expiresAt === saved || !expired(expiresAt, now)) && (limit === null || limit > 0);
+  ) => (expiresAt === saved || !expired(expiresAt, now)) && validLimit(limit);
 </script>
 
 <script lang="ts">
@@ -15,7 +17,6 @@
   import * as Field from "$lib/components/ui/field";
   import { Input } from "$lib/components/ui/input";
   import { dateTime, panel } from "../panel.svelte";
-  import DailyLimitField from "./DailyLimitField.svelte";
   import ExpiryPicker from "./ExpiryPicker.svelte";
 
   let {
