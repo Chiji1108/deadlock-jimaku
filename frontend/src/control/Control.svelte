@@ -48,8 +48,8 @@
     },
     { value: "items", label: "アイテム説明", icon: PackageIcon, page: ItemsTab },
     { value: "rank", label: "ランク", icon: TrophyIcon, page: RankTab },
-    { value: "fonts", label: "フォント", icon: TypeIcon, page: FontTab },
-    { value: "keys", label: "API キー", icon: KeyRoundIcon, page: KeysTab, heading: "" },
+    { value: "fonts", label: "フォント", icon: TypeIcon, page: FontTab, heading: "" },
+    { value: "keys", label: "API キー", icon: KeyRoundIcon, page: KeysTab },
     { value: "share", label: "おすそ分け", icon: GiftIcon, page: ShareTab },
     { value: "usage", label: "料金", icon: WalletIcon, page: UsageTab },
   ];

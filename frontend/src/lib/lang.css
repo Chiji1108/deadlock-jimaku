@@ -5,20 +5,22 @@
    lang 属性を持つ要素ごとに必ずフォントを決め直し、<html lang="ja"> の日本語フォントが
    lang="ru" の段落などに継承されないようにする（キリル文字が全角の字形で描かれてしまう）。
 
-   --font-* は操作パネルで選んだフォント（overlay-fonts.ts）。値の末尾にカンマが付いていて、
-   選んだフォントが PC になければ、続く標準の候補に落ちる。選んでいなければ空になる。 */
+   --font は操作パネルで選んだフォント（overlay-fonts.ts）。値の末尾にカンマが付いていて、
+   選んだフォントが PC になければ、続く標準の候補に落ちる。カスタムプロパティも継承されるので、
+   lang 属性を持つ要素ごとに initial に戻し、親の言語で選んだフォントを引き継がない。 */
 
 /* ラテン・キリル・ギリシャ文字など */
 [lang] {
+  --font: initial;
   font-family:
-    var(--font-latin,) "Noto Sans",
+    var(--font,) "Noto Sans",
     "Segoe UI",
     system-ui,
     sans-serif;
 }
 [lang]:lang(ja) {
   font-family:
-    var(--font-ja,) "Noto Sans JP",
+    var(--font,) "Noto Sans JP",
     "Yu Gothic UI",
     "Meiryo",
     "Hiragino Sans",
@@ -26,28 +28,28 @@
 }
 [lang]:lang(zh-Hans) {
   font-family:
-    var(--font-zh-Hans,) "Noto Sans SC",
+    var(--font,) "Noto Sans SC",
     "Microsoft YaHei UI",
     "PingFang SC",
     sans-serif;
 }
 [lang]:lang(zh-Hant) {
   font-family:
-    var(--font-zh-Hant,) "Noto Sans TC",
+    var(--font,) "Noto Sans TC",
     "Microsoft JhengHei UI",
     "PingFang TC",
     sans-serif;
 }
 [lang]:lang(ko) {
   font-family:
-    var(--font-ko,) "Noto Sans KR",
+    var(--font,) "Noto Sans KR",
     "Malgun Gothic",
     "Apple SD Gothic Neo",
     sans-serif;
 }
 [lang]:lang(th) {
   font-family:
-    var(--font-th,) "Noto Sans Thai",
+    var(--font,) "Noto Sans Thai",
     "Leelawadee UI",
     sans-serif;
 }

@@ -4,25 +4,20 @@
   import { Button } from "$lib/components/ui/button";
   import * as Card from "$lib/components/ui/card";
   import * as Field from "$lib/components/ui/field";
-  import type { FontGroup } from "../../generated/FontGroup";
   import { SUBTITLE_SIZE } from "../../lib/overlay-size";
-  import { applyOverlayFonts, FONT_SAMPLES, fontGroup, groupLang } from "../../lib/overlay-fonts";
+  import { applyOverlayFonts, endonym } from "../../lib/overlay-fonts";
   import FontPicker from "../parts/FontPicker.svelte";
   import OverlayPreview from "../parts/OverlayPreview.svelte";
   import { panel } from "../panel.svelte";
 
   const s = $derived(panel.settings!);
-  /** 字幕とランクに出る言語だけを並べる。ランクは名前がなければ英語で出るので、latin は常に出す */
-  const groups = $derived([
-    ...new Set(
-      ["en", s.micLanguage, ...s.translateTo, s.rankLanguage ?? s.micLanguage].map(fontGroup),
-    ),
+  /** 字幕とランクに出る言語だけを並べる */
+  const languages = $derived([
+    ...new Set([s.micLanguage, ...s.translateTo, s.rankLanguage ?? s.micLanguage]),
   ]);
-  const label = (group: FontGroup) =>
-    group === "latin" ? "英語・キリル文字など" : panel.label(group);
 
   onMount(() => void panel.loadFonts());
-  // 見本もオーバーレイと同じく lang.css の --font-* で描く
+  // 見本もオーバーレイと同じく lang.css の --font で描く
   $effect(() => applyOverlayFonts(s.overlayFonts));
 </script>
 
@@ -47,22 +42,23 @@
     />
 
     <Field.Group>
-      {#each groups as group (group)}
+      {#each languages as language (language)}
         <Field.Field>
-          <Field.Label for="font-{group}">{label(group)}</Field.Label>
+          <Field.Label for="font-{language}">{panel.label(language)}</Field.Label>
           <FontPicker
-            id="font-{group}"
-            {group}
-            value={s.overlayFonts[group]}
+            id="font-{language}"
+            {language}
+            value={s.overlayFonts[language]}
             families={panel.fonts}
             onopen={panel.loadFonts}
-            onchange={(family) => panel.update({ overlayFonts: { [group]: family } })}
+            onchange={(family) => panel.update({ overlayFonts: { [language]: family } })}
           />
-          <p lang={groupLang(group)} class="truncate text-lg font-bold">
-            {FONT_SAMPLES[group]}
-          </p>
+          <p lang={language} class="truncate text-lg font-bold">{endonym(language)}</p>
         </Field.Field>
       {/each}
     </Field.Group>
+    <p class="text-sm text-muted-foreground">
+      インストールしたばかりのフォントは、OBS を再起動すると配信に出ます。
+    </p>
   </Card.Content>
 </Card.Root>

@@ -331,18 +331,21 @@ interface Settings {
 - 標準のフォントは Windows のシステムフォントを優先し、同梱はしない。
 
 ```css
-:lang(ja)      { font-family: var(--font-ja,) "Noto Sans JP", "Yu Gothic UI", "Meiryo", sans-serif; }
-:lang(zh-Hans) { font-family: var(--font-zh-Hans,) "Noto Sans SC", "Microsoft YaHei UI", sans-serif; }
-:lang(zh-Hant) { font-family: var(--font-zh-Hant,) "Noto Sans TC", "Microsoft JhengHei UI", sans-serif; }
-:lang(ko)      { font-family: var(--font-ko,) "Noto Sans KR", "Malgun Gothic", sans-serif; }
-:lang(th)      { font-family: var(--font-th,) "Noto Sans Thai", "Leelawadee UI", sans-serif; }
+[lang]         { --font: initial; font-family: var(--font,) "Noto Sans", "Segoe UI", system-ui, sans-serif; }
+:lang(ja)      { font-family: var(--font,) "Noto Sans JP", "Yu Gothic UI", "Meiryo", sans-serif; }
+:lang(zh-Hans) { font-family: var(--font,) "Noto Sans SC", "Microsoft YaHei UI", sans-serif; }
+:lang(zh-Hant) { font-family: var(--font,) "Noto Sans TC", "Microsoft JhengHei UI", sans-serif; }
+:lang(ko)      { font-family: var(--font,) "Noto Sans KR", "Malgun Gothic", sans-serif; }
+:lang(th)      { font-family: var(--font,) "Noto Sans Thai", "Leelawadee UI", sans-serif; }
 ```
 
-- 字幕とランクのフォントは、操作パネルで言語ごとに選べる（設定の `overlayFonts`）。区分は `lang.css` と同じ `latin`（上の 5 つ以外の言語）、`ja`、`zh-Hans`、`zh-Hant`、`ko`、`th`。キーがない言語は標準のまま。字幕とランクで分けないので、同じ言語は同じフォントで揃う。アイテム説明のカードはゲームと同じ見た目にするので対象外。
-- 保存するのはファミリー名だけ。変更（`SettingsPatch`）は言語単位で重ね、空文字列で標準に戻す。256 文字を超える名前と制御文字を含む名前は変更なら拒否し、設定ファイルならその言語だけ捨てる。PC にあるかは確かめない。
-- 選んだフォントは `display` で届き、`Subtitles.svelte` と `Rank.svelte` が `<html>` の `--font-*` に `"名前",` の形で入れる（`overlay-fonts.ts`。`"` と `\` はエスケープする）。末尾のカンマで標準の候補につながるので、PC にないフォントは標準に落ちる。選んでいなければ `var()` の空の代替値で標準だけになる。`Captions` と `RankBadge` は LP でも使うので、ここでは設定しない。`RankBadge` は根の要素に `lang` を付け、ランク名とポイントを同じ言語のフォントで描く。
+- 字幕とランクのフォントは、操作パネルで言語ごとに選べる（設定の `overlayFonts`）。キーは 6.2 の言語コードで、キーがない言語は標準のまま。字幕とランクで分けないので、同じ言語は同じフォントで揃う。アイテム説明のカードはゲームと同じ見た目にするので対象外。
+- フォントのタブに並ぶのは、話す言語、翻訳先、ランクの言語（`rankLanguage ?? micLanguage`）を重複なしにしたもの。
+- 保存するのはファミリー名だけ。変更（`SettingsPatch`）は言語単位で重ね、空文字列で標準に戻す。知らない言語コード、256 文字を超える名前、制御文字を含む名前は変更なら拒否し、設定ファイルならその項目だけ捨てる。PC にあるかは確かめない。
+- 選んだフォントは `display` で届き、`Subtitles.svelte` と `Rank.svelte` が 1 つの `<style>` を差し替えて `[lang][lang="ru"] { --font: "名前", }` の規則を入れる（`overlay-fonts.ts`。`"` と `\` はエスケープする）。末尾のカンマで標準の候補につながるので、PC にないフォントは標準に落ちる。`--font` も継承されるので、`lang` 属性を持つ要素ごとに `initial` へ戻す。これで `<html lang="ja">` のフォントが `lang="en"` の子に移らず、選んでいなければ `var()` の空の代替値で標準だけになる。`:lang(es)` は `es-419` にも一致するので、規則は属性の完全一致で書く。`Captions` と `RankBadge` は LP でも使うので、ここでは設定しない。`RankBadge` は根の要素に `lang` を付け、ランク名とポイントを同じ言語のフォントで描く。
 - 選べる一覧は `GET /api/fonts`（`fonts.rs`）。`fontdb` で PC のフォントを読み、英語のファミリー名の配列を返す。`.` で始まる macOS の内部用の名前と、設定に保存できない名前は除く。キャッシュせず呼ばれるたびに読み直す。操作パネルはフォントのタブを開いたときと、選択の一覧を開いたときに読み、同時には 1 回だけ走らせる。読み直しの間と失敗したときは、前の一覧を出したままにする。これで、あとから入れたフォントが起動し直さなくても一覧に出る。
-- 一覧の各行は、名前を UI のフォントで、右の見本（`FONT_SWATCHES`）をそのフォントで描く。見本の `font-family` は標準の候補につなげない。画面外の行は `content-visibility: auto` で描かない。
+- あとから入れたフォントは、OBS を起動し直すまで配信に出ない。OBS のブラウザソースは、キャッシュの更新では新しいフォントを読まない（Windows で確認済み）。操作パネルのフォントのタブでこのことを案内する。
+- 一覧の各行は、名前を UI のフォントで、右の見本をそのフォントで描く。行の見本もタブの見本も、その言語での言語名（`Intl.DisplayNames([lang], { type: "language" }).of(lang)`）を使う。見本の `font-family` は標準の候補につなげない。画面外の行は `content-visibility: auto` で描かない。
 
 ### 6.4 ふりがな
 
@@ -648,7 +651,7 @@ type ServerMsg =
   | { type: "rank.update"; rank: RankState | null }               // null: アカウントを外した・替えた
   | { type: "transcription.status"; error: string | null }        // 操作パネル向け。字幕を始められない・止まった理由
   | { type: "glossary.updated"; clientVersion: number }           // オーバーレイが辞書を取り直す
-  | { type: "display"; subtitles: SubtitleDisplay; rankLanguage: LangCode; rankAnchor: Anchor; overlayFonts: { [group in FontGroup]?: string }; itemCards: { holdSeconds: number; language: string; anchor: Anchor } }  // オーバーレイの見せ方（11・12 章）
+  | { type: "display"; subtitles: SubtitleDisplay; rankLanguage: LangCode; rankAnchor: Anchor; overlayFonts: { [language: LangCode]: string }; itemCards: { holdSeconds: number; language: string; anchor: Anchor } }  // オーバーレイの見せ方（11・12 章）
   | { type: "audio.level"; db: number }                           // 操作パネルのメーター。字幕を動かしている間、0.1 秒ごとのピーク（dBFS）
   | { type: "usage"; usage: UsageView };                          // 操作パネルの料金。使うたびに
 ```

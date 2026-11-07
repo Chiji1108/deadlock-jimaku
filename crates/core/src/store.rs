@@ -512,7 +512,7 @@ fn display(settings: &Settings) -> ServerMsg {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::settings::{FontGroup, SpeechEngine};
+    use crate::settings::SpeechEngine;
     use crate::types::Stage;
 
     fn seg(id: &str, text: &str) -> Segment {
@@ -679,13 +679,13 @@ mod tests {
         let mut rx = store.subscribe();
         store
             .update_settings(SettingsPatch {
-                overlay_fonts: Some([(FontGroup::Ja, "Hiragino Sans".to_owned())].into()),
+                overlay_fonts: Some([("ja".to_owned(), "Hiragino Sans".to_owned())].into()),
                 ..Default::default()
             })
             .unwrap();
         let ServerMsg::Display { overlay_fonts, .. } = rx.try_recv().unwrap() else {
             panic!("expected the display message");
         };
-        assert_eq!(overlay_fonts[&FontGroup::Ja], "Hiragino Sans");
+        assert_eq!(overlay_fonts["ja"], "Hiragino Sans");
     }
 }

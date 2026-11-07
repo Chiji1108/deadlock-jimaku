@@ -3,20 +3,19 @@
   import { Command, Popover } from "bits-ui";
   import CheckIcon from "@lucide/svelte/icons/check";
   import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
-  import type { FontGroup } from "../../generated/FontGroup";
-  import { cssString, FONT_SWATCHES, groupLang } from "../../lib/overlay-fonts";
+  import { cssString, endonym } from "../../lib/overlay-fonts";
   import type { FontList } from "../panel.svelte";
 
   let {
     id,
-    group,
+    language,
     value = "",
     families,
     onopen,
     onchange,
   }: {
     id: string;
-    group: FontGroup;
+    language: string;
     value?: string;
     families: FontList;
     onopen: () => void;
@@ -24,6 +23,7 @@
   } = $props();
 
   const STANDARD = "標準";
+  const swatch = $derived(endonym(language));
   /** 一度に描く数。Command は項目が増えると 1 文字ごとに固まるので、多い PC では検索で絞ってもらう */
   const MAX_SHOWN = 500;
   let open = $state(false);
@@ -59,9 +59,9 @@
       <!-- 標準の候補に続けない。無い字が別のフォントで描かれると、このフォントの見本に見える -->
       <span
         aria-hidden="true"
-        lang={groupLang(group)}
+        lang={language}
         class="max-w-1/2 shrink-0 overflow-clip text-base/8 whitespace-nowrap"
-        style:font-family={cssString(family)}>{FONT_SWATCHES[group]}</span
+        style:font-family={cssString(family)}>{swatch}</span
       >
     {/if}
     {#if family === value}<CheckIcon class="absolute top-2 right-2 size-4" />{/if}
