@@ -267,6 +267,8 @@ impl Store {
             tab.id += 1;
             id = tab.id;
             replaced = tab.status.is_some();
+            // ページが読み込まれたので、前のウィンドウの問題はもうない
+            tab.window = None;
         });
         if replaced {
             self.send_chrome_event(ChromeEvent::Closed);
