@@ -162,6 +162,12 @@ class Panel {
 
   openChrome = () => this.run(api.openChrome);
 
+  resetChrome = () =>
+    this.run(async () => {
+      await api.resetChrome();
+      toast.success("Chrome をリセットしました");
+    });
+
   /** 鍵がないときの入口。押した人にだけ、Chrome のモードに切り替えて始める */
   startWithChrome = () => {
     this.level = undefined;

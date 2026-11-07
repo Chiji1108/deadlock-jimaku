@@ -45,6 +45,7 @@ pub fn router(store: Arc<Store>) -> Router {
         .route("/devices", get(devices))
         .route("/languages", get(languages))
         .route("/chrome/open", post(open_chrome))
+        .route("/chrome/reset", post(reset_chrome))
         .route("/chrome/ws", get(chrome_ws));
     Router::new()
         .route("/ws", get(ws))
@@ -88,7 +89,7 @@ async fn local_only(headers: HeaderMap, request: Request, next: Next) -> Respons
 async fn get_settings(State(store): State<Arc<Store>>) -> Json<SettingsView> {
     let keys = tokio::task::spawn_blocking(secrets::status)
         .await
-        .expect("keyring task");
+        .expect("blocking task");
     Json(SettingsView {
         version: env!("CARGO_PKG_VERSION"),
         settings: store.settings(),
@@ -154,7 +155,7 @@ async fn put_key(
 }
 
 async fn blocking<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'static) -> T {
-    tokio::task::spawn_blocking(f).await.expect("keyring task")
+    tokio::task::spawn_blocking(f).await.expect("blocking task")
 }
 
 // ---- ギフトコード（人からもらったもの。DESIGN.md 17.1） ----
@@ -354,6 +355,18 @@ const REPLACED: u16 = 4001;
 async fn open_chrome(State(store): State<Arc<Store>>) -> StatusCode {
     store.reopen_chrome();
     StatusCode::NO_CONTENT
+}
+
+/// 専用のプロファイルを消して、Chrome を始め直す
+async fn reset_chrome(State(store): State<Arc<Store>>) -> Response {
+    match blocking(move || store.reset_chrome()).await {
+        Ok(()) => StatusCode::NO_CONTENT.into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Chrome のデータを消せません（{e}）。少し待ってから、もう一度押してください"),
+        )
+            .into_response(),
+    }
 }
 
 async fn chrome_ws(upgrade: WebSocketUpgrade, State(store): State<Arc<Store>>) -> Response {
@@ -603,11 +616,23 @@ mod tests {
 
     /// 手元のポートで動かす。アドレス（`127.0.0.1:…`）を返す
     async fn serve_on_any_port() -> String {
+        serve_with_data(PathBuf::new()).await
+    }
+
+    async fn serve_with_data(data_dir: PathBuf) -> String {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap().to_string();
-        let store = Store::new(Ok(Settings::default()), PathBuf::new());
+        let store = Store::new(Ok(Settings::default()), data_dir);
         tokio::spawn(serve(listener, store));
         addr
+    }
+
+    async fn post_reset(addr: &str) -> reqwest::Response {
+        reqwest::Client::new()
+            .post(format!("http://{addr}/api/chrome/reset"))
+            .send()
+            .await
+            .unwrap()
     }
 
     async fn post_demo(addr: &str, headers: &[(&str, &str)]) -> StatusCode {
@@ -692,6 +717,13 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(open.status(), StatusCode::FORBIDDEN);
+        let reset = client
+            .post(format!("http://{addr}/api/chrome/reset"))
+            .header("origin", "https://evil.example")
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(reset.status(), StatusCode::FORBIDDEN);
         let mut req = format!("ws://{addr}/api/chrome/ws")
             .into_client_request()
             .unwrap();
@@ -701,6 +733,34 @@ mod tests {
         assert!(
             matches!(refused, Err(tungstenite::Error::Http(res)) if res.status() == StatusCode::FORBIDDEN)
         );
+    }
+
+    #[tokio::test]
+    async fn reset_removes_only_the_chrome_profile_and_can_be_repeated() {
+        let dir = tempfile::tempdir().unwrap();
+        let profile = dir.path().join("chrome-profile");
+        std::fs::create_dir_all(profile.join("Default")).unwrap();
+        std::fs::write(profile.join("Default/Preferences"), "{}").unwrap();
+        let settings = dir.path().join("settings.json");
+        std::fs::write(&settings, "{}").unwrap();
+        let addr = serve_with_data(dir.path().to_owned()).await;
+
+        assert_eq!(post_reset(&addr).await.status(), StatusCode::NO_CONTENT);
+        assert!(!profile.exists());
+        assert!(settings.exists());
+        assert_eq!(post_reset(&addr).await.status(), StatusCode::NO_CONTENT);
+    }
+
+    #[tokio::test]
+    async fn reset_tells_the_user_when_the_profile_cannot_be_removed() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("chrome-profile"), "").unwrap();
+        let addr = serve_with_data(dir.path().to_owned()).await;
+
+        let response = post_reset(&addr).await;
+        assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+        let message = response.text().await.unwrap();
+        assert!(message.contains("Chrome のデータを消せません"), "{message}");
     }
 
     #[tokio::test]
