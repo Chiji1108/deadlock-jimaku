@@ -49,6 +49,11 @@ impl<K: PartialEq> Slot<K> {
         self.input = Some(input);
         self.task = start();
     }
+
+    /// エラーや入力の終わりで止まった処理は動いていない
+    fn is_running(&self) -> bool {
+        self.task.as_ref().is_some_and(|task| !task.is_finished())
+    }
 }
 
 #[derive(PartialEq)]
@@ -119,8 +124,6 @@ pub async fn run(store: Arc<Store>, options: Options) {
     let mut rank_slot = Slot::new();
     let mut subtitles_slot = Slot::new();
     let mut rank_account = None;
-    // 字幕を出していたか（止めた状態から始めるときだけギフトコードの期限を確かめる）
-    let mut running = false;
     loop {
         let settings: Settings = settings_rx.borrow_and_update().clone();
         let keys = tokio::task::spawn_blocking(secrets::load)
@@ -166,20 +169,10 @@ pub async fn run(store: Arc<Store>, options: Options) {
             })
             .await;
 
-        // 確定の字幕を作れないのに、音声だけを Google に送らない
-        let can_finish = !plan.needs_key() || access.is_some();
         let input = subtitles_input(&settings, &options, access);
-        let starting = !running;
-        running = input != SubtitlesInput::Stopped;
-        subtitles_slot
-            .update(input.clone(), || {
-                store.discard_unsettled();
-                let check = starting.then(|| settings.api_base.clone());
-                start_subtitles(&store, input, check)
-            })
-            .await;
+        update_subtitles(&mut subtitles_slot, &store, input, &settings.api_base).await;
         // 設定を変えて字幕の処理を作り直しても、ウィンドウは閉じない
-        store.sync_chrome(settings.transcription_enabled && plan.uses_chrome() && can_finish);
+        store.sync_chrome();
 
         if settings_rx.changed().await.is_err() {
             return;
@@ -223,10 +216,25 @@ fn subtitles_input(
     }))
 }
 
+/// 動いていない状態から始めるときだけ、ギフトコードを確かめる（DESIGN.md 17.1）
+async fn update_subtitles(
+    slot: &mut Slot<SubtitlesInput>,
+    store: &Arc<Store>,
+    input: SubtitlesInput,
+    api: &str,
+) {
+    let check = (!slot.is_running()).then(|| api.to_owned());
+    slot.update(input.clone(), || {
+        store.discard_unsettled();
+        start_subtitles(store, input, check)
+    })
+    .await;
+}
+
 fn start_subtitles(
     store: &Arc<Store>,
     input: SubtitlesInput,
-    // Some なら、始める前にギフトコードの期限を確かめる（その API の根元）
+    // Some なら、始める前にギフトコードを確かめる（その API の根元）
     check_gift: Option<String>,
 ) -> Option<JoinHandle<()>> {
     store.set_transcription_error(None);
@@ -252,8 +260,6 @@ fn start_subtitles(
             };
             let store = store.clone();
             Some(tokio::spawn(async move {
-                // ギフトコードの期限は始めるときだけ確かめる（配信の途中で設定を変えて作り直すときは
-                // 確かめない。止めない。DESIGN.md 17.1）
                 if let (true, Some(api)) = (access.is_gift(), &check_gift)
                     && let Err(e) = share::check_gift(api, access.token()).await
                 {
@@ -291,4 +297,201 @@ async fn supervise(
     };
     tracing::info!("transcription ended: {error:?}");
     store.set_transcription_error(error);
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::time::Duration;
+
+    use axum::http::{HeaderMap, StatusCode};
+    use axum::response::{IntoResponse, Response};
+
+    use super::*;
+
+    /// 確かめの答えが処理に届くまでの待ち時間
+    const SETTLE: Duration = Duration::from_millis(300);
+
+    fn chrome() -> SubtitlesInput {
+        SubtitlesInput::Chrome(ChromeInput {
+            mic_device: None,
+            mic_language: "ja".into(),
+            translate_to: Vec::new(),
+            deadlock_mode: false,
+            segmentation: Settings::default().segmentation,
+        })
+    }
+
+    /// 偽の Worker の `/gift`。答えはコードで決まる
+    async fn gift_server() -> (String, Arc<AtomicUsize>) {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let api = format!("http://{}", listener.local_addr().unwrap());
+        let hits = Arc::new(AtomicUsize::new(0));
+        let counter = hits.clone();
+        let answer = move |headers: HeaderMap| {
+            let hits = counter.clone();
+            async move {
+                hits.fetch_add(1, Ordering::SeqCst);
+                let code = headers["authorization"].to_str().unwrap();
+                gift_answer(code.trim_start_matches("Bearer "))
+            }
+        };
+        let router = axum::Router::new().route("/gift", axum::routing::get(answer));
+        tokio::spawn(async move { axum::serve(listener, router).await });
+        (api, hits)
+    }
+
+    fn gift_answer(code: &str) -> Response {
+        let refused = (
+            StatusCode::FORBIDDEN,
+            axum::Json(serde_json::json!({ "error": "revoked" })),
+        );
+        match code {
+            "revoked" => refused.into_response(),
+            "down" => StatusCode::BAD_GATEWAY.into_response(),
+            _ => axum::Json(serde_json::json!({})).into_response(),
+        }
+    }
+
+    /// 無音の WAV を 30 秒流す字幕の処理と、偽の Worker
+    struct App {
+        store: Arc<Store>,
+        slot: Slot<SubtitlesInput>,
+        api: String,
+        checks: Arc<AtomicUsize>,
+        dir: tempfile::TempDir,
+    }
+
+    impl App {
+        async fn new() -> Self {
+            let dir = tempfile::tempdir().unwrap();
+            let settings = Settings {
+                speech_engine: SpeechEngine::Hybrid,
+                deadlock_mode: false,
+                ..Settings::default()
+            };
+            let silence = vec![0.0; crate::audio::SAMPLE_RATE as usize * 30];
+            let wav = crate::audio::wav(&silence);
+            std::fs::write(dir.path().join("silence.wav"), wav).unwrap();
+            let (api, checks) = gift_server().await;
+            Self {
+                store: Store::new(Ok(settings), dir.path().to_owned()),
+                slot: Slot::new(),
+                api,
+                checks,
+                dir,
+            }
+        }
+
+        fn audio(&self, code: Option<&str>, language: &str) -> SubtitlesInput {
+            SubtitlesInput::Audio(Box::new(AudioInput {
+                source: Source::File(self.dir.path().join("silence.wav")),
+                mic_language: language.into(),
+                translate_to: Vec::new(),
+                deadlock_mode: false,
+                partial_text: Some(TextSource::Chrome),
+                speech_engine: SpeechEngine::Hybrid,
+                models: Settings::default().models,
+                realtime_delay: "low".into(),
+                segmentation: Settings::default().segmentation,
+                access: code.map(|code| Access::gift(code.into(), &self.api)),
+            }))
+        }
+
+        async fn update(&mut self, input: SubtitlesInput) {
+            update_subtitles(&mut self.slot, &self.store, input, &self.api).await;
+        }
+
+        /// `/gift` がこの回数呼ばれ、答えが処理に届くまで待つ
+        async fn settle(&self, checks: usize) {
+            for _ in 0..500 {
+                if self.checks() >= checks {
+                    break;
+                }
+                tokio::time::sleep(Duration::from_millis(10)).await;
+            }
+            tokio::time::sleep(SETTLE).await;
+        }
+
+        fn checks(&self) -> usize {
+            self.checks.load(Ordering::SeqCst)
+        }
+
+        fn error(&self) -> Option<TranscriptionError> {
+            self.store.transcription_error()
+        }
+    }
+
+    #[tokio::test]
+    async fn changing_a_setting_while_stopped_by_a_refusal_checks_the_gift_again() {
+        let mut app = App::new().await;
+        let input = app.audio(Some("revoked"), "ja");
+        app.update(input).await;
+        app.settle(1).await;
+        assert_eq!(app.error(), Some(TranscriptionError::GiftRevoked));
+
+        let input = app.audio(Some("revoked"), "en");
+        app.update(input).await;
+        app.settle(2).await;
+        assert_eq!(app.checks(), 2);
+        assert_eq!(app.error(), Some(TranscriptionError::GiftRevoked));
+        assert!(!app.slot.is_running());
+    }
+
+    #[tokio::test]
+    async fn a_code_entered_after_a_missing_key_is_checked() {
+        let mut app = App::new().await;
+        let input = app.audio(None, "ja");
+        app.update(input).await;
+        assert_eq!(app.error(), Some(TranscriptionError::MissingKey));
+
+        let input = app.audio(Some("revoked"), "ja");
+        app.update(input).await;
+        app.settle(1).await;
+        assert_eq!(app.error(), Some(TranscriptionError::GiftRevoked));
+    }
+
+    /// 動いている間に断られるようになっても、関連の要求で止まる（DESIGN.md 17.1）
+    #[tokio::test]
+    async fn changes_while_running_do_not_check_the_gift() {
+        let mut app = App::new().await;
+        app.update(chrome()).await;
+        let changes = [
+            app.audio(Some("good"), "ja"),
+            app.audio(Some("good"), "en"),
+            app.audio(Some("down"), "en"),
+        ];
+        for input in changes {
+            app.update(input).await;
+            app.settle(0).await;
+            assert_eq!(app.checks(), 0);
+            assert_eq!(app.error(), None);
+            assert!(app.slot.is_running());
+        }
+    }
+
+    #[tokio::test]
+    async fn an_unreachable_server_keeps_the_subtitles_from_starting() {
+        let mut app = App::new().await;
+        let input = app.audio(Some("down"), "ja");
+        app.update(input).await;
+        app.settle(1).await;
+        assert!(matches!(
+            app.error(),
+            Some(TranscriptionError::Failed { .. })
+        ));
+        assert!(!app.slot.is_running());
+    }
+
+    #[tokio::test]
+    async fn the_reason_a_key_was_refused_reaches_the_panel() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = Store::new(Ok(Settings::default()), dir.path().to_owned());
+        let refused = async { Err(TranscriptionError::GiftRevoked.into()) };
+        supervise(store.clone(), refused, None).await;
+        assert_eq!(
+            store.transcription_error(),
+            Some(TranscriptionError::GiftRevoked)
+        );
+    }
 }

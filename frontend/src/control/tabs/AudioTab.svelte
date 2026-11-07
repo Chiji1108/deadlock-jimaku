@@ -67,9 +67,12 @@
       ? panel.chromeStatus.detail
       : undefined,
   );
+  /** ハイブリッドは確定の字幕を作れないと Chrome を閉じる */
+  const chromeClosed = $derived(s.speechEngine === "hybrid" && !!panel.transcriptionError);
   /** Chrome のウィンドウの今の状態 */
   const chromeNote = $derived.by(() => {
     if (!s.transcriptionEnabled) return "字幕を始めると開きます";
+    if (chromeClosed) return "字幕が止まっているので閉じています";
     if (!panel.chromeStatus) return "Chrome のウィンドウを開いています";
     if (panel.chromeStatus.detail) return panel.chromeStatus.detail;
     if (panel.chromeStatus.state === "listening") return "聞き取っています";
@@ -131,7 +134,7 @@
       {/if}
       {#if s.speechEngine !== "openai"}
         <div class="flex flex-wrap items-center gap-3">
-          {#if s.transcriptionEnabled}
+          {#if s.transcriptionEnabled && !chromeClosed}
             <Button variant="outline" size="sm" onclick={panel.openChrome}>Chrome を開き直す</Button
             >
           {/if}

@@ -13,7 +13,7 @@ use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use tokio::sync::mpsc;
+use tokio::sync::{broadcast, mpsc};
 
 use crate::annotate::Annotator;
 use crate::audio::{self, History, SAMPLE_RATE};
@@ -23,12 +23,11 @@ use crate::lang;
 use crate::now_ms;
 use crate::openai::Access;
 use crate::settings::{Settings, TextSource};
-use crate::share;
 use crate::store::{ChromeEvent, Store};
 use crate::stt::{self, BatchRequest, Hints, RealtimeConfig};
 use crate::types::{
     ChromeCommand, Enriched, EntityKind, Glossary, Heard, LangCode, Segment, Stage, Token,
-    Translated, Translations,
+    TranscriptionError, Translated, Translations,
 };
 use crate::usage::Meter;
 
@@ -81,13 +80,13 @@ pub async fn run(store: Arc<Store>, input: audio::Input, access: Access) -> anyh
         keywords,
     });
     // 文を受け取ったら読みと用語を付ける。ハイブリッドの途中の文は Chrome から届く
-    let mut chrome_events = store.subscribe_chrome();
+    let chrome_events = store.subscribe_chrome();
     let annotator = Annotator::new(store.clone(), &settings).await;
-    let mut audio_rx = audio::open(input).await?;
+    let audio_rx = audio::open(input).await?;
 
-    let (done_tx, mut done_rx) = mpsc::channel(64);
+    let (done_tx, done_rx) = mpsc::channel(64);
     // 開く・音声・閉じるは同じチャンネルで順番どおりに送る
-    let (delta_tx, mut delta_rx) = mpsc::channel(256);
+    let (delta_tx, delta_rx) = mpsc::channel(256);
     // オフなら Realtime につながず、確定の字幕だけを出す
     let plan = settings.plan();
     let realtime = if plan.partial.text == Some(TextSource::GptLiveTranscribe) {
@@ -127,10 +126,21 @@ pub async fn run(store: Arc<Store>, input: audio::Input, access: Access) -> anyh
             meter: store.meter(),
         }),
     };
-    let mut pipeline = Pipeline::new(store, &settings, cloud, done_tx, realtime, annotator);
+    let pipeline = Pipeline::new(store, &settings, cloud, done_tx, realtime, annotator);
 
+    listen(pipeline, audio_rx, delta_rx, done_rx, chrome_events).await
+}
+
+/// 入力が終わるか、鍵やギフトコードが断られるまで字幕にする
+async fn listen(
+    mut pipeline: Pipeline,
+    mut audio_rx: mpsc::Receiver<Vec<f32>>,
+    mut delta_rx: mpsc::Receiver<stt::Delta>,
+    mut done_rx: mpsc::Receiver<Done>,
+    mut chrome_events: broadcast::Receiver<ChromeEvent>,
+) -> anyhow::Result<()> {
     let mut level = LevelMeter::default();
-    while !pipeline.daily_limit {
+    while pipeline.refused.is_none() {
         tokio::select! {
             chunk = audio_rx.recv() => {
                 let Some(chunk) = chunk else { break };
@@ -146,17 +156,23 @@ pub async fn run(store: Arc<Store>, input: audio::Input, access: Access) -> anyh
     }
 
     // 入力が終わったら、開いている発話を閉じ、バッチと enrich の結果がすべて届くまで待つ
-    pipeline.finish();
-    while pipeline.pending > 0 {
+    if pipeline.refused.is_none() {
+        pipeline.finish();
+    }
+    while pipeline.pending > 0 && pipeline.refused.is_none() {
         tokio::select! {
             Some(done) = done_rx.recv() => pipeline.on_done(done),
             Some(delta) = delta_rx.recv() => pipeline.on_delta(delta),
         }
     }
-    if pipeline.daily_limit {
-        return Err(share::DailyLimit.into());
+    // 断られた鍵へは送らない。待っていた結果は捨てる
+    match pipeline.refused {
+        Some(refused) => {
+            pipeline.store.discard_unsettled();
+            Err(refused.into())
+        }
+        None => Ok(()),
     }
-    Ok(())
 }
 
 /// 操作パネルのメーター用。区間ごとのピークを dBFS で返す
@@ -209,8 +225,8 @@ struct Pipeline {
     context: VecDeque<String>,
     /// バッチか enrich の結果を待っている数
     pending: usize,
-    /// ギフトコードの今日の上限に達した。確定の字幕は発話ごとに送るので、これで気づける
-    daily_limit: bool,
+    /// OpenAI の鍵やギフトコードが断られた。確定の字幕は発話ごとに送るので、これで気づける
+    refused: Option<TranscriptionError>,
 }
 
 impl Pipeline {
@@ -239,7 +255,7 @@ impl Pipeline {
             seq: 0,
             context: VecDeque::new(),
             pending: 0,
-            daily_limit: false,
+            refused: None,
         }
     }
 
@@ -389,7 +405,7 @@ impl Pipeline {
                 self.pending -= 1;
                 self.on_transcribed(&id, text);
             }
-            Done::DailyLimit => self.daily_limit = true,
+            Done::Refused(refused) => self.refused = Some(refused),
             Done::Draft { id, translations } => self.on_draft(&id, translations),
             Done::Enriched { id, enriched } => {
                 self.pending -= 1;
@@ -553,13 +569,14 @@ async fn realtime_loop(
         let started = Instant::now();
         match stt::realtime(&cfg, &hints, &mut speaking, &mut input, &deltas).await {
             Ok(()) => return,
-            // 張り直しても断られるだけなので、字幕を止めて知らせる
-            Err(e) if e.is::<share::DailyLimit>() => {
+            Err(e) => {
                 tracing::warn!("realtime: {e:#}");
-                let _ = done.send(Done::DailyLimit).await;
-                return;
+                // 張り直しても断られるだけなので、字幕を止めて知らせる
+                if let Some(refused) = e.downcast_ref::<TranscriptionError>() {
+                    let _ = done.send(Done::Refused(refused.clone())).await;
+                    return;
+                }
             }
-            Err(e) => tracing::warn!("realtime: {e:#}"),
         }
         if started.elapsed() > Duration::from_secs(30) {
             backoff = Duration::from_secs(1);
@@ -596,8 +613,8 @@ enum Done {
         id: String,
         translations: Translations,
     },
-    /// サーバーがギフトコードの今日の上限で断った
-    DailyLimit,
+    /// OpenAI の鍵やギフトコードが断られた
+    Refused(TranscriptionError),
     /// 翻訳に失敗しても、固有名詞とふりがなは付いている
     Enriched { id: String, enriched: Enriched },
 }
@@ -621,8 +638,8 @@ async fn transcribe(
         Ok(text) => Some(text),
         Err(e) => {
             tracing::warn!("batch transcription: {e:#}");
-            if e.is::<share::DailyLimit>() {
-                let _ = done.send(Done::DailyLimit).await;
+            if let Some(refused) = e.downcast_ref::<TranscriptionError>() {
+                let _ = done.send(Done::Refused(refused.clone())).await;
             }
             None
         }
@@ -796,8 +813,11 @@ impl Segmenter {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
     use crate::openai::Access;
     use crate::settings::Segmentation;
+    use crate::share;
     use crate::usage::Meter;
     use axum::http::StatusCode;
     use futures_util::{SinkExt, StreamExt};
@@ -811,13 +831,19 @@ mod tests {
         Pipeline,
         tokio::sync::broadcast::Receiver<crate::types::ServerMsg>,
     ) {
+        let (done_tx, _done) = mpsc::channel(1);
+        let access = Access::gift("code".into(), "http://127.0.0.1:9");
+        let pipeline = hybrid_pipeline_to(access, done_tx).await;
+        let messages = pipeline.store.subscribe();
+        (pipeline, messages)
+    }
+
+    async fn hybrid_pipeline_to(access: Access, done_tx: mpsc::Sender<Done>) -> Pipeline {
         let settings = Settings {
             speech_engine: crate::settings::SpeechEngine::Hybrid,
             ..Settings::default()
         };
         let store = Store::new(Ok(settings.clone()), std::path::PathBuf::new());
-        let messages = store.subscribe();
-        let access = Access::gift("code".into(), "http://127.0.0.1:9");
         let cloud = Cloud {
             enricher: Arc::new(Enricher::new(
                 access.clone(),
@@ -839,10 +865,8 @@ mod tests {
                 meter: store.meter(),
             }),
         };
-        let (done_tx, _done) = mpsc::channel(1);
         let annotator = Annotator::new(store.clone(), &settings).await;
-        let pipeline = Pipeline::new(store, &settings, cloud, done_tx, None, annotator);
-        (pipeline, messages)
+        Pipeline::new(store, &settings, cloud, done_tx, None, annotator)
     }
 
     fn heard(text: &str, cut: u32) -> crate::types::Heard {
@@ -908,11 +932,216 @@ mod tests {
         assert!(segment.tokens.is_some_and(|tokens| !tokens.is_empty()));
     }
 
-    /// 字幕の途中で上限に達したら張り直さず、`Done::DailyLimit` を送って終わる
-    async fn stops_at_the_daily_limit(api: String) {
+    /// 確定の文字起こしを 1 回送り、起きたことを返す
+    async fn transcribe_through(access: Access) -> Vec<Done> {
+        let dir = tempfile::tempdir().unwrap();
+        let ctx = Arc::new(BatchContext {
+            http: crate::http().clone(),
+            access,
+            model: "gpt-transcribe".into(),
+            hints: Arc::new(Hints {
+                language: "ja".into(),
+                prompt: String::new(),
+                keywords: Vec::new(),
+            }),
+            meter: Arc::new(Meter::new(dir.path().join("usage.json"))),
+        });
+        let (done_tx, mut done_rx) = mpsc::channel(2);
+        transcribe(ctx, "id".into(), vec![0; 44], 1.0, done_tx).await;
+        std::iter::from_fn(|| done_rx.try_recv().ok()).collect()
+    }
+
+    /// 文字起こしの要求にいつも同じ答えを返すサーバー
+    async fn answering(status: StatusCode, body: serde_json::Value) -> String {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let api = format!("http://{}", listener.local_addr().unwrap());
+        let answer = move || async move { (status, axum::Json(body)) };
+        let router =
+            axum::Router::new().route("/openai/audio/transcriptions", axum::routing::post(answer));
+        tokio::spawn(async move { axum::serve(listener, router).await });
+        api
+    }
+
+    #[tokio::test]
+    async fn a_refused_key_stops_the_subtitles() {
+        for (status, error, expected) in [
+            (
+                StatusCode::UNAUTHORIZED,
+                "unknown",
+                TranscriptionError::GiftUnknown,
+            ),
+            (
+                StatusCode::FORBIDDEN,
+                "revoked",
+                TranscriptionError::GiftRevoked,
+            ),
+            (
+                StatusCode::FORBIDDEN,
+                "expired",
+                TranscriptionError::GiftExpired { expires_at: None },
+            ),
+            (
+                StatusCode::FORBIDDEN,
+                "limit",
+                TranscriptionError::GiftLimit,
+            ),
+        ] {
+            let api = answering(status, json!({ "error": error })).await;
+            let done = transcribe_through(Access::gift("code".into(), &api)).await;
+            assert!(
+                matches!(&done[0], Done::Refused(refused) if *refused == expected),
+                "{error}"
+            );
+            assert!(matches!(done[1], Done::Transcribed { text: None, .. }));
+        }
+    }
+
+    /// 1 つの発話の確定の文が抜けるだけで、字幕は続く
+    #[tokio::test]
+    async fn a_failure_that_may_pass_does_not_stop_the_subtitles() {
+        let rate = json!({ "error": "rate" });
+        let unavailable = json!({ "error": { "message": "try again" } });
+        for api in [
+            answering(StatusCode::TOO_MANY_REQUESTS, rate).await,
+            answering(StatusCode::INTERNAL_SERVER_ERROR, unavailable).await,
+            "http://127.0.0.1:9".to_owned(),
+        ] {
+            let done = transcribe_through(Access::gift("code".into(), &api)).await;
+            assert!(matches!(done[..], [Done::Transcribed { text: None, .. }]));
+        }
+    }
+
+    #[tokio::test]
+    async fn the_pipeline_remembers_why_it_was_refused() {
+        let (mut pipeline, _messages) = hybrid_pipeline().await;
+        pipeline.on_done(Done::Refused(TranscriptionError::GiftRevoked));
+        assert_eq!(pipeline.refused, Some(TranscriptionError::GiftRevoked));
+    }
+
+    /// 1 回目の発話の文字起こしは答えず、2 回目から断るサーバー。呼ばれた回数も返す
+    async fn refusing_after_one_silent_request() -> (String, Arc<AtomicUsize>) {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let api = format!("http://{}", listener.local_addr().unwrap());
+        let requests = Arc::new(AtomicUsize::new(0));
+        let counter = requests.clone();
+        let answer = move || {
+            let requests = counter.clone();
+            async move {
+                if requests.fetch_add(1, Ordering::SeqCst) == 0 {
+                    std::future::pending::<()>().await;
+                }
+                (
+                    StatusCode::FORBIDDEN,
+                    axum::Json(json!({ "error": "revoked" })),
+                )
+            }
+        };
+        let router =
+            axum::Router::new().route("/openai/audio/transcriptions", axum::routing::post(answer));
+        tokio::spawn(async move { axum::serve(listener, router).await });
+        (api, requests)
+    }
+
+    fn utterance(pipeline: &mut Pipeline) {
+        pipeline.open();
+        utterance_alongside(pipeline);
+    }
+
+    /// 開いている発話を残したまま、別の発話を 1 つ文字起こしに送る
+    fn utterance_alongside(pipeline: &mut Pipeline) {
+        let open = pipeline.current.take();
+        pipeline.seq += 1;
+        let segment = partial_segment(pipeline.seq, &pipeline.lang);
+        pipeline.current = Some(segment.id.clone());
+        pipeline.live.insert(segment.id.clone(), segment);
+        pipeline.close(Close {
+            start: 0,
+            end: audio::SAMPLE_RATE.into(),
+            speech_ms: 1000,
+            cut_start: false,
+            cut_end: false,
+        });
+        pipeline.current = open;
+    }
+
+    /// `MIN_SPEECH_MS` を超えて開いたままの発話を、書きかけの文とともに作る
+    fn open_utterance(pipeline: &mut Pipeline) -> String {
+        let frames = u64::from(MIN_SPEECH_MS / FRAME_MS) + 1;
+        for frame in 0..frames {
+            if pipeline.segmenter.push(frame * FRAME as u64, 1.0) == Some(Event::Open) {
+                pipeline.open();
+            }
+        }
+        let segment = pipeline.current.clone().unwrap();
+        pipeline.on_delta(stt::Delta {
+            segment: segment.clone(),
+            text: "ヘイズ".into(),
+        });
+        segment
+    }
+
+    /// 答えない要求が残っていても待たず、開いている発話を断られた鍵へ送らず、出ている字幕を消す
+    #[tokio::test]
+    async fn a_refusal_stops_at_once_and_drops_what_is_left() {
+        let (api, requests) = refusing_after_one_silent_request().await;
+        let (done_tx, done_rx) = mpsc::channel(64);
+        let mut pipeline = hybrid_pipeline_to(Access::gift("code".into(), &api), done_tx).await;
+        let store = pipeline.store.clone();
+        let mut messages = store.subscribe();
+        let open = open_utterance(&mut pipeline);
+        utterance_alongside(&mut pipeline);
+        utterance_alongside(&mut pipeline);
+
+        let (_audio, audio_rx) = mpsc::channel(1);
+        let (_delta, delta_rx) = mpsc::channel(1);
+        let events = store.subscribe_chrome();
+        let run = listen(pipeline, audio_rx, delta_rx, done_rx, events);
+        let refused = tokio::time::timeout(Duration::from_secs(2), run)
+            .await
+            .expect("the refusal does not wait for the silent request")
+            .unwrap_err();
+        assert_eq!(
+            TranscriptionError::from_error(&refused),
+            TranscriptionError::GiftRevoked
+        );
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        assert_eq!(requests.load(Ordering::SeqCst), 2);
+        let discarded = std::iter::from_fn(|| messages.try_recv().ok()).any(|message| {
+            matches!(message, crate::types::ServerMsg::SegmentUpsert { segment }
+                if segment.id == open && segment.stage == Stage::Discarded)
+        });
+        assert!(discarded);
+    }
+
+    /// 入力が終わって残りを待っている間に断られても、待ち続けない
+    #[tokio::test]
+    async fn a_refusal_while_draining_stops_at_once() {
+        let (api, _requests) = refusing_after_one_silent_request().await;
+        let (done_tx, done_rx) = mpsc::channel(64);
+        let mut pipeline = hybrid_pipeline_to(Access::gift("code".into(), &api), done_tx).await;
+        let events = pipeline.store.subscribe_chrome();
+        utterance(&mut pipeline);
+        utterance(&mut pipeline);
+
+        let (_, audio_rx) = mpsc::channel(1);
+        let (_delta, delta_rx) = mpsc::channel(1);
+        let run = listen(pipeline, audio_rx, delta_rx, done_rx, events);
+        let refused = tokio::time::timeout(Duration::from_secs(2), run)
+            .await
+            .expect("the refusal does not wait for the silent request")
+            .unwrap_err();
+        assert_eq!(
+            TranscriptionError::from_error(&refused),
+            TranscriptionError::GiftRevoked
+        );
+    }
+
+    /// 字幕の途中で断られたら張り直さず、`Done::Refused` を送って終わる
+    async fn stops_on_refusal(access: Access, expected: TranscriptionError) {
         let dir = tempfile::tempdir().unwrap();
         let config = RealtimeConfig {
-            access: Access::gift("code".into(), &api),
+            access,
             model: "gpt-live-transcribe".into(),
             delay: "low".into(),
             meter: Arc::new(Meter::new(dir.path().join("usage.json"))),
@@ -929,7 +1158,7 @@ mod tests {
         let done = tokio::time::timeout(Duration::from_secs(5), done_rx.recv())
             .await
             .expect("the loop should not keep reconnecting");
-        assert!(matches!(done, Some(Done::DailyLimit)));
+        assert!(matches!(done, Some(Done::Refused(refused)) if refused == expected));
         tokio::time::timeout(Duration::from_secs(5), task)
             .await
             .unwrap()
@@ -954,7 +1183,8 @@ mod tests {
             };
             ws.close(Some(frame)).await.unwrap();
         });
-        stops_at_the_daily_limit(api).await;
+        let access = Access::gift("code".into(), &api);
+        stops_on_refusal(access, TranscriptionError::GiftLimit).await;
     }
 
     #[tokio::test]
@@ -971,7 +1201,20 @@ mod tests {
         };
         let router = axum::Router::new().route("/openai/realtime", axum::routing::get(refuse));
         tokio::spawn(async move { axum::serve(listener, router).await });
-        stops_at_the_daily_limit(api).await;
+        let access = Access::gift("code".into(), &api);
+        stops_on_refusal(access, TranscriptionError::GiftLimit).await;
+    }
+
+    /// Worker の 401 にはヘッダーがない
+    #[tokio::test]
+    async fn a_realtime_handshake_refused_for_an_unknown_code_does_not_reconnect() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let api = format!("http://{}", listener.local_addr().unwrap());
+        let refuse = || async { StatusCode::UNAUTHORIZED };
+        let router = axum::Router::new().route("/openai/realtime", axum::routing::get(refuse));
+        tokio::spawn(async move { axum::serve(listener, router).await });
+        let access = Access::gift("code".into(), &api);
+        stops_on_refusal(access, TranscriptionError::GiftUnknown).await;
     }
 
     #[test]

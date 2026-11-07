@@ -3,4 +3,8 @@
 /**
  * 字幕を始められなかった・止まった理由。文は操作パネルが作る（サーバーは中身だけを返す）
  */
-export type TranscriptionError = { "code": "missingKey" } | { "code": "giftExpired", expiresAt: number, } | { "code": "giftRevoked" } | { "code": "giftLimit" } | { "code": "giftUnknown" } | { "code": "inputEnded" } | { "code": "microphone", } & ({ "problem": "listFailed", detail: string, } | { "problem": "noDevices" } | { "problem": "notFound", name: string, } | { "problem": "noDefault" }) | { "code": "failed", detail: string, } | { "code": "crashed", detail: string, };
+export type TranscriptionError = { "code": "missingKey" } | { "code": "giftExpired", 
+/**
+ * 中継の 403 は期限を返さない
+ */
+expiresAt: number | null, } | { "code": "giftRevoked" } | { "code": "giftLimit" } | { "code": "giftUnknown" } | { "code": "invalidKey" } | { "code": "inputEnded" } | { "code": "microphone", } & ({ "problem": "listFailed", detail: string, } | { "problem": "noDevices" } | { "problem": "notFound", name: string, } | { "problem": "noDefault" }) | { "code": "failed", detail: string, } | { "code": "crashed", detail: string, };

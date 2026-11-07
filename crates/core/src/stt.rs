@@ -18,6 +18,7 @@ use tokio_tungstenite::tungstenite::{self, Message, client::IntoClientRequest, h
 use crate::audio::{SAMPLE_RATE, to_i16};
 use crate::openai::Access;
 use crate::share;
+use crate::types::TranscriptionError;
 use crate::usage::{Meter, Use};
 
 /// リアルタイムの `audio/pcm` は 24kHz（入力の 16kHz からちょうど 3/2 倍）
@@ -195,7 +196,7 @@ pub async fn realtime(
                 let event = match msg {
                     Some(Ok(Message::Text(text))) => serde_json::from_str::<Value>(&text)?,
                     Some(Ok(Message::Close(Some(frame)))) if frame.reason == share::LIMIT => {
-                        return Err(share::DailyLimit.into());
+                        return Err(TranscriptionError::GiftLimit.into());
                     }
                     Some(Ok(Message::Close(frame))) => bail!("realtime closed: {frame:?}"),
                     Some(Ok(_)) => continue,
@@ -249,15 +250,16 @@ async fn connect(cfg: &RealtimeConfig, hints: &Hints) -> anyhow::Result<(Sink, S
     );
     let (ws, _) = match tokio_tungstenite::connect_async(request).await {
         Ok(connected) => connected,
-        Err(tungstenite::Error::Http(res))
-            if res
-                .headers()
-                .get(share::REFUSAL_HEADER)
-                .is_some_and(|reason| reason == share::LIMIT) =>
-        {
-            return Err(share::DailyLimit.into());
+        Err(e) => {
+            if let tungstenite::Error::Http(res) = &e {
+                let reason = res.headers().get(share::REFUSAL_HEADER);
+                let reason = reason.and_then(|value| value.to_str().ok());
+                if let Some(refused) = share::refusal(&cfg.access, res.status(), reason) {
+                    return Err(refused.into());
+                }
+            }
+            return Err(e).context("connect realtime");
         }
-        Err(e) => return Err(e).context("connect realtime"),
     };
     let (mut sink, mut stream) = ws.split();
     expect_event(&mut stream, "session.created").await?;
@@ -420,8 +422,9 @@ pub async fn transcribe(http: &reqwest::Client, req: BatchRequest<'_>) -> anyhow
     if !status.is_success() {
         // 400 の理由は本文にしか書かれていない
         let body = res.text().await.unwrap_or_default();
-        if share::is_daily_limit(status, &body) {
-            return Err(share::DailyLimit.into());
+        let reason = share::refusal_reason(&body);
+        if let Some(refused) = share::refusal(req.access, status, reason.as_deref()) {
+            return Err(refused.into());
         }
         bail!("{status}: {body}");
     }

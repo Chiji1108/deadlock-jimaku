@@ -3,7 +3,7 @@
 use std::collections::VecDeque;
 use std::io;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -12,7 +12,7 @@ use tokio::sync::{broadcast, watch};
 
 use crate::assets::Loaded;
 use crate::chrome::{self, Browser};
-use crate::settings::{self, Settings, SettingsPatch, SpeechEngine, SubtitleDisplay};
+use crate::settings::{self, Settings, SettingsPatch, SubtitleDisplay};
 use crate::types::{
     ChromeCommand, Heard, ItemCardsView, LiveState, LiveStatus, RankState, Segment, ServerMsg,
     Stage, TranscriptionError, Translated,
@@ -72,10 +72,8 @@ pub struct Store {
     chrome_events: broadcast::Sender<ChromeEvent>,
     chrome_commands: broadcast::Sender<ChromeCommand>,
     chrome_tab: watch::Sender<ChromeTab>,
-    /// 字幕を出している間の Chrome。落とすと閉じる
+    /// 字幕を出している間の Chrome。落とすと閉じる。利用者が閉じても、字幕を始め直すか開き直すまで持つ
     browser: Mutex<Option<Browser>>,
-    /// Chrome を開いておくか（`runtime` が決める）
-    chrome_wanted: AtomicBool,
     /// ハイブリッドの発話を閉じた回数
     chrome_cuts: AtomicU32,
     meter: Arc<Meter>,
@@ -109,7 +107,6 @@ impl Store {
             chrome_commands: broadcast::channel(256).0,
             chrome_tab: watch::Sender::new(ChromeTab::default()),
             browser: Mutex::new(None),
-            chrome_wanted: AtomicBool::new(false),
             chrome_cuts: AtomicU32::new(0),
             meter,
         })
@@ -163,11 +160,10 @@ impl Store {
     }
 
     pub fn set_transcription_error(&self, error: Option<TranscriptionError>) {
-        // ハイブリッドで確定の字幕が止まったら、音声を Google に送り続けない
-        if error.is_some() && self.settings().speech_engine == SpeechEngine::Hybrid {
+        *self.transcription_error.lock().unwrap() = error.clone();
+        if !self.chrome_needed() {
             self.close_chrome();
         }
-        *self.transcription_error.lock().unwrap() = error.clone();
         let _ = self.tx.send(ServerMsg::TranscriptionStatus { error });
     }
 
@@ -267,10 +263,15 @@ impl Store {
     pub fn connect_chrome(&self) -> (u64, watch::Receiver<ChromeTab>) {
         let mut replaced = false;
         let mut id = 0;
-        self.chrome_tab.send_modify(|tab| {
+        self.change_chrome_tab(|tab| {
             tab.id += 1;
             id = tab.id;
             replaced = tab.status.is_some();
+            // 読み込み直されたので、落ちたという案内は要らない。ほかの案内は開き直すまで残す
+            let crashed = |window: &LiveStatus| window.detail.as_deref() == Some(chrome::CRASHED);
+            if tab.window.as_ref().is_some_and(crashed) {
+                tab.window = None;
+            }
         });
         if replaced {
             self.send_chrome_event(ChromeEvent::Closed);
@@ -334,18 +335,26 @@ impl Store {
         self.change_chrome_tab(|tab| tab.window = problem);
     }
 
-    /// 字幕を始めるなら Chrome を起動し、止めるなら閉じる（DESIGN.md 9.6）
-    pub fn sync_chrome(self: &Arc<Self>, wanted: bool) {
-        self.chrome_wanted.store(wanted, Ordering::Relaxed);
-        // ハイブリッドで確定の字幕が止まっているなら、音声を Google に送らない
-        let stalled = self.transcription_error.lock().unwrap().is_some()
-            && self.settings().speech_engine == SpeechEngine::Hybrid;
-        if !wanted || stalled {
+    /// Chrome を開いておくか。確定の字幕に鍵が要るのに字幕が止まっている（鍵がないときも）なら、
+    /// 音声だけを Google に送らない
+    fn chrome_needed(&self) -> bool {
+        let settings = self.settings();
+        let plan = settings.plan();
+        let stalled = plan.needs_key() && self.transcription_error().is_some();
+        settings.transcription_enabled && plan.uses_chrome() && !stalled
+    }
+
+    /// 字幕を始めるなら Chrome を起動し、止めるなら閉じる（DESIGN.md 9.6）。
+    /// ロックを持ってから判断するので、字幕が止まるのと重なっても開いたままにならない
+    pub fn sync_chrome(self: &Arc<Self>) {
+        let mut browser = self.browser.lock().unwrap();
+        if !self.chrome_needed() {
+            drop(browser);
             self.close_chrome();
             return;
         }
-        let mut browser = self.browser.lock().unwrap();
-        if browser.as_mut().is_some_and(Browser::running) {
+        // 閉じられた Chrome も残るので、設定を変えただけでは起動し直さない
+        if browser.is_some() {
             return;
         }
         match Browser::launch(self.clone()) {
@@ -373,7 +382,7 @@ impl Store {
     /// 開き直す。プロセスが残っていても、ページが止まっていることがある
     pub fn reopen_chrome(self: &Arc<Self>) {
         self.close_chrome();
-        self.sync_chrome(self.chrome_wanted.load(Ordering::Relaxed));
+        self.sync_chrome();
     }
 
     /// Chrome を止めてプロファイルを消し、字幕が動いていれば起動し直す（DESIGN.md 9.6）。
@@ -385,7 +394,7 @@ impl Store {
             *browser = None;
             chrome::remove_profile(&self.data_dir)
         };
-        self.sync_chrome(self.chrome_wanted.load(Ordering::Relaxed));
+        self.sync_chrome();
         removed
     }
 
@@ -502,6 +511,7 @@ fn display(settings: &Settings) -> ServerMsg {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::settings::SpeechEngine;
     use crate::types::Stage;
 
     fn seg(id: &str, text: &str) -> Segment {
@@ -523,6 +533,98 @@ mod tests {
             ServerMsg::Snapshot { segments } => segments,
             other => panic!("unexpected {other:?}"),
         }
+    }
+
+    fn chrome_store(speech_engine: SpeechEngine) -> (tempfile::TempDir, Arc<Store>) {
+        let dir = tempfile::tempdir().unwrap();
+        let settings = Settings {
+            speech_engine,
+            transcription_enabled: true,
+            ..Settings::default()
+        };
+        let store = Store::new(Ok(settings), dir.path().to_owned());
+        (dir, store)
+    }
+
+    #[tokio::test]
+    async fn a_stopped_hybrid_closes_chrome_and_does_not_open_it_again() {
+        let (_dir, store) = chrome_store(SpeechEngine::Hybrid);
+        *store.browser.lock().unwrap() = Some(Browser::exited());
+        store.set_transcription_error(Some(TranscriptionError::GiftRevoked));
+        assert!(store.browser.lock().unwrap().is_none());
+        store.sync_chrome();
+        assert!(store.browser.lock().unwrap().is_none());
+    }
+
+    #[tokio::test]
+    async fn a_missing_key_keeps_chrome_closed_in_hybrid() {
+        let (_dir, store) = chrome_store(SpeechEngine::Hybrid);
+        store.set_transcription_error(Some(TranscriptionError::MissingKey));
+        store.sync_chrome();
+        assert!(store.browser.lock().unwrap().is_none());
+    }
+
+    /// Chrome のモードの字幕は OpenAI を使わないので、ウィンドウは残す
+    #[tokio::test]
+    async fn an_error_leaves_chrome_open_in_chrome_mode() {
+        let (_dir, store) = chrome_store(SpeechEngine::Chrome);
+        *store.browser.lock().unwrap() = Some(Browser::exited());
+        store.set_transcription_error(Some(TranscriptionError::Crashed {
+            detail: "panic".into(),
+        }));
+        assert!(store.browser.lock().unwrap().is_some());
+    }
+
+    /// 閉じられたままなら、起動されて `Browser` が入れ替わることもない
+    #[tokio::test]
+    async fn a_closed_chrome_stays_closed_when_settings_change() {
+        let (_dir, store) = chrome_store(SpeechEngine::Chrome);
+        let closed = Browser::exited();
+        let pid = closed.pid();
+        *store.browser.lock().unwrap() = Some(closed);
+        store.sync_chrome();
+        let browser = store.browser.lock().unwrap();
+        assert_eq!(browser.as_ref().map(Browser::pid), Some(pid));
+    }
+
+    #[tokio::test]
+    async fn stopping_forgets_the_closed_chrome() {
+        let (_dir, store) = chrome_store(SpeechEngine::Chrome);
+        *store.browser.lock().unwrap() = Some(Browser::exited());
+        let stop = SettingsPatch {
+            transcription_enabled: Some(false),
+            ..Default::default()
+        };
+        store.update_settings(stop).unwrap();
+        store.sync_chrome();
+        assert!(store.browser.lock().unwrap().is_none());
+    }
+
+    /// ページの読み込みで消えるのは落ちたという案内だけで、消えたことは操作パネルに届く
+    #[tokio::test]
+    async fn a_loaded_page_clears_only_the_crash_notice() {
+        let store = Store::new(Ok(Settings::default()), PathBuf::new());
+        let window = |detail: &str| {
+            Some(LiveStatus {
+                state: LiveState::Failed,
+                detail: Some(detail.into()),
+            })
+        };
+        store.set_chrome_window(window("Chrome が閉じられました"));
+        store.connect_chrome();
+        assert_eq!(
+            store.snapshot_chrome_status(),
+            window("Chrome が閉じられました")
+        );
+
+        store.set_chrome_window(window(chrome::CRASHED));
+        let mut rx = store.subscribe();
+        store.connect_chrome();
+        assert_eq!(store.snapshot_chrome_status(), None);
+        assert_eq!(
+            rx.try_recv().unwrap(),
+            ServerMsg::ChromeStatus { status: None }
+        );
     }
 
     #[test]

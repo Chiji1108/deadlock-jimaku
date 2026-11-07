@@ -20,6 +20,7 @@ use anyhow::Context;
 use futures_util::{SinkExt, StreamExt};
 use serde_json::{Value, json};
 use tokio::task::JoinHandle;
+use tokio::time::MissedTickBehavior;
 use tokio_tungstenite::tungstenite::Message;
 
 use crate::DEFAULT_PORT;
@@ -50,6 +51,8 @@ const RETRY: Duration = Duration::from_millis(200);
 const REMOVE_ATTEMPTS: u32 = 25;
 /// ページの準備が要らないか確かめる間隔
 const CHECK_INTERVAL: Duration = Duration::from_secs(1);
+/// ページが落ちたときに操作パネルに出す案内
+pub(crate) const CRASHED: &str = "Chrome のページが落ちました。「Chrome を開き直す」で戻せます";
 
 /// 落とすと Chrome を閉じる
 pub struct Browser {
@@ -69,27 +72,35 @@ impl Browser {
             .spawn()?;
         let watcher = tokio::spawn(async move {
             let (detail, error) = match connect(&profile).await {
-                Ok((cdp, session)) => (
+                Ok((cdp, page)) => (
                     "Chrome が閉じられました",
-                    drive(cdp, &session).await.unwrap_err(),
+                    drive(cdp, &page, &store).await.unwrap_err(),
                 ),
                 Err(e) => ("Chrome に接続できません", e),
             };
-            // 字幕を止める前なら、操作パネルで開き直せるようにする
-            let settings = store.settings();
-            if settings.transcription_enabled && settings.plan().uses_chrome() {
-                tracing::warn!("chrome: {error:#}");
-                store.set_chrome_window(Some(LiveStatus {
-                    state: LiveState::Failed,
-                    detail: Some(detail.into()),
-                }));
-            }
+            tracing::warn!("chrome: {error:#}");
+            report_failure(&store, detail);
         });
         Ok(Self { child, watcher })
     }
+}
 
-    pub fn running(&mut self) -> bool {
-        matches!(self.child.try_wait(), Ok(None))
+#[cfg(test)]
+impl Browser {
+    /// もう終わったプロセスの Chrome
+    pub fn exited() -> Self {
+        let mut child = Command::new(std::env::current_exe().unwrap())
+            .arg("--list")
+            .stdout(Stdio::null())
+            .spawn()
+            .unwrap();
+        child.wait().unwrap();
+        let watcher = tokio::spawn(async {});
+        Self { child, watcher }
+    }
+
+    pub fn pid(&self) -> u32 {
+        self.child.id()
     }
 }
 
@@ -99,6 +110,17 @@ impl Drop for Browser {
         self.watcher.abort();
         let _ = self.child.kill();
         let _ = self.child.wait();
+    }
+}
+
+/// 字幕を止める前なら、操作パネルで開き直せるようにする
+fn report_failure(store: &Store, detail: &str) {
+    let settings = store.settings();
+    if settings.transcription_enabled && settings.plan().uses_chrome() {
+        store.set_chrome_window(Some(LiveStatus {
+            state: LiveState::Failed,
+            detail: Some(detail.into()),
+        }));
     }
 }
 
@@ -141,7 +163,7 @@ fn arguments(profile: &Path) -> Vec<String> {
 }
 
 /// ページのタブにつなぐ
-async fn connect(profile: &Path) -> anyhow::Result<(Cdp, String)> {
+async fn connect(profile: &Path) -> anyhow::Result<(Cdp, Page)> {
     let port = active_port(profile).await?;
     let version: Value = crate::http()
         .get(format!("http://127.0.0.1:{port}/json/version"))
@@ -154,22 +176,57 @@ async fn connect(profile: &Path) -> anyhow::Result<(Cdp, String)> {
         .context("no debugger url")?;
     let (socket, _) = tokio_tungstenite::connect_async(url).await?;
     let mut cdp = Cdp { socket, id: 0 };
-    let session = cdp.page_session().await?;
-    Ok((cdp, session))
+    // つなぐ前に頼むので、つないだあとにタブが閉じられれば必ず知らせが届く
+    cdp.call(
+        None,
+        "Target.setDiscoverTargets",
+        json!({ "discover": true }),
+    )
+    .await?;
+    let page = cdp.page().await?;
+    Ok((cdp, page))
 }
 
 /// ページの準備（クリックが要るモデルのダウンロード）を始めさせる。翻訳先を増やすと
-/// またダウンロードが要るので、Chrome が閉じるまで続ける（閉じたことも、これで分かる）
-async fn drive(mut cdp: Cdp, session: &str) -> anyhow::Result<std::convert::Infallible> {
+/// またダウンロードが要るので、Chrome が閉じるまで続ける。応答では閉じたと判断しない。
+/// ページが落ちると応答は来ず、読み込み直すと `Target crashed` が返る（DESIGN.md 9.6）。
+/// 落ちても読み込み直せば同じセッションで動き続けるので、知らせるだけで見張りは続ける
+async fn drive(
+    mut cdp: Cdp,
+    page: &Page,
+    store: &Store,
+) -> anyhow::Result<std::convert::Infallible> {
+    let mut check = tokio::time::interval(CHECK_INTERVAL);
+    check.set_missed_tick_behavior(MissedTickBehavior::Delay);
     loop {
-        cdp.call(
-            Some(session),
-            "Runtime.evaluate",
-            json!({ "expression": "window.jimakuStart?.()", "userGesture": true }),
-        )
-        .await?;
-        tokio::time::sleep(CHECK_INTERVAL).await;
+        tokio::select! {
+            _ = check.tick() => {
+                let start = json!({ "expression": "window.jimakuStart?.()", "userGesture": true });
+                cdp.send(Some(&page.session), "Runtime.evaluate", start).await?;
+            }
+            message = cdp.socket.next() => {
+                let Message::Text(text) = message.context("chrome closed")?? else {
+                    continue;
+                };
+                match page_event(&text, &page.target).as_deref() {
+                    Some("Target.targetDestroyed") => anyhow::bail!("the page was closed"),
+                    Some("Target.targetCrashed") => {
+                        tracing::warn!("chrome: the page crashed");
+                        report_failure(store, CRASHED);
+                    }
+                    _ => {}
+                }
+            }
+        }
     }
+}
+
+/// このページのタブについての CDP の知らせの名前
+fn page_event(message: &str, target: &str) -> Option<String> {
+    let event: Value = serde_json::from_str(message).ok()?;
+    let method = event["method"].as_str();
+    let method = method.filter(|_| event["params"]["targetId"] == target)?;
+    Some(method.to_owned())
 }
 
 /// Chrome が開いた CDP のポートはプロファイルのファイルに書かれる
@@ -193,19 +250,35 @@ struct Cdp {
     id: u64,
 }
 
+/// 字幕のページのタブ
+struct Page {
+    target: String,
+    session: String,
+}
+
 impl Cdp {
-    async fn call(
+    async fn send(
         &mut self,
         session: Option<&str>,
         method: &str,
         params: Value,
-    ) -> anyhow::Result<Value> {
+    ) -> anyhow::Result<()> {
         self.id += 1;
         let mut message = json!({ "id": self.id, "method": method, "params": params });
         if let Some(session) = session {
             message["sessionId"] = json!(session);
         }
         self.socket.send(Message::text(message.to_string())).await?;
+        Ok(())
+    }
+
+    async fn call(
+        &mut self,
+        session: Option<&str>,
+        method: &str,
+        params: Value,
+    ) -> anyhow::Result<Value> {
+        self.send(session, method, params).await?;
         while let Some(message) = self.socket.next().await {
             let Message::Text(text) = message? else {
                 continue;
@@ -220,7 +293,7 @@ impl Cdp {
     }
 
     /// 字幕のページのタブにつなぐ
-    async fn page_session(&mut self) -> anyhow::Result<String> {
+    async fn page(&mut self) -> anyhow::Result<Page> {
         for _ in 0..ATTEMPTS {
             let targets = self.call(None, "Target.getTargets", json!({})).await?;
             let target = targets["targetInfos"]
@@ -236,10 +309,13 @@ impl Cdp {
                         json!({ "targetId": target["targetId"], "flatten": true }),
                     )
                     .await?;
-                return session["sessionId"]
-                    .as_str()
-                    .map(ToOwned::to_owned)
-                    .context("no session");
+                return Ok(Page {
+                    target: target["targetId"].as_str().context("no target")?.to_owned(),
+                    session: session["sessionId"]
+                        .as_str()
+                        .context("no session")?
+                        .to_owned(),
+                });
             }
             tokio::time::sleep(RETRY).await;
         }
@@ -467,6 +543,129 @@ mod tests {
             assert!(args.iter().any(|a| a == flag), "{flag}");
         }
         assert!(!args.iter().any(|a| a.contains("auto-accept")));
+    }
+
+    /// 偽の Chrome を `drive` で見張る
+    async fn watch_fake_chrome() -> (JoinHandle<anyhow::Error>, FakeChrome) {
+        watch_fake_chrome_for(running_store()).await
+    }
+
+    fn running_store() -> Arc<Store> {
+        let settings = Settings {
+            speech_engine: crate::settings::SpeechEngine::Chrome,
+            transcription_enabled: true,
+            ..Settings::default()
+        };
+        Store::new(Ok(settings), std::path::PathBuf::new())
+    }
+
+    async fn watch_fake_chrome_for(store: Arc<Store>) -> (JoinHandle<anyhow::Error>, FakeChrome) {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("ws://{}", listener.local_addr().unwrap());
+        let client = tokio::spawn(async move {
+            let (socket, _) = tokio_tungstenite::connect_async(url).await.unwrap();
+            let page = Page {
+                target: "page".into(),
+                session: "session".into(),
+            };
+            drive(Cdp { socket, id: 0 }, &page, &store)
+                .await
+                .unwrap_err()
+        });
+        let (socket, _) = listener.accept().await.unwrap();
+        let chrome = tokio_tungstenite::accept_async(socket).await.unwrap();
+        (client, chrome)
+    }
+
+    type FakeChrome = tokio_tungstenite::WebSocketStream<tokio::net::TcpStream>;
+
+    async fn next_check(chrome: &mut FakeChrome) -> Value {
+        let Some(Ok(Message::Text(text))) = chrome.next().await else {
+            panic!("no command");
+        };
+        let command: Value = serde_json::from_str(&text).unwrap();
+        assert_eq!(command["method"], "Runtime.evaluate");
+        assert_eq!(command["sessionId"], "session");
+        command["id"].clone()
+    }
+
+    fn target_event(method: &str, target: &str) -> Message {
+        let event = json!({ "method": method, "params": { "targetId": target } });
+        Message::text(event.to_string())
+    }
+
+    fn target_destroyed(target: &str) -> Message {
+        target_event("Target.targetDestroyed", target)
+    }
+
+    /// Chrome 156 の測定: ページが落ちると応答は来ず、読み込み直すと `Target crashed` が返る
+    #[tokio::test]
+    async fn a_failed_or_silent_page_is_not_a_closed_window() {
+        let (client, mut chrome) = watch_fake_chrome().await;
+        let id = next_check(&mut chrome).await;
+        let crashed = json!({ "id": id, "error": { "code": -32000, "message": "Target crashed" } });
+        chrome
+            .send(Message::text(crashed.to_string()))
+            .await
+            .unwrap();
+        next_check(&mut chrome).await;
+        // 応答しなくても、次も確かめる
+        next_check(&mut chrome).await;
+        chrome.send(target_destroyed("another")).await.unwrap();
+        next_check(&mut chrome).await;
+        assert!(!client.is_finished());
+
+        chrome.send(target_destroyed("page")).await.unwrap();
+        tokio::time::timeout(Duration::from_secs(5), client)
+            .await
+            .expect("the closed page ends the watch")
+            .unwrap();
+    }
+
+    /// ウィンドウの再読み込みでも戻るので、見張りは続ける（DESIGN.md 9.6）
+    #[tokio::test]
+    async fn a_crashed_page_is_shown_on_the_panel() {
+        let store = running_store();
+        let (client, mut chrome) = watch_fake_chrome_for(store.clone()).await;
+        next_check(&mut chrome).await;
+        let crashed = |target| target_event("Target.targetCrashed", target);
+
+        chrome.send(crashed("another")).await.unwrap();
+        next_check(&mut chrome).await;
+        assert_eq!(store.snapshot_chrome_status(), None);
+
+        chrome.send(crashed("page")).await.unwrap();
+        next_check(&mut chrome).await;
+        let status = store.snapshot_chrome_status().unwrap();
+        assert_eq!(status.state, LiveState::Failed);
+        assert!(status.detail.unwrap().contains("Chrome を開き直す"));
+        assert!(!client.is_finished());
+
+        let (id, _) = store.connect_chrome();
+        store.set_chrome_status(
+            id,
+            LiveStatus {
+                state: LiveState::Listening,
+                detail: None,
+            },
+        );
+        store.chrome_tab_closed(id);
+        assert_eq!(
+            store.snapshot_chrome_status(),
+            None,
+            "読み込み直したあとに古い案内を出さない"
+        );
+    }
+
+    #[tokio::test]
+    async fn the_end_of_chrome_ends_the_watch() {
+        let (client, mut chrome) = watch_fake_chrome().await;
+        next_check(&mut chrome).await;
+        drop(chrome);
+        tokio::time::timeout(Duration::from_secs(5), client)
+            .await
+            .expect("the lost connection ends the watch")
+            .unwrap();
     }
 
     async fn subtitles() -> (Subtitles, tokio::sync::broadcast::Receiver<ServerMsg>) {

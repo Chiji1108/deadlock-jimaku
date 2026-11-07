@@ -1113,7 +1113,7 @@ dependencies = [
 
 [[package]]
 name = "deadlock-jimaku"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "overlays-core",
  "serde_json",
@@ -3431,7 +3431,7 @@ dependencies = [
 
 [[package]]
 name = "overlays-core"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "anyhow",
  "audioadapter-buffers",
@@ -5641,7 +5641,6 @@ dependencies = [
  "libc",
  "mio",
  "pin-project-lite",
- "signal-hook-registry",
  "socket2",
  "tokio-macros",
  "windows-sys 0.61.2",

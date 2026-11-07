@@ -262,8 +262,9 @@ pub enum TranscriptionError {
     MissingKey,
     /// ギフトコードの期限が切れた（DESIGN.md 17.1）
     GiftExpired {
-        #[ts(type = "number")]
-        expires_at: i64,
+        /// 中継の 403 は期限を返さない
+        #[ts(type = "number | null")]
+        expires_at: Option<i64>,
     },
     /// おすそ分けした人がギフトコードを止めた
     GiftRevoked,
@@ -271,6 +272,8 @@ pub enum TranscriptionError {
     GiftLimit,
     /// ないギフトコード（おすそ分けをやめたなど）
     GiftUnknown,
+    /// OpenAI が API キーを断った
+    InvalidKey,
     /// マイクの入力が途切れた
     InputEnded,
     /// マイクを開けない
@@ -288,10 +291,18 @@ pub enum TranscriptionError {
     },
 }
 
+impl std::fmt::Display for TranscriptionError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{self:?}")
+    }
+}
+
+impl std::error::Error for TranscriptionError {}
+
 impl TranscriptionError {
     pub fn from_error(e: &anyhow::Error) -> Self {
-        if e.is::<crate::share::DailyLimit>() {
-            return Self::GiftLimit;
+        if let Some(error) = e.downcast_ref::<Self>() {
+            return error.clone();
         }
         match e.downcast_ref::<crate::audio::MicError>() {
             Some(error) => Self::Microphone {

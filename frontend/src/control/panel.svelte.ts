@@ -258,13 +258,17 @@ export function transcriptionErrorText(e: TranscriptionError): string {
     case "missingKey":
       return "OpenAI の API キーかギフトコードが設定されていません";
     case "giftExpired":
-      return `ギフトコードの期限が切れました（${dateTime(e.expiresAt)} まで）`;
+      return e.expiresAt === null
+        ? "ギフトコードの期限が切れました"
+        : `ギフトコードの期限が切れました（${dateTime(e.expiresAt)} まで）`;
     case "giftRevoked":
       return "ギフトコードが止められています。おすそ分けしてくれた人に確かめてください";
     case "giftLimit":
       return `ギフトコードの今日の上限に達しました。${LIMIT_RESET}`;
     case "giftUnknown":
       return "ギフトコードが見つかりません。おすそ分けしてくれた人に確かめてください";
+    case "invalidKey":
+      return "OpenAI の API キーが使えません。キーを確かめてください";
     case "inputEnded":
       return "マイクの入力が途切れました";
     case "microphone":
