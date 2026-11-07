@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use ts_rs::TS;
 
+use crate::openai::Access;
 use crate::types::TranscriptionError;
 
 const TIMEOUT: Duration = Duration::from_secs(10);
@@ -58,18 +59,6 @@ struct GiftAnswer {
     expires_at: Option<i64>,
 }
 
-/// サーバーがギフトコードの今日の上限で断った（配信の途中で字幕を止める理由）
-#[derive(Debug)]
-pub struct DailyLimit;
-
-impl std::fmt::Display for DailyLimit {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("the gift code reached its daily limit")
-    }
-}
-
-impl std::error::Error for DailyLimit {}
-
 /// サーバーが今日の上限で断るときの理由。JSON の `error`、Realtime の close の reason、
 /// [`REFUSAL_HEADER`] で同じ値を使う
 pub const LIMIT: &str = "limit";
@@ -78,10 +67,29 @@ pub const LIMIT: &str = "limit";
 /// 届いた分しか読めないので、これで見分ける
 pub const REFUSAL_HEADER: &str = "x-gift-refusal";
 
-/// 失敗した中継の応答が、今日の上限で断られたものか
-pub fn is_daily_limit(status: StatusCode, body: &str) -> bool {
-    status == StatusCode::FORBIDDEN
-        && serde_json::from_str::<GiftAnswer>(body).is_ok_and(|a| a.error.as_deref() == Some(LIMIT))
+/// 失敗した応答の本文から、Worker が断った理由を読む。OpenAI の `error` はオブジェクトなので読まない
+pub fn refusal_reason(body: &str) -> Option<String> {
+    serde_json::from_str::<GiftAnswer>(body).ok()?.error
+}
+
+/// 送り直しても断られるだけの応答なら、字幕を止める理由を返す（DESIGN.md 17.1）。
+/// ギフトコードの 401 は理由を読まない。ハンドシェイクでは本文を読みきれずヘッダーもなく、Worker を通った
+/// OpenAI の 401（預けたキーが使えない）も、おすそ分けした人に確かめてもらうのは同じ
+pub fn refusal(
+    access: &Access,
+    status: StatusCode,
+    reason: Option<&str>,
+) -> Option<TranscriptionError> {
+    match (status, reason) {
+        (StatusCode::UNAUTHORIZED, _) if access.is_gift() => Some(TranscriptionError::GiftUnknown),
+        (StatusCode::UNAUTHORIZED, _) => Some(TranscriptionError::InvalidKey),
+        (StatusCode::FORBIDDEN, Some("revoked")) => Some(TranscriptionError::GiftRevoked),
+        (StatusCode::FORBIDDEN, Some("expired")) => {
+            Some(TranscriptionError::GiftExpired { expires_at: None })
+        }
+        (StatusCode::FORBIDDEN, Some(LIMIT)) => Some(TranscriptionError::GiftLimit),
+        _ => None,
+    }
 }
 
 pub async fn gift_status(api: &str, code: &str) -> GiftStatus {
@@ -124,7 +132,9 @@ pub async fn gift_status(api: &str, code: &str) -> GiftStatus {
 pub async fn check_gift(api: &str, code: &str) -> Result<(), TranscriptionError> {
     match gift_status(api, code).await {
         GiftStatus::Active { .. } => Ok(()),
-        GiftStatus::Expired { expires_at } => Err(TranscriptionError::GiftExpired { expires_at }),
+        GiftStatus::Expired { expires_at } => Err(TranscriptionError::GiftExpired {
+            expires_at: Some(expires_at),
+        }),
         GiftStatus::Revoked => Err(TranscriptionError::GiftRevoked),
         GiftStatus::Limit => Err(TranscriptionError::GiftLimit),
         GiftStatus::Unknown | GiftStatus::None => Err(TranscriptionError::GiftUnknown),
@@ -301,19 +311,73 @@ mod tests {
     }
 
     #[test]
-    fn only_the_workers_limit_answer_is_a_daily_limit() {
-        let limit = r#"{"error":"limit"}"#;
-        assert!(is_daily_limit(StatusCode::FORBIDDEN, limit));
-        assert!(!is_daily_limit(StatusCode::BAD_REQUEST, limit));
-        assert!(!is_daily_limit(
-            StatusCode::FORBIDDEN,
-            r#"{"error":"revoked"}"#
-        ));
-        // OpenAI の 403 の error はオブジェクト
-        assert!(!is_daily_limit(
-            StatusCode::FORBIDDEN,
-            r#"{"error":{"message":"no"}}"#
-        ));
+    fn only_answers_that_would_repeat_stop_the_subtitles() {
+        let gift = Access::gift("code".into(), "http://worker");
+        let key = Access::key("sk".into());
+        let refusal =
+            |access, status, body| refusal(access, status, refusal_reason(body).as_deref());
+        for (access, status, body, expected) in [
+            (
+                &gift,
+                StatusCode::UNAUTHORIZED,
+                r#"{"error":"unknown"}"#,
+                Some(TranscriptionError::GiftUnknown),
+            ),
+            (
+                &gift,
+                StatusCode::UNAUTHORIZED,
+                "",
+                Some(TranscriptionError::GiftUnknown),
+            ),
+            (
+                &gift,
+                StatusCode::FORBIDDEN,
+                r#"{"error":"revoked"}"#,
+                Some(TranscriptionError::GiftRevoked),
+            ),
+            (
+                &gift,
+                StatusCode::FORBIDDEN,
+                r#"{"error":"expired"}"#,
+                Some(TranscriptionError::GiftExpired { expires_at: None }),
+            ),
+            (
+                &gift,
+                StatusCode::FORBIDDEN,
+                r#"{"error":"limit"}"#,
+                Some(TranscriptionError::GiftLimit),
+            ),
+            (
+                &key,
+                StatusCode::UNAUTHORIZED,
+                r#"{"error":{"code":"invalid_api_key"}}"#,
+                Some(TranscriptionError::InvalidKey),
+            ),
+            // OpenAI の 403 の error はオブジェクト
+            (
+                &key,
+                StatusCode::FORBIDDEN,
+                r#"{"error":{"message":"no"}}"#,
+                None,
+            ),
+            (&gift, StatusCode::BAD_REQUEST, r#"{"error":"limit"}"#, None),
+            (
+                &gift,
+                StatusCode::TOO_MANY_REQUESTS,
+                r#"{"error":"rate"}"#,
+                None,
+            ),
+            (
+                &key,
+                StatusCode::TOO_MANY_REQUESTS,
+                r#"{"error":{"code":"rate_limit_exceeded"}}"#,
+                None,
+            ),
+            (&key, StatusCode::INTERNAL_SERVER_ERROR, "", None),
+            (&gift, StatusCode::BAD_GATEWAY, "<html>", None),
+        ] {
+            assert_eq!(refusal(access, status, body), expected, "{status} {body}");
+        }
     }
 
     #[tokio::test]

@@ -23,12 +23,11 @@ use crate::lang;
 use crate::now_ms;
 use crate::openai::Access;
 use crate::settings::{Settings, TextSource};
-use crate::share;
 use crate::store::{ChromeEvent, Store};
 use crate::stt::{self, BatchRequest, Hints, RealtimeConfig};
 use crate::types::{
     ChromeCommand, Enriched, EntityKind, Glossary, Heard, LangCode, Segment, Stage, Token,
-    Translated, Translations,
+    TranscriptionError, Translated, Translations,
 };
 use crate::usage::Meter;
 
@@ -130,7 +129,7 @@ pub async fn run(store: Arc<Store>, input: audio::Input, access: Access) -> anyh
     let mut pipeline = Pipeline::new(store, &settings, cloud, done_tx, realtime, annotator);
 
     let mut level = LevelMeter::default();
-    while !pipeline.daily_limit {
+    while pipeline.refused.is_none() {
         tokio::select! {
             chunk = audio_rx.recv() => {
                 let Some(chunk) = chunk else { break };
@@ -153,10 +152,9 @@ pub async fn run(store: Arc<Store>, input: audio::Input, access: Access) -> anyh
             Some(delta) = delta_rx.recv() => pipeline.on_delta(delta),
         }
     }
-    if pipeline.daily_limit {
-        return Err(share::DailyLimit.into());
-    }
-    Ok(())
+    pipeline
+        .refused
+        .map_or(Ok(()), |refused| Err(refused.into()))
 }
 
 /// 操作パネルのメーター用。区間ごとのピークを dBFS で返す
@@ -209,8 +207,8 @@ struct Pipeline {
     context: VecDeque<String>,
     /// バッチか enrich の結果を待っている数
     pending: usize,
-    /// ギフトコードの今日の上限に達した。確定の字幕は発話ごとに送るので、これで気づける
-    daily_limit: bool,
+    /// OpenAI の鍵やギフトコードが断られた。確定の字幕は発話ごとに送るので、これで気づける
+    refused: Option<TranscriptionError>,
 }
 
 impl Pipeline {
@@ -239,7 +237,7 @@ impl Pipeline {
             seq: 0,
             context: VecDeque::new(),
             pending: 0,
-            daily_limit: false,
+            refused: None,
         }
     }
 
@@ -389,7 +387,7 @@ impl Pipeline {
                 self.pending -= 1;
                 self.on_transcribed(&id, text);
             }
-            Done::DailyLimit => self.daily_limit = true,
+            Done::Refused(refused) => self.refused = Some(refused),
             Done::Draft { id, translations } => self.on_draft(&id, translations),
             Done::Enriched { id, enriched } => {
                 self.pending -= 1;
@@ -553,13 +551,14 @@ async fn realtime_loop(
         let started = Instant::now();
         match stt::realtime(&cfg, &hints, &mut speaking, &mut input, &deltas).await {
             Ok(()) => return,
-            // 張り直しても断られるだけなので、字幕を止めて知らせる
-            Err(e) if e.is::<share::DailyLimit>() => {
+            Err(e) => {
                 tracing::warn!("realtime: {e:#}");
-                let _ = done.send(Done::DailyLimit).await;
-                return;
+                // 張り直しても断られるだけなので、字幕を止めて知らせる
+                if let Some(refused) = e.downcast_ref::<TranscriptionError>() {
+                    let _ = done.send(Done::Refused(refused.clone())).await;
+                    return;
+                }
             }
-            Err(e) => tracing::warn!("realtime: {e:#}"),
         }
         if started.elapsed() > Duration::from_secs(30) {
             backoff = Duration::from_secs(1);
@@ -596,8 +595,8 @@ enum Done {
         id: String,
         translations: Translations,
     },
-    /// サーバーがギフトコードの今日の上限で断った
-    DailyLimit,
+    /// OpenAI の鍵やギフトコードが断られた
+    Refused(TranscriptionError),
     /// 翻訳に失敗しても、固有名詞とふりがなは付いている
     Enriched { id: String, enriched: Enriched },
 }
@@ -621,8 +620,8 @@ async fn transcribe(
         Ok(text) => Some(text),
         Err(e) => {
             tracing::warn!("batch transcription: {e:#}");
-            if e.is::<share::DailyLimit>() {
-                let _ = done.send(Done::DailyLimit).await;
+            if let Some(refused) = e.downcast_ref::<TranscriptionError>() {
+                let _ = done.send(Done::Refused(refused.clone())).await;
             }
             None
         }
@@ -798,6 +797,7 @@ mod tests {
     use super::*;
     use crate::openai::Access;
     use crate::settings::Segmentation;
+    use crate::share;
     use crate::usage::Meter;
     use axum::http::StatusCode;
     use futures_util::{SinkExt, StreamExt};
@@ -908,11 +908,97 @@ mod tests {
         assert!(segment.tokens.is_some_and(|tokens| !tokens.is_empty()));
     }
 
-    /// 字幕の途中で上限に達したら張り直さず、`Done::DailyLimit` を送って終わる
-    async fn stops_at_the_daily_limit(api: String) {
+    /// 確定の文字起こしを 1 回送り、起きたことを返す
+    async fn transcribe_through(access: Access) -> Vec<Done> {
+        let dir = tempfile::tempdir().unwrap();
+        let ctx = Arc::new(BatchContext {
+            http: crate::http().clone(),
+            access,
+            model: "gpt-transcribe".into(),
+            hints: Arc::new(Hints {
+                language: "ja".into(),
+                prompt: String::new(),
+                keywords: Vec::new(),
+            }),
+            meter: Arc::new(Meter::new(dir.path().join("usage.json"))),
+        });
+        let (done_tx, mut done_rx) = mpsc::channel(2);
+        transcribe(ctx, "id".into(), vec![0; 44], 1.0, done_tx).await;
+        std::iter::from_fn(|| done_rx.try_recv().ok()).collect()
+    }
+
+    /// 文字起こしの要求にいつも同じ答えを返すサーバー
+    async fn answering(status: StatusCode, body: serde_json::Value) -> String {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let api = format!("http://{}", listener.local_addr().unwrap());
+        let answer = move || async move { (status, axum::Json(body)) };
+        let router =
+            axum::Router::new().route("/openai/audio/transcriptions", axum::routing::post(answer));
+        tokio::spawn(async move { axum::serve(listener, router).await });
+        api
+    }
+
+    #[tokio::test]
+    async fn a_refused_key_stops_the_subtitles() {
+        for (status, error, expected) in [
+            (
+                StatusCode::UNAUTHORIZED,
+                "unknown",
+                TranscriptionError::GiftUnknown,
+            ),
+            (
+                StatusCode::FORBIDDEN,
+                "revoked",
+                TranscriptionError::GiftRevoked,
+            ),
+            (
+                StatusCode::FORBIDDEN,
+                "expired",
+                TranscriptionError::GiftExpired { expires_at: None },
+            ),
+            (
+                StatusCode::FORBIDDEN,
+                "limit",
+                TranscriptionError::GiftLimit,
+            ),
+        ] {
+            let api = answering(status, json!({ "error": error })).await;
+            let done = transcribe_through(Access::gift("code".into(), &api)).await;
+            assert!(
+                matches!(&done[0], Done::Refused(refused) if *refused == expected),
+                "{error}"
+            );
+            assert!(matches!(done[1], Done::Transcribed { text: None, .. }));
+        }
+    }
+
+    /// 1 つの発話の確定の文が抜けるだけで、字幕は続く
+    #[tokio::test]
+    async fn a_failure_that_may_pass_does_not_stop_the_subtitles() {
+        let rate = json!({ "error": "rate" });
+        let unavailable = json!({ "error": { "message": "try again" } });
+        for api in [
+            answering(StatusCode::TOO_MANY_REQUESTS, rate).await,
+            answering(StatusCode::INTERNAL_SERVER_ERROR, unavailable).await,
+            "http://127.0.0.1:9".to_owned(),
+        ] {
+            let done = transcribe_through(Access::gift("code".into(), &api)).await;
+            assert!(matches!(done[..], [Done::Transcribed { text: None, .. }]));
+        }
+    }
+
+    #[tokio::test]
+    async fn the_pipeline_remembers_why_it_was_refused() {
+        let (mut pipeline, _messages) = hybrid_pipeline().await;
+        pipeline.on_done(Done::Refused(TranscriptionError::GiftRevoked));
+        assert_eq!(pipeline.refused, Some(TranscriptionError::GiftRevoked));
+    }
+
+    /// 字幕の途中で断られたら張り直さず、`Done::Refused` を送って終わる
+    async fn stops_on_refusal(access: Access, expected: TranscriptionError) {
         let dir = tempfile::tempdir().unwrap();
         let config = RealtimeConfig {
-            access: Access::gift("code".into(), &api),
+            access,
             model: "gpt-live-transcribe".into(),
             delay: "low".into(),
             meter: Arc::new(Meter::new(dir.path().join("usage.json"))),
@@ -929,7 +1015,7 @@ mod tests {
         let done = tokio::time::timeout(Duration::from_secs(5), done_rx.recv())
             .await
             .expect("the loop should not keep reconnecting");
-        assert!(matches!(done, Some(Done::DailyLimit)));
+        assert!(matches!(done, Some(Done::Refused(refused)) if refused == expected));
         tokio::time::timeout(Duration::from_secs(5), task)
             .await
             .unwrap()
@@ -954,7 +1040,8 @@ mod tests {
             };
             ws.close(Some(frame)).await.unwrap();
         });
-        stops_at_the_daily_limit(api).await;
+        let access = Access::gift("code".into(), &api);
+        stops_on_refusal(access, TranscriptionError::GiftLimit).await;
     }
 
     #[tokio::test]
@@ -971,7 +1058,20 @@ mod tests {
         };
         let router = axum::Router::new().route("/openai/realtime", axum::routing::get(refuse));
         tokio::spawn(async move { axum::serve(listener, router).await });
-        stops_at_the_daily_limit(api).await;
+        let access = Access::gift("code".into(), &api);
+        stops_on_refusal(access, TranscriptionError::GiftLimit).await;
+    }
+
+    /// Worker の 401 にはヘッダーがない
+    #[tokio::test]
+    async fn a_realtime_handshake_refused_for_an_unknown_code_does_not_reconnect() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let api = format!("http://{}", listener.local_addr().unwrap());
+        let refuse = || async { StatusCode::UNAUTHORIZED };
+        let router = axum::Router::new().route("/openai/realtime", axum::routing::get(refuse));
+        tokio::spawn(async move { axum::serve(listener, router).await });
+        let access = Access::gift("code".into(), &api);
+        stops_on_refusal(access, TranscriptionError::GiftUnknown).await;
     }
 
     #[test]
