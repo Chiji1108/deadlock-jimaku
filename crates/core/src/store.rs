@@ -498,6 +498,7 @@ fn display(settings: &Settings) -> ServerMsg {
         rank_language: settings.rank_language(),
         rank_content: settings.rank_content,
         rank_anchor: settings.rank_anchor,
+        overlay_fonts: settings.overlay_fonts.clone(),
         item_cards: ItemCardsView {
             hold_seconds: settings.item_cards.hold_seconds,
             language: crate::lang::find(&settings.item_language())
@@ -511,7 +512,7 @@ fn display(settings: &Settings) -> ServerMsg {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::settings::SpeechEngine;
+    use crate::settings::{FontGroup, SpeechEngine};
     use crate::types::Stage;
 
     fn seg(id: &str, text: &str) -> Segment {
@@ -669,5 +670,22 @@ mod tests {
         store.update_settings(seen()).unwrap();
         assert!(rx.try_recv().is_err());
         assert!(!file.exists());
+    }
+
+    #[test]
+    fn a_chosen_font_reaches_the_overlays() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = Store::new(Ok(Settings::default()), dir.path().to_owned());
+        let mut rx = store.subscribe();
+        store
+            .update_settings(SettingsPatch {
+                overlay_fonts: Some([(FontGroup::Ja, "Hiragino Sans".to_owned())].into()),
+                ..Default::default()
+            })
+            .unwrap();
+        let ServerMsg::Display { overlay_fonts, .. } = rx.try_recv().unwrap() else {
+            panic!("expected the display message");
+        };
+        assert_eq!(overlay_fonts[&FontGroup::Ja], "Hiragino Sans");
     }
 }

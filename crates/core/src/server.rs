@@ -16,6 +16,7 @@ use serde_json::Value;
 use tokio::net::TcpListener;
 use tokio::sync::broadcast::error::RecvError;
 
+use crate::fonts::{self, FontEntry};
 use crate::secrets::{self, Provider};
 use crate::settings::SettingsPatch;
 use crate::share::{self, GiftStatus, Refused, SharedCode};
@@ -44,6 +45,7 @@ pub fn router(store: Arc<Store>) -> Router {
         .route("/share/codes/{id}", patch(update_code))
         .route("/devices", get(devices))
         .route("/languages", get(languages))
+        .route("/fonts", get(fonts))
         .route("/chrome/open", post(open_chrome))
         .route("/chrome/reset", post(reset_chrome))
         .route("/chrome/ws", get(chrome_ws));
@@ -436,6 +438,10 @@ async fn languages() -> Json<Vec<LangCode>> {
     Json(lang::LANGUAGES.iter().map(|l| l.code.to_owned()).collect())
 }
 
+async fn fonts() -> Json<&'static [FontEntry]> {
+    Json(fonts::installed().await)
+}
+
 pub async fn serve(listener: TcpListener, store: Arc<Store>) -> std::io::Result<()> {
     axum::serve(listener, router(store)).await
 }
@@ -625,6 +631,17 @@ mod tests {
         let store = Store::new(Ok(Settings::default()), data_dir);
         tokio::spawn(serve(listener, store));
         addr
+    }
+
+    #[tokio::test]
+    async fn lists_the_fonts_of_this_pc() {
+        let addr = serve_on_any_port().await;
+        let res = reqwest::get(format!("http://{addr}/api/fonts"))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+        let fonts: Vec<Value> = res.json().await.unwrap();
+        assert!(fonts.iter().all(|f| f["source"] == "installed"));
     }
 
     async fn post_reset(addr: &str) -> reqwest::Response {

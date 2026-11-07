@@ -66,7 +66,7 @@ torph 0.1.3  MIT [1]
 tw-animate-css 1.4.0  MIT [1]
   Copyright (c) 2025 Wombosvideo
 
-=== Rust の crate（426 件）===
+=== Rust の crate（431 件）===
 
 adler2 2.0.1  0BSD OR MIT OR Apache-2.0 [45][21][1]
   Copyright (C) Jonas Schievink <jonasschievink@gmail.com>
@@ -328,8 +328,12 @@ flate2 1.1.10  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2014-2026 Alex Crichton
 fnv 1.0.7  Apache-2.0 / MIT [2][1]
   Copyright (c) 2017 Contributors
-foldhash 0.2.0  Zlib [8]
+foldhash 0.2.0  Zlib [7]
   Copyright (c) 2024 Orson Peters
+fontconfig-parser 0.5.8  MIT [1]
+  Copyright (c) 2021 Riey
+fontdb 0.24.0  MIT [1][60]
+  Copyright (c) 2020 Yevhenii Reizner
 foreign-types 0.5.0  MIT/Apache-2.0 [2][1]
   Copyright (c) 2017 The foreign-types Developers
 foreign-types-shared 0.3.1  MIT/Apache-2.0 [2][1]
@@ -541,13 +545,13 @@ minisign-verify 0.3.0  MIT [42]
   Copyright (c) 2019-2025 Frank Denis
   Copyright (c) 2006-2009 Graydon Hoare
   Copyright (c) 2009-2013 Mozilla Foundation
-miniz_oxide 0.8.9  MIT OR Zlib OR Apache-2.0 [1][2][8]
+miniz_oxide 0.8.9  MIT OR Zlib OR Apache-2.0 [1][2][7]
   Copyright 2013-2014 RAD Game Tools and Valve Software
   Copyright 2010-2014 Rich Geldreich and Tenacious Software LLC
   Copyright (c) 2017 Frommi
   Copyright (c) 2017-2024 oyvindln
   Copyright (c) 2020 Frommi
-miniz_oxide 0.9.1  MIT OR Zlib OR Apache-2.0 [1][2][8]
+miniz_oxide 0.9.1  MIT OR Zlib OR Apache-2.0 [1][2][7]
   Copyright 2013-2014 RAD Game Tools and Valve Software
   Copyright 2010-2014 Rich Geldreich and Tenacious Software LLC
   Copyright (c) 2017 Frommi
@@ -657,21 +661,21 @@ radium 0.7.0  MIT [1]
   Copyright (c) 2019 kneecaw (Nika Layzell)
 rancor 0.1.3  MIT [1]
   Copyright 2023 David Koloski
-rand 0.10.3  MIT OR Apache-2.0 [7][2][1]
+rand 0.10.3  MIT OR Apache-2.0 [8][2][1]
   Copyright 2018 Developers of the Rand project
   Copyright (c) 2014 The Rust Project Developers
-rand 0.9.5  MIT OR Apache-2.0 [7][2][1]
+rand 0.9.5  MIT OR Apache-2.0 [8][2][1]
   Copyright 2018 Developers of the Rand project
   Copyright (c) 2014 The Rust Project Developers
-rand_chacha 0.9.0  MIT OR Apache-2.0 [7][2][1]
+rand_chacha 0.9.0  MIT OR Apache-2.0 [8][2][1]
   Copyright 2018 Developers of the Rand project
   Copyright (c) 2014 The Rust Project Developers
 rand_core 0.10.1  MIT OR Apache-2.0 [31][15][1]
   Copyright (c) 2018-2026 The Rand Project Developers
-rand_core 0.9.5  MIT OR Apache-2.0 [7][15][1]
+rand_core 0.9.5  MIT OR Apache-2.0 [8][15][1]
   Copyright 2018 Developers of the Rand project
   Copyright (c) 2014 The Rust Project Developers
-raw-window-handle 0.6.2  MIT OR Apache-2.0 OR Zlib [2][1][8]
+raw-window-handle 0.6.2  MIT OR Apache-2.0 OR Zlib [2][1][7]
   Copyright (c) 2019 Osspial
   Copyright (c) 2020 Osspial
 rayon 1.12.0  MIT OR Apache-2.0 [2][1]
@@ -702,6 +706,8 @@ ring 0.17.14  Apache-2.0 AND ISC [47][22][43][2][41][53]
   Copyright 2015-2020 the fiat-crypto authors (see the AUTHORS file)
 rkyv 0.8.18  MIT [1]
   Copyright 2021 David Koloski
+roxmltree 0.20.0  MIT OR Apache-2.0 [2][1]
+  Copyright (c) 2018 Yevhenii Reizner
 rubato 5.0.1  MIT OR Apache-2.0 [2][1][56]
   Copyright (c) 2020 Henrik Enquist
 rust-embed 8.13.0  MIT [1]
@@ -786,6 +792,8 @@ siphasher 1.0.4  MIT OR Apache-2.0 [37][2][1]
   Copyright 2016-2026 Frank Denis.
 slab 0.4.12  MIT [1]
   Copyright (c) 2019 Carl Lerche
+slotmap 1.1.1  Zlib [7]
+  Copyright (c) 2021 Orson Peters <orsonpeters@gmail.com>
 smallvec 1.16.4  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2018 The Servo Project Developers
 socket2 0.6.5  MIT OR Apache-2.0 [2][1]
@@ -854,6 +862,8 @@ time-core 0.1.9  MIT OR Apache-2.0 [2][1]
   Copyright (c) Jacob Pratt et al.
 tinystr 0.8.5  Unicode-3.0 [3]
   Copyright © 2020-2024 Unicode, Inc.
+tinyvec 1.13.3  Zlib OR Apache-2.0 OR MIT [2][1][7]
+  Copyright (c) 2019 Daniel "Lokathor" Gee.
 tokio 1.54.1  MIT [1]
   Copyright (c) Tokio Contributors
 tokio-rustls 0.26.6  MIT OR Apache-2.0 [2][1]
@@ -1542,21 +1552,6 @@ You may use this code under the terms of either license.
 
 --- [7]
 
-Copyrights in the Rand project are retained by their contributors. No
-copyright assignment is required to contribute to the Rand project.
-
-For full authorship information, see the version control history.
-
-Except as otherwise noted (below and/or in individual files), Rand is
-licensed under the Apache License, Version 2.0 <LICENSE-APACHE> or
-<http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
-<LICENSE-MIT> or <http://opensource.org/licenses/MIT>, at your option.
-
-The Rand project includes code from the Rust project
-published under these same licenses.
-
---- [8]
-
 This software is provided 'as-is', without any express or implied warranty. In
 no event will the authors be held liable for any damages arising from the use of
 this software.
@@ -1574,6 +1569,21 @@ the following restrictions:
     misrepresented as being the original software.
 
 3. This notice may not be removed or altered from any source distribution.
+
+--- [8]
+
+Copyrights in the Rand project are retained by their contributors. No
+copyright assignment is required to contribute to the Rand project.
+
+For full authorship information, see the version control history.
+
+Except as otherwise noted (below and/or in individual files), Rand is
+licensed under the Apache License, Version 2.0 <LICENSE-APACHE> or
+<http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+<LICENSE-MIT> or <http://opensource.org/licenses/MIT>, at your option.
+
+The Rand project includes code from the Rust project
+published under these same licenses.
 
 --- [9]
 
@@ -5844,3 +5854,17 @@ Except as contained in this notice, the name of a copyright holder shall
 not be used in advertising or otherwise to promote the sale, use or other
 dealings in these Data Files or Software without prior written
 authorization of the copyright holder.
+
+--- [60]
+
+We, the copyright holders of this work, hereby release it into the
+public domain. This applies worldwide.
+
+In case this is not legally possible,
+
+We grant any entity the right to use this work for any purpose, without
+any conditions, unless such conditions are required by law.
+
+Thatcher Ulrich <tu@tulrich.com> http://tulrich.com
+Karoly Barta bartakarcsi@gmail.com
+Michael Evans http://www.evertype.com

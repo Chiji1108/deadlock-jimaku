@@ -1,6 +1,7 @@
 // 操作パネルの状態。各タブはこれを読み、変更は api 経由でサーバーに送る（サーバーの返す設定で置き換える）
 import { toast } from "svelte-sonner";
 import type { LiveStatus } from "../generated/LiveStatus";
+import type { FontEntry } from "../generated/FontEntry";
 import type { GiftStatus } from "../generated/GiftStatus";
 import type { Provider } from "../generated/Provider";
 import type { ServerMsg } from "../generated/ServerMsg";
@@ -32,6 +33,8 @@ class Panel {
   languages = $state<string[]>([]);
   /** 取れるまでは undefined */
   devices = $state<string[] | undefined>();
+  /** 選べるフォント。フォントのタブを開いたときに取る */
+  fonts = $state<FontEntry[]>([]);
   server = $state<Status>("connecting");
   /** 字幕を始められなかった・止まった理由 */
   transcriptionError = $state<TranscriptionError | undefined>();
@@ -188,6 +191,13 @@ class Panel {
     if (!saved) this.view = await api.settings().catch(() => this.view);
     void this.refreshShare();
     return saved;
+  };
+
+  loadFonts = async () => {
+    if (this.fonts.length > 0) return;
+    await this.run(async () => {
+      this.fonts = await api.fonts();
+    });
   };
 
   refreshGift = async () => {

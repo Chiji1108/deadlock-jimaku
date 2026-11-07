@@ -6,6 +6,7 @@
   import Captions from "../../lib/Captions.svelte";
   import { api } from "../../lib/api";
   import { loadGlossary } from "../../lib/glossary.svelte";
+  import { applyOverlayFonts } from "../../lib/overlay-fonts";
   import { isReady, visibleLines } from "../../lib/subtitle-lines";
   import { connect } from "../../lib/ws";
 
@@ -57,6 +58,7 @@
           void loadGlossary();
           break;
         case "display":
+          applyOverlayFonts(msg.overlayFonts);
           display = msg.subtitles;
           break;
       }

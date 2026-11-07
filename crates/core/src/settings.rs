@@ -2,9 +2,10 @@
 //!
 //! API キーはここには入れない（`secrets`。OS の資格情報ストアに保存する）。
 
+use std::collections::BTreeMap;
 use std::path::Path;
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use ts_rs::TS;
 
 use crate::lang;
@@ -15,6 +16,9 @@ pub const FILE: &str = "settings.json";
 
 /// 翻訳先の上限（多いほど出力が増えて遅くなる）
 pub const MAX_TRANSLATE_TO: usize = 4;
+
+/// オーバーレイのフォント名の上限（文字数）
+const MAX_FONT_NAME: usize = 100;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
 #[serde(default, rename_all = "camelCase")]
@@ -50,6 +54,9 @@ pub struct Settings {
     /// エターナスの順位を調べるリーダーボードの地域。None なら調べない
     #[ts(optional)]
     pub rank_region: Option<Region>,
+    /// 言語ごとに選んだフォントのファミリー名。キーがない言語は標準（`lang.css`）
+    #[serde(deserialize_with = "readable_fonts")]
+    pub overlay_fonts: BTreeMap<FontGroup, String>,
     /// OBS のブラウザソースで字幕オーバーレイが開かれたことがある（はじめかたのチェックに使う）
     pub obs_seen: bool,
     /// はじめかたを閉じた、または全部終えた
@@ -72,6 +79,49 @@ pub struct Settings {
     pub rank_poll_seconds: u64,
     /// 開発者のサーバー（おすそ分け。DESIGN.md 17.1）の根元。手元で試すときに `wrangler dev` に向ける
     pub api_base: String,
+}
+
+/// フォントを選ぶ単位。`lang.css` の区分と同じ
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub enum FontGroup {
+    /// 下の 5 つ以外の言語（英語・キリル文字など）
+    #[serde(rename = "latin")]
+    Latin,
+    #[serde(rename = "ja")]
+    Ja,
+    #[serde(rename = "zh-Hans")]
+    ZhHans,
+    #[serde(rename = "zh-Hant")]
+    ZhHant,
+    #[serde(rename = "ko")]
+    Ko,
+    #[serde(rename = "th")]
+    Th,
+}
+
+/// 無いフォントは CSS が次の候補に落とすので、確かめるのは CSS の文字列に入れられる形かどうかだけ
+fn valid_font_name(name: &str) -> bool {
+    !name.is_empty()
+        && name.chars().count() <= MAX_FONT_NAME
+        && !name
+            .chars()
+            .any(|c| c.is_control() || matches!(c, '"' | '\\'))
+}
+
+/// 手で編集された設定でも、読めない項目だけを捨てて残りの言語の選択は残す
+fn readable_fonts<'de, D: Deserializer<'de>>(
+    deserializer: D,
+) -> Result<BTreeMap<FontGroup, String>, D::Error> {
+    let raw = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+    Ok(raw
+        .into_iter()
+        .filter_map(|(group, family)| {
+            let group = serde_json::from_value(group.into()).ok()?;
+            let family = family.as_str().filter(|f| valid_font_name(f))?;
+            Some((group, family.to_owned()))
+        })
+        .collect())
 }
 
 /// 既定値から変えたときだけ保存する項目（保存してしまうと、アプリの既定値を直しても古い値が残る）
@@ -489,6 +539,7 @@ impl Default for Settings {
             hybrid_hint_closed: false,
             tray_notice_seen: false,
             rank_region: None,
+            overlay_fonts: BTreeMap::new(),
             models: Models::default(),
             realtime_delay: "low".into(),
             segmentation: Segmentation::default(),
@@ -702,6 +753,15 @@ impl Settings {
         if let Some(anchor) = patch.rank_anchor {
             next.rank_anchor = anchor;
         }
+        for (group, family) in patch.overlay_fonts.into_iter().flatten() {
+            if family.is_empty() {
+                next.overlay_fonts.remove(&group);
+            } else if valid_font_name(&family) {
+                next.overlay_fonts.insert(group, family);
+            } else {
+                return Err(format!("invalid font name: {family}"));
+            }
+        }
         next.obs_seen = patch.obs_seen.unwrap_or(next.obs_seen);
         next.onboarding_closed = patch.onboarding_closed.unwrap_or(next.onboarding_closed);
         next.hybrid_hint_closed = patch.hybrid_hint_closed.unwrap_or(next.hybrid_hint_closed);
@@ -764,6 +824,9 @@ pub struct SettingsPatch {
     pub rank_content: Option<RankContent>,
     #[ts(optional)]
     pub rank_anchor: Option<Anchor>,
+    /// 書いた言語だけを変える。空文字列なら標準に戻す
+    #[ts(optional)]
+    pub overlay_fonts: Option<BTreeMap<FontGroup, String>>,
     #[ts(optional)]
     pub obs_seen: Option<bool>,
     #[ts(optional)]
@@ -1344,6 +1407,97 @@ mod tests {
             (s.item_cards.hold_seconds, s.item_language().as_str()),
             (12.0, "ja")
         );
+    }
+
+    fn font_patch(fonts: &[(FontGroup, &str)]) -> SettingsPatch {
+        SettingsPatch {
+            overlay_fonts: Some(fonts.iter().map(|(g, f)| (*g, (*f).to_owned())).collect()),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn font_patch_changes_only_the_named_languages() {
+        let s = Settings::default()
+            .apply(font_patch(&[
+                (FontGroup::Ja, "Hiragino Mincho ProN"),
+                (FontGroup::Latin, "Georgia"),
+            ]))
+            .unwrap();
+        let next = s
+            .apply(font_patch(&[(FontGroup::Latin, "Verdana")]))
+            .unwrap();
+        assert_eq!(next.overlay_fonts[&FontGroup::Ja], "Hiragino Mincho ProN");
+        assert_eq!(next.overlay_fonts[&FontGroup::Latin], "Verdana");
+        let reset = next.apply(font_patch(&[(FontGroup::Ja, "")])).unwrap();
+        assert!(!reset.overlay_fonts.contains_key(&FontGroup::Ja));
+        assert_eq!(reset.overlay_fonts[&FontGroup::Latin], "Verdana");
+    }
+
+    #[test]
+    fn font_patch_rejects_names_that_cannot_go_into_css() {
+        let s = Settings::default();
+        assert!(
+            s.apply(font_patch(&[(FontGroup::Ja, &"あ".repeat(100))]))
+                .is_ok()
+        );
+        for bad in [
+            "あ".repeat(101),
+            "a\"b".to_owned(),
+            "a\\b".to_owned(),
+            "a\nb".to_owned(),
+        ] {
+            assert!(
+                s.apply(font_patch(&[(FontGroup::Ja, &bad)])).is_err(),
+                "{bad}"
+            );
+        }
+    }
+
+    #[test]
+    fn unreadable_fonts_are_dropped_one_by_one() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("settings.json");
+        std::fs::write(
+            &path,
+            r#"{
+                "subtitleDisplay": { "fontSize": 32 },
+                "overlayFonts": {
+                    "ja": "Hiragino Sans",
+                    "zh-Hans": "bad\"name",
+                    "ko": 1,
+                    "klingon": "pIqaD"
+                }
+            }"#,
+        )
+        .unwrap();
+        let s = load(&path).unwrap();
+        assert_eq!(
+            s.overlay_fonts,
+            BTreeMap::from([(FontGroup::Ja, "Hiragino Sans".to_owned())])
+        );
+        assert_eq!(s.subtitle_display.font_size, 32);
+    }
+
+    #[test]
+    fn settings_saved_before_fonts_use_the_standard_fonts() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("settings.json");
+        std::fs::write(&path, r#"{ "micLanguage": "en" }"#).unwrap();
+        let s = load(&path).unwrap();
+        assert_eq!(s.mic_language, "en");
+        assert!(s.overlay_fonts.is_empty());
+    }
+
+    #[test]
+    fn chosen_fonts_survive_a_save() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join(FILE);
+        let s = Settings::default()
+            .apply(font_patch(&[(FontGroup::ZhHant, "PingFang TC")]))
+            .unwrap();
+        save(&path, &s).unwrap();
+        assert_eq!(load(&path).unwrap(), s);
     }
 
     #[test]

@@ -130,6 +130,7 @@ pub enum ServerMsg {
         rank_language: LangCode,
         rank_content: crate::settings::RankContent,
         rank_anchor: crate::settings::Anchor,
+        overlay_fonts: BTreeMap<crate::settings::FontGroup, String>,
         item_cards: ItemCardsView,
     },
     /// 直近のピーク（dBFS）。1 秒に 10 回ほど

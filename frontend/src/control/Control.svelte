@@ -6,6 +6,7 @@
   import MicIcon from "@lucide/svelte/icons/mic";
   import PackageIcon from "@lucide/svelte/icons/package";
   import SquareIcon from "@lucide/svelte/icons/square";
+  import TypeIcon from "@lucide/svelte/icons/type";
   import TrophyIcon from "@lucide/svelte/icons/trophy";
   import WalletIcon from "@lucide/svelte/icons/wallet";
   import { ModeWatcher } from "mode-watcher";
@@ -21,6 +22,7 @@
   import { total, unpriced, usd } from "./usage";
   import AudioTab from "./tabs/AudioTab.svelte";
   import DisplayTab from "./tabs/DisplayTab.svelte";
+  import FontTab from "./tabs/FontTab.svelte";
   import ItemsTab from "./tabs/ItemsTab.svelte";
   import KeysTab from "./tabs/KeysTab.svelte";
   import RankTab from "./tabs/RankTab.svelte";
@@ -46,6 +48,7 @@
     },
     { value: "items", label: "アイテム説明", icon: PackageIcon, page: ItemsTab },
     { value: "rank", label: "ランク", icon: TrophyIcon, page: RankTab },
+    { value: "fonts", label: "フォント", icon: TypeIcon, page: FontTab },
     { value: "keys", label: "API キー", icon: KeyRoundIcon, page: KeysTab, heading: "" },
     { value: "share", label: "おすそ分け", icon: GiftIcon, page: ShareTab },
     { value: "usage", label: "料金", icon: WalletIcon, page: UsageTab },
@@ -54,9 +57,11 @@
   const wide = new MediaQuery("min-width: 768px");
 
   // タブを変えたら（サイドバーからでも、料金や注意のリンクからでも）先頭から見せる。
-  // おすそ分けで使われた額はサーバーにあるので、それを出すタブを開いたら取り直す
+  // おすそ分けで使われた額はサーバーにあるので、それを出すタブを開いたら取り直す。
+  // フォントの一覧は PC のフォントを全部開くので、タブを開くまで頼まない
   $effect(() => {
     if (tab === "share" || tab === "usage") void panel.refreshShare();
+    if (tab === "fonts") void panel.loadFonts();
     content?.scrollTo({ top: 0 });
     window.scrollTo({ top: 0 });
   });
