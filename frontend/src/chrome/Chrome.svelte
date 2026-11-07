@@ -25,7 +25,7 @@
 
   /** ブロックしたあとは確認が出ない。OS で止めていても同じエラーになる */
   const MIC_DENIED =
-    "マイクを使えません。このウィンドウのメニューの「サイトの設定」でマイクを許可してください。許可しているなら、OS の設定で Google Chrome のマイクを許可してください";
+    "マイクを使えません。Chrome のウィンドウのメニューの「サイトの設定」でマイクを許可してから、Chrome を開き直してください。許可しているなら、OS の設定で Google Chrome のマイクを許可してください";
   /** 認識を続けられない理由ごとの案内 */
   const FATAL: Record<string, string> = {
     "not-allowed": MIC_DENIED,
@@ -216,7 +216,10 @@
   async function open(s: Settings) {
     try {
       if (await micUnanswered()) {
-        show({ state: "preparing", detail: "Chrome のウィンドウでマイクを「許可」してください" });
+        show({
+          state: "preparing",
+          detail: "Chrome のウィンドウで「サイトへのアクセス時は許可」を押してください",
+        });
       }
       return await openMicrophone(s.micDevice, logMic, chosenMic(s.micDevice));
     } catch (e) {
