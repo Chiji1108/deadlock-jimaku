@@ -186,7 +186,7 @@ app.patch("/share/codes/:id", async (c) => {
 
 // ---- コードを使う人 ----
 
-/** コードの状態。アプリは字幕を始めるときにこれで期限を確かめる（ここでは猶予を足さない） */
+/** コードの状態。アプリは止まっている字幕を始めるときと鍵を使い始めるときに、これで期限を確かめる（ここでは猶予を足さない） */
 app.get("/gift", async (c) => {
   const code = await giftCode(c);
   if (!code) return c.json({ error: "unknown" }, 401);
