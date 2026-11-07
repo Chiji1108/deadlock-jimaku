@@ -3,8 +3,24 @@ import { endonym, fontRules, fontSample } from "./overlay-fonts";
 
 test("選んだ言語だけに変数を設定し、標準の候補へ続ける", () => {
   expect(fontRules({ ja: "Hiragino Mincho ProN" })).toBe(
-    '[lang][lang="ja"] { --font: "Hiragino Mincho ProN", }',
+    [
+      '@import url("/api/fonts/Hiragino%20Mincho%20ProN/faces.css");',
+      '[lang][lang="ja"] { --font: "Hiragino Mincho ProN", }',
+    ].join("\n"),
   );
+});
+
+test("@import はシートの先頭に、同じフォントは 1 つだけ書く", () => {
+  const rules = fontRules({ ja: "Meiryo", ko: "Meiryo", en: "Arial" }).split("\n");
+  expect(rules.filter((rule) => rule.startsWith("@import"))).toEqual([
+    '@import url("/api/fonts/Meiryo/faces.css");',
+    '@import url("/api/fonts/Arial/faces.css");',
+  ]);
+  expect(rules.slice(0, 2).every((rule) => rule.startsWith("@import"))).toBe(true);
+});
+
+test("URL に書けない文字はパスの 1 区切りに収める", () => {
+  expect(fontRules({ ja: 'A/B"C' })).toContain('url("/api/fonts/A%2FB%22C/faces.css")');
 });
 
 test("引用符と \\ を含む名前は CSS の文字列にエスケープする", () => {

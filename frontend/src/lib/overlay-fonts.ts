@@ -18,18 +18,30 @@ export function endonym(lang: string) {
 /** フォントの見本。日本語は言語名だと漢字だけになるので、かなも混ぜる */
 export const fontSample = (lang: string) => (lang === "ja" ? "あいアイ漢字" : endonym(lang));
 
+/** 選んだフォントのファイルを core から読む。入れたばかりで WebView が知らないフォントも描ける */
+const fontImports = (fonts: Fonts) =>
+  [...new Set(Object.values(fonts))].map(
+    (family) => `@import url(${cssString(`/api/fonts/${encodeURIComponent(family)}/faces.css`)});`,
+  );
+
 /**
  * 値の末尾のカンマで lang.css の標準の候補につなぐ。:lang(es) は es-419 にも一致するので
- * 属性の完全一致で言語を分け、[lang] を重ねて lang.css のリセットより詳細度を上げる
+ * 属性の完全一致で言語を分け、[lang] を重ねて lang.css のリセットより詳細度を上げる。
+ * ファイルが読めなければ、同じ名前の PC のフォントと標準の候補に落ちる
  */
 export const fontRules = (fonts: Fonts) =>
-  Object.entries(fonts)
-    .map(([lang, family]) => `[lang][lang=${cssString(lang)}] { --font: ${cssString(family)}, }`)
-    .join("\n");
+  [
+    ...fontImports(fonts),
+    ...Object.entries(fonts).map(
+      ([lang, family]) => `[lang][lang=${cssString(lang)}] { --font: ${cssString(family)}, }`,
+    ),
+  ].join("\n");
 
 let sheet: HTMLStyleElement | undefined;
 
+/** display はフォント以外でも届く。@import を書き直すと読み終えるまで標準に戻るので、同じなら触らない */
 export function applyOverlayFonts(fonts: Fonts) {
   sheet ??= document.head.appendChild(document.createElement("style"));
-  sheet.textContent = fontRules(fonts);
+  const css = fontRules(fonts);
+  if (sheet.textContent !== css) sheet.textContent = css;
 }
