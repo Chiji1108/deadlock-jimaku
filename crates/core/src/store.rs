@@ -7,7 +7,6 @@ use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use bytes::Bytes;
 use tokio::sync::{broadcast, watch};
 
 use crate::assets::Loaded;
@@ -62,8 +61,6 @@ pub struct Store {
     /// 新しい版の辞書を作り直すよう頼んだ回数。変わると `runtime` が辞書の処理を張り直す
     glossary_refreshes: AtomicU64,
     rank: Mutex<Option<RankState>>,
-    /// バッジ → アイコン（webp）。バッジごとに持ち、別のバッジのアイコンを配信しない
-    rank_image: Mutex<Option<(u32, Bytes)>>,
     tx: broadcast::Sender<ServerMsg>,
     /// マイクの入力レベル（dBFS）。1 秒に 10 回届くので、字幕などと同じ broadcast には流さない
     /// （購読していないオーバーレイを起こさず、取りこぼしの原因にもしない）
@@ -99,7 +96,6 @@ impl Store {
             glossary: watch::Sender::new(None),
             glossary_refreshes: AtomicU64::new(0),
             rank: Mutex::new(None),
-            rank_image: Mutex::new(None),
             tx: broadcast::channel(256).0,
             level: watch::Sender::new(f32::NEG_INFINITY),
             live_status: Mutex::new(None),
@@ -424,17 +420,9 @@ impl Store {
         }
     }
 
-    pub fn set_rank_image(&self, badge: u32, image: Bytes) {
-        *self.rank_image.lock().unwrap() = Some((badge, image));
-    }
-
-    /// そのバッジのアイコン（今持っているものだけ）
-    pub fn rank_image(&self, badge: u32) -> Option<Bytes> {
-        let image = self.rank_image.lock().unwrap();
-        image
-            .as_ref()
-            .filter(|(b, _)| *b == badge)
-            .map(|(_, bytes)| bytes.clone())
+    /// 取ってきたランクのアイコン（バッジごとの webp）を置く場所
+    pub fn rank_images(&self) -> PathBuf {
+        self.data_dir.join("rank")
     }
 
     pub fn snapshot(&self) -> ServerMsg {

@@ -42,6 +42,8 @@ export const api = {
   openChrome: () => post("/api/chrome/open"),
   /** Chrome の専用のデータを消して始め直す */
   resetChrome: () => post("/api/chrome/reset"),
+  /** ランクのプレビューの見本のアイコン。初めてのときは core が取ってくる */
+  rankSample: () => request<{ image: string }>("/api/rank/sample"),
 
   /** もらったギフトコードの状態 */
   gift: () => request<GiftStatus>("/api/gift"),

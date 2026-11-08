@@ -39,7 +39,9 @@
 </script>
 
 <div class="rank" lang={shown} style={look && textVars(look, BLUR_EM)}>
-  {#if rank.image}<img class="badge" src={rank.image} alt="" />{/if}
+  <!-- アイコンが届くまでは同じ大きさの枠だけを出し、届いたときに文字がずれないようにする -->
+  {#if rank.image}<img class="badge" src={rank.image} alt="" />{:else}<span class="badge pending"
+    ></span>{/if}
   <!-- 1 行目: ランク名、2 行目: ゲージ。出すものは操作パネルで選ぶ -->
   {#if content !== "icon"}<div class="text">
       {#if label}<p class="name" style={font}>{label}</p>{/if}
@@ -93,6 +95,14 @@
     height: var(--badge-size, calc(96px * var(--scale)));
     object-fit: contain;
     filter: drop-shadow(0 calc(2px * var(--scale)) calc(6px * var(--scale)) rgb(0 0 0 / 0.6));
+  }
+  .pending {
+    box-sizing: border-box;
+    border: calc(3px * var(--scale)) solid rgb(255 255 255 / 0.3);
+    border-radius: 50%;
+    /* アイコンの画像は透明な縁を含むので、見えている形の大きさに合わせる */
+    scale: 0.8;
+    filter: none;
   }
   p {
     margin: 0;

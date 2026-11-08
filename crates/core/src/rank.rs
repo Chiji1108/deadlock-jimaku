@@ -1,11 +1,11 @@
 //! 配信者のランク（DESIGN.md 12 章）。deadlock-api を一定間隔で取りに行き、変わったら配信する。
 
 use std::collections::BTreeMap;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use anyhow::Context;
-use bytes::Bytes;
 use serde::Deserialize;
 
 use crate::lang;
@@ -25,6 +25,8 @@ const ETERNUS: u32 = 11;
 const LEADERBOARD_INTERVAL: Duration = Duration::from_secs(15 * 60);
 /// これより古い順位は出さない（取れない状態が続いたら、ポイントに戻す）
 const LEADERBOARD_MAX_AGE: Duration = Duration::from_secs(2 * 60 * 60);
+/// 操作パネルのプレビューで、アカウントを入れる前に出す見本（エミッサリー III）
+const SAMPLE: (u32, u32) = (7, 3);
 
 #[derive(Deserialize)]
 struct PlayerRank {
@@ -79,11 +81,9 @@ async fn run(store: Arc<Store>, account_id: u32) {
         match fetch_rank(account_id).await {
             Ok(player) => {
                 if image_badge != Some(player.badge) {
-                    match fetch_image(&player, &tiers).await {
-                        Ok(bytes) => {
-                            store.set_rank_image(player.badge, bytes);
-                            image_badge = Some(player.badge);
-                        }
+                    let url = || image_source(&player, &tiers);
+                    match ensure_image(&store.rank_images(), player.badge, url).await {
+                        Ok(()) => image_badge = Some(player.badge),
                         Err(e) => tracing::warn!("rank image: {e:#}"),
                     }
                 }
@@ -126,7 +126,7 @@ fn state(player: &PlayerRank, tiers: &Tiers, has_image: bool) -> RankState {
         // ゲージのないエターナスだけ累積のポイントを出す
         points: points.filter(|_| player.rank >= ETERNUS),
         names: tiers.names.get(&player.rank).cloned().unwrap_or_default(),
-        image: has_image.then(|| format!("/assets/rank/{}.webp", player.badge)),
+        image: has_image.then(|| image_url(player.badge)),
         progress: points.and_then(|p| progress(player.rank, player.subrank, p)),
         leaderboard: None,
     }
@@ -230,26 +230,60 @@ async fn fetch_tiers(code: &str) -> anyhow::Result<Vec<Tier>> {
 }
 
 /// サブランク付きのアイコン。サブランクのないティア（未ランク）はティアのアイコン
-async fn fetch_image(player: &PlayerRank, tiers: &Tiers) -> anyhow::Result<Bytes> {
-    let url = if player.subrank == 0 {
+fn image_source(player: &PlayerRank, tiers: &Tiers) -> anyhow::Result<String> {
+    if player.subrank == 0 {
         tiers
             .plain_images
             .get(&player.rank)
             .cloned()
-            .context("tier icon not loaded yet")?
+            .context("tier icon not loaded yet")
     } else {
-        format!(
-            "{API}/assets/ranks/{}/{}/image?format=webp",
-            player.rank, player.subrank
-        )
-    };
-    Ok(crate::http()
-        .get(url)
+        Ok(subrank_image(player.rank, player.subrank))
+    }
+}
+
+fn subrank_image(tier: u32, subrank: u32) -> String {
+    format!("{API}/assets/ranks/{tier}/{subrank}/image?format=webp")
+}
+
+/// アイコンを配る URL（server.rs が `rank_images` の中から返す）
+fn image_url(badge: u32) -> String {
+    format!("/assets/rank/{badge}.webp")
+}
+
+pub fn image_path(dir: &Path, badge: u32) -> PathBuf {
+    dir.join(format!("{badge}.webp"))
+}
+
+/// バッジのアイコンを保存しておく。保存したものがあれば取りに行かない
+async fn ensure_image(
+    dir: &Path,
+    badge: u32,
+    source: impl FnOnce() -> anyhow::Result<String>,
+) -> anyhow::Result<()> {
+    let path = image_path(dir, badge);
+    if tokio::fs::try_exists(&path).await? {
+        return Ok(());
+    }
+    let bytes = crate::http()
+        .get(source()?)
         .send()
         .await?
         .error_for_status()?
         .bytes()
-        .await?)
+        .await?;
+    crate::write_atomic(&path, &bytes).await
+}
+
+/// プレビューの見本のアイコンを用意して、その URL を返す。本物のアイコンと同じく取ってきて保存する
+pub async fn sample_image(store: &Store) -> anyhow::Result<String> {
+    let (tier, subrank) = SAMPLE;
+    let badge = tier * 10 + subrank;
+    ensure_image(&store.rank_images(), badge, || {
+        Ok(subrank_image(tier, subrank))
+    })
+    .await?;
+    Ok(image_url(badge))
 }
 
 #[cfg(test)]
@@ -343,6 +377,45 @@ mod tests {
         // 候補が何人もいる行だけなら、別人かもしれないので順位を出さない
         assert_eq!(find_rank(&entries, 1), None);
         assert_eq!(find_rank(&entries, 7), None);
+    }
+
+    /// 取りに来た回数を数え、決まった中身を返すサーバー。URL を返す
+    async fn serve_image(hits: Arc<std::sync::atomic::AtomicU32>) -> String {
+        use std::sync::atomic::Ordering;
+        let app = axum::Router::new().route(
+            "/image",
+            axum::routing::get(move || async move {
+                hits.fetch_add(1, Ordering::SeqCst);
+                "webp"
+            }),
+        );
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move { axum::serve(listener, app).await });
+        format!("http://{addr}/image")
+    }
+
+    #[tokio::test]
+    async fn an_icon_is_fetched_once_and_kept() {
+        use std::sync::atomic::{AtomicU32, Ordering};
+        let dir = tempfile::tempdir().unwrap();
+        let hits = Arc::new(AtomicU32::new(0));
+        let url = serve_image(hits.clone()).await;
+        for _ in 0..2 {
+            ensure_image(dir.path(), 73, || Ok(url.clone()))
+                .await
+                .unwrap();
+        }
+        assert_eq!(hits.load(Ordering::SeqCst), 1);
+        assert_eq!(std::fs::read(image_path(dir.path(), 73)).unwrap(), b"webp");
+    }
+
+    #[tokio::test]
+    async fn a_failed_fetch_saves_nothing() {
+        let dir = tempfile::tempdir().unwrap();
+        let unreachable = || Ok("http://127.0.0.1:9/image".to_owned());
+        assert!(ensure_image(dir.path(), 73, unreachable).await.is_err());
+        assert!(!image_path(dir.path(), 73).exists());
     }
 
     #[test]

@@ -22,7 +22,7 @@ use crate::settings::SettingsPatch;
 use crate::share::{self, GiftStatus, Refused, SharedCode};
 use crate::store::{ChromeEvent, Store};
 use crate::types::{ChromeCommand, ChromeMsg, ClientMsg, LangCode, ServerMsg, SettingsView, Topic};
-use crate::{audio, lang};
+use crate::{audio, lang, rank};
 use ts_rs::TS;
 
 #[derive(RustEmbed)]
@@ -49,6 +49,7 @@ pub fn router(store: Arc<Store>) -> Router {
         .route("/fonts/{family}/faces.css", get(font_faces))
         .route("/fonts/{family}/download", post(download_font))
         .route("/fonts/{family}/{postscript}", get(font_file))
+        .route("/rank/sample", get(rank_sample))
         .route("/chrome/open", post(open_chrome))
         .route("/chrome/reset", post(reset_chrome))
         .route("/chrome/ws", get(chrome_ws));
@@ -556,13 +557,23 @@ async fn icon(
 
 /// ランクのアイコン。URL にバッジを含み、そのバッジのアイコンだけを返すので中身は変わらない
 async fn rank_image(State(store): State<Arc<Store>>, Path(file): Path<String>) -> Response {
-    let image = file
-        .strip_suffix(".webp")
-        .and_then(|badge| badge.parse().ok())
-        .and_then(|badge| store.rank_image(badge));
-    match image {
-        Some(bytes) => immutable("image/webp", bytes),
-        None => StatusCode::NOT_FOUND.into_response(),
+    let Some(badge) = file.strip_suffix(".webp").and_then(|b| b.parse().ok()) else {
+        return StatusCode::NOT_FOUND.into_response();
+    };
+    match tokio::fs::read(rank::image_path(&store.rank_images(), badge)).await {
+        Ok(bytes) => immutable("image/webp", bytes),
+        Err(_) => StatusCode::NOT_FOUND.into_response(),
+    }
+}
+
+/// プレビューの見本のアイコンの URL。初めて見たときに取ってくる。取れなければ 502
+async fn rank_sample(State(store): State<Arc<Store>>) -> Response {
+    match rank::sample_image(&store).await {
+        Ok(image) => Json(serde_json::json!({ "image": image })).into_response(),
+        Err(e) => {
+            tracing::warn!("rank sample: {e:#}");
+            StatusCode::BAD_GATEWAY.into_response()
+        }
     }
 }
 
@@ -752,6 +763,26 @@ mod tests {
         assert_eq!(res.headers()[header::CONTENT_TYPE], "font/sfnt");
         let body = axum::body::to_bytes(res.into_body(), 16).await.unwrap();
         assert_eq!(&body[..], b"body");
+    }
+
+    #[tokio::test]
+    async fn serves_only_the_saved_rank_icons() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir(dir.path().join("rank")).unwrap();
+        std::fs::write(dir.path().join("rank/73.webp"), b"webp").unwrap();
+        let addr = serve_with_data(dir.path().to_owned()).await;
+        let res = reqwest::get(format!("http://{addr}/assets/rank/73.webp"))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+        assert_eq!(res.headers()[header::CONTENT_TYPE], "image/webp");
+        assert_eq!(&res.bytes().await.unwrap()[..], b"webp");
+        for file in ["74.webp", "73.png", "..%2F73.webp"] {
+            let res = reqwest::get(format!("http://{addr}/assets/rank/{file}"))
+                .await
+                .unwrap();
+            assert_eq!(res.status(), StatusCode::NOT_FOUND, "{file}");
+        }
     }
 
     #[tokio::test]
