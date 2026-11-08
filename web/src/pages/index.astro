@@ -95,7 +95,7 @@ const faqs = [
   },
   {
     q: "字幕はどこで作っていますか？",
-    a: "ハイブリッドは、途中の字幕を Chrome で作り、確定の字幕と翻訳を OpenAI で作ります。OpenAI のモードは、すべて OpenAI で作ります。Chrome のモードは、音声認識も翻訳も Chrome で行います。ハイブリッドと Chrome のモードは Google Chrome が必要で、字幕を始めると小さな Chrome のウィンドウが開きます。翻訳のモデルは初回に Chrome がダウンロードします。ふりがなと用語の速い判定は、話す言語が日本語のときだけ動きます。",
+    a: "ハイブリッドは、途中の字幕を Chrome で作り、確定の字幕と翻訳を OpenAI で作ります。OpenAI のモードは、すべて OpenAI で作ります。Chrome のモードは、音声認識も翻訳も Chrome で行います。ハイブリッドと Chrome のモードは Google Chrome が必要で、字幕を始めると小さな Chrome のウィンドウが開きます。翻訳のモデルは初回に Chrome がダウンロードします。",
   },
   {
     q: "どんな情報が送信されますか？",
@@ -281,7 +281,7 @@ const official = [
         字幕は言語ごとにフォント・太さ・字間を、ランクもフォントを選べます。色、縁取り、影、行間、字幕の後ろの半透明の帯も変えられます。
       </p>
       <p class="reveal mt-3 text-lg leading-relaxed text-muted">
-        フォントは Google Fonts の 199 種類から、大きな見本を見て選んでダウンロードできます。PC に入れたフォントも、再起動なしで使えます。
+        フォントは Google Fonts の 199 種類から、見本を見ながら選んでダウンロードできます。PC に入っているフォントも使えます。
       </p>
     </div>
   </section>
@@ -291,7 +291,7 @@ const official = [
       ゲームの<span class="band">邪魔をしない。</span>
     </h2>
     <p class="reveal mt-5 max-w-2xl text-lg leading-relaxed text-muted">
-      文字起こしをクラウドで動かすので、ゲーム中の PC に重い処理をさせません。アプリの本体は Rust で作っているので、小さくて軽いです。
+      文字起こしをクラウドで動かすので、ゲーム中の PC に重い処理をさせません。アプリも小さくて軽いです。
     </p>
     <ul class="mt-10 grid gap-8 md:grid-cols-3">
       {
@@ -354,7 +354,7 @@ const official = [
     <div class="mx-auto grid max-w-6xl gap-10 px-4 py-20 sm:py-28 md:grid-cols-2">
       <div>
         <h2 class="text-sm font-bold text-gold">料金</h2>
-        <p class="display mt-3 text-[clamp(2.6rem,7vw,5.5rem)]">アプリは無料。<br />上乗せもなし。</p>
+        <p class="display mt-3 text-[clamp(2.6rem,7vw,5.5rem)]">アプリは無料。<br />上乗せなし。</p>
         <p class="mt-5 text-lg leading-relaxed text-paper/70">
           有料プランや手数料はありません。ハイブリッドと OpenAI のモードの料金は、ご自身の
           <a href="#openai-key" class="underline hover:text-paper">OpenAI の API キー</a>で OpenAI に直接払う分だけです。まずは Chrome のモードを無料で試せます。API キーは要りません。
