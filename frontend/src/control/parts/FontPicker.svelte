@@ -239,7 +239,6 @@
     onconfirm={() => download(pending!.family)}
   >
     <p>大きさ: {formatSize(pending.sizeBytes!)}</p>
-    <p>Google Fonts のフォントを GitHub から取得します。</p>
     <p>ダウンロードしたフォントはこの PC に保存し、OBS の字幕とランクにも使います。</p>
   </ConfirmDialog>
 {/if}
