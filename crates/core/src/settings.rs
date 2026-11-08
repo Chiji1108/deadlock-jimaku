@@ -380,7 +380,8 @@ const OUTLINE_WIDTH: std::ops::RangeInclusive<f64> = 0.0..=0.5;
 const SHADOW_BLUR: std::ops::RangeInclusive<f64> = 0.0..=1.0;
 const OPACITY: std::ops::RangeInclusive<f64> = 0.0..=1.0;
 const LINE_HEIGHT: std::ops::RangeInclusive<f64> = 1.0..=3.0;
-const WEIGHT: std::ops::RangeInclusive<u16> = 100..=900;
+/// CSS の `font-weight` と同じ範囲。フォントの面は 950 などもある
+const WEIGHT: std::ops::RangeInclusive<u16> = 1..=1000;
 const LETTER_SPACING: std::ops::RangeInclusive<f64> = -0.1..=0.5;
 /// ランクの既定の箱（幅 400）に、長い名前が収まる字間
 const RANK_LETTER_SPACING: std::ops::RangeInclusive<f64> = -0.1..=0.1;
@@ -1678,6 +1679,21 @@ mod tests {
     }
 
     #[test]
+    fn any_weight_css_accepts_can_be_saved() {
+        for weight in [1, 950, 1000] {
+            let s = Settings::default()
+                .apply(subtitle_style(
+                    json!({ "languages": { "ja": { "weight": weight } } }),
+                ))
+                .unwrap()
+                .apply(rank_style(json!({ "weight": weight })))
+                .unwrap();
+            assert_eq!(s.subtitle_style.languages["ja"].weight, Some(weight));
+            assert_eq!(s.rank_style.font.weight, Some(weight));
+        }
+    }
+
+    #[test]
     fn style_patches_reject_values_out_of_range_and_change_nothing() {
         let s = Settings::default();
         for bad in [
@@ -1698,8 +1714,8 @@ mod tests {
             json!({ "background": { "opacity": 1.1 } }),
             json!({ "background": { "color": "black" } }),
             json!({ "languages": { "latin": { "font": "Georgia" } } }),
-            json!({ "languages": { "ja": { "weight": 99 } } }),
-            json!({ "languages": { "ja": { "weight": 901 } } }),
+            json!({ "languages": { "ja": { "weight": 0 } } }),
+            json!({ "languages": { "ja": { "weight": 1001 } } }),
             json!({ "languages": { "ja": { "letterSpacing": 0.6 } } }),
             json!({ "languages": { "ja": { "letterSpacing": -0.2 } } }),
             json!({ "languages": { "ja": { "font": "a\nb" } } }),
@@ -1709,7 +1725,7 @@ mod tests {
         for bad in [
             json!({ "color": "red" }),
             json!({ "font": "a\nb" }),
-            json!({ "weight": 1000 }),
+            json!({ "weight": 1001 }),
             json!({ "letterSpacing": 0.11 }),
         ] {
             assert!(s.apply(rank_style(bad.clone())).is_err(), "{bad}");

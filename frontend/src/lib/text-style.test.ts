@@ -131,6 +131,10 @@ test("太さの選択肢に標準と選んでいる太さを足す", () => {
   expect(weightChoices([], 700, 300)).toEqual([300, 400, 500, 700, 800, 900]);
 });
 
+test("100 刻みでない面や 900 を超える面も選択肢に出す（core は CSS と同じ 1〜1000 を受け付ける）", () => {
+  expect(weightChoices([350, 950], 700)).toEqual([350, 700, 950]);
+});
+
 test("太字を合成するのは、600 以上を求めて 600 以上の面がないときだけ", () => {
   expect(syntheticBold([400], 700)).toBe(true);
   expect(syntheticBold([400, 500], 600)).toBe(true);

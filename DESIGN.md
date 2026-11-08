@@ -738,7 +738,7 @@ interface TextLook {
 }
 interface FontStyle {
   font: string | null;
-  weight: number | null;         // 100〜900
+  weight: number | null;         // 1〜1000（CSS の font-weight と同じ。選択肢は faces.css の面から出す）
   letterSpacing: number | null;  // 字間。文字の大きさとの比（-0.1〜0.5。ランクは -0.1〜0.1）
 }
 type SubtitleStyle = TextLook & {
