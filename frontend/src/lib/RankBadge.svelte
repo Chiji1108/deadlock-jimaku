@@ -38,12 +38,7 @@
   const number = (n: number) => n.toLocaleString("en-US");
 </script>
 
-<div
-  class="rank"
-  lang={shown}
-  data-background={look?.background.enabled ? "band" : undefined}
-  style={look && textVars(look, BLUR_EM)}
->
+<div class="rank" lang={shown} style={look && textVars(look, BLUR_EM)}>
   {#if rank.image}<img class="badge" src={rank.image} alt="" />{/if}
   <!-- 1 行目: ランク名、2 行目: ゲージ。出すものは操作パネルで選ぶ -->
   {#if content !== "icon"}<div class="text">
@@ -92,15 +87,6 @@
       0 calc(2px * var(--scale)) var(--shadow-blur, calc(6px * var(--scale)))
         var(--shadow-color, rgb(0 0 0 / 0.6))
     );
-  }
-  .rank[data-background="band"] {
-    border-radius: calc(12px * var(--scale));
-    background: var(--band-color, rgb(0 0 0 / 0.62));
-  }
-  /* 筆記体や斜体の字の形は送り幅の外にはみ出すので、帯の中に収まるよう字の大きさに比例して空ける
-     （.rank の文字の大きさは名前と別なので、字のある行に置く） */
-  .rank[data-background="band"] p {
-    padding-inline-end: 0.3em;
   }
   .badge {
     width: var(--badge-size, calc(96px * var(--scale)));

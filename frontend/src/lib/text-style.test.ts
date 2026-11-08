@@ -1,4 +1,5 @@
 import { expect, test } from "vitest";
+import type { SubtitleStyle } from "../generated/SubtitleStyle";
 import type { TextLook } from "../generated/TextLook";
 import {
   changedDetails,
@@ -14,6 +15,10 @@ const standard = (): TextLook => ({
   color: null,
   outline: { width: null, color: null },
   shadow: { enabled: null, blur: null, color: null },
+});
+/** 字幕の見た目（帯を持てる） */
+const subtitle = (): TextLook & Pick<SubtitleStyle, "background"> => ({
+  ...standard(),
   background: { enabled: false, color: null, opacity: null },
 });
 const vars = (css?: string) =>
@@ -65,7 +70,8 @@ test("縁取りより暗い字では、用語の色の明るさを反転し、�
 });
 
 test("帯だけなら縁取りを細くして影を消す", () => {
-  const look = standard();
+  expect(textVars(subtitle())).toBeUndefined();
+  const look = subtitle();
   look.background.enabled = true;
   expect(vars(textVars(look))).toEqual({
     "--outline-width": "calc(0.08 * 1em)",
@@ -75,7 +81,7 @@ test("帯だけなら縁取りを細くして影を消す", () => {
 });
 
 test("帯でも選んだ縁取りと影を優先する", () => {
-  const look = standard();
+  const look = subtitle();
   look.background.enabled = true;
   look.outline.width = 0.2;
   look.shadow.enabled = true;
@@ -92,7 +98,7 @@ test("影を消すとぼかしと色は渡さない", () => {
 });
 
 test("帯の色と濃さは 1 つの色にする", () => {
-  const look = standard();
+  const look = subtitle();
   look.background = { enabled: true, color: "#112233", opacity: 0.5 };
   expect(vars(textVars(look))["--band-color"]).toBe("#11223380");
   look.background = { enabled: true, color: null, opacity: 1 };
@@ -101,8 +107,9 @@ test("帯の色と濃さは 1 つの色にする", () => {
   expect(vars(textVars(look))["--band-color"]).toBe("#1122339e");
 });
 
-test("ランクは標準と同じく、ぼかしだけを --scale に比例させる", () => {
+test("ランクは帯を持たず、標準と同じく影を付け、ぼかしだけを --scale に比例させる", () => {
   const look = standard();
+  expect(shadowOn(look)).toBe(true);
   look.outline.width = 0.25;
   look.shadow.blur = 0.5;
   const rank = vars(textVars(look, "calc(16px * var(--scale))"));
@@ -139,7 +146,7 @@ test("標準に戻す差分は全部の項目を null にする", () => {
 });
 
 test("「詳しく」の中で変えている項目を数える（隠れている項目は数えない）", () => {
-  const look = standard();
+  const look = subtitle();
   expect(changedDetails(look, [])).toBe(0);
   look.color = "#000000";
   look.outline.color = "#ffffff";

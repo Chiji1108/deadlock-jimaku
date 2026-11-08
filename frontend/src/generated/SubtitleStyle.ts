@@ -7,7 +7,7 @@ import type { Shadow } from "./Shadow";
 /**
  * 字幕の文字の見た目。言語ごとに色なども変えられるようにするなら `FontStyle` の隣に足す
  */
-export type SubtitleStyle = { lineHeight: number | null, 
+export type SubtitleStyle = { background: Background, lineHeight: number | null, 
 /**
  * キーがない言語は標準
  */
@@ -15,4 +15,4 @@ languages: { [key in string]: FontStyle },
 /**
  * 通常の文字の色。ヒーロー名などの色分けは変えない
  */
-color: string | null, outline: Outline, shadow: Shadow, background: Background, };
+color: string | null, outline: Outline, shadow: Shadow, };

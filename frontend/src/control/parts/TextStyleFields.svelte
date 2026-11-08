@@ -9,6 +9,7 @@
     changedDetails,
     outlineStandard,
     shadowOn,
+    type Look,
     type MergePatch,
     type TextStandard,
   } from "../../lib/text-style";
@@ -16,28 +17,30 @@
   import ConfirmDialog from "./ConfirmDialog.svelte";
   import StyleNumber from "./StyleNumber.svelte";
 
-  // 字幕とランクで共通の「文字の見た目」。フォントと帯だけを見せ、残りは「詳しく」に畳む。
+  // 字幕とランクで共通の「文字の見た目」。フォント（と字幕の帯）だけを見せ、残りは「詳しく」に畳む。
   // 変えると表示中のオーバーレイとプレビューにそのまま届く
   let {
     look,
     standard,
-    bandHint,
     colorHint,
     onchange,
     onreset,
     fonts,
+    band,
     details,
     detailValues,
   }: {
-    look: TextLook;
+    /** 帯は字幕だけが持つ。帯があれば縁取りと影の標準が変わる */
+    look: Look;
     standard: TextStandard;
-    bandHint: string;
     colorHint?: string;
     onchange: (patch: MergePatch<TextLook>) => Promise<boolean>;
     onreset: () => Promise<boolean>;
     /** フォントの行 */
     fonts: Snippet;
-    /** 「詳しく」の行のうち、字幕とランクで違うもの */
+    /** フォントの下に出す帯のスイッチ（字幕だけ） */
+    band?: Snippet;
+    /** 「詳しく」の行のうち、字幕とランクで違うもの（字幕の帯の色と濃さもここ） */
     details: Snippet;
     /** `details` の行の値（標準から変えている数を出す） */
     detailValues: (number | null | undefined)[];
@@ -58,17 +61,7 @@
     <Field.Description>太字の面がないフォントは、太字を合成して描きます</Field.Description>
   </Field.Field>
 
-  <Field.Field orientation="horizontal">
-    <Field.Content>
-      <Field.Label>半透明の帯</Field.Label>
-      <Field.Description>{bandHint}</Field.Description>
-    </Field.Content>
-    <Switch
-      aria-label="半透明の帯"
-      checked={look.background.enabled}
-      onCheckedChange={(enabled) => onchange({ background: { enabled } })}
-    />
-  </Field.Field>
+  {@render band?.()}
 
   <details class="group flex flex-col">
     <summary
@@ -127,23 +120,6 @@
         />
       {/if}
       {@render details()}
-      {#if look.background.enabled}
-        <ColorField
-          label="帯の色"
-          value={look.background.color}
-          standard={standard.bandColor}
-          onchange={(color) => onchange({ background: { color } })}
-        />
-        <StyleNumber
-          label="帯の濃さ"
-          value={look.background.opacity}
-          standard={standard.bandOpacity}
-          presets={[0.25, 0.4, 0.8, 1]}
-          percent
-          range={{ min: 0, max: 100, step: 1 }}
-          onchange={(opacity) => onchange({ background: { opacity } })}
-        />
-      {/if}
       <div>
         <Button variant="outline" size="sm" onclick={() => (confirming = true)}>
           文字の見た目を標準に戻す

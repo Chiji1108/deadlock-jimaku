@@ -14,6 +14,7 @@
   import { cleared, LINE_HEIGHT, SUBTITLE_TEXT } from "../../lib/text-style";
   import type { SubtitleStyle } from "../../generated/SubtitleStyle";
   import AddToObs from "../parts/AddToObs.svelte";
+  import ColorField from "../parts/ColorField.svelte";
   import OverlayPreview from "../parts/OverlayPreview.svelte";
   import DisplayTimingDialog from "../parts/DisplayTimingDialog.svelte";
   import FontPicker from "../parts/FontPicker.svelte";
@@ -49,6 +50,7 @@
   const noTargets = $derived(s.translateTo.length === 0);
   const languages = $derived([...new Set([s.micLanguage, ...s.translateTo])]);
   const onlyTranslation = $derived(translationOnly(s));
+  const bg = $derived(s.subtitleStyle.background);
   /** 変えた項目だけを送る（続けて変えても、前の変更を古い値で戻さない） */
   const set = (patch: SubtitleDisplayPatch) => panel.update({ subtitleDisplay: patch });
   const setStyle = (patch: MergePatch<SubtitleStyle>) => panel.update({ subtitleStyle: patch });
@@ -131,7 +133,6 @@
         <TextStyleFields
           look={s.subtitleStyle}
           standard={SUBTITLE_TEXT}
-          bandHint="明るい場面でも読めるよう、行の後ろに帯を敷きます"
           colorHint="ヒーロー名、スキル名、アイテム名の色分けは残します"
           onchange={setStyle}
           onreset={() => setStyle(cleared(s.subtitleStyle))}
@@ -152,6 +153,21 @@
                 standardWeight={SUBTITLE_TEXT.weight}
               />
             {/each}
+          {/snippet}
+          {#snippet band()}
+            <Field.Field orientation="horizontal">
+              <Field.Content>
+                <Field.Label>半透明の帯</Field.Label>
+                <Field.Description
+                  >明るい場面でも読めるよう、行の後ろに帯を敷きます</Field.Description
+                >
+              </Field.Content>
+              <Switch
+                aria-label="半透明の帯"
+                checked={bg.enabled}
+                onCheckedChange={(enabled) => setStyle({ background: { enabled } })}
+              />
+            </Field.Field>
           {/snippet}
           {#snippet details()}
             <StyleNumber
@@ -174,6 +190,23 @@
                   panel.setFontStyle({ kind: "subtitle", language }, { letterSpacing })}
               />
             {/each}
+            {#if bg.enabled}
+              <ColorField
+                label="帯の色"
+                value={bg.color}
+                standard={SUBTITLE_TEXT.bandColor}
+                onchange={(color) => setStyle({ background: { color } })}
+              />
+              <StyleNumber
+                label="帯の濃さ"
+                value={bg.opacity}
+                standard={SUBTITLE_TEXT.bandOpacity}
+                presets={[0.25, 0.4, 0.8, 1]}
+                percent
+                range={{ min: 0, max: 100, step: 1 }}
+                onchange={(opacity) => setStyle({ background: { opacity } })}
+              />
+            {/if}
           {/snippet}
         </TextStyleFields>
 

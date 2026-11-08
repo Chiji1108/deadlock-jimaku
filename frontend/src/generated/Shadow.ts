@@ -2,7 +2,7 @@
 
 export type Shadow = { 
 /**
- * None なら帯のないときだけ影を付ける
+ * None なら標準（字幕は帯のないときだけ、ランクはいつも付ける）
  */
 enabled: boolean | null, 
 /**

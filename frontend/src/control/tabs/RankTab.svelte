@@ -175,7 +175,6 @@
       <TextStyleFields
         look={s.rankStyle}
         standard={RANK_TEXT}
-        bandHint="明るい場面でも読めるよう、ランクの後ろに帯を敷きます"
         onchange={setStyle}
         onreset={() => setStyle(cleared(s.rankStyle))}
         detailValues={[s.rankStyle.letterSpacing]}

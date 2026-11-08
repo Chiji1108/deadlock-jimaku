@@ -297,7 +297,7 @@ impl SubtitleDisplay {
     }
 }
 
-/// 字幕とランクの文字の見た目（DESIGN.md 11 章）。None は標準で、オーバーレイに値を渡さず、
+/// 字幕とランクで共通の文字の見た目（DESIGN.md 11 章）。None は標準で、オーバーレイに値を渡さず、
 /// CSS の既定の見た目と OBS のカスタム CSS で上書きした変数をそのまま使う
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, TS)]
 #[serde(default, rename_all = "camelCase")]
@@ -307,7 +307,6 @@ pub struct TextLook {
     pub color: Option<String>,
     pub outline: Outline,
     pub shadow: Shadow,
-    pub background: Background,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, TS)]
@@ -323,14 +322,14 @@ pub struct Outline {
 #[serde(default, rename_all = "camelCase")]
 #[ts(export)]
 pub struct Shadow {
-    /// None なら帯のないときだけ影を付ける
+    /// None なら標準（字幕は帯のないときだけ、ランクはいつも付ける）
     pub enabled: Option<bool>,
     /// ぼかしの半径（em）
     pub blur: Option<f64>,
     pub color: Option<String>,
 }
 
-/// 文字の後ろの半透明の帯。字幕は行ごと、ランクは全体に敷く
+/// 字幕の行の後ろに敷く半透明の帯。ランクには敷かない（アイコンの透明な縁がティアごとに違い、余白がそろわない）
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, TS)]
 #[serde(default, rename_all = "camelCase")]
 #[ts(export)]
@@ -360,6 +359,7 @@ pub struct FontStyle {
 pub struct SubtitleStyle {
     #[serde(flatten)]
     pub look: TextLook,
+    pub background: Background,
     pub line_height: Option<f64>,
     /// キーがない言語は標準
     pub languages: BTreeMap<LangCode, FontStyle>,
@@ -400,10 +400,8 @@ impl TextLook {
         let valid = valid_color(&self.color)
             && valid_color(&self.outline.color)
             && valid_color(&self.shadow.color)
-            && valid_color(&self.background.color)
             && within(self.outline.width, &OUTLINE_WIDTH)
-            && within(self.shadow.blur, &SHADOW_BLUR)
-            && within(self.background.opacity, &OPACITY);
+            && within(self.shadow.blur, &SHADOW_BLUR);
         valid
             .then_some(())
             .ok_or("text style is out of range".into())
@@ -425,6 +423,9 @@ impl FontStyle {
 impl SubtitleStyle {
     fn validate(&self) -> Result<(), String> {
         self.look.validate()?;
+        if !valid_color(&self.background.color) || !within(self.background.opacity, &OPACITY) {
+            return Err("background is out of range".into());
+        }
         if !within(self.line_height, &LINE_HEIGHT) {
             return Err("lineHeight is out of range".into());
         }
@@ -1664,13 +1665,12 @@ mod tests {
         let next = s
             .apply(rank_style(json!({
                 "font": "Georgia", "weight": 900, "letterSpacing": 0.02,
-                "color": "#ffe066", "background": { "enabled": true }
+                "color": "#ffe066"
             })))
             .unwrap();
         assert_eq!(next.rank_style.font.font.as_deref(), Some("Georgia"));
         assert_eq!(next.rank_style.font.weight, Some(900));
         assert_eq!(next.rank_style.look.color.as_deref(), Some("#ffe066"));
-        assert!(next.rank_style.look.background.enabled);
         assert_eq!(next.subtitle_style, s.subtitle_style);
         let back = next.apply(rank_style(json!({ "font": null }))).unwrap();
         assert_eq!(back.rank_style.font.font, None);
@@ -1748,7 +1748,6 @@ mod tests {
                 "color": null,
                 "outline": { "width": null, "color": null },
                 "shadow": { "enabled": null, "blur": null, "color": null },
-                "background": { "enabled": false, "color": null, "opacity": null },
                 "font": null,
                 "weight": null,
                 "letterSpacing": null
@@ -1846,10 +1845,10 @@ mod tests {
                         blur: Some(0.5),
                         ..Default::default()
                     },
-                    background: Background {
-                        enabled: true,
-                        ..Default::default()
-                    },
+                    ..Default::default()
+                },
+                background: Background {
+                    enabled: true,
                     ..Default::default()
                 },
                 languages: BTreeMap::from([
@@ -1885,6 +1884,45 @@ mod tests {
         // 残った値は変更の検証を通る
         s.apply(subtitle_style(json!({ "color": "#ffffff" })))
             .unwrap();
+    }
+
+    #[test]
+    fn the_rank_band_from_0_4_0_rc_is_dropped_and_the_rest_stays() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join(FILE);
+        std::fs::write(
+            &path,
+            r##"{
+                "subtitleStyle": { "background": { "enabled": true, "opacity": 0.4 } },
+                "rankStyle": {
+                    "font": "Georgia", "weight": 900, "color": "#ffe066",
+                    "background": { "enabled": true, "color": "#112233", "opacity": 0.5 }
+                }
+            }"##,
+        )
+        .unwrap();
+        let s = load(&path).unwrap();
+        assert_eq!(s.rank_style.font.font.as_deref(), Some("Georgia"));
+        assert_eq!(s.rank_style.font.weight, Some(900));
+        assert_eq!(s.rank_style.look.color.as_deref(), Some("#ffe066"));
+        assert_eq!(
+            s.subtitle_style.background,
+            Background {
+                enabled: true,
+                color: None,
+                opacity: Some(0.4)
+            }
+        );
+
+        save(&path, &s).unwrap();
+        let file: Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        assert!(file["rankStyle"].get("background").is_none());
+        assert_eq!(load(&path).unwrap(), s);
+        // 操作パネルから送っても、ランクには帯を持てない
+        let next = s
+            .apply(rank_style(json!({ "background": { "enabled": true } })))
+            .unwrap();
+        assert_eq!(next.rank_style, s.rank_style);
     }
 
     #[test]

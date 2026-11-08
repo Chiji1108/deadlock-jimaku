@@ -1,5 +1,6 @@
 // 操作パネルで決めた文字の見た目を、オーバーレイの CSS に渡す。値がなければ何も書かず、
 // Captions.svelte と RankBadge.svelte の既定の見た目と OBS のカスタム CSS の変数をそのまま使う
+import type { Background } from "../generated/Background";
 import type { FontStyle } from "../generated/FontStyle";
 import type { TextLook } from "../generated/TextLook";
 import { invertLightness, luminance, mix } from "./color";
@@ -16,37 +17,48 @@ const COMMON = {
   color: "#ffffff",
   outlineColor: "#000000",
   shadowColor: "#000000",
-  bandColor: "#000000",
-  bandOpacity: 0.62,
   letterSpacing: 0,
 };
+/** 字幕の帯の標準 */
+const BAND = { bandColor: "#000000", bandOpacity: 0.62 };
+export const RANK_TEXT = { ...COMMON, outlineWidth: 0.16, shadowBlur: 0.375, weight: 800 };
+export const SUBTITLE_TEXT = {
+  ...COMMON,
+  ...BAND,
+  outlineWidth: 0.18,
+  shadowBlur: 0.15,
+  weight: 700,
+};
+export const LINE_HEIGHT = 1.5;
+/** 字幕とランクで共通の項目の標準 */
+export type TextStandard = typeof RANK_TEXT;
+
 /** 帯があるときの縁取り */
 const BAND_OUTLINE = 0.08;
-export const SUBTITLE_TEXT = { ...COMMON, outlineWidth: 0.18, shadowBlur: 0.15, weight: 700 };
-export const RANK_TEXT = { ...COMMON, outlineWidth: 0.16, shadowBlur: 0.375, weight: 800 };
-export const LINE_HEIGHT = 1.5;
-export type TextStandard = typeof SUBTITLE_TEXT;
+/** 字幕かランクの見た目。帯は字幕だけが持つ（ランクの見た目には `background` がない） */
+export type Look = TextLook & { background?: Background };
+const banded = (look: Look) => look.background?.enabled ?? false;
 
 /** 帯があれば標準では影を付けない */
-export const shadowOn = (look: TextLook) => look.shadow.enabled ?? !look.background.enabled;
+export const shadowOn = (look: Look) => look.shadow.enabled ?? !banded(look);
 
 /**
  * 「詳しく」の中で標準から変えている項目の数。隠れている項目（影を消したときのぼかし、帯がないときの帯の色）は
  * 効かないので数えない。`extra` は字幕とランクで違う項目の値
  */
-export const changedDetails = (look: TextLook, extra: (number | null | undefined)[]) =>
+export const changedDetails = (look: Look, extra: (number | null | undefined)[]) =>
   [
     look.color,
     look.outline.width,
     look.outline.color,
     look.shadow.enabled,
     ...(shadowOn(look) ? [look.shadow.blur, look.shadow.color] : []),
-    ...(look.background.enabled ? [look.background.color, look.background.opacity] : []),
+    ...(look.background?.enabled ? [look.background.color, look.background.opacity] : []),
     ...extra,
   ].filter((value) => value !== null && value !== undefined).length;
 
-export const outlineStandard = (look: TextLook, standard: TextStandard) =>
-  look.background.enabled ? BAND_OUTLINE : standard.outlineWidth;
+export const outlineStandard = (look: Look, standard: TextStandard) =>
+  banded(look) ? BAND_OUTLINE : standard.outlineWidth;
 
 const declarations = (entries: [string, string | number | undefined | null][]) =>
   entries
@@ -78,13 +90,12 @@ const scaled = (value: number | null | undefined, unit = "1em") =>
  * オーバーレイに渡す CSS 変数。em を置くのは var() を使う要素なので、行ごとの文字の大きさに合う。
  * 影のぼかしは `blurUnit` を掛ける（ランクの標準の影は、縁取りと違って --scale に比例する）
  */
-export function textVars(look: TextLook, blurUnit = "1em") {
+export function textVars(look: Look, blurUnit = "1em") {
   const { color, outline, shadow, background } = look;
   const on = shadowOn(look);
-  const width = outline.width ?? (background.enabled ? BAND_OUTLINE : undefined);
+  const width = outline.width ?? (banded(look) ? BAND_OUTLINE : undefined);
   const stroke = (outline.width ?? 0) / 2;
   const blur = on ? (shadow.blur ?? 0) : 0;
-  const custom = background.color !== null || background.opacity !== null;
   const text = color ?? COMMON.color;
   const edge = outline.color ?? COMMON.outlineColor;
   const colored = color !== null || outline.color !== null;
@@ -104,8 +115,8 @@ export function textVars(look: TextLook, blurUnit = "1em") {
     ["--shadow-color", on ? shadow.color : undefined],
     [
       "--band-color",
-      custom
-        ? `${background.color ?? COMMON.bandColor}${alpha(background.opacity ?? COMMON.bandOpacity)}`
+      background && (background.color !== null || background.opacity !== null)
+        ? `${background.color ?? BAND.bandColor}${alpha(background.opacity ?? BAND.bandOpacity)}`
         : undefined,
     ],
     ["--edge", stroke + blur > 0 ? `calc(${stroke} * 1em + ${blur} * ${blurUnit})` : undefined],
