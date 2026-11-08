@@ -1,5 +1,4 @@
 <script lang="ts">
-  import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
   import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
   import * as Alert from "$lib/components/ui/alert";
   import { Button } from "$lib/components/ui/button";
@@ -36,9 +35,9 @@
     {
       value: "chrome",
       label: "Chrome",
-      traits: "無料・キー不要",
+      traits: "キー不要",
       price: "無料",
-      hint: "音声認識も翻訳も Chrome で行います。無料でキー不要です",
+      hint: "音声認識も翻訳も Chrome で行います",
     },
     {
       value: "hybrid",
@@ -72,7 +71,6 @@
   const chromeClosed = $derived(s.speechEngine === "hybrid" && !!panel.transcriptionError);
   /** Chrome のウィンドウの今の状態 */
   const chromeNote = $derived.by(() => {
-    if (!s.transcriptionEnabled) return "字幕を始めると開きます";
     if (chromeClosed) return "字幕が止まっているので閉じています";
     if (!panel.chromeStatus) return "Chrome のウィンドウを開いています";
     if (panel.chromeStatus.detail) return panel.chromeStatus.detail;
@@ -135,13 +133,16 @@
         </div>
       {/if}
       {#if s.speechEngine !== "openai"}
-        <div class="flex flex-wrap items-center gap-3">
-          {#if s.transcriptionEnabled && !chromeClosed}
-            <Button variant="outline" size="sm" onclick={panel.openChrome}>Chrome を開き直す</Button
-            >
-          {/if}
-          {#if !chromeProblem}<p class="text-sm text-muted-foreground">{chromeNote}</p>{/if}
-        </div>
+        {#if s.transcriptionEnabled}
+          <div class="flex flex-wrap items-center gap-3">
+            {#if !chromeClosed}
+              <Button variant="outline" size="sm" onclick={panel.openChrome}
+                >Chrome を開き直す</Button
+              >
+            {/if}
+            {#if !chromeProblem}<p class="text-sm text-muted-foreground">{chromeNote}</p>{/if}
+          </div>
+        {/if}
         <p class="text-xs text-muted-foreground">
           字幕を始めると小さな Chrome のウィンドウが開きます。音声は Chrome を通じて Google
           に送られます。途中の翻訳は Chrome
@@ -170,21 +171,12 @@
             </Alert.Description>
           </Alert.Root>
         {:else}
-          <details class="group flex flex-col">
-            <summary
-              class="flex cursor-pointer list-none items-center gap-1 text-xs text-muted-foreground select-none hover:text-foreground [&::-webkit-details-marker]:hidden"
-            >
-              <ChevronRightIcon
-                class="size-3.5 transition-transform group-open:rotate-90"
-              />うまくいかないとき
-            </summary>
-            <div class="mt-2 flex flex-wrap items-center gap-3 pl-4.5">
-              {@render resetButton()}
-              <p class="text-xs text-muted-foreground">
-                マイクの許可をやり直したいとき、字幕が出ないときに
-              </p>
-            </div>
-          </details>
+          <div class="flex flex-wrap items-center gap-3">
+            <p class="text-xs text-muted-foreground">
+              マイクの許可をやり直したいとき、字幕が出ないときに
+            </p>
+            {@render resetButton()}
+          </div>
         {/if}
       {/if}
     </Card.Content>
