@@ -1,0 +1,47 @@
+[
+  {
+    "text": "さあ始まりましたデッドロック実況です。ええね、僕の一番好きなキャラはヘイズですね。ヘイズめっちゃ強いから。でも最近出たバイオレットもめっちゃ気になるね。いや、楽しみだな。いや、ヘイズのバレットダンスもめっちゃ強いんだけど、バイオレットのウルトもなんか強そうだよね。",
+    "connect_s": 0.43,
+    "first_partial_s": 2.63,
+    "last_final_after_audio_s": 0.28,
+    "finished_after_audio_s": 10.28,
+    "partials": 27,
+    "sentences": 3,
+    "usage": {
+      "input_tokens": 256,
+      "output_tokens": 72,
+      "total_tokens": 328
+    },
+    "cer": 0.0484
+  },
+  {
+    "text": "さあ始まりましたデッドロック実況です。ええね、僕の一番好きなキャラはヘイズですね。ヘイズめっちゃ強いから。でも最近出たバイオレットもめっちゃ気になるね。いや、楽しみだな。いや、ヘイズのバレットダンスもめっちゃ強いんだけど、バイオレットのウルトもなんか強そうである。",
+    "connect_s": 0.48,
+    "first_partial_s": 2.54,
+    "last_final_after_audio_s": 0.32,
+    "finished_after_audio_s": 10.33,
+    "partials": 27,
+    "sentences": 3,
+    "usage": {
+      "input_tokens": 256,
+      "output_tokens": 72,
+      "total_tokens": 328
+    },
+    "cer": 0.0242
+  },
+  {
+    "text": "さあ始まりましたデッドロック実況です。ええね、僕の一番好きなキャラはヘイズですね。ヘイズめっちゃ強いから。でも最近出たバイオレットもめっちゃ気になるね。いや、楽しみだな。いや、ヘイズのバレットダンスもめっちゃ強いんだけど、バイオレットのウルトもなんか強そうである。",
+    "connect_s": 0.5,
+    "first_partial_s": 2.53,
+    "last_final_after_audio_s": 0.42,
+    "finished_after_audio_s": 10.42,
+    "partials": 27,
+    "sentences": 3,
+    "usage": {
+      "input_tokens": 256,
+      "output_tokens": 72,
+      "total_tokens": 328
+    },
+    "cer": 0.0242
+  }
+]
