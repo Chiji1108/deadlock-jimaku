@@ -34,6 +34,10 @@ run = "node frontend/scripts/notices.ts"
 description = "Google Fonts のフォントの見本の SVG を作り直し、カタログの言語と名前を確かめる（GitHub からフォントを取る）"
 run = "node frontend/scripts/font-samples.ts"
 
+[tasks.lp-fonts]
+description = "LP の文字の見た目の見本のフォントを、見本の字だけの woff2 に作り直す（GitHub からフォントを取る）"
+run = "node web/scripts/fonts.ts"
+
 [tasks.check]
 description = "整形・リント・型チェック・テストをまとめて実行する"
 run = [
@@ -44,8 +48,10 @@ run = [
   "pnpm --dir server check",
   "pnpm --dir frontend test",
   "pnpm --dir server test",
+  "pnpm --dir web test",
   "cargo fmt --all --check",
   "cargo clippy --workspace --all-targets -- -D warnings",
   "cargo test --workspace",
   "node frontend/scripts/notices.ts --check",
+  "node web/scripts/fonts.ts --check",
 ]

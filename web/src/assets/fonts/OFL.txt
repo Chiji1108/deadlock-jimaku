@@ -1,5 +1,5 @@
 Copyright 2020 The Dela Gothic Project Authors (https://github.com/syakuzen/DelaGothic)
-Copyright 2021 The Shippori Mincho Project Authors (https://github.com/fontdasu/ShipporiMincho)
+Copyright 2020 The Hachi Maru Pop Project Authors (https://github.com/noriokanisawa/HachiMaruPop)
 Copyright 2020 The DotGothic16 Project Authors (https://github.com/fontworks-fonts/DotGothic16)
 
 
