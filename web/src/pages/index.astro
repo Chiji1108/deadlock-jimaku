@@ -1,4 +1,7 @@
 ---
+import miri from "../assets/miri.webp?url";
+import obsPoster from "../assets/obs-drag.webp?url";
+import obsVideo from "../assets/obs-drag.mp4?url";
 import Layout from "../layouts/Layout.astro";
 import type { SpeechEngine } from "../../../frontend/src/generated/SpeechEngine";
 import { ENGINES } from "../../../frontend/src/lib/engines";
@@ -121,7 +124,7 @@ const faqs = [
   {
     q: "どんな人が開発したんですか？",
     a: "Twitch で Deadlock を配信しているミリちゃんねるが、配信者目線で開発しました。",
-    photo: "/media/miri.webp",
+    photo: miri,
     link: { href: TWITCH, label: "Twitch のチャンネルを見る" },
   },
   {
@@ -299,8 +302,8 @@ const official = [
     <video
       data-play-in-view
       class="reveal mx-auto mt-10 w-full rounded-[clamp(14px,2.2vw,28px)]"
-      src="/media/obs-drag.mp4"
-      poster="/media/obs-drag.webp"
+      src={obsVideo}
+      poster={obsPoster}
       width="1280"
       height="608"
       muted

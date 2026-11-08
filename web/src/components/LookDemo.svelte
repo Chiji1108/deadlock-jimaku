@@ -5,6 +5,7 @@
   import type { SubtitleStyle } from "../../../frontend/src/generated/SubtitleStyle";
   import Captions from "../../../frontend/src/lib/Captions.svelte";
   import RankBadge from "../../../frontend/src/lib/RankBadge.svelte";
+  import scene from "../assets/hero.webp?url";
   import { display, enriched, LINES, RANK } from "../lib/demo";
 
   type Look = {
@@ -80,7 +81,7 @@
     style:font-family={look.font && `"${look.font}", var(--font-sans)`}
   >
     <!-- 一番上の動画の 1 コマから、ゲームの表示（HUD）のないところを拡大して背景にする -->
-    <img src="/media/hero.webp" alt="" class="look-scene absolute inset-0 size-full object-cover" loading="lazy" />
+    <img src={scene} alt="" class="look-scene absolute inset-0 size-full object-cover" loading="lazy" />
     <div class="look-rank" role="img" aria-label="ランクの表示（エミッサリー III）">
       <RankBadge rank={RANK} lang="ja" content="name" look={rank} />
     </div>
@@ -104,22 +105,22 @@
 </figure>
 
 <style>
-  /* 見本の文字だけを入れたフォント（web/public/media/fonts/OFL.txt）。demo.ts の台詞を変えたら作り直す */
+  /* 見本の文字だけを入れたフォント（web/src/assets/fonts/OFL.txt）。demo.ts の台詞を変えたら作り直す */
   @font-face {
     font-family: "Dela Gothic One";
-    src: url("/media/fonts/dela-gothic-one.woff2") format("woff2");
+    src: url("../assets/fonts/dela-gothic-one.woff2") format("woff2");
     font-weight: 400;
     font-display: swap;
   }
   @font-face {
     font-family: "Shippori Mincho B1";
-    src: url("/media/fonts/shippori-mincho-b1.woff2") format("woff2");
+    src: url("../assets/fonts/shippori-mincho-b1.woff2") format("woff2");
     font-weight: 800;
     font-display: swap;
   }
   @font-face {
     font-family: "DotGothic16";
-    src: url("/media/fonts/dotgothic16.woff2") format("woff2");
+    src: url("../assets/fonts/dotgothic16.woff2") format("woff2");
     font-weight: 400;
     font-display: swap;
   }

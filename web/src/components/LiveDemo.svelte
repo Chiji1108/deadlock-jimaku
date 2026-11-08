@@ -3,6 +3,8 @@
   import { onMount } from "svelte";
   import Captions from "../../../frontend/src/lib/Captions.svelte";
   import RankBadge from "../../../frontend/src/lib/RankBadge.svelte";
+  import heroPoster from "../assets/hero.webp?url";
+  import heroVideo from "../assets/hero.mp4?url";
   import { defineCards, type Cards } from "../lib/cards";
   import { display, enriched, LANGS, LINES, partial, RANK, spokenText } from "../lib/demo";
 
@@ -86,8 +88,8 @@
   <div class="stream" class:narrow bind:this={stream} bind:clientWidth={width}>
     <video
       data-play-in-view
-      src="/media/hero.mp4"
-      poster="/media/hero.webp"
+      src={heroVideo}
+      poster={heroPoster}
       muted
       loop
       playsinline

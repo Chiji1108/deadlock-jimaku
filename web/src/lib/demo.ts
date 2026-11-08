@@ -5,6 +5,7 @@ import type { Segment } from "../../../frontend/src/generated/Segment";
 import type { SubtitleDisplay } from "../../../frontend/src/generated/SubtitleDisplay";
 import type { Token } from "../../../frontend/src/generated/Token";
 import { setGlossary } from "../../../frontend/src/lib/glossary.svelte";
+import rankBadge from "../assets/rank-badge.webp?url";
 
 export const LANGS = [
   { value: "en", label: "English" },
@@ -13,11 +14,17 @@ export const LANGS = [
 ] as const;
 type Lang = (typeof LANGS)[number]["value"];
 
+const ICONS = import.meta.glob<string>("../assets/icons/*.webp", {
+  eager: true,
+  import: "default",
+  query: "?url",
+});
+
 const hero = (icon: string, ja: string, en: string, ru: string, zh: string): Entity => ({
   kind: "hero",
   className: icon,
   names: { ja, en, ru, "zh-Hans": zh },
-  icon: `/media/icons/${icon}.webp`,
+  icon: ICONS[`../assets/icons/${icon}.webp`],
 });
 const item = (
   icon: string,
@@ -112,6 +119,6 @@ export const RANK: RankState = {
   tier: 7,
   subrank: 3,
   names: { ja: "エミッサリー", en: "Emissary" },
-  image: "/media/rank-badge.webp",
+  image: rankBadge,
   progress: { value: 640, max: 1000 },
 };
