@@ -1,20 +1,27 @@
-// OpenAI の単価（2026-11）。アプリの crates/core/src/usage.rs と同じ表。
+// OpenAI と xAI の単価（2026-11）。アプリの crates/core/src/usage.rs と同じ表。
 // おすそ分けでは、ここにないモデル（単価が分からない）は使わせない
 
-type Price = { perMinute: number } | { input: number; cached: number; output: number };
+export type Provider = "openai" | "xai";
+
+type Price =
+  | { provider: Provider; perMinute: number }
+  | { input: number; cached: number; output: number };
 
 const PRICES: Record<string, Price> = {
-  "gpt-live-transcribe": { perMinute: 0.017 },
-  "gpt-transcribe": { perMinute: 0.0045 },
+  "gpt-live-transcribe": { provider: "openai", perMinute: 0.017 },
+  "gpt-transcribe": { provider: "openai", perMinute: 0.0045 },
+  "grok-voice-transcribe-2.0": { provider: "xai", perMinute: 0.1 / 60 },
   // 100 万トークンあたり
   "gpt-6.1-terra": { input: 1.0, cached: 0.05, output: 5.0 },
   "gpt-6-luna": { input: 0.1, cached: 0.01, output: 0.5 },
 };
 
-/** 音声の料金。音声のモデルでなければ undefined */
-export function audioUsd(model: string, seconds: number): number | undefined {
+/** その会社の音声のモデルの料金。そうでなければ undefined */
+export function audioUsd(provider: Provider, model: string, seconds: number): number | undefined {
   const price = PRICES[model];
-  return price && "perMinute" in price ? (seconds / 60) * price.perMinute : undefined;
+  return price && "perMinute" in price && price.provider === provider
+    ? (seconds / 60) * price.perMinute
+    : undefined;
 }
 
 export interface Tokens {

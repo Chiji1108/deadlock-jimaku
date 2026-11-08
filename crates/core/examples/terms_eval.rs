@@ -16,9 +16,9 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use anyhow::Context;
+use overlays_core::access::Access;
 use overlays_core::assets;
 use overlays_core::enrich::{Enricher, Question, Span};
-use overlays_core::openai::Access;
 use overlays_core::settings::Models;
 use overlays_core::types::{Glossary, Token};
 use overlays_core::usage::Meter;
@@ -68,7 +68,7 @@ async fn main() -> anyhow::Result<()> {
             std::env::temp_dir().join("terms_eval_usage.json"),
         ));
         let enricher = Enricher::new(
-            Access::key(key.clone()),
+            Access::key(overlays_core::secrets::Provider::OpenAi, key.clone()),
             &Models {
                 translate: model.clone(),
                 ..Models::default()

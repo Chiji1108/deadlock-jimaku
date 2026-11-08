@@ -2,14 +2,17 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { getPlatformProxy } from "wrangler";
 import share0001 from "../migrations/0001_share.sql?raw";
 import limit0002 from "../migrations/0002_daily_limit.sql?raw";
+import xai0003 from "../migrations/0003_xai.sql?raw";
 import { addUsage, codeByValue, day, DEFAULT_DAILY_LIMIT_USD } from "./db";
 import { app, type Env } from "./index";
 import { openai, validKey } from "./openai";
 import { appendSeconds, tokensUsd, wavSeconds } from "./price";
 import { relay } from "./realtime";
 import { normalizeCode } from "./secrets";
+import { validXaiKey, xai } from "./xai";
 
 vi.mock("./openai", () => ({ openai: vi.fn(), validKey: vi.fn() }));
+vi.mock("./xai", () => ({ xai: vi.fn(), validXaiKey: vi.fn() }));
 
 const KEY = "sk-issuer";
 let proxy: Awaited<ReturnType<typeof getPlatformProxy<{ DB: D1Database }>>>;
@@ -41,7 +44,7 @@ beforeAll(async () => {
     SHARE_KEY: btoa(String.fromCharCode(...new Uint8Array(32).fill(7))),
     GIFT_RATE: { limit: rate },
   };
-  const sql = (share0001 + limit0002)
+  const sql = (share0001 + limit0002 + xai0003)
     .replace(/--.*$/gm, "")
     .split(";")
     .map((s) => s.trim())
@@ -57,6 +60,8 @@ beforeEach(async () => {
   }
   vi.mocked(validKey).mockImplementation(async (key) => key.startsWith("sk-"));
   vi.mocked(openai).mockReset();
+  vi.mocked(validXaiKey).mockImplementation(async (key) => key.startsWith("xai-"));
+  vi.mocked(xai).mockReset();
   rate.mockReset();
   rate.mockResolvedValue({ success: true });
 });
@@ -176,7 +181,7 @@ describe("gift", () => {
     const token = await share();
     const future = Date.now() + 60_000;
     const { code, id } = await createCode(token, { expiresAt: future });
-    expect(await (await call("/gift", { token: code })).json()).toEqual({ expiresAt: future });
+    expect(await (await call("/gift", { token: code })).json()).toEqual({ expiresAt: future, providers: ["openai"] });
 
     // 期限を過ぎた直後: 始められないが、中継はする
     const past = Date.now() - 60_000;
@@ -203,7 +208,7 @@ describe("gift", () => {
     await revoke(true);
     expect(await (await call("/gift", { token: code })).json()).toEqual({ error: "revoked" });
     await revoke(false);
-    expect(await (await call("/gift", { token: code })).json()).toEqual({ expiresAt: null });
+    expect(await (await call("/gift", { token: code })).json()).toEqual({ expiresAt: null, providers: ["openai"] });
   });
 
   it("unknown codes are refused", async () => {
@@ -389,6 +394,84 @@ describe("relay", () => {
     const body = json({ model: "gpt-6.1-terra", input: "x" });
     expect((await call("/openai/responses", { method: "POST", token: code, ...body })).status).toBe(500);
     expect((await listCodes(token))[0]!.usd).toBe(0);
+  });
+});
+
+describe("xai", () => {
+  const XAI_KEY = "xai-issuer";
+
+  async function depositXai(token: string, key = XAI_KEY) {
+    return call("/share/xai", { method: "PUT", token, ...json({ key }) });
+  }
+
+  function sttForm(model = "grok-voice-transcribe-2.0") {
+    const form = new FormData();
+    form.set("model", model);
+    form.set("language", "ja");
+    form.append("keyterm", "ヘイズ");
+    form.append("keyterm", "デッドロック");
+    form.set("prompt", "not passed");
+    form.set("file", new File([wav(36)], "segment.wav", { type: "audio/wav" }));
+    return form;
+  }
+
+  it("is deposited only by the issuer, with a working key, and shows in the codes and the gift", async () => {
+    const token = await share();
+    const { code } = await createCode(token);
+    expect((await depositXai("nobody")).status).toBe(401);
+    expect((await depositXai(token, "bad")).status).toBe(400);
+    expect(await (await call("/gift", { token: code })).json()).toMatchObject({ providers: ["openai"] });
+
+    expect((await depositXai(token)).status).toBe(204);
+    expect(await (await call("/share/codes", { token })).json()).toMatchObject({ xai: true });
+    expect(await (await call("/gift", { token: code })).json()).toMatchObject({ providers: ["openai", "xai"] });
+
+    expect((await call("/share/xai", { method: "DELETE", token })).status).toBe(204);
+    expect(await (await call("/share/codes", { token })).json()).toMatchObject({ xai: false });
+  });
+
+  it("keeps the xAI key when the OpenAI key changes", async () => {
+    const old = await share();
+    await depositXai(old);
+    const res = await call("/share/key", { method: "PUT", token: old, ...json({ key: "sk-new" }) });
+    const { token } = (await res.json()) as { token: string };
+    expect(await (await call("/share/codes", { token })).json()).toMatchObject({ xai: true });
+  });
+
+  it("refuses to relay when no xAI key is deposited", async () => {
+    const token = await share();
+    const { code } = await createCode(token);
+    const res = await call("/xai/stt", { method: "POST", token: code, body: sttForm() });
+    expect(res.status).toBe(403);
+    expect(res.headers.get("X-Gift-Refusal")).toBe("unsupported");
+    expect(xai).not.toHaveBeenCalled();
+  });
+
+  it("relays with the issuer's xAI key, only the app's fields with the file last, and counts the cost", async () => {
+    const token = await share();
+    await depositXai(token);
+    const { code } = await createCode(token);
+    vi.mocked(xai).mockResolvedValue(Response.json({ text: "ヘイズ", duration: 36 }));
+    const res = await call("/xai/stt", { method: "POST", token: code, body: sttForm() });
+    expect(await res.json()).toMatchObject({ text: "ヘイズ" });
+    const [path, key, init] = vi.mocked(xai).mock.calls[0]!;
+    expect([path, key]).toEqual(["/v1/stt", XAI_KEY]);
+    const sent = init!.body as FormData;
+    expect([...sent.keys()]).toEqual(["model", "language", "keyterm", "keyterm", "file"]);
+    expect((await listCodes(token))[0]!.usd).toBeCloseTo(0.001);
+  });
+
+  it("refuses OpenAI models on xAI, and Grok on OpenAI", async () => {
+    const token = await share();
+    await depositXai(token);
+    const { code } = await createCode(token);
+    const res = await call("/xai/stt", { method: "POST", token: code, body: sttForm("gpt-transcribe") });
+    expect(res.status).toBe(400);
+    const form = sttForm();
+    const openaiRes = await call("/openai/audio/transcriptions", { method: "POST", token: code, body: form });
+    expect(openaiRes.status).toBe(400);
+    expect(xai).not.toHaveBeenCalled();
+    expect(openai).not.toHaveBeenCalled();
   });
 });
 

@@ -101,12 +101,12 @@ export async function relay(
       }
       model = input.transcription?.model;
       // 単価の分からないモデルは使わせない（おすそ分けした人の料金を数えられない）
-      if (!model || audioUsd(model, 0) === undefined) return close(1008, "model not allowed");
+      if (!model || audioUsd("openai", model, 0) === undefined) return close(1008, "model not allowed");
     } else if (!model) {
       return close(1008, "session.update with a model comes first");
     } else if (msg.type === "input_audio_buffer.append") {
       if (typeof msg.audio !== "string") return close(1008, "message not allowed");
-      const usd = audioUsd(model, appendSeconds(msg.audio)) ?? 0;
+      const usd = audioUsd("openai", model, appendSeconds(msg.audio)) ?? 0;
       pending += usd;
       remaining -= usd;
       if (remaining <= 0) return close(1008, "limit");

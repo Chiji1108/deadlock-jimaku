@@ -19,10 +19,10 @@ use jiter::{JsonValue, PartialMode};
 use serde::Deserialize;
 use serde_json::{Value, json};
 
+use crate::access::Access;
 use crate::furigana;
 use crate::lang;
 use crate::llm;
-use crate::openai::Access;
 use crate::settings::Models;
 use crate::types::{EntityKind, Glossary, LangCode, RubySegment, Token, Translations};
 use crate::usage::{Meter, Use};
@@ -699,7 +699,7 @@ mod tests {
 
     fn enricher(targets: &[&str]) -> Enricher {
         Enricher::new(
-            Access::key("key".into()),
+            Access::key(crate::secrets::Provider::OpenAi, "key".into()),
             &Models::default(),
             "ja".into(),
             targets.iter().map(|t| (*t).to_owned()).collect(),

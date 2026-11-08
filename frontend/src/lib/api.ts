@@ -68,6 +68,9 @@ export const api = {
   share: () => request<ShareView>("/api/share"),
   enableShare: () => request<ShareView>("/api/share", { method: "POST" }),
   disableShare: () => request<ShareView>("/api/share", { method: "DELETE" }),
+  /** 自分の xAI のキーも預ける（ギフトコードで Grok を使ってもらう） */
+  shareXai: () => request<ShareView>("/api/share/xai", { method: "POST" }),
+  unshareXai: () => request<ShareView>("/api/share/xai", { method: "DELETE" }),
   /** `expiresAt` はミリ秒。null は期限なし */
   createCode: (body: { memo: string; expiresAt: number | null; dailyLimitUsd: number }) =>
     request<ShareView>("/api/share/codes", { method: "POST", body: JSON.stringify(body) }),

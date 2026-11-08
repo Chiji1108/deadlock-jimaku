@@ -43,6 +43,7 @@ pub fn router(store: Arc<Store>) -> Router {
             "/share",
             get(get_share).post(enable_share).delete(disable_share),
         )
+        .route("/share/xai", post(share_xai).delete(unshare_xai))
         .route("/share/codes", post(create_code))
         .route("/share/codes/{id}", patch(update_code))
         .route("/devices", get(devices))
@@ -136,18 +137,29 @@ async fn put_key(
         return (StatusCode::INTERNAL_SERVER_ERROR, format!("{e:#}")).into_response();
     }
     store.restart();
-    // おすそ分けしていれば、預けたキーも新しいキーにする（消したときは預けたまま。無効にすれば消える）
-    if let (Provider::OpenAi, false, Some(token)) = (
-        provider,
-        key.is_empty(),
-        blocking(secrets::share_token).await,
-    ) {
-        match share::update_key(&store.settings().api_base, &token, &key).await {
-            Ok(token) => {
+    // おすそ分けしていれば、預けたキーも新しいキーにする（消したときは預けたまま。やめれば消える）。
+    // xAI のキーは預けているときだけ替える
+    if let (false, Some(token)) = (key.is_empty(), blocking(secrets::share_token).await) {
+        let api = store.settings().api_base;
+        let replaced = match provider {
+            Provider::OpenAi => share::update_key(&api, &token, &key).await.map(Some),
+            // 預けているか分からなければ替えない（預けていないかもしれないキーの失敗を出さない）
+            Provider::Xai => match share::shared(&api, &token).await {
+                Ok(shared) if shared.xai => share::set_xai(&api, &token, &key).await.map(|()| None),
+                Ok(_) => Ok(None),
+                Err(refused) => {
+                    tracing::warn!("share: {}", refused.message);
+                    Ok(None)
+                }
+            },
+        };
+        match replaced {
+            Ok(Some(token)) => {
                 if let Err(e) = blocking(move || secrets::set_share_token(&token)).await {
                     return (StatusCode::INTERNAL_SERVER_ERROR, format!("{e:#}")).into_response();
                 }
             }
+            Ok(None) => {}
             // ほかの PC でやめた、キーを替えたなど。預けたキーはもうない
             Err(refused) if refused.status == StatusCode::UNAUTHORIZED => {}
             Err(refused) => {
@@ -209,6 +221,8 @@ async fn delete_gift(State(store): State<Arc<Store>>) -> Response {
 pub struct ShareView {
     pub enabled: bool,
     pub codes: Vec<SharedCode>,
+    /// xAI のキーも預けている（ギフトコードで Grok を使える）
+    pub xai: bool,
 }
 
 impl IntoResponse for Refused {
@@ -227,13 +241,15 @@ async fn get_share(State(store): State<Arc<Store>>) -> Response {
         return Json(ShareView {
             enabled: false,
             codes: Vec::new(),
+            xai: false,
         })
         .into_response();
     };
-    match share::codes(&store.settings().api_base, &token).await {
-        Ok(codes) => {
+    match share::shared(&store.settings().api_base, &token).await {
+        Ok(shared) => {
             let codes = blocking(move || {
-                codes
+                shared
+                    .codes
                     .into_iter()
                     .map(|c| SharedCode {
                         code: secrets::share_code(&c.id),
@@ -245,6 +261,7 @@ async fn get_share(State(store): State<Arc<Store>>) -> Response {
             Json(ShareView {
                 enabled: true,
                 codes,
+                xai: shared.xai,
             })
             .into_response()
         }
@@ -256,6 +273,7 @@ async fn get_share(State(store): State<Arc<Store>>) -> Response {
             Json(ShareView {
                 enabled: false,
                 codes: Vec::new(),
+                xai: false,
             })
             .into_response()
         }
@@ -285,8 +303,8 @@ async fn disable_share(State(store): State<Arc<Store>>) -> Response {
     let mut ids = Vec::new();
     if let Some(token) = blocking(secrets::share_token).await {
         // 消す前に、この PC に覚えたコードの ID を聞いておく
-        if let Ok(codes) = share::codes(&api, &token).await {
-            ids = codes.into_iter().map(|c| c.id).collect();
+        if let Ok(shared) = share::shared(&api, &token).await {
+            ids = shared.codes.into_iter().map(|c| c.id).collect();
         }
         if let Err(refused) = share::disable(&api, &token).await
             && refused.status != StatusCode::UNAUTHORIZED
@@ -303,6 +321,31 @@ async fn disable_share(State(store): State<Arc<Store>>) -> Response {
     .await;
     if let Err(e) = cleared {
         return (StatusCode::INTERNAL_SERVER_ERROR, format!("{e:#}")).into_response();
+    }
+    get_share(State(store)).await
+}
+
+/// 自分の xAI のキーも預ける（ギフトコードで Grok を使ってもらう）
+async fn share_xai(State(store): State<Arc<Store>>) -> Response {
+    let Some(key) = blocking(secrets::xai).await else {
+        let message = "先に自分の xAI の API キーを保存してください";
+        return (StatusCode::BAD_REQUEST, message).into_response();
+    };
+    set_shared_xai(store, key).await
+}
+
+/// 預けた xAI のキーを消す。ギフトコードは OpenAI だけで使える
+async fn unshare_xai(State(store): State<Arc<Store>>) -> Response {
+    set_shared_xai(store, String::new()).await
+}
+
+async fn set_shared_xai(store: Arc<Store>, key: String) -> Response {
+    let token = match share_token().await {
+        Ok(token) => token,
+        Err(res) => return res.into_response(),
+    };
+    if let Err(refused) = share::set_xai(&store.settings().api_base, &token, &key).await {
+        return refused.into_response();
     }
     get_share(State(store)).await
 }

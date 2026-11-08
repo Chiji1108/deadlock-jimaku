@@ -261,7 +261,7 @@ pub struct TermName {
 )]
 #[ts(export)]
 pub enum TranscriptionError {
-    /// 選んだ工程に要る鍵がない（OpenAI なら API キーもギフトコードもない）
+    /// 選んだ工程に要る鍵がない（その会社の API キーもギフトコードもない）
     MissingKey { provider: crate::secrets::Provider },
     /// ギフトコードの期限が切れた（DESIGN.md 17.1）
     GiftExpired {
@@ -275,6 +275,8 @@ pub enum TranscriptionError {
     GiftLimit,
     /// ないギフトコード（おすそ分けをやめたなど）
     GiftUnknown,
+    /// おすそ分けした人が、その会社のキーを預けていない（xAI。DESIGN.md 17.1）
+    GiftUnsupported { provider: crate::secrets::Provider },
     /// API キーを断られた
     InvalidKey { provider: crate::secrets::Provider },
     /// マイクの入力が途切れた

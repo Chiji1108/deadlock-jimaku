@@ -60,6 +60,7 @@ flowchart LR
   end
   worker["Cloudflare Worker（server/）<br/>おすそ分け"]
   openai["OpenAI"]
+  xai["xAI"]
   google["Google の音声認識"]
   deadlockapi["deadlock-api"]
   releases["GitHub Releases"]
@@ -72,7 +73,9 @@ flowchart LR
   tab -- "声" --> google
   core -- "ギフトコード" --> worker
   worker -- "おすそ分けした人のキー" --> openai
+  worker -- "おすそ分けした人のキー" --> xai
   core -- "自分の API キー" --> openai
+  core -- "自分の API キー" --> xai
   core -- "ランク、辞書" --> deadlockapi
   shell -- "新しい版を確認" --> releases
   lp -- "ダウンロードのリンク" --> releases
@@ -80,7 +83,7 @@ flowchart LR
 
 - 操作パネルは Tauri のウィンドウでも OBS のドックでも同じ画面で、`/api` と `/ws` だけを使います。
 - ハイブリッドと Chrome のモードでは、アプリが専用のプロファイルの Chrome を起動します。音声認識と翻訳は Chrome が行い、ふりがなと辞書の一致は中核の中で Lindera + IPADIC が行います。
-- 自分の API キーがあれば OpenAI へ直接送ります。なければギフトコードで Worker を通します。Worker は同じパスで中継するので、下の図の OpenAI はどちらの経路でも同じです。
+- 自分の API キーがあれば OpenAI（確定の文字起こしを Grok にしたら xAI）へ直接送ります。なければギフトコードで Worker を通します。Worker は会社ごとに同じパスで中継するので、下の図の OpenAI はどちらの経路でも同じです。xAI は、おすそ分けした人が xAI のキーも預けていればギフトコードで使えます。
 
 ### 声と文字の流れ
 

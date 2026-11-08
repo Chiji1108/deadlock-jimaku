@@ -8,4 +8,4 @@ export type TranscriptionError = { "code": "missingKey", provider: Provider, } |
 /**
  * 中継の 403 は期限を返さない
  */
-expiresAt: number | null, } | { "code": "giftRevoked" } | { "code": "giftLimit" } | { "code": "giftUnknown" } | { "code": "invalidKey", provider: Provider, } | { "code": "inputEnded" } | { "code": "microphone", } & ({ "problem": "listFailed", detail: string, } | { "problem": "noDevices" } | { "problem": "notFound", name: string, } | { "problem": "noDefault" }) | { "code": "failed", detail: string, } | { "code": "crashed", detail: string, };
+expiresAt: number | null, } | { "code": "giftRevoked" } | { "code": "giftLimit" } | { "code": "giftUnknown" } | { "code": "giftUnsupported", provider: Provider, } | { "code": "invalidKey", provider: Provider, } | { "code": "inputEnded" } | { "code": "microphone", } & ({ "problem": "listFailed", detail: string, } | { "problem": "noDevices" } | { "problem": "notFound", name: string, } | { "problem": "noDefault" }) | { "code": "failed", detail: string, } | { "code": "crashed", detail: string, };

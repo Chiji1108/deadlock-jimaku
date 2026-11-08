@@ -10,11 +10,10 @@ use std::sync::Arc;
 use futures_util::FutureExt;
 use tokio::task::JoinHandle;
 
-use crate::openai::Access;
+use crate::access::Access;
 use crate::secrets::Provider;
 use crate::settings::{Engines, FinalSource, Models, Region, Segmentation, Settings, TextSource};
 use crate::store::Store;
-use crate::stt::Transcriber;
 use crate::types::{LangCode, TranscriptionError};
 use crate::{assets, audio, chrome, rank, secrets, share, subtitles};
 
@@ -96,8 +95,8 @@ struct AudioInput {
     realtime_delay: String,
     segmentation: Segmentation,
     access: Option<Access>,
-    /// xAI の API キー（xAI を使う工程がなければ None）
-    xai: Option<String>,
+    /// xAI の送り先と鍵（xAI を使う工程がなければ None）
+    xai: Option<Access>,
 }
 
 /// ページは準備が整い直すたびに設定を読むので、ページが使う設定もここに入れる
@@ -141,9 +140,11 @@ pub async fn run(store: Arc<Store>, options: Options) {
         let languages = settings.glossary_languages();
         // 使わない会社には何も送らない
         let access = keys
-            .access(&settings.api_base)
+            .access(Provider::OpenAi, &settings.api_base)
             .filter(|_| settings.engines.uses_openai());
-        let xai = keys.xai.clone().filter(|_| settings.engines.uses_xai());
+        let xai = keys
+            .access(Provider::Xai, &settings.api_base)
+            .filter(|_| settings.engines.uses_xai());
 
         assets_slot
             .update(
@@ -195,7 +196,7 @@ fn subtitles_input(
     settings: &Settings,
     options: &Options,
     access: Option<Access>,
-    xai: Option<String>,
+    xai: Option<Access>,
 ) -> SubtitlesInput {
     if settings.engines.transcription == FinalSource::Chrome {
         if !settings.transcription_enabled {
@@ -266,9 +267,7 @@ fn start_subtitles(
             tracing::info!("transcription started");
             let store = store.clone();
             Some(tokio::spawn(async move {
-                if let Some(access) = &input.access
-                    && !gift_accepted(&store, access, check_gift.as_deref()).await
-                {
+                if !gift_accepted(&store, input.access.iter(), check_gift.as_deref()).await {
                     return;
                 }
                 let run = chrome::run(store.clone(), input.access);
@@ -293,13 +292,10 @@ fn start_subtitles(
                 store.set_transcription_error(Some(TranscriptionError::MissingKey { provider }));
                 return None;
             }
-            let transcriber = match (input.xai, &input.access) {
-                (Some(key), _) => Transcriber::xai(key),
-                (None, Some(access)) => Transcriber::OpenAi(access.clone()),
-                // 確定が Chrome でなければ、xAI か OpenAI のどちらかを使う（鍵は上で確かめた）
-                (None, None) => unreachable!("finals without a key"),
-            };
-            let access = input.access;
+            // 確定が Chrome でなければ、xAI か OpenAI のどちらかを使う（鍵は上で確かめた）
+            let transcriber =
+                (input.xai.clone().or_else(|| input.access.clone())).expect("finals without a key");
+            let (access, xai) = (input.access, input.xai);
             tracing::info!("transcription started");
             let (input, ended) = match input.source {
                 Source::Mic(device) => (
@@ -310,9 +306,7 @@ fn start_subtitles(
             };
             let store = store.clone();
             Some(tokio::spawn(async move {
-                if let Some(access) = &access
-                    && !gift_accepted(&store, access, check_gift.as_deref()).await
-                {
+                if !gift_accepted(&store, access.iter().chain(&xai), check_gift.as_deref()).await {
                     return;
                 }
                 let run = subtitles::run(store.clone(), input, access, transcriber);
@@ -322,12 +316,28 @@ fn start_subtitles(
     }
 }
 
-/// ギフトコードなら、`check` の API の根元で使えるか確かめる。断られたら理由を出して false
-async fn gift_accepted(store: &Store, access: &Access, check: Option<&str>) -> bool {
-    let (true, Some(api)) = (access.is_gift(), check) else {
+/// ギフトコードを使うなら、`check` の API の根元で、使えるか・使う会社を中継するかを確かめる。
+/// 断られたら理由を出して false
+async fn gift_accepted(
+    store: &Store,
+    accesses: impl Iterator<Item = &Access>,
+    check: Option<&str>,
+) -> bool {
+    let gifts: Vec<&Access> = accesses.filter(|a| a.is_gift()).collect();
+    let (Some(gift), Some(api)) = (gifts.first(), check) else {
         return true;
     };
-    match share::check_gift(api, access.token()).await {
+    let checked = share::check_gift(api, gift.token())
+        .await
+        .and_then(
+            |providers| match gifts.iter().find(|a| !providers.contains(&a.provider())) {
+                Some(a) => Err(TranscriptionError::GiftUnsupported {
+                    provider: a.provider(),
+                }),
+                None => Ok(()),
+            },
+        );
+    match checked {
         Ok(()) => true,
         Err(e) => {
             store.set_transcription_error(Some(e));
@@ -415,6 +425,11 @@ mod tests {
         match code {
             "revoked" => refused.into_response(),
             "down" => StatusCode::BAD_GATEWAY.into_response(),
+            // おすそ分けした人が xAI のキーも預けている
+            "both" => {
+                axum::Json(serde_json::json!({ "providers": ["openai", "xai"] })).into_response()
+            }
+            // 前のサーバーは中継する会社を返さない（OpenAI だけ）
             _ => axum::Json(serde_json::json!({})).into_response(),
         }
     }
@@ -460,7 +475,7 @@ mod tests {
                 models: Settings::default().models,
                 realtime_delay: "low".into(),
                 segmentation: Settings::default().segmentation,
-                access: code.map(|code| Access::gift(code.into(), &self.api)),
+                access: code.map(|code| Access::gift(Provider::OpenAi, code.into(), &self.api)),
                 xai: None,
             }))
         }
@@ -544,7 +559,7 @@ mod tests {
     #[tokio::test]
     async fn grok_needs_an_xai_key_and_openai_for_the_rest() {
         let mut app = App::new().await;
-        let grok = |input: SubtitlesInput, xai: Option<&str>, engines: Engines| {
+        let grok = |input: SubtitlesInput, xai: Option<Access>, engines: Engines| {
             let SubtitlesInput::Audio(mut input) = input else {
                 unreachable!()
             };
@@ -552,7 +567,7 @@ mod tests {
                 transcription: FinalSource::GrokVoiceTranscribe,
                 ..engines
             };
-            input.xai = xai.map(Into::into);
+            input.xai = xai;
             SubtitlesInput::Audio(input)
         };
         let missing = |provider| Some(TranscriptionError::MissingKey { provider });
@@ -561,13 +576,43 @@ mod tests {
         app.update(input).await;
         assert_eq!(app.error(), missing(Provider::Xai));
 
-        let input = grok(app.audio(None, "ja"), Some("xai"), Engines::HYBRID);
+        let xai = || Some(Access::key(Provider::Xai, "xai".into()));
+        let input = grok(app.audio(None, "ja"), xai(), Engines::HYBRID);
         app.update(input).await;
         assert_eq!(app.error(), missing(Provider::OpenAi));
 
         // OpenAI を使わなければ OpenAI の鍵は要らない
-        let input = grok(app.audio(None, "en"), Some("xai"), Engines::CHROME);
+        let input = grok(app.audio(None, "en"), xai(), Engines::CHROME);
         app.update(input).await;
+        assert_eq!(app.error(), None);
+        assert!(app.slot.is_running());
+    }
+
+    /// ギフトコードで Grok を使うには、おすそ分けした人が xAI のキーを預けている必要がある
+    #[tokio::test]
+    async fn grok_through_a_gift_needs_the_issuer_xai_key() {
+        let mut app = App::new().await;
+        let grok = |app: &App, code: &str| {
+            let SubtitlesInput::Audio(mut input) = app.audio(Some(code), "ja") else {
+                unreachable!()
+            };
+            input.engines.transcription = FinalSource::GrokVoiceTranscribe;
+            input.xai = Some(Access::gift(Provider::Xai, code.into(), &app.api));
+            SubtitlesInput::Audio(input)
+        };
+
+        app.update(grok(&app, "good")).await;
+        app.settle(1).await;
+        assert_eq!(
+            app.error(),
+            Some(TranscriptionError::GiftUnsupported {
+                provider: Provider::Xai
+            })
+        );
+        assert!(!app.slot.is_running());
+
+        app.update(grok(&app, "both")).await;
+        app.settle(2).await;
         assert_eq!(app.error(), None);
         assert!(app.slot.is_running());
     }

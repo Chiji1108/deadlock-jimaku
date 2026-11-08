@@ -1,5 +1,6 @@
 // D1 の読み書き（migrations/）
 
+import type { Provider } from "./price";
 import { normalizeCode, sha256 } from "./secrets";
 
 /** 期限を過ぎても、始めていた配信はこの間だけ続けられる（期限は字幕を始めるときに確かめる） */
@@ -11,6 +12,8 @@ export const DEFAULT_DAILY_LIMIT_USD = 60;
 export interface Issuer {
   id: string;
   encrypted_key: string;
+  /** 預けた xAI のキー。NULL は預けていない */
+  encrypted_xai_key: string | null;
 }
 
 export interface Code {
@@ -25,15 +28,17 @@ export interface Code {
   day_usd: number;
   /** おすそ分けした人の暗号化したキー */
   encrypted_key: string;
+  /** おすそ分けした人の暗号化した xAI のキー。NULL は預けていない */
+  encrypted_xai_key: string | null;
 }
 
 const SELECT_CODE = `SELECT c.id, c.issuer_id, c.expires_at, c.revoked,
-    c.daily_limit_usd, c.day, c.day_usd, i.encrypted_key
+    c.daily_limit_usd, c.day, c.day_usd, i.encrypted_key, i.encrypted_xai_key
   FROM codes c JOIN issuers i ON i.id = c.issuer_id`;
 
 export async function issuerByToken(db: D1Database, token: string): Promise<Issuer | null> {
   return db
-    .prepare("SELECT id, encrypted_key FROM issuers WHERE admin_token_hash = ?")
+    .prepare("SELECT id, encrypted_key, encrypted_xai_key FROM issuers WHERE admin_token_hash = ?")
     .bind(await sha256(token))
     .first<Issuer>();
 }
@@ -58,6 +63,11 @@ export function refusal(code: Code, now: number): "revoked" | "expired" | "limit
   if (code.expires_at !== null && now >= code.expires_at + GRACE_MS) return "expired";
   if (overLimit(code, now)) return "limit";
   return undefined;
+}
+
+/** コードで中継する会社（OpenAI はいつも。xAI はキーを預けていれば） */
+export function providers(code: Pick<Code, "encrypted_xai_key">): Provider[] {
+  return code.encrypted_xai_key === null ? ["openai"] : ["openai", "xai"];
 }
 
 /** 実際に効く 1 日の上限 */

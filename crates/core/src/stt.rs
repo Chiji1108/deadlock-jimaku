@@ -17,8 +17,8 @@ use serde_json::{Value, json};
 use tokio::sync::mpsc;
 use tokio_tungstenite::tungstenite::{self, Message, client::IntoClientRequest, http::HeaderValue};
 
+use crate::access::Access;
 use crate::audio::{SAMPLE_RATE, to_i16};
-use crate::openai::Access;
 use crate::secrets::Provider;
 use crate::share;
 use crate::types::TranscriptionError;
@@ -392,26 +392,6 @@ async fn expect_event(stream: &mut Stream, expected: &str) -> anyhow::Result<()>
     bail!("realtime closed before {expected}")
 }
 
-/// 確定の文字起こしの送り先と鍵
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Transcriber {
-    /// GPT-Transcribe（自分のキーかギフトコード）
-    OpenAi(Access),
-    /// Grok Voice Transcribe（自分のキーだけ）。`url` は xAI の音声認識の口
-    Xai { url: String, key: String },
-}
-
-impl Transcriber {
-    pub fn xai(key: String) -> Self {
-        Self::Xai {
-            url: XAI_STT.to_owned(),
-            key,
-        }
-    }
-}
-
-/// xAI の音声認識（DESIGN.md 3）
-const XAI_STT: &str = "https://api.x.ai/v1/stt";
 /// xAI に渡せる用語は 100 件、1 件 50 文字まで
 const XAI_MAX_KEYTERMS: usize = 100;
 const XAI_MAX_KEYTERM_CHARS: usize = 50;
@@ -424,14 +404,15 @@ fn xai_language(code: &str) -> &str {
     }
 }
 
-/// xAI が鍵を断った。間違った鍵には 401 ではなく 400 と「Incorrect API key provided」を返す（2026-11 の実測）
+/// xAI が鍵を断った（DESIGN.md 3）。間違った鍵には 401 ではなく 400 と「Incorrect API key provided」を返す（2026-11 の実測）
 fn xai_refused(status: StatusCode, body: &str) -> bool {
     status == StatusCode::UNAUTHORIZED
         || (status == StatusCode::BAD_REQUEST && body.contains("Incorrect API key"))
 }
 
 pub struct BatchRequest<'a> {
-    pub transcriber: &'a Transcriber,
+    /// OpenAI なら GPT-Transcribe、xAI なら Grok Voice Transcribe（どちらも自分のキーかギフトコード）
+    pub access: &'a Access,
     pub model: &'a str,
     pub hints: &'a Hints,
     pub wav: Vec<u8>,
@@ -446,8 +427,9 @@ pub async fn transcribe(http: &reqwest::Client, req: BatchRequest<'_>) -> anyhow
         .file_name("segment.wav")
         .mime_str("audio/wav")?;
     let form = reqwest::multipart::Form::new().text("model", req.model.to_owned());
-    let request = match req.transcriber {
-        Transcriber::OpenAi(access) => {
+    let access = req.access;
+    let request = match access.provider() {
+        Provider::OpenAi => {
             let mut form = form
                 .text("prompt", req.hints.prompt.clone())
                 .text("languages[]", req.hints.language.clone());
@@ -458,7 +440,7 @@ pub async fn transcribe(http: &reqwest::Client, req: BatchRequest<'_>) -> anyhow
                 .bearer_auth(access.token())
                 .multipart(form.part("file", file))
         }
-        Transcriber::Xai { url, key } => {
+        Provider::Xai => {
             // ファイルより後ろの欄は読まれないことがあるので、ファイルは最後に置く
             let mut form = form.text("language", xai_language(&req.hints.language).to_owned());
             let keyterms = req.hints.keywords.iter();
@@ -466,8 +448,8 @@ pub async fn transcribe(http: &reqwest::Client, req: BatchRequest<'_>) -> anyhow
             for keyword in keyterms.take(XAI_MAX_KEYTERMS) {
                 form = form.text("keyterm", keyword.clone());
             }
-            http.post(url)
-                .bearer_auth(key)
+            http.post(access.url("/stt"))
+                .bearer_auth(access.token())
                 .multipart(form.part("file", file))
         }
     };
@@ -476,17 +458,13 @@ pub async fn transcribe(http: &reqwest::Client, req: BatchRequest<'_>) -> anyhow
     if !status.is_success() {
         // 400 の理由は本文にしか書かれていない
         let body = res.text().await.unwrap_or_default();
-        let refused = match req.transcriber {
-            Transcriber::OpenAi(access) => {
-                share::refusal(access, status, share::refusal_reason(&body).as_deref())
-            }
-            Transcriber::Xai { .. } => {
-                xai_refused(status, &body).then_some(TranscriptionError::InvalidKey {
-                    provider: Provider::Xai,
-                })
-            }
+        // xAI の断り方を OpenAI と同じ 401 にそろえる
+        let status = match access.provider() {
+            Provider::Xai if xai_refused(status, &body) => StatusCode::UNAUTHORIZED,
+            _ => status,
         };
-        if let Some(refused) = refused {
+        let reason = share::refusal_reason(&body);
+        if let Some(refused) = share::refusal(access, status, reason.as_deref()) {
             return Err(refused.into());
         }
         bail!("{status}: {body}");

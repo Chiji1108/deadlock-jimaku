@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::IDENTIFIER;
-use crate::openai::Access;
+use crate::access::Access;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "lowercase")]
@@ -84,11 +84,16 @@ pub struct Keys {
 }
 
 impl Keys {
-    /// 自分のキーがあれば OpenAI へ直接、なければギフトコードで開発者のサーバーを通す（`api` はその根元）
-    pub fn access(&self, api: &str) -> Option<Access> {
-        match (&self.openai, &self.gift) {
-            (Some(key), _) => Some(Access::key(key.clone())),
-            (None, Some(code)) => Some(Access::gift(code.clone(), api)),
+    /// 自分のキーがあればその会社へ直接、なければギフトコードで開発者のサーバーを通す（`api` はその根元）。
+    /// ギフトコードでその会社を使えるか（xAI のキーを預けているか）は、字幕を始めるときに確かめる
+    pub fn access(&self, provider: Provider, api: &str) -> Option<Access> {
+        let own = match provider {
+            Provider::OpenAi => &self.openai,
+            Provider::Xai => &self.xai,
+        };
+        match (own, &self.gift) {
+            (Some(key), _) => Some(Access::key(provider, key.clone())),
+            (None, Some(code)) => Some(Access::gift(provider, code.clone(), api)),
             (None, None) => None,
         }
     }
@@ -166,6 +171,10 @@ pub fn set(provider: Provider, key: &str) -> anyhow::Result<()> {
 
 pub fn openai() -> Option<String> {
     get_or_warn(Slot::OpenAi)
+}
+
+pub fn xai() -> Option<String> {
+    get_or_warn(Slot::Xai)
 }
 
 pub fn gift() -> Option<String> {

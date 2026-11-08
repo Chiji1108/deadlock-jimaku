@@ -9,9 +9,9 @@ use std::time::Instant;
 
 use tokio::sync::{broadcast, mpsc};
 
+use crate::access::Access;
 use crate::chrome;
 use crate::enrich::{Enricher, Span, source_tokens};
-use crate::openai::Access;
 use crate::settings::{EmphasisSource, Phase, RubySource, Settings, TranslationSource};
 use crate::store::{ChromeEvent, Store};
 use crate::types::{Enriched, RubySegment, Token, TranscriptionError, Translatable, Translations};

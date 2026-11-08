@@ -9,7 +9,7 @@ use anyhow::Context;
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 
-use crate::openai::Access;
+use crate::access::Access;
 use crate::share;
 use crate::usage::{Meter, Tokens, Use};
 

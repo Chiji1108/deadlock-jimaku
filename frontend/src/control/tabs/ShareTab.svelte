@@ -15,6 +15,7 @@
   import { usd } from "../usage";
 
   const ownKey = $derived(panel.view?.keys.openai.state === "saved");
+  const ownXai = $derived(panel.view?.keys.xai.state === "saved");
   const share = $derived(panel.share);
 
   // 新しいコード。期限の既定は 3 日後
@@ -44,6 +45,7 @@
   const consent = async () => (await panel.shareAction(api.enableShare)) && (joining || create());
 
   let consenting = $state(false);
+  let consentingXai = $state(false);
   /** ほかの PC のおすそ分けを見るだけで、コードは作らない */
   let joining = $state(false);
   let stopping = $state(false);
@@ -200,6 +202,34 @@
         <Button variant="outline" onclick={() => (stopping = true)}>おすそ分けをやめる</Button>
       </Card.Footer>
     </Card.Root>
+
+    <Card.Root>
+      <Card.Header>
+        <Card.Title class="flex items-center gap-2">
+          Grok（xAI）
+          {#if share.xai}<Badge variant="secondary">預けています</Badge>{/if}
+        </Card.Title>
+        <Card.Description>
+          xAI の API キーも預けると、ギフトコードの人が確定の文字起こしに Grok Voice Transcribe
+          を使えます。使われた分は自分の xAI のキーに請求されます
+        </Card.Description>
+      </Card.Header>
+      <Card.Content>
+        {#if share.xai}
+          <Button
+            variant="outline"
+            onclick={() => panel.shareAction(api.unshareXai, "xAI のキーを消しました")}
+            >xAI のキーを預けるのをやめる</Button
+          >
+        {:else if ownXai}
+          <Button onclick={() => (consentingXai = true)}>xAI のキーも預ける</Button>
+        {:else}
+          <p class="text-sm text-muted-foreground">
+            預けるには、先に「API キー」で自分の xAI のキーを保存してください
+          </p>
+        {/if}
+      </Card.Content>
+    </Card.Root>
   {/if}
 </div>
 
@@ -218,6 +248,22 @@
     <li>料金: その人が使った分は、あなたの OpenAI に請求されます</li>
     <li>保存: キーは暗号化して保存します。その人の声や字幕は保存しません</li>
     <li>やめるとき: 「おすそ分けをやめる」で、いつでもキーを消せます</li>
+  </ul>
+</ConfirmDialog>
+
+<ConfirmDialog
+  bind:open={consentingXai}
+  title="あなたの xAI の API キーをサーバーに預けます"
+  action="預ける"
+  onconfirm={() => panel.shareAction(api.shareXai, "xAI のキーを預けました")}
+>
+  <p>ギフトコードをもらった人が Grok を選んだとき、その人の確定の文字起こしに使います。</p>
+  <ul class="list-disc pl-5">
+    <li>料金: その人が使った分は、あなたの xAI に請求されます（1 時間 $0.10）</li>
+    <li>保存: キーは暗号化して保存します。その人の声や字幕は保存しません</li>
+    <li>
+      やめるとき: 「xAI のキーを預けるのをやめる」か「おすそ分けをやめる」で、いつでも消せます
+    </li>
   </ul>
 </ConfirmDialog>
 

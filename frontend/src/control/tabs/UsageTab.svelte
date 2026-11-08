@@ -1,6 +1,7 @@
 <script lang="ts">
   import * as Card from "$lib/components/ui/card";
   import type { Use } from "../../generated/Use";
+  import { PROVIDER_NAMES } from "../../lib/engines";
   import { panel } from "../panel.svelte";
   import { total, unpriced as hasUnpriced, usd } from "../usage";
 
@@ -26,9 +27,7 @@
   const shared = $derived(
     panel.share?.enabled ? panel.share.codes.reduce((sum, c) => sum + c.monthUsd, 0) : undefined,
   );
-  const gift = $derived(
-    panel.view?.keys.openai.state !== "saved" && panel.view?.keys.gift.state === "saved",
-  );
+  const giftPaid = $derived(panel.giftPaid.map((p) => PROVIDER_NAMES[p]).join(" と "));
 </script>
 
 <Card.Root>
@@ -73,10 +72,9 @@
         </div>
       {/each}
     </div>
-    {#if gift}
+    {#if giftPaid}
       <p class="mt-4 text-xs text-muted-foreground">
-        ギフトコードで使っているので、OpenAI の料金はおすそ分けしてくれた人に請求されます{#if panel.settings?.engines.transcription === "grokVoiceTranscribe"}。確定の文字起こし（Grok）の料金は、自分の
-          xAI のキーに請求されます{/if}
+        ギフトコードで使っているので、{giftPaid} の料金はおすそ分けしてくれた人に請求されます
       </p>
     {/if}
     {#if unpriced}

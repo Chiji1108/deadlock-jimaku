@@ -1,5 +1,6 @@
 // API（api.jimaku.deadlock.jp。DESIGN.md 17.1）。パスは版（/v1）で区切る。
-// おすそ分け: 自分の OpenAI キーを預けた人がコードを作り、コードを持つ人の通信を、そのキーで OpenAI に中継する
+// おすそ分け: 自分の OpenAI キーを預けた人がコードを作り、コードを持つ人の通信を、そのキーで OpenAI に中継する。
+// xAI のキーも預けていれば、確定の文字起こし（Grok）を xAI に中継する
 import { Hono, type Context } from "hono";
 import {
   addUsage,
@@ -8,14 +9,16 @@ import {
   issuerByToken,
   month,
   overLimit,
+  providers,
   refusal,
   todayUsd,
   type Code,
 } from "./db";
 import { openai, validKey } from "./openai";
-import { audioUsd, tokensOf, tokensUsd, wavSeconds } from "./price";
+import { audioUsd, tokensOf, tokensUsd, wavSeconds, type Provider } from "./price";
 import { relay } from "./realtime";
 import { decrypt, encrypt, issuerToken, newCode, newId, normalizeCode, sha256 } from "./secrets";
+import { validXaiKey, xai } from "./xai";
 
 export interface Env {
   DB: D1Database;
@@ -40,6 +43,9 @@ const RESPONSES_FIELDS = ["model", "instructions", "input", "text", "reasoning",
  * いちばん長い辞書の読み（40 語で 3,000 トークンほど）の 10 倍にする（DESIGN.md 17.1）
  */
 const MAX_OUTPUT_TOKENS = 32_000;
+
+/** xAI の文字起こしに渡す項目（アプリが送るもの）。xAI はファイルより後ろの欄を読まないことがあるので、ファイルは最後に足す */
+const XAI_STT_FIELDS = ["model", "language", "keyterm"];
 
 /** 本文の長さの上限（文字数）。いちばん長い用語の判定（辞書の全部を送る。32,000 文字ほど）の 8 倍 */
 const MAX_RESPONSES_BODY = 256_000;
@@ -102,6 +108,28 @@ app.put("/share/key", async (c) => {
   return c.json({ token });
 });
 
+/** xAI のキーを預ける（替える）。OpenAI のキーとは別に、預けた人が選んだときだけ */
+app.put("/share/xai", async (c) => {
+  const issuer = await admin(c);
+  if (!issuer) return c.json({ error: "unauthorized" }, 401);
+  const key = (await json<{ key?: unknown }>(c))?.key;
+  if (typeof key !== "string" || !key || !(await validXaiKey(key))) {
+    return c.json({ error: "invalidXaiKey" }, 400);
+  }
+  await c.env.DB.prepare("UPDATE issuers SET encrypted_xai_key = ? WHERE id = ?")
+    .bind(await encrypt(key, c.env.SHARE_KEY), issuer.id)
+    .run();
+  return c.body(null, 204);
+});
+
+/** 預けた xAI のキーを消す。コードは OpenAI だけで使える */
+app.delete("/share/xai", async (c) => {
+  const issuer = await admin(c);
+  if (!issuer) return c.json({ error: "unauthorized" }, 401);
+  await c.env.DB.prepare("UPDATE issuers SET encrypted_xai_key = NULL WHERE id = ?").bind(issuer.id).run();
+  return c.body(null, 204);
+});
+
 /** おすそ分けをやめる。預けたキーとコードを消す */
 app.delete("/share", async (c) => {
   const issuer = await admin(c);
@@ -132,7 +160,8 @@ app.get("/share/codes", async (c) => {
     dailyLimitUsd: daily_limit_usd,
     effectiveLimitUsd: dailyLimit({ daily_limit_usd }),
   }));
-  return c.json({ codes });
+  // xai: xAI のキーを預けているか
+  return c.json({ codes, xai: issuer.encrypted_xai_key !== null });
 });
 
 /** コードを作る。コードそのものはこの応答でだけ返す（保存するのはハッシュ） */
@@ -195,7 +224,7 @@ app.get("/gift", async (c) => {
     return c.json({ error: "expired", expiresAt: code.expires_at }, 403);
   }
   if (overLimit(code, Date.now())) return c.json({ error: "limit" }, 403);
-  return c.json({ expiresAt: code.expires_at });
+  return c.json({ expiresAt: code.expires_at, providers: providers(code) });
 });
 
 app.post("/openai/responses", async (c) => {
@@ -249,9 +278,33 @@ app.post("/openai/audio/transcriptions", async (c) => {
   const file = form.get("file");
   if (typeof model !== "string" || !(file instanceof File)) return c.json({ error: "invalid" }, 400);
   const seconds = wavSeconds(await file.arrayBuffer());
-  const usd = seconds === undefined ? undefined : audioUsd(model, seconds);
+  const usd = seconds === undefined ? undefined : audioUsd("openai", model, seconds);
   if (usd === undefined) return c.json({ error: "notAllowed" }, 400);
   const res = await openai("/v1/audio/transcriptions", gift.key, { method: "POST", body: form });
+  if (res.ok) c.executionCtx.waitUntil(addUsage(c.env.DB, gift.code.id, usd, Date.now()));
+  return new Response(res.body, {
+    status: res.status,
+    headers: { "Content-Type": res.headers.get("Content-Type") ?? "application/json" },
+  });
+});
+
+app.post("/xai/stt", async (c) => {
+  const gift = await giftKey(c, "xai");
+  if (gift instanceof Response) return gift;
+  const form = await c.req.formData().catch(() => undefined);
+  if (!form) return c.json({ error: "invalid" }, 400);
+  const model = form.get("model");
+  const file = form.get("file");
+  if (typeof model !== "string" || !(file instanceof File)) return c.json({ error: "invalid" }, 400);
+  const seconds = wavSeconds(await file.arrayBuffer());
+  const usd = seconds === undefined ? undefined : audioUsd("xai", model, seconds);
+  if (usd === undefined) return c.json({ error: "notAllowed" }, 400);
+  const forwarded = new FormData();
+  for (const name of XAI_STT_FIELDS) {
+    for (const value of form.getAll(name)) if (typeof value === "string") forwarded.append(name, value);
+  }
+  forwarded.append("file", file);
+  const res = await xai("/v1/stt", gift.key, { method: "POST", body: forwarded });
   if (res.ok) c.executionCtx.waitUntil(addUsage(c.env.DB, gift.code.id, usd, Date.now()));
   return new Response(res.body, {
     status: res.status,
@@ -283,18 +336,23 @@ async function giftCode(c: Ctx): Promise<Code | null> {
 }
 
 /**
- * 中継に使えるコードと、おすそ分けした人のキー。使えなければ返す応答。
+ * 中継に使えるコードと、おすそ分けした人のその会社のキー。使えなければ返す応答。
  * 理由はヘッダーにも載せる（WebSocket のクライアントは、断られたときの本文を読みきれるとは限らない）。
  * 429 は 403 のあとに見るので、止まる理由を隠さない
  */
-async function giftKey(c: Ctx): Promise<{ code: Code; key: string } | Response> {
+async function giftKey(
+  c: Ctx,
+  provider: Provider = "openai",
+): Promise<{ code: Code; key: string } | Response> {
   const code = await giftCode(c);
   if (!code) return c.json({ error: "unknown" }, 401);
-  const error = refusal(code, Date.now());
+  // xAI のキーを預けていなければ "unsupported"
+  const error = refusal(code, Date.now()) ?? (providers(code).includes(provider) ? undefined : "unsupported");
   if (error) return c.json({ error }, 403, { "X-Gift-Refusal": error });
   const { success } = await c.env.GIFT_RATE.limit({ key: code.id });
   if (!success) return c.json({ error: "rate" }, 429);
-  return { code, key: await decrypt(code.encrypted_key, c.env.SHARE_KEY) };
+  const encrypted = provider === "xai" ? code.encrypted_xai_key! : code.encrypted_key;
+  return { code, key: await decrypt(encrypted, c.env.SHARE_KEY) };
 }
 
 /** JSON の本文。読めなければ undefined（400 にする） */

@@ -166,14 +166,9 @@ export const anyPaid = (t: Engines) => providers(t).length > 0;
 /** 会社の名前 */
 export const PROVIDER_NAMES: Record<Provider, string> = { openai: "OpenAI", xai: "xAI" };
 
-/** 会社ごとの、要る鍵の名前。ギフトコードは OpenAI にだけ使える */
-export const KEY_NAMES: Record<Provider, string> = {
-  openai: "OpenAI の API キーかギフトコード",
-  xai: "xAI の API キー",
-};
-
-/** 要る鍵の名前をつなげる */
-export const keyNames = (list: Provider[]) => list.map((p) => KEY_NAMES[p]).join("と ");
+/** 要る鍵の名前。ギフトコードはどの会社にも使える（xAI は、おすそ分けした人が xAI のキーを預けていれば） */
+export const keyNames = (list: Provider[]) =>
+  `${list.map((p) => PROVIDER_NAMES[p]).join(" と ")} の API キーかギフトコード`;
 
 /** 今の仕組みで作れない選び方。core の `Engines::sanitized` と同じ決まり。
  * Chrome の翻訳を使っている間は途中の字幕を Chrome から変えさせない（変えると core が翻訳を有料に直し、黙って料金がかかる） */

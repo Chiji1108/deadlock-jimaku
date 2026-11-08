@@ -9,8 +9,8 @@ use std::time::Duration;
 use serde::Deserialize;
 use serde_json::json;
 
+use crate::access::Access;
 use crate::llm;
-use crate::openai::Access;
 use crate::types::RubySegment;
 use crate::usage::{Meter, Use};
 

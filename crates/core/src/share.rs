@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use ts_rs::TS;
 
-use crate::openai::Access;
+use crate::access::Access;
 use crate::secrets::Provider;
 use crate::types::TranscriptionError;
 
@@ -29,6 +29,8 @@ pub enum GiftStatus {
         /// ミリ秒。None は期限なし
         #[ts(type = "number | null")]
         expires_at: Option<i64>,
+        /// 中継する会社（xAI はおすそ分けした人がキーを預けていれば）
+        providers: Vec<Provider>,
     },
     Expired {
         #[ts(type = "number")]
@@ -58,11 +60,21 @@ struct GiftAnswer {
     error: Option<String>,
     #[serde(default)]
     expires_at: Option<i64>,
+    /// 前のサーバーは返さない（OpenAI だけを中継する）
+    #[serde(default = "openai_only")]
+    providers: Vec<Provider>,
+}
+
+fn openai_only() -> Vec<Provider> {
+    vec![Provider::OpenAi]
 }
 
 /// サーバーが今日の上限で断るときの理由。JSON の `error`、Realtime の close の reason、
 /// [`REFUSAL_HEADER`] で同じ値を使う
 pub const LIMIT: &str = "limit";
+
+/// おすそ分けした人がその会社のキーを預けていないので、サーバーが中継を断るときの理由
+pub const UNSUPPORTED: &str = "unsupported";
 
 /// サーバーが中継を断った理由のヘッダー。WebSocket のハンドシェイクでは、断られたときの本文は
 /// 届いた分しか読めないので、これで見分ける
@@ -84,13 +96,18 @@ pub fn refusal(
     match (status, reason) {
         (StatusCode::UNAUTHORIZED, _) if access.is_gift() => Some(TranscriptionError::GiftUnknown),
         (StatusCode::UNAUTHORIZED, _) => Some(TranscriptionError::InvalidKey {
-            provider: Provider::OpenAi,
+            provider: access.provider(),
         }),
+        // 403 の理由は Worker のもの。xAI の `error` も文字列なので、自分のキーでは読まない
+        (StatusCode::FORBIDDEN, _) if !access.is_gift() => None,
         (StatusCode::FORBIDDEN, Some("revoked")) => Some(TranscriptionError::GiftRevoked),
         (StatusCode::FORBIDDEN, Some("expired")) => {
             Some(TranscriptionError::GiftExpired { expires_at: None })
         }
         (StatusCode::FORBIDDEN, Some(LIMIT)) => Some(TranscriptionError::GiftLimit),
+        (StatusCode::FORBIDDEN, Some(UNSUPPORTED)) => Some(TranscriptionError::GiftUnsupported {
+            provider: access.provider(),
+        }),
         _ => None,
     }
 }
@@ -120,7 +137,10 @@ pub async fn gift_status(api: &str, code: &str) -> GiftStatus {
         }
     };
     match (status, answer.error.as_deref(), answer.expires_at) {
-        (StatusCode::OK, _, expires_at) => GiftStatus::Active { expires_at },
+        (StatusCode::OK, _, expires_at) => GiftStatus::Active {
+            expires_at,
+            providers: answer.providers,
+        },
         (_, Some("expired"), Some(expires_at)) => GiftStatus::Expired { expires_at },
         (_, Some("revoked"), _) => GiftStatus::Revoked,
         (_, Some("limit"), _) => GiftStatus::Limit,
@@ -131,10 +151,10 @@ pub async fn gift_status(api: &str, code: &str) -> GiftStatus {
     }
 }
 
-/// 動いていない字幕を始めるときに、ギフトコードがまだ使えるか確かめる
-pub async fn check_gift(api: &str, code: &str) -> Result<(), TranscriptionError> {
+/// 動いていない字幕を始めるときに、ギフトコードがまだ使えるか確かめる。使えれば中継する会社
+pub async fn check_gift(api: &str, code: &str) -> Result<Vec<Provider>, TranscriptionError> {
     match gift_status(api, code).await {
-        GiftStatus::Active { .. } => Ok(()),
+        GiftStatus::Active { providers, .. } => Ok(providers),
         GiftStatus::Expired { expires_at } => Err(TranscriptionError::GiftExpired {
             expires_at: Some(expires_at),
         }),
@@ -216,6 +236,7 @@ async fn call(
     }
     let message = match value["error"].as_str() {
         Some("invalidKey" | "noKey") => "OpenAI の API キーが使えません".to_owned(),
+        Some("invalidXaiKey") => "xAI の API キーが使えません".to_owned(),
         Some("keyInUse") => "そのキーは、別のおすそ分けで使っています".to_owned(),
         Some("unauthorized") => {
             "おすそ分けの登録が見つかりません。「おすそ分けをやめる」を押してから、ギフトコードを作り直してください"
@@ -266,12 +287,32 @@ pub async fn update_key(api: &str, token: &str, key: &str) -> Result<String, Ref
         })
 }
 
-pub async fn codes(api: &str, token: &str) -> Result<Vec<SharedCode>, Refused> {
+/// 預けているもの（作ったコードと、xAI のキーを預けているか）
+#[derive(Deserialize)]
+pub struct Shared {
+    pub codes: Vec<SharedCode>,
+    /// 前のサーバーは返さない（xAI のキーを預かれない）
+    #[serde(default)]
+    pub xai: bool,
+}
+
+pub async fn shared(api: &str, token: &str) -> Result<Shared, Refused> {
     let value = call(api, reqwest::Method::GET, "/share/codes", Some(token), None).await?;
-    serde_json::from_value(value["codes"].clone()).map_err(|e| Refused {
+    serde_json::from_value(value).map_err(|e| Refused {
         status: StatusCode::BAD_GATEWAY,
         message: format!("サーバーの答えを読めません（{e}）"),
     })
+}
+
+/// xAI のキーを預ける（替える）。空なら預けたキーを消す
+pub async fn set_xai(api: &str, token: &str, key: &str) -> Result<(), Refused> {
+    let (method, body) = match key {
+        "" => (reqwest::Method::DELETE, None),
+        key => (reqwest::Method::PUT, Some(json!({ "key": key }))),
+    };
+    call(api, method, "/share/xai", Some(token), body)
+        .await
+        .map(drop)
 }
 
 /// コードを作る。(ID, コード)
@@ -308,15 +349,21 @@ mod tests {
     #[test]
     fn a_gift_at_its_daily_limit_stays_valid() {
         assert!(GiftStatus::Limit.is_valid());
-        assert!(GiftStatus::Active { expires_at: None }.is_valid());
+        let active = GiftStatus::Active {
+            expires_at: None,
+            providers: vec![Provider::OpenAi],
+        };
+        assert!(active.is_valid());
         assert!(!GiftStatus::Revoked.is_valid());
         assert!(!GiftStatus::Unknown.is_valid());
     }
 
     #[test]
     fn only_answers_that_would_repeat_stop_the_subtitles() {
-        let gift = Access::gift("code".into(), "http://worker");
-        let key = Access::key("sk".into());
+        let gift = Access::gift(Provider::OpenAi, "code".into(), "http://worker");
+        let key = Access::key(Provider::OpenAi, "sk".into());
+        let xai_gift = Access::gift(Provider::Xai, "code".into(), "http://worker");
+        let xai_key = Access::key(Provider::Xai, "xai".into());
         let refusal =
             |access, status, body| refusal(access, status, refusal_reason(body).as_deref());
         for (access, status, body, expected) in [
@@ -349,6 +396,34 @@ mod tests {
                 StatusCode::FORBIDDEN,
                 r#"{"error":"limit"}"#,
                 Some(TranscriptionError::GiftLimit),
+            ),
+            (
+                &xai_gift,
+                StatusCode::FORBIDDEN,
+                r#"{"error":"unsupported"}"#,
+                Some(TranscriptionError::GiftUnsupported {
+                    provider: Provider::Xai,
+                }),
+            ),
+            (
+                &xai_gift,
+                StatusCode::UNAUTHORIZED,
+                "",
+                Some(TranscriptionError::GiftUnknown),
+            ),
+            (
+                &xai_key,
+                StatusCode::FORBIDDEN,
+                r#"{"error":"limit"}"#,
+                None,
+            ),
+            (
+                &xai_key,
+                StatusCode::UNAUTHORIZED,
+                "",
+                Some(TranscriptionError::InvalidKey {
+                    provider: Provider::Xai,
+                }),
             ),
             (
                 &key,

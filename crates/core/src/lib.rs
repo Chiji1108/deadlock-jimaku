@@ -1,3 +1,4 @@
+pub mod access;
 pub mod annotate;
 pub mod assets;
 pub mod audio;
@@ -10,7 +11,6 @@ pub mod furigana;
 pub mod lang;
 pub mod llm;
 pub mod markup;
-pub mod openai;
 pub mod rank;
 pub mod reading;
 pub mod runtime;

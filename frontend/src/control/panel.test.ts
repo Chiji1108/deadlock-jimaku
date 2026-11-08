@@ -217,7 +217,7 @@ test.each([
   ["gptTranscribe", "saved", "missing", "missing", []],
   ["gptTranscribe", "missing", "saved", "missing", []],
   ["grokVoiceTranscribe", "missing", "missing", "missing", ["xai"]],
-  ["grokVoiceTranscribe", "missing", "saved", "missing", ["xai"]],
+  ["grokVoiceTranscribe", "missing", "saved", "missing", []],
   ["grokVoiceTranscribe", "missing", "missing", "saved", []],
 ] as const)(
   "キーの案内: 確定の文字起こし %s、OpenAI %s、ギフトコード %s、xAI %s → %j",
@@ -241,6 +241,17 @@ test("Grok と Terra なら、xAI と OpenAI の鍵が要る", () => {
     keys: { openai: { state: "missing" }, gift: { state: "missing" }, xai: { state: "missing" } },
   } as unknown as SettingsView;
   expect(fresh.missingKeys).toEqual(["openai", "xai"]);
+});
+
+test("ギフトコードで払ってもらうのは、自分のキーがない会社の分", () => {
+  const fresh = freshPanel();
+  fresh.view = {
+    settings: {
+      engines: { ...CHROME, transcription: "grokVoiceTranscribe", translation: "gpt61Terra" },
+    },
+    keys: { openai: { state: "saved" }, gift: { state: "saved" }, xai: { state: "missing" } },
+  } as unknown as SettingsView;
+  expect(fresh.giftPaid).toEqual(["xai"]);
 });
 
 test("設定が届く前はキーの案内を出さない", () => {

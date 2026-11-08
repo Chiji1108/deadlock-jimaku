@@ -16,16 +16,16 @@ use std::time::{Duration, Instant};
 
 use tokio::sync::{broadcast, mpsc};
 
+use crate::access::Access;
 use crate::annotate::Annotator;
 use crate::audio::{self, History, SAMPLE_RATE};
 use crate::chrome;
 use crate::finish::{self, Finished, Finisher};
 use crate::lang;
 use crate::now_ms;
-use crate::openai::Access;
 use crate::settings::{Settings, TextSource};
 use crate::store::{ChromeEvent, Store};
-use crate::stt::{self, BatchRequest, Hints, RealtimeConfig, Transcriber};
+use crate::stt::{self, BatchRequest, Hints, RealtimeConfig};
 use crate::types::{
     ChromeCommand, Enriched, EntityKind, Glossary, Heard, LangCode, Segment, Stage, Token,
     TranscriptionError, Translated, Translations,
@@ -49,12 +49,12 @@ const PROMPT: &str = "Live commentary by a streamer playing the video game Deadl
 const PLAIN_PROMPT: &str = "Live commentary by a streamer.";
 
 /// `access` は OpenAI（途中の字幕・翻訳・ふりがな）の送り先と鍵（OpenAI を使わなければ None）、
-/// `transcriber` は確定の文字起こしの送り先と鍵
+/// `transcriber` は確定の文字起こしの送り先と鍵（OpenAI なら GPT-Transcribe、xAI なら Grok）
 pub async fn run(
     store: Arc<Store>,
     input: audio::Input,
     access: Option<Access>,
-    transcriber: Transcriber,
+    transcriber: Access,
 ) -> anyhow::Result<()> {
     let settings = store.settings();
 
@@ -633,7 +633,7 @@ async fn realtime_loop(
 
 struct BatchContext {
     http: reqwest::Client,
-    transcriber: Transcriber,
+    transcriber: Access,
     model: String,
     hints: Arc<Hints>,
     meter: Arc<Meter>,
@@ -654,7 +654,7 @@ async fn transcribe(
     done: mpsc::Sender<Done>,
 ) {
     let request = BatchRequest {
-        transcriber: &ctx.transcriber,
+        access: &ctx.transcriber,
         model: &ctx.model,
         hints: &ctx.hints,
         wav,
@@ -818,7 +818,8 @@ mod tests {
     use super::*;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
-    use crate::openai::Access;
+    use crate::access::Access;
+    use crate::secrets::Provider;
     use crate::settings::Segmentation;
     use crate::share;
     use crate::usage::Meter;
@@ -835,7 +836,7 @@ mod tests {
         tokio::sync::broadcast::Receiver<crate::types::ServerMsg>,
     ) {
         let (done_tx, _done) = mpsc::channel(1);
-        let access = Access::gift("code".into(), "http://127.0.0.1:9");
+        let access = Access::gift(Provider::OpenAi, "code".into(), "http://127.0.0.1:9");
         let (pipeline, _finished) = hybrid_pipeline_to(access, done_tx).await;
         let messages = pipeline.store.subscribe();
         (pipeline, messages)
@@ -860,7 +861,7 @@ mod tests {
             finished_tx,
             batch: Arc::new(BatchContext {
                 http: crate::http().clone(),
-                transcriber: Transcriber::OpenAi(access),
+                transcriber: access,
                 model: settings.models.batch.clone(),
                 hints: Arc::new(Hints {
                     language: "ja".into(),
@@ -940,10 +941,10 @@ mod tests {
 
     /// 確定の文字起こしを 1 回送り、起きたことを返す
     async fn transcribe_through(access: Access) -> Vec<Done> {
-        transcribe_with(Transcriber::OpenAi(access), Vec::new()).await
+        transcribe_with(access, Vec::new()).await
     }
 
-    async fn transcribe_with(transcriber: Transcriber, keywords: Vec<String>) -> Vec<Done> {
+    async fn transcribe_with(transcriber: Access, keywords: Vec<String>) -> Vec<Done> {
         let dir = tempfile::tempdir().unwrap();
         let ctx = Arc::new(BatchContext {
             http: crate::http().clone(),
@@ -997,7 +998,8 @@ mod tests {
             ),
         ] {
             let api = answering(status, json!({ "error": error })).await;
-            let done = transcribe_through(Access::gift("code".into(), &api)).await;
+            let done =
+                transcribe_through(Access::gift(Provider::OpenAi, "code".into(), &api)).await;
             assert!(
                 matches!(&done[0], Done::Refused(refused) if *refused == expected),
                 "{error}"
@@ -1016,7 +1018,8 @@ mod tests {
             answering(StatusCode::INTERNAL_SERVER_ERROR, unavailable).await,
             "http://127.0.0.1:9".to_owned(),
         ] {
-            let done = transcribe_through(Access::gift("code".into(), &api)).await;
+            let done =
+                transcribe_through(Access::gift(Provider::OpenAi, "code".into(), &api)).await;
             assert!(matches!(done[..], [Done::Transcribed { text: None, .. }]));
         }
     }
@@ -1025,7 +1028,7 @@ mod tests {
     #[tokio::test]
     async fn grok_gets_the_language_and_up_to_100_keyterms_before_the_file() {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let url = format!("http://{}/v1/stt", listener.local_addr().unwrap());
+        let api = format!("http://{}", listener.local_addr().unwrap());
         let (fields_tx, mut fields_rx) = mpsc::unbounded_channel();
         // multipart の欄を、送られた順に名前と値で読む（ファイルの中身は読まない）
         let answer = move |body: axum::body::Bytes| {
@@ -1046,15 +1049,13 @@ mod tests {
                 axum::Json(json!({ "text": " ヘイズ強い " }))
             }
         };
-        let router = axum::Router::new().route("/v1/stt", axum::routing::post(answer));
+        let router = axum::Router::new().route("/xai/stt", axum::routing::post(answer));
         tokio::spawn(async move { axum::serve(listener, router).await });
 
         let mut keywords = vec!["x".repeat(51)];
         keywords.extend((0..150).map(|i| format!("用語{i}")));
-        let transcriber = Transcriber::Xai {
-            url,
-            key: "xai".into(),
-        };
+        // ギフトコードでも自分のキーでも、同じ欄を送る（ギフトコードは開発者のサーバーが中継する）
+        let transcriber = Access::gift(Provider::Xai, "code".into(), &api);
         let done = transcribe_with(transcriber, keywords).await;
         assert!(
             matches!(&done[..], [Done::Transcribed { text: Some(t), .. }] if t == "ヘイズ強い")
@@ -1073,7 +1074,7 @@ mod tests {
         assert_eq!(fields.last().unwrap().0, "file");
     }
 
-    /// 間違った鍵には 400 が返る。ほかの 400 では止めない
+    /// 間違った鍵には 400 が返る。ほかの 400 では止めない。ギフトコードなら、おすそ分けした人の鍵が断られた
     #[tokio::test]
     async fn a_refused_xai_key_stops_the_subtitles() {
         let incorrect = r#"{"code":"Client specified an invalid argument","error":"Incorrect API key provided. You can obtain an API key from https://console.x.ai."}"#;
@@ -1087,18 +1088,13 @@ mod tests {
             ),
         ] {
             let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-            let url = format!("http://{}/v1/stt", listener.local_addr().unwrap());
+            let api = format!("http://{}", listener.local_addr().unwrap());
             let answer = move || async move { (status, body) };
-            let router = axum::Router::new().route("/v1/stt", axum::routing::post(answer));
+            let router = axum::Router::new().route("/xai/stt", axum::routing::post(answer));
             tokio::spawn(async move { axum::serve(listener, router).await });
-            let transcriber = Transcriber::Xai {
-                url,
-                key: "bad".into(),
-            };
+            let transcriber = Access::gift(Provider::Xai, "code".into(), &api);
             let done = transcribe_with(transcriber, Vec::new()).await;
-            let expected = TranscriptionError::InvalidKey {
-                provider: crate::secrets::Provider::Xai,
-            };
+            let expected = TranscriptionError::GiftUnknown;
             assert_eq!(
                 matches!(&done[0], Done::Refused(r) if *r == expected),
                 refused,
@@ -1182,7 +1178,7 @@ mod tests {
         let (api, requests) = refusing_after_one_silent_request().await;
         let (done_tx, done_rx) = mpsc::channel(64);
         let (mut pipeline, finished_rx) =
-            hybrid_pipeline_to(Access::gift("code".into(), &api), done_tx).await;
+            hybrid_pipeline_to(Access::gift(Provider::OpenAi, "code".into(), &api), done_tx).await;
         let store = pipeline.store.clone();
         let mut messages = store.subscribe();
         let open = open_utterance(&mut pipeline);
@@ -1217,7 +1213,7 @@ mod tests {
         let (api, _requests) = refusing_after_one_silent_request().await;
         let (done_tx, done_rx) = mpsc::channel(64);
         let (mut pipeline, finished_rx) =
-            hybrid_pipeline_to(Access::gift("code".into(), &api), done_tx).await;
+            hybrid_pipeline_to(Access::gift(Provider::OpenAi, "code".into(), &api), done_tx).await;
         let events = pipeline.store.subscribe_chrome();
         utterance(&mut pipeline);
         utterance(&mut pipeline);
@@ -1281,7 +1277,7 @@ mod tests {
             };
             ws.close(Some(frame)).await.unwrap();
         });
-        let access = Access::gift("code".into(), &api);
+        let access = Access::gift(Provider::OpenAi, "code".into(), &api);
         stops_on_refusal(access, TranscriptionError::GiftLimit).await;
     }
 
@@ -1299,7 +1295,7 @@ mod tests {
         };
         let router = axum::Router::new().route("/openai/realtime", axum::routing::get(refuse));
         tokio::spawn(async move { axum::serve(listener, router).await });
-        let access = Access::gift("code".into(), &api);
+        let access = Access::gift(Provider::OpenAi, "code".into(), &api);
         stops_on_refusal(access, TranscriptionError::GiftLimit).await;
     }
 
@@ -1311,7 +1307,7 @@ mod tests {
         let refuse = || async { StatusCode::UNAUTHORIZED };
         let router = axum::Router::new().route("/openai/realtime", axum::routing::get(refuse));
         tokio::spawn(async move { axum::serve(listener, router).await });
-        let access = Access::gift("code".into(), &api);
+        let access = Access::gift(Provider::OpenAi, "code".into(), &api);
         stops_on_refusal(access, TranscriptionError::GiftUnknown).await;
     }
 

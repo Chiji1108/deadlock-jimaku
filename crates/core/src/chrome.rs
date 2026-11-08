@@ -26,9 +26,9 @@ use tokio::time::MissedTickBehavior;
 use tokio_tungstenite::tungstenite::Message;
 
 use crate::DEFAULT_PORT;
+use crate::access::Access;
 use crate::annotate::Annotator;
 use crate::finish::{self, Finished, Finisher};
-use crate::openai::Access;
 use crate::settings::Settings;
 use crate::store::{ChromeEvent, Store};
 use crate::subtitles;
