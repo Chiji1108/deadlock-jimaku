@@ -551,6 +551,9 @@ mic ─┬─▶ ローカル VAD（earshot）── 発話の開始 → Segment
   - Z.ai GLM 5.3 Flash（`zai-glm-5-3-flash`）も推論するモデルで、1 発話 5.5〜23 秒。訳の質は Small 4 とほぼ同じ。ふりがなを付けさせると普通の文は正しいが 20 秒かかり、造語の多い文では原文と無関係な文を作った
   - Small 4 は 1 発話 0.8〜1.8 秒、記号は 4/4 で保たれた
   - OpenAI `gpt-6-luna`（`reasoning_effort: none`）は 1.1〜3.4 秒。ロシア語訳に日本語の「実況」が残った
+    - 2026-11 にアプリと同じ問い合わせで測り直した（`crates/core/examples/terms_eval.rs`、`experiments/results/terms_eval.json`。9.1 の 37 文 × 3 回、訳は英語とロシア語）。用語の判定は Terra の 106/111（外れた 3 回のうち 2 回は「ヘイズの2で寝かせてからウルト」のウルトも用語にしたもので、むしろ正しい。ほかに 1 回タイムアウト）に対して Luna は 97/111。Luna は「〇〇のウルト」のウルトを落とす（ページのウルト 3/3）、「のウルト」と助詞ごと区切る（4 回）、区切りが原文とつながらず用語がすべて落ちる（ヘイズの2… 2/3）、ふつうの言葉を用語にする（スマホはポケットに 1/3）。訳文に日本語が残ったのはどちらも 0 回。訳はどちらも自然で、Luna は「⟦Haze⟧'s ult」のようにスキルを参照にせず書くことがある。応答の中央値は Terra 1.9 秒、Luna 1.7 秒。料金は 1 発話あたり Terra 約 $0.0010、Luna 約 $0.00017（単価から。入力のほとんどがキャッシュから読まれる）
+    - この結果から、翻訳と用語の選択肢に Luna を足した（安いが用語の判定は弱い、と添える）。おすすめは Terra のまま。ふりがなに Luna を使えるかは測っていない
+    - Claude Haiku 5.5 も同じ問い合わせ（`Enricher::question` を Messages API の構造化出力で送り、`Enricher::read` で確かめる。推論は止め、effort `low`）で測った。用語は 85/111（ほかに 1 回タイムアウト）。ほかのスキルや別のアイテムの参照を選ぶ（カース、グレイブスの３番、ページのウルト）、区切りが原文とつながらず用語がすべて落ちる（ヘイズのウルト 3/3、カースは最終盤に 2/3）、ふつうの言葉を用語にする（スマホはポケットに 3/3、ヒーロー名のないウルト 2/3、ソウル、ラッシュ）。訳は原文にない言葉を足す（「no question」）、用語を落とす（「⟦Haze⟧'s hits so hard」）、ロシア語に英語を残す（「Guardian слишком…」）。応答の中央値は 1.3 秒でいちばん速く、料金は 1 発話あたり約 $0.00022（測った usage から）。推論を入れた場合は測っていない
   - OpenAI `gpt-6.1-terra`（同）は 1.7〜3.8 秒。所有格のルールを守り、ロシア語がいちばん自然 → **採用**
   - Claude Haiku 5.5（推論なし）2.4〜3.9 秒、Claude Sonnet 5.5（推論なし）2.3〜9.2 秒。Sonnet の訳は自然
 - system: 役割とルールと用語の一覧（1 行に 1 つ。`hero:13 | hero | ヘイズ | Haze`、スキルは `| ability 4 of Haze (hero:13)` を足す。話す言語の名前と英語名）
@@ -599,7 +602,7 @@ interface Enriched {
 |---|---|---|
 | 途中の字幕 | Chrome（Google）。途中の訳は Translator | GPT-Live-Transcribe（途中の訳なし）。「出さない」も選べる |
 | 確定の文字起こし | Chrome（発話の区切りも Chrome が決める） | GPT-Transcribe（アプリのマイクと VAD で区切る） |
-| 翻訳と用語 | Chrome の Translator と辞書の一致（`terms.rs`、日本語だけ） | GPT-6.1 Terra（9.3） |
+| 翻訳と用語 | Chrome の Translator と辞書の一致（`terms.rs`、日本語だけ） | GPT-6.1 Terra か GPT-6 Luna（9.3。選んだモデルを `Settings::models_in_use` が渡す） |
 | ふりがな | Lindera（日本語だけ） | GPT-6.1 Terra |
 
 **組み合わせの決まり:** 今の仕組みで作れない組み合わせは `Engines::sanitized` が直し、操作パネルでは選べなくする（`frontend/src/lib/engines.ts` の `unavailable`）。

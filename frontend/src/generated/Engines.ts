@@ -2,7 +2,7 @@
 import type { FinalSource } from "./FinalSource";
 import type { LiveSource } from "./LiveSource";
 import type { RubySource } from "./RubySource";
-import type { TranslationSource } from "./TranslationSource";
+import type { TranslationEngine } from "./TranslationEngine";
 
 /**
  * 字幕の工程ごとに、何で作るか。無料（Chrome と PC の中）か有料（OpenAI）か（DESIGN.md 9.6）。
@@ -20,7 +20,7 @@ transcription: FinalSource,
 /**
  * 翻訳と用語。訳文の名前を用語から作るので、同じもので作る（DESIGN.md 9.1）
  */
-translation: TranslationSource, 
+translation: TranslationEngine, 
 /**
  * ふりがな
  */

@@ -96,6 +96,11 @@ fn price(model: &str) -> Option<Price> {
             cached: 0.05,
             output: 5.00,
         },
+        "gpt-6-luna" => Price::PerMillion {
+            input: 0.10,
+            cached: 0.01,
+            output: 0.50,
+        },
         _ => return None,
     })
 }

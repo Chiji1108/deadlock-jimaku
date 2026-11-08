@@ -563,7 +563,7 @@ pub struct Engines {
     /// 確定の文字起こし
     pub transcription: FinalSource,
     /// 翻訳と用語。訳文の名前を用語から作るので、同じもので作る（DESIGN.md 9.1）
-    pub translation: TranslationSource,
+    pub translation: TranslationEngine,
     /// ふりがな
     pub furigana: RubySource,
 }
@@ -573,14 +573,14 @@ impl Engines {
     pub const CHROME: Self = Self {
         live: LiveSource::Chrome,
         transcription: FinalSource::Chrome,
-        translation: TranslationSource::ChromeTranslator,
+        translation: TranslationEngine::ChromeTranslator,
         furigana: RubySource::Lindera,
     };
     /// ハイブリッドのモード（おすすめ）。途中の字幕は Chrome、確定は OpenAI
     pub const HYBRID: Self = Self {
         live: LiveSource::Chrome,
         transcription: FinalSource::GptTranscribe,
-        translation: TranslationSource::Llm,
+        translation: TranslationEngine::Gpt61Terra,
         furigana: RubySource::Llm,
     };
     /// OpenAI のモード。すべて OpenAI で、Chrome を使わない
@@ -594,7 +594,7 @@ impl Engines {
     pub fn paid(&self) -> bool {
         self.live == LiveSource::GptLiveTranscribe
             || self.transcription == FinalSource::GptTranscribe
-            || self.translation == TranslationSource::Llm
+            || self.translation != TranslationEngine::ChromeTranslator
             || self.furigana == RubySource::Llm
     }
 
@@ -604,8 +604,10 @@ impl Engines {
         if self.transcription == FinalSource::Chrome {
             self.live = LiveSource::Chrome;
         }
-        if self.live != LiveSource::Chrome {
-            self.translation = TranslationSource::Llm;
+        if self.live != LiveSource::Chrome
+            && self.translation == TranslationEngine::ChromeTranslator
+        {
+            self.translation = TranslationEngine::Gpt61Terra;
         }
         self
     }
@@ -645,10 +647,28 @@ pub enum TextSource {
     GptTranscribe,
 }
 
-/// 翻訳の出どころ。Chrome の翻訳なら、用語は辞書の一致で判定する
+/// 翻訳と用語を何で作るか。Chrome の翻訳なら、用語は辞書の一致で判定する
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
+pub enum TranslationEngine {
+    ChromeTranslator,
+    Gpt61Terra,
+    /// Terra より安く速いが、用語の判定は弱い（DESIGN.md 9.3）
+    Gpt6Luna,
+}
+
+impl TranslationEngine {
+    pub fn source(self) -> TranslationSource {
+        match self {
+            Self::ChromeTranslator => TranslationSource::ChromeTranslator,
+            Self::Gpt61Terra | Self::Gpt6Luna => TranslationSource::Llm,
+        }
+    }
+}
+
+/// 翻訳の出どころ
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TranslationSource {
     ChromeTranslator,
     Llm,
@@ -840,12 +860,12 @@ impl Settings {
                 FinalSource::Chrome => Text::Chrome,
                 FinalSource::GptTranscribe => Text::GptTranscribe,
             }),
-            translation: translates.then_some(engines.translation),
+            translation: translates.then_some(engines.translation.source()),
             ruby: match engines.furigana {
                 Ruby::Lindera => lindera,
                 Ruby::Llm => ruby.then_some(Ruby::Llm),
             },
-            emphasis: match engines.translation {
+            emphasis: match engines.translation.source() {
                 Translation::ChromeTranslator => terms,
                 Translation::Llm => self.deadlock_mode.then_some(Emphasis::Llm),
             },
@@ -855,6 +875,15 @@ impl Settings {
             finals,
             translation_only,
         }
+    }
+
+    /// 使うモデル。翻訳と用語は工程の選択で決まる（Terra は詳細設定の `models.translate` のまま）
+    pub fn models_in_use(&self) -> Models {
+        let mut models = self.models.clone();
+        if self.engines.translation == TranslationEngine::Gpt6Luna {
+            models.translate = "gpt-6-luna".into();
+        }
+        models
     }
 
     /// 辞書に名前を載せる言語（DESIGN.md 8.2）
@@ -1376,7 +1405,7 @@ mod tests {
         assert_eq!(llm_text.finals.ruby, Some(R::Lindera));
 
         let llm_words = plan_of(Engines {
-            translation: Tr::Llm,
+            translation: TranslationEngine::Gpt6Luna,
             furigana: R::Llm,
             ..Engines::CHROME
         });
@@ -1385,6 +1414,36 @@ mod tests {
         assert_eq!(llm_words.finals.emphasis, Some(E::Llm));
         assert_eq!(llm_words.finals.ruby, Some(R::Llm));
         assert_eq!(llm_words.partial, plan_of(Engines::CHROME).partial);
+    }
+
+    #[test]
+    fn luna_changes_only_the_model_of_translation() {
+        let luna = Settings {
+            engines: Engines {
+                translation: TranslationEngine::Gpt6Luna,
+                ..Engines::HYBRID
+            },
+            ..Default::default()
+        };
+        assert_eq!(
+            luna.plan(),
+            Settings {
+                engines: Engines::HYBRID,
+                ..Default::default()
+            }
+            .plan()
+        );
+        assert_eq!(luna.models_in_use().translate, "gpt-6-luna");
+        assert_eq!(luna.models_in_use().readings, Models::default().readings);
+        assert_eq!(
+            Settings {
+                engines: Engines::HYBRID,
+                ..Default::default()
+            }
+            .models_in_use(),
+            Models::default()
+        );
+        assert!(luna.engines.paid());
     }
 
     #[test]
@@ -1413,7 +1472,7 @@ mod tests {
         assert_eq!(chrome_finals.sanitized(), Engines::CHROME);
         // Chrome の翻訳は Chrome のページの中で動く
         let no_page = Engines {
-            translation: TranslationSource::ChromeTranslator,
+            translation: TranslationEngine::ChromeTranslator,
             ..Engines::OPENAI
         };
         assert_eq!(no_page.sanitized(), Engines::OPENAI);

@@ -8,6 +8,7 @@ const PRICES: Record<string, Price> = {
   "gpt-transcribe": { perMinute: 0.0045 },
   // 100 万トークンあたり
   "gpt-6.1-terra": { input: 1.0, cached: 0.05, output: 5.0 },
+  "gpt-6-luna": { input: 0.1, cached: 0.01, output: 0.5 },
 };
 
 /** 音声の料金。音声のモデルでなければ undefined */

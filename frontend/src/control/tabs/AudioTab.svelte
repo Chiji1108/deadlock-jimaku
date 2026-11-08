@@ -268,8 +268,10 @@
       <Field.Field>
         <Field.Label>翻訳先</Field.Label>
         <Field.Description>
-          最大 {MAX_TRANSLATE_TO} つ（{s.translateTo.length} / {MAX_TRANSLATE_TO}）{#if t.translation === "llm"}。1
-            つ増えるごとに、話し続けて 1 時間あたり約 $0.3{/if}
+          最大 {MAX_TRANSLATE_TO} つ（{s.translateTo.length} / {MAX_TRANSLATE_TO}）{#if t.translation !== "chromeTranslator"}。1
+            つ増えるごとに、話し続けて 1 時間あたり約 ${t.translation === "gpt6Luna"
+              ? "0.05"
+              : "0.3"}{/if}
         </Field.Description>
         <ToggleGroup.Root
           type="multiple"

@@ -53,6 +53,9 @@
               >
                 <span>{o.label}</span>
                 <span class="text-xs text-muted-foreground tabular-nums">{o.price}</span>
+                {#if o.note}<span class="text-xs whitespace-normal text-muted-foreground"
+                    >{o.note}</span
+                  >{/if}
               </ToggleGroup.Item>
             {/each}
           </ToggleGroup.Root>

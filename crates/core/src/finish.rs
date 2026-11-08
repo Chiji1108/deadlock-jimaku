@@ -49,7 +49,7 @@ impl Finisher {
         let enricher = access.map(|access| {
             Enricher::new(
                 access,
-                &settings.models,
+                &settings.models_in_use(),
                 settings.mic_language.clone(),
                 settings.translate_to.clone(),
                 settings.deadlock_mode,

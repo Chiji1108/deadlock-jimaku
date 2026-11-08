@@ -11,6 +11,8 @@ export type Option<K extends Item = Item> = {
   price: string;
   /** OpenAI の API キーかギフトコードが要る */
   paid: boolean;
+  /** ほかの選択肢との違い（測った結果。DESIGN.md 9.3） */
+  note?: string;
 };
 
 /** 工程と、その作り方。無料のものを先に置く */
@@ -43,10 +45,18 @@ export const ITEMS: { [K in Item]: { label: string; hint: string; options: Optio
     options: [
       { value: "chromeTranslator", label: "Chrome の翻訳 ＋ 辞書", price: "無料", paid: false },
       {
-        value: "llm",
+        value: "gpt61Terra",
         label: "GPT-6.1 Terra",
         price: "100 万トークンで入力 $1・出力 $5",
         paid: true,
+        note: "略称やスキルの呼び方もよく判定する",
+      },
+      {
+        value: "gpt6Luna",
+        label: "GPT-6 Luna",
+        price: "100 万トークンで入力 $0.1・出力 $0.5",
+        paid: true,
+        note: "Terra の約 6 分の 1 の料金。「〇〇のウルト」などの判定は Terra より弱い",
       },
     ],
   },
@@ -75,7 +85,7 @@ export const CHROME: Engines = {
 export const HYBRID: Engines = {
   live: "chrome",
   transcription: "gptTranscribe",
-  translation: "llm",
+  translation: "gpt61Terra",
   furigana: "llm",
 };
 const OPENAI: Engines = { ...HYBRID, live: "gptLiveTranscribe" };
