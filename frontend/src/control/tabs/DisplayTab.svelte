@@ -9,12 +9,19 @@
   import { Switch } from "$lib/components/ui/switch";
   import * as ToggleGroup from "$lib/components/ui/toggle-group";
   import type { Align } from "../../generated/Align";
-  import type { Background } from "../../generated/Background";
   import type { SubtitleDisplayPatch } from "../../generated/SubtitleDisplayPatch";
+  import type { MergePatch } from "../../lib/text-style";
+  import { cleared, LINE_HEIGHT, SUBTITLE_TEXT } from "../../lib/text-style";
+  import type { SubtitleStyle } from "../../generated/SubtitleStyle";
   import AddToObs from "../parts/AddToObs.svelte";
+  import ColorField from "../parts/ColorField.svelte";
+  import OverlayPage from "../parts/OverlayPage.svelte";
   import OverlayPreview from "../parts/OverlayPreview.svelte";
   import DisplayTimingDialog from "../parts/DisplayTimingDialog.svelte";
+  import FontPicker from "../parts/FontPicker.svelte";
   import FontSizeDialog from "../parts/FontSizeDialog.svelte";
+  import StyleNumber from "../parts/StyleNumber.svelte";
+  import TextStyleFields from "../parts/TextStyleFields.svelte";
   import { SUBTITLE_SIZE } from "../../lib/overlay-size";
   import { overlayUrl, panel } from "../panel.svelte";
   import { translationOnly } from "../../lib/subtitle-lines";
@@ -30,14 +37,6 @@
     { field: "fontSize", label: "話した言葉の大きさ" },
     { field: "translationFontSize", label: "翻訳の大きさ" },
   ] as const;
-  const BACKGROUNDS: { value: Background; label: string; hint: string }[] = [
-    { value: "outline", label: "縁取り", hint: "文字に黒い縁取りを付けます" },
-    {
-      value: "band",
-      label: "半透明の帯",
-      hint: "明るい場面でも読めるよう、行の後ろに黒い帯を敷きます",
-    },
-  ];
   /** 同時に出す字幕の数。0 は制限なし */
   const LINES = [
     { value: 1, label: "1" },
@@ -50,31 +49,41 @@
   const s = $derived(panel.settings!);
   const d = $derived(s.subtitleDisplay);
   const noTargets = $derived(s.translateTo.length === 0);
+  const languages = $derived([...new Set([s.micLanguage, ...s.translateTo])]);
   const onlyTranslation = $derived(translationOnly(s));
+  const bg = $derived(s.subtitleStyle.background);
   /** 変えた項目だけを送る（続けて変えても、前の変更を古い値で戻さない） */
   const set = (patch: SubtitleDisplayPatch) => panel.update({ subtitleDisplay: patch });
+  const setStyle = (patch: MergePatch<SubtitleStyle>) => panel.update({ subtitleStyle: patch });
 </script>
 
-<div class="flex flex-col gap-6">
+<OverlayPage>
+  {#snippet preview()}
+    <OverlayPreview
+      src="/overlay/subtitles.html?preview={languages.join(',')}"
+      title="字幕オーバーレイのプレビュー"
+      size={SUBTITLE_SIZE}
+    >
+      <Button variant="outline" size="sm" onclick={panel.demo}>
+        <PlayIcon />テスト字幕を流す
+      </Button>
+    </OverlayPreview>
+    <AddToObs
+      url={overlayUrl("subtitles")}
+      name="字幕"
+      size={SUBTITLE_SIZE}
+      hint="大きさは、ソースを引き伸ばさずにプロパティの幅と高さで変えてください"
+    />
+  {/snippet}
+
   <Card.Root>
     <Card.Header>
       <Card.Title>字幕オーバーレイ</Card.Title>
       <Card.Description
         >ここで変えた見せ方は、OBS に表示中の字幕にもそのまま反映されます</Card.Description
       >
-      <Card.Action>
-        <Button variant="outline" size="sm" onclick={panel.demo}>
-          <PlayIcon />テスト字幕を流す
-        </Button>
-      </Card.Action>
     </Card.Header>
     <Card.Content class="flex flex-col gap-6">
-      <OverlayPreview
-        src="/overlay/subtitles.html"
-        title="字幕オーバーレイのプレビュー"
-        size={SUBTITLE_SIZE}
-      />
-
       <Field.Group>
         <Field.Field>
           <Field.Label>揃え</Field.Label>
@@ -120,23 +129,88 @@
             {/if}
           </Field.Field>
         {/each}
-        <Field.Field>
-          <Field.Label>背景</Field.Label>
-          <ToggleGroup.Root
-            type="single"
-            variant="outline"
-            class="w-full"
-            value={d.background}
-            onValueChange={(v) => v && set({ background: v as Background })}
-          >
-            {#each BACKGROUNDS as b (b.value)}
-              <ToggleGroup.Item value={b.value} class="flex-1">{b.label}</ToggleGroup.Item>
+
+        <Field.Separator />
+
+        <TextStyleFields
+          look={s.subtitleStyle}
+          standard={SUBTITLE_TEXT}
+          colorHint="ヒーロー名、スキル名、アイテム名の色分けは残します"
+          onchange={setStyle}
+          onreset={() => setStyle(cleared(s.subtitleStyle))}
+          detailValues={[
+            s.subtitleStyle.lineHeight,
+            ...languages.map((language) => s.subtitleStyle.languages[language]?.letterSpacing),
+          ]}
+        >
+          {#snippet fonts()}
+            <Field.Description>
+              Google Fonts のフォントと、この PC に入っているフォントから言語ごとに選べます
+            </Field.Description>
+            {#each languages as language (language)}
+              <FontPicker
+                target={{ kind: "subtitle", language }}
+                {language}
+                label={panel.label(language)}
+                standardWeight={SUBTITLE_TEXT.weight}
+              />
             {/each}
-          </ToggleGroup.Root>
-          <Field.Description
-            >{BACKGROUNDS.find((b) => b.value === d.background)?.hint}</Field.Description
-          >
-        </Field.Field>
+          {/snippet}
+          {#snippet band()}
+            <Field.Field orientation="horizontal">
+              <Field.Content>
+                <Field.Label>半透明の帯</Field.Label>
+                <Field.Description
+                  >明るい場面でも読めるよう、行の後ろに帯を敷きます</Field.Description
+                >
+              </Field.Content>
+              <Switch
+                aria-label="半透明の帯"
+                checked={bg.enabled}
+                onCheckedChange={(enabled) => setStyle({ background: { enabled } })}
+              />
+            </Field.Field>
+          {/snippet}
+          {#snippet details()}
+            <StyleNumber
+              label="行間"
+              value={s.subtitleStyle.lineHeight}
+              standard={LINE_HEIGHT}
+              presets={[1.2, 1.5, 1.8, 2]}
+              range={{ min: 1, max: 3, step: 0.1 }}
+              onchange={(lineHeight) => setStyle({ lineHeight })}
+            />
+            {#each languages as language (language)}
+              <StyleNumber
+                label="{panel.label(language)}の字間"
+                value={s.subtitleStyle.languages[language]?.letterSpacing ?? null}
+                standard={SUBTITLE_TEXT.letterSpacing}
+                presets={[0, 0.02, 0.05, 0.1]}
+                percent
+                range={{ min: -10, max: 50, step: 1 }}
+                onchange={(letterSpacing) =>
+                  panel.setFontStyle({ kind: "subtitle", language }, { letterSpacing })}
+              />
+            {/each}
+            {#if bg.enabled}
+              <ColorField
+                label="帯の色"
+                value={bg.color}
+                standard={SUBTITLE_TEXT.bandColor}
+                onchange={(color) => setStyle({ background: { color } })}
+              />
+              <StyleNumber
+                label="帯の濃さ"
+                value={bg.opacity}
+                standard={SUBTITLE_TEXT.bandOpacity}
+                presets={[0.25, 0.4, 0.8, 1]}
+                percent
+                range={{ min: 0, max: 100, step: 1 }}
+                onchange={(opacity) => setStyle({ background: { opacity } })}
+              />
+            {/if}
+          {/snippet}
+        </TextStyleFields>
 
         <Field.Separator />
 
@@ -214,16 +288,4 @@
       </Field.Group>
     </Card.Content>
   </Card.Root>
-
-  <Card.Root>
-    <Card.Header>
-      <Card.Title>OBS に追加する</Card.Title>
-      <Card.Description>
-        字幕は箱の下から積み上がり、箱の幅で折り返します。大きさを変えるときは、ソースを引き伸ばさずにプロパティの幅と高さを変えてください（引き伸ばすと文字ごと伸びます）。一度追加すれば、見せ方を変えても貼り直す必要はありません
-      </Card.Description>
-    </Card.Header>
-    <Card.Content>
-      <AddToObs url={overlayUrl("subtitles")} name="字幕" size={SUBTITLE_SIZE} />
-    </Card.Content>
-  </Card.Root>
-</div>
+</OverlayPage>

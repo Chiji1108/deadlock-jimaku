@@ -16,7 +16,15 @@ micDevice?: string, micLanguage?: string, translateTo?: Array<string>, deadlockM
 /**
  * SteamID64 か 32bit のアカウント ID。空文字列ならランクを表示しない
  */
-rankAccount?: string, subtitleDisplay?: SubtitleDisplayPatch, itemCards?: ItemCardsPatch, 
+rankAccount?: string, subtitleDisplay?: SubtitleDisplayPatch, 
+/**
+ * JSON Merge Patch。書いた項目だけを変え、null は標準に戻す
+ */
+subtitleStyle?: import("../lib/text-style").MergePatch<import("./SubtitleStyle").SubtitleStyle>, 
+/**
+ * `subtitle_style` と同じ
+ */
+rankStyle?: import("../lib/text-style").MergePatch<import("./RankStyle").RankStyle>, itemCards?: ItemCardsPatch, 
 /**
  * 何 ms 黙ったら区切るか
  */
@@ -24,11 +32,7 @@ minSilenceMs?: number,
 /**
  * 空文字列なら話す言語
  */
-rankLanguage?: string, rankContent?: RankContent, rankAnchor?: Anchor, 
-/**
- * 書いた言語だけを変える。空文字列なら標準に戻す
- */
-overlayFonts?: { [key in string]: string }, obsSeen?: boolean, onboardingClosed?: boolean, hybridHintClosed?: boolean, trayNoticeSeen?: boolean, 
+rankLanguage?: string, rankContent?: RankContent, rankAnchor?: Anchor, obsSeen?: boolean, onboardingClosed?: boolean, hybridHintClosed?: boolean, trayNoticeSeen?: boolean, 
 /**
  * 地域（`Region`）。空文字列なら順位を調べない
  */

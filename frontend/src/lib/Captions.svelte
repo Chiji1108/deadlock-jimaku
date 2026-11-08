@@ -3,23 +3,32 @@
   import { fade, fly } from "svelte/transition";
   import type { Segment } from "../generated/Segment";
   import type { SubtitleDisplay } from "../generated/SubtitleDisplay";
+  import type { SubtitleStyle } from "../generated/SubtitleStyle";
   import GrowingText from "./GrowingText.svelte";
   import Rich from "./Rich.svelte";
   import { slide } from "./slide";
   import { draftTerms, showsSource, translationsOf } from "./subtitle-lines";
+  import { fontCss, textVars } from "./text-style";
 
-  let { segments, display }: { segments: Segment[]; display?: SubtitleDisplay } = $props();
+  let {
+    segments,
+    display,
+    look,
+  }: { segments: Segment[]; display?: SubtitleDisplay; look?: SubtitleStyle } = $props();
 
   /** 1 行だけのとき、次の字幕に入れ替わるなら、古い行をフェードさせない（2 行に見える） */
   const replacing = () => display?.maxLines === 1 && segments.length > 0;
 </script>
 
 <!-- 見せ方は操作パネルから届く値を CSS 変数で当てる（操作パネルの値が優先。OBS のカスタム CSS で
-     大きさを変えるときは .captions に !important で書く。色は :root の変数を上書きする） -->
+     大きさを変えるときは .captions に !important で書く。色は、操作パネルで標準のままなら :root の
+     変数を上書きする） -->
 <ol
   class="captions"
   data-align={display?.align ?? "center"}
-  data-background={display?.background ?? "outline"}
+  data-background={look?.background.enabled ? "band" : "outline"}
+  style={look && textVars(look)}
+  style:--line-height={look?.lineHeight}
   style:--source-size={display && `${display.fontSize}px`}
   style:--translation-size={display && `${display.translationFontSize}px`}
 >
@@ -32,7 +41,7 @@
       out:fade={{ duration: replacing() ? 0 : 400 }}
     >
       {#if showsSource(s, display)}
-        <p class="source" lang={s.lang}>
+        <p class="source" lang={s.lang} style={fontCss(look?.languages[s.lang])}>
           <!-- partial / final は増えた文字だけをフェードさせ、enriched ではふりがなとアイコンを足す。
                途中から付いていたものは、出し直して見えないよう足し直さない。確定で初めて見つかった
                用語にだけ演出を付ける -->
@@ -51,7 +60,12 @@
         </p>
       {/if}
       {#each Object.entries(translationsOf(s)) as [lang, tokens] (lang)}
-        <p class="translation" {lang} in:fly={{ y: 8, duration: 250 }}>
+        <p
+          class="translation"
+          {lang}
+          style={fontCss(look?.languages[lang])}
+          in:fly={{ y: 8, duration: 250 }}
+        >
           <Rich
             tokens={tokens ?? []}
             {lang}
@@ -90,13 +104,11 @@
     text-align: center;
     color: var(--text-color);
   }
-  /* 半透明の帯: 明るい場面でも読めるよう、行ごとに黒い帯を敷いて縁取りを細くする */
+  /* 半透明の帯: 明るい場面でも読めるよう、行ごとに帯を敷く（標準では縁取りを細くし、影を消す。text-style.ts） */
   .captions[data-background="band"] p {
-    -webkit-text-stroke-width: 0.08em;
-    text-shadow: none;
     padding: 0.08em 0.45em;
     border-radius: 0.2em;
-    background: rgb(0 0 0 / 0.62);
+    background: var(--band-color, rgb(0 0 0 / 0.62));
   }
   /* 帯は行の幅だけにする（揃えは .captions の align-items に合わせる） */
   .caption {
@@ -116,14 +128,22 @@
   /* 縁取りの太さは行ごとの文字の大きさに合わせる（em は要素自身の font-size で決まる） */
   p {
     margin: 0;
-    line-height: 1.5;
+    /* 太い縁取りや大きな影が箱の端で切れないよう、余白に収まらない分だけ内側に寄せる */
+    margin-inline: max(0px, calc(var(--edge, 0px) - 12px));
+    line-height: var(--line-height, 1.5);
     font-weight: 700;
     /* 文節で折り返す。ふりがなの付いた文は長い 1 文節に見えることがあるので、箱に収まらなければ途中でも折る */
     word-break: auto-phrase;
     overflow-wrap: anywhere;
-    -webkit-text-stroke: 0.18em var(--outline-color);
+    -webkit-text-stroke: var(--outline-width, 0.18em) var(--outline-color);
     paint-order: stroke fill;
-    text-shadow: 0 0.05em 0.15em rgb(0 0 0 / 0.6);
+    text-shadow: var(
+      --text-shadow,
+      0 0.05em var(--shadow-blur, 0.15em) var(--shadow-color, rgb(0 0 0 / 0.6))
+    );
+  }
+  .caption:last-child p:last-child {
+    margin-bottom: max(0px, calc(var(--edge, 0px) - 8px));
   }
   .source {
     font-size: var(--source-size);

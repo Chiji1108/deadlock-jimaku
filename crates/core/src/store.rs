@@ -7,11 +7,11 @@ use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use bytes::Bytes;
 use tokio::sync::{broadcast, watch};
 
 use crate::assets::Loaded;
 use crate::chrome::{self, Browser};
+use crate::fonts::Library;
 use crate::settings::{self, Settings, SettingsPatch, SubtitleDisplay};
 use crate::types::{
     ChromeCommand, Heard, ItemCardsView, LiveState, LiveStatus, RankState, Segment, ServerMsg,
@@ -62,8 +62,6 @@ pub struct Store {
     /// 新しい版の辞書を作り直すよう頼んだ回数。変わると `runtime` が辞書の処理を張り直す
     glossary_refreshes: AtomicU64,
     rank: Mutex<Option<RankState>>,
-    /// バッジ → アイコン（webp）。バッジごとに持ち、別のバッジのアイコンを配信しない
-    rank_image: Mutex<Option<(u32, Bytes)>>,
     tx: broadcast::Sender<ServerMsg>,
     /// マイクの入力レベル（dBFS）。1 秒に 10 回届くので、字幕などと同じ broadcast には流さない
     /// （購読していないオーバーレイを起こさず、取りこぼしの原因にもしない）
@@ -77,6 +75,7 @@ pub struct Store {
     /// ハイブリッドの発話を閉じた回数
     chrome_cuts: AtomicU32,
     meter: Arc<Meter>,
+    fonts: Arc<Library>,
 }
 
 impl Store {
@@ -90,6 +89,7 @@ impl Store {
             }
         };
         let meter = Arc::new(Meter::new(data_dir.join("usage.json")));
+        let fonts = Arc::new(Library::new(&data_dir));
         Arc::new(Self {
             settings: watch::Sender::new(settings),
             data_dir,
@@ -99,7 +99,6 @@ impl Store {
             glossary: watch::Sender::new(None),
             glossary_refreshes: AtomicU64::new(0),
             rank: Mutex::new(None),
-            rank_image: Mutex::new(None),
             tx: broadcast::channel(256).0,
             level: watch::Sender::new(f32::NEG_INFINITY),
             live_status: Mutex::new(None),
@@ -109,6 +108,7 @@ impl Store {
             browser: Mutex::new(None),
             chrome_cuts: AtomicU32::new(0),
             meter,
+            fonts,
         })
     }
 
@@ -122,6 +122,10 @@ impl Store {
 
     pub fn data_dir(&self) -> &Path {
         &self.data_dir
+    }
+
+    pub fn fonts(&self) -> &Arc<Library> {
+        &self.fonts
     }
 
     /// 操作パネルからの変更を当てて保存する。読めない値なら何も変えずにエラー
@@ -424,17 +428,9 @@ impl Store {
         }
     }
 
-    pub fn set_rank_image(&self, badge: u32, image: Bytes) {
-        *self.rank_image.lock().unwrap() = Some((badge, image));
-    }
-
-    /// そのバッジのアイコン（今持っているものだけ）
-    pub fn rank_image(&self, badge: u32) -> Option<Bytes> {
-        let image = self.rank_image.lock().unwrap();
-        image
-            .as_ref()
-            .filter(|(b, _)| *b == badge)
-            .map(|(_, bytes)| bytes.clone())
+    /// 取ってきたランクのアイコン（バッジごとの webp）を置く場所
+    pub fn rank_images(&self) -> PathBuf {
+        self.data_dir.join("rank")
     }
 
     pub fn snapshot(&self) -> ServerMsg {
@@ -495,10 +491,11 @@ fn display(settings: &Settings) -> ServerMsg {
             show_source: !settings.plan().translation_only,
             ..settings.subtitle_display.clone()
         },
+        subtitle_style: Box::new(settings.subtitle_style.clone()),
         rank_language: settings.rank_language(),
         rank_content: settings.rank_content,
         rank_anchor: settings.rank_anchor,
-        overlay_fonts: settings.overlay_fonts.clone(),
+        rank_style: Box::new(settings.rank_style.clone()),
         item_cards: ItemCardsView {
             hold_seconds: settings.item_cards.hold_seconds,
             language: crate::lang::find(&settings.item_language())
@@ -512,6 +509,8 @@ fn display(settings: &Settings) -> ServerMsg {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
+
     use crate::settings::SpeechEngine;
     use crate::types::Stage;
 
@@ -679,13 +678,23 @@ mod tests {
         let mut rx = store.subscribe();
         store
             .update_settings(SettingsPatch {
-                overlay_fonts: Some([("ja".to_owned(), "Hiragino Sans".to_owned())].into()),
+                subtitle_style: Some(json!({ "languages": { "ja": { "font": "Hiragino Sans" } } })),
+                rank_style: Some(json!({ "font": "Georgia" })),
                 ..Default::default()
             })
             .unwrap();
-        let ServerMsg::Display { overlay_fonts, .. } = rx.try_recv().unwrap() else {
+        let ServerMsg::Display {
+            subtitle_style,
+            rank_style,
+            ..
+        } = rx.try_recv().unwrap()
+        else {
             panic!("expected the display message");
         };
-        assert_eq!(overlay_fonts["ja"], "Hiragino Sans");
+        assert_eq!(
+            subtitle_style.languages["ja"].font.as_deref(),
+            Some("Hiragino Sans")
+        );
+        assert_eq!(rank_style.font.font.as_deref(), Some("Georgia"));
     }
 }

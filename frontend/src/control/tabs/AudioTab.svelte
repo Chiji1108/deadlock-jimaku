@@ -33,11 +33,18 @@
     recommended?: boolean;
   }[] = [
     {
+      value: "chrome",
+      label: "Chrome",
+      traits: "高速・キー不要",
+      price: "無料",
+      hint: "多くの字幕ソフトと同じく、Chrome の音声認識を使います",
+    },
+    {
       value: "hybrid",
       label: "ハイブリッド",
       traits: "高速・高精度",
       price: "約 $0.6／時間",
-      hint: "途中の字幕は Chrome、確定の字幕は OpenAI の高い精度に置き換えます",
+      hint: "途中の字幕は Chrome、確定の字幕は OpenAI の高い精度に置き換えます。OpenAI の API キーかギフトコードが要ります",
       recommended: true,
     },
     {
@@ -45,14 +52,7 @@
       label: "OpenAI",
       traits: "低負荷・高精度",
       price: "約 $1／時間",
-      hint: "すべて OpenAI で作ります。Chrome は使いません",
-    },
-    {
-      value: "chrome",
-      label: "Chrome",
-      traits: "無料・キー不要",
-      price: "無料",
-      hint: "音声認識も翻訳も Chrome で行います。無料でキー不要です",
+      hint: "すべて OpenAI で作ります。Chrome は使いません。OpenAI の API キーかギフトコードが要ります",
     },
   ];
 
@@ -71,7 +71,6 @@
   const chromeClosed = $derived(s.speechEngine === "hybrid" && !!panel.transcriptionError);
   /** Chrome のウィンドウの今の状態 */
   const chromeNote = $derived.by(() => {
-    if (!s.transcriptionEnabled) return "字幕を始めると開きます";
     if (chromeClosed) return "字幕が止まっているので閉じています";
     if (!panel.chromeStatus) return "Chrome のウィンドウを開いています";
     if (panel.chromeStatus.detail) return panel.chromeStatus.detail;
@@ -133,16 +132,16 @@
         </div>
       {/if}
       {#if s.speechEngine !== "openai"}
-        <div class="flex flex-wrap items-center gap-3">
-          {#if s.transcriptionEnabled && !chromeClosed}
-            <Button variant="outline" size="sm" onclick={panel.openChrome}>Chrome を開き直す</Button
-            >
-          {/if}
-          <Button variant="outline" size="sm" onclick={() => (confirmingReset = true)}>
-            Chrome をリセット
-          </Button>
-          {#if !chromeProblem}<p class="text-sm text-muted-foreground">{chromeNote}</p>{/if}
-        </div>
+        {#if s.transcriptionEnabled}
+          <div class="flex flex-wrap items-center gap-3">
+            {#if !chromeClosed}
+              <Button variant="outline" size="sm" onclick={panel.openChrome}
+                >Chrome を開き直す</Button
+              >
+            {/if}
+            {#if !chromeProblem}<p class="text-sm text-muted-foreground">{chromeNote}</p>{/if}
+          </div>
+        {/if}
         <p class="text-xs text-muted-foreground">
           字幕を始めると小さな Chrome のウィンドウが開きます。音声は Chrome を通じて Google
           に送られます。途中の翻訳は Chrome
@@ -151,26 +150,32 @@
         {#if s.transcriptionEnabled && chromeProblem}
           <Alert.Root variant="destructive">
             <Alert.Title>{chromeProblem}</Alert.Title>
-            {#if s.speechEngine === "hybrid" || panel.chromeStatus?.state === "missing"}
-              <Alert.Description>
-                {#if s.speechEngine === "hybrid"}
-                  確定の字幕は出ています。話している途中の字幕だけが止まっています。
-                {/if}
-                {#if panel.chromeStatus?.state === "missing"}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    class="mt-2"
-                    href="https://www.google.com/chrome/"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Google Chrome をインストールする
-                  </Button>
-                {/if}
-              </Alert.Description>
-            {/if}
+            <Alert.Description class="flex flex-col items-start gap-2">
+              {#if s.speechEngine === "hybrid"}
+                確定の字幕は出ています。話している途中の字幕だけが止まっています。
+              {/if}
+              {#if panel.chromeStatus?.state === "missing"}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  href="https://www.google.com/chrome/"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Google Chrome をインストールする
+                </Button>
+              {:else}
+                {@render resetButton()}
+              {/if}
+            </Alert.Description>
           </Alert.Root>
+        {:else}
+          <div class="flex flex-wrap items-center gap-3">
+            <p class="text-xs text-muted-foreground">
+              マイクの許可をやり直したいとき、字幕が出ないときに
+            </p>
+            {@render resetButton()}
+          </div>
         {/if}
       {/if}
     </Card.Content>
@@ -267,7 +272,7 @@
         <Field.Content>
           <Field.Label for="deadlock-mode">デッドロックモード</Field.Label>
           <Field.Description>
-            ヒーロー・スキル・アイテムを強調し、アイテム説明を出します。雑談やほかのゲームの配信では、オフにすると普通の字幕になります
+            ヒーロー・スキル・アイテムを強調し、アイテム説明を出します
             <DeadlockModeDialog />
           </Field.Description>
         </Field.Content>
@@ -354,6 +359,12 @@
     </Card.Content>
   </Card.Root>
 </div>
+
+{#snippet resetButton()}
+  <Button variant="outline" size="sm" onclick={() => (confirmingReset = true)}>
+    Chrome をリセット
+  </Button>
+{/snippet}
 
 <ConfirmDialog
   bind:open={confirmingReset}

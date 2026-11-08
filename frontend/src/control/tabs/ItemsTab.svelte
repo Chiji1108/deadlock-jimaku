@@ -6,6 +6,7 @@
   import * as Select from "$lib/components/ui/select";
   import * as ToggleGroup from "$lib/components/ui/toggle-group";
   import AddToObs from "../parts/AddToObs.svelte";
+  import OverlayPage from "../parts/OverlayPage.svelte";
   import AnchorPicker from "../parts/AnchorPicker.svelte";
   import ItemHoldDialog from "../parts/ItemHoldDialog.svelte";
   import OverlayPreview from "../parts/OverlayPreview.svelte";
@@ -20,7 +21,23 @@
   const language = $derived(c.language ?? FOLLOW);
 </script>
 
-<div class="flex flex-col gap-6">
+<OverlayPage>
+  {#snippet preview()}
+    <div class="mx-auto w-full max-w-xs">
+      <OverlayPreview
+        src="/overlay/items.html?preview"
+        title="アイテム説明オーバーレイのプレビュー"
+        size={ITEMS_SIZE}
+      />
+    </div>
+    <AddToObs
+      url={overlayUrl("items")}
+      name="アイテム説明"
+      size={ITEMS_SIZE}
+      hint="大きさは、ソースを引き伸ばさずにプロパティの幅と高さを同じ割合で変えてください"
+    />
+  {/snippet}
+
   <Card.Root>
     <Card.Header>
       <Card.Title>アイテム説明オーバーレイ</Card.Title>
@@ -35,14 +52,6 @@
           <Alert.Title>デッドロックモードがオフなので、アイテム説明は出ません</Alert.Title>
         </Alert.Root>
       {/if}
-      <div class="mx-auto w-full max-w-xs">
-        <OverlayPreview
-          src="/overlay/items.html?preview"
-          title="アイテム説明オーバーレイのプレビュー"
-          size={ITEMS_SIZE}
-        />
-      </div>
-
       <Field.Group>
         <Field.Field>
           <div class="flex items-center justify-between">
@@ -103,16 +112,4 @@
       </Field.Group>
     </Card.Content>
   </Card.Root>
-
-  <Card.Root>
-    <Card.Header>
-      <Card.Title>OBS に追加する</Card.Title>
-      <Card.Description>
-        大きさを変えるときは、ソースを引き伸ばさずにプロパティの幅と高さを同じ割合で変えてください。カードがくっきりしたまま大きくなります
-      </Card.Description>
-    </Card.Header>
-    <Card.Content>
-      <AddToObs url={overlayUrl("items")} name="アイテム説明" size={ITEMS_SIZE} />
-    </Card.Content>
-  </Card.Root>
-</div>
+</OverlayPage>

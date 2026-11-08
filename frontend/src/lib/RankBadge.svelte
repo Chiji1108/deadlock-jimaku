@@ -4,9 +4,20 @@
   import type { LeaderboardRank } from "../generated/LeaderboardRank";
   import type { RankContent } from "../generated/RankContent";
   import type { RankState } from "../generated/RankState";
+  import type { RankStyle } from "../generated/RankStyle";
   import { REGIONS } from "./regions";
+  import { fontCss, textVars } from "./text-style";
 
-  let { rank, lang, content }: { rank: RankState; lang: string; content: RankContent } = $props();
+  let {
+    rank,
+    lang,
+    content,
+    look,
+  }: { rank: RankState; lang: string; content: RankContent; look?: RankStyle } = $props();
+
+  /** 標準の影に合わせ、ぼかしは --scale に比例する 16px を元にする */
+  const BLUR_EM = "calc(16px * var(--scale))";
+  const font = $derived(fontCss(look));
 
   /** リーダーボードの順位。ランク名と同じ言語にそろえる（日本語は「アジア 12位」、ほかは「#12 Asia」） */
   const placement = (l: LeaderboardRank) =>
@@ -27,31 +38,25 @@
   const number = (n: number) => n.toLocaleString("en-US");
 </script>
 
-<div class="rank" lang={shown}>
-  {#if rank.image}<img class="badge" src={rank.image} alt="" />{/if}
-  <!-- 1 行目: ランク名、2 行目: ゲージ（ポイントを重ねるか、数字なしで細くする）。出すものは操作パネルで選ぶ -->
+<div class="rank" lang={shown} style={look && textVars(look, BLUR_EM)}>
+  <!-- アイコンが届くまでは同じ大きさの枠だけを出し、届いたときに文字がずれないようにする -->
+  {#if rank.image}<img class="badge" src={rank.image} alt="" />{:else}<span class="badge pending"
+    ></span>{/if}
+  <!-- 1 行目: ランク名、2 行目: ゲージ。出すものは操作パネルで選ぶ -->
   {#if content !== "icon"}<div class="text">
-      {#if label}<p class="name">{label}</p>{/if}
+      {#if label}<p class="name" style={font}>{label}</p>{/if}
       {#if content === "name"}
         <!-- 名前だけ -->
       {:else if rank.leaderboard}
         <!-- エターナスは上のティアがないので、リーダーボードの順位を出す -->
-        <p class="points">{placement(rank.leaderboard)}</p>
+        <p class="points" style={font}>{placement(rank.leaderboard)}</p>
       {:else if rank.progress}
-        <div class="bar" class:thin={content === "gauge"}>
+        <div class="bar">
           <div class="fill" style:width="{ratio * 100}%"></div>
-          {#if content === "full"}
-            <p class="points">
-              <!-- ポイントが変わったら桁ごとに数字を動かす -->
-              <TextMorph text={number(rank.progress.value)} numbers as="span" duration={600} /><span
-                class="max">{` / ${number(rank.progress.max)}`}</span
-              >
-            </p>
-          {/if}
         </div>
       {:else if rank.points !== undefined}
-        <!-- 順位が取れないエターナスは、累積のポイントを出す -->
-        <p class="points">
+        <!-- 順位が取れないエターナスは、累積のポイントを出す。変わったら桁ごとに数字を動かす -->
+        <p class="points" style={font}>
           <TextMorph text={number(rank.points)} numbers as="span" duration={600} />
           <span class="unit">RP</span>
         </p>
@@ -74,16 +79,30 @@
     align-items: center;
     gap: calc(14px * var(--scale));
     padding: calc(8px * var(--scale));
+    /* 太い縁取りや大きな影が箱の右端で切れないよう、余白を超えた分だけ広げる */
+    padding-inline-end: max(calc(8px * var(--scale)), var(--edge, 0px));
     color: var(--text-color);
-    -webkit-text-stroke: 0.16em var(--outline-color);
+    -webkit-text-stroke: var(--outline-width, 0.16em) var(--outline-color);
     paint-order: stroke fill;
-    text-shadow: 0 calc(2px * var(--scale)) calc(6px * var(--scale)) rgb(0 0 0 / 0.6);
+    text-shadow: var(
+      --text-shadow,
+      0 calc(2px * var(--scale)) var(--shadow-blur, calc(6px * var(--scale)))
+        var(--shadow-color, rgb(0 0 0 / 0.6))
+    );
   }
   .badge {
     width: var(--badge-size, calc(96px * var(--scale)));
     height: var(--badge-size, calc(96px * var(--scale)));
     object-fit: contain;
     filter: drop-shadow(0 calc(2px * var(--scale)) calc(6px * var(--scale)) rgb(0 0 0 / 0.6));
+  }
+  .pending {
+    box-sizing: border-box;
+    border: calc(3px * var(--scale)) solid rgb(255 255 255 / 0.3);
+    border-radius: 50%;
+    /* アイコンの画像は透明な縁を含むので、見えている形の大きさに合わせる */
+    scale: 0.8;
+    filter: none;
   }
   p {
     margin: 0;
@@ -99,21 +118,15 @@
     flex-direction: column;
     gap: calc(6px * var(--scale));
   }
+  /* 幅はランク名に合わせる（短い名前でも進み具合が読める長さは残す）。変数の名前は、ポイントを重ねる太いゲージがあったころのまま */
   .bar {
     position: relative;
-    display: grid;
-    place-items: center;
-    min-width: var(--gauge-width, calc(260px * var(--scale)));
-    height: var(--gauge-height, calc(30px * var(--scale)));
+    min-width: var(--gauge-thin-width, calc(120px * var(--scale)));
+    height: var(--gauge-thin-height, calc(12px * var(--scale)));
     border-radius: 999px;
     background: rgb(0 0 0 / 0.55);
     box-shadow: 0 0 0 calc(2px * var(--scale)) rgb(0 0 0 / 0.6);
     overflow: hidden;
-  }
-  /* 数字を重ねないときは細くして、幅はランク名に合わせる（短い名前でも進み具合が読める長さは残す） */
-  .thin {
-    min-width: var(--gauge-thin-width, calc(120px * var(--scale)));
-    height: var(--gauge-thin-height, calc(12px * var(--scale)));
   }
   .fill {
     position: absolute;
@@ -121,17 +134,11 @@
     background: var(--gauge-color);
     transition: width 0.6s ease-out;
   }
-  /* 白い塗りの上でも暗い地の上でも読めるよう、縁取りした白い文字を中央に重ねる */
-  .bar .points {
-    position: relative;
-    line-height: 1;
-  }
   .points {
     font-size: var(--points-size, calc(20px * var(--scale)));
     font-variant-numeric: tabular-nums;
   }
-  .unit,
-  .max {
+  .unit {
     font-size: 0.7em;
     opacity: 0.75;
   }

@@ -19,9 +19,7 @@
   <Dialog.Content class="sm:max-w-xl">
     <Dialog.Header>
       <Dialog.Title>デッドロックモード</Dialog.Title>
-      <Dialog.Description>
-        雑談やほかのゲームの配信では、オフにすると普通の字幕になります。切り替えると、字幕は始め直します
-      </Dialog.Description>
+      <Dialog.Description>切り替えると、字幕は始め直します</Dialog.Description>
     </Dialog.Header>
     <table class="w-full text-sm">
       <thead>

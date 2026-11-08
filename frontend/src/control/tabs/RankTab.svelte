@@ -9,14 +9,20 @@
   import type { Region } from "../../generated/Region";
   import { REGIONS } from "../../lib/regions";
   import AddToObs from "../parts/AddToObs.svelte";
+  import OverlayPage from "../parts/OverlayPage.svelte";
   import AnchorPicker from "../parts/AnchorPicker.svelte";
+  import FontPicker from "../parts/FontPicker.svelte";
   import OverlayPreview from "../parts/OverlayPreview.svelte";
+  import StyleNumber from "../parts/StyleNumber.svelte";
+  import TextStyleFields from "../parts/TextStyleFields.svelte";
   import { rankSize } from "../../lib/overlay-size";
+  import type { MergePatch } from "../../lib/text-style";
+  import { cleared, RANK_TEXT } from "../../lib/text-style";
+  import type { RankStyle } from "../../generated/RankStyle";
   import { overlayUrl, panel } from "../panel.svelte";
 
   const CONTENTS: { value: RankContent; label: string }[] = [
-    { value: "gauge", label: "名前とゲージ" },
-    { value: "full", label: "名前とポイント" },
+    { value: "gauge", label: "ゲージ" },
     { value: "name", label: "名前だけ" },
     { value: "icon", label: "アイコンだけ" },
   ];
@@ -33,6 +39,8 @@
     s.rankLanguage && languages.includes(s.rankLanguage) ? s.rankLanguage : FOLLOW,
   );
 
+  const setStyle = (patch: MergePatch<RankStyle>) => panel.update({ rankStyle: patch });
+
   const saved = () => panel.settings?.rankAccount?.toString() ?? "";
   let account = $state(saved());
 
@@ -43,7 +51,21 @@
   }
 </script>
 
-<div class="flex flex-col gap-6">
+<OverlayPage>
+  {#snippet preview()}
+    <OverlayPreview
+      src="/overlay/rank.html?preview"
+      title="ランクオーバーレイのプレビュー"
+      {size}
+    />
+    <AddToObs
+      url={overlayUrl("rank")}
+      name="ランク"
+      {size}
+      hint="大きさは、ソースを引き伸ばさずにプロパティの幅と高さを同じ割合で変え、出すものを変えたらプレビューの下の大きさに合わせ直してください"
+    />
+  {/snippet}
+
   <Card.Root>
     <Card.Header>
       <Card.Title>ランクオーバーレイ</Card.Title>
@@ -52,8 +74,6 @@
       </Card.Description>
     </Card.Header>
     <Card.Content class="flex flex-col gap-6">
-      <OverlayPreview src="/overlay/rank.html" title="ランクオーバーレイのプレビュー" {size} />
-
       <form
         onsubmit={(e) => {
           e.preventDefault();
@@ -152,19 +172,36 @@
           </Select.Content>
         </Select.Root>
       </Field.Field>
-    </Card.Content>
-  </Card.Root>
 
-  <Card.Root>
-    <Card.Header>
-      <Card.Title>OBS に追加する</Card.Title>
-      <Card.Description>
-        大きさを変えるときは、ソースを引き伸ばさずにプロパティの幅と高さを同じ割合で変えてください。中身がくっきりしたまま大きくなります。出すものを変えたときは、プロパティの幅と高さを
-        {size[0]}×{size[1]} に合わせ直してください
-      </Card.Description>
-    </Card.Header>
-    <Card.Content>
-      <AddToObs url={overlayUrl("rank")} name="ランク" {size} />
+      <Field.Separator />
+
+      <TextStyleFields
+        look={s.rankStyle}
+        standard={RANK_TEXT}
+        onchange={setStyle}
+        onreset={() => setStyle(cleared(s.rankStyle))}
+        detailValues={[s.rankStyle.letterSpacing]}
+      >
+        {#snippet fonts()}
+          <FontPicker
+            target={{ kind: "rank" }}
+            language={language || s.micLanguage}
+            label="ランク"
+            standardWeight={RANK_TEXT.weight}
+          />
+        {/snippet}
+        {#snippet details()}
+          <StyleNumber
+            label="字間"
+            value={s.rankStyle.letterSpacing}
+            standard={RANK_TEXT.letterSpacing}
+            presets={[0, 0.02, 0.05, 0.1]}
+            percent
+            range={{ min: -10, max: 10, step: 1 }}
+            onchange={(letterSpacing) => setStyle({ letterSpacing })}
+          />
+        {/snippet}
+      </TextStyleFields>
     </Card.Content>
   </Card.Root>
-</div>
+</OverlayPage>

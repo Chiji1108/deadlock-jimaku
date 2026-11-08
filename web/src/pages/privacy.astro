@@ -2,7 +2,7 @@
 import Layout from "../layouts/Layout.astro";
 import { DISCORD } from "../site";
 
-const UPDATED = "2026 年 11 月 6 日";
+const UPDATED = "2026 年 11 月 8 日";
 ---
 
 <Layout title="プライバシーポリシー" description="デドロ字幕が扱う情報と、その送り先について。">
@@ -53,13 +53,21 @@ const UPDATED = "2026 年 11 月 6 日";
       </li>
     </ul>
 
+    <h2>GitHub からダウンロードするもの（Google Fonts のフォント）</h2>
+    <ul>
+      <li>
+        操作パネルで Google Fonts のフォントを選び、確認の画面で進めると、GitHub にある Google Fonts の配布物（google/fonts）からフォントのファイルをダウンロードします。このとき、IP アドレスなどの通信に必要な情報が GitHub に渡ります。字幕や音声は送りません。
+      </li>
+      <li>フォントのダウンロードのために GitHub に接続するのは、確認の画面で進めたときだけです。一覧の見本はアプリの中にあるので、一覧を開いても通信しません。</li>
+    </ul>
+
     <h2>deadlock-api に送るもの</h2>
     <ul>
       <li>
         ランクを表示するために、設定した Steam のアカウント ID を
         <a href="https://deadlock-api.com" class="underline">deadlock-api</a> に送り、公開されているランクを取得します。ランクを表示しない設定なら送りません。
       </li>
-      <li>ヒーロー・アイテム・スキルの名前とアイコンを取得します（利用者の情報は送りません）。</li>
+      <li>ヒーロー・アイテム・スキルの名前とアイコン、ランクのアイコン（操作パネルのプレビューの見本を含む）を取得します（利用者の情報は送りません）。</li>
     </ul>
 
     <h2>おすそ分け（デドロ字幕のサーバー api.jimaku.deadlock.jp）</h2>
@@ -91,7 +99,7 @@ const UPDATED = "2026 年 11 月 6 日";
         OpenAI の API キー、ギフトコード、おすそ分けの管理に使う値と作ったコードは、OS
         の資格情報ストア（Windows の資格情報マネージャー、Mac のキーチェーンなど）に保存します。
       </li>
-      <li>設定、OpenAI の使用量の目安、ゲームのデータのキャッシュを、PC の中に保存します。</li>
+      <li>設定、OpenAI の使用量の目安、ゲームのデータのキャッシュ、ダウンロードしたフォントを、PC の中に保存します。</li>
       <li>音声や字幕の履歴は保存しません。</li>
     </ul>
 

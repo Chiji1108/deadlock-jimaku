@@ -1,0 +1,139 @@
+<script lang="ts">
+  import type { Snippet } from "svelte";
+  import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
+  import { Button } from "$lib/components/ui/button";
+  import * as Field from "$lib/components/ui/field";
+  import { Switch } from "$lib/components/ui/switch";
+  import type { TextLook } from "../../generated/TextLook";
+  import {
+    changedDetails,
+    outlineStandard,
+    shadowOn,
+    type Look,
+    type MergePatch,
+    type TextStandard,
+  } from "../../lib/text-style";
+  import ColorField from "./ColorField.svelte";
+  import ConfirmDialog from "./ConfirmDialog.svelte";
+  import StyleNumber from "./StyleNumber.svelte";
+
+  // 字幕とランクで共通の「文字の見た目」。フォント（と字幕の帯）だけを見せ、残りは「詳しく」に畳む。
+  // 変えると表示中のオーバーレイとプレビューにそのまま届く
+  let {
+    look,
+    standard,
+    colorHint,
+    onchange,
+    onreset,
+    fonts,
+    band,
+    details,
+    detailValues,
+  }: {
+    /** 帯は字幕だけが持つ。帯があれば縁取りと影の標準が変わる */
+    look: Look;
+    standard: TextStandard;
+    colorHint?: string;
+    onchange: (patch: MergePatch<TextLook>) => Promise<boolean>;
+    onreset: () => Promise<boolean>;
+    /** フォントの行 */
+    fonts: Snippet;
+    /** フォントの下に出す帯のスイッチ（字幕だけ） */
+    band?: Snippet;
+    /** 「詳しく」の行のうち、字幕とランクで違うもの（字幕の帯の色と濃さもここ） */
+    details: Snippet;
+    /** `details` の行の値（標準から変えている数を出す） */
+    detailValues: (number | null | undefined)[];
+  } = $props();
+
+  let confirming = $state(false);
+  const OUTLINE_RANGE = { min: 0, max: 50, step: 1 };
+  const BLUR_RANGE = { min: 0, max: 100, step: 1 };
+  const outlineWidth = $derived(outlineStandard(look, standard));
+  const changed = $derived(changedDetails(look, detailValues));
+  const summary = $derived(changed ? `詳しく（${changed} つ変更中）` : "詳しく");
+</script>
+
+<div class="flex flex-col gap-6">
+  <Field.Field>
+    <Field.Label>文字の見た目</Field.Label>
+    {@render fonts()}
+    <Field.Description>太字の面がないフォントは、太字を合成して描きます</Field.Description>
+  </Field.Field>
+
+  {@render band?.()}
+
+  <details class="group flex flex-col">
+    <summary
+      class="flex cursor-pointer list-none items-center gap-1 text-sm font-medium select-none"
+    >
+      <ChevronRightIcon class="size-4 transition-transform group-open:rotate-90" />{summary}
+    </summary>
+    <div class="flex flex-col gap-6 pt-4">
+      <ColorField
+        label="文字の色"
+        description={colorHint}
+        value={look.color}
+        standard={standard.color}
+        onchange={(color) => onchange({ color })}
+      />
+
+      <StyleNumber
+        label="縁取りの幅"
+        value={look.outline.width}
+        standard={outlineWidth}
+        presets={[0, 0.08, standard.outlineWidth, 0.3]}
+        percent
+        range={OUTLINE_RANGE}
+        onchange={(width) => onchange({ outline: { width } })}
+      />
+      <ColorField
+        label="縁取りの色"
+        value={look.outline.color}
+        standard={standard.outlineColor}
+        onchange={(color) => onchange({ outline: { color } })}
+      />
+
+      <Field.Field orientation="horizontal">
+        <Field.Label class="flex-1">影</Field.Label>
+        <Switch
+          aria-label="影"
+          checked={shadowOn(look)}
+          onCheckedChange={(enabled) => onchange({ shadow: { enabled } })}
+        />
+      </Field.Field>
+      {#if shadowOn(look)}
+        <StyleNumber
+          label="影のぼかし"
+          value={look.shadow.blur}
+          standard={standard.shadowBlur}
+          presets={[0, 0.1, 0.3, 0.6]}
+          percent
+          range={BLUR_RANGE}
+          onchange={(blur) => onchange({ shadow: { blur } })}
+        />
+        <ColorField
+          label="影の色"
+          value={look.shadow.color}
+          standard={standard.shadowColor}
+          onchange={(color) => onchange({ shadow: { color } })}
+        />
+      {/if}
+      {@render details()}
+      <div>
+        <Button variant="outline" size="sm" onclick={() => (confirming = true)}>
+          文字の見た目を標準に戻す
+        </Button>
+      </div>
+    </div>
+  </details>
+</div>
+
+<ConfirmDialog
+  bind:open={confirming}
+  title="文字の見た目を標準に戻しますか"
+  action="標準に戻す"
+  onconfirm={onreset}
+>
+  <p>フォント、色、縁取り、影などの設定を全部消します。</p>
+</ConfirmDialog>

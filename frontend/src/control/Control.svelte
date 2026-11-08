@@ -6,7 +6,6 @@
   import MicIcon from "@lucide/svelte/icons/mic";
   import PackageIcon from "@lucide/svelte/icons/package";
   import SquareIcon from "@lucide/svelte/icons/square";
-  import TypeIcon from "@lucide/svelte/icons/type";
   import TrophyIcon from "@lucide/svelte/icons/trophy";
   import WalletIcon from "@lucide/svelte/icons/wallet";
   import { ModeWatcher } from "mode-watcher";
@@ -22,7 +21,6 @@
   import { total, unpriced, usd } from "./usage";
   import AudioTab from "./tabs/AudioTab.svelte";
   import DisplayTab from "./tabs/DisplayTab.svelte";
-  import FontTab from "./tabs/FontTab.svelte";
   import ItemsTab from "./tabs/ItemsTab.svelte";
   import KeysTab from "./tabs/KeysTab.svelte";
   import RankTab from "./tabs/RankTab.svelte";
@@ -32,7 +30,6 @@
   onMount(() => panel.start());
 
   const s = $derived(panel.settings);
-  const needsKey = $derived(!!panel.view && !panel.hasAccess);
   let tab = $state("audio");
   /** 中身の欄（広い画面ではここだけがスクロールする） */
   let content = $state<HTMLElement>();
@@ -45,16 +42,24 @@
       icon: CaptionsIcon,
       page: DisplayTab,
       heading: "オーバーレイ",
+      wide: true,
     },
-    { value: "items", label: "アイテム説明", icon: PackageIcon, page: ItemsTab },
-    { value: "rank", label: "ランク", icon: TrophyIcon, page: RankTab },
-    { value: "fonts", label: "フォント", icon: TypeIcon, page: FontTab, heading: "" },
-    { value: "keys", label: "API キー", icon: KeyRoundIcon, page: KeysTab },
+    { value: "items", label: "アイテム説明", icon: PackageIcon, page: ItemsTab, wide: true },
+    { value: "rank", label: "ランク", icon: TrophyIcon, page: RankTab, wide: true },
+    {
+      value: "keys",
+      label: "API キー",
+      icon: KeyRoundIcon,
+      page: KeysTab,
+      heading: "有料のモード",
+    },
     { value: "share", label: "おすそ分け", icon: GiftIcon, page: ShareTab },
     { value: "usage", label: "料金", icon: WalletIcon, page: UsageTab },
   ];
   // デスクトップのウィンドウでは左のサイドバー。OBS のドックのように狭いときは上に並べる
   const wide = new MediaQuery("min-width: 768px");
+  /** オーバーレイのタブはプレビューと設定を 2 列に並べるので広く取る。ほかは読みやすい幅に留める */
+  const pageWidth = $derived(TABS.find((t) => t.value === tab)?.wide ? "max-w-6xl" : "max-w-3xl");
 
   // タブを変えたら（サイドバーからでも、料金や注意のリンクからでも）先頭から見せる。
   // おすそ分けで使われた額はサーバーにあるので、それを出すタブを開いたら取り直す
@@ -97,35 +102,42 @@
   class="flex min-h-screen flex-col bg-background text-foreground has-data-[orientation=vertical]:h-screen"
 >
   <header class="sticky top-0 z-10 shrink-0 border-b bg-background/80 backdrop-blur">
-    <div class="flex items-center gap-4 px-4 py-3">
+    <!-- 狭いときはボタンを次の行に回す -->
+    <div class="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
       <!-- 名前はウィンドウ（OBS ならドックのタブ）に出ているので、状態と今回の料金を置く -->
       <h1 class="sr-only">デドロ字幕</h1>
-      <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+      <div class="flex min-w-40 flex-1 flex-col gap-0.5">
         <p class="flex items-center gap-2 text-sm font-medium">
           <span class="size-2 shrink-0 rounded-full {status.dot}"></span>
           {panel.server === "open" ? status.label : "アプリに接続しています…"}
         </p>
-        <!-- 届く前も行の高さを取っておく（届いたときにページがずれない） -->
-        <p class="h-4 text-xs text-muted-foreground tabular-nums">
-          {#if s && panel.server === "open" && panel.usage}
-            <button class="hover:text-foreground hover:underline" onclick={() => (tab = "usage")}>
-              起動してからの料金 {usd(total(panel.usage.session))}{unpriced(panel.usage.session)
-                ? " ＋α"
-                : ""}
-            </button>
-          {/if}
-        </p>
+        <!-- Chrome のモードは無料なので出さない。使用量が届く前も行の高さを取っておく（届いたときにページがずれない） -->
+        {#if s && s.speechEngine !== "chrome"}
+          <p class="h-4 text-xs text-muted-foreground tabular-nums">
+            {#if panel.server === "open" && panel.usage}
+              <button class="hover:text-foreground hover:underline" onclick={() => (tab = "usage")}>
+                起動してからの料金 {usd(total(panel.usage.session))}{unpriced(panel.usage.session)
+                  ? " ＋α"
+                  : ""}
+              </button>
+            {/if}
+          </p>
+        {/if}
       </div>
       {#if s}
         {#if s.transcriptionEnabled}
           <Button variant="outline" onclick={() => panel.setTranscription(false)}>
             <SquareIcon />字幕を止める
           </Button>
-        {:else if needsKey && s.speechEngine === "hybrid"}
-          <Button variant="outline" onclick={() => (tab = "keys")}>キーを入れる</Button>
-          <Button onclick={panel.startWithChrome}>キーなしで始める（Chrome）</Button>
+        {:else if panel.needsKey}
+          <div class="flex flex-wrap gap-2">
+            <Button variant="outline" onclick={() => (tab = "keys")}
+              >キーかギフトコードを入れる</Button
+            >
+            <Button onclick={panel.startWithChrome}>無料の Chrome モードで始める</Button>
+          </div>
         {:else}
-          <Button disabled={needsKey} onclick={() => panel.setTranscription(true)}>
+          <Button onclick={() => panel.setTranscription(true)}>
             <MicIcon />字幕を始める
           </Button>
         {/if}
@@ -141,7 +153,7 @@
     >
       <!-- 縦のとき（サイドバー）は高さいっぱいに伸ばし、入りきらなければサイドバーだけスクロールする -->
       <div
-        class="flex shrink-0 flex-col px-4 pt-4 group-data-vertical/tabs:w-56 group-data-vertical/tabs:overflow-y-auto group-data-vertical/tabs:border-r group-data-vertical/tabs:bg-muted/30 group-data-vertical/tabs:p-3"
+        class="flex shrink-0 flex-col px-4 pt-4 group-data-vertical/tabs:w-48 group-data-vertical/tabs:overflow-y-auto group-data-vertical/tabs:border-r group-data-vertical/tabs:bg-muted/30 group-data-vertical/tabs:p-3"
       >
         <Tabs.List
           class="w-full shrink-0 justify-start overflow-x-auto overflow-y-hidden group-data-vertical/tabs:gap-1 group-data-vertical/tabs:bg-transparent"
@@ -173,7 +185,7 @@
         </div>
       </div>
       <main bind:this={content} class="min-w-0 flex-1 group-data-vertical/tabs:overflow-y-auto">
-        <div class="mx-auto flex max-w-3xl flex-col gap-4 px-4 py-6">
+        <div class="mx-auto flex {pageWidth} flex-col gap-4 px-4 py-6">
           {#if panel.view?.unsaved}
             <Alert.Root variant="destructive">
               <CircleAlertIcon />
@@ -184,17 +196,19 @@
             </Alert.Root>
           {/if}
           <Onboarding open={(value) => (tab = value)} />
-          {#if needsKey && s.onboardingClosed}
+          {#if panel.needsKey && s.onboardingClosed}
             <Alert.Root>
-              <CircleAlertIcon />
-              <Alert.Title>はじめに OpenAI の API キーを設定してください</Alert.Title>
-              <Alert.Description>
-                <p>
-                  文字起こしと翻訳に使います。人からギフトコードをもらった場合は、それを入れても使えます。キーがなければ、Chrome
-                  のモードで始められます。<button class="underline" onclick={() => (tab = "keys")}>
-                    API キーの設定へ
-                  </button>
-                </p>
+              <KeyRoundIcon />
+              <Alert.Title>このモードには OpenAI の API キーかギフトコードが要ります</Alert.Title>
+              <Alert.Description class="flex flex-wrap gap-2 pt-1">
+                <Button size="sm" onclick={() => (tab = "keys")}>キーかギフトコードを入れる</Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onclick={() => panel.update({ speechEngine: "chrome" })}
+                >
+                  無料の Chrome モードにする
+                </Button>
               </Alert.Description>
             </Alert.Root>
           {/if}
@@ -213,7 +227,9 @@
           {#each TABS as t (t.value)}
             <Tabs.Content value={t.value}><t.page /></Tabs.Content>
           {/each}
-          <div class="hidden tabular-nums group-data-horizontal/tabs:block"><AboutDialog /></div>
+          <div class="hidden tabular-nums group-data-horizontal/tabs:block">
+            <AboutDialog />
+          </div>
         </div>
       </main>
     </Tabs.Root>
