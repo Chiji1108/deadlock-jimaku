@@ -276,29 +276,28 @@ fn start_subtitles(
             }))
         }
         SubtitlesInput::Audio(input) => {
-            let transcriber = match input.engines.transcription {
-                FinalSource::GrokVoiceTranscribe => {
-                    input.xai.map(Transcriber::xai).ok_or(Provider::Xai)
-                }
-                _ => input
-                    .access
-                    .clone()
-                    .map(Transcriber::OpenAi)
-                    .ok_or(Provider::OpenAi),
-            };
-            let transcriber = match transcriber {
-                Ok(_) if input.engines.uses_openai() && input.access.is_none() => {
-                    Err(Provider::OpenAi)
-                }
-                other => other,
-            };
-            let transcriber = match transcriber {
-                Ok(transcriber) => transcriber,
-                Err(provider) => {
-                    store
-                        .set_transcription_error(Some(TranscriptionError::MissingKey { provider }));
-                    return None;
-                }
+            // 足りない鍵があれば始めない（OpenAI を先に知らせる）
+            let missing = [
+                (
+                    Provider::OpenAi,
+                    input.engines.uses_openai() && input.access.is_none(),
+                ),
+                (
+                    Provider::Xai,
+                    input.engines.uses_xai() && input.xai.is_none(),
+                ),
+            ]
+            .into_iter()
+            .find_map(|(provider, missing)| missing.then_some(provider));
+            if let Some(provider) = missing {
+                store.set_transcription_error(Some(TranscriptionError::MissingKey { provider }));
+                return None;
+            }
+            let transcriber = match (input.xai, &input.access) {
+                (Some(key), _) => Transcriber::xai(key),
+                (None, Some(access)) => Transcriber::OpenAi(access.clone()),
+                // 確定が Chrome でなければ、xAI か OpenAI のどちらかを使う（鍵は上で確かめた）
+                (None, None) => unreachable!("finals without a key"),
             };
             let access = input.access;
             tracing::info!("transcription started");

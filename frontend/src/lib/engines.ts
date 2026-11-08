@@ -163,7 +163,10 @@ export const providers = (t: Engines): Provider[] =>
 /** 有料の工程がある（鍵が要る） */
 export const anyPaid = (t: Engines) => providers(t).length > 0;
 
-/** 会社ごとの、要る鍵の名前 */
+/** 会社の名前 */
+export const PROVIDER_NAMES: Record<Provider, string> = { openai: "OpenAI", xai: "xAI" };
+
+/** 会社ごとの、要る鍵の名前。ギフトコードは OpenAI にだけ使える */
 export const KEY_NAMES: Record<Provider, string> = {
   openai: "OpenAI の API キーかギフトコード",
   xai: "xAI の API キー",

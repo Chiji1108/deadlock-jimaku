@@ -12,7 +12,7 @@ import type { MicError } from "../generated/MicError";
 import type { TranscriptionError } from "../generated/TranscriptionError";
 import type { UsageView } from "../generated/UsageView";
 import { api } from "../lib/api";
-import { CHROME, KEY_NAMES, chromeFinals, providers } from "../lib/engines";
+import { CHROME, KEY_NAMES, PROVIDER_NAMES, chromeFinals, providers } from "../lib/engines";
 import { addFontFaces, fontWeights } from "../lib/overlay-fonts";
 import type { MergePatch } from "../lib/text-style";
 import type { FontEntry } from "../generated/FontEntry";
@@ -392,7 +392,7 @@ export function transcriptionErrorText(e: TranscriptionError): string {
     case "giftUnknown":
       return "ギフトコードが見つかりません。おすそ分けしてくれた人に確かめてください";
     case "invalidKey":
-      return `${e.provider === "xai" ? "xAI" : "OpenAI"} の API キーが使えません。キーを確かめてください`;
+      return `${PROVIDER_NAMES[e.provider]} の API キーが使えません。キーを確かめてください`;
     case "inputEnded":
       return "マイクの入力が途切れました";
     case "microphone":

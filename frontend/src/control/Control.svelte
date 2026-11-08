@@ -133,7 +133,9 @@
         {:else if panel.needsKey}
           <div class="flex flex-wrap gap-2">
             <Button variant="outline" onclick={() => (tab = "keys")}
-              >キーかギフトコードを入れる</Button
+              >{panel.missingKeys.includes("openai")
+                ? "キーかギフトコードを入れる"
+                : "キーを入れる"}</Button
             >
             <Button onclick={panel.startWithChrome}>無料の Chrome モードで始める</Button>
           </div>
@@ -202,7 +204,11 @@
               <KeyRoundIcon />
               <Alert.Title>この作り方には {keyNames(panel.missingKeys)}が要ります</Alert.Title>
               <Alert.Description class="flex flex-wrap gap-2 pt-1">
-                <Button size="sm" onclick={() => (tab = "keys")}>キーかギフトコードを入れる</Button>
+                <Button size="sm" onclick={() => (tab = "keys")}
+                  >{panel.missingKeys.includes("openai")
+                    ? "キーかギフトコードを入れる"
+                    : "キーを入れる"}</Button
+                >
                 <Button
                   size="sm"
                   variant="outline"

@@ -33,13 +33,14 @@
 
 <Card.Root>
   <Card.Header>
-    <Card.Title>OpenAI の料金（概算）</Card.Title>
+    <Card.Title>料金（概算）</Card.Title>
     <Card.Description>
-      送った音声の長さと使ったトークン数に、OpenAI の単価を掛けた目安です。正確な金額は
+      送った音声の長さと使ったトークン数に、OpenAI と xAI の単価を掛けた目安です。正確な金額は
       <a class="underline" href="https://platform.openai.com/usage" target="_blank" rel="noreferrer"
-        >OpenAI の使用量のページ</a
-      >で確かめてください。今月は UTC
-      の月で数えます。応答が届かなかった分（タイムアウトなど）は数えられないので、少なめに出ることがあります
+        >OpenAI</a
+      >
+      と <a class="underline" href="https://console.x.ai" target="_blank" rel="noreferrer">xAI</a> の使用量のページで確かめてください。今月は
+      UTC の月で数えます。応答が届かなかった分（タイムアウトなど）は数えられないので、少なめに出ることがあります
     </Card.Description>
   </Card.Header>
   <Card.Content>
@@ -74,7 +75,8 @@
     </div>
     {#if gift}
       <p class="mt-4 text-xs text-muted-foreground">
-        ギフトコードで使っているので、この料金はおすそ分けしてくれた人に請求されます
+        ギフトコードで使っているので、OpenAI の料金はおすそ分けしてくれた人に請求されます{#if panel.settings?.engines.transcription === "grokVoiceTranscribe"}。確定の文字起こし（Grok）の料金は、自分の
+          xAI のキーに請求されます{/if}
       </p>
     {/if}
     {#if unpriced}

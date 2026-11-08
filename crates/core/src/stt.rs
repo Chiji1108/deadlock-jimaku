@@ -416,6 +416,14 @@ const XAI_STT: &str = "https://api.x.ai/v1/stt";
 const XAI_MAX_KEYTERMS: usize = 100;
 const XAI_MAX_KEYTERM_CHARS: usize = 50;
 
+/// xAI の言語コード。アプリの話す言語は、ノルウェー語のほかは同じコードで xAI も受け付ける（2026-11 の一覧）
+fn xai_language(code: &str) -> &str {
+    match code {
+        "no" => "nb",
+        code => code,
+    }
+}
+
 /// xAI が鍵を断った。間違った鍵には 401 ではなく 400 と「Incorrect API key provided」を返す（2026-11 の実測）
 fn xai_refused(status: StatusCode, body: &str) -> bool {
     status == StatusCode::UNAUTHORIZED
@@ -452,7 +460,7 @@ pub async fn transcribe(http: &reqwest::Client, req: BatchRequest<'_>) -> anyhow
         }
         Transcriber::Xai { url, key } => {
             // ファイルより後ろの欄は読まれないことがあるので、ファイルは最後に置く
-            let mut form = form.text("language", req.hints.language.clone());
+            let mut form = form.text("language", xai_language(&req.hints.language).to_owned());
             let keyterms = req.hints.keywords.iter();
             let keyterms = keyterms.filter(|k| k.chars().count() <= XAI_MAX_KEYTERM_CHARS);
             for keyword in keyterms.take(XAI_MAX_KEYTERMS) {
