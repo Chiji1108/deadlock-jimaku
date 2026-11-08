@@ -105,6 +105,11 @@
     border-radius: calc(12px * var(--scale));
     background: var(--band-color, rgb(0 0 0 / 0.62));
   }
+  /* 筆記体や斜体の字の形は送り幅の外にはみ出すので、帯の中に収まるよう字の大きさに比例して空ける
+     （.rank の文字の大きさは名前と別なので、字のある行に置く） */
+  .rank[data-background="band"] p {
+    padding-inline-end: 0.3em;
+  }
   .badge {
     width: var(--badge-size, calc(96px * var(--scale)));
     height: var(--badge-size, calc(96px * var(--scale)));
