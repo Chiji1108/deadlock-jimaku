@@ -578,8 +578,8 @@ async fn rank_sample(
     State(store): State<Arc<Store>>,
     Query(query): Query<RankSampleQuery>,
 ) -> Result<Json<RankState>, StatusCode> {
-    lang::find(&query.lang).ok_or(StatusCode::BAD_REQUEST)?;
-    Ok(Json(rank::sample(&store, &query.lang).await))
+    let language = lang::find(&query.lang).ok_or(StatusCode::BAD_REQUEST)?;
+    Ok(Json(rank::sample(&store, language).await))
 }
 
 /// URL に版やバッジを含むアセット（中身が変わらない）を長くキャッシュさせて返す

@@ -27,19 +27,43 @@
   /** 操作パネルのプレビュー（`?preview`）では、アカウントを入れる前でも見本を出しておく。OBS には出さない */
   const preview = new URLSearchParams(location.search).has("preview");
   /** 見本は core が本物と同じ作り方で返す（ゲームの画像は配布物に入れず、取ってくる）。
-   * 名前はランクの言語の分だけ取るので、言語を変えたら、届くまで前の言語の名前のまま出す */
-  let sample = $state<{ rank: RankState; lang: string } | undefined>();
-  const shown = $derived(rank && lang ? { rank, lang } : sample);
+   * 名前は英語とランクの言語の分だけ取るので、言語を変えたら、届くまで前の言語の名前のまま出す */
+  let sample = $state<RankState | undefined>();
+  let sampleLang = $state<string | undefined>();
+  const shown = $derived(rank ?? sample);
+  /** 取りに行っている言語。英語は名前のない言語の代わりに出すので、ほかの言語に変えても取り消さない */
+  const pending = new Map<string, AbortController>();
 
-  $effect(() => {
-    if (!preview || !lang) return;
-    const want = lang;
-    let stale = false;
-    void api.rankSample(want).then((s) => {
-      if (!stale) sample = { rank: { ...s, image: s.image ?? FALLBACK_IMAGE }, lang: want };
-    });
-    return () => (stale = true);
-  });
+  /** 本物のランクがあれば取らない。取れなかった名前は、次に display が届いたときに取り直す */
+  function loadSample(want: string) {
+    if (!preview || rank) return;
+    if (sample?.names[want]) {
+      sampleLang = want;
+      return;
+    }
+    if (pending.has(want)) return;
+    for (const [l, controller] of pending) {
+      if (l === "en") continue;
+      controller.abort();
+      pending.delete(l);
+    }
+    const controller = new AbortController();
+    pending.set(want, controller);
+    api
+      .rankSample(want, controller.signal)
+      .then((s) => {
+        // 英語の答えは、表示の言語の答えより先に届いたときだけ使う（表示の言語の答えにも英語の名前は入る）
+        if (sample && want !== lang) return;
+        sample = { ...s, image: s.image ?? FALLBACK_IMAGE };
+        sampleLang = want;
+      })
+      .catch((e: unknown) => {
+        if (!controller.signal.aborted) console.warn("rank sample", e);
+      })
+      .finally(() => {
+        if (pending.get(want) === controller) pending.delete(want);
+      });
+  }
 
   // 大きさは --scale で描く（zoom だとポイントの数字のアニメーションの位置がずれる）
   $effect(() =>
@@ -51,7 +75,9 @@
   );
 
   onMount(() => {
-    return connect(["rank", "display"], (msg) => {
+    // 表示の言語が届くのを待たずに、英語の名前とアイコンを取り始める
+    loadSample("en");
+    const disconnect = connect(["rank", "display"], (msg) => {
       if (msg.type === "rank.update") rank = msg.rank ?? undefined;
       if (msg.type === "display") {
         applyFontImports(fontImports([msg.rankStyle.font]));
@@ -59,8 +85,13 @@
         lang = msg.rankLanguage;
         content = msg.rankContent;
         anchor = msg.rankAnchor;
+        loadSample(msg.rankLanguage);
       }
     });
+    return () => {
+      disconnect();
+      for (const controller of pending.values()) controller.abort();
+    };
   });
 </script>
 
@@ -68,9 +99,9 @@
 <div class="stage" style:place-items={placeItems(anchor)}>
   {#if shown && content}
     <!-- バッジが変わったら作り直してアニメーションさせる -->
-    {#key shown.rank.badge}
+    {#key shown.badge}
       <div class="card" in:scale={{ start: 0.8, duration: 400 }}>
-        <RankBadge rank={shown.rank} lang={shown.lang} {content} {look} />
+        <RankBadge rank={shown} lang={(rank ? lang : sampleLang) ?? "en"} {content} {look} />
       </div>
     {/key}
   {/if}
