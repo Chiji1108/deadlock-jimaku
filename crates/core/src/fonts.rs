@@ -4,7 +4,7 @@ use std::collections::hash_map::DefaultHasher;
 use std::collections::{BTreeSet, HashSet};
 use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
-use std::sync::{LazyLock, Mutex, OnceLock};
+use std::sync::{Arc, LazyLock, Mutex, OnceLock};
 use std::time::{Duration, UNIX_EPOCH};
 
 use anyhow::{Context, ensure};
@@ -78,7 +78,7 @@ pub fn find(family: &str) -> Option<&'static CatalogFont> {
 }
 
 /// ダウンロードしたフォントの置き場所
-pub fn folder(data_dir: &Path) -> PathBuf {
+fn folder(data_dir: &Path) -> PathBuf {
     data_dir.join("fonts")
 }
 
@@ -204,14 +204,6 @@ async fn download_once(
         .map_err(DownloadError::Failed)
 }
 
-pub async fn download(font: &CatalogFont, dir: &Path) -> Result<(), DownloadError> {
-    let origin = format!(
-        "https://raw.githubusercontent.com/google/fonts/{}",
-        CATALOG.commit
-    );
-    download_once(&origin, font, dir, LIMITS).await
-}
-
 /// 設定に保存できて、一覧に出すファミリーか。`.` で始まる名前は macOS の内部用で、選べない
 fn selectable(family: &str) -> bool {
     valid_font_name(family) && !family.starts_with('.')
@@ -268,23 +260,18 @@ fn list(pc: Vec<String>, catalog: &[CatalogFont], dir: &Path) -> Vec<FontEntry> 
         .collect()
 }
 
-fn scan(dir: &Path) -> Vec<FontEntry> {
-    let mut db = Database::new();
-    db.load_system_fonts();
+/// ダウンロードで置いたフォントは PC のフォントに数えない
+fn scan(db: &Database, dir: &Path) -> Vec<FontEntry> {
+    let downloaded =
+        |face: &&FaceInfo| matches!(&face.source, Source::File(path) if path.starts_with(dir));
     // 先頭は英語の名前。どの OS でも CSS の font-family に書ける
     let pc = entries(
         db.faces()
+            .filter(|face| !downloaded(face))
             .filter_map(|face| face.families.first())
             .map(|(family, _)| family.as_str()),
     );
     list(pc, &CATALOG.fonts, dir)
-}
-
-/// PC のフォントを全部開くので別のスレッドで読む。入れたばかりのフォントも出るよう、毎回読み直す
-pub async fn listed(dir: PathBuf) -> Vec<FontEntry> {
-    tokio::task::spawn_blocking(move || scan(&dir))
-        .await
-        .expect("blocking task")
 }
 
 /// 配る面。URL から受け取った名前は `fontdb` の結果と比べるだけで、パスには使わない。
@@ -378,18 +365,74 @@ fn file(db: &Database, family: &str, postscript: &str) -> Option<FaceFile> {
     })
 }
 
-/// そのファミリーの `@font-face`。一覧にないファミリーは `None`
-pub async fn faces_css(dir: PathBuf, family: String) -> Option<String> {
-    tokio::task::spawn_blocking(move || css(&database(&dir), &family))
+/// PC のフォントとダウンロードしたフォントを読んだ `fontdb`。読み直すのは一覧を読むときと
+/// ダウンロードを終えたときだけで、`faces.css` と面の配信は同じものを使う
+pub struct Library {
+    dir: PathBuf,
+    db: Mutex<Option<Arc<Database>>>,
+}
+
+/// PC のフォントを全部開くので、別のスレッドで読む
+async fn blocking<T: Send + 'static>(read: impl FnOnce() -> T + Send + 'static) -> T {
+    tokio::task::spawn_blocking(read)
         .await
         .expect("blocking task")
 }
 
-/// `faces_css` に書いた面のファイル
-pub async fn face_file(dir: PathBuf, family: String, postscript: String) -> Option<FaceFile> {
-    tokio::task::spawn_blocking(move || file(&database(&dir), &family, &postscript))
-        .await
-        .expect("blocking task")
+impl Library {
+    pub fn new(data_dir: &Path) -> Self {
+        Self {
+            dir: folder(data_dir),
+            db: Mutex::new(None),
+        }
+    }
+
+    /// 一覧をまだ読んでいなければ、ここで読む（OBS のオーバーレイは一覧を読まない）
+    fn current(&self) -> Arc<Database> {
+        let mut db = self.db.lock().expect("lock");
+        db.get_or_insert_with(|| Arc::new(database(&self.dir)))
+            .clone()
+    }
+
+    fn reload(&self) -> Arc<Database> {
+        let db = Arc::new(database(&self.dir));
+        *self.db.lock().expect("lock") = Some(db.clone());
+        db
+    }
+
+    /// 入れたばかりのフォントも出るよう、読み直す
+    pub async fn list(self: &Arc<Self>) -> Vec<FontEntry> {
+        let library = self.clone();
+        blocking(move || scan(&library.reload(), &library.dir)).await
+    }
+
+    /// そのファミリーの `@font-face`。一覧にないファミリーは `None`
+    pub async fn faces_css(self: &Arc<Self>, family: String) -> Option<String> {
+        let library = self.clone();
+        blocking(move || css(&library.current(), &family)).await
+    }
+
+    /// `faces_css` に書いた面のファイル
+    pub async fn face_file(
+        self: &Arc<Self>,
+        family: String,
+        postscript: String,
+    ) -> Option<FaceFile> {
+        let library = self.clone();
+        blocking(move || file(&library.current(), &family, &postscript)).await
+    }
+
+    /// 置いたフォントをすぐ配れるよう、読み直す
+    pub async fn download(self: &Arc<Self>, font: &CatalogFont) -> Result<(), DownloadError> {
+        let origin = format!(
+            "https://raw.githubusercontent.com/google/fonts/{}",
+            CATALOG.commit
+        );
+        download_once(&origin, font, &self.dir, LIMITS).await?;
+        let library = self.clone();
+        blocking(move || drop(library.reload())).await;
+        Ok(())
+    }
 }
 
 const COLLECTION: &[u8] = b"ttcf";
@@ -954,6 +997,33 @@ mod tests {
         assert_eq!(
             sheet_files(&database(&fonts), "Download Probe"),
             ["Probe-Regular", "Probe-Bold"]
+        );
+    }
+
+    #[tokio::test]
+    async fn a_saved_font_is_served_once_the_list_is_read_again() {
+        let data = tempfile::tempdir().unwrap();
+        let library = Arc::new(Library::new(data.path()));
+        let family = || "Later Probe".to_owned();
+        assert_eq!(library.faces_css(family()).await, None);
+
+        let fonts = folder(data.path());
+        std::fs::create_dir(&fonts).unwrap();
+        std::fs::write(
+            fonts.join("later.ttf"),
+            face("Later Probe", "Later-Regular", 400),
+        )
+        .unwrap();
+        assert_eq!(library.faces_css(family()).await, None);
+
+        let list = library.list().await;
+        assert!(list.iter().all(|font| font.family != "Later Probe"));
+        assert!(library.faces_css(family()).await.is_some());
+        assert!(
+            library
+                .face_file(family(), "Later-Regular".to_owned())
+                .await
+                .is_some()
         );
     }
 

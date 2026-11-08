@@ -80,50 +80,32 @@ test("見本は言語名で、日本語だけかなと漢字を混ぜる", () =>
   expect(fontSample("ja")).toMatch(/\p{Script=Hiragana}.*\p{Script=Katakana}.*\p{Script=Han}/u);
 });
 
-test("フォントの読み込みは、前が終わってから次を始める", async () => {
-  type Link = { href?: string; events: Record<string, () => void> };
-  const links: Link[] = [];
+test("フォントの読み込みは、名前を URL に入れた faces.css を足す", () => {
+  const links: { href?: string }[] = [];
   vi.stubGlobal("document", {
-    createElement: () => {
-      const link: Link & { addEventListener: (name: string, run: () => void) => void } = {
-        events: {},
-        addEventListener: (name, run) => (link.events[name] = run),
-      };
-      return link;
-    },
-    head: { append: (link: Link) => links.push(link) },
+    createElement: () => ({}),
+    head: { append: (link: { href?: string }) => links.push(link) },
   });
   addFontFaces("A B");
   addFontFaces("C");
-  addFontFaces("D");
-  await vi.waitFor(() => expect(links).toHaveLength(1));
-  expect(links[0]!.href).toBe("/api/fonts/A%20B/faces.css");
-
-  links[0]!.events.load!();
-  await vi.waitFor(() => expect(links).toHaveLength(2));
-  links[1]!.events.error!();
-  await vi.waitFor(() => expect(links).toHaveLength(3));
-  expect(links[2]!.href).toBe("/api/fonts/D/faces.css");
-  links[2]!.events.load!();
+  expect(links.map((link) => link.href)).toEqual([
+    "/api/fonts/A%20B/faces.css",
+    "/api/fonts/C/faces.css",
+  ]);
   vi.unstubAllGlobals();
 });
 
-test("太さの読み込みも 1 本ずつで、失敗しても次へ進む", async () => {
-  const replies = [
-    { ok: false, status: 404 },
-    { ok: true, text: async () => "font-weight: 400 400;" },
-  ];
-  const finish: (() => void)[] = [];
-  const fetchFaces = vi.fn(() => new Promise((reply) => finish.push(() => reply(replies.shift()))));
-  vi.stubGlobal("fetch", fetchFaces);
-  const missing = fontWeights("A");
-  const found = fontWeights("B");
-  await vi.waitFor(() => expect(fetchFaces).toHaveBeenCalledTimes(1));
-  finish[0]!();
-  await expect(missing).rejects.toThrow("404");
-  await vi.waitFor(() => expect(fetchFaces).toHaveBeenCalledTimes(2));
-  finish[1]!();
-  await expect(found).resolves.toEqual([400]);
+test("太さは faces.css から読み、読めなければ reject", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string) =>
+      url.includes("/A/")
+        ? { ok: false, status: 404 }
+        : { ok: true, text: async () => "font-weight: 400 400;" },
+    ),
+  );
+  await expect(fontWeights("A")).rejects.toThrow("404");
+  await expect(fontWeights("B")).resolves.toEqual([400]);
   vi.unstubAllGlobals();
 });
 

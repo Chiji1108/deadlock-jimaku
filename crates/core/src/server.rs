@@ -443,7 +443,7 @@ async fn languages() -> Json<Vec<LangCode>> {
 }
 
 async fn fonts(State(store): State<Arc<Store>>) -> Json<Vec<fonts::FontEntry>> {
-    Json(fonts::listed(fonts::folder(store.data_dir())).await)
+    Json(store.fonts().list().await)
 }
 
 /// カタログの名前だけを受け付ける。別の URL やパスは渡せない
@@ -451,7 +451,7 @@ async fn download_font(State(store): State<Arc<Store>>, Path(family): Path<Strin
     let Some(font) = fonts::find(&family) else {
         return StatusCode::NOT_FOUND.into_response();
     };
-    match fonts::download(font, &fonts::folder(store.data_dir())).await {
+    match store.fonts().download(font).await {
         Ok(()) => StatusCode::NO_CONTENT.into_response(),
         Err(fonts::DownloadError::Busy) => {
             (StatusCode::CONFLICT, "ダウンロード中です").into_response()
@@ -492,7 +492,7 @@ async fn font_faces(
     Path(family): Path<String>,
     headers: HeaderMap,
 ) -> Response {
-    match fonts::faces_css(fonts::folder(store.data_dir()), family).await {
+    match store.fonts().faces_css(family).await {
         Some(css) => font_response(
             &headers,
             fonts::content_etag(&css),
@@ -508,7 +508,7 @@ async fn font_file(
     Path((family, postscript)): Path<(String, String)>,
     headers: HeaderMap,
 ) -> Response {
-    match fonts::face_file(fonts::folder(store.data_dir()), family, postscript).await {
+    match store.fonts().face_file(family, postscript).await {
         Some(face) => font_response(&headers, face.etag, "font/sfnt", face.data),
         None => StatusCode::NOT_FOUND.into_response(),
     }

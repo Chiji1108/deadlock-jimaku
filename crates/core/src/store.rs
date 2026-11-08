@@ -11,6 +11,7 @@ use tokio::sync::{broadcast, watch};
 
 use crate::assets::Loaded;
 use crate::chrome::{self, Browser};
+use crate::fonts::Library;
 use crate::settings::{self, Settings, SettingsPatch, SubtitleDisplay};
 use crate::types::{
     ChromeCommand, Heard, ItemCardsView, LiveState, LiveStatus, RankState, Segment, ServerMsg,
@@ -74,6 +75,7 @@ pub struct Store {
     /// ハイブリッドの発話を閉じた回数
     chrome_cuts: AtomicU32,
     meter: Arc<Meter>,
+    fonts: Arc<Library>,
 }
 
 impl Store {
@@ -87,6 +89,7 @@ impl Store {
             }
         };
         let meter = Arc::new(Meter::new(data_dir.join("usage.json")));
+        let fonts = Arc::new(Library::new(&data_dir));
         Arc::new(Self {
             settings: watch::Sender::new(settings),
             data_dir,
@@ -105,6 +108,7 @@ impl Store {
             browser: Mutex::new(None),
             chrome_cuts: AtomicU32::new(0),
             meter,
+            fonts,
         })
     }
 
@@ -118,6 +122,10 @@ impl Store {
 
     pub fn data_dir(&self) -> &Path {
         &self.data_dir
+    }
+
+    pub fn fonts(&self) -> &Arc<Library> {
+        &self.fonts
     }
 
     /// 操作パネルからの変更を当てて保存する。読めない値なら何も変えずにエラー

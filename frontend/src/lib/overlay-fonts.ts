@@ -15,28 +15,12 @@ export function endonym(lang: string) {
 
 const facesUrl = (family: string) => `/api/fonts/${encodeURIComponent(family)}/faces.css`;
 
-let faces: Promise<unknown> = Promise.resolve();
-
-/** faces.css は 1 回ごとに PC の全部のフォントを読むので、重ねず 1 本ずつ読む */
-function inTurn<T>(read: () => Promise<T>) {
-  const reading = faces.then(read);
-  faces = reading.catch(() => undefined);
-  return reading;
-}
-
 /** 開いたあとに入ったフォントは WebView が名前で描けないので、一覧の見本のために読み込む */
 export function addFontFaces(family: string) {
-  void inTurn(
-    () =>
-      new Promise<void>((done) => {
-        const link = document.createElement("link");
-        link.rel = "stylesheet";
-        link.href = facesUrl(family);
-        link.addEventListener("load", () => done());
-        link.addEventListener("error", () => done());
-        document.head.append(link);
-      }),
-  );
+  const link = document.createElement("link");
+  link.rel = "stylesheet";
+  link.href = facesUrl(family);
+  document.head.append(link);
 }
 
 const WEIGHT_STEPS = [100, 200, 300, 400, 500, 600, 700, 800, 900];
@@ -53,12 +37,11 @@ export function faceWeights(css: string) {
 }
 
 /** そのフォントの持つ太さ。読めなければ reject */
-export const fontWeights = (family: string) =>
-  inTurn(async () => {
-    const res = await fetch(facesUrl(family));
-    if (!res.ok) throw new Error(`faces.css: ${res.status}`);
-    return faceWeights(await res.text());
-  });
+export async function fontWeights(family: string) {
+  const res = await fetch(facesUrl(family));
+  if (!res.ok) throw new Error(`faces.css: ${res.status}`);
+  return faceWeights(await res.text());
+}
 
 /** フォントの見本。日本語は言語名だと漢字だけになるので、かなも混ぜる */
 export const fontSample = (lang: string) => (lang === "ja" ? "あいアイ漢字" : endonym(lang));
