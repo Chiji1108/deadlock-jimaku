@@ -37,7 +37,7 @@
       label: "Chrome",
       traits: "キー不要",
       price: "無料",
-      hint: "音声認識も翻訳も Chrome で行います",
+      hint: "多くの字幕ソフトと同じく、Chrome の音声認識を使います",
     },
     {
       value: "hybrid",
@@ -88,8 +88,7 @@
   <Card.Root>
     <Card.Header>
       <Card.Title>モード</Card.Title>
-      <Card.Description>字幕をどこで作るかを選びます。無料の Chrome で始められます</Card.Description
-      >
+      <Card.Description>字幕をどこで作るかを選びます</Card.Description>
     </Card.Header>
     <Card.Content class="flex flex-col gap-3">
       <div class="grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label="モード">
