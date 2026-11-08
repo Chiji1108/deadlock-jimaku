@@ -492,9 +492,7 @@ fn merged<T: Serialize + DeserializeOwned>(current: &T, patch: &Value) -> Result
 #[serde(rename_all = "lowercase")]
 #[ts(export)]
 pub enum RankContent {
-    /// アイコン・名前・ポイント（ゲージ）
-    Full,
-    /// アイコン・名前・細いゲージ（ゲージのあるランクは数字なし。小さく置くとき向け）
+    /// アイコン・名前・ゲージ（ゲージのないエターナスは順位かポイント）
     Gauge,
     /// アイコンと名前
     Name,
@@ -1887,6 +1885,21 @@ mod tests {
         // 残った値は変更の検証を通る
         s.apply(subtitle_style(json!({ "color": "#ffffff" })))
             .unwrap();
+    }
+
+    #[test]
+    fn an_unknown_rank_content_falls_back_to_the_gauge() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join(FILE);
+        std::fs::write(
+            &path,
+            r#"{ "rankAccount": 308386819, "rankContent": "full", "rankAnchor": "bottom-right" }"#,
+        )
+        .unwrap();
+        let s = load(&path).unwrap();
+        assert_eq!(s.rank_content, RankContent::Gauge);
+        assert_eq!(s.rank_account, Some(308_386_819));
+        assert_eq!(s.rank_anchor, Anchor::BottomRight);
     }
 
     #[test]

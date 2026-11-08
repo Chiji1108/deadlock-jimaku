@@ -45,7 +45,7 @@
   style={look && textVars(look, BLUR_EM)}
 >
   {#if rank.image}<img class="badge" src={rank.image} alt="" />{/if}
-  <!-- 1 行目: ランク名、2 行目: ゲージ（ポイントを重ねるか、数字なしで細くする）。出すものは操作パネルで選ぶ -->
+  <!-- 1 行目: ランク名、2 行目: ゲージ。出すものは操作パネルで選ぶ -->
   {#if content !== "icon"}<div class="text">
       {#if label}<p class="name" style={font}>{label}</p>{/if}
       {#if content === "name"}
@@ -54,19 +54,11 @@
         <!-- エターナスは上のティアがないので、リーダーボードの順位を出す -->
         <p class="points" style={font}>{placement(rank.leaderboard)}</p>
       {:else if rank.progress}
-        <div class="bar" class:thin={content === "gauge"}>
+        <div class="bar">
           <div class="fill" style:width="{ratio * 100}%"></div>
-          {#if content === "full"}
-            <p class="points" style={font}>
-              <!-- ポイントが変わったら桁ごとに数字を動かす -->
-              <TextMorph text={number(rank.progress.value)} numbers as="span" duration={600} /><span
-                class="max">{` / ${number(rank.progress.max)}`}</span
-              >
-            </p>
-          {/if}
         </div>
       {:else if rank.points !== undefined}
-        <!-- 順位が取れないエターナスは、累積のポイントを出す -->
+        <!-- 順位が取れないエターナスは、累積のポイントを出す。変わったら桁ごとに数字を動かす -->
         <p class="points" style={font}>
           <TextMorph text={number(rank.points)} numbers as="span" duration={600} />
           <span class="unit">RP</span>
@@ -130,21 +122,15 @@
     flex-direction: column;
     gap: calc(6px * var(--scale));
   }
+  /* 幅はランク名に合わせる（短い名前でも進み具合が読める長さは残す）。変数の名前は、ポイントを重ねる太いゲージがあったころのまま */
   .bar {
     position: relative;
-    display: grid;
-    place-items: center;
-    min-width: var(--gauge-width, calc(260px * var(--scale)));
-    height: var(--gauge-height, calc(30px * var(--scale)));
+    min-width: var(--gauge-thin-width, calc(120px * var(--scale)));
+    height: var(--gauge-thin-height, calc(12px * var(--scale)));
     border-radius: 999px;
     background: rgb(0 0 0 / 0.55);
     box-shadow: 0 0 0 calc(2px * var(--scale)) rgb(0 0 0 / 0.6);
     overflow: hidden;
-  }
-  /* 数字を重ねないときは細くして、幅はランク名に合わせる（短い名前でも進み具合が読める長さは残す） */
-  .thin {
-    min-width: var(--gauge-thin-width, calc(120px * var(--scale)));
-    height: var(--gauge-thin-height, calc(12px * var(--scale)));
   }
   .fill {
     position: absolute;
@@ -152,17 +138,11 @@
     background: var(--gauge-color);
     transition: width 0.6s ease-out;
   }
-  /* 白い塗りの上でも暗い地の上でも読めるよう、縁取りした白い文字を中央に重ねる */
-  .bar .points {
-    position: relative;
-    line-height: 1;
-  }
   .points {
     font-size: var(--points-size, calc(20px * var(--scale)));
     font-variant-numeric: tabular-nums;
   }
-  .unit,
-  .max {
+  .unit {
     font-size: 0.7em;
     opacity: 0.75;
   }

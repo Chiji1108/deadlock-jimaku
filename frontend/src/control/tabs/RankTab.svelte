@@ -21,8 +21,7 @@
   import { overlayUrl, panel } from "../panel.svelte";
 
   const CONTENTS: { value: RankContent; label: string }[] = [
-    { value: "gauge", label: "名前とゲージ" },
-    { value: "full", label: "名前とポイント" },
+    { value: "gauge", label: "ゲージ" },
     { value: "name", label: "名前だけ" },
     { value: "icon", label: "アイコンだけ" },
   ];
