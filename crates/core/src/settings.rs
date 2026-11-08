@@ -987,37 +987,6 @@ pub struct SettingsPatch {
     pub rank_region: Option<String>,
 }
 
-/// 0.3 は帯を `subtitleDisplay.background`、フォントを `overlayFonts` に持っていた。
-/// `subtitleStyle` があるファイルは移したあとなので変えない。フォントを移したら true
-fn migrate(json: &mut Value) -> bool {
-    let Some(settings) = json.as_object_mut() else {
-        return false;
-    };
-    let band = settings
-        .get_mut("subtitleDisplay")
-        .and_then(Value::as_object_mut)
-        .and_then(|display| display.remove("background"));
-    let fonts = settings.remove("overlayFonts");
-    if settings.contains_key("subtitleStyle") {
-        return false;
-    }
-    let languages: serde_json::Map<_, _> = fonts
-        .iter()
-        .filter_map(Value::as_object)
-        .flatten()
-        .map(|(language, font)| (language.clone(), serde_json::json!({ "font": font })))
-        .collect();
-    let moved = !languages.is_empty();
-    settings.insert(
-        "subtitleStyle".into(),
-        serde_json::json!({
-            "background": { "enabled": band.is_some_and(|b| b == "band") },
-            "languages": languages,
-        }),
-    );
-    moved
-}
-
 /// 読めない項目だけを捨てて、ほかの項目は残す。項目を 1 つだけ書いた設定として、葉から順に確かめる
 fn keep_readable(value: &mut Value, path: &mut Vec<String>) -> bool {
     if let Value::Object(fields) = value {
@@ -1046,18 +1015,8 @@ fn keep_readable(value: &mut Value, path: &mut Vec<String>) -> bool {
 /// JSON として読めなければ Err
 fn parse(bytes: &[u8]) -> serde_json::Result<Settings> {
     let mut json: Value = serde_json::from_slice(bytes)?;
-    let moved_fonts = migrate(&mut json);
     keep_readable(&mut json, &mut Vec::new());
-    let mut settings: Settings = serde_json::from_value(json)?;
-    if moved_fonts {
-        // 0.3 はランクも `overlayFonts` のランク名の言語のフォントで描いていた
-        let font = settings
-            .subtitle_style
-            .languages
-            .get(&settings.rank_language());
-        settings.rank_style.font.font = font.and_then(|font| font.font.clone());
-    }
-    Ok(settings)
+    serde_json::from_value(json)
 }
 
 pub fn load(path: &Path) -> std::io::Result<Settings> {
@@ -1800,167 +1759,47 @@ mod tests {
     }
 
     #[test]
-    fn settings_from_0_3_keep_their_display_and_look() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("settings.json");
-        let old = |background: &str| {
-            format!(
-                r#"{{
-                    "overlayFonts": {{ "ja": "Old Font" }},
-                    "subtitleDisplay": {{
-                        "align": "left", "fontSize": 52, "translationFontSize": 30,
-                        "background": "{background}", "maxLines": 2, "holdSeconds": 9
-                    }}
-                }}"#
-            )
-        };
-        std::fs::write(&path, old("band")).unwrap();
-        let s = load(&path).unwrap();
-        assert_eq!(s.subtitle_display.align, Align::Left);
-        assert_eq!(s.subtitle_display.font_size, 52);
-        assert_eq!(s.subtitle_display.translation_font_size, 30);
-        assert_eq!(s.subtitle_display.max_lines, 2);
-        assert_eq!(s.subtitle_display.hold_seconds, 9.0);
-        let languages = || {
-            BTreeMap::from([(
-                "ja".to_owned(),
-                FontStyle {
-                    font: Some("Old Font".to_owned()),
-                    ..Default::default()
-                },
-            )])
-        };
-        assert_eq!(
-            s.subtitle_style,
-            SubtitleStyle {
-                look: TextLook {
-                    background: Background {
-                        enabled: true,
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                },
-                languages: languages(),
-                ..Default::default()
-            }
-        );
-
-        // 保存し直しても帯とフォントは残る
-        save(&path, &s).unwrap();
-        assert_eq!(load(&path).unwrap(), s);
-
-        std::fs::write(&path, old("outline")).unwrap();
-        let s = load(&path).unwrap();
-        assert_eq!(s.subtitle_display.font_size, 52);
-        assert_eq!(
-            s.subtitle_style,
-            SubtitleStyle {
-                languages: languages(),
-                ..Default::default()
-            }
-        );
-        assert_eq!(s.rank_style.look, TextLook::default());
-    }
-
-    #[test]
-    fn overlay_fonts_from_0_3_move_to_the_styles() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("settings.json");
-        let load_old = |settings: serde_json::Value| {
-            std::fs::write(&path, settings.to_string()).unwrap();
-            load(&path).unwrap()
-        };
-        let fonts = json!({ "ja": "Mincho", "en": "Georgia", "ko": "Jua" });
-        let rank_font = |s: &Settings| s.rank_style.font.font.clone();
-
-        let s = load_old(json!({ "overlayFonts": fonts, "micLanguage": "ja" }));
-        assert_eq!(font_of(&s, "ja").as_deref(), Some("Mincho"));
-        assert_eq!(font_of(&s, "en").as_deref(), Some("Georgia"));
-        assert_eq!(font_of(&s, "ko").as_deref(), Some("Jua"));
-        assert_eq!(
-            rank_font(&s).as_deref(),
-            Some("Mincho"),
-            "the spoken language"
-        );
-
-        let s = load_old(json!({ "overlayFonts": fonts, "rankLanguage": "en" }));
-        assert_eq!(
-            rank_font(&s).as_deref(),
-            Some("Georgia"),
-            "the rank language"
-        );
-
-        // 翻訳先から外した言語の名前は取らないので、0.3 も話す言語で描いていた
-        let s = load_old(json!({ "overlayFonts": fonts, "rankLanguage": "ko" }));
-        assert_eq!(rank_font(&s).as_deref(), Some("Mincho"));
-        let s = load_old(json!({
-            "overlayFonts": fonts, "rankLanguage": "ko", "translateTo": ["ko"]
-        }));
-        assert_eq!(rank_font(&s).as_deref(), Some("Jua"));
-
-        let s = load_old(json!({ "overlayFonts": { "en": "Georgia" }, "micLanguage": "ja" }));
-        assert_eq!(rank_font(&s), None, "no font for the rank language");
-
-        // 保存すると今の形だけが残り、読み直しても同じ
-        let s = load_old(json!({ "overlayFonts": fonts, "rankLanguage": "en" }));
-        save(&path, &s).unwrap();
-        let file = std::fs::read_to_string(&path).unwrap();
-        assert!(!file.contains("overlayFonts"));
-        assert_eq!(load(&path).unwrap(), s);
-    }
-
-    #[test]
-    fn broken_overlay_fonts_from_0_3_are_dropped_one_by_one() {
+    fn band_and_fonts_from_0_3_2_go_back_to_the_standard() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("settings.json");
         std::fs::write(
             &path,
             json!({
+                "speechEngine": "chrome",
                 "micLanguage": "ko",
                 "rankAccount": 308_386_819,
-                "overlayFonts": {
-                    "ja": "Mincho",
-                    "ko": "bad\nname",
-                    "en": 1,
-                    "latin": "Georgia"
+                "overlayFonts": { "ja": "Old Font" },
+                "subtitleDisplay": {
+                    "align": "left", "fontSize": 52, "translationFontSize": 30,
+                    "background": "band", "maxLines": 2, "holdSeconds": 9
                 }
             })
             .to_string(),
         )
         .unwrap();
         let s = load(&path).unwrap();
+        assert_eq!(s.speech_engine, SpeechEngine::Chrome);
+        assert_eq!(s.mic_language, "ko");
         assert_eq!(s.rank_account, Some(308_386_819));
         assert_eq!(
-            s.subtitle_style.languages.keys().collect::<Vec<_>>(),
-            ["ja"]
+            s.subtitle_display,
+            SubtitleDisplay {
+                align: Align::Left,
+                font_size: 52,
+                translation_font_size: 30,
+                max_lines: 2,
+                hold_seconds: 9.0,
+                ..Default::default()
+            }
         );
-        assert_eq!(font_of(&s, "ja").as_deref(), Some("Mincho"));
-        assert_eq!(s.rank_style.font.font, None);
+        assert_eq!(s.subtitle_style, SubtitleStyle::default());
+        assert_eq!(s.rank_style, RankStyle::default());
 
-        std::fs::write(&path, r#"{ "overlayFonts": 1, "micLanguage": "en" }"#).unwrap();
-        let s = load(&path).unwrap();
-        assert_eq!(s.mic_language, "en");
-        assert!(s.subtitle_style.languages.is_empty());
+        save(&path, &s).unwrap();
+        let file = std::fs::read_to_string(&path).unwrap();
+        assert!(!file.contains("overlayFonts") && !file.contains("band"));
+        assert_eq!(load(&path).unwrap(), s);
     }
-
-    #[test]
-    fn saved_styles_are_not_migrated_again() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("settings.json");
-        std::fs::write(
-            &path,
-            r#"{
-                "overlayFonts": { "ja": "Old Font" },
-                "subtitleStyle": { "languages": { "ja": { "font": "New Font" } } },
-                "rankStyle": { "font": "Rank Font" }
-            }"#,
-        )
-        .unwrap();
-        let s = load(&path).unwrap();
-        assert_eq!(font_of(&s, "ja").as_deref(), Some("New Font"));
-        assert_eq!(s.rank_style.font.font.as_deref(), Some("Rank Font"));
-    }
-
     #[test]
     fn broken_style_values_fall_back_without_losing_the_rest() {
         let dir = tempfile::tempdir().unwrap();
