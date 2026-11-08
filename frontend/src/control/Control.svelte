@@ -52,7 +52,6 @@
     { value: "usage", label: "料金", icon: WalletIcon, page: UsageTab },
   ];
   // デスクトップのウィンドウでは左のサイドバー。OBS のドックのように狭いときは上に並べる
-  // サイドバーは、ウィンドウが lg より狭いとアイコンだけにして、中身の欄を広く取る
   const wide = new MediaQuery("min-width: 768px");
   /** オーバーレイのタブはプレビューと設定を 2 列に並べるので広く取る。ほかは読みやすい幅に留める */
   const pageWidth = $derived(TABS.find((t) => t.value === tab)?.wide ? "max-w-6xl" : "max-w-3xl");
@@ -142,7 +141,7 @@
     >
       <!-- 縦のとき（サイドバー）は高さいっぱいに伸ばし、入りきらなければサイドバーだけスクロールする -->
       <div
-        class="flex shrink-0 flex-col px-4 pt-4 group-data-vertical/tabs:w-56 group-data-vertical/tabs:max-lg:w-16 group-data-vertical/tabs:overflow-y-auto group-data-vertical/tabs:border-r group-data-vertical/tabs:bg-muted/30 group-data-vertical/tabs:p-3"
+        class="flex shrink-0 flex-col px-4 pt-4 group-data-vertical/tabs:w-48 group-data-vertical/tabs:overflow-y-auto group-data-vertical/tabs:border-r group-data-vertical/tabs:bg-muted/30 group-data-vertical/tabs:p-3"
       >
         <Tabs.List
           class="w-full shrink-0 justify-start overflow-x-auto overflow-y-hidden group-data-vertical/tabs:gap-1 group-data-vertical/tabs:bg-transparent"
@@ -154,22 +153,21 @@
                 role="presentation"
                 class="self-stretch px-[15px] pt-3 text-xs text-muted-foreground group-data-horizontal/tabs:hidden"
               >
-                <span class="group-data-vertical/tabs:max-lg:sr-only">{t.heading}</span>
+                {t.heading}
               </p>
             {/if}
             <!-- 横に並べるときは幅が狭いので、アイコンを出さない（入りきらなければ横にスクロール） -->
             <Tabs.Trigger
               value={t.value}
-              title={t.label}
               class="group-data-horizontal/tabs:[&>svg]:hidden group-data-vertical/tabs:h-9 group-data-vertical/tabs:flex-none group-data-vertical/tabs:px-3"
             >
-              <t.icon /><span class="group-data-vertical/tabs:max-lg:sr-only">{t.label}</span>
+              <t.icon />{t.label}
             </Tabs.Trigger>
           {/each}
         </Tabs.List>
         <!-- 不具合の報告や、更新できたかの確認に使う。狭いときはページの一番下に出す -->
         <div
-          class="mt-auto self-start px-[15px] pt-3 tabular-nums group-data-horizontal/tabs:hidden group-data-vertical/tabs:max-lg:hidden"
+          class="mt-auto self-start px-[15px] pt-3 tabular-nums group-data-horizontal/tabs:hidden"
         >
           <AboutDialog />
         </div>
@@ -215,9 +213,7 @@
           {#each TABS as t (t.value)}
             <Tabs.Content value={t.value}><t.page /></Tabs.Content>
           {/each}
-          <div
-            class="hidden tabular-nums group-data-horizontal/tabs:block group-data-vertical/tabs:max-lg:block"
-          >
+          <div class="hidden tabular-nums group-data-horizontal/tabs:block">
             <AboutDialog />
           </div>
         </div>

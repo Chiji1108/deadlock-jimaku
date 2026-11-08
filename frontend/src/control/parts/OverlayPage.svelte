@@ -9,16 +9,14 @@
 
 <!-- 幅は、このタブの中身の欄で決める（サイドバーの有無や開き方に関わらない） -->
 <div class="@container">
-  <div
-    class="grid gap-6 group-data-vertical/tabs:@[46rem]:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]"
-  >
+  <div class="grid gap-6 group-data-vertical/tabs:@[44rem]:grid-cols-2">
     <aside
-      class="flex flex-col gap-3 group-data-vertical/tabs:@[46rem]:sticky group-data-vertical/tabs:@[46rem]:top-6 group-data-vertical/tabs:@[46rem]:col-start-2 group-data-vertical/tabs:@[46rem]:row-start-1 group-data-vertical/tabs:@[46rem]:self-start"
+      class="flex flex-col gap-3 group-data-vertical/tabs:@[44rem]:sticky group-data-vertical/tabs:@[44rem]:top-6 group-data-vertical/tabs:@[44rem]:col-start-2 group-data-vertical/tabs:@[44rem]:row-start-1 group-data-vertical/tabs:@[44rem]:self-start"
     >
       {@render preview()}
     </aside>
     <div
-      class="min-w-0 group-data-vertical/tabs:@[46rem]:col-start-1 group-data-vertical/tabs:@[46rem]:row-start-1"
+      class="min-w-0 group-data-vertical/tabs:@[44rem]:col-start-1 group-data-vertical/tabs:@[44rem]:row-start-1"
     >
       {@render children()}
     </div>
