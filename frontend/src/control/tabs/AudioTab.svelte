@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
   import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
   import * as Alert from "$lib/components/ui/alert";
   import { Button } from "$lib/components/ui/button";
@@ -138,9 +139,6 @@
             <Button variant="outline" size="sm" onclick={panel.openChrome}>Chrome を開き直す</Button
             >
           {/if}
-          <Button variant="outline" size="sm" onclick={() => (confirmingReset = true)}>
-            Chrome をリセット
-          </Button>
           {#if !chromeProblem}<p class="text-sm text-muted-foreground">{chromeNote}</p>{/if}
         </div>
         <p class="text-xs text-muted-foreground">
@@ -151,26 +149,41 @@
         {#if s.transcriptionEnabled && chromeProblem}
           <Alert.Root variant="destructive">
             <Alert.Title>{chromeProblem}</Alert.Title>
-            {#if s.speechEngine === "hybrid" || panel.chromeStatus?.state === "missing"}
-              <Alert.Description>
-                {#if s.speechEngine === "hybrid"}
-                  確定の字幕は出ています。話している途中の字幕だけが止まっています。
-                {/if}
-                {#if panel.chromeStatus?.state === "missing"}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    class="mt-2"
-                    href="https://www.google.com/chrome/"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Google Chrome をインストールする
-                  </Button>
-                {/if}
-              </Alert.Description>
-            {/if}
+            <Alert.Description class="flex flex-col items-start gap-2">
+              {#if s.speechEngine === "hybrid"}
+                確定の字幕は出ています。話している途中の字幕だけが止まっています。
+              {/if}
+              {#if panel.chromeStatus?.state === "missing"}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  href="https://www.google.com/chrome/"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Google Chrome をインストールする
+                </Button>
+              {:else}
+                {@render resetButton()}
+              {/if}
+            </Alert.Description>
           </Alert.Root>
+        {:else}
+          <details class="group flex flex-col">
+            <summary
+              class="flex cursor-pointer list-none items-center gap-1 text-xs text-muted-foreground select-none hover:text-foreground [&::-webkit-details-marker]:hidden"
+            >
+              <ChevronRightIcon
+                class="size-3.5 transition-transform group-open:rotate-90"
+              />うまくいかないとき
+            </summary>
+            <div class="mt-2 flex flex-wrap items-center gap-3 pl-4.5">
+              {@render resetButton()}
+              <p class="text-xs text-muted-foreground">
+                マイクの許可をやり直したいとき、字幕が出ないときに
+              </p>
+            </div>
+          </details>
         {/if}
       {/if}
     </Card.Content>
@@ -354,6 +367,12 @@
     </Card.Content>
   </Card.Root>
 </div>
+
+{#snippet resetButton()}
+  <Button variant="outline" size="sm" onclick={() => (confirmingReset = true)}>
+    Chrome をリセット
+  </Button>
+{/snippet}
 
 <ConfirmDialog
   bind:open={confirmingReset}
