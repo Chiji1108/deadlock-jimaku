@@ -5,6 +5,7 @@
   import type { SubtitleDisplay } from "../generated/SubtitleDisplay";
   import type { SubtitleStyle } from "../generated/SubtitleStyle";
   import GrowingText from "./GrowingText.svelte";
+  import { fontVar } from "./overlay-fonts";
   import Rich from "./Rich.svelte";
   import { slide } from "./slide";
   import { draftTerms, showsSource, translationsOf } from "./subtitle-lines";
@@ -41,7 +42,12 @@
       out:fade={{ duration: replacing() ? 0 : 400 }}
     >
       {#if showsSource(s, display)}
-        <p class="source" lang={s.lang} style={fontCss(look?.languages[s.lang])}>
+        <p
+          class="source"
+          lang={s.lang}
+          style={fontCss(look?.languages[s.lang])}
+          style:--font={fontVar(look?.languages[s.lang]?.font)}
+        >
           <!-- partial / final は増えた文字だけをフェードさせ、enriched ではふりがなとアイコンを足す。
                途中から付いていたものは、出し直して見えないよう足し直さない。確定で初めて見つかった
                用語にだけ演出を付ける -->
@@ -64,6 +70,7 @@
           class="translation"
           {lang}
           style={fontCss(look?.languages[lang])}
+          style:--font={fontVar(look?.languages[lang]?.font)}
           in:fly={{ y: 8, duration: 250 }}
         >
           <Rich

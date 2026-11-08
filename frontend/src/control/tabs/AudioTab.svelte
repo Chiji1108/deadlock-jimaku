@@ -13,8 +13,8 @@
   import PauseDialog from "../parts/PauseDialog.svelte";
   import { Badge } from "$lib/components/ui/badge";
   import { panel } from "../panel.svelte";
+  import { ENGINES } from "../../lib/engines";
   import { translationOnly } from "../../lib/subtitle-lines";
-  import type { SpeechEngine } from "../../generated/SpeechEngine";
 
   const MAX_TRANSLATE_TO = 4;
   /** 何 ms 黙ったら区切るか */
@@ -22,38 +22,6 @@
     { ms: 500, label: "すぐ", hint: "早く確定する。文の途中で切れやすい" },
     { ms: 750, label: "ふつう", hint: "おすすめ" },
     { ms: 1000, label: "つなぐ", hint: "文がまとまる。確定まで少し待つ" },
-  ];
-
-  const ENGINES: {
-    value: SpeechEngine;
-    label: string;
-    traits: string;
-    price: string;
-    hint: string;
-    recommended?: boolean;
-  }[] = [
-    {
-      value: "chrome",
-      label: "Chrome",
-      traits: "高速・キー不要",
-      price: "無料",
-      hint: "多くの字幕ソフトと同じく、Chrome の音声認識を使います",
-    },
-    {
-      value: "hybrid",
-      label: "ハイブリッド",
-      traits: "高速・高精度",
-      price: "約 $0.6／時間",
-      hint: "途中の字幕は Chrome、確定の字幕は OpenAI の高い精度に置き換えます。OpenAI の API キーかギフトコードが要ります",
-      recommended: true,
-    },
-    {
-      value: "openai",
-      label: "OpenAI",
-      traits: "低負荷・高精度",
-      price: "約 $1／時間",
-      hint: "すべて OpenAI で作ります。Chrome は使いません。OpenAI の API キーかギフトコードが要ります",
-    },
   ];
 
   const s = $derived(panel.settings!);
@@ -109,7 +77,9 @@
           </button>
         {/each}
       </div>
-      <p class="text-sm text-muted-foreground">{engine.hint}</p>
+      <p class="text-sm text-muted-foreground">
+        {engine.hint}{#if engine.needsKey}。OpenAI の API キーかギフトコードが要ります{/if}
+      </p>
       {#if s.speechEngine === "chrome" && panel.hybridReady && !s.hybridHintClosed}
         <div class="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3">
           <p class="text-sm">ハイブリッドにすると、確定の字幕が高い精度になります</p>

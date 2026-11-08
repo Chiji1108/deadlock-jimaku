@@ -1,5 +1,4 @@
 // 言語ごとに選んだフォントを lang.css の --font に渡す
-import type { SubtitleStyle } from "../generated/SubtitleStyle";
 
 /** 制御文字はサーバーが拒否するので、エスケープするのは引用符と \ だけ */
 export const cssString = (name: string) => `"${name.replace(/["\\]/g, "\\$&")}"`;
@@ -46,37 +45,23 @@ export async function fontWeights(family: string) {
 /** フォントの見本。日本語は言語名だと漢字だけになるので、かなも混ぜる */
 export const fontSample = (lang: string) => (lang === "ja" ? "あいアイ漢字" : endonym(lang));
 
-/** 選んだフォントのファイルを core から読む。入れたばかりで WebView が知らないフォントも描ける */
-const fontImports = (families: string[]) =>
-  [...new Set(families)].map((family) => `@import url(${cssString(facesUrl(family))});`);
-
 /**
- * 値の末尾のカンマで lang.css の標準の候補につなぐ。:lang(es) は es-419 にも一致するので
- * 属性の完全一致で言語を分け、[lang] を重ねて lang.css のリセットより詳細度を上げる。
- * ファイルが読めなければ、同じ名前の PC のフォントと標準の候補に落ちる
+ * lang 属性を持つ要素に書く --font の値。末尾のカンマで lang.css の標準の候補につなぎ、
+ * PC にないフォントは標準に落ちる。選んでいなければ書かず、lang.css が initial に戻す
  */
-export function subtitleFontRules(languages: SubtitleStyle["languages"]) {
-  const fonts = Object.entries(languages).flatMap(([lang, { font }]) =>
-    font ? [[lang, font] as const] : [],
-  );
-  return [
-    ...fontImports(fonts.map(([, family]) => family)),
-    ...fonts.map(
-      ([lang, family]) => `[lang][lang=${cssString(lang)}] { --font: ${cssString(family)}, }`,
-    ),
-  ].join("\n");
-}
+export const fontVar = (family?: string | null) => (family ? `${cssString(family)},` : undefined);
 
-/** ランクは 1 つのフォントなので、ランク名の言語によらず全部の言語に当てる */
-export const rankFontRules = (family?: string | null) =>
-  family
-    ? [...fontImports([family]), `[lang][lang] { --font: ${cssString(family)}, }`].join("\n")
-    : "";
+/** 選んだフォントのファイルを core から読む。入れたばかりで WebView が知らないフォントも描ける */
+export const fontImports = (families: (string | null)[]) =>
+  [...new Set(families)]
+    .filter((family) => family !== null)
+    .map((family) => `@import url(${cssString(facesUrl(family))});`)
+    .join("\n");
 
 let sheet: HTMLStyleElement | undefined;
 
 /** display はフォント以外でも届く。@import を書き直すと読み終えるまで標準に戻るので、同じなら触らない */
-export function applyFontRules(css: string) {
+export function applyFontImports(css: string) {
   sheet ??= document.head.appendChild(document.createElement("style"));
   if (sheet.textContent !== css) sheet.textContent = css;
 }

@@ -4,66 +4,31 @@ import {
   endonym,
   faceWeights,
   fontSample,
+  fontImports,
+  fontVar,
   fontWeights,
-  rankFontRules,
-  subtitleFontRules,
 } from "./overlay-fonts";
 
-const fonts = (families: Record<string, string>) =>
-  Object.fromEntries(
-    Object.entries(families).map(([lang, font]) => [
-      lang,
-      { font, weight: null, letterSpacing: null },
-    ]),
-  );
-
-test("選んだ言語だけに変数を設定し、標準の候補へ続ける", () => {
-  expect(subtitleFontRules(fonts({ ja: "Hiragino Mincho ProN" }))).toBe(
-    [
-      '@import url("/api/fonts/Hiragino%20Mincho%20ProN/faces.css");',
-      '[lang][lang="ja"] { --font: "Hiragino Mincho ProN", }',
-    ].join("\n"),
-  );
-});
-
-test("@import はシートの先頭に、同じフォントは 1 つだけ書く", () => {
-  const rules = subtitleFontRules(fonts({ ja: "Meiryo", ko: "Meiryo", en: "Arial" })).split("\n");
-  expect(rules.filter((rule) => rule.startsWith("@import"))).toEqual([
-    '@import url("/api/fonts/Meiryo/faces.css");',
-    '@import url("/api/fonts/Arial/faces.css");',
-  ]);
-  expect(rules.slice(0, 2).every((rule) => rule.startsWith("@import"))).toBe(true);
-});
-
-test("URL に書けない文字はパスの 1 区切りに収める", () => {
-  expect(subtitleFontRules(fonts({ ja: 'A/B"C' }))).toContain(
-    'url("/api/fonts/A%2FB%22C/faces.css")',
-  );
+test("--font の値は末尾のカンマで標準の候補へ続け、選んでいなければ書かない", () => {
+  expect(fontVar("Hiragino Mincho ProN")).toBe('"Hiragino Mincho ProN",');
+  expect(fontVar(null)).toBeUndefined();
+  expect(fontVar("")).toBeUndefined();
 });
 
 test("引用符と \\ を含む名前は CSS の文字列にエスケープする", () => {
-  expect(subtitleFontRules(fonts({ ja: String.raw`A"B\C` }))).toContain(
-    String.raw`--font: "A\"B\\C",`,
-  );
+  expect(fontVar(String.raw`A"B\C`)).toBe(String.raw`"A\"B\\C",`);
 });
 
-test("何も選んでいなければ規則を作らない", () => {
-  expect(subtitleFontRules({})).toBe("");
-  expect(subtitleFontRules({ ja: { font: null, weight: 500, letterSpacing: null } })).toBe("");
+test("読み込みは同じフォントを 1 つだけ書き、選んでいない言語は飛ばす", () => {
+  expect(fontImports(["Meiryo", null, "Meiryo", "Arial"]).split("\n")).toEqual([
+    '@import url("/api/fonts/Meiryo/faces.css");',
+    '@import url("/api/fonts/Arial/faces.css");',
+  ]);
+  expect(fontImports([null])).toBe("");
 });
 
-test("ランクのフォントは全部の言語に当て、読み込みは 1 つだけ書く", () => {
-  expect(rankFontRules("Bebas Neue")).toBe(
-    [
-      '@import url("/api/fonts/Bebas%20Neue/faces.css");',
-      '[lang][lang] { --font: "Bebas Neue", }',
-    ].join("\n"),
-  );
-});
-
-test("ランクのフォントを選んでいなければ規則を作らない", () => {
-  expect(rankFontRules(undefined)).toBe("");
-  expect(rankFontRules(null)).toBe("");
+test("URL に書けない文字はパスの 1 区切りに収める", () => {
+  expect(fontImports(['A/B"C'])).toBe('@import url("/api/fonts/A%2FB%22C/faces.css");');
 });
 
 test("言語名はその言語で書く", () => {

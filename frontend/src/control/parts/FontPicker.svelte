@@ -14,7 +14,7 @@
     formatSize,
     STANDARD,
   } from "../../lib/font-samples";
-  import { cssString, fontSample } from "../../lib/overlay-fonts";
+  import { cssString, fontSample, fontVar } from "../../lib/overlay-fonts";
   import { syntheticBold, weightChoices } from "../../lib/text-style";
   import { panel, type FontTarget } from "../panel.svelte";
   import ConfirmDialog from "./ConfirmDialog.svelte";
@@ -163,7 +163,7 @@
     <p
       lang={language}
       class="truncate text-lg font-bold"
-      style:--font={value ? `${cssString(value)},` : "initial"}
+      style:--font={fontVar(value)}
       style:font-weight={weight ?? standardWeight}
     >
       {swatch}
