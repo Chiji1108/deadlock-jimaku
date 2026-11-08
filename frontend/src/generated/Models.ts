@@ -6,7 +6,7 @@ export type Models = {
  */
 realtime: string, 
 /**
- * 確定字幕の音声認識（OpenAI）
+ * 確定字幕の音声認識（OpenAI。Grok を選ぶと `Settings::models_in_use` が替える）
  */
 batch: string, 
 /**

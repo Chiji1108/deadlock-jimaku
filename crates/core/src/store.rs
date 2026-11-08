@@ -559,7 +559,9 @@ mod tests {
     #[tokio::test]
     async fn a_missing_key_keeps_chrome_closed_in_hybrid() {
         let (_dir, store) = chrome_store(Engines::HYBRID);
-        store.set_transcription_error(Some(TranscriptionError::MissingKey));
+        store.set_transcription_error(Some(TranscriptionError::MissingKey {
+            provider: crate::secrets::Provider::OpenAi,
+        }));
         store.sync_chrome();
         assert!(store.browser.lock().unwrap().is_none());
     }

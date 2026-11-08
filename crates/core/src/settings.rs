@@ -103,7 +103,7 @@ const ADVANCED: [&str; 5] = [
 pub struct Models {
     /// リアルタイムの音声認識（OpenAI）
     pub realtime: String,
-    /// 確定字幕の音声認識（OpenAI）
+    /// 確定字幕の音声認識（OpenAI。Grok を選ぶと `Settings::models_in_use` が替える）
     pub batch: String,
     /// 翻訳（OpenAI）。質を優先して選んだ（DESIGN.md 9.3）
     pub translate: String,
@@ -552,7 +552,7 @@ impl Region {
     }
 }
 
-/// 字幕の工程ごとに、何で作るか。無料（Chrome と PC の中）か有料（OpenAI）か（DESIGN.md 9.6）。
+/// 字幕の工程ごとに、何で作るか。無料（Chrome と PC の中）か有料（OpenAI・xAI）か（DESIGN.md 9.6）。
 /// 今の仕組みで作れない組み合わせは `sanitized` が直す
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(default, rename_all = "camelCase")]
@@ -589,13 +589,23 @@ impl Engines {
         ..Self::HYBRID
     };
 
-    /// OpenAI を使う工程があり、API キーかギフトコードが要る。表示の設定（翻訳先、ふりがな）では変わらないので、
+    /// 有料の工程があり、鍵が要る。表示の設定（翻訳先、ふりがな）では変わらないので、
     /// 表示を切り替えても字幕の処理を始め直さない
     pub fn paid(&self) -> bool {
+        self.uses_openai() || self.uses_xai()
+    }
+
+    /// OpenAI を使う工程があり、API キーかギフトコードが要る
+    pub fn uses_openai(&self) -> bool {
         self.live == LiveSource::GptLiveTranscribe
             || self.transcription == FinalSource::GptTranscribe
             || self.translation != TranslationEngine::ChromeTranslator
             || self.furigana == RubySource::Llm
+    }
+
+    /// xAI を使う工程があり、xAI の API キーが要る（ギフトコードは OpenAI だけ）
+    pub fn uses_xai(&self) -> bool {
+        self.transcription == FinalSource::GrokVoiceTranscribe
     }
 
     /// 確定の文を Chrome が作るなら、発話の区切りも Chrome が決めるので、途中の字幕も Chrome。
@@ -637,6 +647,8 @@ pub enum LiveSource {
 pub enum FinalSource {
     Chrome,
     GptTranscribe,
+    /// GPT-Transcribe より安い。精度は同じか少し下（DESIGN.md 3）
+    GrokVoiceTranscribe,
 }
 
 /// 字幕の文字の出どころ
@@ -645,6 +657,7 @@ pub enum TextSource {
     Chrome,
     GptLiveTranscribe,
     GptTranscribe,
+    GrokVoiceTranscribe,
 }
 
 /// 翻訳と用語を何で作るか。Chrome の翻訳なら、用語は辞書の一致で判定する
@@ -859,6 +872,7 @@ impl Settings {
             text: Some(match engines.transcription {
                 FinalSource::Chrome => Text::Chrome,
                 FinalSource::GptTranscribe => Text::GptTranscribe,
+                FinalSource::GrokVoiceTranscribe => Text::GrokVoiceTranscribe,
             }),
             translation: translates.then_some(engines.translation.source()),
             ruby: match engines.furigana {
@@ -877,9 +891,13 @@ impl Settings {
         }
     }
 
-    /// 使うモデル。翻訳と用語は工程の選択で決まる（Terra は詳細設定の `models.translate` のまま）
+    /// 使うモデル。確定の文字起こしと、翻訳と用語は工程の選択で決まる（GPT-Transcribe と Terra は
+    /// 詳細設定の `models.batch` と `models.translate` のまま）
     pub fn models_in_use(&self) -> Models {
         let mut models = self.models.clone();
+        if self.engines.transcription == FinalSource::GrokVoiceTranscribe {
+            models.batch = "grok-voice-transcribe-2.0".into();
+        }
         if self.engines.translation == TranslationEngine::Gpt6Luna {
             models.translate = "gpt-6-luna".into();
         }
@@ -1460,6 +1478,29 @@ mod tests {
         };
         assert!(plan_of(paid_furigana).uses_chrome());
         assert!(paid_furigana.paid());
+        assert!(paid_furigana.uses_openai() && !paid_furigana.uses_xai());
+    }
+
+    /// Grok の確定は xAI だけを使い、確定の文の出どころとモデルだけが変わる
+    #[test]
+    fn grok_uses_xai_for_the_finals() {
+        let grok = Engines {
+            transcription: FinalSource::GrokVoiceTranscribe,
+            ..Engines::CHROME
+        };
+        assert!(grok.paid() && grok.uses_xai() && !grok.uses_openai());
+        assert_eq!(grok.sanitized(), grok);
+        let settings = Settings {
+            engines: grok,
+            ..Default::default()
+        };
+        assert_eq!(
+            settings.plan().finals.text,
+            Some(TextSource::GrokVoiceTranscribe)
+        );
+        assert_eq!(settings.plan().partial, plan_of(Engines::HYBRID).partial);
+        assert_eq!(settings.models_in_use().batch, "grok-voice-transcribe-2.0");
+        assert_eq!(Settings::default().models_in_use().batch, "gpt-transcribe");
     }
 
     #[test]

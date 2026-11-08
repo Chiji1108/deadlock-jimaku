@@ -5,7 +5,7 @@ import type { RubySource } from "./RubySource";
 import type { TranslationEngine } from "./TranslationEngine";
 
 /**
- * 字幕の工程ごとに、何で作るか。無料（Chrome と PC の中）か有料（OpenAI）か（DESIGN.md 9.6）。
+ * 字幕の工程ごとに、何で作るか。無料（Chrome と PC の中）か有料（OpenAI・xAI）か（DESIGN.md 9.6）。
  * 今の仕組みで作れない組み合わせは `sanitized` が直す
  */
 export type Engines = { 

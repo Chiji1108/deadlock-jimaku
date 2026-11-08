@@ -17,12 +17,15 @@ pub enum Provider {
     /// 文字起こし・翻訳・辞書の漢字名の読み
     #[serde(rename = "openai")]
     OpenAi,
+    /// 確定の文字起こし（Grok Voice Transcribe）
+    Xai,
 }
 
 impl Provider {
     fn slot(self) -> Slot {
         match self {
             Self::OpenAi => Slot::OpenAi,
+            Self::Xai => Slot::Xai,
         }
     }
 }
@@ -31,6 +34,7 @@ impl Provider {
 #[derive(Clone, Copy, Debug)]
 enum Slot {
     OpenAi,
+    Xai,
     /// 人からもらったギフトコード（DESIGN.md 17.1）
     Gift,
     /// おすそ分けを管理する合言葉（サーバーが発行）
@@ -43,6 +47,7 @@ impl Slot {
     fn account(self) -> &'static str {
         match self {
             Self::OpenAi => "openai",
+            Self::Xai => "xai",
             Self::Gift => "gift",
             Self::ShareToken => "share-token",
             Self::ShareCode => "share-code",
@@ -66,6 +71,7 @@ pub enum KeyState {
 #[ts(export)]
 pub struct KeyStatus {
     pub openai: KeyState,
+    pub xai: KeyState,
     /// ギフトコード。コードそのものは返さない
     pub gift: KeyState,
 }
@@ -73,6 +79,7 @@ pub struct KeyStatus {
 #[derive(Clone, Debug, Default)]
 pub struct Keys {
     pub openai: Option<String>,
+    pub xai: Option<String>,
     pub gift: Option<String>,
 }
 
@@ -139,6 +146,7 @@ fn state(slot: Slot) -> KeyState {
 pub fn load() -> Keys {
     Keys {
         openai: get_or_warn(Slot::OpenAi),
+        xai: get_or_warn(Slot::Xai),
         gift: get_or_warn(Slot::Gift),
     }
 }
@@ -146,6 +154,7 @@ pub fn load() -> Keys {
 pub fn status() -> KeyStatus {
     KeyStatus {
         openai: state(Slot::OpenAi),
+        xai: state(Slot::Xai),
         gift: state(Slot::Gift),
     }
 }

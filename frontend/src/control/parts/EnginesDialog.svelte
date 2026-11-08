@@ -5,7 +5,15 @@
   import * as Field from "$lib/components/ui/field";
   import * as ToggleGroup from "$lib/components/ui/toggle-group";
   import { panel } from "../panel.svelte";
-  import { ITEMS, anyPaid, chromeFinals, unavailable, usesChrome } from "../../lib/engines";
+  import {
+    ITEMS,
+    anyPaid,
+    chromeFinals,
+    keyNames,
+    providers,
+    unavailable,
+    usesChrome,
+  } from "../../lib/engines";
   import { translationOnly } from "../../lib/subtitle-lines";
   import type { Engines } from "../../generated/Engines";
 
@@ -26,8 +34,7 @@
     <Dialog.Header>
       <Dialog.Title>字幕の作り方を詳しく選ぶ</Dialog.Title>
       <Dialog.Description>
-        工程ごとに、無料か OpenAI かを選べます。料金は OpenAI
-        の単価です。切り替えると、字幕は始め直します
+        工程ごとに、無料か有料（OpenAI・xAI）かを選べます。料金はそれぞれの会社の単価です。切り替えると、字幕は始め直します
       </Dialog.Description>
     </Dialog.Header>
     <div class="flex flex-col gap-5">
@@ -76,8 +83,9 @@
       {/each}
       {#if anyPaid(t)}
         <p class="text-sm text-muted-foreground">
-          OpenAI を使う工程には、API
-          キーかギフトコードが要ります。使った分の目安は「料金」タブに工程ごとに出ます
+          この作り方には {keyNames(
+            providers(t),
+          )}が要ります。使った分の目安は「料金」タブに工程ごとに出ます
         </p>
       {/if}
     </div>

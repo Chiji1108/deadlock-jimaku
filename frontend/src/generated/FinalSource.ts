@@ -3,4 +3,4 @@
 /**
  * 確定の文字起こしを何で作るか
  */
-export type FinalSource = "chrome" | "gptTranscribe";
+export type FinalSource = "chrome" | "gptTranscribe" | "grokVoiceTranscribe";

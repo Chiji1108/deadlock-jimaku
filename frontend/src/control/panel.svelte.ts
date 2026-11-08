@@ -12,7 +12,7 @@ import type { MicError } from "../generated/MicError";
 import type { TranscriptionError } from "../generated/TranscriptionError";
 import type { UsageView } from "../generated/UsageView";
 import { api } from "../lib/api";
-import { CHROME, anyPaid, chromeFinals } from "../lib/engines";
+import { CHROME, KEY_NAMES, chromeFinals, providers } from "../lib/engines";
 import { addFontFaces, fontWeights } from "../lib/overlay-fonts";
 import type { MergePatch } from "../lib/text-style";
 import type { FontEntry } from "../generated/FontEntry";
@@ -86,18 +86,25 @@ class Panel {
     return this.view?.keys.openai.state === "missing" && this.view.keys.gift.state === "missing";
   }
 
-  /** 字幕を始められる鍵（自分のキーかギフトコード）がある。OpenAI を使わないなら鍵が要らない */
-  get hasAccess() {
-    return (
-      (!!this.settings && !anyPaid(this.settings.engines)) ||
-      this.view?.keys.openai.state === "saved" ||
-      this.view?.keys.gift.state === "saved"
+  /** 選んだ作り方に要るのに、保存されていない鍵の会社。OpenAI はギフトコードでもよい */
+  get missingKeys(): Provider[] {
+    const view = this.view;
+    if (!view) return [];
+    return providers(view.settings.engines).filter((p) =>
+      p === "openai"
+        ? view.keys.openai.state !== "saved" && view.keys.gift.state !== "saved"
+        : view.keys[p].state !== "saved",
     );
+  }
+
+  /** 字幕を始められる鍵がそろっている。有料の工程がなければ鍵は要らない */
+  get hasAccess() {
+    return !!this.view && this.missingKeys.length === 0;
   }
 
   /** 選んだモードに要る鍵がない。キーの案内を出し、字幕を始めさせない */
   get needsKey() {
-    return !!this.view && !this.hasAccess;
+    return this.missingKeys.length > 0;
   }
 
   /** ハイブリッドで使える鍵（自分のキーか、期限内のギフトコード）がある */
@@ -373,7 +380,7 @@ export const LIMIT_RESET = "日本時間の朝 9 時（UTC の 0 時）にまた
 export function transcriptionErrorText(e: TranscriptionError): string {
   switch (e.code) {
     case "missingKey":
-      return "OpenAI の API キーかギフトコードが設定されていません";
+      return `${KEY_NAMES[e.provider]}が設定されていません`;
     case "giftExpired":
       return e.expiresAt === null
         ? "ギフトコードの期限が切れました"
@@ -385,7 +392,7 @@ export function transcriptionErrorText(e: TranscriptionError): string {
     case "giftUnknown":
       return "ギフトコードが見つかりません。おすそ分けしてくれた人に確かめてください";
     case "invalidKey":
-      return "OpenAI の API キーが使えません。キーを確かめてください";
+      return `${e.provider === "xai" ? "xAI" : "OpenAI"} の API キーが使えません。キーを確かめてください`;
     case "inputEnded":
       return "マイクの入力が途切れました";
     case "microphone":

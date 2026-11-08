@@ -25,7 +25,7 @@ use crate::now_ms;
 use crate::openai::Access;
 use crate::settings::{Settings, TextSource};
 use crate::store::{ChromeEvent, Store};
-use crate::stt::{self, BatchRequest, Hints, RealtimeConfig};
+use crate::stt::{self, BatchRequest, Hints, RealtimeConfig, Transcriber};
 use crate::types::{
     ChromeCommand, Enriched, EntityKind, Glossary, Heard, LangCode, Segment, Stage, Token,
     TranscriptionError, Translated, Translations,
@@ -48,8 +48,14 @@ const PROMPT: &str = "Live commentary by a streamer playing the video game Deadl
 /// デッドロックモードを切ったとき（雑談の配信など）
 const PLAIN_PROMPT: &str = "Live commentary by a streamer.";
 
-/// `access` は OpenAI（文字起こし・翻訳）の送り先と鍵
-pub async fn run(store: Arc<Store>, input: audio::Input, access: Access) -> anyhow::Result<()> {
+/// `access` は OpenAI（途中の字幕・翻訳・ふりがな）の送り先と鍵（OpenAI を使わなければ None）、
+/// `transcriber` は確定の文字起こしの送り先と鍵
+pub async fn run(
+    store: Arc<Store>,
+    input: audio::Input,
+    access: Option<Access>,
+    transcriber: Transcriber,
+) -> anyhow::Result<()> {
     let settings = store.settings();
 
     // 用語ヒントは Realtime のセッション開始時に 1 回しか渡せないので、辞書を少し待つ。
@@ -91,37 +97,34 @@ pub async fn run(store: Arc<Store>, input: audio::Input, access: Access) -> anyh
     let (delta_tx, delta_rx) = mpsc::channel(256);
     // オフなら Realtime につながず、確定の字幕だけを出す
     let plan = settings.plan();
-    let realtime = if plan.partial.text == Some(TextSource::GptLiveTranscribe) {
-        let (tx, rx) = mpsc::unbounded_channel();
-        let config = RealtimeConfig {
-            access: access.clone(),
-            model: settings.models.realtime.clone(),
-            delay: settings.realtime_delay.clone(),
-            meter: store.meter(),
+    let realtime =
+        if let (Some(TextSource::GptLiveTranscribe), Some(access)) = (plan.partial.text, &access) {
+            let (tx, rx) = mpsc::unbounded_channel();
+            let config = RealtimeConfig {
+                access: access.clone(),
+                model: settings.models.realtime.clone(),
+                delay: settings.realtime_delay.clone(),
+                meter: store.meter(),
+            };
+            tokio::spawn(realtime_loop(
+                config,
+                hints.clone(),
+                rx,
+                delta_tx,
+                done_tx.clone(),
+            ));
+            Some(tx)
+        } else {
+            None
         };
-        tokio::spawn(realtime_loop(
-            config,
-            hints.clone(),
-            rx,
-            delta_tx,
-            done_tx.clone(),
-        ));
-        Some(tx)
-    } else {
-        None
-    };
 
     let cloud = Cloud {
-        finisher: Arc::new(Finisher::new(
-            store.clone(),
-            &settings,
-            Some(access.clone()),
-        )),
+        finisher: Arc::new(Finisher::new(store.clone(), &settings, access)),
         finished_tx,
         batch: Arc::new(BatchContext {
             http: crate::http().clone(),
-            access,
-            model: settings.models.batch.clone(),
+            transcriber,
+            model: settings.models_in_use().batch,
             hints,
             meter: store.meter(),
         }),
@@ -210,7 +213,7 @@ impl LevelMeter {
     }
 }
 
-/// OpenAI の確定の字幕と、その仕上げ
+/// 確定の字幕（OpenAI か xAI）と、その仕上げ
 struct Cloud {
     batch: Arc<BatchContext>,
     finisher: Arc<Finisher>,
@@ -237,7 +240,7 @@ struct Pipeline {
     context: VecDeque<String>,
     /// バッチか enrich の結果を待っている数
     pending: usize,
-    /// OpenAI の鍵やギフトコードが断られた。確定の字幕は発話ごとに送るので、これで気づける
+    /// 鍵やギフトコードが断られた。確定の字幕は発話ごとに送るので、これで気づける
     refused: Option<TranscriptionError>,
 }
 
@@ -630,7 +633,7 @@ async fn realtime_loop(
 
 struct BatchContext {
     http: reqwest::Client,
-    access: Access,
+    transcriber: Transcriber,
     model: String,
     hints: Arc<Hints>,
     meter: Arc<Meter>,
@@ -639,7 +642,7 @@ struct BatchContext {
 enum Done {
     /// None ならバッチが失敗した
     Transcribed { id: String, text: Option<String> },
-    /// OpenAI の鍵やギフトコードが断られた
+    /// 鍵やギフトコードが断られた
     Refused(TranscriptionError),
 }
 
@@ -651,7 +654,7 @@ async fn transcribe(
     done: mpsc::Sender<Done>,
 ) {
     let request = BatchRequest {
-        access: &ctx.access,
+        transcriber: &ctx.transcriber,
         model: &ctx.model,
         hints: &ctx.hints,
         wav,
@@ -857,7 +860,7 @@ mod tests {
             finished_tx,
             batch: Arc::new(BatchContext {
                 http: crate::http().clone(),
-                access,
+                transcriber: Transcriber::OpenAi(access),
                 model: settings.models.batch.clone(),
                 hints: Arc::new(Hints {
                     language: "ja".into(),
@@ -937,15 +940,19 @@ mod tests {
 
     /// 確定の文字起こしを 1 回送り、起きたことを返す
     async fn transcribe_through(access: Access) -> Vec<Done> {
+        transcribe_with(Transcriber::OpenAi(access), Vec::new()).await
+    }
+
+    async fn transcribe_with(transcriber: Transcriber, keywords: Vec<String>) -> Vec<Done> {
         let dir = tempfile::tempdir().unwrap();
         let ctx = Arc::new(BatchContext {
             http: crate::http().clone(),
-            access,
+            transcriber,
             model: "gpt-transcribe".into(),
             hints: Arc::new(Hints {
                 language: "ja".into(),
                 prompt: String::new(),
-                keywords: Vec::new(),
+                keywords,
             }),
             meter: Arc::new(Meter::new(dir.path().join("usage.json"))),
         });
@@ -1011,6 +1018,92 @@ mod tests {
         ] {
             let done = transcribe_through(Access::gift("code".into(), &api)).await;
             assert!(matches!(done[..], [Done::Transcribed { text: None, .. }]));
+        }
+    }
+
+    /// xAI には言語と用語（100 件・50 文字まで）を送り、ファイルを最後に置く
+    #[tokio::test]
+    async fn grok_gets_the_language_and_up_to_100_keyterms_before_the_file() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}/v1/stt", listener.local_addr().unwrap());
+        let (fields_tx, mut fields_rx) = mpsc::unbounded_channel();
+        // multipart の欄を、送られた順に名前と値で読む（ファイルの中身は読まない）
+        let answer = move |body: axum::body::Bytes| {
+            let fields_tx = fields_tx.clone();
+            async move {
+                let body = String::from_utf8_lossy(&body);
+                let fields: Vec<(String, String)> = body
+                    .split(" name=\"")
+                    .skip(1)
+                    .map(|part| {
+                        let (name, rest) = part.split_once('"').unwrap();
+                        let value = rest.split("\r\n\r\n").nth(1).unwrap_or_default();
+                        let value = value.split("\r\n").next().unwrap_or_default();
+                        (name.to_owned(), value.to_owned())
+                    })
+                    .collect();
+                fields_tx.send(fields).unwrap();
+                axum::Json(json!({ "text": " ヘイズ強い " }))
+            }
+        };
+        let router = axum::Router::new().route("/v1/stt", axum::routing::post(answer));
+        tokio::spawn(async move { axum::serve(listener, router).await });
+
+        let mut keywords = vec!["x".repeat(51)];
+        keywords.extend((0..150).map(|i| format!("用語{i}")));
+        let transcriber = Transcriber::Xai {
+            url,
+            key: "xai".into(),
+        };
+        let done = transcribe_with(transcriber, keywords).await;
+        assert!(
+            matches!(&done[..], [Done::Transcribed { text: Some(t), .. }] if t == "ヘイズ強い")
+        );
+        let fields = fields_rx.recv().await.unwrap();
+        let value = |name: &str| {
+            fields
+                .iter()
+                .find(|(n, _)| n == name)
+                .map(|(_, v)| v.as_str())
+        };
+        assert_eq!(value("language"), Some("ja"));
+        let keyterms: Vec<_> = fields.iter().filter(|(n, _)| n == "keyterm").collect();
+        assert_eq!(keyterms.len(), 100);
+        assert_eq!(keyterms[0].1, "用語0");
+        assert_eq!(fields.last().unwrap().0, "file");
+    }
+
+    /// 間違った鍵には 400 が返る。ほかの 400 では止めない
+    #[tokio::test]
+    async fn a_refused_xai_key_stops_the_subtitles() {
+        let incorrect = r#"{"code":"Client specified an invalid argument","error":"Incorrect API key provided. You can obtain an API key from https://console.x.ai."}"#;
+        for (status, body, refused) in [
+            (StatusCode::BAD_REQUEST, incorrect, true),
+            (StatusCode::UNAUTHORIZED, "", true),
+            (
+                StatusCode::BAD_REQUEST,
+                r#"{"error":"unsupported format"}"#,
+                false,
+            ),
+        ] {
+            let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let url = format!("http://{}/v1/stt", listener.local_addr().unwrap());
+            let answer = move || async move { (status, body) };
+            let router = axum::Router::new().route("/v1/stt", axum::routing::post(answer));
+            tokio::spawn(async move { axum::serve(listener, router).await });
+            let transcriber = Transcriber::Xai {
+                url,
+                key: "bad".into(),
+            };
+            let done = transcribe_with(transcriber, Vec::new()).await;
+            let expected = TranscriptionError::InvalidKey {
+                provider: crate::secrets::Provider::Xai,
+            };
+            assert_eq!(
+                matches!(&done[0], Done::Refused(r) if *r == expected),
+                refused,
+                "{status} {body}"
+            );
         }
     }
 

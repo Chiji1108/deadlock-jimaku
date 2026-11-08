@@ -20,7 +20,9 @@
     anyPaid,
     chromeFinals,
     modeOf,
+    keyNames,
     paidItems,
+    providers,
     usesChrome,
   } from "../../lib/engines";
 
@@ -44,7 +46,7 @@
       ? panel.chromeStatus.detail
       : undefined,
   );
-  /** OpenAI を使うモードの字幕が止まったら Chrome を閉じる（字幕にならない音声を Google に送らない） */
+  /** 有料の工程がある字幕が止まったら Chrome を閉じる（字幕にならない音声を Google に送らない） */
   const chromeClosed = $derived(anyPaid(t) && !!panel.transcriptionError);
   /** Chrome のウィンドウの今の状態 */
   const chromeNote = $derived.by(() => {
@@ -90,10 +92,10 @@
         {#if mode}
           {mode.hint}
         {:else if paid.length}
-          詳しく選んだ作り方です。OpenAI を使う工程: {paid.join("、")}
+          詳しく選んだ作り方です。有料の工程: {paid.join("、")}
         {:else}
           詳しく選んだ作り方です。すべて無料です
-        {/if}{#if paid.length}。OpenAI の API キーかギフトコードが要ります{/if}
+        {/if}{#if paid.length}。{keyNames(providers(t))}が要ります{/if}
       </p>
       <EnginesDialog />
       {#if mode?.name === "chrome" && panel.hybridReady && !s.hybridHintClosed}

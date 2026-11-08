@@ -91,6 +91,8 @@ fn price(model: &str) -> Option<Price> {
     Some(match model {
         "gpt-live-transcribe" => Price::PerMinute(0.017),
         "gpt-transcribe" => Price::PerMinute(0.0045),
+        // xAI の REST は 1 時間 $0.10
+        "grok-voice-transcribe-2.0" => Price::PerMinute(0.10 / 60.0),
         "gpt-6.1-terra" => Price::PerMillion {
             input: 1.00,
             cached: 0.05,

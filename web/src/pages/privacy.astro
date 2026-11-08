@@ -2,7 +2,7 @@
 import Layout from "../layouts/Layout.astro";
 import { DISCORD } from "../site";
 
-const UPDATED = "2026 年 11 月 8 日";
+const UPDATED = "2026 年 11 月 9 日";
 ---
 
 <Layout title="プライバシーポリシー" description="デドロ字幕が扱う情報と、その送り先について。">
@@ -28,6 +28,17 @@ const UPDATED = "2026 年 11 月 8 日";
       <li>
         送るときは、利用者ご自身の OpenAI の API キーか、人からもらったギフトコードを使います（下の「おすそ分け」）。送った内容の扱いは
         <a href="https://openai.com/policies/" class="underline">OpenAI のポリシー</a>に従います。
+      </li>
+    </ul>
+
+    <h2>xAI に送るもの（確定の文字起こしに Grok を選んだとき）</h2>
+    <ul>
+      <li>
+        モードを詳しく選んで、確定の文字起こしを Grok Voice Transcribe にしたときだけ、話している間のマイクの音声を xAI に送って文字にします。黙っている間は送りません。字幕の文字は xAI に送りません。
+      </li>
+      <li>
+        送るときは、利用者ご自身の xAI の API キーを使います（ギフトコードでは使えません）。送った内容の扱いは
+        <a href="https://x.ai/legal" class="underline">xAI の API の規約とポリシー</a>に従います。
       </li>
     </ul>
 
@@ -96,10 +107,10 @@ const UPDATED = "2026 年 11 月 8 日";
     <h2>PC の中に保存するもの</h2>
     <ul>
       <li>
-        OpenAI の API キー、ギフトコード、おすそ分けの管理に使う値と作ったコードは、OS
+        OpenAI と xAI の API キー、ギフトコード、おすそ分けの管理に使う値と作ったコードは、OS
         の資格情報ストア（Windows の資格情報マネージャー、Mac のキーチェーンなど）に保存します。
       </li>
-      <li>設定、OpenAI の使用量の目安、ゲームのデータのキャッシュ、ダウンロードしたフォントを、PC の中に保存します。</li>
+      <li>設定、OpenAI と xAI の使用量の目安、ゲームのデータのキャッシュ、ダウンロードしたフォントを、PC の中に保存します。</li>
       <li>音声や字幕の履歴は保存しません。</li>
     </ul>
 

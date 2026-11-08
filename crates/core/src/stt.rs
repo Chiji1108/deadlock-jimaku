@@ -1,4 +1,5 @@
-//! OpenAI の音声認識（DESIGN.md 3 章）。リアルタイム（GPT-Live-Transcribe）とバッチ（GPT-Transcribe）。
+//! 音声認識（DESIGN.md 3 章）。リアルタイム（OpenAI の GPT-Live-Transcribe）とバッチ（OpenAI の
+//! GPT-Transcribe か xAI の Grok Voice Transcribe）。
 //!
 //! リアルタイムはサーバー側で発話を区切らない。こちらの VAD で発話を開いたら音声を送り始め、
 //! 閉じたら commit する。commit までの音声が 1 つの item になり、delta には item の ID が付いて届く。
@@ -11,12 +12,14 @@ use std::time::Duration;
 use anyhow::{Context, bail};
 use base64::Engine;
 use futures_util::{SinkExt, StreamExt};
+use reqwest::StatusCode;
 use serde_json::{Value, json};
 use tokio::sync::mpsc;
 use tokio_tungstenite::tungstenite::{self, Message, client::IntoClientRequest, http::HeaderValue};
 
 use crate::audio::{SAMPLE_RATE, to_i16};
 use crate::openai::Access;
+use crate::secrets::Provider;
 use crate::share;
 use crate::types::TranscriptionError;
 use crate::usage::{Meter, Use};
@@ -389,8 +392,38 @@ async fn expect_event(stream: &mut Stream, expected: &str) -> anyhow::Result<()>
     bail!("realtime closed before {expected}")
 }
 
+/// 確定の文字起こしの送り先と鍵
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Transcriber {
+    /// GPT-Transcribe（自分のキーかギフトコード）
+    OpenAi(Access),
+    /// Grok Voice Transcribe（自分のキーだけ）。`url` は xAI の音声認識の口
+    Xai { url: String, key: String },
+}
+
+impl Transcriber {
+    pub fn xai(key: String) -> Self {
+        Self::Xai {
+            url: XAI_STT.to_owned(),
+            key,
+        }
+    }
+}
+
+/// xAI の音声認識（DESIGN.md 3）
+const XAI_STT: &str = "https://api.x.ai/v1/stt";
+/// xAI に渡せる用語は 100 件、1 件 50 文字まで
+const XAI_MAX_KEYTERMS: usize = 100;
+const XAI_MAX_KEYTERM_CHARS: usize = 50;
+
+/// xAI が鍵を断った。間違った鍵には 401 ではなく 400 と「Incorrect API key provided」を返す（2026-11 の実測）
+fn xai_refused(status: StatusCode, body: &str) -> bool {
+    status == StatusCode::UNAUTHORIZED
+        || (status == StatusCode::BAD_REQUEST && body.contains("Incorrect API key"))
+}
+
 pub struct BatchRequest<'a> {
-    pub access: &'a Access,
+    pub transcriber: &'a Transcriber,
     pub model: &'a str,
     pub hints: &'a Hints,
     pub wav: Vec<u8>,
@@ -404,26 +437,48 @@ pub async fn transcribe(http: &reqwest::Client, req: BatchRequest<'_>) -> anyhow
     let file = reqwest::multipart::Part::bytes(req.wav)
         .file_name("segment.wav")
         .mime_str("audio/wav")?;
-    let mut form = reqwest::multipart::Form::new()
-        .text("model", req.model.to_owned())
-        .text("prompt", req.hints.prompt.clone())
-        .text("languages[]", req.hints.language.clone())
-        .part("file", file);
-    for keyword in &req.hints.keywords {
-        form = form.text("keywords[]", keyword.clone());
-    }
-    let res = http
-        .post(req.access.url("/audio/transcriptions"))
-        .bearer_auth(req.access.token())
-        .multipart(form)
-        .send()
-        .await?;
+    let form = reqwest::multipart::Form::new().text("model", req.model.to_owned());
+    let request = match req.transcriber {
+        Transcriber::OpenAi(access) => {
+            let mut form = form
+                .text("prompt", req.hints.prompt.clone())
+                .text("languages[]", req.hints.language.clone());
+            for keyword in &req.hints.keywords {
+                form = form.text("keywords[]", keyword.clone());
+            }
+            http.post(access.url("/audio/transcriptions"))
+                .bearer_auth(access.token())
+                .multipart(form.part("file", file))
+        }
+        Transcriber::Xai { url, key } => {
+            // ファイルより後ろの欄は読まれないことがあるので、ファイルは最後に置く
+            let mut form = form.text("language", req.hints.language.clone());
+            let keyterms = req.hints.keywords.iter();
+            let keyterms = keyterms.filter(|k| k.chars().count() <= XAI_MAX_KEYTERM_CHARS);
+            for keyword in keyterms.take(XAI_MAX_KEYTERMS) {
+                form = form.text("keyterm", keyword.clone());
+            }
+            http.post(url)
+                .bearer_auth(key)
+                .multipart(form.part("file", file))
+        }
+    };
+    let res = request.send().await?;
     let status = res.status();
     if !status.is_success() {
         // 400 の理由は本文にしか書かれていない
         let body = res.text().await.unwrap_or_default();
-        let reason = share::refusal_reason(&body);
-        if let Some(refused) = share::refusal(req.access, status, reason.as_deref()) {
+        let refused = match req.transcriber {
+            Transcriber::OpenAi(access) => {
+                share::refusal(access, status, share::refusal_reason(&body).as_deref())
+            }
+            Transcriber::Xai { .. } => {
+                xai_refused(status, &body).then_some(TranscriptionError::InvalidKey {
+                    provider: Provider::Xai,
+                })
+            }
+        };
+        if let Some(refused) = refused {
             return Err(refused.into());
         }
         bail!("{status}: {body}");

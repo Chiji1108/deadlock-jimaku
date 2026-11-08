@@ -9,6 +9,7 @@ use serde_json::{Value, json};
 use ts_rs::TS;
 
 use crate::openai::Access;
+use crate::secrets::Provider;
 use crate::types::TranscriptionError;
 
 const TIMEOUT: Duration = Duration::from_secs(10);
@@ -82,7 +83,9 @@ pub fn refusal(
 ) -> Option<TranscriptionError> {
     match (status, reason) {
         (StatusCode::UNAUTHORIZED, _) if access.is_gift() => Some(TranscriptionError::GiftUnknown),
-        (StatusCode::UNAUTHORIZED, _) => Some(TranscriptionError::InvalidKey),
+        (StatusCode::UNAUTHORIZED, _) => Some(TranscriptionError::InvalidKey {
+            provider: Provider::OpenAi,
+        }),
         (StatusCode::FORBIDDEN, Some("revoked")) => Some(TranscriptionError::GiftRevoked),
         (StatusCode::FORBIDDEN, Some("expired")) => {
             Some(TranscriptionError::GiftExpired { expires_at: None })
@@ -351,7 +354,9 @@ mod tests {
                 &key,
                 StatusCode::UNAUTHORIZED,
                 r#"{"error":{"code":"invalid_api_key"}}"#,
-                Some(TranscriptionError::InvalidKey),
+                Some(TranscriptionError::InvalidKey {
+                    provider: Provider::OpenAi,
+                }),
             ),
             // OpenAI の 403 の error はオブジェクト
             (

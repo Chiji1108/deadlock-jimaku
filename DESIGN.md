@@ -20,7 +20,7 @@
 
 - 配信 PC は Windows（Deadlock・OBS・本ツールを同じマシンで動かす）
 - ヘッドホンを使う（マイクにゲーム音が回り込まない）
-- 音声認識: OpenAI（GPT-Live-Transcribe と GPT-Transcribe。3 章）
+- 音声認識: OpenAI（GPT-Live-Transcribe と GPT-Transcribe）か xAI（Grok Voice Transcribe。確定だけ）。3 章
 - 翻訳と辞書の漢字名の読み: OpenAI GPT-6.1 Terra（推論なし。9.3）
 - ふりがな: GPT-6.1 Terra（文ごと。答えは確かめてから使う）、固有名詞: 翻訳と同じ問い合わせで GPT-6.1 Terra に辞書の用語から選ばせる（9 章）
 - ゲームデータ: [deadlock-api](https://api.deadlock-api.com/docs)（MIT）
@@ -216,6 +216,7 @@
 ### 3.2 GPT-Transcribe（バッチ）
 
 - `/v1/audio/transcriptions` に multipart で `model`, `file`（Segment の区間の WAV。16kHz）, `prompt`, `languages[]`, `keywords[]`（realtime と同じもの）を送る
+- 確定の文字起こしを Grok にしたら、同じ WAV を xAI の `https://api.x.ai/v1/stt` に送る（`stt::Transcriber::Xai`）。multipart で `model`（`grok-voice-transcribe-2.0`）, `language`, `keyterm`（同じ用語の先頭から、50 文字までのものを 100 件）, `file`（ファイルより後ろの欄は読まれないことがあるので最後）。録音の説明（prompt）は渡せない。鍵は自分の xAI の API キーだけで、ギフトコードは OpenAI にしか使えない。間違った鍵には 401 ではなく 400 と「Incorrect API key provided」が返る（実測）ので、401 とその 400 で `InvalidKey { provider: xai }` にして字幕を止める。料金は 1 時間 $0.10
 
 ### 3.3 1 時間あたりのコスト見積もり
 
@@ -628,10 +629,10 @@ interface Enriched {
 | `openai` | GPT-Live-Transcribe | OpenAI | 低負荷で高精度。Chrome を使わない |
 | `chrome` | Chrome（Google） | 確定の文は Chrome、翻訳は Translator、読みと用語は PC の中 | 無料、API キー不要。音声は Google に送られる。翻訳は Chrome の中で動く |
 
-| 工程 | 無料 | OpenAI |
+| 工程 | 無料 | 有料 |
 |---|---|---|
 | 途中の字幕 | Chrome（Google）。途中の訳は Translator | GPT-Live-Transcribe（途中の訳なし）。「出さない」も選べる |
-| 確定の文字起こし | Chrome（発話の区切りも Chrome が決める） | GPT-Transcribe（アプリのマイクと VAD で区切る） |
+| 確定の文字起こし | Chrome（発話の区切りも Chrome が決める） | GPT-Transcribe か xAI の Grok Voice Transcribe（アプリのマイクと VAD で区切る。3.2） |
 | 翻訳と用語 | Chrome の Translator と辞書の一致（`terms.rs`、日本語だけ） | GPT-6.1 Terra か GPT-6 Luna（9.3。選んだモデルを `Settings::models_in_use` が渡す） |
 | ふりがな | Lindera（日本語だけ） | GPT-6.1 Terra |
 
@@ -641,7 +642,8 @@ interface Enriched {
 - Chrome の翻訳は Chrome のページの中で動くので、途中の字幕が Chrome のときだけ選べる。途中の字幕が Chrome でないのにページを開くと、使わない音声認識まで動いて音声を Google に送ってしまう。操作パネルでは、Chrome の翻訳を使っている間は途中の字幕を Chrome から変えさせない（変えると翻訳が OpenAI に直り、黙って料金がかかる）
 - 翻訳と用語は 1 つの工程にする。LLM は訳文の用語を参照（`⟦hero:13⟧`）で書き、Chrome の流れは用語を英語の名前に置き換えてから訳す。どちらも用語の判定の結果で訳文の名前を守るので、別のもので作ると名前が崩れるか、片方の答えを待って遅くなる
 - ふりがなは別の工程にする。今も翻訳とは別の問い合わせで同時に投げているので、分けても遅くならない
-- 工程の選択肢には OpenAI の単価（`usage.rs` と同じ）を添える。1 時間あたりの目安は工程ごとには測っていないので書かず、モードの目安と「料金」タブの使い道ごとの額で見てもらう
+- 有料の工程は会社ごとに鍵が要る（`Engines::uses_openai` と `uses_xai`）。始めるときに足りない鍵を 1 つ選んで `MissingKey { provider }` で止め、操作パネルは足りない鍵を全部出す（`panel.missingKeys`）。使わない会社には鍵があっても何も送らない
+- 工程の選択肢には各社の単価（`usage.rs` と同じ）を添える。1 時間あたりの目安は工程ごとには測っていないので書かず、モードの目安と「料金」タブの使い道ごとの額で見てもらう
 
 **確定の仕上げ（`finish.rs`）:** 確定の文を Chrome と OpenAI のどちらが作っても、`Finisher` が工程ごとに用語・ふりがな・翻訳を付ける。PC の中の読みと用語（`Annotator`）を先に付け、LLM に聞く工程（`enrich.rs`）と Chrome の翻訳（`chrome::final_translation`。頼んだときから聞くので取りこぼさない）を同時に待ち、聞かなかった工程は PC の中で付けたものを使って、文字の位置で 1 つの字幕にまとめる（`enrich::source_tokens`）。どちらの経路でも、結果はチャンネルで字幕の処理に返し、Segment を書き換えるのは字幕の処理だけにする。LLM に鍵やギフトコードが断られたら（`share::refusal`）、確定の文字起こしと同じく字幕を止める（どちらの経路でも）。Chrome の確定の訳は 10 秒待って来なければ訳なしで仕上げる（ページが固まっても字幕を残さない）。
 

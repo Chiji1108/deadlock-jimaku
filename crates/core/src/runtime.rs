@@ -11,8 +11,10 @@ use futures_util::FutureExt;
 use tokio::task::JoinHandle;
 
 use crate::openai::Access;
+use crate::secrets::Provider;
 use crate::settings::{Engines, FinalSource, Models, Region, Segmentation, Settings, TextSource};
 use crate::store::Store;
+use crate::stt::Transcriber;
 use crate::types::{LangCode, TranscriptionError};
 use crate::{assets, audio, chrome, rank, secrets, share, subtitles};
 
@@ -94,6 +96,8 @@ struct AudioInput {
     realtime_delay: String,
     segmentation: Segmentation,
     access: Option<Access>,
+    /// xAI の API キー（xAI を使う工程がなければ None）
+    xai: Option<String>,
 }
 
 /// ページは準備が整い直すたびに設定を読むので、ページが使う設定もここに入れる
@@ -135,10 +139,11 @@ pub async fn run(store: Arc<Store>, options: Options) {
             .await
             .unwrap_or_default();
         let languages = settings.glossary_languages();
-        // OpenAI を使う工程がなければ OpenAI に何も送らない
+        // 使わない会社には何も送らない
         let access = keys
             .access(&settings.api_base)
-            .filter(|_| settings.engines.paid());
+            .filter(|_| settings.engines.uses_openai());
+        let xai = keys.xai.clone().filter(|_| settings.engines.uses_xai());
 
         assets_slot
             .update(
@@ -175,7 +180,7 @@ pub async fn run(store: Arc<Store>, options: Options) {
             })
             .await;
 
-        let input = subtitles_input(&settings, &options, access);
+        let input = subtitles_input(&settings, &options, access, xai);
         update_subtitles(&mut subtitles_slot, &store, input, &settings.api_base).await;
         // 設定を変えて字幕の処理を作り直しても、ウィンドウは閉じない
         store.sync_chrome();
@@ -190,6 +195,7 @@ fn subtitles_input(
     settings: &Settings,
     options: &Options,
     access: Option<Access>,
+    xai: Option<String>,
 ) -> SubtitlesInput {
     if settings.engines.transcription == FinalSource::Chrome {
         if !settings.transcription_enabled {
@@ -222,6 +228,7 @@ fn subtitles_input(
         realtime_delay: settings.realtime_delay.clone(),
         segmentation: settings.segmentation.clone(),
         access,
+        xai,
     }))
 }
 
@@ -250,8 +257,10 @@ fn start_subtitles(
     match input {
         SubtitlesInput::Stopped => None,
         SubtitlesInput::Chrome(input) => {
-            if input.engines.paid() && input.access.is_none() {
-                store.set_transcription_error(Some(TranscriptionError::MissingKey));
+            if input.engines.uses_openai() && input.access.is_none() {
+                store.set_transcription_error(Some(TranscriptionError::MissingKey {
+                    provider: Provider::OpenAi,
+                }));
                 return None;
             }
             tracing::info!("transcription started");
@@ -267,10 +276,31 @@ fn start_subtitles(
             }))
         }
         SubtitlesInput::Audio(input) => {
-            let Some(access) = input.access else {
-                store.set_transcription_error(Some(TranscriptionError::MissingKey));
-                return None;
+            let transcriber = match input.engines.transcription {
+                FinalSource::GrokVoiceTranscribe => {
+                    input.xai.map(Transcriber::xai).ok_or(Provider::Xai)
+                }
+                _ => input
+                    .access
+                    .clone()
+                    .map(Transcriber::OpenAi)
+                    .ok_or(Provider::OpenAi),
             };
+            let transcriber = match transcriber {
+                Ok(_) if input.engines.uses_openai() && input.access.is_none() => {
+                    Err(Provider::OpenAi)
+                }
+                other => other,
+            };
+            let transcriber = match transcriber {
+                Ok(transcriber) => transcriber,
+                Err(provider) => {
+                    store
+                        .set_transcription_error(Some(TranscriptionError::MissingKey { provider }));
+                    return None;
+                }
+            };
+            let access = input.access;
             tracing::info!("transcription started");
             let (input, ended) = match input.source {
                 Source::Mic(device) => (
@@ -281,10 +311,12 @@ fn start_subtitles(
             };
             let store = store.clone();
             Some(tokio::spawn(async move {
-                if !gift_accepted(&store, &access, check_gift.as_deref()).await {
+                if let Some(access) = &access
+                    && !gift_accepted(&store, access, check_gift.as_deref()).await
+                {
                     return;
                 }
-                let run = subtitles::run(store.clone(), input, access);
+                let run = subtitles::run(store.clone(), input, access, transcriber);
                 supervise(store, run, ended).await;
             }))
         }
@@ -430,6 +462,7 @@ mod tests {
                 realtime_delay: "low".into(),
                 segmentation: Settings::default().segmentation,
                 access: code.map(|code| Access::gift(code.into(), &self.api)),
+                xai: None,
             }))
         }
 
@@ -478,7 +511,12 @@ mod tests {
         let mut app = App::new().await;
         let input = app.audio(None, "ja");
         app.update(input).await;
-        assert_eq!(app.error(), Some(TranscriptionError::MissingKey));
+        assert_eq!(
+            app.error(),
+            Some(TranscriptionError::MissingKey {
+                provider: Provider::OpenAi
+            })
+        );
 
         let input = app.audio(Some("revoked"), "ja");
         app.update(input).await;
@@ -495,7 +533,44 @@ mod tests {
         };
         input.engines.furigana = crate::settings::RubySource::Llm;
         app.update(SubtitlesInput::Chrome(input)).await;
-        assert_eq!(app.error(), Some(TranscriptionError::MissingKey));
+        assert_eq!(
+            app.error(),
+            Some(TranscriptionError::MissingKey {
+                provider: Provider::OpenAi
+            })
+        );
+    }
+
+    /// Grok の確定には xAI のキーが、ほかの工程が OpenAI ならその鍵も要る
+    #[tokio::test]
+    async fn grok_needs_an_xai_key_and_openai_for_the_rest() {
+        let mut app = App::new().await;
+        let grok = |input: SubtitlesInput, xai: Option<&str>, engines: Engines| {
+            let SubtitlesInput::Audio(mut input) = input else {
+                unreachable!()
+            };
+            input.engines = Engines {
+                transcription: FinalSource::GrokVoiceTranscribe,
+                ..engines
+            };
+            input.xai = xai.map(Into::into);
+            SubtitlesInput::Audio(input)
+        };
+        let missing = |provider| Some(TranscriptionError::MissingKey { provider });
+
+        let input = grok(app.audio(Some("good"), "ja"), None, Engines::HYBRID);
+        app.update(input).await;
+        assert_eq!(app.error(), missing(Provider::Xai));
+
+        let input = grok(app.audio(None, "ja"), Some("xai"), Engines::HYBRID);
+        app.update(input).await;
+        assert_eq!(app.error(), missing(Provider::OpenAi));
+
+        // OpenAI を使わなければ OpenAI の鍵は要らない
+        let input = grok(app.audio(None, "en"), Some("xai"), Engines::CHROME);
+        app.update(input).await;
+        assert_eq!(app.error(), None);
+        assert!(app.slot.is_running());
     }
 
     /// 動いている間に断られるようになっても、関連の要求で止まる（DESIGN.md 17.1）
