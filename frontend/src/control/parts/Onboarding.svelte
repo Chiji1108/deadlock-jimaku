@@ -18,10 +18,10 @@
       ? []
       : [
           {
-            title: "API キーかギフトコードを入れる（なければ Chrome のモードで始める）",
+            title: "このモードに要る OpenAI の API キーかギフトコードを入れる",
             done: celebrating || panel.hasAccess,
             tab: "keys",
-            go: "API キーへ",
+            go: "入れる",
           },
         ]),
     {
@@ -82,9 +82,14 @@
               >
                 {step.go}
               </Button>
-              {#if i === 0 && s.speechEngine === "hybrid"}
-                <Button variant="link" size="sm" class="h-auto p-0" onclick={panel.startWithChrome}>
-                  キーなしで始める（Chrome）
+              {#if i === 0 && s.speechEngine !== "chrome"}
+                <Button
+                  variant="link"
+                  size="sm"
+                  class="h-auto p-0"
+                  onclick={() => panel.update({ speechEngine: "chrome" })}
+                >
+                  無料の Chrome モードにする
                 </Button>
               {/if}
             {/if}

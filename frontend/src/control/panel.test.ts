@@ -196,3 +196,23 @@ test("太さは 1 回だけ読み、読めなければ覚えずに読み直す",
   expect(fresh.weights.get("Jua")).toEqual([400]);
   expect(read).toHaveBeenCalledTimes(2);
 });
+
+test.each([
+  ["chrome", "missing", "missing", false],
+  ["hybrid", "missing", "missing", true],
+  ["openai", "missing", "missing", true],
+  ["hybrid", "saved", "missing", false],
+  ["hybrid", "missing", "saved", false],
+  ["openai", "missing", "saved", false],
+] as const)("キーの案内: %s、API キー %s、ギフトコード %s → %s", (engine, openai, gift, shown) => {
+  const fresh = freshPanel();
+  fresh.view = {
+    settings: { speechEngine: engine },
+    keys: { openai: { state: openai }, gift: { state: gift } },
+  } as unknown as SettingsView;
+  expect(fresh.needsKey).toBe(shown);
+});
+
+test("設定が届く前はキーの案内を出さない", () => {
+  expect(freshPanel().needsKey).toBe(false);
+});

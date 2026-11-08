@@ -94,6 +94,11 @@ class Panel {
     );
   }
 
+  /** 選んだモードに要る鍵がない。キーの案内を出し、字幕を始めさせない */
+  get needsKey() {
+    return !!this.view && !this.hasAccess;
+  }
+
   /** ハイブリッドで使える鍵（自分のキーか、期限内のギフトコード）がある */
   get hybridReady() {
     return this.view?.keys.openai.state === "saved" || giftValid(this.gift);

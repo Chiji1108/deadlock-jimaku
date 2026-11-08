@@ -34,11 +34,18 @@
     recommended?: boolean;
   }[] = [
     {
+      value: "chrome",
+      label: "Chrome",
+      traits: "無料・キー不要",
+      price: "無料",
+      hint: "音声認識も翻訳も Chrome で行います。無料でキー不要です",
+    },
+    {
       value: "hybrid",
       label: "ハイブリッド",
-      traits: "高速・高精度",
+      traits: "もっと精度を上げたいとき",
       price: "約 $0.6／時間",
-      hint: "途中の字幕は Chrome、確定の字幕は OpenAI の高い精度に置き換えます",
+      hint: "途中の字幕は Chrome、確定の字幕は OpenAI の高い精度に置き換えます。OpenAI の API キーかギフトコードが要ります",
       recommended: true,
     },
     {
@@ -46,14 +53,7 @@
       label: "OpenAI",
       traits: "低負荷・高精度",
       price: "約 $1／時間",
-      hint: "すべて OpenAI で作ります。Chrome は使いません",
-    },
-    {
-      value: "chrome",
-      label: "Chrome",
-      traits: "無料・キー不要",
-      price: "無料",
-      hint: "音声認識も翻訳も Chrome で行います。無料でキー不要です",
+      hint: "すべて OpenAI で作ります。Chrome は使いません。OpenAI の API キーかギフトコードが要ります",
     },
   ];
 
@@ -90,7 +90,8 @@
   <Card.Root>
     <Card.Header>
       <Card.Title>モード</Card.Title>
-      <Card.Description>字幕をどこで作るかを選びます</Card.Description>
+      <Card.Description>字幕をどこで作るかを選びます。無料の Chrome で始められます</Card.Description
+      >
     </Card.Header>
     <Card.Content class="flex flex-col gap-3">
       <div class="grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label="モード">

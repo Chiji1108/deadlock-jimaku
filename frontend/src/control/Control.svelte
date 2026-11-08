@@ -30,7 +30,6 @@
   onMount(() => panel.start());
 
   const s = $derived(panel.settings);
-  const needsKey = $derived(!!panel.view && !panel.hasAccess);
   let tab = $state("audio");
   /** 中身の欄（広い画面ではここだけがスクロールする） */
   let content = $state<HTMLElement>();
@@ -47,7 +46,13 @@
     },
     { value: "items", label: "アイテム説明", icon: PackageIcon, page: ItemsTab, wide: true },
     { value: "rank", label: "ランク", icon: TrophyIcon, page: RankTab, wide: true },
-    { value: "keys", label: "API キー", icon: KeyRoundIcon, page: KeysTab, heading: "" },
+    {
+      value: "keys",
+      label: "API キー",
+      icon: KeyRoundIcon,
+      page: KeysTab,
+      heading: "有料のモード",
+    },
     { value: "share", label: "おすそ分け", icon: GiftIcon, page: ShareTab },
     { value: "usage", label: "料金", icon: WalletIcon, page: UsageTab },
   ];
@@ -97,35 +102,42 @@
   class="flex min-h-screen flex-col bg-background text-foreground has-data-[orientation=vertical]:h-screen"
 >
   <header class="sticky top-0 z-10 shrink-0 border-b bg-background/80 backdrop-blur">
-    <div class="flex items-center gap-4 px-4 py-3">
+    <!-- 狭いときはボタンを次の行に回す -->
+    <div class="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
       <!-- 名前はウィンドウ（OBS ならドックのタブ）に出ているので、状態と今回の料金を置く -->
       <h1 class="sr-only">デドロ字幕</h1>
-      <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+      <div class="flex min-w-40 flex-1 flex-col gap-0.5">
         <p class="flex items-center gap-2 text-sm font-medium">
           <span class="size-2 shrink-0 rounded-full {status.dot}"></span>
           {panel.server === "open" ? status.label : "アプリに接続しています…"}
         </p>
-        <!-- 届く前も行の高さを取っておく（届いたときにページがずれない） -->
-        <p class="h-4 text-xs text-muted-foreground tabular-nums">
-          {#if s && panel.server === "open" && panel.usage}
-            <button class="hover:text-foreground hover:underline" onclick={() => (tab = "usage")}>
-              起動してからの料金 {usd(total(panel.usage.session))}{unpriced(panel.usage.session)
-                ? " ＋α"
-                : ""}
-            </button>
-          {/if}
-        </p>
+        <!-- Chrome のモードは無料なので出さない。使用量が届く前も行の高さを取っておく（届いたときにページがずれない） -->
+        {#if s && s.speechEngine !== "chrome"}
+          <p class="h-4 text-xs text-muted-foreground tabular-nums">
+            {#if panel.server === "open" && panel.usage}
+              <button class="hover:text-foreground hover:underline" onclick={() => (tab = "usage")}>
+                起動してからの料金 {usd(total(panel.usage.session))}{unpriced(panel.usage.session)
+                  ? " ＋α"
+                  : ""}
+              </button>
+            {/if}
+          </p>
+        {/if}
       </div>
       {#if s}
         {#if s.transcriptionEnabled}
           <Button variant="outline" onclick={() => panel.setTranscription(false)}>
             <SquareIcon />字幕を止める
           </Button>
-        {:else if needsKey && s.speechEngine === "hybrid"}
-          <Button variant="outline" onclick={() => (tab = "keys")}>キーを入れる</Button>
-          <Button onclick={panel.startWithChrome}>キーなしで始める（Chrome）</Button>
+        {:else if panel.needsKey}
+          <div class="flex flex-wrap gap-2">
+            <Button variant="outline" onclick={() => (tab = "keys")}
+              >キーかギフトコードを入れる</Button
+            >
+            <Button onclick={panel.startWithChrome}>無料の Chrome モードで始める</Button>
+          </div>
         {:else}
-          <Button disabled={needsKey} onclick={() => panel.setTranscription(true)}>
+          <Button onclick={() => panel.setTranscription(true)}>
             <MicIcon />字幕を始める
           </Button>
         {/if}
@@ -184,17 +196,19 @@
             </Alert.Root>
           {/if}
           <Onboarding open={(value) => (tab = value)} />
-          {#if needsKey && s.onboardingClosed}
+          {#if panel.needsKey && s.onboardingClosed}
             <Alert.Root>
-              <CircleAlertIcon />
-              <Alert.Title>はじめに OpenAI の API キーを設定してください</Alert.Title>
-              <Alert.Description>
-                <p>
-                  文字起こしと翻訳に使います。人からギフトコードをもらった場合は、それを入れても使えます。キーがなければ、Chrome
-                  のモードで始められます。<button class="underline" onclick={() => (tab = "keys")}>
-                    API キーの設定へ
-                  </button>
-                </p>
+              <KeyRoundIcon />
+              <Alert.Title>このモードには OpenAI の API キーかギフトコードが要ります</Alert.Title>
+              <Alert.Description class="flex flex-wrap gap-2 pt-1">
+                <Button size="sm" onclick={() => (tab = "keys")}>キーかギフトコードを入れる</Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onclick={() => panel.update({ speechEngine: "chrome" })}
+                >
+                  無料の Chrome モードにする
+                </Button>
               </Alert.Description>
             </Alert.Root>
           {/if}
