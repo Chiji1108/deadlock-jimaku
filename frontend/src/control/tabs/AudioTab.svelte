@@ -35,14 +35,14 @@
     {
       value: "chrome",
       label: "Chrome",
-      traits: "キー不要",
+      traits: "高速・キー不要",
       price: "無料",
       hint: "多くの字幕ソフトと同じく、Chrome の音声認識を使います",
     },
     {
       value: "hybrid",
       label: "ハイブリッド",
-      traits: "もっと精度を上げたいとき",
+      traits: "高速・高精度",
       price: "約 $0.6／時間",
       hint: "途中の字幕は Chrome、確定の字幕は OpenAI の高い精度に置き換えます。OpenAI の API キーかギフトコードが要ります",
       recommended: true,
