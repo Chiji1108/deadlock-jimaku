@@ -8,7 +8,7 @@
   import Captions from "../../lib/Captions.svelte";
   import { api } from "../../lib/api";
   import { loadGlossary } from "../../lib/glossary.svelte";
-  import { applyFontRules, fontSample, subtitleFontRules } from "../../lib/overlay-fonts";
+  import { applyFontImports, fontImports, fontSample } from "../../lib/overlay-fonts";
   import { isReady, visibleLines } from "../../lib/subtitle-lines";
   import { connect } from "../../lib/ws";
 
@@ -81,7 +81,9 @@
           void loadGlossary();
           break;
         case "display":
-          applyFontRules(subtitleFontRules(msg.subtitleStyle.languages));
+          applyFontImports(
+            fontImports(Object.values(msg.subtitleStyle.languages).map(({ font }) => font)),
+          );
           display = msg.subtitles;
           look = msg.subtitleStyle;
           break;

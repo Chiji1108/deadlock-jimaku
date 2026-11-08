@@ -6,7 +6,7 @@
   import type { RankState } from "../../generated/RankState";
   import type { RankStyle } from "../../generated/RankStyle";
   import { placeItems } from "../../lib/anchor";
-  import { applyFontRules, rankFontRules } from "../../lib/overlay-fonts";
+  import { applyFontImports, fontImports } from "../../lib/overlay-fonts";
   import { fitSource, rankSize } from "../../lib/overlay-size";
   import RankBadge from "../../lib/RankBadge.svelte";
   import { api } from "../../lib/api";
@@ -45,7 +45,7 @@
     return connect(["rank", "display"], (msg) => {
       if (msg.type === "rank.update") rank = msg.rank ?? undefined;
       if (msg.type === "display") {
-        applyFontRules(rankFontRules(msg.rankStyle.font));
+        applyFontImports(fontImports([msg.rankStyle.font]));
         look = msg.rankStyle;
         lang = msg.rankLanguage;
         content = msg.rankContent;
