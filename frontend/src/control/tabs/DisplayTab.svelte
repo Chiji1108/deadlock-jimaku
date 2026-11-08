@@ -73,6 +73,12 @@
         title="字幕オーバーレイのプレビュー"
         size={SUBTITLE_SIZE}
       />
+      <AddToObs
+        url={overlayUrl("subtitles")}
+        name="字幕"
+        size={SUBTITLE_SIZE}
+        hint="大きさは、ソースを引き伸ばさずにプロパティの幅と高さで変えてください"
+      />
 
       <Field.Group>
         <Field.Field>
@@ -240,18 +246,6 @@
           {/if}
         </Field.Field>
       </Field.Group>
-    </Card.Content>
-  </Card.Root>
-
-  <Card.Root>
-    <Card.Header>
-      <Card.Title>OBS に追加する</Card.Title>
-      <Card.Description>
-        字幕は箱の下から積み上がり、箱の幅で折り返します。大きさを変えるときは、ソースを引き伸ばさずにプロパティの幅と高さを変えてください（引き伸ばすと文字ごと伸びます）。一度追加すれば、見せ方を変えても貼り直す必要はありません
-      </Card.Description>
-    </Card.Header>
-    <Card.Content>
-      <AddToObs url={overlayUrl("subtitles")} name="字幕" size={SUBTITLE_SIZE} />
     </Card.Content>
   </Card.Root>
 </div>

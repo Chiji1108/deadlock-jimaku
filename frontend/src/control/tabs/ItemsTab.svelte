@@ -42,6 +42,12 @@
           size={ITEMS_SIZE}
         />
       </div>
+      <AddToObs
+        url={overlayUrl("items")}
+        name="アイテム説明"
+        size={ITEMS_SIZE}
+        hint="大きさは、ソースを引き伸ばさずにプロパティの幅と高さを同じ割合で変えてください"
+      />
 
       <Field.Group>
         <Field.Field>
@@ -101,18 +107,6 @@
           <Field.Description>OBS のソースの箱の中で、カードを寄せる位置です</Field.Description>
         </Field.Field>
       </Field.Group>
-    </Card.Content>
-  </Card.Root>
-
-  <Card.Root>
-    <Card.Header>
-      <Card.Title>OBS に追加する</Card.Title>
-      <Card.Description>
-        大きさを変えるときは、ソースを引き伸ばさずにプロパティの幅と高さを同じ割合で変えてください。カードがくっきりしたまま大きくなります
-      </Card.Description>
-    </Card.Header>
-    <Card.Content>
-      <AddToObs url={overlayUrl("items")} name="アイテム説明" size={ITEMS_SIZE} />
     </Card.Content>
   </Card.Root>
 </div>

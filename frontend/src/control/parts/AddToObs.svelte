@@ -8,7 +8,18 @@
   import { Button } from "$lib/components/ui/button";
   import { Input } from "$lib/components/ui/input";
 
-  let { url, name, size }: { url: string; name: string; size: [number, number] } = $props();
+  let {
+    url,
+    name,
+    size,
+    hint,
+  }: {
+    url: string;
+    name: string;
+    size: [number, number];
+    /** 追加したあとの大きさの変え方 */
+    hint: string;
+  } = $props();
   let copied = $state(false);
   let reset: ReturnType<typeof setTimeout> | undefined;
 
@@ -45,6 +56,7 @@
 </script>
 
 <div class="flex flex-col gap-3">
+  <p class="text-sm font-medium">OBS に追加する</p>
   <div
     draggable="true"
     ondragstart={drag}
@@ -56,7 +68,7 @@
   <p class="text-sm text-muted-foreground">
     OBS のプレビューかソースの一覧に落とすと、大きさを合わせたブラウザソースができます（OBS
     を管理者として起動していると使えません）。うまくいかないときは、下の URL
-    をコピーしてソースの「＋」→「ブラウザ」に貼り付け、幅 {size[0]}・高さ {size[1]} にしてください
+    をコピーしてソースの「＋」→「ブラウザ」に貼り付け、幅 {size[0]}・高さ {size[1]} にしてください。{hint}
   </p>
   <div class="flex gap-2">
     <Input

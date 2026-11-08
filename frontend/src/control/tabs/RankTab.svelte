@@ -65,6 +65,12 @@
         title="ランクオーバーレイのプレビュー"
         {size}
       />
+      <AddToObs
+        url={overlayUrl("rank")}
+        name="ランク"
+        {size}
+        hint="大きさは、ソースを引き伸ばさずにプロパティの幅と高さを同じ割合で変え、出すものを変えたら {size[0]}×{size[1]} に合わせ直してください"
+      />
 
       <form
         onsubmit={(e) => {
@@ -194,19 +200,6 @@
           />
         {/snippet}
       </TextStyleFields>
-    </Card.Content>
-  </Card.Root>
-
-  <Card.Root>
-    <Card.Header>
-      <Card.Title>OBS に追加する</Card.Title>
-      <Card.Description>
-        大きさを変えるときは、ソースを引き伸ばさずにプロパティの幅と高さを同じ割合で変えてください。中身がくっきりしたまま大きくなります。出すものを変えたときは、プロパティの幅と高さを
-        {size[0]}×{size[1]} に合わせ直してください
-      </Card.Description>
-    </Card.Header>
-    <Card.Content>
-      <AddToObs url={overlayUrl("rank")} name="ランク" {size} />
     </Card.Content>
   </Card.Root>
 </div>
