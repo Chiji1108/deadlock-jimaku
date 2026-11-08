@@ -1,5 +1,7 @@
 ---
 import Layout from "../layouts/Layout.astro";
+import type { SpeechEngine } from "../../../frontend/src/generated/SpeechEngine";
+import { ENGINES } from "../../../frontend/src/lib/engines";
 import RankBadge from "../../../frontend/src/lib/RankBadge.svelte";
 import LiveDemo from "../components/LiveDemo.svelte";
 import LookDemo from "../components/LookDemo.svelte";
@@ -129,31 +131,12 @@ const faqs = [
   },
 ];
 
-/** 字幕の作り方。並びと言い方は操作パネル（frontend/src/control/tabs/AudioTab.svelte）とそろえる */
-const modes = [
-  {
-    name: "Chrome",
-    traits: ["高速", "キー不要"],
-    price: "無料",
-    body: "多くの字幕ソフトと同じく、Chrome の音声認識を使います。翻訳も Chrome の中で行います",
-    needs: "Google Chrome（字幕を始めると小さなウィンドウが開く）",
-  },
-  {
-    name: "ハイブリッド",
-    badge: "おすすめ",
-    traits: ["高速", "高精度"],
-    price: "約 $0.6／時間",
-    body: "途中の字幕は Chrome、確定の字幕は OpenAI の高い精度に置き換えます",
-    needs: "API キーかギフトコード、Google Chrome",
-  },
-  {
-    name: "OpenAI",
-    traits: ["低負荷", "高精度"],
-    price: "約 $1／時間",
-    body: "すべて OpenAI で作ります。Chrome は使いません",
-    needs: "API キーかギフトコード",
-  },
-];
+/** モードの一覧はアプリと同じもの（engines.ts）を出し、LP では「必要なもの」だけを足す */
+const needs: Record<SpeechEngine, string> = {
+  chrome: "Google Chrome（字幕を始めると小さなウィンドウが開く）",
+  hybrid: "API キーかギフトコード、Google Chrome",
+  openai: "API キーかギフトコード",
+};
 
 const line = LINES[0]!;
 /** 手元の測定（M5 Pro）とリリースのファイルの大きさ */
@@ -334,16 +317,16 @@ const official = [
     </h2>
     <ul class="mt-10 grid gap-8 md:grid-cols-3">
       {
-        modes.map((m) => (
+        ENGINES.map((e) => (
           <li class="reveal border-t-2 border-ink pt-4">
             <h3 class="flex items-center gap-2 text-xl font-bold">
-              {m.name}
-              {m.badge && <span class="bg-ink px-2 py-0.5 text-xs text-paper">{m.badge}</span>}
+              {e.label}
+              {e.recommended && <span class="bg-ink px-2 py-0.5 text-xs text-paper">おすすめ</span>}
             </h3>
-            <p class="mt-2 text-sm font-bold">{m.traits.join("・")}</p>
-            <p class="display mt-3 text-3xl">{m.price}</p>
-            <p class="mt-3 leading-relaxed text-muted">{m.body}</p>
-            <p class="mt-2 text-sm text-muted">必要なもの: {m.needs}</p>
+            <p class="mt-2 text-sm font-bold">{e.traits}</p>
+            <p class="display mt-3 text-3xl">{e.price}</p>
+            <p class="mt-3 leading-relaxed text-muted">{e.hint}</p>
+            <p class="mt-2 text-sm text-muted">必要なもの: {needs[e.value]}</p>
           </li>
         ))
       }
