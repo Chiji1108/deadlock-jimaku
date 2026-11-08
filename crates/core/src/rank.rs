@@ -1,11 +1,13 @@
 //! 配信者のランク（DESIGN.md 12 章）。deadlock-api を一定間隔で取りに行き、変わったら配信する。
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, LazyLock, Mutex};
 use std::time::{Duration, Instant};
 
 use anyhow::{Context, ensure};
+use futures_util::FutureExt;
+use futures_util::future::{BoxFuture, Shared};
 use serde::Deserialize;
 
 use crate::lang::{self, Language};
@@ -57,7 +59,7 @@ struct Tiers {
     names: BTreeMap<u32, BTreeMap<LangCode, String>>,
     plain_images: BTreeMap<u32, String>,
     /// 名前を取れた言語。取れなかった言語は次の回に取り直す
-    loaded: Vec<LangCode>,
+    loaded: BTreeSet<LangCode>,
 }
 
 /// 設定にアカウントがあれば、ランクを取りに行き続ける
@@ -205,56 +207,39 @@ async fn fetch_rank(account_id: u32) -> anyhow::Result<PlayerRank> {
         .await?)
 }
 
-type Fetched = Vec<(&'static Language, anyhow::Result<Vec<Tier>>)>;
-
 impl Tiers {
-    /// まだ名前を取れていない言語（重ねない）
-    fn missing(&self, languages: &[&'static Language]) -> Vec<&'static Language> {
-        let mut out: Vec<&'static Language> = Vec::new();
-        for &l in languages {
-            if !self.loaded.iter().any(|code| code == l.code)
-                && !out.iter().any(|o| o.code == l.code)
-            {
-                out.push(l);
-            }
-        }
-        out
-    }
-
     /// 取れた名前を足す。失敗した言語は警告して次の回に回す
-    fn add(&mut self, fetched: Fetched) {
-        for (language, result) in fetched {
-            let code = language.code;
-            match result {
-                Ok(list) if !self.loaded.iter().any(|c| c == code) => {
-                    for t in list {
-                        self.names
-                            .entry(t.tier)
-                            .or_default()
-                            .insert(code.to_owned(), t.name);
-                        if let Some(Some(url)) = t.images.get("large_webp") {
-                            self.plain_images.insert(t.tier, url.clone());
-                        }
+    fn add(&mut self, language: &Language, result: anyhow::Result<Vec<Tier>>) {
+        let code = language.code;
+        match result {
+            Ok(list) => {
+                for t in list {
+                    self.names
+                        .entry(t.tier)
+                        .or_default()
+                        .insert(code.to_owned(), t.name);
+                    if let Some(Some(url)) = t.images.get("large_webp") {
+                        self.plain_images.insert(t.tier, url.clone());
                     }
-                    self.loaded.push(code.to_owned());
                 }
-                Ok(_) => {}
-                Err(e) => tracing::warn!("rank names ({code}): {e:#}"),
+                self.loaded.insert(code.to_owned());
             }
+            Err(e) => tracing::warn!("rank names ({code}): {e:#}"),
         }
     }
 }
 
 /// まだ取れていない言語の名前を、並べて取る
-async fn load_tiers(tiers: &mut Tiers, api: &str, languages: &[&'static Language]) {
-    let fetched = fetch_all_tiers(api, tiers.missing(languages)).await;
-    tiers.add(fetched);
-}
-
-async fn fetch_all_tiers(api: &str, languages: Vec<&'static Language>) -> Fetched {
-    let fetched =
-        futures_util::future::join_all(languages.iter().map(|l| fetch_tiers(api, l))).await;
-    languages.into_iter().zip(fetched).collect()
+async fn load_tiers(tiers: &mut Tiers, api: &str, languages: &[&Language]) {
+    let missing: Vec<&Language> = languages
+        .iter()
+        .copied()
+        .filter(|l| !tiers.loaded.contains(l.code))
+        .collect();
+    let fetched = futures_util::future::join_all(missing.iter().map(|l| fetch_tiers(api, l))).await;
+    for (language, result) in missing.into_iter().zip(fetched) {
+        tiers.add(language, result);
+    }
 }
 
 async fn fetch_tiers(api: &str, language: &Language) -> anyhow::Result<Vec<Tier>> {
@@ -346,8 +331,44 @@ async fn player_image(dir: &Path, player: &PlayerRank, tiers: &Tiers) -> anyhow:
     ensure_image(dir, player.badge, &image_source(player, tiers)?).await
 }
 
-/// 見本のティアの名前。英語と表示の言語の分だけ取り、取れた言語は覚えて取り直さない
-static SAMPLE_TIERS: LazyLock<Mutex<Tiers>> = LazyLock::new(Default::default);
+/// 取りに行っている途中の、見本の名前かアイコン。要求が取り消されても最後まで取って覚える
+type Flight = Shared<BoxFuture<'static, ()>>;
+
+/// 見本の名前（英語と表示の言語の分）とアイコン。取れたものは覚えて取り直さない
+#[derive(Default)]
+struct SampleCache {
+    tiers: Tiers,
+    image: Option<String>,
+    /// 言語のコードか `ICON`。同じものを同時に求められたら、同じ取得を待つ
+    flights: BTreeMap<&'static str, Flight>,
+}
+
+const ICON: &str = "icon";
+
+static SAMPLE_CACHE: LazyLock<Mutex<SampleCache>> = LazyLock::new(Default::default);
+
+impl SampleCache {
+    /// `key` を取りに行っていればそれを、なければ新しく `fetch` を始めて返す。`fetch` は取れたものを自分で覚える
+    fn flight(
+        &mut self,
+        cache: &'static Mutex<SampleCache>,
+        key: &'static str,
+        fetch: impl Future<Output = ()> + Send + 'static,
+    ) -> Flight {
+        self.flights
+            .entry(key)
+            .or_insert_with(|| {
+                tokio::spawn(async move {
+                    fetch.await;
+                    cache.lock().unwrap().flights.remove(key);
+                })
+                .map(|_| ())
+                .boxed()
+                .shared()
+            })
+            .clone()
+    }
+}
 
 fn sample_player() -> PlayerRank {
     let (rank, subrank, points) = SAMPLE;
@@ -365,34 +386,49 @@ fn sample_player() -> PlayerRank {
 /// 名前は英語（オーバーレイは名前のない言語を英語で出す）と `language` の分を取り、それまでに取れたほかの言語の名前も返す。
 /// 取れなかった名前やアイコンは欠けたまま返し、次に開いたときに取り直す
 pub async fn sample(store: &Store, language: &'static Language) -> RankState {
-    sample_from(API, &SAMPLE_TIERS, &store.rank_images(), language).await
+    sample_from(&SAMPLE_CACHE, API, &store.rank_images(), language).await
 }
 
-/// 取りに行っている間はロックを持たない（ほかの言語の見本を待たせない）。同じ言語を同時に求められたら、どちらも取りに行く
+/// ロックは覚えたものを読み書きする間だけ持つ（取りに行く間、ほかの言語の見本を待たせない）
 async fn sample_from(
+    cache: &'static Mutex<SampleCache>,
     api: &str,
-    cache: &Mutex<Tiers>,
     dir: &Path,
     language: &'static Language,
 ) -> RankState {
     let english = lang::find("en").expect("English is supported");
     let player = sample_player();
-    let (missing, source) = {
-        let tiers = cache.lock().unwrap();
-        (
-            tiers.missing(&[english, language]),
-            image_source(&player, &tiers),
-        )
+    let flights = {
+        let mut c = cache.lock().unwrap();
+        let mut flights = Vec::new();
+        for l in [english, language] {
+            if !c.tiers.loaded.contains(l.code) {
+                let api = api.to_owned();
+                flights.push(c.flight(cache, l.code, async move {
+                    let result = fetch_tiers(&api, l).await;
+                    cache.lock().unwrap().tiers.add(l, result);
+                }));
+            }
+        }
+        if c.image.is_none() {
+            match image_source(&player, &c.tiers) {
+                Ok(source) => {
+                    let (dir, badge) = (dir.to_owned(), player.badge);
+                    flights.push(c.flight(cache, ICON, async move {
+                        match ensure_image(&dir, badge, &source).await {
+                            Ok(url) => cache.lock().unwrap().image = Some(url),
+                            Err(e) => tracing::warn!("rank sample image: {e:#}"),
+                        }
+                    }));
+                }
+                Err(e) => tracing::warn!("rank sample image: {e:#}"),
+            }
+        }
+        flights
     };
-    let (fetched, image) = tokio::join!(fetch_all_tiers(api, missing), async {
-        ensure_image(dir, player.badge, &source?).await
-    });
-    let image = image
-        .inspect_err(|e| tracing::warn!("rank sample image: {e:#}"))
-        .ok();
-    let mut tiers = cache.lock().unwrap();
-    tiers.add(fetched);
-    state(&player, &tiers, image)
+    futures_util::future::join_all(flights).await;
+    let c = cache.lock().unwrap();
+    state(&player, &c.tiers, c.image.clone())
 }
 
 #[cfg(test)]
@@ -505,6 +541,10 @@ mod tests {
         dir
     }
 
+    fn new_cache() -> &'static Mutex<SampleCache> {
+        Box::leak(Box::default())
+    }
+
     fn language(code: &str) -> &'static Language {
         lang::find(code).unwrap()
     }
@@ -513,10 +553,10 @@ mod tests {
     async fn sample_names_are_fetched_once_per_language_and_kept() {
         let asked = Arc::new(Mutex::new(Vec::new()));
         let api = serve_tiers(asked.clone(), &[], &[]).await;
-        let (cache, dir) = (Mutex::default(), sample_dir());
+        let (cache, dir) = (new_cache(), sample_dir());
         let mut last = None;
         for code in ["en", "en", "ja", "en", "ko", "ja"] {
-            let s = sample_from(&api, &cache, dir.path(), language(code)).await;
+            let s = sample_from(cache, &api, dir.path(), language(code)).await;
             assert_eq!(s.names[code], format!("Emissary ({})", language(code).api));
             assert!(s.image.is_some());
             last = Some(s);
@@ -526,12 +566,46 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn names_asked_for_at_once_are_fetched_once() {
+        let asked = Arc::new(Mutex::new(Vec::new()));
+        let api = serve_tiers(asked.clone(), &[], &[]).await;
+        let (cache, dir) = (new_cache(), sample_dir());
+        let (en, ja) = tokio::join!(
+            sample_from(cache, &api, dir.path(), language("en")),
+            sample_from(cache, &api, dir.path(), language("ja")),
+        );
+        assert!(en.names.contains_key("en"));
+        assert!(ja.names.contains_key("en") && ja.names.contains_key("ja"));
+        let mut asked = asked.lock().unwrap().clone();
+        asked.sort();
+        assert_eq!(asked, ["english", "japanese"]);
+    }
+
+    #[tokio::test]
+    async fn a_cancelled_sample_still_keeps_the_names() {
+        let asked = Arc::new(Mutex::new(Vec::new()));
+        let api = serve_tiers(asked.clone(), &[], &[]).await;
+        let (cache, dir) = (new_cache(), sample_dir());
+        // 取りに行き始めたところで取り消す（オーバーレイが前の言語の要求を取り消したとき）
+        assert!(
+            sample_from(cache, &api, dir.path(), language("ja"))
+                .now_or_never()
+                .is_none()
+        );
+        let s = sample_from(cache, &api, dir.path(), language("ja")).await;
+        assert!(s.names.contains_key("ja"));
+        let mut asked = asked.lock().unwrap().clone();
+        asked.sort();
+        assert_eq!(asked, ["english", "japanese"]);
+    }
+
+    #[tokio::test]
     async fn sample_keeps_english_when_the_language_fails() {
         let asked = Arc::new(Mutex::new(Vec::new()));
         let api = serve_tiers(asked.clone(), &["koreana"], &[]).await;
-        let (cache, dir) = (Mutex::default(), sample_dir());
+        let (cache, dir) = (new_cache(), sample_dir());
         for _ in 0..2 {
-            let s = sample_from(&api, &cache, dir.path(), language("ko")).await;
+            let s = sample_from(cache, &api, dir.path(), language("ko")).await;
             assert_eq!(
                 s.names,
                 BTreeMap::from([("en".into(), "Emissary (english)".into())])
@@ -547,11 +621,11 @@ mod tests {
     async fn a_stuck_sample_does_not_hold_up_other_languages() {
         let asked = Arc::new(Mutex::new(Vec::new()));
         let api = serve_tiers(asked.clone(), &[], &["japanese"]).await;
-        let (cache, dir) = (Mutex::default(), sample_dir());
-        let stuck = sample_from(&api, &cache, dir.path(), language("ja"));
+        let (cache, dir) = (new_cache(), sample_dir());
+        let stuck = sample_from(cache, &api, dir.path(), language("ja"));
         let other = tokio::time::timeout(
             Duration::from_secs(5),
-            sample_from(&api, &cache, dir.path(), language("ko")),
+            sample_from(cache, &api, dir.path(), language("ko")),
         );
         tokio::select! {
             biased;

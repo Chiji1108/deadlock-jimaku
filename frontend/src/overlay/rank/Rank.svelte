@@ -30,38 +30,32 @@
    * 名前は英語とランクの言語の分だけ取るので、言語を変えたら、届くまで前の言語の名前のまま出す */
   let sample = $state<RankState | undefined>();
   let sampleLang = $state<string | undefined>();
-  const shown = $derived(rank ?? sample);
-  /** 取りに行っている言語。英語は名前のない言語の代わりに出すので、ほかの言語に変えても取り消さない */
-  const pending = new Map<string, AbortController>();
+  const shown = $derived(rank ?? (sample && { ...sample, image: sample.image ?? FALLBACK_IMAGE }));
+  let request: { lang: string; controller: AbortController } | undefined;
 
-  /** 本物のランクがあれば取らない。取れなかった名前は、次に display が届いたときに取り直す */
+  /** 本物のランクがあれば取らない。取れなかった名前とアイコンは、次に display が届いたときに取り直す */
   function loadSample(want: string) {
     if (!preview || rank) return;
-    if (sample?.names[want]) {
+    if (sample?.names[want] && sample.image) {
       sampleLang = want;
       return;
     }
-    if (pending.has(want)) return;
-    for (const [l, controller] of pending) {
-      if (l === "en") continue;
-      controller.abort();
-      pending.delete(l);
-    }
+    if (request?.lang === want) return;
+    // 取り消しても core は取りかけたものを最後まで取って覚えるので、前の言語の名前も無駄にならない
+    request?.controller.abort();
     const controller = new AbortController();
-    pending.set(want, controller);
+    request = { lang: want, controller };
     api
       .rankSample(want, controller.signal)
       .then((s) => {
-        // 英語の答えは、表示の言語の答えより先に届いたときだけ使う（表示の言語の答えにも英語の名前は入る）
-        if (sample && want !== lang) return;
-        sample = { ...s, image: s.image ?? FALLBACK_IMAGE };
+        sample = s;
         sampleLang = want;
       })
       .catch((e: unknown) => {
         if (!controller.signal.aborted) console.warn("rank sample", e);
       })
       .finally(() => {
-        if (pending.get(want) === controller) pending.delete(want);
+        if (request?.controller === controller) request = undefined;
       });
   }
 
@@ -90,7 +84,7 @@
     });
     return () => {
       disconnect();
-      for (const controller of pending.values()) controller.abort();
+      request?.controller.abort();
     };
   });
 </script>
