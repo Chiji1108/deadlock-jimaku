@@ -5,7 +5,7 @@ use std::sync::Arc;
 use axum::Json;
 use axum::Router;
 use axum::extract::ws::{CloseFrame, Message, WebSocket, WebSocketUpgrade};
-use axum::extract::{Path, Request, State};
+use axum::extract::{Path, Query, Request, State};
 use axum::http::{HeaderMap, StatusCode, Uri, header};
 use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Response};
@@ -568,9 +568,18 @@ async fn rank_image(State(store): State<Arc<Store>>, Path(file): Path<String>) -
     }
 }
 
-/// プレビューの見本のランク。名前とアイコンは、まだ取れていなければ取ってくる。取れなかったものは欠けたまま
-async fn rank_sample(State(store): State<Arc<Store>>) -> Json<RankState> {
-    Json(rank::sample(&store).await)
+#[derive(Deserialize)]
+struct RankSampleQuery {
+    lang: LangCode,
+}
+
+/// プレビューの見本のランク。`lang` の名前とアイコンは、まだ取れていなければ取ってくる。取れなかったものは欠けたまま
+async fn rank_sample(
+    State(store): State<Arc<Store>>,
+    Query(query): Query<RankSampleQuery>,
+) -> Result<Json<RankState>, StatusCode> {
+    let language = lang::find(&query.lang).ok_or(StatusCode::BAD_REQUEST)?;
+    Ok(Json(rank::sample(&store, language).await))
 }
 
 /// URL に版やバッジを含むアセット（中身が変わらない）を長くキャッシュさせて返す
@@ -786,6 +795,17 @@ mod tests {
                 .await
                 .unwrap();
             assert_eq!(res.status(), StatusCode::NOT_FOUND, "{file}");
+        }
+    }
+
+    #[tokio::test]
+    async fn the_rank_sample_needs_a_known_language() {
+        let addr = serve_on_any_port().await;
+        for query in ["", "?lang=xx"] {
+            let res = reqwest::get(format!("http://{addr}/api/rank/sample{query}"))
+                .await
+                .unwrap();
+            assert_eq!(res.status(), StatusCode::BAD_REQUEST, "{query}");
         }
     }
 

@@ -43,8 +43,9 @@ export const api = {
   openChrome: () => post("/api/chrome/open"),
   /** Chrome の専用のデータを消して始め直す */
   resetChrome: () => post("/api/chrome/reset"),
-  /** ランクのプレビューの見本のアイコン。初めてのときは core が取ってくる */
-  rankSample: () => request<RankState>("/api/rank/sample"),
+  /** ランクのプレビューの見本。その言語の名前とアイコンは、初めてのときに core が取ってくる */
+  rankSample: (lang: string, signal?: AbortSignal) =>
+    request<RankState>(`/api/rank/sample?lang=${encodeURIComponent(lang)}`, { signal }),
 
   /** もらったギフトコードの状態 */
   gift: () => request<GiftStatus>("/api/gift"),
