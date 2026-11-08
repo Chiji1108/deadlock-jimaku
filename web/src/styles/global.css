@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* 字幕とランクの部品のフォント（言語ごとの標準と、選んだフォントの --font）はアプリと同じ */
+@import "../../../frontend/src/lib/lang.css" layer(base);
 
 @theme {
   /* フォントは読み込まず、アプリの字幕と同じく端末のものを使う（ふりがなの位置も揃う） */

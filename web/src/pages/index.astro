@@ -1,7 +1,13 @@
 ---
+import miri from "../assets/miri.webp?url";
+import obsPoster from "../assets/obs-drag.webp?url";
+import obsVideo from "../assets/obs-drag.mp4?url";
 import Layout from "../layouts/Layout.astro";
+import type { SpeechEngine } from "../../../frontend/src/generated/SpeechEngine";
+import { ENGINES } from "../../../frontend/src/lib/engines";
 import RankBadge from "../../../frontend/src/lib/RankBadge.svelte";
 import LiveDemo from "../components/LiveDemo.svelte";
+import LookDemo from "../components/LookDemo.svelte";
 import PlateCaption from "../components/PlateCaption.svelte";
 import PlateCard from "../components/PlateCard.svelte";
 import { fetchCards } from "../lib/cards";
@@ -94,7 +100,7 @@ const faqs = [
   },
   {
     q: "字幕はどこで作っていますか？",
-    a: "ハイブリッドは、途中の字幕を Chrome で作り、確定の字幕と翻訳を OpenAI で作ります。OpenAI のモードは、すべて OpenAI で作ります。Chrome のモードは、音声認識も翻訳も Chrome で行います。ハイブリッドと Chrome のモードは Google Chrome が必要で、字幕を始めると小さな Chrome のウィンドウが開きます。翻訳のモデルは初回に Chrome がダウンロードします。ふりがなと用語の速い判定は、話す言語が日本語のときだけ動きます。",
+    a: "ハイブリッドは、途中の字幕を Chrome で作り、確定の字幕と翻訳を OpenAI で作ります。OpenAI のモードは、すべて OpenAI で作ります。Chrome のモードは、音声認識も翻訳も Chrome で行います。ハイブリッドと Chrome のモードは Google Chrome が必要で、字幕を始めると小さな Chrome のウィンドウが開きます。翻訳のモデルは初回に Chrome がダウンロードします。",
   },
   {
     q: "どんな情報が送信されますか？",
@@ -118,7 +124,7 @@ const faqs = [
   {
     q: "どんな人が開発したんですか？",
     a: "Twitch で Deadlock を配信しているミリちゃんねるが、配信者目線で開発しました。",
-    photo: "/media/miri.webp",
+    photo: miri,
     link: { href: TWITCH, label: "Twitch のチャンネルを見る" },
   },
   {
@@ -128,31 +134,12 @@ const faqs = [
   },
 ];
 
-/** 字幕の作り方 */
-const modes = [
-  {
-    name: "ハイブリッド",
-    badge: "おすすめ",
-    traits: ["高速", "高精度"],
-    price: "約 $0.6／時間",
-    body: "途中の字幕は Chrome、確定の字幕は OpenAI の高い精度に置き換えます",
-    needs: "API キーかギフトコード、Google Chrome",
-  },
-  {
-    name: "OpenAI",
-    traits: ["低負荷", "高精度"],
-    price: "約 $1／時間",
-    body: "すべて OpenAI で作ります。Chrome は使いません",
-    needs: "API キーかギフトコード",
-  },
-  {
-    name: "Chrome",
-    traits: ["無料", "キー不要"],
-    price: "無料",
-    body: "音声認識も翻訳も Chrome で行います。ほかの字幕ソフトでも使われている、ブラウザの音声認識の仕組みを使います",
-    needs: "Google Chrome（字幕を始めると小さなウィンドウが開く）",
-  },
-];
+/** モードの一覧はアプリと同じもの（engines.ts）を出し、LP では「必要なもの」だけを足す */
+const needs: Record<SpeechEngine, string> = {
+  chrome: "Google Chrome（字幕を始めると小さなウィンドウが開く）",
+  hybrid: "API キーかギフトコード、Google Chrome",
+  openai: "API キーかギフトコード",
+};
 
 const line = LINES[0]!;
 /** 手元の測定（M5 Pro）とリリースのファイルの大きさ */
@@ -179,6 +166,7 @@ const official = [
     </div>
 
     <LiveDemo client:load cards={cards} />
+    <p class="mt-3 text-center text-sm text-muted">見本はハイブリッドのモードの字幕です</p>
   </section>
 
   <section class="mx-auto mt-24 grid max-w-6xl items-center gap-10 px-4 sm:mt-32 md:grid-cols-2">
@@ -187,7 +175,7 @@ const official = [
         聞き取りの<br /><span class="band">精度が違う。</span>
       </h2>
       <p class="reveal mt-5 text-lg leading-relaxed text-muted">
-        OpenAI を使うモードでは、最新モデルで文字起こしします。略して呼んでも、どのアイテムやスキルのことか見分けます。
+        ハイブリッドと OpenAI のモードでは、確定の字幕を OpenAI の最新モデルで作ります。略して呼んでも、どのアイテムやスキルのことか見分けます。
       </p>
     </div>
     <div class="reveal plate relative h-64 overflow-hidden">
@@ -214,7 +202,7 @@ const official = [
       <span class="band">デッドロック特化。</span>
     </h2>
     <p class="reveal mt-5 max-w-2xl text-lg leading-relaxed text-muted">
-      ヒーロー・スキル・アイテムの名前は色とアイコンで強調します。アイテムの名前が出たら、ゲーム内と同じカードで説明も出します。OpenAI を使うモードでは、略して話しても、翻訳はゲーム内の正式な名前になります。
+      ヒーロー・スキル・アイテムの名前は色とアイコンで強調します。アイテムの名前が出たら、ゲーム内と同じカードで説明も出します。ハイブリッドと OpenAI のモードでは、略して話しても、翻訳はゲーム内の正式な名前になります。Chrome のモードでは、日本語で正式な名前を話したときだけ色とアイコンが付きます。
     </p>
     <div class="mt-10 grid gap-4 md:grid-cols-2">
       <figure class="reveal">
@@ -243,7 +231,7 @@ const official = [
         </div>
         <figcaption class="mt-4">
           <h3 class="text-xl font-bold">正式名への翻訳</h3>
-          <p class="mt-1 leading-relaxed text-muted">海外の視聴者にも、何の話か伝わります。</p>
+          <p class="mt-1 leading-relaxed text-muted">海外の視聴者にも、何の話か伝わります（ハイブリッドと OpenAI のモード）。</p>
         </figcaption>
       </figure>
     </div>
@@ -271,12 +259,25 @@ const official = [
     </div>
   </section>
 
+  <section class="mx-auto mt-28 grid max-w-6xl items-center gap-10 px-4 sm:mt-40 md:grid-cols-2">
+    <LookDemo client:visible />
+    <div class="order-first md:order-none">
+      <h2 class="display reveal text-[clamp(2.1rem,4.5vw,3.6rem)]">文字の見た目も、<br /><span class="band">好きなように。</span></h2>
+      <p class="reveal mt-5 text-lg leading-relaxed text-muted">
+        字幕は言語ごとにフォント・太さ・字間を、ランクもフォントを選べます。色、縁取り、影、行間、字幕の後ろの半透明の帯も変えられます。
+      </p>
+      <p class="reveal mt-3 text-lg leading-relaxed text-muted">
+        フォントは Google Fonts の 199 種類から、見本を見ながら選んでダウンロードできます。PC に入っているフォントも使えます。
+      </p>
+    </div>
+  </section>
+
   <section class="mx-auto mt-28 max-w-6xl px-4 sm:mt-40">
     <h2 class="display reveal text-[clamp(2.1rem,5.4vw,4.25rem)]">
       ゲームの<span class="band">邪魔をしない。</span>
     </h2>
     <p class="reveal mt-5 max-w-2xl text-lg leading-relaxed text-muted">
-      文字起こしをクラウドで動かすので、ゲーム中の PC に重い処理をさせません。アプリの本体は Rust で作っているので、小さくて軽いです。
+      文字起こしをクラウドで動かすので、ゲーム中の PC に重い処理をさせません。アプリも小さくて軽いです。
     </p>
     <ul class="mt-10 grid gap-8 md:grid-cols-3">
       {
@@ -301,15 +302,15 @@ const official = [
     <video
       data-play-in-view
       class="reveal mx-auto mt-10 w-full rounded-[clamp(14px,2.2vw,28px)]"
-      src="/media/obs.mp4"
-      poster="/media/obs.webp"
+      src={obsVideo}
+      poster={obsPoster}
       width="1280"
-      height="658"
+      height="608"
       muted
       loop
       playsinline
       preload="none"
-      aria-label="アプリのボタンを OBS にドラッグすると、字幕のソースができる画面録画"
+      aria-label="操作パネルの「ここを OBS にドラッグして追加」を OBS にドラッグして字幕のソースを足し、位置を動かす画面録画"
     ></video>
   </section>
 
@@ -319,16 +320,16 @@ const official = [
     </h2>
     <ul class="mt-10 grid gap-8 md:grid-cols-3">
       {
-        modes.map((m) => (
+        ENGINES.map((e) => (
           <li class="reveal border-t-2 border-ink pt-4">
             <h3 class="flex items-center gap-2 text-xl font-bold">
-              {m.name}
-              {m.badge && <span class="bg-ink px-2 py-0.5 text-xs text-paper">{m.badge}</span>}
+              {e.label}
+              {e.recommended && <span class="bg-ink px-2 py-0.5 text-xs text-paper">おすすめ</span>}
             </h3>
-            <p class="mt-2 text-sm font-bold">{m.traits.join("・")}</p>
-            <p class="display mt-3 text-3xl">{m.price}</p>
-            <p class="mt-3 leading-relaxed text-muted">{m.body}</p>
-            <p class="mt-2 text-sm text-muted">必要なもの: {m.needs}</p>
+            <p class="mt-2 text-sm font-bold">{e.traits}</p>
+            <p class="display mt-3 text-3xl">{e.price}</p>
+            <p class="mt-3 leading-relaxed text-muted">{e.hint}</p>
+            <p class="mt-2 text-sm text-muted">必要なもの: {needs[e.value]}</p>
           </li>
         ))
       }
@@ -339,7 +340,7 @@ const official = [
     <div class="mx-auto grid max-w-6xl gap-10 px-4 py-20 sm:py-28 md:grid-cols-2">
       <div>
         <h2 class="text-sm font-bold text-gold">料金</h2>
-        <p class="display mt-3 text-[clamp(2.6rem,7vw,5.5rem)]">アプリは無料。<br />上乗せもなし。</p>
+        <p class="display mt-3 text-[clamp(2.6rem,7vw,5.5rem)]">アプリは無料。<br />上乗せなし。</p>
         <p class="mt-5 text-lg leading-relaxed text-paper/70">
           有料プランや手数料はありません。ハイブリッドと OpenAI のモードの料金は、ご自身の
           <a href="#openai-key" class="underline hover:text-paper">OpenAI の API キー</a>で OpenAI に直接払う分だけです。まずは Chrome のモードを無料で試せます。API キーは要りません。

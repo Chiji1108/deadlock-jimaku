@@ -5,6 +5,7 @@
   import type { RankContent } from "../generated/RankContent";
   import type { RankState } from "../generated/RankState";
   import type { RankStyle } from "../generated/RankStyle";
+  import { fontVar } from "./overlay-fonts";
   import { REGIONS } from "./regions";
   import { fontCss, textVars } from "./text-style";
 
@@ -38,7 +39,12 @@
   const number = (n: number) => n.toLocaleString("en-US");
 </script>
 
-<div class="rank" lang={shown} style={look && textVars(look, BLUR_EM)}>
+<div
+  class="rank"
+  lang={shown}
+  style={look && textVars(look, BLUR_EM)}
+  style:--font={fontVar(look?.font)}
+>
   <!-- アイコンが届くまでは同じ大きさの枠だけを出し、届いたときに文字がずれないようにする -->
   {#if rank.image}<img class="badge" src={rank.image} alt="" />{:else}<span class="badge pending"
     ></span>{/if}
