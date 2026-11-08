@@ -127,6 +127,8 @@ class Panel {
       [this.view, this.languages] = await Promise.all([api.settings(), api.languages()]);
     });
     void this.refreshDevices();
+    // WebView が名前で描ける PC のフォントは、起動したときにあったもの。その一覧をここで覚える
+    void this.loadFonts();
     void this.refreshGift();
     void this.refreshShare();
     const disconnect = connect(
@@ -229,8 +231,8 @@ class Panel {
   }
 
   /**
-   * 最初の一覧の PC のフォントは WebView が名前で描ける。そのあと増えたフォントと、PC になく
-   * ダウンロードで置いたフォントは読み込む。未取得のフォントはファイルがないので読まない
+   * 最初の一覧（`start` で読む）の PC のフォントは WebView が名前で描ける。そのあと増えたフォントと、
+   * PC になくダウンロードで置いたフォントは読み込む。未取得のフォントはファイルがないので読まない
    */
   private addFaces(fonts: FontEntry[]) {
     const first = !this.knownFonts;

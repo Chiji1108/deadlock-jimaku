@@ -6,6 +6,7 @@ import type { FontEntry } from "../generated/FontEntry";
 import type { SettingsView } from "../generated/SettingsView";
 
 vi.mock("../lib/overlay-fonts", () => ({ addFontFaces: vi.fn(), fontWeights: vi.fn() }));
+vi.mock("../lib/ws", () => ({ connect: vi.fn(() => () => {}) }));
 
 const pc = (...families: string[]): FontEntry[] =>
   families.map((family) => ({ family, downloaded: false }));
@@ -63,6 +64,18 @@ function withFonts(fonts: Record<string, string>) {
   const update = vi.spyOn(next, "update").mockResolvedValue(true);
   return { next, update };
 }
+
+const never = () => new Promise<never>(() => {});
+
+test("操作パネルを開いたときに一覧を読む（あとで入れたフォントを最初の一覧に入れない）", () => {
+  const fresh = freshPanel();
+  for (const name of ["settings", "languages", "devices", "gift", "share"] as const)
+    vi.spyOn(api, name).mockImplementation(never);
+  const fonts = vi.spyOn(api, "fonts").mockImplementation(never);
+  const stop = fresh.start();
+  expect(fonts).toHaveBeenCalledTimes(1);
+  stop();
+});
 
 test("最初の一覧では、PC にないダウンロード済みのフォントだけ読み込む", async () => {
   const add = vi.mocked(addFontFaces);
