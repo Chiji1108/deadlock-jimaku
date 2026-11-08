@@ -22,6 +22,7 @@
     look,
     standard,
     bandHint,
+    colorHint,
     onchange,
     onreset,
     fonts,
@@ -31,6 +32,7 @@
     look: TextLook;
     standard: TextStandard;
     bandHint: string;
+    colorHint?: string;
     onchange: (patch: MergePatch<TextLook>) => Promise<boolean>;
     onreset: () => Promise<boolean>;
     /** フォントの行 */
@@ -77,7 +79,7 @@
     <div class="flex flex-col gap-6 pt-4">
       <ColorField
         label="文字の色"
-        description="ヒーロー名、スキル名、アイテム名の色分けは残します"
+        description={colorHint}
         value={look.color}
         standard={standard.color}
         onchange={(color) => onchange({ color })}

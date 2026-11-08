@@ -132,6 +132,7 @@
           look={s.subtitleStyle}
           standard={SUBTITLE_TEXT}
           bandHint="明るい場面でも読めるよう、行の後ろに帯を敷きます"
+          colorHint="ヒーロー名、スキル名、アイテム名の色分けは残します"
           onchange={setStyle}
           onreset={() => setStyle(cleared(s.subtitleStyle))}
           detailValues={[
