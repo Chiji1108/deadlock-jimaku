@@ -9,6 +9,7 @@
   import type { Region } from "../../generated/Region";
   import { REGIONS } from "../../lib/regions";
   import AddToObs from "../parts/AddToObs.svelte";
+  import OverlayPage from "../parts/OverlayPage.svelte";
   import AnchorPicker from "../parts/AnchorPicker.svelte";
   import FontPicker from "../parts/FontPicker.svelte";
   import OverlayPreview from "../parts/OverlayPreview.svelte";
@@ -50,7 +51,21 @@
   }
 </script>
 
-<div class="flex flex-col gap-6">
+<OverlayPage>
+  {#snippet preview()}
+    <OverlayPreview
+      src="/overlay/rank.html?preview"
+      title="ランクオーバーレイのプレビュー"
+      {size}
+    />
+    <AddToObs
+      url={overlayUrl("rank")}
+      name="ランク"
+      {size}
+      hint="大きさは、ソースを引き伸ばさずにプロパティの幅と高さを同じ割合で変え、出すものを変えたらプレビューの下の大きさに合わせ直してください"
+    />
+  {/snippet}
+
   <Card.Root>
     <Card.Header>
       <Card.Title>ランクオーバーレイ</Card.Title>
@@ -59,18 +74,6 @@
       </Card.Description>
     </Card.Header>
     <Card.Content class="flex flex-col gap-6">
-      <OverlayPreview
-        src="/overlay/rank.html?preview"
-        title="ランクオーバーレイのプレビュー"
-        {size}
-      />
-      <AddToObs
-        url={overlayUrl("rank")}
-        name="ランク"
-        {size}
-        hint="大きさは、ソースを引き伸ばさずにプロパティの幅と高さを同じ割合で変え、出すものを変えたら {size[0]}×{size[1]} に合わせ直してください"
-      />
-
       <form
         onsubmit={(e) => {
           e.preventDefault();
@@ -201,4 +204,4 @@
       </TextStyleFields>
     </Card.Content>
   </Card.Root>
-</div>
+</OverlayPage>

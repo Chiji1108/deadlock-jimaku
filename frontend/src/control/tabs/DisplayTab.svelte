@@ -15,6 +15,7 @@
   import type { SubtitleStyle } from "../../generated/SubtitleStyle";
   import AddToObs from "../parts/AddToObs.svelte";
   import ColorField from "../parts/ColorField.svelte";
+  import OverlayPage from "../parts/OverlayPage.svelte";
   import OverlayPreview from "../parts/OverlayPreview.svelte";
   import DisplayTimingDialog from "../parts/DisplayTimingDialog.svelte";
   import FontPicker from "../parts/FontPicker.svelte";
@@ -56,32 +57,33 @@
   const setStyle = (patch: MergePatch<SubtitleStyle>) => panel.update({ subtitleStyle: patch });
 </script>
 
-<div class="flex flex-col gap-6">
+<OverlayPage>
+  {#snippet preview()}
+    <OverlayPreview
+      src="/overlay/subtitles.html?preview={languages.join(',')}"
+      title="字幕オーバーレイのプレビュー"
+      size={SUBTITLE_SIZE}
+    >
+      <Button variant="outline" size="sm" onclick={panel.demo}>
+        <PlayIcon />テスト字幕を流す
+      </Button>
+    </OverlayPreview>
+    <AddToObs
+      url={overlayUrl("subtitles")}
+      name="字幕"
+      size={SUBTITLE_SIZE}
+      hint="大きさは、ソースを引き伸ばさずにプロパティの幅と高さで変えてください"
+    />
+  {/snippet}
+
   <Card.Root>
     <Card.Header>
       <Card.Title>字幕オーバーレイ</Card.Title>
       <Card.Description
         >ここで変えた見せ方は、OBS に表示中の字幕にもそのまま反映されます</Card.Description
       >
-      <Card.Action>
-        <Button variant="outline" size="sm" onclick={panel.demo}>
-          <PlayIcon />テスト字幕を流す
-        </Button>
-      </Card.Action>
     </Card.Header>
     <Card.Content class="flex flex-col gap-6">
-      <OverlayPreview
-        src="/overlay/subtitles.html?preview={languages.join(',')}"
-        title="字幕オーバーレイのプレビュー"
-        size={SUBTITLE_SIZE}
-      />
-      <AddToObs
-        url={overlayUrl("subtitles")}
-        name="字幕"
-        size={SUBTITLE_SIZE}
-        hint="大きさは、ソースを引き伸ばさずにプロパティの幅と高さで変えてください"
-      />
-
       <Field.Group>
         <Field.Field>
           <Field.Label>揃え</Field.Label>
@@ -286,4 +288,4 @@
       </Field.Group>
     </Card.Content>
   </Card.Root>
-</div>
+</OverlayPage>

@@ -1,12 +1,16 @@
 <script lang="ts">
   // OBS に追加する: ボタンを OBS にドラッグするとブラウザソースができる。うまくいかなければ URL をコピーして貼る。
+  // プレビューのそばに置くので小さくまとめ、長い説明は「うまくいかないとき」の窓に入れる。
+  // ドラッグする部分は窓の中に入れない（窓は開いたときだけあり、Windows ではドラッグの扱いをアプリで止めている）
   // URL の layer-name / layer-width / layer-height は、ドラッグで作るソースの名前と大きさ（OBS 25 以降）
   import CheckIcon from "@lucide/svelte/icons/check";
   import CopyIcon from "@lucide/svelte/icons/copy";
   import GripIcon from "@lucide/svelte/icons/grip-vertical";
+  import InfoIcon from "@lucide/svelte/icons/info";
   import { toast } from "svelte-sonner";
   import { Button } from "$lib/components/ui/button";
   import { Input } from "$lib/components/ui/input";
+  import * as Popover from "$lib/components/ui/popover";
 
   let {
     url,
@@ -55,30 +59,43 @@
   }
 </script>
 
-<div class="flex flex-col gap-3">
-  <p class="text-sm font-medium">OBS に追加する</p>
+<div class="flex flex-col gap-2 rounded-lg border bg-card p-3">
   <div
     draggable="true"
     ondragstart={drag}
     role="note"
-    class="flex cursor-grab items-center justify-center gap-2 rounded-md border-2 border-dashed border-primary/50 bg-primary/5 px-4 py-3 text-sm font-medium select-none active:cursor-grabbing"
+    class="flex cursor-grab items-center justify-center gap-2 rounded-md border-2 border-dashed border-primary/50 bg-primary/5 px-3 py-2.5 text-sm font-medium select-none active:cursor-grabbing"
   >
-    <GripIcon class="size-4" />ここを OBS にドラッグして追加（{name}）
+    <GripIcon class="size-4 shrink-0" />ここを OBS にドラッグして追加
   </div>
-  <p class="text-sm text-muted-foreground">
-    OBS のプレビューかソースの一覧に落とすと、大きさを合わせたブラウザソースができます（OBS
-    を管理者として起動していると使えません）。うまくいかないときは、下の URL
-    をコピーしてソースの「＋」→「ブラウザ」に貼り付け、幅 {size[0]}・高さ {size[1]} にしてください。{hint}
-  </p>
-  <div class="flex gap-2">
-    <Input
-      value={url}
-      readonly
-      class="font-mono text-xs"
-      onfocus={(e) => e.currentTarget.select()}
-    />
-    <Button variant="outline" onclick={copy}>
-      {#if copied}<CheckIcon />コピーしました{:else}<CopyIcon />コピー{/if}
+  <div class="flex flex-wrap items-center justify-between gap-x-2">
+    <Button variant="ghost" size="xs" class="text-muted-foreground" onclick={copy}>
+      {#if copied}<CheckIcon />コピーしました{:else}<CopyIcon />URL をコピー{/if}
     </Button>
+    <Popover.Root>
+      <Popover.Trigger>
+        {#snippet child({ props })}
+          <Button variant="ghost" size="xs" class="text-muted-foreground" {...props}>
+            <InfoIcon />うまくいかないとき
+          </Button>
+        {/snippet}
+      </Popover.Trigger>
+      <Popover.Content align="end" class="w-80 text-muted-foreground">
+        <p>
+          OBS のプレビューかソースの一覧に落とすと、大きさを合わせたブラウザソース（{name}）ができます。OBS
+          を管理者として起動していると使えません。
+        </p>
+        <p>
+          そのときは、この URL
+          をソースの「＋」→「ブラウザ」に貼り付け、幅と高さをプレビューの下の大きさにしてください。{hint}
+        </p>
+        <Input
+          value={url}
+          readonly
+          class="font-mono text-xs"
+          onfocus={(e) => e.currentTarget.select()}
+        />
+      </Popover.Content>
+    </Popover.Root>
   </div>
 </div>
