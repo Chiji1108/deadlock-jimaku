@@ -1,0 +1,6605 @@
+{
+  "claude-haiku-5-5": {
+    "summary": {
+      "runs": 111,
+      "termsCorrect": 85,
+      "failed": 1,
+      "japaneseLeftInTranslation": 0,
+      "strayTermsInTranslation": 0,
+      "averageMs": 1447,
+      "usage": {
+        "translate": {
+          "usd": 0.024665525000000008
+        }
+      }
+    },
+    "runs": [
+      {
+        "text": "僕の一番好きなキャラはヘイズですね。",
+        "ms": 2966,
+        "ok": true,
+        "terms": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ]
+        ],
+        "expected": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ]
+        ],
+        "translations": {
+          "en": "My favorite character is ⟦Haze⟧, honestly.",
+          "ru": "Мой любимый персонаж — ⟦Haze⟧, если честно."
+        }
+      },
+      {
+        "text": "僕の一番好きなキャラはヘイズですね。",
+        "ms": 1578,
+        "ok": true,
+        "terms": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ]
+        ],
+        "expected": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ]
+        ],
+        "translations": {
+          "en": "My favorite hero is ⟦Haze⟧, no question.",
+          "ru": "Мой любимый герой — ⟦Haze⟧, без вопросов."
+        }
+      },
+      {
+        "text": "僕の一番好きなキャラはヘイズですね。",
+        "ms": 1568,
+        "ok": true,
+        "terms": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ]
+        ],
+        "expected": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ]
+        ],
+        "translations": {
+          "en": "My favorite character is ⟦Haze⟧, no question.",
+          "ru": "Мой любимый персонаж — ⟦Haze⟧, без вопросов."
+        }
+      },
+      {
+        "text": "いやヘイズのバレットダンスもめっちゃ強いんだけど、バイオレットのウルトもなんか強そうではある。",
+        "ms": 2136,
+        "ok": false,
+        "terms": [
+          [
+            "いやヘイズ",
+            "hero:13"
+          ],
+          [
+            "バレットダンス",
+            "ability:731943444"
+          ],
+          [
+            "バイオレット",
+            "hero:86"
+          ],
+          [
+            "ウルト",
+            "ability:2516700978"
+          ]
+        ],
+        "expected": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "バレットダンス",
+            "ability:731943444"
+          ],
+          [
+            "バイオレット",
+            "hero:86"
+          ],
+          [
+            "ウルト",
+            "ability:2516700978"
+          ]
+        ],
+        "translations": {
+          "en": "Yeah, Haze's ⟦Bullet Dance⟧ is super strong too, but Violet's ⟦Abstract Landscape⟧ also looks kinda strong.",
+          "ru": "Да, ⟦Bullet Dance⟧ у ⟦Haze⟧ тоже очень сильный, но ⟦Abstract Landscape⟧ у ⟦Violet⟧ тоже выглядит довольно мощно."
+        }
+      },
+      {
+        "text": "いやヘイズのバレットダンスもめっちゃ強いんだけど、バイオレットのウルトもなんか強そうではある。",
+        "ms": 1532,
+        "ok": false,
+        "terms": [],
+        "expected": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "バレットダンス",
+            "ability:731943444"
+          ],
+          [
+            "バイオレット",
+            "hero:86"
+          ],
+          [
+            "ウルト",
+            "ability:2516700978"
+          ]
+        ],
+        "translations": {
+          "en": "Yeah, Haze's is super strong too, but Violet's ⟦ability:4",
+          "ru": "x"
+        }
+      },
+      {
+        "text": "いやヘイズのバレットダンスもめっちゃ強いんだけど、バイオレットのウルトもなんか強そうではある。",
+        "ms": 1925,
+        "ok": true,
+        "terms": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "バレットダンス",
+            "ability:731943444"
+          ],
+          [
+            "バイオレット",
+            "hero:86"
+          ],
+          [
+            "ウルト",
+            "ability:2516700978"
+          ]
+        ],
+        "expected": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "バレットダンス",
+            "ability:731943444"
+          ],
+          [
+            "バイオレット",
+            "hero:86"
+          ],
+          [
+            "ウルト",
+            "ability:2516700978"
+          ]
+        ],
+        "translations": {
+          "en": "Yeah, Haze's ⟦Bullet Dance⟧ is super strong too, but Violet's ⟦Abstract Landscape⟧ also looks kinda strong.",
+          "ru": "Да, ⟦Bullet Dance⟧ у ⟦Haze⟧ тоже очень сильная, но ⟦Abstract Landscape⟧ у ⟦Violet⟧ тоже выглядит мощно."
+        }
+      },
+      {
+        "text": "拡マガをちゃんとね、取りたいよね。最初は。",
+        "ms": 2182,
+        "ok": true,
+        "terms": [
+          [
+            "拡マガ",
+            "item:1548066885"
+          ]
+        ],
+        "expected": [
+          [
+            "拡マガ",
+            "item:1548066885"
+          ]
+        ],
+        "translations": {
+          "en": "Gotta grab the Extended Magazine for sure, at the start.",
+          "ru": "Обязательно надо взять расширенный магазин в начале."
+        }
+      },
+      {
+        "text": "拡マガをちゃんとね、取りたいよね。最初は。",
+        "ms": 1510,
+        "ok": true,
+        "terms": [
+          [
+            "拡マガ",
+            "item:1548066885"
+          ]
+        ],
+        "expected": [
+          [
+            "拡マガ",
+            "item:1548066885"
+          ]
+        ],
+        "translations": {
+          "en": "We should really grab the extended magazine first.",
+          "ru": "Нам реально стоит сначала взять расширенный магазин."
+        }
+      },
+      {
+        "text": "拡マガをちゃんとね、取りたいよね。最初は。",
+        "ms": 1945,
+        "ok": true,
+        "terms": [
+          [
+            "拡マガ",
+            "item:1548066885"
+          ]
+        ],
+        "expected": [
+          [
+            "拡マガ",
+            "item:1548066885"
+          ]
+        ],
+        "translations": {
+          "en": "Gotta grab the Extended Magazine properly, you know. Early on.",
+          "ru": "Надо нормально взять ⟦Extended Magazine⟧, понимаешь. В самом начале."
+        }
+      },
+      {
+        "text": "エクストラスピリットも重要だけど、拡マガは武器ダメージも上がるから。",
+        "ms": 1537,
+        "ok": true,
+        "terms": [
+          [
+            "エクストラスピリット",
+            "item:968099481"
+          ],
+          [
+            "拡マガ",
+            "item:1548066885"
+          ]
+        ],
+        "expected": [
+          [
+            "エクストラスピリット",
+            "item:968099481"
+          ],
+          [
+            "拡マガ",
+            "item:1548066885"
+          ]
+        ],
+        "translations": {
+          "en": "Extra Spirit is important too, but ⟦Extended Magazine⟧ also boosts weapon damage.",
+          "ru": "⟦Extra Spirit⟧ тоже важен, но ⟦Extended Magazine⟧ ещё и урон оружия повышает."
+        }
+      },
+      {
+        "text": "エクストラスピリットも重要だけど、拡マガは武器ダメージも上がるから。",
+        "ms": 1522,
+        "ok": true,
+        "terms": [
+          [
+            "エクストラスピリット",
+            "item:968099481"
+          ],
+          [
+            "拡マガ",
+            "item:1548066885"
+          ]
+        ],
+        "expected": [
+          [
+            "エクストラスピリット",
+            "item:968099481"
+          ],
+          [
+            "拡マガ",
+            "item:1548066885"
+          ]
+        ],
+        "translations": {
+          "en": "Extra Spirit is important too, but Extended Magazine also boosts gun damage.",
+          "ru": "Extra Spirit тоже важен, но ⟦Extended Magazine⟧ ещё и урон от оружия повышает."
+        }
+      },
+      {
+        "text": "エクストラスピリットも重要だけど、拡マガは武器ダメージも上がるから。",
+        "ms": 1762,
+        "ok": true,
+        "terms": [
+          [
+            "エクストラスピリット",
+            "item:968099481"
+          ],
+          [
+            "拡マガ",
+            "item:1548066885"
+          ]
+        ],
+        "expected": [
+          [
+            "エクストラスピリット",
+            "item:968099481"
+          ],
+          [
+            "拡マガ",
+            "item:1548066885"
+          ]
+        ],
+        "translations": {
+          "en": "Extra Spirit's important too, but Extended Magazine also boosts weapon damage.",
+          "ru": "Extra Spirit тоже важен, но Extended Magazine ещё и урон оружия повышает."
+        }
+      },
+      {
+        "text": "まあ、あとは呪いの遺物？まあいわゆるカースだね。",
+        "ms": 1572,
+        "ok": false,
+        "terms": [
+          [
+            "呪いの遺物",
+            "item:2617435668"
+          ]
+        ],
+        "expected": [
+          [
+            "呪いの遺物",
+            "item:2617435668"
+          ],
+          [
+            "カース",
+            "item:2617435668"
+          ]
+        ],
+        "translations": {
+          "en": "Well, the rest is Cursed Relic? Yeah, the so-called curse.",
+          "ru": "Ну, остальное — ⟦Cursed Relic⟧? Ну, то есть проклятие, да."
+        }
+      },
+      {
+        "text": "まあ、あとは呪いの遺物？まあいわゆるカースだね。",
+        "ms": 1490,
+        "ok": false,
+        "terms": [
+          [
+            "呪いの遺物",
+            "item:2617435668"
+          ]
+        ],
+        "expected": [
+          [
+            "呪いの遺物",
+            "item:2617435668"
+          ],
+          [
+            "カース",
+            "item:2617435668"
+          ]
+        ],
+        "translations": {
+          "en": "Well, the rest would be Cursed Relic? Yeah, the so-called curse one.",
+          "ru": "Ну, а остальное — это ⟦Cursed Relic⟧? Ну, то есть тот самый проклятый предмет."
+        }
+      },
+      {
+        "text": "まあ、あとは呪いの遺物？まあいわゆるカースだね。",
+        "ms": 1512,
+        "ok": false,
+        "terms": [
+          [
+            "呪いの遺物",
+            "item:2617435668"
+          ]
+        ],
+        "expected": [
+          [
+            "呪いの遺物",
+            "item:2617435668"
+          ],
+          [
+            "カース",
+            "item:2617435668"
+          ]
+        ],
+        "translations": {
+          "en": "Anyway, what else... Cursed Relic? I mean, the so-called curse one.",
+          "ru": "Ну, что там ещё... ⟦Cursed Relic⟧? Ну, то есть тот самый проклятый предмет."
+        }
+      },
+      {
+        "text": "エコシャ早めに積みたい。",
+        "ms": 1252,
+        "ok": true,
+        "terms": [
+          [
+            "エコシャ",
+            "item:630839635"
+          ]
+        ],
+        "expected": [
+          [
+            "エコシャ",
+            "item:630839635"
+          ]
+        ],
+        "translations": {
+          "en": "Wanna get ⟦Echo Shard⟧ early.",
+          "ru": "Хочу рано собрать ⟦Echo Shard⟧."
+        }
+      },
+      {
+        "text": "エコシャ早めに積みたい。",
+        "ms": 1331,
+        "ok": true,
+        "terms": [
+          [
+            "エコシャ",
+            "item:630839635"
+          ]
+        ],
+        "expected": [
+          [
+            "エコシャ",
+            "item:630839635"
+          ]
+        ],
+        "translations": {
+          "en": "Wanna get ⟦Echo Shard⟧ down early.",
+          "ru": "Хочу рано собрать ⟦Echo Shard⟧."
+        }
+      },
+      {
+        "text": "エコシャ早めに積みたい。",
+        "ms": 1355,
+        "ok": true,
+        "terms": [
+          [
+            "エコシャ",
+            "item:630839635"
+          ]
+        ],
+        "expected": [
+          [
+            "エコシャ",
+            "item:630839635"
+          ]
+        ],
+        "translations": {
+          "en": "Wanna get ⟦Echo Shard⟧ down early.",
+          "ru": "Хочу рано собрать ⟦Echo Shard⟧."
+        }
+      },
+      {
+        "text": "ページのウルトで回復して。",
+        "ms": 1513,
+        "ok": true,
+        "terms": [
+          [
+            "ページ",
+            "hero:67"
+          ],
+          [
+            "ウルト",
+            "ability:1841901343"
+          ]
+        ],
+        "expected": [
+          [
+            "ページ",
+            "hero:67"
+          ],
+          [
+            "ウルト",
+            "ability:1841901343"
+          ]
+        ],
+        "translations": {
+          "en": "Heal with Paige's .",
+          "ru": "Лечись через ⟦Rallying Charge⟧ Пейдж."
+        }
+      },
+      {
+        "text": "ページのウルトで回復して。",
+        "ms": 1505,
+        "ok": false,
+        "terms": [
+          [
+            "ページ",
+            "hero:67"
+          ],
+          [
+            "ウルト",
+            "ability:3054993162"
+          ]
+        ],
+        "expected": [
+          [
+            "ページ",
+            "hero:67"
+          ],
+          [
+            "ウルト",
+            "ability:1841901343"
+          ]
+        ],
+        "translations": {
+          "en": "Heal up with the Doorman's .",
+          "ru": "Лечись через Доормена."
+        }
+      },
+      {
+        "text": "ページのウルトで回復して。",
+        "ms": 1770,
+        "ok": true,
+        "terms": [
+          [
+            "ページ",
+            "hero:67"
+          ],
+          [
+            "ウルト",
+            "ability:1841901343"
+          ]
+        ],
+        "expected": [
+          [
+            "ページ",
+            "hero:67"
+          ],
+          [
+            "ウルト",
+            "ability:1841901343"
+          ]
+        ],
+        "translations": {
+          "en": "Heal with Pages' ... er, wait, I mean ult — Paige's ult is ⟦Rallying Charge⟧ so heal with that.",
+          "ru": "Лечись через ульту ⟦Paige⟧ ..."
+        }
+      },
+      {
+        "text": "リコシェット強すぎ。",
+        "ms": 1208,
+        "ok": true,
+        "terms": [
+          [
+            "リコシェット",
+            "item:2480592370"
+          ]
+        ],
+        "expected": [
+          [
+            "リコシェット",
+            "item:2480592370"
+          ]
+        ],
+        "translations": {
+          "en": "Ricochet is way too strong.",
+          "ru": "⟦Ricochet⟧ слишком сильный."
+        }
+      },
+      {
+        "text": "リコシェット強すぎ。",
+        "ms": 1410,
+        "ok": true,
+        "terms": [
+          [
+            "リコシェット",
+            "item:2480592370"
+          ]
+        ],
+        "expected": [
+          [
+            "リコシェット",
+            "item:2480592370"
+          ]
+        ],
+        "translations": {
+          "en": "Ricochet is too strong.",
+          "ru": "⟦Ricochet⟧ слишком сильный."
+        }
+      },
+      {
+        "text": "リコシェット強すぎ。",
+        "ms": 1120,
+        "ok": true,
+        "terms": [
+          [
+            "リコシェット",
+            "item:2480592370"
+          ]
+        ],
+        "expected": [
+          [
+            "リコシェット",
+            "item:2480592370"
+          ]
+        ],
+        "translations": {
+          "en": "Ricochet is too strong.",
+          "ru": "⟦Ricochet⟧ слишком сильный."
+        }
+      },
+      {
+        "text": "ヘイズのウルトは強い。",
+        "ms": 1420,
+        "ok": false,
+        "terms": [],
+        "expected": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "ウルト",
+            "ability:731943444"
+          ]
+        ],
+        "translations": {
+          "en": " ... wait, no— isn't Haze's ult, so here it is: Haze's ult is no, correction: Haze's ult is and it's strong.",
+          "ru": "x"
+        }
+      },
+      {
+        "text": "ヘイズのウルトは強い。",
+        "ms": 1494,
+        "ok": false,
+        "terms": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ]
+        ],
+        "expected": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "ウルト",
+            "ability:731943444"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Haze⟧'s hits hard... wait, no — Haze's ult is strong.",
+          "ru": "Ульта ⟦Haze⟧ сильная."
+        }
+      },
+      {
+        "text": "ヘイズのウルトは強い。",
+        "ms": 1431,
+        "ok": false,
+        "terms": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ]
+        ],
+        "expected": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "ウルト",
+            "ability:731943444"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Haze⟧'s hits so hard.",
+          "ru": "Ультимейт ⟦Haze⟧ такой мощный."
+        }
+      },
+      {
+        "text": "カースは買っとけ。",
+        "ms": 1260,
+        "ok": false,
+        "terms": [
+          [
+            "カース",
+            "item:3144988365"
+          ]
+        ],
+        "expected": [
+          [
+            "カース",
+            "item:2617435668"
+          ]
+        ],
+        "translations": {
+          "en": "Buy Curse, seriously.",
+          "ru": "Купи ⟦Decay⟧ уже, серьёзно."
+        }
+      },
+      {
+        "text": "カースは買っとけ。",
+        "ms": 1302,
+        "ok": true,
+        "terms": [
+          [
+            "カース",
+            "item:2617435668"
+          ]
+        ],
+        "expected": [
+          [
+            "カース",
+            "item:2617435668"
+          ]
+        ],
+        "translations": {
+          "en": "Buy Cursed Relic.",
+          "ru": "Купи ⟦Cursed Relic⟧."
+        }
+      },
+      {
+        "text": "カースは買っとけ。",
+        "ms": 1228,
+        "ok": false,
+        "terms": [
+          [
+            "カース",
+            "item:3028234315"
+          ]
+        ],
+        "expected": [
+          [
+            "カース",
+            "item:2617435668"
+          ]
+        ],
+        "translations": {
+          "en": "Get Curse, bro.",
+          "ru": "Купи Curse, бро."
+        }
+      },
+      {
+        "text": "ドアマンのカートに乗せられた。",
+        "ms": 1371,
+        "ok": true,
+        "terms": [
+          [
+            "ドアマン",
+            "hero:69"
+          ],
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "expected": [
+          [
+            "ドアマン",
+            "hero:69"
+          ],
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "translations": {
+          "en": "Got put on ⟦Luggage Cart⟧ by ⟦The Doorman⟧.",
+          "ru": "Меня закинули на ⟦Luggage Cart⟧ от ⟦The Doorman⟧."
+        }
+      },
+      {
+        "text": "ドアマンのカートに乗せられた。",
+        "ms": 1757,
+        "ok": true,
+        "terms": [
+          [
+            "ドアマン",
+            "hero:69"
+          ],
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "expected": [
+          [
+            "ドアマン",
+            "hero:69"
+          ],
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "translations": {
+          "en": "Got put on ⟦Luggage Cart⟧ by ⟦The Doorman⟧.",
+          "ru": "Меня закинули на ⟦Luggage Cart⟧ от ⟦The Doorman⟧."
+        }
+      },
+      {
+        "text": "ドアマンのカートに乗せられた。",
+        "ms": 1375,
+        "ok": true,
+        "terms": [
+          [
+            "ドアマン",
+            "hero:69"
+          ],
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "expected": [
+          [
+            "ドアマン",
+            "hero:69"
+          ],
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "translations": {
+          "en": "Got put on ⟦Luggage Cart⟧ by ⟦The Doorman⟧ lol",
+          "ru": "⟦The Doorman⟧ закинул меня на ⟦Luggage Cart⟧, лол"
+        }
+      },
+      {
+        "text": "リコセ買ったら一気に楽になった。",
+        "ms": 1415,
+        "ok": true,
+        "terms": [
+          [
+            "リコセ",
+            "item:2480592370"
+          ]
+        ],
+        "expected": [
+          [
+            "リコセ",
+            "item:2480592370"
+          ]
+        ],
+        "translations": {
+          "en": "Got ⟦Ricochet⟧ and it made things so much easier all of a sudden.",
+          "ru": "Купил ⟦Ricochet⟧ и сразу стало намного легче."
+        }
+      },
+      {
+        "text": "リコセ買ったら一気に楽になった。",
+        "ms": 1400,
+        "ok": true,
+        "terms": [
+          [
+            "リコセ",
+            "item:2480592370"
+          ]
+        ],
+        "expected": [
+          [
+            "リコセ",
+            "item:2480592370"
+          ]
+        ],
+        "translations": {
+          "en": "Bought ⟦Ricochet⟧ and suddenly everything got way easier.",
+          "ru": "Купил ⟦Ricochet⟧ и сразу стало намного легче."
+        }
+      },
+      {
+        "text": "リコセ買ったら一気に楽になった。",
+        "ms": 1308,
+        "ok": true,
+        "terms": [
+          [
+            "リコセ",
+            "item:2480592370"
+          ]
+        ],
+        "expected": [
+          [
+            "リコセ",
+            "item:2480592370"
+          ]
+        ],
+        "translations": {
+          "en": "Got ⟦Ricochet⟧ and suddenly everything got way easier.",
+          "ru": "Купил ⟦Ricochet⟧ и сразу стало намного легче."
+        }
+      },
+      {
+        "text": "グレイブスの３番はスプリットショットで強くなる。",
+        "ms": 1547,
+        "ok": false,
+        "terms": [
+          [
+            "グレイブス",
+            "hero:76"
+          ],
+          [
+            "３番",
+            "ability:2001589780"
+          ],
+          [
+            "スプリットショット",
+            "item:3647584222"
+          ]
+        ],
+        "expected": [
+          [
+            "グレイブス",
+            "hero:76"
+          ],
+          [
+            "３番",
+            "ability:629925354"
+          ],
+          [
+            "スプリットショット",
+            "item:3647584222"
+          ]
+        ],
+        "translations": {
+          "en": "Graves' ⟦Grasping Hands⟧ gets strong with ⟦Split Shot⟧.",
+          "ru": "⟦Graves⟧ с ⟦Grasping Hands⟧ становится сильнее с ⟦Split Shot⟧."
+        }
+      },
+      {
+        "text": "グレイブスの３番はスプリットショットで強くなる。",
+        "ms": 1605,
+        "ok": false,
+        "terms": [
+          [
+            "グレイブス",
+            "hero:76"
+          ],
+          [
+            "３番",
+            "ability:2001589780"
+          ],
+          [
+            "スプリットショット",
+            "item:3647584222"
+          ]
+        ],
+        "expected": [
+          [
+            "グレイブス",
+            "hero:76"
+          ],
+          [
+            "３番",
+            "ability:629925354"
+          ],
+          [
+            "スプリットショット",
+            "item:3647584222"
+          ]
+        ],
+        "translations": {
+          "en": "Graves' ⟦Grasping Hands⟧ gets strong with ⟦Split Shot⟧.",
+          "ru": "⟦Grasping Hands⟧ ⟦Graves⟧ становится сильнее с ⟦Split Shot⟧."
+        }
+      },
+      {
+        "text": "グレイブスの３番はスプリットショットで強くなる。",
+        "ms": 8005,
+        "error": "Err(error sending request for url (https://api.anthropic.com/v1/messages)\n\nCaused by:\n    operation timed out)"
+      },
+      {
+        "text": "ドアマンカートで味方を運ぼう。",
+        "ms": 1539,
+        "ok": true,
+        "terms": [
+          [
+            "ドアマン",
+            "hero:69"
+          ],
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "expected": [
+          [
+            "ドアマン",
+            "hero:69"
+          ],
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "translations": {
+          "en": "Let's carry teammates with ⟦Luggage Cart⟧ from ⟦The Doorman⟧.",
+          "ru": "Давайте перевозить союзников с помощью ⟦Luggage Cart⟧ ⟦The Doorman⟧."
+        }
+      },
+      {
+        "text": "ドアマンカートで味方を運ぼう。",
+        "ms": 1299,
+        "ok": false,
+        "terms": [
+          [
+            "ドアマンカート",
+            "ability:1719512318"
+          ]
+        ],
+        "expected": [
+          [
+            "ドアマン",
+            "hero:69"
+          ],
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "translations": {
+          "en": "Let's carry allies with ⟦Luggage Cart⟧.",
+          "ru": "Давайте тащить союзников с помощью ⟦Luggage Cart⟧."
+        }
+      },
+      {
+        "text": "ドアマンカートで味方を運ぼう。",
+        "ms": 1535,
+        "ok": true,
+        "terms": [
+          [
+            "ドアマン",
+            "hero:69"
+          ],
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "expected": [
+          [
+            "ドアマン",
+            "hero:69"
+          ],
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "translations": {
+          "en": "Let's carry allies with ⟦Luggage Cart⟧ from ⟦The Doorman⟧.",
+          "ru": "Давайте перенесём союзников с помощью ⟦Luggage Cart⟧ от ⟦The Doorman⟧."
+        }
+      },
+      {
+        "text": "カートに気をつけて。",
+        "ms": 1179,
+        "ok": true,
+        "terms": [
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "expected": [
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "translations": {
+          "en": "Watch out for ⟦Luggage Cart⟧.",
+          "ru": "Осторожно с ⟦Luggage Cart⟧."
+        }
+      },
+      {
+        "text": "カートに気をつけて。",
+        "ms": 1175,
+        "ok": true,
+        "terms": [
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "expected": [
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "translations": {
+          "en": "Watch out for ⟦Luggage Cart⟧.",
+          "ru": "Осторожнее с ⟦Luggage Cart⟧."
+        }
+      },
+      {
+        "text": "カートに気をつけて。",
+        "ms": 1267,
+        "ok": true,
+        "terms": [
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "expected": [
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "translations": {
+          "en": "Watch out for ⟦Luggage Cart⟧.",
+          "ru": "Осторожнее с ⟦Luggage Cart⟧."
+        }
+      },
+      {
+        "text": "ヘイズの2で寝かせてからウルト。",
+        "ms": 2080,
+        "ok": true,
+        "terms": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "2",
+            "ability:2414191464"
+          ]
+        ],
+        "expected": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "2",
+            "ability:2414191464"
+          ]
+        ],
+        "translations": {
+          "en": "Put them to sleep with ⟦Smoke Bomb⟧ ... wait, no: Haze's ability 2 is Smoke Bomb, so: Smoke-bomb them, then ult.",
+          "ru": ""
+        }
+      },
+      {
+        "text": "ヘイズの2で寝かせてからウルト。",
+        "ms": 1786,
+        "ok": true,
+        "terms": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "2",
+            "ability:2414191464"
+          ]
+        ],
+        "expected": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "2",
+            "ability:2414191464"
+          ]
+        ],
+        "translations": {
+          "en": "Put them to sleep with ⟦Smoke Bomb⟧... wait, no, ⟦Haze⟧'s ⟦Smoke Bomb⟧... let me restate: Slept them with ⟦Smoke Bomb⟧ then ult.",
+          "ru": "Усыпил через ⟦Haze⟧ 2, потом ульта."
+        }
+      },
+      {
+        "text": "ヘイズの2で寝かせてからウルト。",
+        "ms": 1929,
+        "ok": false,
+        "terms": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "2",
+            "ability:2414191464"
+          ],
+          [
+            "ウルト",
+            "ability:731943444"
+          ]
+        ],
+        "expected": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "2",
+            "ability:2414191464"
+          ]
+        ],
+        "translations": {
+          "en": "Sleep them with ⟦Smoke Bomb⟧... wait, no, Haze's 2 ⟦Smoke Bomb⟧ is Smoke Bomb; sleep is 1. Correction: Put them to sleep with then ult with ⟦Bullet Dance⟧.",
+          "ru": "Усыпляю , потом ульту ⟦Bullet Dance⟧."
+        }
+      },
+      {
+        "text": "今日は1番強いキャラを使う。",
+        "ms": 1232,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Today I'm playing the strongest character.",
+          "ru": "Сегодня играю за самого сильного персонажа."
+        }
+      },
+      {
+        "text": "今日は1番強いキャラを使う。",
+        "ms": 1204,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Today I'm playing the strongest character.",
+          "ru": "Сегодня играю за самого сильного персонажа."
+        }
+      },
+      {
+        "text": "今日は1番強いキャラを使う。",
+        "ms": 1250,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Today I'm playing the strongest character.",
+          "ru": "Сегодня играю за самого сильного персонажа."
+        }
+      },
+      {
+        "text": "次のページを見て。",
+        "ms": 1057,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Check the next page.",
+          "ru": "Посмотри следующую страницу."
+        }
+      },
+      {
+        "text": "次のページを見て。",
+        "ms": 1116,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Check the next page.",
+          "ru": "Посмотри следующую страницу."
+        }
+      },
+      {
+        "text": "次のページを見て。",
+        "ms": 1113,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Check out the next page.",
+          "ru": "Глянь следующую страницу."
+        }
+      },
+      {
+        "text": "コンビニでカート押してた。",
+        "ms": 1367,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Was pushing a cart at the convenience store.",
+          "ru": "Катал тележку в магазине у дома."
+        }
+      },
+      {
+        "text": "コンビニでカート押してた。",
+        "ms": 1249,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I was pushing a cart at the convenience store.",
+          "ru": "Я катил тележку в конбини."
+        }
+      },
+      {
+        "text": "コンビニでカート押してた。",
+        "ms": 1184,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I was pushing a shopping cart at the convenience store.",
+          "ru": "Я катил тележку в магазине у дома."
+        }
+      },
+      {
+        "text": "このチャージが溜まったら撃って。",
+        "ms": 1236,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Shoot once this charge is built up.",
+          "ru": "Стреляй, как только этот заряд накопится."
+        }
+      },
+      {
+        "text": "このチャージが溜まったら撃って。",
+        "ms": 1317,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Shoot once this charge is full.",
+          "ru": "Стреляй, как только этот заряд накопится."
+        }
+      },
+      {
+        "text": "このチャージが溜まったら撃って。",
+        "ms": 1303,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Shoot once this charge is built up.",
+          "ru": "Стреляй, когда этот заряд накопится."
+        }
+      },
+      {
+        "text": "マークついてるやつ狙って。",
+        "ms": 1244,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Target the ones with the mark.",
+          "ru": "Целься в тех, на ком метка."
+        }
+      },
+      {
+        "text": "マークついてるやつ狙って。",
+        "ms": 1112,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Target the ones with the mark.",
+          "ru": "Цель те, на которых метка."
+        }
+      },
+      {
+        "text": "マークついてるやつ狙って。",
+        "ms": 1340,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Target the ones with the mark.",
+          "ru": "Целься в тех, у кого есть метка."
+        }
+      },
+      {
+        "text": "さあ、始まりました。デッドロック実況です。",
+        "ms": 1288,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Alright, we're starting. Deadlock commentary time.",
+          "ru": "Ну что, начинаем. Комментарий по Deadlock."
+        }
+      },
+      {
+        "text": "さあ、始まりました。デッドロック実況です。",
+        "ms": 1318,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Alright, we're starting. Deadlock commentary time.",
+          "ru": "Ну что, поехали. Комментирую Deadlock."
+        }
+      },
+      {
+        "text": "さあ、始まりました。デッドロック実況です。",
+        "ms": 1591,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Alright, we're starting. Deadlock commentary time.",
+          "ru": "Ну что, поехали. Комментирую Deadlock."
+        }
+      },
+      {
+        "text": "ヘイズめっちゃ強いから。",
+        "ms": 1220,
+        "ok": true,
+        "terms": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ]
+        ],
+        "expected": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ]
+        ],
+        "translations": {
+          "en": "Haze is so strong, that's why.",
+          "ru": "Хейз такой сильный, вот почему."
+        }
+      },
+      {
+        "text": "ヘイズめっちゃ強いから。",
+        "ms": 1207,
+        "ok": true,
+        "terms": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ]
+        ],
+        "expected": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ]
+        ],
+        "translations": {
+          "en": "Haze is so strong, that's why.",
+          "ru": "Хейз такой сильный, вот поэтому."
+        }
+      },
+      {
+        "text": "ヘイズめっちゃ強いから。",
+        "ms": 1210,
+        "ok": true,
+        "terms": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ]
+        ],
+        "expected": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ]
+        ],
+        "translations": {
+          "en": "Haze is so strong, that's why.",
+          "ru": "Хейз просто очень сильный, вот почему."
+        }
+      },
+      {
+        "text": "でも最近出たバイオレットもめっちゃ気になるね。",
+        "ms": 1473,
+        "ok": true,
+        "terms": [
+          [
+            "バイオレット",
+            "hero:86"
+          ]
+        ],
+        "expected": [
+          [
+            "バイオレット",
+            "hero:86"
+          ]
+        ],
+        "translations": {
+          "en": "But I'm also really curious about the recently released ⟦Violet⟧.",
+          "ru": "Но ещё очень интересно, что там с недавно вышедшей ⟦Violet⟧."
+        }
+      },
+      {
+        "text": "でも最近出たバイオレットもめっちゃ気になるね。",
+        "ms": 1489,
+        "ok": true,
+        "terms": [
+          [
+            "バイオレット",
+            "hero:86"
+          ]
+        ],
+        "expected": [
+          [
+            "バイオレット",
+            "hero:86"
+          ]
+        ],
+        "translations": {
+          "en": "But I'm also really curious about the recently released ⟦Violet⟧.",
+          "ru": "Но я тоже очень заинтересован новым ⟦Violet⟧."
+        }
+      },
+      {
+        "text": "でも最近出たバイオレットもめっちゃ気になるね。",
+        "ms": 1588,
+        "ok": true,
+        "terms": [
+          [
+            "バイオレット",
+            "hero:86"
+          ]
+        ],
+        "expected": [
+          [
+            "バイオレット",
+            "hero:86"
+          ]
+        ],
+        "translations": {
+          "en": "But Violet, who just came out recently, is also super interesting to me.",
+          "ru": "Но ⟦Violet⟧, который недавно вышел, тоже меня очень заинтересовал."
+        }
+      },
+      {
+        "text": "そこはちゃんと取りたいよね。",
+        "ms": 1100,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "We should definitely grab that one.",
+          "ru": "Это точно надо забрать."
+        }
+      },
+      {
+        "text": "そこはちゃんと取りたいよね。",
+        "ms": 1238,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "We should definitely grab that one.",
+          "ru": "Этот момент точно стоит забрать."
+        }
+      },
+      {
+        "text": "そこはちゃんと取りたいよね。",
+        "ms": 1074,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "We really wanna grab that one.",
+          "ru": "Там точно надо забрать."
+        }
+      },
+      {
+        "text": "カースは最終盤に取りたいよね。ちゃんと。",
+        "ms": 1500,
+        "ok": false,
+        "terms": [],
+        "expected": [
+          [
+            "カース",
+            "item:2617435668"
+          ]
+        ],
+        "translations": {
+          "en": "Curse is something you wanna pick up in the late game, for real.",
+          "ru": "Проклятие (curse) реально стоит брать ближе к концу игры, серьёзно."
+        }
+      },
+      {
+        "text": "カースは最終盤に取りたいよね。ちゃんと。",
+        "ms": 1559,
+        "ok": true,
+        "terms": [
+          [
+            "カース",
+            "item:2617435668"
+          ]
+        ],
+        "expected": [
+          [
+            "カース",
+            "item:2617435668"
+          ]
+        ],
+        "translations": {
+          "en": "Curse is something you want to grab late game, for real.",
+          "ru": "Проклятие (curse) стоит брать ближе к самой поздней стадии, серьёзно."
+        }
+      },
+      {
+        "text": "カースは最終盤に取りたいよね。ちゃんと。",
+        "ms": 1557,
+        "ok": false,
+        "terms": [],
+        "expected": [
+          [
+            "カース",
+            "item:2617435668"
+          ]
+        ],
+        "translations": {
+          "en": "Curse is something you wanna grab late game, for sure.",
+          "ru": "Проклятие стоит брать ближе к концу игры, это точно."
+        }
+      },
+      {
+        "text": "ソウル全然足りない。",
+        "ms": 1113,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Souls are way short.",
+          "ru": "Душ катастрофически не хватает."
+        }
+      },
+      {
+        "text": "ソウル全然足りない。",
+        "ms": 1300,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Still way short on souls.",
+          "ru": "Душ всё ещё катастрофически не хватает."
+        }
+      },
+      {
+        "text": "ソウル全然足りない。",
+        "ms": 1292,
+        "ok": false,
+        "terms": [
+          [
+            "ソウル",
+            "item:4050602737"
+          ]
+        ],
+        "expected": [],
+        "translations": {
+          "en": "Souls are way short.",
+          "ru": "Душ катастрофически не хватает."
+        }
+      },
+      {
+        "text": "敵全員ミッドに寄ってる。",
+        "ms": 1166,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Enemies are all bunched up mid.",
+          "ru": "Все враги собрались на миде."
+        }
+      },
+      {
+        "text": "敵全員ミッドに寄ってる。",
+        "ms": 1187,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Enemies are all bunched up mid.",
+          "ru": "Все враги собрались на миде."
+        }
+      },
+      {
+        "text": "敵全員ミッドに寄ってる。",
+        "ms": 1170,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Enemies are all bunched up mid.",
+          "ru": "Все враги собрались в миде."
+        }
+      },
+      {
+        "text": "ガーディアン硬すぎる。",
+        "ms": 1156,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Guardian is way too tanky.",
+          "ru": "Guardian слишком живучий."
+        }
+      },
+      {
+        "text": "ガーディアン硬すぎる。",
+        "ms": 1239,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Guardian is so tanky.",
+          "ru": "Guardian слишком живучий."
+        }
+      },
+      {
+        "text": "ガーディアン硬すぎる。",
+        "ms": 1107,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Guardian is way too tanky.",
+          "ru": "Guardian слишком живучий."
+        }
+      },
+      {
+        "text": "ウルト溜まったから行くよ。",
+        "ms": 1322,
+        "ok": false,
+        "terms": [
+          [
+            "ウルト",
+            "ability:2054144742"
+          ]
+        ],
+        "expected": [],
+        "translations": {
+          "en": "Ult's charged, I'm going in.",
+          "ru": "Ульта заряжена, иду в бой."
+        }
+      },
+      {
+        "text": "ウルト溜まったから行くよ。",
+        "ms": 1313,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Ult's ready, I'm going in.",
+          "ru": "Ульта заряжена, иду в бой."
+        }
+      },
+      {
+        "text": "ウルト溜まったから行くよ。",
+        "ms": 1231,
+        "ok": false,
+        "terms": [
+          [
+            "ウルト",
+            "ability:2054144742"
+          ]
+        ],
+        "expected": [],
+        "translations": {
+          "en": "Ult's charged, I'm going in.",
+          "ru": "Ульта заряжена, иду."
+        }
+      },
+      {
+        "text": "スマホはポケットに入れといて。",
+        "ms": 1263,
+        "ok": false,
+        "terms": [
+          [
+            "ポケット",
+            "hero:50"
+          ]
+        ],
+        "expected": [],
+        "translations": {
+          "en": "Keep your phone in your pocket.",
+          "ru": "Держи телефон в кармане."
+        }
+      },
+      {
+        "text": "スマホはポケットに入れといて。",
+        "ms": 1136,
+        "ok": false,
+        "terms": [
+          [
+            "ポケット",
+            "hero:50"
+          ]
+        ],
+        "expected": [],
+        "translations": {
+          "en": "Keep your phone in your pocket.",
+          "ru": "Телефон держи в кармане."
+        }
+      },
+      {
+        "text": "スマホはポケットに入れといて。",
+        "ms": 1048,
+        "ok": false,
+        "terms": [
+          [
+            "ポケット",
+            "hero:50"
+          ]
+        ],
+        "expected": [],
+        "translations": {
+          "en": "Keep your phone in your pocket.",
+          "ru": "Телефон держи в кармане."
+        }
+      },
+      {
+        "text": "ポケットのウルト避けて。",
+        "ms": 1212,
+        "ok": false,
+        "terms": [],
+        "expected": [
+          [
+            "ポケット",
+            "hero:50"
+          ],
+          [
+            "ウルト",
+            "ability:2954330093"
+          ]
+        ],
+        "translations": {
+          "en": "Dodge Pocket's ... wait no, correction: dodge Pocket's [ult] — ",
+          "ru": ""
+        }
+      },
+      {
+        "text": "ポケットのウルト避けて。",
+        "ms": 1583,
+        "ok": true,
+        "terms": [
+          [
+            "ポケット",
+            "hero:50"
+          ],
+          [
+            "ウルト",
+            "ability:2954330093"
+          ]
+        ],
+        "expected": [
+          [
+            "ポケット",
+            "hero:50"
+          ],
+          [
+            "ウルト",
+            "ability:2954330093"
+          ]
+        ],
+        "translations": {
+          "en": "Dodge Pocket's ... wait, no, dodge ⟦Pocket⟧'s ⟦Affliction⟧.",
+          "ru": "Уклонись от ⟦Affliction⟧ ⟦Pocket⟧."
+        }
+      },
+      {
+        "text": "ポケットのウルト避けて。",
+        "ms": 1534,
+        "ok": true,
+        "terms": [
+          [
+            "ポケット",
+            "hero:50"
+          ],
+          [
+            "ウルト",
+            "ability:2954330093"
+          ]
+        ],
+        "expected": [
+          [
+            "ポケット",
+            "hero:50"
+          ],
+          [
+            "ウルト",
+            "ability:2954330093"
+          ]
+        ],
+        "translations": {
+          "en": "Dodge Pocket's ... wait, no: dodge Pocket's ⟦Affliction⟧.",
+          "ru": "Уклонись от ⟦Affliction⟧ Покет."
+        }
+      },
+      {
+        "text": "ちょっとセブンイレブン行ってくる。",
+        "ms": 1125,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Gonna run to 7-Eleven real quick.",
+          "ru": "Сбегаю в 7-Eleven, быстро."
+        }
+      },
+      {
+        "text": "ちょっとセブンイレブン行ってくる。",
+        "ms": 1201,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Gonna pop over to 7-Eleven real quick.",
+          "ru": "Сейчас сгоняю в 7-Eleven."
+        }
+      },
+      {
+        "text": "ちょっとセブンイレブン行ってくる。",
+        "ms": 1285,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Just popping out to 7-Eleven real quick.",
+          "ru": "Ладно, сбегаю в 7-Eleven на минутку."
+        }
+      },
+      {
+        "text": "セブン止めないとやばい。",
+        "ms": 1275,
+        "ok": true,
+        "terms": [
+          [
+            "セブン",
+            "hero:2"
+          ]
+        ],
+        "expected": [
+          [
+            "セブン",
+            "hero:2"
+          ]
+        ],
+        "translations": {
+          "en": "We've gotta stop ⟦Seven⟧ or we're screwed.",
+          "ru": "Надо остановить ⟦Seven⟧, иначе нам конец."
+        }
+      },
+      {
+        "text": "セブン止めないとやばい。",
+        "ms": 1247,
+        "ok": true,
+        "terms": [
+          [
+            "セブン",
+            "hero:2"
+          ]
+        ],
+        "expected": [
+          [
+            "セブン",
+            "hero:2"
+          ]
+        ],
+        "translations": {
+          "en": "We gotta stop ⟦Seven⟧ or we're screwed.",
+          "ru": "Надо остановить ⟦Seven⟧, а то жопа."
+        }
+      },
+      {
+        "text": "セブン止めないとやばい。",
+        "ms": 1237,
+        "ok": true,
+        "terms": [
+          [
+            "セブン",
+            "hero:2"
+          ]
+        ],
+        "expected": [
+          [
+            "セブン",
+            "hero:2"
+          ]
+        ],
+        "translations": {
+          "en": "We gotta stop ⟦Seven⟧ or we're dead.",
+          "ru": "Надо остановить ⟦Seven⟧, а то нам конец."
+        }
+      },
+      {
+        "text": "最初からラッシュしよう。",
+        "ms": 1228,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Let's rush from the start.",
+          "ru": "Давайте с самого начала рашить."
+        }
+      },
+      {
+        "text": "最初からラッシュしよう。",
+        "ms": 1230,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Let's rush from the start.",
+          "ru": "Давайте с самого начала рашить."
+        }
+      },
+      {
+        "text": "最初からラッシュしよう。",
+        "ms": 1227,
+        "ok": false,
+        "terms": [
+          [
+            "ラッシュ",
+            "hero:31"
+          ]
+        ],
+        "expected": [],
+        "translations": {
+          "en": "Let's rush from the start.",
+          "ru": "Давай с самого начала раш."
+        }
+      },
+      {
+        "text": "ラッシュに飛び込まれた。",
+        "ms": 1205,
+        "ok": true,
+        "terms": [
+          [
+            "ラッシュ",
+            "hero:31"
+          ]
+        ],
+        "expected": [
+          [
+            "ラッシュ",
+            "hero:31"
+          ]
+        ],
+        "translations": {
+          "en": "Got dove by ⟦Lash⟧.",
+          "ru": "Меня накрыл ⟦Lash⟧."
+        }
+      },
+      {
+        "text": "ラッシュに飛び込まれた。",
+        "ms": 1254,
+        "ok": true,
+        "terms": [
+          [
+            "ラッシュ",
+            "hero:31"
+          ]
+        ],
+        "expected": [
+          [
+            "ラッシュ",
+            "hero:31"
+          ]
+        ],
+        "translations": {
+          "en": "Got dove by ⟦Lash⟧.",
+          "ru": "Меня нырнул ⟦Lash⟧."
+        }
+      },
+      {
+        "text": "ラッシュに飛び込まれた。",
+        "ms": 1328,
+        "ok": true,
+        "terms": [
+          [
+            "ラッシュ",
+            "hero:31"
+          ]
+        ],
+        "expected": [
+          [
+            "ラッシュ",
+            "hero:31"
+          ]
+        ],
+        "translations": {
+          "en": "Got dove by ⟦Lash⟧.",
+          "ru": "Меня заныкал ⟦Lash⟧."
+        }
+      },
+      {
+        "text": "ミラージュみたいに見えた。",
+        "ms": 1311,
+        "ok": true,
+        "terms": [
+          [
+            "ミラージュ",
+            "hero:52"
+          ]
+        ],
+        "expected": [
+          [
+            "ミラージュ",
+            "hero:52"
+          ]
+        ],
+        "translations": {
+          "en": "Looked like ⟦Mirage⟧.",
+          "ru": "Выглядело как ⟦Mirage⟧."
+        }
+      },
+      {
+        "text": "ミラージュみたいに見えた。",
+        "ms": 1130,
+        "ok": true,
+        "terms": [
+          [
+            "ミラージュ",
+            "hero:52"
+          ]
+        ],
+        "expected": [
+          [
+            "ミラージュ",
+            "hero:52"
+          ]
+        ],
+        "translations": {
+          "en": "Looked like ⟦Mirage⟧.",
+          "ru": "Выглядело как ⟦Mirage⟧."
+        }
+      },
+      {
+        "text": "ミラージュみたいに見えた。",
+        "ms": 1321,
+        "ok": true,
+        "terms": [
+          [
+            "ミラージュ",
+            "hero:52"
+          ]
+        ],
+        "expected": [
+          [
+            "ミラージュ",
+            "hero:52"
+          ]
+        ],
+        "translations": {
+          "en": "Looked like ⟦Mirage⟧.",
+          "ru": "Выглядело как ⟦Mirage⟧."
+        }
+      }
+    ]
+  },
+  "gpt-6-luna": {
+    "summary": {
+      "runs": 111,
+      "termsCorrect": 97,
+      "failed": 0,
+      "japaneseLeftInTranslation": 0,
+      "strayTermsInTranslation": 4,
+      "averageMs": 1791,
+      "usage": {
+        "translate": {
+          "seconds": 0.0,
+          "tokens": 1111588,
+          "usd": 0.0,
+          "unpriced": true
+        }
+      }
+    },
+    "runs": [
+      {
+        "text": "僕の一番好きなキャラはヘイズですね。",
+        "ms": 1516,
+        "ok": true,
+        "terms": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ]
+        ],
+        "expected": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ]
+        ],
+        "translations": {
+          "en": "My favorite character is ⟦Haze⟧.",
+          "ru": "Мой любимый персонаж — ⟦Haze⟧."
+        }
+      },
+      {
+        "text": "僕の一番好きなキャラはヘイズですね。",
+        "ms": 1840,
+        "ok": true,
+        "terms": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ]
+        ],
+        "expected": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ]
+        ],
+        "translations": {
+          "en": "My favorite character is ⟦Haze⟧.",
+          "ru": "Мой любимый персонаж — ⟦Haze⟧."
+        }
+      },
+      {
+        "text": "僕の一番好きなキャラはヘイズですね。",
+        "ms": 1630,
+        "ok": true,
+        "terms": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ]
+        ],
+        "expected": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ]
+        ],
+        "translations": {
+          "en": "My favorite character is ⟦Haze⟧.",
+          "ru": "Мой любимый персонаж — ⟦Haze⟧."
+        }
+      },
+      {
+        "text": "いやヘイズのバレットダンスもめっちゃ強いんだけど、バイオレットのウルトもなんか強そうではある。",
+        "ms": 2872,
+        "ok": false,
+        "terms": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "バレットダンス",
+            "ability:731943444"
+          ],
+          [
+            "バイオレット",
+            "hero:86"
+          ]
+        ],
+        "expected": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "バレットダンス",
+            "ability:731943444"
+          ],
+          [
+            "バイオレット",
+            "hero:86"
+          ],
+          [
+            "ウルト",
+            "ability:2516700978"
+          ]
+        ],
+        "translations": {
+          "en": "Yeah, Haze's ⟦Bullet Dance⟧ is really strong too, but Violet's ult also looks pretty strong.",
+          "ru": "Да, у Haze ⟦Bullet Dance⟧ тоже очень сильная, но ульта Violet тоже выглядит мощно."
+        }
+      },
+      {
+        "text": "いやヘイズのバレットダンスもめっちゃ強いんだけど、バイオレットのウルトもなんか強そうではある。",
+        "ms": 2600,
+        "ok": true,
+        "terms": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "バレットダンス",
+            "ability:731943444"
+          ],
+          [
+            "バイオレット",
+            "hero:86"
+          ],
+          [
+            "ウルト",
+            "ability:2516700978"
+          ]
+        ],
+        "expected": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "バレットダンス",
+            "ability:731943444"
+          ],
+          [
+            "バイオレット",
+            "hero:86"
+          ],
+          [
+            "ウルト",
+            "ability:2516700978"
+          ]
+        ],
+        "translations": {
+          "en": "Haze's ⟦Bullet Dance⟧ is really strong too, but Violet's ult also seems pretty strong.",
+          "ru": "⟦Bullet Dance⟧ у ⟦Haze⟧ тоже очень сильная, но и ульта ⟦Violet⟧ вроде мощная."
+        }
+      },
+      {
+        "text": "いやヘイズのバレットダンスもめっちゃ強いんだけど、バイオレットのウルトもなんか強そうではある。",
+        "ms": 2587,
+        "ok": true,
+        "terms": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "バレットダンス",
+            "ability:731943444"
+          ],
+          [
+            "バイオレット",
+            "hero:86"
+          ],
+          [
+            "ウルト",
+            "ability:2516700978"
+          ]
+        ],
+        "expected": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "バレットダンス",
+            "ability:731943444"
+          ],
+          [
+            "バイオレット",
+            "hero:86"
+          ],
+          [
+            "ウルト",
+            "ability:2516700978"
+          ]
+        ],
+        "translations": {
+          "en": "Haze's ⟦Bullet Dance⟧ is really strong too, but Violet's ult looks pretty strong as well.",
+          "ru": "⟦Bullet Dance⟧ у ⟦Haze⟧ тоже очень сильная, но ульта ⟦Violet⟧ тоже выглядит мощно."
+        }
+      },
+      {
+        "text": "拡マガをちゃんとね、取りたいよね。最初は。",
+        "ms": 1715,
+        "ok": true,
+        "terms": [
+          [
+            "拡マガ",
+            "item:1548066885"
+          ]
+        ],
+        "expected": [
+          [
+            "拡マガ",
+            "item:1548066885"
+          ]
+        ],
+        "translations": {
+          "en": "I wanna make sure I get ⟦Extended Magazine⟧ early.",
+          "ru": "В начале хочется обязательно взять ⟦Extended Magazine⟧."
+        }
+      },
+      {
+        "text": "拡マガをちゃんとね、取りたいよね。最初は。",
+        "ms": 2122,
+        "ok": true,
+        "terms": [
+          [
+            "拡マガ",
+            "item:1548066885"
+          ]
+        ],
+        "expected": [
+          [
+            "拡マガ",
+            "item:1548066885"
+          ]
+        ],
+        "translations": {
+          "en": "You really want to grab ⟦Extended Magazine⟧ early on.",
+          "ru": "В начале точно хочется взять ⟦Extended Magazine⟧."
+        }
+      },
+      {
+        "text": "拡マガをちゃんとね、取りたいよね。最初は。",
+        "ms": 2019,
+        "ok": true,
+        "terms": [
+          [
+            "拡マガ",
+            "item:1548066885"
+          ]
+        ],
+        "expected": [
+          [
+            "拡マガ",
+            "item:1548066885"
+          ]
+        ],
+        "translations": {
+          "en": "You want to make sure you get ⟦Extended Magazine⟧ early.",
+          "ru": "В начале точно хочется взять ⟦Extended Magazine⟧."
+        }
+      },
+      {
+        "text": "エクストラスピリットも重要だけど、拡マガは武器ダメージも上がるから。",
+        "ms": 1907,
+        "ok": true,
+        "terms": [
+          [
+            "エクストラスピリット",
+            "item:968099481"
+          ],
+          [
+            "拡マガ",
+            "item:1548066885"
+          ]
+        ],
+        "expected": [
+          [
+            "エクストラスピリット",
+            "item:968099481"
+          ],
+          [
+            "拡マガ",
+            "item:1548066885"
+          ]
+        ],
+        "translations": {
+          "en": "Extra Spirit is important too, but Extended Magazine also increases your weapon damage.",
+          "ru": "Экстра-спирит тоже важен, но Extended Magazine ещё и повышает урон от оружия."
+        }
+      },
+      {
+        "text": "エクストラスピリットも重要だけど、拡マガは武器ダメージも上がるから。",
+        "ms": 2254,
+        "ok": true,
+        "terms": [
+          [
+            "エクストラスピリット",
+            "item:968099481"
+          ],
+          [
+            "拡マガ",
+            "item:1548066885"
+          ]
+        ],
+        "expected": [
+          [
+            "エクストラスピリット",
+            "item:968099481"
+          ],
+          [
+            "拡マガ",
+            "item:1548066885"
+          ]
+        ],
+        "translations": {
+          "en": "Extra Spirit is important too, but Extended Magazine also boosts weapon damage.",
+          "ru": "Extra Spirit тоже важен, но Extended Magazine ещё и увеличивает урон от оружия."
+        }
+      },
+      {
+        "text": "エクストラスピリットも重要だけど、拡マガは武器ダメージも上がるから。",
+        "ms": 2274,
+        "ok": true,
+        "terms": [
+          [
+            "エクストラスピリット",
+            "item:968099481"
+          ],
+          [
+            "拡マガ",
+            "item:1548066885"
+          ]
+        ],
+        "expected": [
+          [
+            "エクストラスピリット",
+            "item:968099481"
+          ],
+          [
+            "拡マガ",
+            "item:1548066885"
+          ]
+        ],
+        "translations": {
+          "en": "Extra Spirit ⟦Extra Spirit⟧ is important too, but Extended Magazine ⟦Extended Magazine⟧ also boosts weapon damage.",
+          "ru": "⟦Extra Spirit⟧ тоже важен, но ⟦Extended Magazine⟧ ещё и повышает урон от оружия."
+        }
+      },
+      {
+        "text": "まあ、あとは呪いの遺物？まあいわゆるカースだね。",
+        "ms": 2128,
+        "ok": false,
+        "terms": [
+          [
+            "呪いの遺物",
+            "item:2617435668"
+          ]
+        ],
+        "expected": [
+          [
+            "呪いの遺物",
+            "item:2617435668"
+          ],
+          [
+            "カース",
+            "item:2617435668"
+          ]
+        ],
+        "translations": {
+          "en": "Well, and then Cursed Relic? Basically, you know, a curse.",
+          "ru": "Ну, и ещё Cursed Relic? В общем, это типа проклятие."
+        }
+      },
+      {
+        "text": "まあ、あとは呪いの遺物？まあいわゆるカースだね。",
+        "ms": 1953,
+        "ok": false,
+        "terms": [
+          [
+            "呪いの遺物",
+            "item:2617435668"
+          ]
+        ],
+        "expected": [
+          [
+            "呪いの遺物",
+            "item:2617435668"
+          ],
+          [
+            "カース",
+            "item:2617435668"
+          ]
+        ],
+        "translations": {
+          "en": "Well, then there's ⟦Cursed Relic⟧, I guess? Basically, it's what you'd call a curse.",
+          "ru": "Ну, и ещё, наверное, ⟦Cursed Relic⟧? В общем, это типа проклятия."
+        }
+      },
+      {
+        "text": "まあ、あとは呪いの遺物？まあいわゆるカースだね。",
+        "ms": 3860,
+        "ok": false,
+        "terms": [
+          [
+            "呪いの遺物",
+            "item:2617435668"
+          ]
+        ],
+        "expected": [
+          [
+            "呪いの遺物",
+            "item:2617435668"
+          ],
+          [
+            "カース",
+            "item:2617435668"
+          ]
+        ],
+        "translations": {
+          "en": "Well, then there's ⟦Cursed Relic⟧? You know, basically a curse.",
+          "ru": "Ну, дальше — ⟦Cursed Relic⟧? В общем, это типа проклятие."
+        }
+      },
+      {
+        "text": "エコシャ早めに積みたい。",
+        "ms": 1590,
+        "ok": true,
+        "terms": [
+          [
+            "エコシャ",
+            "item:630839635"
+          ]
+        ],
+        "expected": [
+          [
+            "エコシャ",
+            "item:630839635"
+          ]
+        ],
+        "translations": {
+          "en": "I wanna get ⟦Echo Shard⟧ early.",
+          "ru": "Хочу пораньше купить ⟦Echo Shard⟧."
+        }
+      },
+      {
+        "text": "エコシャ早めに積みたい。",
+        "ms": 1582,
+        "ok": true,
+        "terms": [
+          [
+            "エコシャ",
+            "item:630839635"
+          ]
+        ],
+        "expected": [
+          [
+            "エコシャ",
+            "item:630839635"
+          ]
+        ],
+        "translations": {
+          "en": "I wanna get ⟦Echo Shard⟧ early.",
+          "ru": "Хочу пораньше взять ⟦Echo Shard⟧."
+        }
+      },
+      {
+        "text": "エコシャ早めに積みたい。",
+        "ms": 1916,
+        "ok": true,
+        "terms": [
+          [
+            "エコシャ",
+            "item:630839635"
+          ]
+        ],
+        "expected": [
+          [
+            "エコシャ",
+            "item:630839635"
+          ]
+        ],
+        "translations": {
+          "en": "I wanna get ⟦Echo Shard⟧ early.",
+          "ru": "Хочу пораньше купить ⟦Echo Shard⟧."
+        }
+      },
+      {
+        "text": "ページのウルトで回復して。",
+        "ms": 2804,
+        "ok": false,
+        "terms": [
+          [
+            "ページ",
+            "hero:67"
+          ]
+        ],
+        "expected": [
+          [
+            "ページ",
+            "hero:67"
+          ],
+          [
+            "ウルト",
+            "ability:1841901343"
+          ]
+        ],
+        "translations": {
+          "en": "Heal with ⟦Paige⟧'s ult.",
+          "ru": "Восстанови здоровье ультой ⟦Paige⟧."
+        }
+      },
+      {
+        "text": "ページのウルトで回復して。",
+        "ms": 2169,
+        "ok": false,
+        "terms": [
+          [
+            "ページ",
+            "hero:67"
+          ]
+        ],
+        "expected": [
+          [
+            "ページ",
+            "hero:67"
+          ],
+          [
+            "ウルト",
+            "ability:1841901343"
+          ]
+        ],
+        "translations": {
+          "en": "Heal with ⟦Paige⟧'s ult.",
+          "ru": "Восстанови здоровье ультой ⟦Paige⟧."
+        }
+      },
+      {
+        "text": "ページのウルトで回復して。",
+        "ms": 1575,
+        "ok": false,
+        "terms": [
+          [
+            "ページ",
+            "hero:67"
+          ]
+        ],
+        "expected": [
+          [
+            "ページ",
+            "hero:67"
+          ],
+          [
+            "ウルト",
+            "ability:1841901343"
+          ]
+        ],
+        "translations": {
+          "en": "Heal with ⟦Paige⟧'s ult.",
+          "ru": "Восстанови здоровье ультой ⟦Paige⟧."
+        }
+      },
+      {
+        "text": "リコシェット強すぎ。",
+        "ms": 2356,
+        "ok": true,
+        "terms": [
+          [
+            "リコシェット",
+            "item:2480592370"
+          ]
+        ],
+        "expected": [
+          [
+            "リコシェット",
+            "item:2480592370"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Ricochet⟧ is way too strong.",
+          "ru": "⟦Ricochet⟧ слишком сильный."
+        }
+      },
+      {
+        "text": "リコシェット強すぎ。",
+        "ms": 1895,
+        "ok": true,
+        "terms": [
+          [
+            "リコシェット",
+            "item:2480592370"
+          ]
+        ],
+        "expected": [
+          [
+            "リコシェット",
+            "item:2480592370"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Ricochet⟧ is way too strong.",
+          "ru": "⟦Ricochet⟧ слишком сильный."
+        }
+      },
+      {
+        "text": "リコシェット強すぎ。",
+        "ms": 1512,
+        "ok": true,
+        "terms": [
+          [
+            "リコシェット",
+            "item:2480592370"
+          ]
+        ],
+        "expected": [
+          [
+            "リコシェット",
+            "item:2480592370"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Ricochet⟧ is way too strong.",
+          "ru": "⟦Ricochet⟧ слишком сильный."
+        }
+      },
+      {
+        "text": "ヘイズのウルトは強い。",
+        "ms": 1499,
+        "ok": true,
+        "terms": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "ウルト",
+            "ability:731943444"
+          ]
+        ],
+        "expected": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "ウルト",
+            "ability:731943444"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Haze⟧'s ult is strong.",
+          "ru": "Ульта ⟦Haze⟧ сильная."
+        }
+      },
+      {
+        "text": "ヘイズのウルトは強い。",
+        "ms": 1650,
+        "ok": false,
+        "terms": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "のウルト",
+            "ability:731943444"
+          ]
+        ],
+        "expected": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "ウルト",
+            "ability:731943444"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Haze⟧'s ult is strong.",
+          "ru": "Ульта ⟦Haze⟧ сильная."
+        }
+      },
+      {
+        "text": "ヘイズのウルトは強い。",
+        "ms": 1962,
+        "ok": false,
+        "terms": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "のウルト",
+            "ability:731943444"
+          ]
+        ],
+        "expected": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "ウルト",
+            "ability:731943444"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Haze⟧'s ult is strong.",
+          "ru": "Ульта ⟦Haze⟧ сильная."
+        }
+      },
+      {
+        "text": "カースは買っとけ。",
+        "ms": 1574,
+        "ok": true,
+        "terms": [
+          [
+            "カース",
+            "item:2617435668"
+          ]
+        ],
+        "expected": [
+          [
+            "カース",
+            "item:2617435668"
+          ]
+        ],
+        "translations": {
+          "en": "You should buy ⟦Cursed Relic⟧.",
+          "ru": "Обязательно купи ⟦Cursed Relic⟧."
+        }
+      },
+      {
+        "text": "カースは買っとけ。",
+        "ms": 1736,
+        "ok": true,
+        "terms": [
+          [
+            "カース",
+            "item:2617435668"
+          ]
+        ],
+        "expected": [
+          [
+            "カース",
+            "item:2617435668"
+          ]
+        ],
+        "translations": {
+          "en": "Make sure you buy ⟦Cursed Relic⟧.",
+          "ru": "Обязательно купи ⟦Cursed Relic⟧."
+        }
+      },
+      {
+        "text": "カースは買っとけ。",
+        "ms": 1547,
+        "ok": true,
+        "terms": [
+          [
+            "カース",
+            "item:2617435668"
+          ]
+        ],
+        "expected": [
+          [
+            "カース",
+            "item:2617435668"
+          ]
+        ],
+        "translations": {
+          "en": "You should buy ⟦Cursed Relic⟧.",
+          "ru": "Обязательно купи ⟦Cursed Relic⟧."
+        }
+      },
+      {
+        "text": "ドアマンのカートに乗せられた。",
+        "ms": 1787,
+        "ok": true,
+        "terms": [
+          [
+            "ドアマン",
+            "hero:69"
+          ],
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "expected": [
+          [
+            "ドアマン",
+            "hero:69"
+          ],
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "translations": {
+          "en": "I got put on ⟦Luggage Cart⟧.",
+          "ru": "Меня посадили на ⟦Luggage Cart⟧."
+        }
+      },
+      {
+        "text": "ドアマンのカートに乗せられた。",
+        "ms": 1643,
+        "ok": true,
+        "terms": [
+          [
+            "ドアマン",
+            "hero:69"
+          ],
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "expected": [
+          [
+            "ドアマン",
+            "hero:69"
+          ],
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "translations": {
+          "en": "I got put on ⟦Luggage Cart⟧.",
+          "ru": "Меня посадили на ⟦Luggage Cart⟧."
+        }
+      },
+      {
+        "text": "ドアマンのカートに乗せられた。",
+        "ms": 1937,
+        "ok": true,
+        "terms": [
+          [
+            "ドアマン",
+            "hero:69"
+          ],
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "expected": [
+          [
+            "ドアマン",
+            "hero:69"
+          ],
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "translations": {
+          "en": "I got put on ⟦Luggage Cart⟧ by ⟦The Doorman⟧.",
+          "ru": "⟦The Doorman⟧ посадил меня на ⟦Luggage Cart⟧."
+        }
+      },
+      {
+        "text": "リコセ買ったら一気に楽になった。",
+        "ms": 1628,
+        "ok": true,
+        "terms": [
+          [
+            "リコセ",
+            "item:2480592370"
+          ]
+        ],
+        "expected": [
+          [
+            "リコセ",
+            "item:2480592370"
+          ]
+        ],
+        "translations": {
+          "en": "Buying ⟦Ricochet⟧ made things way easier all of a sudden.",
+          "ru": "Купил ⟦Ricochet⟧ — и сразу стало намного проще."
+        }
+      },
+      {
+        "text": "リコセ買ったら一気に楽になった。",
+        "ms": 1997,
+        "ok": true,
+        "terms": [
+          [
+            "リコセ",
+            "item:2480592370"
+          ]
+        ],
+        "expected": [
+          [
+            "リコセ",
+            "item:2480592370"
+          ]
+        ],
+        "translations": {
+          "en": "Buying ⟦Ricochet⟧ made things so much easier.",
+          "ru": "Купил ⟦Ricochet⟧ — и сразу стало намного легче."
+        }
+      },
+      {
+        "text": "リコセ買ったら一気に楽になった。",
+        "ms": 2012,
+        "ok": true,
+        "terms": [
+          [
+            "リコセ",
+            "item:2480592370"
+          ]
+        ],
+        "expected": [
+          [
+            "リコセ",
+            "item:2480592370"
+          ]
+        ],
+        "translations": {
+          "en": "Once I bought ⟦Ricochet⟧, things got way easier.",
+          "ru": "Купил ⟦Ricochet⟧ — и сразу стало намного легче."
+        }
+      },
+      {
+        "text": "グレイブスの３番はスプリットショットで強くなる。",
+        "ms": 2016,
+        "ok": true,
+        "terms": [
+          [
+            "グレイブス",
+            "hero:76"
+          ],
+          [
+            "３番",
+            "ability:629925354"
+          ],
+          [
+            "スプリットショット",
+            "item:3647584222"
+          ]
+        ],
+        "expected": [
+          [
+            "グレイブス",
+            "hero:76"
+          ],
+          [
+            "３番",
+            "ability:629925354"
+          ],
+          [
+            "スプリットショット",
+            "item:3647584222"
+          ]
+        ],
+        "translations": {
+          "en": "Graves' ⟦Essence Theft⟧ gets stronger with ⟦Split Shot⟧.",
+          "ru": "⟦Essence Theft⟧ ⟦Graves⟧ становится сильнее с ⟦Split Shot⟧."
+        }
+      },
+      {
+        "text": "グレイブスの３番はスプリットショットで強くなる。",
+        "ms": 2497,
+        "ok": true,
+        "terms": [
+          [
+            "グレイブス",
+            "hero:76"
+          ],
+          [
+            "３番",
+            "ability:629925354"
+          ],
+          [
+            "スプリットショット",
+            "item:3647584222"
+          ]
+        ],
+        "expected": [
+          [
+            "グレイブス",
+            "hero:76"
+          ],
+          [
+            "３番",
+            "ability:629925354"
+          ],
+          [
+            "スプリットショット",
+            "item:3647584222"
+          ]
+        ],
+        "translations": {
+          "en": "Graves' ⟦Essence Theft⟧ gets stronger with ⟦Split Shot⟧.",
+          "ru": "⟦Essence Theft⟧ ⟦Graves⟧ становится сильнее с ⟦Split Shot⟧."
+        }
+      },
+      {
+        "text": "グレイブスの３番はスプリットショットで強くなる。",
+        "ms": 2492,
+        "ok": true,
+        "terms": [
+          [
+            "グレイブス",
+            "hero:76"
+          ],
+          [
+            "３番",
+            "ability:629925354"
+          ],
+          [
+            "スプリットショット",
+            "item:3647584222"
+          ]
+        ],
+        "expected": [
+          [
+            "グレイブス",
+            "hero:76"
+          ],
+          [
+            "３番",
+            "ability:629925354"
+          ],
+          [
+            "スプリットショット",
+            "item:3647584222"
+          ]
+        ],
+        "translations": {
+          "en": "Graves' ⟦Essence Theft⟧ gets stronger with ⟦Split Shot⟧.",
+          "ru": "⟦Essence Theft⟧ ⟦Graves⟧ становится сильнее с ⟦Split Shot⟧."
+        }
+      },
+      {
+        "text": "ドアマンカートで味方を運ぼう。",
+        "ms": 1973,
+        "ok": true,
+        "terms": [
+          [
+            "ドアマン",
+            "hero:69"
+          ],
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "expected": [
+          [
+            "ドアマン",
+            "hero:69"
+          ],
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "translations": {
+          "en": "Let's carry our teammate with ⟦Luggage Cart⟧.",
+          "ru": "Давайте перевезём союзника с помощью ⟦Luggage Cart⟧."
+        }
+      },
+      {
+        "text": "ドアマンカートで味方を運ぼう。",
+        "ms": 1706,
+        "ok": true,
+        "terms": [
+          [
+            "ドアマン",
+            "hero:69"
+          ],
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "expected": [
+          [
+            "ドアマン",
+            "hero:69"
+          ],
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "translations": {
+          "en": "Let's carry our teammate with ⟦Luggage Cart⟧.",
+          "ru": "Давайте отвезём союзника на ⟦Luggage Cart⟧."
+        }
+      },
+      {
+        "text": "ドアマンカートで味方を運ぼう。",
+        "ms": 1809,
+        "ok": true,
+        "terms": [
+          [
+            "ドアマン",
+            "hero:69"
+          ],
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "expected": [
+          [
+            "ドアマン",
+            "hero:69"
+          ],
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "translations": {
+          "en": "Let's carry our teammate with ⟦Luggage Cart⟧.",
+          "ru": "Давайте перевезём союзника с помощью ⟦Luggage Cart⟧."
+        }
+      },
+      {
+        "text": "カートに気をつけて。",
+        "ms": 1654,
+        "ok": true,
+        "terms": [
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "expected": [
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "translations": {
+          "en": "Watch out for ⟦Luggage Cart⟧.",
+          "ru": "Осторожно, ⟦Luggage Cart⟧."
+        }
+      },
+      {
+        "text": "カートに気をつけて。",
+        "ms": 1686,
+        "ok": true,
+        "terms": [
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "expected": [
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "translations": {
+          "en": "Watch out for ⟦Luggage Cart⟧.",
+          "ru": "Осторожно, ⟦Luggage Cart⟧."
+        }
+      },
+      {
+        "text": "カートに気をつけて。",
+        "ms": 1987,
+        "ok": true,
+        "terms": [
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "expected": [
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "translations": {
+          "en": "Watch out for ⟦Luggage Cart⟧.",
+          "ru": "Осторожно, ⟦Luggage Cart⟧."
+        }
+      },
+      {
+        "text": "ヘイズの2で寝かせてからウルト。",
+        "ms": 2239,
+        "ok": false,
+        "terms": [],
+        "expected": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "2",
+            "ability:2414191464"
+          ]
+        ],
+        "translations": {
+          "en": "Put them to sleep with ⟦Haze⟧'s , then ult.",
+          "ru": "Усыпить с помощью ⟦Haze⟧, а потом ульт."
+        }
+      },
+      {
+        "text": "ヘイズの2で寝かせてからウルト。",
+        "ms": 2092,
+        "ok": true,
+        "terms": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "2",
+            "ability:2414191464"
+          ]
+        ],
+        "expected": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "2",
+            "ability:2414191464"
+          ]
+        ],
+        "translations": {
+          "en": "Put them to sleep with ⟦Haze⟧'s , then ult.",
+          "ru": "Усыпить их ⟦Haze⟧, а потом ульт."
+        }
+      },
+      {
+        "text": "ヘイズの2で寝かせてからウルト。",
+        "ms": 2096,
+        "ok": false,
+        "terms": [],
+        "expected": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "2",
+            "ability:2414191464"
+          ]
+        ],
+        "translations": {
+          "en": "Put them to sleep with ⟦Haze⟧'s ⟦Sleep Dagger⟧, then ult.",
+          "ru": "Усыпить их с помощью ⟦Sleep Dagger⟧ ⟦Haze⟧, а потом ульт."
+        }
+      },
+      {
+        "text": "今日は1番強いキャラを使う。",
+        "ms": 1661,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Today, I'm playing the strongest character.",
+          "ru": "Сегодня играю на самом сильном персонаже."
+        }
+      },
+      {
+        "text": "今日は1番強いキャラを使う。",
+        "ms": 1782,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Today, I'm using the strongest character.",
+          "ru": "Сегодня буду играть за самого сильного персонажа."
+        }
+      },
+      {
+        "text": "今日は1番強いキャラを使う。",
+        "ms": 1392,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Today, I'm playing the strongest character.",
+          "ru": "Сегодня сыграю за самого сильного персонажа."
+        }
+      },
+      {
+        "text": "次のページを見て。",
+        "ms": 1317,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Check the next page.",
+          "ru": "Посмотри следующую страницу."
+        }
+      },
+      {
+        "text": "次のページを見て。",
+        "ms": 1686,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Look at the next page.",
+          "ru": "Посмотри на следующую страницу."
+        }
+      },
+      {
+        "text": "次のページを見て。",
+        "ms": 1220,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Look at the next page.",
+          "ru": "Посмотри на следующую страницу."
+        }
+      },
+      {
+        "text": "コンビニでカート押してた。",
+        "ms": 1321,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I was pushing a cart at the convenience store.",
+          "ru": "Я толкал тележку в магазине у дома."
+        }
+      },
+      {
+        "text": "コンビニでカート押してた。",
+        "ms": 1397,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I was pushing a cart at the convenience store.",
+          "ru": "Я толкал тележку в магазине у дома."
+        }
+      },
+      {
+        "text": "コンビニでカート押してた。",
+        "ms": 1236,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I was pushing a cart at the convenience store.",
+          "ru": "Я катил тележку в магазине у дома."
+        }
+      },
+      {
+        "text": "このチャージが溜まったら撃って。",
+        "ms": 1322,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "When this charge is full, shoot.",
+          "ru": "Когда этот заряд накопится, стреляй."
+        }
+      },
+      {
+        "text": "このチャージが溜まったら撃って。",
+        "ms": 1384,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "When this charge is full, fire.",
+          "ru": "Когда этот заряд накопится, стреляй."
+        }
+      },
+      {
+        "text": "このチャージが溜まったら撃って。",
+        "ms": 1271,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Shoot when this charge is full.",
+          "ru": "Стреляй, когда этот заряд накопится."
+        }
+      },
+      {
+        "text": "マークついてるやつ狙って。",
+        "ms": 1295,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Go for the one with the mark.",
+          "ru": "Целься в того, на ком метка."
+        }
+      },
+      {
+        "text": "マークついてるやつ狙って。",
+        "ms": 1552,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Go for the one with the mark.",
+          "ru": "Атакуй того, на ком метка."
+        }
+      },
+      {
+        "text": "マークついてるやつ狙って。",
+        "ms": 1512,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Go for the one with the mark.",
+          "ru": "Целься в того, на ком метка."
+        }
+      },
+      {
+        "text": "さあ、始まりました。デッドロック実況です。",
+        "ms": 1478,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "All right, we're live. Deadlock gameplay commentary.",
+          "ru": "Ну что, начинаем. Комментирую Deadlock."
+        }
+      },
+      {
+        "text": "さあ、始まりました。デッドロック実況です。",
+        "ms": 1666,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "All right, we're live. Deadlock gameplay commentary.",
+          "ru": "Ну что, начинаем. Комментирую игру в Deadlock."
+        }
+      },
+      {
+        "text": "さあ、始まりました。デッドロック実況です。",
+        "ms": 1831,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "All right, we're live. Deadlock commentary starts now.",
+          "ru": "Ну что, начинаем. Комментируем Deadlock."
+        }
+      },
+      {
+        "text": "ヘイズめっちゃ強いから。",
+        "ms": 1361,
+        "ok": true,
+        "terms": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ]
+        ],
+        "expected": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ]
+        ],
+        "translations": {
+          "en": "Haze is really strong.",
+          "ru": "Хейз очень сильная."
+        }
+      },
+      {
+        "text": "ヘイズめっちゃ強いから。",
+        "ms": 1806,
+        "ok": true,
+        "terms": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ]
+        ],
+        "expected": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ]
+        ],
+        "translations": {
+          "en": "Haze is really strong.",
+          "ru": "Хейз очень сильная."
+        }
+      },
+      {
+        "text": "ヘイズめっちゃ強いから。",
+        "ms": 1414,
+        "ok": true,
+        "terms": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ]
+        ],
+        "expected": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Haze⟧ is really strong.",
+          "ru": "⟦Haze⟧ очень сильная."
+        }
+      },
+      {
+        "text": "でも最近出たバイオレットもめっちゃ気になるね。",
+        "ms": 1724,
+        "ok": true,
+        "terms": [
+          [
+            "バイオレット",
+            "hero:86"
+          ]
+        ],
+        "expected": [
+          [
+            "バイオレット",
+            "hero:86"
+          ]
+        ],
+        "translations": {
+          "en": "But I’m really curious about Violet too, since she just came out.",
+          "ru": "Но мне ещё очень интересна Вайолет — она ведь недавно вышла."
+        }
+      },
+      {
+        "text": "でも最近出たバイオレットもめっちゃ気になるね。",
+        "ms": 1822,
+        "ok": true,
+        "terms": [
+          [
+            "バイオレット",
+            "hero:86"
+          ]
+        ],
+        "expected": [
+          [
+            "バイオレット",
+            "hero:86"
+          ]
+        ],
+        "translations": {
+          "en": "But Violet, who just came out recently, looks really interesting too.",
+          "ru": "Но и недавно вышедшая Violet тоже очень заинтересовала."
+        }
+      },
+      {
+        "text": "でも最近出たバイオレットもめっちゃ気になるね。",
+        "ms": 1768,
+        "ok": true,
+        "terms": [
+          [
+            "バイオレット",
+            "hero:86"
+          ]
+        ],
+        "expected": [
+          [
+            "バイオレット",
+            "hero:86"
+          ]
+        ],
+        "translations": {
+          "en": "But Violet, who just came out recently, looks really interesting too.",
+          "ru": "Но недавно вышедшая Violet тоже очень заинтересовала."
+        }
+      },
+      {
+        "text": "そこはちゃんと取りたいよね。",
+        "ms": 1652,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "We definitely want to secure that, right?",
+          "ru": "Это место точно надо забрать, да?"
+        }
+      },
+      {
+        "text": "そこはちゃんと取りたいよね。",
+        "ms": 1731,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "We definitely want to take that, right?",
+          "ru": "Нам ведь надо это забрать."
+        }
+      },
+      {
+        "text": "そこはちゃんと取りたいよね。",
+        "ms": 1475,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "We definitely want to secure that spot.",
+          "ru": "Это место точно хочется забрать."
+        }
+      },
+      {
+        "text": "カースは最終盤に取りたいよね。ちゃんと。",
+        "ms": 1985,
+        "ok": true,
+        "terms": [
+          [
+            "カース",
+            "item:2617435668"
+          ]
+        ],
+        "expected": [
+          [
+            "カース",
+            "item:2617435668"
+          ]
+        ],
+        "translations": {
+          "en": "You want to pick up ⟦Cursed Relic⟧ in the very late game, for sure.",
+          "ru": "⟦Cursed Relic⟧ лучше брать уже в самом лейте, точно."
+        }
+      },
+      {
+        "text": "カースは最終盤に取りたいよね。ちゃんと。",
+        "ms": 2069,
+        "ok": true,
+        "terms": [
+          [
+            "カース",
+            "item:2617435668"
+          ]
+        ],
+        "expected": [
+          [
+            "カース",
+            "item:2617435668"
+          ]
+        ],
+        "translations": {
+          "en": "You really want to pick up ⟦Cursed Relic⟧ in the late game.",
+          "ru": "⟦Cursed Relic⟧ лучше брать уже в самом лейте."
+        }
+      },
+      {
+        "text": "カースは最終盤に取りたいよね。ちゃんと。",
+        "ms": 2009,
+        "ok": true,
+        "terms": [
+          [
+            "カース",
+            "item:2617435668"
+          ]
+        ],
+        "expected": [
+          [
+            "カース",
+            "item:2617435668"
+          ]
+        ],
+        "translations": {
+          "en": "You want to pick up ⟦Cursed Relic⟧ in the very late game, for sure.",
+          "ru": "⟦Cursed Relic⟧ лучше брать уже в самой поздней стадии игры."
+        }
+      },
+      {
+        "text": "ソウル全然足りない。",
+        "ms": 1463,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I'm way short on souls.",
+          "ru": "Мне совсем не хватает душ."
+        }
+      },
+      {
+        "text": "ソウル全然足りない。",
+        "ms": 1330,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I'm way short on souls.",
+          "ru": "Мне совсем не хватает душ."
+        }
+      },
+      {
+        "text": "ソウル全然足りない。",
+        "ms": 1290,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I'm way short on souls.",
+          "ru": "Мне вообще не хватает душ."
+        }
+      },
+      {
+        "text": "敵全員ミッドに寄ってる。",
+        "ms": 1573,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "All the enemies are grouping up mid.",
+          "ru": "Все враги собрались на миде."
+        }
+      },
+      {
+        "text": "敵全員ミッドに寄ってる。",
+        "ms": 1238,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "All the enemies are grouped up mid.",
+          "ru": "Все враги сгруппировались на миде."
+        }
+      },
+      {
+        "text": "敵全員ミッドに寄ってる。",
+        "ms": 1628,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "The whole enemy team is grouping mid.",
+          "ru": "Вся вражеская команда сгруппировалась на миде."
+        }
+      },
+      {
+        "text": "ガーディアン硬すぎる。",
+        "ms": 1382,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "The Guardian is way too tanky.",
+          "ru": "Гардиан слишком жирный."
+        }
+      },
+      {
+        "text": "ガーディアン硬すぎる。",
+        "ms": 1392,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "The Guardian is way too tanky.",
+          "ru": "Гардиан слишком жирный."
+        }
+      },
+      {
+        "text": "ガーディアン硬すぎる。",
+        "ms": 1575,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "The Guardian is way too tanky.",
+          "ru": "Гардиан слишком жирный."
+        }
+      },
+      {
+        "text": "ウルト溜まったから行くよ。",
+        "ms": 1937,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "My ult is ready, let's go.",
+          "ru": "Ульта готова, погнали."
+        }
+      },
+      {
+        "text": "ウルト溜まったから行くよ。",
+        "ms": 2031,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "My ult is charged, let's go.",
+          "ru": "Ульта зарядилась, погнали."
+        }
+      },
+      {
+        "text": "ウルト溜まったから行くよ。",
+        "ms": 1266,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "My ult's ready, let's go.",
+          "ru": "Ульта готова, пошли."
+        }
+      },
+      {
+        "text": "スマホはポケットに入れといて。",
+        "ms": 1723,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Keep your phone in your pocket.",
+          "ru": "Убери телефон в карман."
+        }
+      },
+      {
+        "text": "スマホはポケットに入れといて。",
+        "ms": 2420,
+        "ok": false,
+        "terms": [
+          [
+            "ポケット",
+            "hero:50"
+          ]
+        ],
+        "expected": [],
+        "translations": {
+          "en": "Keep your phone in your pocket.",
+          "ru": "Убери телефон в карман."
+        }
+      },
+      {
+        "text": "スマホはポケットに入れといて。",
+        "ms": 2277,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Keep your phone in your pocket.",
+          "ru": "Убери телефон в карман."
+        }
+      },
+      {
+        "text": "ポケットのウルト避けて。",
+        "ms": 1881,
+        "ok": true,
+        "terms": [
+          [
+            "ポケット",
+            "hero:50"
+          ],
+          [
+            "ウルト",
+            "ability:2954330093"
+          ]
+        ],
+        "expected": [
+          [
+            "ポケット",
+            "hero:50"
+          ],
+          [
+            "ウルト",
+            "ability:2954330093"
+          ]
+        ],
+        "translations": {
+          "en": "Dodge ⟦Pocket⟧'s ult.",
+          "ru": "Увернись от ульты ⟦Pocket⟧."
+        }
+      },
+      {
+        "text": "ポケットのウルト避けて。",
+        "ms": 1718,
+        "ok": false,
+        "terms": [
+          [
+            "ポケット",
+            "hero:50"
+          ]
+        ],
+        "expected": [
+          [
+            "ポケット",
+            "hero:50"
+          ],
+          [
+            "ウルト",
+            "ability:2954330093"
+          ]
+        ],
+        "translations": {
+          "en": "Dodge ⟦Pocket⟧'s ult.",
+          "ru": "Уклоняйся от ульты ⟦Pocket⟧."
+        }
+      },
+      {
+        "text": "ポケットのウルト避けて。",
+        "ms": 1912,
+        "ok": false,
+        "terms": [
+          [
+            "ポケット",
+            "hero:50"
+          ],
+          [
+            "のウルト",
+            "ability:2954330093"
+          ]
+        ],
+        "expected": [
+          [
+            "ポケット",
+            "hero:50"
+          ],
+          [
+            "ウルト",
+            "ability:2954330093"
+          ]
+        ],
+        "translations": {
+          "en": "Dodge ⟦Pocket⟧'s ult.",
+          "ru": "Увернись от ульты ⟦Pocket⟧."
+        }
+      },
+      {
+        "text": "ちょっとセブンイレブン行ってくる。",
+        "ms": 2017,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I’m gonna pop over to 7-Eleven real quick.",
+          "ru": "Ща быстренько сбегаю в 7-Eleven."
+        }
+      },
+      {
+        "text": "ちょっとセブンイレブン行ってくる。",
+        "ms": 2648,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I'm gonna run to 7-Eleven real quick.",
+          "ru": "Я быстренько сбегаю в 7-Eleven."
+        }
+      },
+      {
+        "text": "ちょっとセブンイレブン行ってくる。",
+        "ms": 1782,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I'm gonna run to 7-Eleven real quick.",
+          "ru": "Я быстренько сбегаю в 7-Eleven."
+        }
+      },
+      {
+        "text": "セブン止めないとやばい。",
+        "ms": 1581,
+        "ok": true,
+        "terms": [
+          [
+            "セブン",
+            "hero:2"
+          ]
+        ],
+        "expected": [
+          [
+            "セブン",
+            "hero:2"
+          ]
+        ],
+        "translations": {
+          "en": "We gotta stop ⟦Seven⟧, this is bad.",
+          "ru": "Надо остановить ⟦Seven⟧, иначе будет жесть."
+        }
+      },
+      {
+        "text": "セブン止めないとやばい。",
+        "ms": 1662,
+        "ok": true,
+        "terms": [
+          [
+            "セブン",
+            "hero:2"
+          ]
+        ],
+        "expected": [
+          [
+            "セブン",
+            "hero:2"
+          ]
+        ],
+        "translations": {
+          "en": "We need to stop ⟦Seven⟧, or we're screwed.",
+          "ru": "Надо остановить ⟦Seven⟧, иначе нам крышка."
+        }
+      },
+      {
+        "text": "セブン止めないとやばい。",
+        "ms": 1772,
+        "ok": true,
+        "terms": [
+          [
+            "セブン",
+            "hero:2"
+          ]
+        ],
+        "expected": [
+          [
+            "セブン",
+            "hero:2"
+          ]
+        ],
+        "translations": {
+          "en": "We gotta stop ⟦Seven⟧, this is bad.",
+          "ru": "Надо остановить ⟦Seven⟧, а то будет плохо."
+        }
+      },
+      {
+        "text": "最初からラッシュしよう。",
+        "ms": 1435,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Let's rush from the start.",
+          "ru": "Давайте сразу рашить."
+        }
+      },
+      {
+        "text": "最初からラッシュしよう。",
+        "ms": 1410,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Let's rush from the start.",
+          "ru": "Давайте сразу рашить."
+        }
+      },
+      {
+        "text": "最初からラッシュしよう。",
+        "ms": 1277,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Let's rush from the start.",
+          "ru": "Давайте рашить с самого начала."
+        }
+      },
+      {
+        "text": "ラッシュに飛び込まれた。",
+        "ms": 2005,
+        "ok": true,
+        "terms": [
+          [
+            "ラッシュ",
+            "hero:31"
+          ]
+        ],
+        "expected": [
+          [
+            "ラッシュ",
+            "hero:31"
+          ]
+        ],
+        "translations": {
+          "en": "Lash jumped on me.",
+          "ru": "Лаш на меня влетел."
+        }
+      },
+      {
+        "text": "ラッシュに飛び込まれた。",
+        "ms": 1534,
+        "ok": true,
+        "terms": [
+          [
+            "ラッシュ",
+            "hero:31"
+          ]
+        ],
+        "expected": [
+          [
+            "ラッシュ",
+            "hero:31"
+          ]
+        ],
+        "translations": {
+          "en": "Lash jumped on me.",
+          "ru": "Lash на меня запрыгнул."
+        }
+      },
+      {
+        "text": "ラッシュに飛び込まれた。",
+        "ms": 1476,
+        "ok": true,
+        "terms": [
+          [
+            "ラッシュ",
+            "hero:31"
+          ]
+        ],
+        "expected": [
+          [
+            "ラッシュ",
+            "hero:31"
+          ]
+        ],
+        "translations": {
+          "en": "Lash jumped on me.",
+          "ru": "В меня влетел Lash."
+        }
+      },
+      {
+        "text": "ミラージュみたいに見えた。",
+        "ms": 1946,
+        "ok": true,
+        "terms": [
+          [
+            "ミラージュ",
+            "hero:52"
+          ]
+        ],
+        "expected": [
+          [
+            "ミラージュ",
+            "hero:52"
+          ]
+        ],
+        "translations": {
+          "en": "It looked like Mirage.",
+          "ru": "Показалось, что это Mirage."
+        }
+      },
+      {
+        "text": "ミラージュみたいに見えた。",
+        "ms": 1591,
+        "ok": true,
+        "terms": [
+          [
+            "ミラージュ",
+            "hero:52"
+          ]
+        ],
+        "expected": [
+          [
+            "ミラージュ",
+            "hero:52"
+          ]
+        ],
+        "translations": {
+          "en": "Looked like ⟦Mirage⟧.",
+          "ru": "Показалось, что это ⟦Mirage⟧."
+        }
+      },
+      {
+        "text": "ミラージュみたいに見えた。",
+        "ms": 1702,
+        "ok": true,
+        "terms": [
+          [
+            "ミラージュ",
+            "hero:52"
+          ]
+        ],
+        "expected": [
+          [
+            "ミラージュ",
+            "hero:52"
+          ]
+        ],
+        "translations": {
+          "en": "Looked like ⟦Mirage⟧.",
+          "ru": "Показалось, что это ⟦Mirage⟧."
+        }
+      }
+    ]
+  },
+  "gpt-6.1-terra": {
+    "summary": {
+      "runs": 111,
+      "termsCorrect": 106,
+      "failed": 1,
+      "japaneseLeftInTranslation": 0,
+      "strayTermsInTranslation": 0,
+      "averageMs": 2124,
+      "usage": {
+        "translate": {
+          "seconds": 0.0,
+          "tokens": 1102294,
+          "usd": 0.11442765,
+          "unpriced": false
+        }
+      }
+    },
+    "runs": [
+      {
+        "text": "僕の一番好きなキャラはヘイズですね。",
+        "ms": 3253,
+        "ok": true,
+        "terms": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ]
+        ],
+        "expected": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ]
+        ],
+        "translations": {
+          "en": "My favorite character is ⟦Haze⟧.",
+          "ru": "Мой любимый персонаж — ⟦Haze⟧."
+        }
+      },
+      {
+        "text": "僕の一番好きなキャラはヘイズですね。",
+        "ms": 2949,
+        "ok": true,
+        "terms": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ]
+        ],
+        "expected": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ]
+        ],
+        "translations": {
+          "en": "My favorite character is ⟦Haze⟧.",
+          "ru": "Мой любимый персонаж — ⟦Haze⟧."
+        }
+      },
+      {
+        "text": "僕の一番好きなキャラはヘイズですね。",
+        "ms": 2221,
+        "ok": true,
+        "terms": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ]
+        ],
+        "expected": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ]
+        ],
+        "translations": {
+          "en": "My favorite character is ⟦Haze⟧.",
+          "ru": "Мой любимый персонаж — ⟦Haze⟧."
+        }
+      },
+      {
+        "text": "いやヘイズのバレットダンスもめっちゃ強いんだけど、バイオレットのウルトもなんか強そうではある。",
+        "ms": 3965,
+        "ok": true,
+        "terms": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "バレットダンス",
+            "ability:731943444"
+          ],
+          [
+            "バイオレット",
+            "hero:86"
+          ],
+          [
+            "ウルト",
+            "ability:2516700978"
+          ]
+        ],
+        "expected": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "バレットダンス",
+            "ability:731943444"
+          ],
+          [
+            "バイオレット",
+            "hero:86"
+          ],
+          [
+            "ウルト",
+            "ability:2516700978"
+          ]
+        ],
+        "translations": {
+          "en": "I mean, ⟦Haze⟧'s ⟦Bullet Dance⟧ is really strong too, but ⟦Violet⟧'s ⟦Abstract Landscape⟧ also looks pretty strong.",
+          "ru": "Ну, ⟦Bullet Dance⟧ у ⟦Haze⟧ тоже очень сильная, но ⟦Abstract Landscape⟧ у ⟦Violet⟧ тоже вроде выглядит мощно."
+        }
+      },
+      {
+        "text": "いやヘイズのバレットダンスもめっちゃ強いんだけど、バイオレットのウルトもなんか強そうではある。",
+        "ms": 3868,
+        "ok": true,
+        "terms": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "バレットダンス",
+            "ability:731943444"
+          ],
+          [
+            "バイオレット",
+            "hero:86"
+          ],
+          [
+            "ウルト",
+            "ability:2516700978"
+          ]
+        ],
+        "expected": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "バレットダンス",
+            "ability:731943444"
+          ],
+          [
+            "バイオレット",
+            "hero:86"
+          ],
+          [
+            "ウルト",
+            "ability:2516700978"
+          ]
+        ],
+        "translations": {
+          "en": "I mean, ⟦Haze⟧'s ⟦Bullet Dance⟧ is super strong too, but ⟦Violet⟧'s ⟦Abstract Landscape⟧ looks pretty strong as well.",
+          "ru": "Ну, ⟦Bullet Dance⟧ у ⟦Haze⟧ тоже очень сильный, но ульта ⟦Abstract Landscape⟧ у ⟦Violet⟧ тоже вроде выглядит мощно."
+        }
+      },
+      {
+        "text": "いやヘイズのバレットダンスもめっちゃ強いんだけど、バイオレットのウルトもなんか強そうではある。",
+        "ms": 3571,
+        "ok": true,
+        "terms": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "バレットダンス",
+            "ability:731943444"
+          ],
+          [
+            "バイオレット",
+            "hero:86"
+          ],
+          [
+            "ウルト",
+            "ability:2516700978"
+          ]
+        ],
+        "expected": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "バレットダンス",
+            "ability:731943444"
+          ],
+          [
+            "バイオレット",
+            "hero:86"
+          ],
+          [
+            "ウルト",
+            "ability:2516700978"
+          ]
+        ],
+        "translations": {
+          "en": "I mean, ⟦Haze⟧'s ⟦Bullet Dance⟧ is really strong too, but ⟦Violet⟧'s ⟦Abstract Landscape⟧ also looks pretty strong.",
+          "ru": "Ну, ⟦Bullet Dance⟧ у ⟦Haze⟧ тоже очень сильная, но ⟦Abstract Landscape⟧ у ⟦Violet⟧ тоже вроде выглядит сильно."
+        }
+      },
+      {
+        "text": "拡マガをちゃんとね、取りたいよね。最初は。",
+        "ms": 2255,
+        "ok": true,
+        "terms": [
+          [
+            "拡マガ",
+            "item:1548066885"
+          ]
+        ],
+        "expected": [
+          [
+            "拡マガ",
+            "item:1548066885"
+          ]
+        ],
+        "translations": {
+          "en": "You definitely want to pick up ⟦Extended Magazine⟧ early on.",
+          "ru": "В самом начале, конечно, стоит взять ⟦Extended Magazine⟧."
+        }
+      },
+      {
+        "text": "拡マガをちゃんとね、取りたいよね。最初は。",
+        "ms": 1968,
+        "ok": true,
+        "terms": [
+          [
+            "拡マガ",
+            "item:1548066885"
+          ]
+        ],
+        "expected": [
+          [
+            "拡マガ",
+            "item:1548066885"
+          ]
+        ],
+        "translations": {
+          "en": "You definitely want to pick up ⟦Extended Magazine⟧ early on.",
+          "ru": "В начале всё-таки стоит взять ⟦Extended Magazine⟧."
+        }
+      },
+      {
+        "text": "拡マガをちゃんとね、取りたいよね。最初は。",
+        "ms": 2671,
+        "ok": true,
+        "terms": [
+          [
+            "拡マガ",
+            "item:1548066885"
+          ]
+        ],
+        "expected": [
+          [
+            "拡マガ",
+            "item:1548066885"
+          ]
+        ],
+        "translations": {
+          "en": "You wanna make sure you pick up ⟦Extended Magazine⟧ at the start.",
+          "ru": "В начале стоит обязательно взять ⟦Extended Magazine⟧."
+        }
+      },
+      {
+        "text": "エクストラスピリットも重要だけど、拡マガは武器ダメージも上がるから。",
+        "ms": 2697,
+        "ok": true,
+        "terms": [
+          [
+            "エクストラスピリット",
+            "item:968099481"
+          ],
+          [
+            "拡マガ",
+            "item:1548066885"
+          ]
+        ],
+        "expected": [
+          [
+            "エクストラスピリット",
+            "item:968099481"
+          ],
+          [
+            "拡マガ",
+            "item:1548066885"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Extra Spirit⟧ is important too, but ⟦Extended Magazine⟧ also boosts weapon damage.",
+          "ru": "⟦Extra Spirit⟧ тоже важен, но ⟦Extended Magazine⟧ ещё и повышает урон оружия."
+        }
+      },
+      {
+        "text": "エクストラスピリットも重要だけど、拡マガは武器ダメージも上がるから。",
+        "ms": 3769,
+        "ok": true,
+        "terms": [
+          [
+            "エクストラスピリット",
+            "item:968099481"
+          ],
+          [
+            "拡マガ",
+            "item:1548066885"
+          ]
+        ],
+        "expected": [
+          [
+            "エクストラスピリット",
+            "item:968099481"
+          ],
+          [
+            "拡マガ",
+            "item:1548066885"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Extra Spirit⟧ is important too, but ⟦Extended Magazine⟧ also boosts weapon damage.",
+          "ru": "⟦Extra Spirit⟧ тоже важен, но ⟦Extended Magazine⟧ ещё и урон оружия повышает."
+        }
+      },
+      {
+        "text": "エクストラスピリットも重要だけど、拡マガは武器ダメージも上がるから。",
+        "ms": 2706,
+        "ok": true,
+        "terms": [
+          [
+            "エクストラスピリット",
+            "item:968099481"
+          ],
+          [
+            "拡マガ",
+            "item:1548066885"
+          ]
+        ],
+        "expected": [
+          [
+            "エクストラスピリット",
+            "item:968099481"
+          ],
+          [
+            "拡マガ",
+            "item:1548066885"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Extra Spirit⟧ is important too, but ⟦Extended Magazine⟧ also boosts weapon damage.",
+          "ru": "⟦Extra Spirit⟧ тоже важен, но ⟦Extended Magazine⟧ ещё и повышает урон от оружия."
+        }
+      },
+      {
+        "text": "まあ、あとは呪いの遺物？まあいわゆるカースだね。",
+        "ms": 2181,
+        "ok": false,
+        "terms": [
+          [
+            "呪いの遺物",
+            "item:2617435668"
+          ]
+        ],
+        "expected": [
+          [
+            "呪いの遺物",
+            "item:2617435668"
+          ],
+          [
+            "カース",
+            "item:2617435668"
+          ]
+        ],
+        "translations": {
+          "en": "Well, there's also ⟦Cursed Relic⟧? You know, the curse.",
+          "ru": "Ну, ещё есть ⟦Cursed Relic⟧? Ну, так называемый кёрс."
+        }
+      },
+      {
+        "text": "まあ、あとは呪いの遺物？まあいわゆるカースだね。",
+        "ms": 2442,
+        "ok": true,
+        "terms": [
+          [
+            "呪いの遺物",
+            "item:2617435668"
+          ],
+          [
+            "カース",
+            "item:2617435668"
+          ]
+        ],
+        "expected": [
+          [
+            "呪いの遺物",
+            "item:2617435668"
+          ],
+          [
+            "カース",
+            "item:2617435668"
+          ]
+        ],
+        "translations": {
+          "en": "Well, there's also ⟦Cursed Relic⟧? You know, what's called a curse.",
+          "ru": "Ну, ещё есть ⟦Cursed Relic⟧? Ну, то, что называют кёрсом."
+        }
+      },
+      {
+        "text": "まあ、あとは呪いの遺物？まあいわゆるカースだね。",
+        "ms": 2487,
+        "ok": false,
+        "terms": [
+          [
+            "呪いの遺物",
+            "item:2617435668"
+          ]
+        ],
+        "expected": [
+          [
+            "呪いの遺物",
+            "item:2617435668"
+          ],
+          [
+            "カース",
+            "item:2617435668"
+          ]
+        ],
+        "translations": {
+          "en": "Well, there's also ⟦Cursed Relic⟧, right? You know, the curse.",
+          "ru": "Ну и ещё ⟦Cursed Relic⟧? Ну, короче, проклятие."
+        }
+      },
+      {
+        "text": "エコシャ早めに積みたい。",
+        "ms": 1926,
+        "ok": true,
+        "terms": [
+          [
+            "エコシャ",
+            "item:630839635"
+          ]
+        ],
+        "expected": [
+          [
+            "エコシャ",
+            "item:630839635"
+          ]
+        ],
+        "translations": {
+          "en": "I want to pick up ⟦Echo Shard⟧ early.",
+          "ru": "Хочу пораньше купить ⟦Echo Shard⟧."
+        }
+      },
+      {
+        "text": "エコシャ早めに積みたい。",
+        "ms": 2287,
+        "ok": true,
+        "terms": [
+          [
+            "エコシャ",
+            "item:630839635"
+          ]
+        ],
+        "expected": [
+          [
+            "エコシャ",
+            "item:630839635"
+          ]
+        ],
+        "translations": {
+          "en": "I wanna pick up ⟦Echo Shard⟧ early.",
+          "ru": "Хочу пораньше купить ⟦Echo Shard⟧."
+        }
+      },
+      {
+        "text": "エコシャ早めに積みたい。",
+        "ms": 2392,
+        "ok": true,
+        "terms": [
+          [
+            "エコシャ",
+            "item:630839635"
+          ]
+        ],
+        "expected": [
+          [
+            "エコシャ",
+            "item:630839635"
+          ]
+        ],
+        "translations": {
+          "en": "I want to pick up ⟦Echo Shard⟧ early.",
+          "ru": "Хочу пораньше купить ⟦Echo Shard⟧."
+        }
+      },
+      {
+        "text": "ページのウルトで回復して。",
+        "ms": 3017,
+        "ok": true,
+        "terms": [
+          [
+            "ページ",
+            "hero:67"
+          ],
+          [
+            "ウルト",
+            "ability:1841901343"
+          ]
+        ],
+        "expected": [
+          [
+            "ページ",
+            "hero:67"
+          ],
+          [
+            "ウルト",
+            "ability:1841901343"
+          ]
+        ],
+        "translations": {
+          "en": "Heal up with ⟦Paige⟧'s ⟦Rallying Charge⟧.",
+          "ru": "Подлечись ультой ⟦Paige⟧."
+        }
+      },
+      {
+        "text": "ページのウルトで回復して。",
+        "ms": 2346,
+        "ok": true,
+        "terms": [
+          [
+            "ページ",
+            "hero:67"
+          ],
+          [
+            "ウルト",
+            "ability:1841901343"
+          ]
+        ],
+        "expected": [
+          [
+            "ページ",
+            "hero:67"
+          ],
+          [
+            "ウルト",
+            "ability:1841901343"
+          ]
+        ],
+        "translations": {
+          "en": "Heal up with ⟦Paige⟧'s ⟦Rallying Charge⟧.",
+          "ru": "Подхились с помощью ⟦Rallying Charge⟧ от ⟦Paige⟧."
+        }
+      },
+      {
+        "text": "ページのウルトで回復して。",
+        "ms": 2334,
+        "ok": true,
+        "terms": [
+          [
+            "ページ",
+            "hero:67"
+          ],
+          [
+            "ウルト",
+            "ability:1841901343"
+          ]
+        ],
+        "expected": [
+          [
+            "ページ",
+            "hero:67"
+          ],
+          [
+            "ウルト",
+            "ability:1841901343"
+          ]
+        ],
+        "translations": {
+          "en": "Heal up with ⟦Paige⟧'s ⟦Rallying Charge⟧.",
+          "ru": "Подхились с помощью ⟦Rallying Charge⟧ у ⟦Paige⟧."
+        }
+      },
+      {
+        "text": "リコシェット強すぎ。",
+        "ms": 1898,
+        "ok": true,
+        "terms": [
+          [
+            "リコシェット",
+            "item:2480592370"
+          ]
+        ],
+        "expected": [
+          [
+            "リコシェット",
+            "item:2480592370"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Ricochet⟧ is way too strong.",
+          "ru": "⟦Ricochet⟧ слишком сильный."
+        }
+      },
+      {
+        "text": "リコシェット強すぎ。",
+        "ms": 8004,
+        "error": "Err(error decoding response body\n\nCaused by:\n    0: request or response body error\n    1: operation timed out)"
+      },
+      {
+        "text": "リコシェット強すぎ。",
+        "ms": 2020,
+        "ok": true,
+        "terms": [
+          [
+            "リコシェット",
+            "item:2480592370"
+          ]
+        ],
+        "expected": [
+          [
+            "リコシェット",
+            "item:2480592370"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Ricochet⟧ is way too strong.",
+          "ru": "⟦Ricochet⟧ слишком сильный."
+        }
+      },
+      {
+        "text": "ヘイズのウルトは強い。",
+        "ms": 2476,
+        "ok": true,
+        "terms": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "ウルト",
+            "ability:731943444"
+          ]
+        ],
+        "expected": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "ウルト",
+            "ability:731943444"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Haze⟧'s ⟦Bullet Dance⟧ is strong.",
+          "ru": "Ульта ⟦Haze⟧, ⟦Bullet Dance⟧, сильная."
+        }
+      },
+      {
+        "text": "ヘイズのウルトは強い。",
+        "ms": 2311,
+        "ok": true,
+        "terms": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "ウルト",
+            "ability:731943444"
+          ]
+        ],
+        "expected": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "ウルト",
+            "ability:731943444"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Haze⟧'s ⟦Bullet Dance⟧ is strong.",
+          "ru": "Ульта ⟦Haze⟧, ⟦Bullet Dance⟧, сильная."
+        }
+      },
+      {
+        "text": "ヘイズのウルトは強い。",
+        "ms": 2174,
+        "ok": true,
+        "terms": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "ウルト",
+            "ability:731943444"
+          ]
+        ],
+        "expected": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "ウルト",
+            "ability:731943444"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Haze⟧'s ⟦Bullet Dance⟧ is strong.",
+          "ru": "⟦Bullet Dance⟧ у ⟦Haze⟧ сильная."
+        }
+      },
+      {
+        "text": "カースは買っとけ。",
+        "ms": 1721,
+        "ok": true,
+        "terms": [
+          [
+            "カース",
+            "item:2617435668"
+          ]
+        ],
+        "expected": [
+          [
+            "カース",
+            "item:2617435668"
+          ]
+        ],
+        "translations": {
+          "en": "Make sure you buy ⟦Cursed Relic⟧.",
+          "ru": "Обязательно купи ⟦Cursed Relic⟧."
+        }
+      },
+      {
+        "text": "カースは買っとけ。",
+        "ms": 1819,
+        "ok": true,
+        "terms": [
+          [
+            "カース",
+            "item:2617435668"
+          ]
+        ],
+        "expected": [
+          [
+            "カース",
+            "item:2617435668"
+          ]
+        ],
+        "translations": {
+          "en": "Make sure you buy ⟦Cursed Relic⟧.",
+          "ru": "Обязательно купи ⟦Cursed Relic⟧."
+        }
+      },
+      {
+        "text": "カースは買っとけ。",
+        "ms": 2136,
+        "ok": true,
+        "terms": [
+          [
+            "カース",
+            "item:2617435668"
+          ]
+        ],
+        "expected": [
+          [
+            "カース",
+            "item:2617435668"
+          ]
+        ],
+        "translations": {
+          "en": "Make sure you buy ⟦Cursed Relic⟧.",
+          "ru": "Обязательно купи ⟦Cursed Relic⟧."
+        }
+      },
+      {
+        "text": "ドアマンのカートに乗せられた。",
+        "ms": 2240,
+        "ok": true,
+        "terms": [
+          [
+            "ドアマン",
+            "hero:69"
+          ],
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "expected": [
+          [
+            "ドアマン",
+            "hero:69"
+          ],
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "translations": {
+          "en": "I got put on ⟦The Doorman⟧'s ⟦Luggage Cart⟧.",
+          "ru": "Меня посадили на ⟦Luggage Cart⟧ от ⟦The Doorman⟧."
+        }
+      },
+      {
+        "text": "ドアマンのカートに乗せられた。",
+        "ms": 2461,
+        "ok": true,
+        "terms": [
+          [
+            "ドアマン",
+            "hero:69"
+          ],
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "expected": [
+          [
+            "ドアマン",
+            "hero:69"
+          ],
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "translations": {
+          "en": "I got put on ⟦The Doorman⟧'s ⟦Luggage Cart⟧.",
+          "ru": "Меня посадили на ⟦Luggage Cart⟧ героя ⟦The Doorman⟧."
+        }
+      },
+      {
+        "text": "ドアマンのカートに乗せられた。",
+        "ms": 2355,
+        "ok": true,
+        "terms": [
+          [
+            "ドアマン",
+            "hero:69"
+          ],
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "expected": [
+          [
+            "ドアマン",
+            "hero:69"
+          ],
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "translations": {
+          "en": "I got put on ⟦The Doorman⟧'s ⟦Luggage Cart⟧.",
+          "ru": "Меня посадили на ⟦Luggage Cart⟧ у ⟦The Doorman⟧."
+        }
+      },
+      {
+        "text": "リコセ買ったら一気に楽になった。",
+        "ms": 2098,
+        "ok": true,
+        "terms": [
+          [
+            "リコセ",
+            "item:2480592370"
+          ]
+        ],
+        "expected": [
+          [
+            "リコセ",
+            "item:2480592370"
+          ]
+        ],
+        "translations": {
+          "en": "Once I bought ⟦Ricochet⟧, things got way easier.",
+          "ru": "Купил ⟦Ricochet⟧, и сразу стало намного легче."
+        }
+      },
+      {
+        "text": "リコセ買ったら一気に楽になった。",
+        "ms": 1844,
+        "ok": true,
+        "terms": [
+          [
+            "リコセ",
+            "item:2480592370"
+          ]
+        ],
+        "expected": [
+          [
+            "リコセ",
+            "item:2480592370"
+          ]
+        ],
+        "translations": {
+          "en": "Once I bought ⟦Ricochet⟧, things got way easier.",
+          "ru": "Как только купил ⟦Ricochet⟧, сразу стало намного легче."
+        }
+      },
+      {
+        "text": "リコセ買ったら一気に楽になった。",
+        "ms": 1941,
+        "ok": true,
+        "terms": [
+          [
+            "リコセ",
+            "item:2480592370"
+          ]
+        ],
+        "expected": [
+          [
+            "リコセ",
+            "item:2480592370"
+          ]
+        ],
+        "translations": {
+          "en": "Once I bought ⟦Ricochet⟧, things got way easier.",
+          "ru": "Как только купил ⟦Ricochet⟧, сразу стало намного проще."
+        }
+      },
+      {
+        "text": "グレイブスの３番はスプリットショットで強くなる。",
+        "ms": 2730,
+        "ok": true,
+        "terms": [
+          [
+            "グレイブス",
+            "hero:76"
+          ],
+          [
+            "３番",
+            "ability:629925354"
+          ],
+          [
+            "スプリットショット",
+            "item:3647584222"
+          ]
+        ],
+        "expected": [
+          [
+            "グレイブス",
+            "hero:76"
+          ],
+          [
+            "３番",
+            "ability:629925354"
+          ],
+          [
+            "スプリットショット",
+            "item:3647584222"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Graves⟧'s ⟦Essence Theft⟧ gets stronger with ⟦Split Shot⟧.",
+          "ru": "⟦Essence Theft⟧ у ⟦Graves⟧ становится сильнее с ⟦Split Shot⟧."
+        }
+      },
+      {
+        "text": "グレイブスの３番はスプリットショットで強くなる。",
+        "ms": 2805,
+        "ok": true,
+        "terms": [
+          [
+            "グレイブス",
+            "hero:76"
+          ],
+          [
+            "３番",
+            "ability:629925354"
+          ],
+          [
+            "スプリットショット",
+            "item:3647584222"
+          ]
+        ],
+        "expected": [
+          [
+            "グレイブス",
+            "hero:76"
+          ],
+          [
+            "３番",
+            "ability:629925354"
+          ],
+          [
+            "スプリットショット",
+            "item:3647584222"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Graves⟧'s ⟦Essence Theft⟧ gets stronger with ⟦Split Shot⟧.",
+          "ru": "⟦Essence Theft⟧ у ⟦Graves⟧ становится сильнее с ⟦Split Shot⟧."
+        }
+      },
+      {
+        "text": "グレイブスの３番はスプリットショットで強くなる。",
+        "ms": 2957,
+        "ok": true,
+        "terms": [
+          [
+            "グレイブス",
+            "hero:76"
+          ],
+          [
+            "３番",
+            "ability:629925354"
+          ],
+          [
+            "スプリットショット",
+            "item:3647584222"
+          ]
+        ],
+        "expected": [
+          [
+            "グレイブス",
+            "hero:76"
+          ],
+          [
+            "３番",
+            "ability:629925354"
+          ],
+          [
+            "スプリットショット",
+            "item:3647584222"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Graves⟧'s ⟦Essence Theft⟧ gets stronger with ⟦Split Shot⟧.",
+          "ru": "⟦Essence Theft⟧ у ⟦Graves⟧ становится сильнее с ⟦Split Shot⟧."
+        }
+      },
+      {
+        "text": "ドアマンカートで味方を運ぼう。",
+        "ms": 2180,
+        "ok": true,
+        "terms": [
+          [
+            "ドアマン",
+            "hero:69"
+          ],
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "expected": [
+          [
+            "ドアマン",
+            "hero:69"
+          ],
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "translations": {
+          "en": "Let's carry a teammate with ⟦The Doorman⟧'s ⟦Luggage Cart⟧.",
+          "ru": "Давай перевезём союзника с помощью ⟦Luggage Cart⟧ у ⟦The Doorman⟧."
+        }
+      },
+      {
+        "text": "ドアマンカートで味方を運ぼう。",
+        "ms": 2313,
+        "ok": true,
+        "terms": [
+          [
+            "ドアマン",
+            "hero:69"
+          ],
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "expected": [
+          [
+            "ドアマン",
+            "hero:69"
+          ],
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "translations": {
+          "en": "Let's carry a teammate with ⟦The Doorman⟧'s ⟦Luggage Cart⟧.",
+          "ru": "Давай перевезём союзника с помощью ⟦Luggage Cart⟧ у ⟦The Doorman⟧."
+        }
+      },
+      {
+        "text": "ドアマンカートで味方を運ぼう。",
+        "ms": 2708,
+        "ok": true,
+        "terms": [
+          [
+            "ドアマン",
+            "hero:69"
+          ],
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "expected": [
+          [
+            "ドアマン",
+            "hero:69"
+          ],
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "translations": {
+          "en": "Let's use ⟦The Doorman⟧'s ⟦Luggage Cart⟧ to carry a teammate.",
+          "ru": "Давай перевезём союзника с помощью ⟦Luggage Cart⟧ у ⟦The Doorman⟧."
+        }
+      },
+      {
+        "text": "カートに気をつけて。",
+        "ms": 1737,
+        "ok": true,
+        "terms": [
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "expected": [
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "translations": {
+          "en": "Watch out for ⟦Luggage Cart⟧.",
+          "ru": "Осторожно, ⟦Luggage Cart⟧."
+        }
+      },
+      {
+        "text": "カートに気をつけて。",
+        "ms": 1846,
+        "ok": true,
+        "terms": [
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "expected": [
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "translations": {
+          "en": "Watch out for ⟦Luggage Cart⟧.",
+          "ru": "Осторожно, ⟦Luggage Cart⟧."
+        }
+      },
+      {
+        "text": "カートに気をつけて。",
+        "ms": 3285,
+        "ok": true,
+        "terms": [
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "expected": [
+          [
+            "カート",
+            "ability:1719512318"
+          ]
+        ],
+        "translations": {
+          "en": "Watch out for ⟦Luggage Cart⟧.",
+          "ru": "Осторожно, ⟦Luggage Cart⟧."
+        }
+      },
+      {
+        "text": "ヘイズの2で寝かせてからウルト。",
+        "ms": 2734,
+        "ok": false,
+        "terms": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "2",
+            "ability:2414191464"
+          ],
+          [
+            "ウルト",
+            "ability:731943444"
+          ]
+        ],
+        "expected": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "2",
+            "ability:2414191464"
+          ]
+        ],
+        "translations": {
+          "en": "Put them to sleep with ⟦Haze⟧'s ⟦Smoke Bomb⟧, then ult.",
+          "ru": "Усыпить с помощью ⟦Smoke Bomb⟧ у ⟦Haze⟧, а потом ультануть."
+        }
+      },
+      {
+        "text": "ヘイズの2で寝かせてからウルト。",
+        "ms": 2474,
+        "ok": true,
+        "terms": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "2",
+            "ability:2414191464"
+          ]
+        ],
+        "expected": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "2",
+            "ability:2414191464"
+          ]
+        ],
+        "translations": {
+          "en": "Put them to sleep with ⟦Haze⟧'s ⟦Smoke Bomb⟧, then ult.",
+          "ru": "Усыпляй второй способностью ⟦Haze⟧ — ⟦Smoke Bomb⟧, а потом ультуй."
+        }
+      },
+      {
+        "text": "ヘイズの2で寝かせてからウルト。",
+        "ms": 2714,
+        "ok": false,
+        "terms": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "2",
+            "ability:2414191464"
+          ],
+          [
+            "ウルト",
+            "ability:731943444"
+          ]
+        ],
+        "expected": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ],
+          [
+            "2",
+            "ability:2414191464"
+          ]
+        ],
+        "translations": {
+          "en": "Put them to sleep with ⟦Haze⟧'s ⟦Smoke Bomb⟧, then ult.",
+          "ru": "Усыпить второй способностью ⟦Smoke Bomb⟧ у ⟦Haze⟧, а потом дать ⟦Bullet Dance⟧."
+        }
+      },
+      {
+        "text": "今日は1番強いキャラを使う。",
+        "ms": 1604,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Today I'm playing the strongest character.",
+          "ru": "Сегодня буду играть за самого сильного персонажа."
+        }
+      },
+      {
+        "text": "今日は1番強いキャラを使う。",
+        "ms": 1468,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Today, I'm playing the strongest character.",
+          "ru": "Сегодня буду играть за самого сильного персонажа."
+        }
+      },
+      {
+        "text": "今日は1番強いキャラを使う。",
+        "ms": 1491,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Today I'm playing the strongest character.",
+          "ru": "Сегодня буду играть за самого сильного персонажа."
+        }
+      },
+      {
+        "text": "次のページを見て。",
+        "ms": 1773,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Look at the next page.",
+          "ru": "Посмотри на следующую страницу."
+        }
+      },
+      {
+        "text": "次のページを見て。",
+        "ms": 1906,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Look at the next page.",
+          "ru": "Посмотри на следующую страницу."
+        }
+      },
+      {
+        "text": "次のページを見て。",
+        "ms": 1516,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Look at the next page.",
+          "ru": "Посмотри на следующую страницу."
+        }
+      },
+      {
+        "text": "コンビニでカート押してた。",
+        "ms": 1740,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I was pushing a cart at the convenience store.",
+          "ru": "Я катал тележку в магазине у дома."
+        }
+      },
+      {
+        "text": "コンビニでカート押してた。",
+        "ms": 1549,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I was pushing a cart at the convenience store.",
+          "ru": "Я катил тележку в магазине."
+        }
+      },
+      {
+        "text": "コンビニでカート押してた。",
+        "ms": 2235,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I was pushing a cart at the convenience store.",
+          "ru": "Я катал тележку в магазине."
+        }
+      },
+      {
+        "text": "このチャージが溜まったら撃って。",
+        "ms": 1612,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Fire when this charge fills up.",
+          "ru": "Стреляй, когда этот заряд накопится."
+        }
+      },
+      {
+        "text": "このチャージが溜まったら撃って。",
+        "ms": 1489,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Fire when this charge is full.",
+          "ru": "Стреляй, когда заряд накопится."
+        }
+      },
+      {
+        "text": "このチャージが溜まったら撃って。",
+        "ms": 1859,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Fire when this charge fills up.",
+          "ru": "Стреляй, когда заряд накопится."
+        }
+      },
+      {
+        "text": "マークついてるやつ狙って。",
+        "ms": 1749,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Focus the one with the mark on them.",
+          "ru": "Целься в того, на ком метка."
+        }
+      },
+      {
+        "text": "マークついてるやつ狙って。",
+        "ms": 1681,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Focus the one with the mark on them.",
+          "ru": "Фокусим того, на ком метка."
+        }
+      },
+      {
+        "text": "マークついてるやつ狙って。",
+        "ms": 1521,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Focus the one with the mark.",
+          "ru": "Фокусьте того, на ком метка."
+        }
+      },
+      {
+        "text": "さあ、始まりました。デッドロック実況です。",
+        "ms": 1861,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "All right, here we go! It's time for some Deadlock gameplay commentary.",
+          "ru": "Ну что, началось! Комментируем игру в Deadlock."
+        }
+      },
+      {
+        "text": "さあ、始まりました。デッドロック実況です。",
+        "ms": 1826,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "All right, here we go. It's Deadlock commentary time.",
+          "ru": "Ну что, начинаем. Это комментаторский стрим по Deadlock."
+        }
+      },
+      {
+        "text": "さあ、始まりました。デッドロック実況です。",
+        "ms": 1616,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "All right, here we go. It's Deadlock commentary time.",
+          "ru": "Ну что, начинается. Комментируем Deadlock."
+        }
+      },
+      {
+        "text": "ヘイズめっちゃ強いから。",
+        "ms": 1629,
+        "ok": true,
+        "terms": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ]
+        ],
+        "expected": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ]
+        ],
+        "translations": {
+          "en": "Because ⟦Haze⟧ is super strong.",
+          "ru": "Потому что ⟦Haze⟧ очень сильная."
+        }
+      },
+      {
+        "text": "ヘイズめっちゃ強いから。",
+        "ms": 1870,
+        "ok": true,
+        "terms": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ]
+        ],
+        "expected": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ]
+        ],
+        "translations": {
+          "en": "Because ⟦Haze⟧ is really strong.",
+          "ru": "Потому что ⟦Haze⟧ очень сильная."
+        }
+      },
+      {
+        "text": "ヘイズめっちゃ強いから。",
+        "ms": 2101,
+        "ok": true,
+        "terms": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ]
+        ],
+        "expected": [
+          [
+            "ヘイズ",
+            "hero:13"
+          ]
+        ],
+        "translations": {
+          "en": "Because ⟦Haze⟧ is super strong.",
+          "ru": "Потому что ⟦Haze⟧ очень сильная."
+        }
+      },
+      {
+        "text": "でも最近出たバイオレットもめっちゃ気になるね。",
+        "ms": 2517,
+        "ok": true,
+        "terms": [
+          [
+            "バイオレット",
+            "hero:86"
+          ]
+        ],
+        "expected": [
+          [
+            "バイオレット",
+            "hero:86"
+          ]
+        ],
+        "translations": {
+          "en": "But I'm also really curious about ⟦Violet⟧, who came out recently.",
+          "ru": "Но мне ещё очень интересна ⟦Violet⟧, она недавно вышла."
+        }
+      },
+      {
+        "text": "でも最近出たバイオレットもめっちゃ気になるね。",
+        "ms": 2071,
+        "ok": true,
+        "terms": [
+          [
+            "バイオレット",
+            "hero:86"
+          ]
+        ],
+        "expected": [
+          [
+            "バイオレット",
+            "hero:86"
+          ]
+        ],
+        "translations": {
+          "en": "But I'm also really curious about ⟦Violet⟧, who came out recently.",
+          "ru": "Но мне ещё очень интересна ⟦Violet⟧, которая недавно вышла."
+        }
+      },
+      {
+        "text": "でも最近出たバイオレットもめっちゃ気になるね。",
+        "ms": 1989,
+        "ok": true,
+        "terms": [
+          [
+            "バイオレット",
+            "hero:86"
+          ]
+        ],
+        "expected": [
+          [
+            "バイオレット",
+            "hero:86"
+          ]
+        ],
+        "translations": {
+          "en": "But I'm also really curious about ⟦Violet⟧, who came out recently.",
+          "ru": "Но мне ещё очень интересна ⟦Violet⟧, которая недавно вышла."
+        }
+      },
+      {
+        "text": "そこはちゃんと取りたいよね。",
+        "ms": 1575,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "We definitely wanna secure that, right?",
+          "ru": "Это точно надо забрать, да?"
+        }
+      },
+      {
+        "text": "そこはちゃんと取りたいよね。",
+        "ms": 1678,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "We definitely want to secure that, right?",
+          "ru": "Это точно надо забрать, да?"
+        }
+      },
+      {
+        "text": "そこはちゃんと取りたいよね。",
+        "ms": 1570,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "We definitely want to secure that, right?",
+          "ru": "Там надо обязательно забрать, да?"
+        }
+      },
+      {
+        "text": "カースは最終盤に取りたいよね。ちゃんと。",
+        "ms": 2451,
+        "ok": true,
+        "terms": [
+          [
+            "カース",
+            "item:2617435668"
+          ]
+        ],
+        "expected": [
+          [
+            "カース",
+            "item:2617435668"
+          ]
+        ],
+        "translations": {
+          "en": "You really want to pick up ⟦Cursed Relic⟧ in the late game, right?",
+          "ru": "В самом конце игры всё-таки стоит взять ⟦Cursed Relic⟧, да?"
+        }
+      },
+      {
+        "text": "カースは最終盤に取りたいよね。ちゃんと。",
+        "ms": 2004,
+        "ok": true,
+        "terms": [
+          [
+            "カース",
+            "item:2617435668"
+          ]
+        ],
+        "expected": [
+          [
+            "カース",
+            "item:2617435668"
+          ]
+        ],
+        "translations": {
+          "en": "You really want to pick up ⟦Cursed Relic⟧ in the late game, right?",
+          "ru": "В самом конце игры всё-таки хочется взять ⟦Cursed Relic⟧, да?"
+        }
+      },
+      {
+        "text": "カースは最終盤に取りたいよね。ちゃんと。",
+        "ms": 1968,
+        "ok": true,
+        "terms": [
+          [
+            "カース",
+            "item:2617435668"
+          ]
+        ],
+        "expected": [
+          [
+            "カース",
+            "item:2617435668"
+          ]
+        ],
+        "translations": {
+          "en": "You want to pick up ⟦Cursed Relic⟧ in the very late game, for sure.",
+          "ru": "В самом лейте точно стоит взять ⟦Cursed Relic⟧."
+        }
+      },
+      {
+        "text": "ソウル全然足りない。",
+        "ms": 1439,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I'm nowhere near having enough souls.",
+          "ru": "Душ совсем не хватает."
+        }
+      },
+      {
+        "text": "ソウル全然足りない。",
+        "ms": 1445,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I'm nowhere near having enough souls.",
+          "ru": "Душ вообще не хватает."
+        }
+      },
+      {
+        "text": "ソウル全然足りない。",
+        "ms": 1500,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I'm nowhere near having enough souls.",
+          "ru": "Душ совсем не хватает."
+        }
+      },
+      {
+        "text": "敵全員ミッドに寄ってる。",
+        "ms": 1539,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "The whole enemy team is rotating mid.",
+          "ru": "Вся вражеская команда стягивается на мид."
+        }
+      },
+      {
+        "text": "敵全員ミッドに寄ってる。",
+        "ms": 1614,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "The whole enemy team is rotating mid.",
+          "ru": "Вся вражеская команда стягивается на мид."
+        }
+      },
+      {
+        "text": "敵全員ミッドに寄ってる。",
+        "ms": 1499,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "The whole enemy team is rotating mid.",
+          "ru": "Вся команда врага стягивается на мид."
+        }
+      },
+      {
+        "text": "ガーディアン硬すぎる。",
+        "ms": 1469,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "The guardian is way too tanky.",
+          "ru": "Гардиан слишком жирный."
+        }
+      },
+      {
+        "text": "ガーディアン硬すぎる。",
+        "ms": 1419,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "The guardian is way too tanky.",
+          "ru": "Страж слишком жирный."
+        }
+      },
+      {
+        "text": "ガーディアン硬すぎる。",
+        "ms": 1768,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "The guardian is way too tanky.",
+          "ru": "Страж слишком жирный."
+        }
+      },
+      {
+        "text": "ウルト溜まったから行くよ。",
+        "ms": 1531,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "My ult's ready, so I'm going in.",
+          "ru": "Ульта готова, захожу."
+        }
+      },
+      {
+        "text": "ウルト溜まったから行くよ。",
+        "ms": 1542,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "My ult's ready, so I'm going in.",
+          "ru": "Ульта готова, иду в бой."
+        }
+      },
+      {
+        "text": "ウルト溜まったから行くよ。",
+        "ms": 1560,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "My ult's ready, I'm going in.",
+          "ru": "Ульта готова, захожу."
+        }
+      },
+      {
+        "text": "スマホはポケットに入れといて。",
+        "ms": 1773,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Keep your phone in your pocket.",
+          "ru": "Держи телефон в кармане."
+        }
+      },
+      {
+        "text": "スマホはポケットに入れといて。",
+        "ms": 1629,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Keep your phone in your pocket.",
+          "ru": "Держи телефон в кармане."
+        }
+      },
+      {
+        "text": "スマホはポケットに入れといて。",
+        "ms": 1616,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Keep your phone in your pocket.",
+          "ru": "Держи телефон в кармане."
+        }
+      },
+      {
+        "text": "ポケットのウルト避けて。",
+        "ms": 2205,
+        "ok": true,
+        "terms": [
+          [
+            "ポケット",
+            "hero:50"
+          ],
+          [
+            "ウルト",
+            "ability:2954330093"
+          ]
+        ],
+        "expected": [
+          [
+            "ポケット",
+            "hero:50"
+          ],
+          [
+            "ウルト",
+            "ability:2954330093"
+          ]
+        ],
+        "translations": {
+          "en": "Dodge ⟦Pocket⟧'s ⟦Affliction⟧.",
+          "ru": "Уклоняйся от ульты ⟦Pocket⟧ — ⟦Affliction⟧."
+        }
+      },
+      {
+        "text": "ポケットのウルト避けて。",
+        "ms": 2162,
+        "ok": true,
+        "terms": [
+          [
+            "ポケット",
+            "hero:50"
+          ],
+          [
+            "ウルト",
+            "ability:2954330093"
+          ]
+        ],
+        "expected": [
+          [
+            "ポケット",
+            "hero:50"
+          ],
+          [
+            "ウルト",
+            "ability:2954330093"
+          ]
+        ],
+        "translations": {
+          "en": "Dodge ⟦Pocket⟧'s ⟦Affliction⟧.",
+          "ru": "Уклоняйся от ульты ⟦Affliction⟧ героя ⟦Pocket⟧."
+        }
+      },
+      {
+        "text": "ポケットのウルト避けて。",
+        "ms": 2482,
+        "ok": true,
+        "terms": [
+          [
+            "ポケット",
+            "hero:50"
+          ],
+          [
+            "ウルト",
+            "ability:2954330093"
+          ]
+        ],
+        "expected": [
+          [
+            "ポケット",
+            "hero:50"
+          ],
+          [
+            "ウルト",
+            "ability:2954330093"
+          ]
+        ],
+        "translations": {
+          "en": "Dodge ⟦Pocket⟧'s ⟦Affliction⟧.",
+          "ru": "Уклоняйся от ⟦Affliction⟧ героя ⟦Pocket⟧."
+        }
+      },
+      {
+        "text": "ちょっとセブンイレブン行ってくる。",
+        "ms": 1905,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I'm gonna run to 7-Eleven real quick.",
+          "ru": "Я быстренько сбегаю в 7-Eleven."
+        }
+      },
+      {
+        "text": "ちょっとセブンイレブン行ってくる。",
+        "ms": 1747,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I'm gonna go to 7-Eleven real quick.",
+          "ru": "Сбегаю ненадолго в 7-Eleven."
+        }
+      },
+      {
+        "text": "ちょっとセブンイレブン行ってくる。",
+        "ms": 1664,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I'm gonna run to 7-Eleven real quick.",
+          "ru": "Сгоняю быстренько в 7-Eleven."
+        }
+      },
+      {
+        "text": "セブン止めないとやばい。",
+        "ms": 1792,
+        "ok": true,
+        "terms": [
+          [
+            "セブン",
+            "hero:2"
+          ]
+        ],
+        "expected": [
+          [
+            "セブン",
+            "hero:2"
+          ]
+        ],
+        "translations": {
+          "en": "We gotta stop ⟦Seven⟧ or we're screwed.",
+          "ru": "Надо остановить ⟦Seven⟧, иначе нам хана."
+        }
+      },
+      {
+        "text": "セブン止めないとやばい。",
+        "ms": 1874,
+        "ok": true,
+        "terms": [
+          [
+            "セブン",
+            "hero:2"
+          ]
+        ],
+        "expected": [
+          [
+            "セブン",
+            "hero:2"
+          ]
+        ],
+        "translations": {
+          "en": "We need to stop ⟦Seven⟧ or we're screwed.",
+          "ru": "Надо остановить ⟦Seven⟧, иначе нам конец."
+        }
+      },
+      {
+        "text": "セブン止めないとやばい。",
+        "ms": 1833,
+        "ok": true,
+        "terms": [
+          [
+            "セブン",
+            "hero:2"
+          ]
+        ],
+        "expected": [
+          [
+            "セブン",
+            "hero:2"
+          ]
+        ],
+        "translations": {
+          "en": "We gotta stop ⟦Seven⟧, or we're screwed.",
+          "ru": "Надо остановить ⟦Seven⟧, иначе нам хана."
+        }
+      },
+      {
+        "text": "最初からラッシュしよう。",
+        "ms": 1598,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Let's rush from the start.",
+          "ru": "Давайте рашить с самого начала."
+        }
+      },
+      {
+        "text": "最初からラッシュしよう。",
+        "ms": 1651,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Let's rush from the start.",
+          "ru": "Давай рашить с самого начала."
+        }
+      },
+      {
+        "text": "最初からラッシュしよう。",
+        "ms": 1807,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Let's rush from the start.",
+          "ru": "Давай рашить с самого начала."
+        }
+      },
+      {
+        "text": "ラッシュに飛び込まれた。",
+        "ms": 1740,
+        "ok": true,
+        "terms": [
+          [
+            "ラッシュ",
+            "hero:31"
+          ]
+        ],
+        "expected": [
+          [
+            "ラッシュ",
+            "hero:31"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Lash⟧ jumped me.",
+          "ru": "На меня влетел ⟦Lash⟧."
+        }
+      },
+      {
+        "text": "ラッシュに飛び込まれた。",
+        "ms": 1725,
+        "ok": true,
+        "terms": [
+          [
+            "ラッシュ",
+            "hero:31"
+          ]
+        ],
+        "expected": [
+          [
+            "ラッシュ",
+            "hero:31"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Lash⟧ jumped on me.",
+          "ru": "⟦Lash⟧ влетел в меня."
+        }
+      },
+      {
+        "text": "ラッシュに飛び込まれた。",
+        "ms": 1701,
+        "ok": true,
+        "terms": [
+          [
+            "ラッシュ",
+            "hero:31"
+          ]
+        ],
+        "expected": [
+          [
+            "ラッシュ",
+            "hero:31"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Lash⟧ jumped me.",
+          "ru": "На меня влетел ⟦Lash⟧."
+        }
+      },
+      {
+        "text": "ミラージュみたいに見えた。",
+        "ms": 1820,
+        "ok": true,
+        "terms": [
+          [
+            "ミラージュ",
+            "hero:52"
+          ]
+        ],
+        "expected": [
+          [
+            "ミラージュ",
+            "hero:52"
+          ]
+        ],
+        "translations": {
+          "en": "Looked like ⟦Mirage⟧.",
+          "ru": "Показалось, что это ⟦Mirage⟧."
+        }
+      },
+      {
+        "text": "ミラージュみたいに見えた。",
+        "ms": 1758,
+        "ok": true,
+        "terms": [
+          [
+            "ミラージュ",
+            "hero:52"
+          ]
+        ],
+        "expected": [
+          [
+            "ミラージュ",
+            "hero:52"
+          ]
+        ],
+        "translations": {
+          "en": "It looked like ⟦Mirage⟧.",
+          "ru": "Было похоже на ⟦Mirage⟧."
+        }
+      },
+      {
+        "text": "ミラージュみたいに見えた。",
+        "ms": 1828,
+        "ok": true,
+        "terms": [
+          [
+            "ミラージュ",
+            "hero:52"
+          ]
+        ],
+        "expected": [
+          [
+            "ミラージュ",
+            "hero:52"
+          ]
+        ],
+        "translations": {
+          "en": "It looked like ⟦Mirage⟧.",
+          "ru": "Показалось, что это ⟦Mirage⟧."
+        }
+      }
+    ]
+  }
+}

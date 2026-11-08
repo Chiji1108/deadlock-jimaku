@@ -97,35 +97,12 @@ impl Enricher {
         text: &str,
         context: &[String],
         glossary: Option<&Glossary>,
-        on_draft: impl FnMut(Translations),
+        mut on_draft: impl FnMut(Translations),
     ) -> anyhow::Result<Option<(Vec<Span>, Translations)>> {
         let glossary = glossary.filter(|_| self.deadlock_mode);
-        let Some(analysis) = self.analyze(text, context, glossary, on_draft).await? else {
+        let Some(question) = self.question(text, context, glossary) else {
             return Ok(None);
         };
-        let spans = if self.deadlock_mode {
-            analysis.spans(text, glossary)
-        } else {
-            vec![Span::Text(text.to_owned())]
-        };
-        Ok(Some((
-            spans,
-            analysis.translations(&self.targets, glossary),
-        )))
-    }
-
-    /// 用語と翻訳。辞書も翻訳先もなければ聞くことがない
-    async fn analyze(
-        &self,
-        text: &str,
-        context: &[String],
-        glossary: Option<&Glossary>,
-        mut on_draft: impl FnMut(Translations),
-    ) -> anyhow::Result<Option<Analysis>> {
-        if glossary.is_none() && self.targets.is_empty() {
-            return Ok(None);
-        }
-        let user = json!({ "context": context, "transcript": text });
         let mut last = Translations::new();
         let on_text = |partial: &str| {
             // 訳文のあとは区切りが続くだけ
@@ -138,24 +115,60 @@ impl Enricher {
                 on_draft(translations);
             }
         };
-        llm::stream_json(
+        let answer = llm::stream_json(
             &self.http,
             llm::Request {
                 access: &self.access,
                 model: &self.model,
                 reasoning_effort: self.reasoning_effort.as_deref(),
-                system: &self.system(glossary),
-                user: user.to_string(),
+                system: &question.system,
+                user: question.user,
                 schema_name: "subtitle",
-                schema: self.schema(),
+                schema: question.schema,
                 timeout: TIMEOUT,
                 meter: &self.meter,
                 purpose: Use::Translate,
             },
             on_text,
         )
-        .await
-        .map(Some)
+        .await?;
+        self.read(text, glossary, answer).map(Some)
+    }
+
+    /// 用語と翻訳の問い合わせ。辞書も翻訳先もなければ聞くことがない。
+    /// 送り先を替えて比べるとき（`examples/terms_eval.rs`）にも、同じ問い合わせを使う
+    pub fn question(
+        &self,
+        text: &str,
+        context: &[String],
+        glossary: Option<&Glossary>,
+    ) -> Option<Question> {
+        let glossary = glossary.filter(|_| self.deadlock_mode);
+        if glossary.is_none() && self.targets.is_empty() {
+            return None;
+        }
+        Some(Question {
+            system: self.system(glossary),
+            user: json!({ "context": context, "transcript": text }).to_string(),
+            schema: self.schema(),
+        })
+    }
+
+    /// 答え（`question` の schema の JSON）を、確かめてから原文の区切りと訳文にする
+    pub fn read(
+        &self,
+        text: &str,
+        glossary: Option<&Glossary>,
+        answer: Value,
+    ) -> anyhow::Result<(Vec<Span>, Translations)> {
+        let glossary = glossary.filter(|_| self.deadlock_mode);
+        let analysis: Analysis = serde_json::from_value(answer)?;
+        let spans = if self.deadlock_mode {
+            analysis.spans(text, glossary)
+        } else {
+            vec![Span::Text(text.to_owned())]
+        };
+        Ok((spans, analysis.translations(&self.targets, glossary)))
     }
 
     fn system(&self, glossary: Option<&Glossary>) -> Arc<str> {
@@ -226,6 +239,13 @@ impl Enricher {
             "properties": properties,
         })
     }
+}
+
+/// 用語と翻訳の問い合わせの中身
+pub struct Question {
+    pub system: Arc<str>,
+    pub user: String,
+    pub schema: Value,
 }
 
 /// どの辞書から作った system か（版と、名前のある言語）
