@@ -25,13 +25,35 @@ test("選んだ値だけを変数にする", () => {
   look.shadow.color = "#ff0000";
   expect(vars(textVars(look))).toEqual({
     "--text-color": "#ffe066",
-    "--pending-color": "#ffe066c7",
+    "--pending-color": "#cbb75a",
     "--outline-color": "#102030",
     "--outline-width": "calc(0.3 * 1em)",
     "--shadow-blur": "calc(0.4 * 1em)",
     "--shadow-color": "#ff0000",
     "--edge": "calc(0.15 * 1em + 0.4 * 1em)",
   });
+});
+
+test("白い字と黒い縁取りを選べば、確定前の字は標準と同じ灰色で、用語の色は変えない", () => {
+  const look = standard();
+  look.color = "#ffffff";
+  look.outline.color = "#000000";
+  expect(vars(textVars(look))).toEqual({
+    "--text-color": "#ffffff",
+    "--pending-color": "#c8c8c8",
+    "--outline-color": "#000000",
+  });
+});
+
+test("縁取りより暗い字では、用語の色の明るさを反転し、確定前の字は縁取りの色へ寄せる", () => {
+  const look = standard();
+  look.color = "#000000";
+  look.outline.color = "#ffffff";
+  const inverted = vars(textVars(look));
+  expect(inverted["--pending-color"]).toBe("#373737");
+  expect(inverted["--hero-color"]).toBe("#81004c");
+  expect(inverted["--ability-color"]).toBe("#00354b");
+  expect(Object.keys(inverted).filter((name) => name.endsWith("-color"))).toHaveLength(8);
 });
 
 test("帯だけなら縁取りを細くして影を消す", () => {

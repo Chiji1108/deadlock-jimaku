@@ -2,6 +2,7 @@
 // Captions.svelte と RankBadge.svelte の既定の見た目と OBS のカスタム CSS の変数をそのまま使う
 import type { FontStyle } from "../generated/FontStyle";
 import type { TextLook } from "../generated/TextLook";
+import { invertLightness, luminance, mix } from "./color";
 
 /** 書いた項目だけを変え、null は標準に戻す（JSON Merge Patch） */
 export type MergePatch<T> = T extends object ? { [K in keyof T]?: MergePatch<T[K]> | null } : T;
@@ -43,8 +44,17 @@ const alpha = (opacity: number) =>
     .toString(16)
     .padStart(2, "0");
 
-/** 確定前の文字は、選んだ色を落として見せる（標準の #c8c8c8 と同じくらいの比） */
-const PENDING_ALPHA = alpha(0.78);
+/** 確定前の文字は、文字の色を縁取りの色へ寄せて落とす（標準の白と黒で #c8c8c8 になる比） */
+const PENDING_MIX = 1 - 0xc8 / 0xff;
+
+/** 用語の色（EntityRef.svelte の既定）。明るい文字に合わせてあり、暗い文字では明るさを反転する */
+const ENTITY_COLORS = {
+  "--hero-color": "#ff7ab6",
+  "--ability-color": "#8fd8ff",
+  "--weapon-color": "#ffb35c",
+  "--vitality-color": "#98e36b",
+  "--spirit-color": "#cfa2ff",
+};
 
 const scaled = (value: number | null | undefined, unit = "1em") =>
   value === null || value === undefined ? undefined : `calc(${value} * ${unit})`;
@@ -60,9 +70,18 @@ export function textVars(look: TextLook, blurUnit = "1em") {
   const stroke = (outline.width ?? 0) / 2;
   const blur = on ? (shadow.blur ?? 0) : 0;
   const custom = background.color !== null || background.opacity !== null;
+  const text = color ?? COMMON.color;
+  const edge = outline.color ?? COMMON.outlineColor;
+  const colored = color !== null || outline.color !== null;
+  // 縁取りより暗い文字では、明るい用語の色が縁取りに紛れる
+  const dark = luminance(text) < luminance(edge);
   return declarations([
     ["--text-color", color],
-    ["--pending-color", color && `${color}${PENDING_ALPHA}`],
+    ["--pending-color", colored ? mix(text, edge, PENDING_MIX) : undefined],
+    ...Object.entries(ENTITY_COLORS).map(([name, value]): [string, string | undefined] => [
+      name,
+      dark ? invertLightness(value) : undefined,
+    ]),
     ["--outline-color", outline.color],
     ["--outline-width", scaled(width)],
     ["--text-shadow", on ? undefined : "none"],
