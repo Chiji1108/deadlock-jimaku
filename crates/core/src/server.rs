@@ -21,7 +21,9 @@ use crate::secrets::{self, Provider};
 use crate::settings::SettingsPatch;
 use crate::share::{self, GiftStatus, Refused, SharedCode};
 use crate::store::{ChromeEvent, Store};
-use crate::types::{ChromeCommand, ChromeMsg, ClientMsg, LangCode, ServerMsg, SettingsView, Topic};
+use crate::types::{
+    ChromeCommand, ChromeMsg, ClientMsg, LangCode, RankState, ServerMsg, SettingsView, Topic,
+};
 use crate::{audio, lang, rank};
 use ts_rs::TS;
 
@@ -566,15 +568,9 @@ async fn rank_image(State(store): State<Arc<Store>>, Path(file): Path<String>) -
     }
 }
 
-/// プレビューの見本のアイコンの URL。初めて見たときに取ってくる。取れなければ 502
-async fn rank_sample(State(store): State<Arc<Store>>) -> Response {
-    match rank::sample_image(&store).await {
-        Ok(image) => Json(serde_json::json!({ "image": image })).into_response(),
-        Err(e) => {
-            tracing::warn!("rank sample: {e:#}");
-            StatusCode::BAD_GATEWAY.into_response()
-        }
-    }
+/// プレビューの見本のランク。名前とアイコンは、まだ取れていなければ取ってくる。取れなかったものは欠けたまま
+async fn rank_sample(State(store): State<Arc<Store>>) -> Json<RankState> {
+    Json(rank::sample(&store).await)
 }
 
 /// URL に版やバッジを含むアセット（中身が変わらない）を長くキャッシュさせて返す

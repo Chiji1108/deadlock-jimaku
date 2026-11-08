@@ -2,7 +2,7 @@
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 use std::time::{Duration, Instant};
 
 use anyhow::{Context, ensure};
@@ -25,8 +25,9 @@ const ETERNUS: u32 = 11;
 const LEADERBOARD_INTERVAL: Duration = Duration::from_secs(15 * 60);
 /// これより古い順位は出さない（取れない状態が続いたら、ポイントに戻す）
 const LEADERBOARD_MAX_AGE: Duration = Duration::from_secs(2 * 60 * 60);
-/// 操作パネルのプレビューで、アカウントを入れる前に出す見本（エミッサリー III）
-const SAMPLE: (u32, u32) = (7, 3);
+/// 操作パネルのプレビューで、アカウントを入れる前に出す見本（ティア、サブランク、累積ポイント）。
+/// エミッサリー III の 640 / 1000
+const SAMPLE: (u32, u32, u32) = (7, 3, 41_640);
 
 #[derive(Deserialize)]
 struct PlayerRank {
@@ -199,13 +200,16 @@ async fn fetch_rank(account_id: u32) -> anyhow::Result<PlayerRank> {
         .await?)
 }
 
-/// まだ取れていない言語の名前を取る。失敗した言語は警告して次の回に回す
+/// まだ取れていない言語の名前を、並べて取る。失敗した言語は警告して次の回に回す
 async fn load_tiers(tiers: &mut Tiers, languages: &[LangCode]) {
-    for code in languages {
-        if tiers.loaded.contains(code) {
-            continue;
-        }
-        match fetch_tiers(code).await {
+    let missing: Vec<&LangCode> = languages
+        .iter()
+        .filter(|code| !tiers.loaded.contains(code))
+        .collect();
+    let fetched =
+        futures_util::future::join_all(missing.iter().map(|code| fetch_tiers(code))).await;
+    for (code, result) in missing.into_iter().zip(fetched) {
+        match result {
             Ok(list) => {
                 for t in list {
                     tiers
@@ -314,15 +318,34 @@ async fn player_image(dir: &Path, player: &PlayerRank, tiers: &Tiers) -> anyhow:
     ensure_image(dir, player.badge, &image_source(player, tiers)?).await
 }
 
-/// プレビューの見本のアイコンを用意して、その URL を返す。本物のアイコンと同じく取ってきて保存する
-pub async fn sample_image(store: &Store) -> anyhow::Result<String> {
-    let (tier, subrank) = SAMPLE;
-    ensure_image(
-        &store.rank_images(),
-        tier * 10 + subrank,
-        &subrank_image(tier, subrank),
-    )
-    .await
+/// 見本のティアの名前。プレビューを開いたまま翻訳先とランクの言語を変えても名前が出るよう、全部の言語の分を
+/// 取れたものから覚えておく
+static SAMPLE_TIERS: LazyLock<tokio::sync::Mutex<Tiers>> = LazyLock::new(Default::default);
+
+fn sample_player() -> PlayerRank {
+    let (rank, subrank, points) = SAMPLE;
+    PlayerRank {
+        badge: rank * 10 + subrank,
+        rank,
+        subrank,
+        last_match: Some(LastMatch {
+            player_rank_final_flat_progress: Some(points),
+        }),
+    }
+}
+
+/// プレビューの見本。本物と同じく、名前はティアの一覧から、進み具合はポイントから出し、アイコンは取ってきて保存する。
+/// 取れなかった名前やアイコンは欠けたまま返し、次に開いたときに取り直す
+pub async fn sample(store: &Store) -> RankState {
+    let languages: Vec<LangCode> = lang::LANGUAGES.iter().map(|l| l.code.to_owned()).collect();
+    let mut tiers = SAMPLE_TIERS.lock().await;
+    load_tiers(&mut tiers, &languages).await;
+    let player = sample_player();
+    let image = player_image(&store.rank_images(), &player, &tiers)
+        .await
+        .inspect_err(|e| tracing::warn!("rank sample image: {e:#}"))
+        .ok();
+    state(&player, &tiers, image)
 }
 
 #[cfg(test)]
@@ -365,6 +388,31 @@ mod tests {
         let below_its_subrank = state(&player(43, Some(1_000)), &tiers, None);
         assert_eq!(below_its_subrank.points, None);
         assert_eq!(below_its_subrank.progress, None);
+    }
+
+    #[test]
+    fn the_sample_is_drawn_like_a_real_rank() {
+        let tiers = Tiers {
+            names: BTreeMap::from([(
+                7,
+                BTreeMap::from([
+                    ("ja".into(), "エミッサリー".into()),
+                    ("ko".into(), "사절".into()),
+                ]),
+            )]),
+            ..Tiers::default()
+        };
+        let s = state(&sample_player(), &tiers, None);
+        assert_eq!((s.badge, s.tier, s.subrank), (73, 7, 3));
+        assert_eq!(s.names, tiers.names[&7]);
+        assert_eq!(s.points, None);
+        assert_eq!(
+            s.progress,
+            Some(RankProgress {
+                value: 640,
+                max: SUBRANK_POINTS
+            })
+        );
     }
 
     #[test]

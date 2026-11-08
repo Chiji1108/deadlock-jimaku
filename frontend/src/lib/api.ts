@@ -1,6 +1,7 @@
 import type { FontEntry } from "../generated/FontEntry";
 import type { GiftStatus } from "../generated/GiftStatus";
 import type { Provider } from "../generated/Provider";
+import type { RankState } from "../generated/RankState";
 import type { SettingsPatch } from "../generated/SettingsPatch";
 import type { SettingsView } from "../generated/SettingsView";
 import type { ShareView } from "../generated/ShareView";
@@ -43,7 +44,7 @@ export const api = {
   /** Chrome の専用のデータを消して始め直す */
   resetChrome: () => post("/api/chrome/reset"),
   /** ランクのプレビューの見本のアイコン。初めてのときは core が取ってくる */
-  rankSample: () => request<{ image: string }>("/api/rank/sample"),
+  rankSample: () => request<RankState>("/api/rank/sample"),
 
   /** もらったギフトコードの状態 */
   gift: () => request<GiftStatus>("/api/gift"),

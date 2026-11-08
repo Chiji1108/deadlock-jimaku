@@ -26,21 +26,9 @@
 
   /** 操作パネルのプレビュー（`?preview`）では、アカウントを入れる前でも見本を出しておく。OBS には出さない */
   const preview = new URLSearchParams(location.search).has("preview");
-  /** 見本のアイコン。ゲームの画像は配布物に入れず、本物と同じく core が取ってくる。届くまでは枠だけ */
-  let sampleImage = $state<string | undefined>();
-  const SAMPLE = $derived<RankState | undefined>(
-    preview
-      ? {
-          badge: 73,
-          tier: 7,
-          subrank: 3,
-          names: { ja: "エミッサリー", en: "Emissary" },
-          image: sampleImage,
-          progress: { value: 1240, max: 2000 },
-        }
-      : undefined,
-  );
-  const shown = $derived(rank ?? SAMPLE);
+  /** 見本は core が本物と同じ作り方で返す（ゲームの画像は配布物に入れず、取ってくる） */
+  let sample = $state<RankState | undefined>();
+  const shown = $derived(rank ?? sample);
 
   // 大きさは --scale で描く（zoom だとポイントの数字のアニメーションの位置がずれる）
   $effect(() =>
@@ -53,10 +41,7 @@
 
   onMount(() => {
     if (preview)
-      api.rankSample().then(
-        (sample) => (sampleImage = sample.image),
-        () => (sampleImage = FALLBACK_IMAGE),
-      );
+      void api.rankSample().then((s) => (sample = { ...s, image: s.image ?? FALLBACK_IMAGE }));
     return connect(["rank", "display"], (msg) => {
       if (msg.type === "rank.update") rank = msg.rank ?? undefined;
       if (msg.type === "display") {
