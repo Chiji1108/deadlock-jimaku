@@ -5,6 +5,7 @@
   import type { RankContent } from "../generated/RankContent";
   import type { RankState } from "../generated/RankState";
   import type { RankStyle } from "../generated/RankStyle";
+  import { watchInk } from "./ink";
   import { REGIONS } from "./regions";
   import { fontCss, textVars } from "./text-style";
 
@@ -36,6 +37,10 @@
   });
   const ratio = $derived(rank.progress ? rank.progress.value / rank.progress.max : 0);
   const number = (n: number) => n.toLocaleString("en-US");
+
+  /** 中身の端に来うるもの（アイコン、ランク名や順位、ゲージ）のインクの端までの空き */
+  let ink = $state({ lead: 0, trail: 0 });
+  const measureInk = watchInk(".badge, .text > p, .bar", (insets) => (ink = insets));
 </script>
 
 <div
@@ -43,6 +48,9 @@
   lang={shown}
   data-background={look?.background.enabled ? "band" : undefined}
   style={look && textVars(look, BLUR_EM)}
+  style:--ink-lead="{ink.lead}px"
+  style:--ink-trail="{ink.trail}px"
+  {@attach measureInk}
 >
   {#if rank.image}<img class="badge" src={rank.image} alt="" />{/if}
   <!-- 1 行目: ランク名、2 行目: ゲージ（ポイントを重ねるか、数字なしで細くする）。出すものは操作パネルで選ぶ -->
@@ -90,8 +98,11 @@
     align-items: center;
     gap: calc(14px * var(--scale));
     padding: calc(8px * var(--scale));
-    /* 太い縁取りや大きな影が箱の右端で切れないよう、余白を超えた分だけ広げる */
-    padding-inline-end: max(calc(8px * var(--scale)), var(--edge, 0px));
+    /* 太い縁取りや大きな影が箱の右端で切れないよう、余白を超えた分だけ広げる。
+       筆記体などの字の形が送り幅の外にはみ出す分（--ink-trail が負）も足す */
+    padding-inline-end: calc(
+      max(calc(8px * var(--scale)), var(--edge, 0px)) + max(0px, -1 * var(--ink-trail))
+    );
     color: var(--text-color);
     -webkit-text-stroke: var(--outline-width, 0.16em) var(--outline-color);
     paint-order: stroke fill;
@@ -104,6 +115,12 @@
   .rank[data-background="band"] {
     border-radius: calc(12px * var(--scale));
     background: var(--band-color, rgb(0 0 0 / 0.62));
+    /* 帯の右の余白は、見た目で左とそろえる。左のアイコンの透明な縁（--ink-lead）の分を足し、
+       右の端のインクまでの空き（--ink-trail。字の形がはみ出せば負）の分を引く */
+    padding-inline-end: max(
+      0px,
+      calc(max(calc(8px * var(--scale)), var(--edge, 0px)) + var(--ink-lead) - var(--ink-trail))
+    );
   }
   .badge {
     width: var(--badge-size, calc(96px * var(--scale)));
