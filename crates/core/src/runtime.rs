@@ -11,7 +11,7 @@ use futures_util::FutureExt;
 use tokio::task::JoinHandle;
 
 use crate::openai::Access;
-use crate::settings::{Models, Region, Segmentation, Settings, SpeechEngine, TextSource};
+use crate::settings::{FinalSource, Models, Region, Segmentation, Settings, TextSource, Toppings};
 use crate::store::Store;
 use crate::types::{LangCode, TranscriptionError};
 use crate::{assets, audio, chrome, rank, secrets, share, subtitles};
@@ -77,7 +77,7 @@ struct RankInput {
 enum SubtitlesInput {
     Stopped,
     Audio(Box<AudioInput>),
-    Chrome(ChromeInput),
+    Chrome(Box<ChromeInput>),
 }
 
 #[derive(Clone, PartialEq)]
@@ -89,7 +89,7 @@ struct AudioInput {
     deadlock_mode: bool,
     /// 途中の字幕の出どころ。表示の切り替えでは字幕を止めない
     partial_text: Option<TextSource>,
-    speech_engine: SpeechEngine,
+    toppings: Toppings,
     models: Models,
     realtime_delay: String,
     segmentation: Segmentation,
@@ -104,6 +104,11 @@ struct ChromeInput {
     translate_to: Vec<LangCode>,
     deadlock_mode: bool,
     segmentation: Segmentation,
+    /// 確定の仕上げ（翻訳・用語・ふりがな）を LLM に聞く品
+    toppings: Toppings,
+    models: Models,
+    /// 有料の品があるのに鍵がなければ始めない
+    access: Option<Access>,
 }
 
 #[derive(Clone, PartialEq)]
@@ -130,9 +135,10 @@ pub async fn run(store: Arc<Store>, options: Options) {
             .await
             .unwrap_or_default();
         let languages = settings.glossary_languages();
-        // Chrome のモードは OpenAI に何も送らない
-        let plan = settings.plan();
-        let access = keys.access(&settings.api_base).filter(|_| plan.needs_key());
+        // すべて無料の品なら OpenAI に何も送らない
+        let access = keys
+            .access(&settings.api_base)
+            .filter(|_| settings.toppings.paid());
 
         assets_slot
             .update(
@@ -185,17 +191,20 @@ fn subtitles_input(
     options: &Options,
     access: Option<Access>,
 ) -> SubtitlesInput {
-    if settings.speech_engine == SpeechEngine::Chrome {
+    if settings.toppings.transcription == FinalSource::Chrome {
         if !settings.transcription_enabled {
             return SubtitlesInput::Stopped;
         }
-        return SubtitlesInput::Chrome(ChromeInput {
+        return SubtitlesInput::Chrome(Box::new(ChromeInput {
             mic_device: settings.mic_device.clone(),
             mic_language: settings.mic_language.clone(),
             translate_to: settings.translate_to.clone(),
             deadlock_mode: settings.deadlock_mode,
             segmentation: settings.segmentation.clone(),
-        });
+            toppings: settings.toppings,
+            models: settings.models.clone(),
+            access,
+        }));
     }
     let source = match &options.input_file {
         Some(path) => Source::File(path.clone()),
@@ -208,7 +217,7 @@ fn subtitles_input(
         translate_to: settings.translate_to.clone(),
         deadlock_mode: settings.deadlock_mode,
         partial_text: settings.plan().partial.text,
-        speech_engine: settings.speech_engine,
+        toppings: settings.toppings,
         models: settings.models.clone(),
         realtime_delay: settings.realtime_delay.clone(),
         segmentation: settings.segmentation.clone(),
@@ -240,10 +249,22 @@ fn start_subtitles(
     store.set_transcription_error(None);
     match input {
         SubtitlesInput::Stopped => None,
-        SubtitlesInput::Chrome(_) => {
+        SubtitlesInput::Chrome(input) => {
+            if input.toppings.paid() && input.access.is_none() {
+                store.set_transcription_error(Some(TranscriptionError::MissingKey));
+                return None;
+            }
             tracing::info!("transcription started");
-            let run = chrome::run(store.clone());
-            Some(tokio::spawn(supervise(store.clone(), run, None)))
+            let store = store.clone();
+            Some(tokio::spawn(async move {
+                if let Some(access) = &input.access
+                    && !gift_accepted(&store, access, check_gift.as_deref()).await
+                {
+                    return;
+                }
+                let run = chrome::run(store.clone(), input.access);
+                supervise(store, run, None).await;
+            }))
         }
         SubtitlesInput::Audio(input) => {
             let Some(access) = input.access else {
@@ -260,15 +281,26 @@ fn start_subtitles(
             };
             let store = store.clone();
             Some(tokio::spawn(async move {
-                if let (true, Some(api)) = (access.is_gift(), &check_gift)
-                    && let Err(e) = share::check_gift(api, access.token()).await
-                {
-                    store.set_transcription_error(Some(e));
+                if !gift_accepted(&store, &access, check_gift.as_deref()).await {
                     return;
                 }
                 let run = subtitles::run(store.clone(), input, access);
                 supervise(store, run, ended).await;
             }))
+        }
+    }
+}
+
+/// ギフトコードなら、`check` の API の根元で使えるか確かめる。断られたら理由を出して false
+async fn gift_accepted(store: &Store, access: &Access, check: Option<&str>) -> bool {
+    let (true, Some(api)) = (access.is_gift(), check) else {
+        return true;
+    };
+    match share::check_gift(api, access.token()).await {
+        Ok(()) => true,
+        Err(e) => {
+            store.set_transcription_error(Some(e));
+            false
         }
     }
 }
@@ -313,13 +345,16 @@ mod tests {
     const SETTLE: Duration = Duration::from_millis(300);
 
     fn chrome() -> SubtitlesInput {
-        SubtitlesInput::Chrome(ChromeInput {
+        SubtitlesInput::Chrome(Box::new(ChromeInput {
             mic_device: None,
             mic_language: "ja".into(),
             translate_to: Vec::new(),
             deadlock_mode: false,
             segmentation: Settings::default().segmentation,
-        })
+            toppings: Toppings::FREE,
+            models: Settings::default().models,
+            access: None,
+        }))
     }
 
     /// 偽の Worker の `/gift`。答えはコードで決まる
@@ -366,7 +401,7 @@ mod tests {
         async fn new() -> Self {
             let dir = tempfile::tempdir().unwrap();
             let settings = Settings {
-                speech_engine: SpeechEngine::Hybrid,
+                toppings: Toppings::RECOMMENDED,
                 deadlock_mode: false,
                 ..Settings::default()
             };
@@ -390,7 +425,7 @@ mod tests {
                 translate_to: Vec::new(),
                 deadlock_mode: false,
                 partial_text: Some(TextSource::Chrome),
-                speech_engine: SpeechEngine::Hybrid,
+                toppings: Toppings::RECOMMENDED,
                 models: Settings::default().models,
                 realtime_delay: "low".into(),
                 segmentation: Settings::default().segmentation,
@@ -449,6 +484,18 @@ mod tests {
         app.update(input).await;
         app.settle(1).await;
         assert_eq!(app.error(), Some(TranscriptionError::GiftRevoked));
+    }
+
+    /// 確定の文を Chrome が作っても、有料の品があって鍵がなければ始めない
+    #[tokio::test]
+    async fn paid_toppings_on_chrome_need_a_key() {
+        let mut app = App::new().await;
+        let SubtitlesInput::Chrome(mut input) = chrome() else {
+            unreachable!()
+        };
+        input.toppings.furigana = crate::settings::RubySource::Llm;
+        app.update(SubtitlesInput::Chrome(input)).await;
+        assert_eq!(app.error(), Some(TranscriptionError::MissingKey));
     }
 
     /// 動いている間に断られるようになっても、関連の要求で止まる（DESIGN.md 17.1）

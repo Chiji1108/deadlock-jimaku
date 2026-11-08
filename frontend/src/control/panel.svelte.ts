@@ -12,6 +12,7 @@ import type { MicError } from "../generated/MicError";
 import type { TranscriptionError } from "../generated/TranscriptionError";
 import type { UsageView } from "../generated/UsageView";
 import { api } from "../lib/api";
+import { FREE, anyPaid, chromeFinals } from "../lib/toppings";
 import { addFontFaces, fontWeights } from "../lib/overlay-fonts";
 import type { MergePatch } from "../lib/text-style";
 import type { FontEntry } from "../generated/FontEntry";
@@ -85,22 +86,22 @@ class Panel {
     return this.view?.keys.openai.state === "missing" && this.view.keys.gift.state === "missing";
   }
 
-  /** 字幕を始められる鍵（自分のキーかギフトコード）がある。Chrome のモードは鍵が要らない */
+  /** 字幕を始められる鍵（自分のキーかギフトコード）がある。無料の品だけなら鍵が要らない */
   get hasAccess() {
     return (
-      this.settings?.speechEngine === "chrome" ||
+      (!!this.settings && !anyPaid(this.settings.toppings)) ||
       this.view?.keys.openai.state === "saved" ||
       this.view?.keys.gift.state === "saved"
     );
   }
 
-  /** 選んだモードに要る鍵がない。キーの案内を出し、字幕を始めさせない */
+  /** 選んだ品に要る鍵がない。キーの案内を出し、字幕を始めさせない */
   get needsKey() {
     return !!this.view && !this.hasAccess;
   }
 
-  /** ハイブリッドで使える鍵（自分のキーか、期限内のギフトコード）がある */
-  get hybridReady() {
+  /** 有料の品に使える鍵（自分のキーか、期限内のギフトコード）がある */
+  get paidReady() {
     return this.view?.keys.openai.state === "saved" || giftValid(this.gift);
   }
 
@@ -109,11 +110,12 @@ class Panel {
     return !!this.settings?.transcriptionEnabled && !this.transcriptionError;
   }
 
-  /** 動いているのに、しばらく音が来ていない。Chrome のモードのマイクはページが開く */
+  /** 動いているのに、しばらく音が来ていない。確定の文を Chrome が作るなら、マイクはページが開く */
   get silent() {
     return (
       this.running &&
-      this.settings?.speechEngine !== "chrome" &&
+      !!this.settings &&
+      !chromeFinals(this.settings.toppings) &&
       this.level !== undefined &&
       this.now - this.heardAt > SILENT_MS
     );
@@ -193,10 +195,10 @@ class Panel {
       toast.success("Chrome をリセットしました");
     });
 
-  /** 鍵がないときの入口。押した人にだけ、Chrome のモードに切り替えて始める */
-  startWithChrome = () => {
+  /** 鍵がないときの入口。押した人にだけ、すべて無料に切り替えて始める */
+  startFree = () => {
     this.level = undefined;
-    return this.update({ speechEngine: "chrome", transcriptionEnabled: true });
+    return this.update({ toppings: FREE, transcriptionEnabled: true });
   };
 
   setTranscription(enabled: boolean) {

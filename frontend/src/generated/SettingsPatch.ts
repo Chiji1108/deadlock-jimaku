@@ -2,8 +2,8 @@
 import type { Anchor } from "./Anchor";
 import type { ItemCardsPatch } from "./ItemCardsPatch";
 import type { RankContent } from "./RankContent";
-import type { SpeechEngine } from "./SpeechEngine";
 import type { SubtitleDisplayPatch } from "./SubtitleDisplayPatch";
+import type { Toppings } from "./Toppings";
 
 /**
  * 操作パネルから変える項目。省いた項目は変えない
@@ -12,7 +12,11 @@ export type SettingsPatch = { transcriptionEnabled?: boolean,
 /**
  * 空文字列なら OS の既定の入力デバイス
  */
-micDevice?: string, micLanguage?: string, translateTo?: Array<string>, deadlockMode?: boolean, liveSubtitles?: boolean, speechEngine?: SpeechEngine, 
+micDevice?: string, micLanguage?: string, translateTo?: Array<string>, deadlockMode?: boolean, 
+/**
+ * 今の仕組みで作れない組み合わせは直して保存する
+ */
+toppings?: Toppings, 
 /**
  * SteamID64 か 32bit のアカウント ID。空文字列ならランクを表示しない
  */

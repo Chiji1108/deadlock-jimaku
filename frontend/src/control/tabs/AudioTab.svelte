@@ -13,7 +13,17 @@
   import PauseDialog from "../parts/PauseDialog.svelte";
   import { Badge } from "$lib/components/ui/badge";
   import { panel } from "../panel.svelte";
-  import { ENGINES } from "../../lib/engines";
+  import {
+    ITEMS,
+    PRESETS,
+    RECOMMENDED,
+    anyPaid,
+    chromeFinals,
+    presetOf,
+    unavailable,
+    usesChrome,
+  } from "../../lib/toppings";
+  import type { Toppings } from "../../generated/Toppings";
   import { translationOnly } from "../../lib/subtitle-lines";
 
   const MAX_TRANSLATE_TO = 4;
@@ -26,7 +36,11 @@
 
   const s = $derived(panel.settings!);
   const onlyTranslation = $derived(translationOnly(s));
-  const engine = $derived(ENGINES.find((e) => e.value === s.speechEngine)!);
+  const t = $derived(s.toppings);
+  const preset = $derived(presetOf(t));
+  const items = Object.entries(ITEMS) as [keyof Toppings, (typeof ITEMS)[keyof Toppings]][];
+  const choose = <K extends keyof Toppings>(item: K, value: Toppings[K]) =>
+    panel.update({ toppings: { ...t, [item]: value } });
   /** Chrome のウィンドウが字幕を止めている理由。止まっているか、回線の回復を待っている */
   const chromeProblem = $derived(
     panel.chromeStatus?.state === "failed" ||
@@ -35,8 +49,8 @@
       ? panel.chromeStatus.detail
       : undefined,
   );
-  /** ハイブリッドは確定の字幕を作れないと Chrome を閉じる */
-  const chromeClosed = $derived(s.speechEngine === "hybrid" && !!panel.transcriptionError);
+  /** 有料の品の字幕が止まったら Chrome を閉じる（字幕にならない音声を Google に送らない） */
+  const chromeClosed = $derived(anyPaid(t) && !!panel.transcriptionError);
   /** Chrome のウィンドウの今の状態 */
   const chromeNote = $derived.by(() => {
     if (chromeClosed) return "字幕が止まっているので閉じています";
@@ -46,7 +60,7 @@
     return "字幕の準備をしています";
   });
   const pause = $derived(s.segmentation.minSilenceMs);
-  const preset = $derived(PAUSES.find((p) => p.ms === pause));
+  const pausePreset = $derived(PAUSES.find((p) => p.ms === pause));
 
   const DEFAULT_DEVICE = "__default__";
   let confirmingReset = $state(false);
@@ -55,41 +69,40 @@
 <div class="flex flex-col gap-6">
   <Card.Root>
     <Card.Header>
-      <Card.Title>モード</Card.Title>
-      <Card.Description>字幕をどこで作るかを選びます</Card.Description>
+      <Card.Title>字幕の作り方</Card.Title>
+      <Card.Description
+        >品ごとに、無料か有料かを選べます。まとめて選ぶなら、下の 3 つから</Card.Description
+      >
     </Card.Header>
-    <Card.Content class="flex flex-col gap-3">
-      <div class="grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label="モード">
-        {#each ENGINES as e (e.value)}
+    <Card.Content class="flex flex-col gap-5">
+      <div class="grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label="まとめて選ぶ">
+        {#each PRESETS as p (p.name)}
           <button
             type="button"
             role="radio"
-            aria-checked={s.speechEngine === e.value}
+            aria-checked={preset?.name === p.name}
             class="flex flex-col gap-1 rounded-lg border p-3 text-left transition-colors hover:bg-muted aria-checked:border-foreground aria-checked:bg-muted"
-            onclick={() => panel.update({ speechEngine: e.value })}
+            onclick={() => panel.update({ toppings: p.toppings })}
           >
             <span class="flex items-center gap-2 text-sm font-medium">
-              {e.label}
-              {#if e.recommended}<Badge variant="secondary">おすすめ</Badge>{/if}
+              {p.label}
+              {#if p.recommended}<Badge variant="secondary">おすすめ</Badge>{/if}
             </span>
-            <span class="text-xs text-muted-foreground">{e.traits}</span>
-            <span class="text-xs text-muted-foreground tabular-nums">{e.price}</span>
+            <span class="text-xs text-muted-foreground">{p.traits}</span>
+            <span class="text-xs text-muted-foreground tabular-nums">{p.price}</span>
           </button>
         {/each}
       </div>
-      <p class="text-sm text-muted-foreground">
-        {engine.hint}{#if engine.needsKey}。OpenAI の API キーかギフトコードが要ります{/if}
-      </p>
-      {#if s.speechEngine === "chrome" && panel.hybridReady && !s.hybridHintClosed}
+      {#if preset?.name === "free" && panel.paidReady && !s.hybridHintClosed}
         <div class="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3">
-          <p class="text-sm">ハイブリッドにすると、確定の字幕が高い精度になります</p>
+          <p class="text-sm">おすすめにすると、確定の字幕が高い精度になります</p>
           <div class="flex gap-1">
             <Button
               variant="outline"
               size="sm"
-              onclick={() => panel.update({ speechEngine: "hybrid" })}
+              onclick={() => panel.update({ toppings: RECOMMENDED })}
             >
-              ハイブリッドにする
+              おすすめにする
             </Button>
             <Button
               variant="ghost"
@@ -101,7 +114,57 @@
           </div>
         </div>
       {/if}
-      {#if s.speechEngine !== "openai"}
+
+      {#each items as [item, spec] (item)}
+        <Field.Field>
+          <Field.Label>{spec.label}</Field.Label>
+          <Field.Description>
+            {spec.hint}
+            {#if item === "live" && onlyTranslation && t.live === "gptLiveTranscribe"}
+              。翻訳だけを出しているので、途中の字幕は出ません
+            {/if}
+          </Field.Description>
+          <ToggleGroup.Root
+            type="single"
+            variant="outline"
+            spacing={2}
+            class="flex-wrap justify-start"
+            value={t[item]}
+            onValueChange={(v) => v && choose(item, v as Toppings[typeof item])}
+          >
+            {#each spec.options as o (o.value)}
+              <ToggleGroup.Item
+                value={o.value}
+                class="h-auto flex-col items-start gap-0 py-2"
+                disabled={unavailable(t, item, o.value)}
+              >
+                <span>{o.label}</span>
+                <span class="text-xs text-muted-foreground tabular-nums">{o.price}</span>
+              </ToggleGroup.Item>
+            {/each}
+          </ToggleGroup.Root>
+          {#if item === "live" && chromeFinals(t)}
+            <Field.Description
+              >確定の文字起こしが Chrome なら、途中の字幕も Chrome です</Field.Description
+            >
+          {:else if item === "live" && t.translation === "chromeTranslator"}
+            <Field.Description
+              >Chrome の翻訳を使っている間は、途中の字幕も Chrome です</Field.Description
+            >
+          {:else if item === "translation" && !usesChrome(t)}
+            <Field.Description
+              >Chrome の翻訳は、途中の字幕が Chrome のときだけ選べます</Field.Description
+            >
+          {/if}
+        </Field.Field>
+      {/each}
+      {#if anyPaid(t)}
+        <p class="text-sm text-muted-foreground">
+          有料の品には OpenAI の API
+          キーかギフトコードが要ります。料金は使った分だけで、目安は「料金」タブに品ごとに出ます
+        </p>
+      {/if}
+      {#if usesChrome(t)}
         {#if s.transcriptionEnabled}
           <div class="flex flex-wrap items-center gap-3">
             {#if !chromeClosed}
@@ -121,7 +184,7 @@
           <Alert.Root variant="destructive">
             <Alert.Title>{chromeProblem}</Alert.Title>
             <Alert.Description class="flex flex-col items-start gap-2">
-              {#if s.speechEngine === "hybrid"}
+              {#if !chromeFinals(t)}
                 確定の字幕は出ています。話している途中の字幕だけが止まっています。
               {/if}
               {#if panel.chromeStatus?.state === "missing"}
@@ -190,7 +253,7 @@
         {/if}
       </Field.Field>
 
-      {#if s.speechEngine !== "chrome"}
+      {#if !chromeFinals(t)}
         <Field.Field>
           <Field.Label>入力レベル</Field.Label>
           <LevelMeter />
@@ -233,7 +296,7 @@
             {/each}
           </Select.Content>
         </Select.Root>
-        {#if s.speechEngine === "chrome" && s.micLanguage !== "ja"}
+        {#if t.translation === "chromeTranslator" && s.micLanguage !== "ja"}
           <Field.Description>ふりがなと用語の強調は日本語のときだけ出ます</Field.Description>
         {/if}
       </Field.Field>
@@ -253,29 +316,10 @@
         />
       </Field.Field>
 
-      {#if s.speechEngine === "openai"}<Field.Field orientation="horizontal">
-          <Field.Content>
-            <Field.Label for="live-subtitles">話している途中から字幕を出す</Field.Label>
-            <Field.Description>
-              {#if onlyTranslation}
-                翻訳だけを出しているので、途中の字幕は出ません
-              {:else}
-                オフにすると途中の字幕の料金がかかりません。字幕は話し終えてから出ます。切り替えると、字幕は始め直します
-              {/if}
-            </Field.Description>
-          </Field.Content>
-          <Switch
-            id="live-subtitles"
-            checked={s.liveSubtitles}
-            disabled={onlyTranslation}
-            onCheckedChange={(v) => panel.update({ liveSubtitles: v })}
-          />
-        </Field.Field>{/if}
-
       <Field.Field>
         <Field.Label>翻訳先</Field.Label>
         <Field.Description>
-          最大 {MAX_TRANSLATE_TO} つ（{s.translateTo.length} / {MAX_TRANSLATE_TO}）{#if s.speechEngine !== "chrome"}。1
+          最大 {MAX_TRANSLATE_TO} つ（{s.translateTo.length} / {MAX_TRANSLATE_TO}）{#if t.translation === "llm"}。1
             つ増えるごとに、話し続けて 1 時間あたり約 $0.3{/if}
         </Field.Description>
         <ToggleGroup.Root
@@ -313,7 +357,7 @@
         type="single"
         variant="outline"
         class="w-full"
-        value={preset ? String(pause) : ""}
+        value={pausePreset ? String(pause) : ""}
         onValueChange={(v) => v && panel.update({ minSilenceMs: Number(v) })}
       >
         {#each PAUSES as p (p.ms)}
@@ -324,7 +368,7 @@
         {/each}
       </ToggleGroup.Root>
       <p class="text-sm text-muted-foreground">
-        {preset ? preset.hint : `数値で指定しています（${pause} ミリ秒）`}
+        {pausePreset ? pausePreset.hint : `数値で指定しています（${pause} ミリ秒）`}
       </p>
     </Card.Content>
   </Card.Root>

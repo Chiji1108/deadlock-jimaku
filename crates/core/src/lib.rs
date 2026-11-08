@@ -4,6 +4,7 @@ pub mod audio;
 pub mod chrome;
 pub mod demo;
 pub mod enrich;
+pub mod finish;
 pub mod fonts;
 pub mod furigana;
 pub mod lang;

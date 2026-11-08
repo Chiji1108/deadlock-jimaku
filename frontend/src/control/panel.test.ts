@@ -4,6 +4,7 @@ import { panel, type FontTarget } from "./panel.svelte";
 import { addFontFaces, fontWeights } from "../lib/overlay-fonts";
 import type { FontEntry } from "../generated/FontEntry";
 import type { SettingsView } from "../generated/SettingsView";
+import { FREE } from "../lib/toppings";
 
 vi.mock("../lib/overlay-fonts", () => ({ addFontFaces: vi.fn(), fontWeights: vi.fn() }));
 vi.mock("../lib/ws", () => ({ connect: vi.fn(() => () => {}) }));
@@ -212,19 +213,20 @@ test("太さは 1 回だけ読み、読めなければ覚えずに読み直す",
 
 test.each([
   ["chrome", "missing", "missing", false],
-  ["hybrid", "missing", "missing", true],
-  ["openai", "missing", "missing", true],
-  ["hybrid", "saved", "missing", false],
-  ["hybrid", "missing", "saved", false],
-  ["openai", "missing", "saved", false],
-] as const)("キーの案内: %s、API キー %s、ギフトコード %s → %s", (engine, openai, gift, shown) => {
-  const fresh = freshPanel();
-  fresh.view = {
-    settings: { speechEngine: engine },
-    keys: { openai: { state: openai }, gift: { state: gift } },
-  } as unknown as SettingsView;
-  expect(fresh.needsKey).toBe(shown);
-});
+  ["gptTranscribe", "missing", "missing", true],
+  ["gptTranscribe", "saved", "missing", false],
+  ["gptTranscribe", "missing", "saved", false],
+] as const)(
+  "キーの案内: 確定の文字起こし %s、API キー %s、ギフトコード %s → %s",
+  (transcription, openai, gift, shown) => {
+    const fresh = freshPanel();
+    fresh.view = {
+      settings: { toppings: { ...FREE, transcription } },
+      keys: { openai: { state: openai }, gift: { state: gift } },
+    } as unknown as SettingsView;
+    expect(fresh.needsKey).toBe(shown);
+  },
+);
 
 test("設定が届く前はキーの案内を出さない", () => {
   expect(freshPanel().needsKey).toBe(false);

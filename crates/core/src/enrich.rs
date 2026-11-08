@@ -1,9 +1,10 @@
-//! 確定した字幕に、用語・ふりがな・翻訳を付ける（DESIGN.md 9 章）。
+//! 確定した字幕の用語・ふりがな・翻訳を LLM に聞く（DESIGN.md 9 章）。どれを LLM に聞くかは品の選択で決まり、
+//! 答えを字幕にまとめるのは `finish.rs`。
 //!
 //! - 用語と翻訳: LLM に辞書の用語の一覧（公式名とスキルの持ち主・番号）を渡し、字幕を「ふつうの文字」と
 //!   「用語」の区切りに分けさせ、同じ問い合わせで訳させる。略称・言い間違い・番号で呼んだスキルも文脈から決まる。
 //!   訳文の用語は `⟦hero:13⟧` のように参照で書かせ、各言語の公式名は描画時に辞書から出す
-//! - ふりがな: LLM に文ごとに聞き（`furigana`）、用語と同時に問い合わせる
+//! - ふりがな: LLM に文ごとに聞く（`furigana`）。用語と翻訳とは別の問い合わせで、同時に投げる
 //!
 //! 答えは確かめてから使う。区切りをつなげて字幕にならなければ用語を付けず、辞書にない参照は捨てる。
 //! ふりがなは文字の位置で区切りに当てはめる（`source_tokens`）。
@@ -23,7 +24,7 @@ use crate::lang;
 use crate::llm;
 use crate::openai::Access;
 use crate::settings::Models;
-use crate::types::{Enriched, EntityKind, Glossary, LangCode, RubySegment, Token, Translations};
+use crate::types::{EntityKind, Glossary, LangCode, RubySegment, Token, Translations};
 use crate::usage::{Meter, Use};
 
 const TIMEOUT: Duration = Duration::from_secs(8);
@@ -69,47 +70,15 @@ impl Enricher {
         }
     }
 
-    /// `context` は直前の確定字幕（古い順）。用語と翻訳に失敗したら、原文（とふりがな）だけ返す。
-    /// 雑音（咳やフィラーだけ）はバッチの文字起こしが空になるので、ここでは判定しない
-    pub async fn enrich(
+    /// 文全体の読み。日本語で漢字を含む文だけ聞く。答えが通らなければ None。
+    /// `context` は直前の確定字幕（古い順）
+    pub async fn furigana(
         &self,
         text: &str,
         context: &[String],
-        glossary: Option<&Glossary>,
-        furigana: bool,
-        on_draft: impl FnMut(Translations),
-    ) -> Enriched {
-        let glossary = glossary.filter(|_| self.deadlock_mode);
-        let (ruby, analysis) = tokio::join!(
-            self.furigana(text, context, furigana),
-            self.analyze(text, context, glossary, on_draft)
-        );
-        let (spans, translations) = match analysis {
-            Some(a) if self.deadlock_mode => (
-                a.spans(text, glossary),
-                a.translations(&self.targets, glossary),
-            ),
-            Some(a) => (
-                vec![Span::Text(text.to_owned())],
-                a.translations(&self.targets, None),
-            ),
-            None => (vec![Span::Text(text.to_owned())], BTreeMap::new()),
-        };
-        Enriched {
-            source: source_tokens(&spans, ruby.as_deref().unwrap_or_default()),
-            translations,
-        }
-    }
-
-    /// ふりがなを出す設定で、日本語で漢字を含む文だけ聞く。失敗したらふりがななし
-    async fn furigana(
-        &self,
-        text: &str,
-        context: &[String],
-        enabled: bool,
-    ) -> Option<Vec<RubySegment>> {
-        if !enabled || self.source_lang != "ja" || !text.chars().any(furigana::is_kanji) {
-            return None;
+    ) -> anyhow::Result<Option<Vec<RubySegment>>> {
+        if self.source_lang != "ja" || !text.chars().any(furigana::is_kanji) {
+            return Ok(None);
         }
         let model = furigana::Model {
             deadlock: self.deadlock_mode,
@@ -118,12 +87,31 @@ impl Enricher {
             reasoning_effort: self.reasoning_effort.as_deref(),
             meter: &self.meter,
         };
-        furigana::ask(&self.http, &model, text, context)
-            .await
-            .unwrap_or_else(|e| {
-                tracing::warn!("furigana: {e:#}");
-                None
-            })
+        furigana::ask(&self.http, &model, text, context).await
+    }
+
+    /// 原文の用語の区切りと訳文。辞書も翻訳先もなければ聞くことがなく、None。
+    /// 雑音（咳やフィラーだけ）はバッチの文字起こしが空になるので、ここでは判定しない
+    pub async fn terms_and_translations(
+        &self,
+        text: &str,
+        context: &[String],
+        glossary: Option<&Glossary>,
+        on_draft: impl FnMut(Translations),
+    ) -> anyhow::Result<Option<(Vec<Span>, Translations)>> {
+        let glossary = glossary.filter(|_| self.deadlock_mode);
+        let Some(analysis) = self.analyze(text, context, glossary, on_draft).await? else {
+            return Ok(None);
+        };
+        let spans = if self.deadlock_mode {
+            analysis.spans(text, glossary)
+        } else {
+            vec![Span::Text(text.to_owned())]
+        };
+        Ok(Some((
+            spans,
+            analysis.translations(&self.targets, glossary),
+        )))
     }
 
     /// 用語と翻訳。辞書も翻訳先もなければ聞くことがない
@@ -133,9 +121,9 @@ impl Enricher {
         context: &[String],
         glossary: Option<&Glossary>,
         mut on_draft: impl FnMut(Translations),
-    ) -> Option<Analysis> {
+    ) -> anyhow::Result<Option<Analysis>> {
         if glossary.is_none() && self.targets.is_empty() {
-            return None;
+            return Ok(None);
         }
         let user = json!({ "context": context, "transcript": text });
         let mut last = Translations::new();
@@ -167,8 +155,7 @@ impl Enricher {
             on_text,
         )
         .await
-        .inspect_err(|e| tracing::warn!("terms and translation: {e:#}"))
-        .ok()
+        .map(Some)
     }
 
     fn system(&self, glossary: Option<&Glossary>) -> Arc<str> {
@@ -391,7 +378,7 @@ fn push_text(tokens: &mut Vec<Token>, text: String) {
 
 /// 原文のトークン。文のふりがな（`ruby`、つなげると原文になる）を、文字の位置で区切りに当てはめる。
 /// 区切りをまたぐ部分はふりがなを付けない
-fn source_tokens(spans: &[Span], ruby: &[RubySegment]) -> Vec<Token> {
+pub(crate) fn source_tokens(spans: &[Span], ruby: &[RubySegment]) -> Vec<Token> {
     let mut placed = Vec::new();
     let mut pos = 0;
     for seg in ruby {
@@ -462,8 +449,9 @@ fn cover(text: &str, offset: usize, placed: &[(usize, usize, &RubySegment)]) -> 
     out
 }
 
+/// 原文の区切り。用語なら参照
 #[derive(Debug, PartialEq)]
-enum Span {
+pub enum Span {
     Text(String),
     Entity { reference: String, spoken: String },
 }
@@ -752,13 +740,14 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn no_llm_call_without_glossary_targets_and_furigana() {
+    async fn no_llm_call_without_glossary_and_targets() {
         // API キーもモデルも偽物なので、呼べばエラーになって warn が出るだけ。呼ばずに返ることを確かめる
         let e = enricher(&["ja"]);
         let started = std::time::Instant::now();
-        let out = e.enrich("ヘイズ強い", &[], None, false, |_| {}).await;
-        assert!(out.translations.is_empty());
-        assert_eq!(out.source, [text("ヘイズ強い")]);
+        let out = e
+            .terms_and_translations("ヘイズ強い", &[], None, |_| {})
+            .await;
+        assert!(out.unwrap().is_none());
         assert!(started.elapsed() < Duration::from_secs(1));
     }
 

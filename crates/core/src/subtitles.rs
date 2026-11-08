@@ -3,9 +3,10 @@
 //! マイク → VAD で区切る ─┬→ GPT-Live-Transcribe の delta を Segment に追記（partial）。
 //!                        │   Segment を開いたら音声を送り始め、閉じたら commit する
 //!                        └→ Segment が閉じたら区間を切り出して GPT-Transcribe（final）
-//!                             → ふりがな・翻訳・固有名詞（enriched）
+//!                             → ふりがな・翻訳・固有名詞（enriched。`finish.rs`）
 //!
-//! Chrome のモードの経路は `chrome.rs` にある。発話の形とオーバーレイへの出力だけを共有する。
+//! 確定の文を Chrome が作るときの経路は `chrome.rs` にある。確定の仕上げ（`Finisher`）、
+//! 発話の形とオーバーレイへの出力を共有する。
 //!
 //! Segment の状態を書き換えるのは `Pipeline` だけにする。バッチや enrich の結果もチャンネルで受け取って反映する。
 
@@ -18,7 +19,7 @@ use tokio::sync::{broadcast, mpsc};
 use crate::annotate::Annotator;
 use crate::audio::{self, History, SAMPLE_RATE};
 use crate::chrome;
-use crate::enrich::Enricher;
+use crate::finish::{self, Finished, Finisher};
 use crate::lang;
 use crate::now_ms;
 use crate::openai::Access;
@@ -85,6 +86,7 @@ pub async fn run(store: Arc<Store>, input: audio::Input, access: Access) -> anyh
     let audio_rx = audio::open(input).await?;
 
     let (done_tx, done_rx) = mpsc::channel(64);
+    let (finished_tx, finished_rx) = mpsc::channel(64);
     // 開く・音声・閉じるは同じチャンネルで順番どおりに送る
     let (delta_tx, delta_rx) = mpsc::channel(256);
     // オフなら Realtime につながず、確定の字幕だけを出す
@@ -110,14 +112,12 @@ pub async fn run(store: Arc<Store>, input: audio::Input, access: Access) -> anyh
     };
 
     let cloud = Cloud {
-        enricher: Arc::new(Enricher::new(
-            access.clone(),
-            &settings.models,
-            settings.mic_language.clone(),
-            settings.translate_to.clone(),
-            settings.deadlock_mode,
-            store.meter(),
+        finisher: Arc::new(Finisher::new(
+            store.clone(),
+            &settings,
+            Some(access.clone()),
         )),
+        finished_tx,
         batch: Arc::new(BatchContext {
             http: crate::http().clone(),
             access,
@@ -128,7 +128,15 @@ pub async fn run(store: Arc<Store>, input: audio::Input, access: Access) -> anyh
     };
     let pipeline = Pipeline::new(store, &settings, cloud, done_tx, realtime, annotator);
 
-    listen(pipeline, audio_rx, delta_rx, done_rx, chrome_events).await
+    listen(
+        pipeline,
+        audio_rx,
+        delta_rx,
+        done_rx,
+        finished_rx,
+        chrome_events,
+    )
+    .await
 }
 
 /// 入力が終わるか、鍵やギフトコードが断られるまで字幕にする
@@ -137,6 +145,7 @@ async fn listen(
     mut audio_rx: mpsc::Receiver<Vec<f32>>,
     mut delta_rx: mpsc::Receiver<stt::Delta>,
     mut done_rx: mpsc::Receiver<Done>,
+    mut finished_rx: mpsc::Receiver<Finished>,
     mut chrome_events: broadcast::Receiver<ChromeEvent>,
 ) -> anyhow::Result<()> {
     let mut level = LevelMeter::default();
@@ -151,6 +160,7 @@ async fn listen(
             }
             Some(delta) = delta_rx.recv() => pipeline.on_delta(delta),
             Some(done) = done_rx.recv() => pipeline.on_done(done),
+            Some(finished) = finished_rx.recv() => pipeline.on_finished(finished),
             Ok(event) = chrome_events.recv() => pipeline.on_chrome(event),
         }
     }
@@ -162,6 +172,7 @@ async fn listen(
     while pipeline.pending > 0 && pipeline.refused.is_none() {
         tokio::select! {
             Some(done) = done_rx.recv() => pipeline.on_done(done),
+            Some(finished) = finished_rx.recv() => pipeline.on_finished(finished),
             Some(delta) = delta_rx.recv() => pipeline.on_delta(delta),
         }
     }
@@ -199,10 +210,11 @@ impl LevelMeter {
     }
 }
 
-/// OpenAI の確定の字幕と enrich
+/// OpenAI の確定の字幕と、その仕上げ
 struct Cloud {
     batch: Arc<BatchContext>,
-    enricher: Arc<Enricher>,
+    finisher: Arc<Finisher>,
+    finished_tx: mpsc::Sender<Finished>,
 }
 
 struct Pipeline {
@@ -406,11 +418,17 @@ impl Pipeline {
                 self.on_transcribed(&id, text);
             }
             Done::Refused(refused) => self.refused = Some(refused),
-            Done::Draft { id, translations } => self.on_draft(&id, translations),
-            Done::Enriched { id, enriched } => {
+        }
+    }
+
+    fn on_finished(&mut self, finished: Finished) {
+        match finished {
+            Finished::Draft { id, translations } => self.on_draft(&id, translations),
+            Finished::Done { id, enriched } => {
                 self.pending -= 1;
                 self.on_enriched(&id, enriched);
             }
+            Finished::Refused(refused) => self.refused = Some(refused),
         }
     }
 
@@ -438,43 +456,25 @@ impl Pipeline {
             .then(|| self.annotator.annotate(&text, &plan.partial).0);
         self.store.upsert_segment(seg.clone());
 
-        let context: Vec<String> = self.context.iter().cloned().collect();
-        self.context.push_back(text.clone());
-        if self.context.len() > CONTEXT_LINES {
-            self.context.pop_front();
-        }
+        let context = push_context(&mut self.context, &text);
+        let (tokens, translate) = self.annotator.annotate(&text, &plan.finals);
         self.pending += 1;
-        // 辞書は enrich のたびに store から取る（後から届いたり、作り直されたりする）。
-        // ふりがなは出さない設定なら聞かない（字幕を止めずに切り替えられるので、そのときの設定を見る）
-        let glossary = self.store.glossary().map(|l| l.glossary);
-        let furigana = plan.finals.ruby.is_some();
-        tokio::spawn(enrich(
-            self.cloud.enricher.clone(),
-            id.to_owned(),
+        let heard = finish::Heard {
+            id: id.to_owned(),
             text,
             context,
-            glossary,
-            furigana,
-            self.done_tx.clone(),
-        ));
+            tokens,
+        };
+        let done = self.cloud.finished_tx.clone();
+        self.cloud
+            .finisher
+            .spawn(heard, translate, plan.finals, done);
     }
 
     fn on_draft(&mut self, id: &str, translations: Translations) {
         if let Some(seg) = self.live.get_mut(id) {
-            // 翻訳だけなら届いて初めて表示する。読む時間と並びはこの時刻から数える
-            if seg.draft.is_none() && self.store.settings().plan().translation_only {
-                seg.started_at = now_ms();
-            }
-            // 途中の字幕の訳が出ていれば、OpenAI の訳がそれを追い越すまで残す
-            let draft = seg.draft.get_or_insert_default();
-            for (lang, tokens) in translations {
-                if draft
-                    .get(&lang)
-                    .is_none_or(|old| text_len(old) <= text_len(&tokens))
-                {
-                    draft.insert(lang, tokens);
-                }
-            }
+            let translation_only = self.store.settings().plan().translation_only;
+            apply_llm_draft(seg, translations, translation_only);
             self.store.upsert_segment(seg.clone());
         }
     }
@@ -518,6 +518,37 @@ pub(crate) fn apply_draft(
     }
     seg.draft = Some(translations);
     true
+}
+
+/// LLM の書きかけの訳文を載せる。途中の字幕の訳が出ていれば、LLM の訳がそれを追い越すまで残す
+pub(crate) fn apply_llm_draft(
+    seg: &mut Segment,
+    translations: Translations,
+    translation_only: bool,
+) {
+    // 翻訳だけなら届いて初めて表示する。読む時間と並びはこの時刻から数える
+    if seg.draft.is_none() && translation_only {
+        seg.started_at = now_ms();
+    }
+    let draft = seg.draft.get_or_insert_default();
+    for (lang, tokens) in translations {
+        if draft
+            .get(&lang)
+            .is_none_or(|old| text_len(old) <= text_len(&tokens))
+        {
+            draft.insert(lang, tokens);
+        }
+    }
+}
+
+/// 確定した文を文脈に足し、足す前の文脈（LLM に渡す直前の確定字幕）を返す
+pub(crate) fn push_context(context: &mut VecDeque<String>, text: &str) -> Vec<String> {
+    let before = context.iter().cloned().collect();
+    context.push_back(text.to_owned());
+    if context.len() > CONTEXT_LINES {
+        context.pop_front();
+    }
+    before
 }
 
 /// まだ表示していなければ流す必要もない
@@ -608,15 +639,8 @@ struct BatchContext {
 enum Done {
     /// None ならバッチが失敗した
     Transcribed { id: String, text: Option<String> },
-    /// 書きかけの訳文
-    Draft {
-        id: String,
-        translations: Translations,
-    },
     /// OpenAI の鍵やギフトコードが断られた
     Refused(TranscriptionError),
-    /// 翻訳に失敗しても、固有名詞とふりがなは付いている
-    Enriched { id: String, enriched: Enriched },
 }
 
 async fn transcribe(
@@ -645,30 +669,6 @@ async fn transcribe(
         }
     };
     let _ = done.send(Done::Transcribed { id, text }).await;
-}
-
-async fn enrich(
-    enricher: Arc<Enricher>,
-    id: String,
-    text: String,
-    context: Vec<String>,
-    glossary: Option<Arc<Glossary>>,
-    furigana: bool,
-    done: mpsc::Sender<Done>,
-) {
-    let started = Instant::now();
-    let on_draft = |translations| {
-        // 書きかけは次のものが追い越すので、詰まっていたら捨てる
-        let _ = done.try_send(Done::Draft {
-            id: id.clone(),
-            translations,
-        });
-    };
-    let enriched = enricher
-        .enrich(&text, &context, glossary.as_deref(), furigana, on_draft)
-        .await;
-    tracing::debug!("enriched in {:?}", started.elapsed());
-    let _ = done.send(Done::Enriched { id, enriched }).await;
 }
 
 /// 用語ヒント: 話す言語での名前（DESIGN.md 8.4）。
@@ -833,26 +833,28 @@ mod tests {
     ) {
         let (done_tx, _done) = mpsc::channel(1);
         let access = Access::gift("code".into(), "http://127.0.0.1:9");
-        let pipeline = hybrid_pipeline_to(access, done_tx).await;
+        let (pipeline, _finished) = hybrid_pipeline_to(access, done_tx).await;
         let messages = pipeline.store.subscribe();
         (pipeline, messages)
     }
 
-    async fn hybrid_pipeline_to(access: Access, done_tx: mpsc::Sender<Done>) -> Pipeline {
+    async fn hybrid_pipeline_to(
+        access: Access,
+        done_tx: mpsc::Sender<Done>,
+    ) -> (Pipeline, mpsc::Receiver<Finished>) {
         let settings = Settings {
-            speech_engine: crate::settings::SpeechEngine::Hybrid,
+            toppings: crate::settings::Toppings::RECOMMENDED,
             ..Settings::default()
         };
         let store = Store::new(Ok(settings.clone()), std::path::PathBuf::new());
+        let (finished_tx, finished_rx) = mpsc::channel(64);
         let cloud = Cloud {
-            enricher: Arc::new(Enricher::new(
-                access.clone(),
-                &settings.models,
-                settings.mic_language.clone(),
-                settings.translate_to.clone(),
-                settings.deadlock_mode,
-                store.meter(),
+            finisher: Arc::new(Finisher::new(
+                store.clone(),
+                &settings,
+                Some(access.clone()),
             )),
+            finished_tx,
             batch: Arc::new(BatchContext {
                 http: crate::http().clone(),
                 access,
@@ -866,7 +868,8 @@ mod tests {
             }),
         };
         let annotator = Annotator::new(store.clone(), &settings).await;
-        Pipeline::new(store, &settings, cloud, done_tx, None, annotator)
+        let pipeline = Pipeline::new(store, &settings, cloud, done_tx, None, annotator);
+        (pipeline, finished_rx)
     }
 
     fn heard(text: &str, cut: u32) -> crate::types::Heard {
@@ -1085,7 +1088,8 @@ mod tests {
     async fn a_refusal_stops_at_once_and_drops_what_is_left() {
         let (api, requests) = refusing_after_one_silent_request().await;
         let (done_tx, done_rx) = mpsc::channel(64);
-        let mut pipeline = hybrid_pipeline_to(Access::gift("code".into(), &api), done_tx).await;
+        let (mut pipeline, finished_rx) =
+            hybrid_pipeline_to(Access::gift("code".into(), &api), done_tx).await;
         let store = pipeline.store.clone();
         let mut messages = store.subscribe();
         let open = open_utterance(&mut pipeline);
@@ -1095,7 +1099,7 @@ mod tests {
         let (_audio, audio_rx) = mpsc::channel(1);
         let (_delta, delta_rx) = mpsc::channel(1);
         let events = store.subscribe_chrome();
-        let run = listen(pipeline, audio_rx, delta_rx, done_rx, events);
+        let run = listen(pipeline, audio_rx, delta_rx, done_rx, finished_rx, events);
         let refused = tokio::time::timeout(Duration::from_secs(2), run)
             .await
             .expect("the refusal does not wait for the silent request")
@@ -1119,14 +1123,15 @@ mod tests {
     async fn a_refusal_while_draining_stops_at_once() {
         let (api, _requests) = refusing_after_one_silent_request().await;
         let (done_tx, done_rx) = mpsc::channel(64);
-        let mut pipeline = hybrid_pipeline_to(Access::gift("code".into(), &api), done_tx).await;
+        let (mut pipeline, finished_rx) =
+            hybrid_pipeline_to(Access::gift("code".into(), &api), done_tx).await;
         let events = pipeline.store.subscribe_chrome();
         utterance(&mut pipeline);
         utterance(&mut pipeline);
 
         let (_, audio_rx) = mpsc::channel(1);
         let (_delta, delta_rx) = mpsc::channel(1);
-        let run = listen(pipeline, audio_rx, delta_rx, done_rx, events);
+        let run = listen(pipeline, audio_rx, delta_rx, done_rx, finished_rx, events);
         let refused = tokio::time::timeout(Duration::from_secs(2), run)
             .await
             .expect("the refusal does not wait for the silent request")

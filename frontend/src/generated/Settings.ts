@@ -6,9 +6,9 @@ import type { RankContent } from "./RankContent";
 import type { RankStyle } from "./RankStyle";
 import type { Region } from "./Region";
 import type { Segmentation } from "./Segmentation";
-import type { SpeechEngine } from "./SpeechEngine";
 import type { SubtitleDisplay } from "./SubtitleDisplay";
 import type { SubtitleStyle } from "./SubtitleStyle";
+import type { Toppings } from "./Toppings";
 
 export type Settings = { 
 /**
@@ -16,9 +16,9 @@ export type Settings = {
  */
 transcriptionEnabled: boolean, 
 /**
- * 音声認識と翻訳をどこで動かすか
+ * 品ごとに、無料（Chrome と PC の中）か有料（OpenAI）か
  */
-speechEngine: SpeechEngine, 
+toppings: Toppings, 
 /**
  * 配信者が話す言語
  */
@@ -35,10 +35,6 @@ translateTo: Array<string>,
  * ヒーロー・スキル・アイテムを判定して強調し、アイテム説明を出す。雑談の配信ならオフにする
  */
 deadlockMode: boolean, 
-/**
- * 話している途中から字幕を出す。オフなら話し終えてから出し、途中の字幕の料金がかからない
- */
-liveSubtitles: boolean, 
 /**
  * 字幕オーバーレイの見せ方。変えると表示中のオーバーレイにそのまま届く
  */
@@ -85,7 +81,7 @@ onboardingClosed: boolean,
  */
 trayNoticeSeen: boolean, 
 /**
- * Chrome のモードの「ハイブリッドにする」の提案を閉じた
+ * 無料で使っている人への「おすすめにする」の提案を閉じた
  */
 hybridHintClosed: boolean, models: Models, 
 /**

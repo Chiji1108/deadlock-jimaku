@@ -6,7 +6,7 @@ Deadlock の配信者向けの OBS オーバーレイ（非公式）。
 - **ランク**: ランクのアイコン・名前・ポイントのゲージ
 - **アイテム説明**: 字幕でアイテム名が出たら、その説明をゲーム内と同じカードで出す
 
-字幕の作り方は 3 つのモードから選べます。まず無料の Chrome のモード（既定）で、キーなしで始められます。API キーかギフトコードを入れると、おすすめのハイブリッドに切り替えられます。OpenAI のモードも API キーかギフトコードで使います。ハイブリッドと Chrome は Google Chrome が必要で、字幕を始めると小さな Chrome のウィンドウが開きます。設定はアプリの操作パネルから行います。
+字幕の作り方は、品（途中の字幕、確定の文字起こし、翻訳と用語、ふりがな）ごとに無料か有料かを選べます。まずはすべて無料（既定）で、キーなしで始められます。API キーかギフトコードを入れると、有料の品（OpenAI）を選べます。まとめて選ぶ見本として「無料」「おすすめ」「OpenAI」の 3 つがあります。途中の字幕が Chrome なら Google Chrome が必要で、字幕を始めると小さな Chrome のウィンドウが開きます。設定はアプリの操作パネルから行います。
 
 サイトは [jimaku.deadlock.jp](https://jimaku.deadlock.jp)。設計は [DESIGN.md](DESIGN.md) を見てください。
 
@@ -28,11 +28,11 @@ macOS 版は Apple の署名と公証を済ませています。Windows 版は�
 
 ## しくみ
 
-開発する人のための地図です。理由は [DESIGN.md](DESIGN.md) を見てください（モードは 9.6、おすそ分けは 17.1、LP は 17 章）。
+開発する人のための地図です。理由は [DESIGN.md](DESIGN.md) を見てください（品は 9.6、おすそ分けは 17.1、LP は 17 章）。
 
-字幕を何で作るかは、モードと設定から `Settings::plan` が決めます（`crates/core/src/settings.rs`。この表はテストに同じ値があります）。
+字幕を何で作るかは、品の選択（設定の `toppings`）と設定から `Settings::plan` が決めます（`crates/core/src/settings.rs`）。表は 3 つの見本の組み合わせで、テストに同じ値があります。品は 1 つずつ選び直せ、確定の欄はその品の行だけが変わります。
 
-| | ハイブリッド | OpenAI | Chrome |
+| | おすすめ | OpenAI | 無料 |
 |---|---|---|---|
 | 途中の字幕 | Chrome | GPT-Live-Transcribe | Chrome |
 | 途中の翻訳 | Chrome Translator | なし | Chrome Translator |
@@ -43,7 +43,11 @@ macOS 版は Apple の署名と公証を済ませています。Windows 版は�
 | 確定のふりがな | GPT-6.1 Terra | GPT-6.1 Terra | Lindera |
 | 確定の強調 | GPT-6.1 Terra | GPT-6.1 Terra | 辞書の一致 |
 
-翻訳先がない、翻訳だけを見せる、ふりがなやデッドロックモードを切る、話す言語が日本語でない（Lindera と辞書の一致は日本語だけ）ときは、その項目が「なし」になります。
+翻訳先がない、翻訳だけを見せる、ふりがなやデッドロックモードを切る、話す言語が日本語でない（Lindera と辞書の一致は日本語だけ）ときは、その項目が「なし」になります。途中の字幕は「出さない」も選べます。
+
+今の仕組みで作れない組み合わせは `Toppings::sanitized` が直します。確定の文字起こしが Chrome なら途中の字幕も Chrome（発話の区切りを Chrome が決める）、Chrome の翻訳は途中の字幕が Chrome のときだけです。翻訳と用語は 1 つの品です（訳文の名前を用語から作るので）。
+
+確定の文には、どちらの経路でも `finish.rs` が品ごとに用語・ふりがな・翻訳を付け、1 つの字幕にまとめます。LLM に聞くもの（`enrich.rs`）と Chrome の翻訳は同時に待ちます。
 
 ```mermaid
 flowchart LR
@@ -77,14 +81,14 @@ flowchart LR
 ```
 
 - 操作パネルは Tauri のウィンドウでも OBS のドックでも同じ画面で、`/api` と `/ws` だけを使います。
-- ハイブリッドと Chrome のモードでは、アプリが専用のプロファイルの Chrome を起動します。音声認識と翻訳は Chrome が行い、ふりがなと辞書の一致は中核の中で Lindera + IPADIC が行います。
+- 途中の字幕が Chrome なら、アプリが専用のプロファイルの Chrome を起動します。音声認識と翻訳は Chrome が行い、ふりがなと辞書の一致は中核の中で Lindera + IPADIC が行います。
 - 自分の API キーがあれば OpenAI へ直接送ります。なければギフトコードで Worker を通します。Worker は同じパスで中継するので、下の図の OpenAI はどちらの経路でも同じです。
 
 ### 声と文字の流れ
 
-モードは設定の `speechEngine` で決まります。図は処理の順で、黄色は PC の外です。OpenAI とのやりとりは、すべて中核が行います。字幕は `/ws` でオーバーレイと操作パネルに届きます。
+図は 3 つの見本の組み合わせの処理の順で、黄色は PC の外です。確定の文字起こしが有料なら上の 2 つ（アプリのマイクと VAD で区切る）、Chrome なら 3 つ目（Chrome が区切る）の経路です。OpenAI とのやりとりは、すべて中核が行います。字幕は `/ws` でオーバーレイと操作パネルに届きます。
 
-**`hybrid`（ハイブリッド）。** 途中の字幕は Chrome で作ります。発話が終わると、アプリのマイクの声と文字を OpenAI に送ります。Chrome にも同じマイクを渡します（渡せない環境では Chrome の既定のマイクを使い、操作パネルに出します）。
+**おすすめ。** 途中の字幕は Chrome で作ります。発話が終わると、アプリのマイクの声と文字を OpenAI に送ります。Chrome にも同じマイクを渡します（渡せない環境では Chrome の既定のマイクを使い、操作パネルに出します）。
 
 ```mermaid
 flowchart LR
@@ -101,7 +105,7 @@ flowchart LR
   class google,batch,llm cloud
 ```
 
-**`openai`（OpenAI）。** 途中の字幕も OpenAI で作ります。途中の字幕を切ると、Realtime にはつなぎません。
+**OpenAI。** 途中の字幕も OpenAI で作ります。途中の字幕を「出さない」にすると、Realtime にはつなぎません。
 
 ```mermaid
 flowchart LR
@@ -115,7 +119,7 @@ flowchart LR
   class realtime,batch,llm cloud
 ```
 
-**`chrome`（Chrome）。** 音声認識も翻訳も Chrome で行い、声は Chrome を通じて Google に送られます。読みと用語は中核で付け、OpenAI には何も送りません。
+**無料。** 音声認識も翻訳も Chrome で行い、声は Chrome を通じて Google に送られます。読みと用語は中核で付け、OpenAI には何も送りません。翻訳と用語かふりがなを有料にすると、確定の文だけを OpenAI に送ります（音声は送りません）。
 
 ```mermaid
 flowchart LR

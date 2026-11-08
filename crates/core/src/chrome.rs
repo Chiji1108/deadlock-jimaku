@@ -1,4 +1,4 @@
-//! Chrome のモード（DESIGN.md 9.6）。Chrome の起動と、ページが認識した文を字幕にする経路。
+//! Chrome の品（DESIGN.md 9.6）。Chrome の起動と、ページが認識した文を字幕にする経路。
 //!
 //! 全画面のゲームに隠れても認識が止まらないよう、省電力の働きを切った Chrome を専用のプロファイルで起動する。
 //! フラグは Chrome の起動時にしか効かないので、ふだんの Chrome のプロファイルとは分ける。
@@ -6,9 +6,10 @@
 //! 翻訳モデルのダウンロードにはクリックが要るが、起動した Chrome を開発者ツールの仕組み
 //! （CDP。この PC の中からだけ接続できる）で操作して、手を煩わせずに済ませる。
 //!
-//! 字幕の経路が音声の処理と共有するのは、読みと用語（`Annotator`）、発話の形とオーバーレイへの出力だけ
+//! 字幕の経路が音声の処理と共有するのは、読みと用語（`Annotator`）、確定の仕上げ（`Finisher`）、
+//! 発話の形とオーバーレイへの出力だけ
 
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -19,18 +20,21 @@ use std::time::Duration;
 use anyhow::Context;
 use futures_util::{SinkExt, StreamExt};
 use serde_json::{Value, json};
+use tokio::sync::broadcast;
 use tokio::task::JoinHandle;
 use tokio::time::MissedTickBehavior;
 use tokio_tungstenite::tungstenite::Message;
 
 use crate::DEFAULT_PORT;
 use crate::annotate::Annotator;
+use crate::finish::{self, Finished, Finisher};
+use crate::openai::Access;
 use crate::settings::Settings;
 use crate::store::{ChromeEvent, Store};
 use crate::subtitles;
 use crate::types::{
-    ChromeCommand, ChromeTask, Enriched, Heard, LangCode, LiveState, LiveStatus, Segment, Stage,
-    Translatable, Translated, Translations,
+    ChromeCommand, ChromeTask, Heard, LangCode, LiveState, LiveStatus, Segment, Stage,
+    TranscriptionError, Translatable, Translated, Translations,
 };
 
 const FLAGS: [&str; 7] = [
@@ -51,6 +55,8 @@ const RETRY: Duration = Duration::from_millis(200);
 const REMOVE_ATTEMPTS: u32 = 25;
 /// ページの準備が要らないか確かめる間隔
 const CHECK_INTERVAL: Duration = Duration::from_secs(1);
+/// 確定の文の訳を待つ長さ。ページが固まっても、字幕を仕上げずに残さない
+const FINAL_TRANSLATION_TIMEOUT: Duration = Duration::from_secs(10);
 /// ページが落ちたときに操作パネルに出す案内
 pub(crate) const CRASHED: &str = "Chrome のページが落ちました。「Chrome を開き直す」で戻せます";
 
@@ -379,17 +385,66 @@ pub(crate) fn ask_translation(
     }))
 }
 
-/// ページが認識した文を字幕にする。止めるまで続く（ページが閉じられても、開き直せば続きが出る）
-pub async fn run(store: Arc<Store>) -> anyhow::Result<()> {
+/// ページに確定の文を訳してもらう。頼んだときから聞くので、訳がすぐ届いても取りこぼさない。
+/// ページが開いていなければ None
+pub(crate) fn ask_final_translation(
+    store: &Store,
+    id: String,
+    translate: Translatable,
+) -> Option<broadcast::Receiver<ChromeEvent>> {
+    let events = store.subscribe_chrome();
+    ask_translation(store, id, translate, true).then_some(events)
+}
+
+/// 頼んだ確定の文の訳を待つ。ページが閉じられるか、答えが来なければ訳なし
+pub(crate) async fn final_translation(
+    mut events: broadcast::Receiver<ChromeEvent>,
+    id: &str,
+) -> Translations {
+    let wait = async {
+        loop {
+            match events.recv().await {
+                Ok(ChromeEvent::Translated(Translated {
+                    id: done,
+                    is_final: true,
+                    translations,
+                })) if done == id => return translations,
+                // 取りこぼした訳を待ち続けない
+                Ok(ChromeEvent::Closed) | Err(_) => return Translations::new(),
+                Ok(_) => {}
+            }
+        }
+    };
+    tokio::time::timeout(FINAL_TRANSLATION_TIMEOUT, wait)
+        .await
+        .unwrap_or_else(|_| {
+            tracing::warn!("no final translation from the page");
+            Translations::new()
+        })
+}
+
+/// ページが認識した文を字幕にする。止めるまで続く（ページが閉じられても、開き直せば続きが出る）。
+/// `access` は確定の仕上げに LLM を使う品があるときだけ
+pub async fn run(store: Arc<Store>, access: Option<Access>) -> anyhow::Result<()> {
     let settings = store.settings();
     let annotator = Annotator::new(store.clone(), &settings).await;
+    let finisher = Arc::new(Finisher::new(store.clone(), &settings, access));
     let mut events = store.subscribe_chrome();
-    let mut subtitles = Subtitles::new(store, &settings, annotator);
+    let (done_tx, mut done_rx) = tokio::sync::mpsc::channel(64);
+    let mut subtitles = Subtitles::new(store, &settings, annotator, finisher, done_tx);
     loop {
-        match events.recv().await {
-            Ok(event) => subtitles.on_event(event),
-            // 取りこぼした確定の文や訳を待ち続けない
-            Err(_) => subtitles.on_closed(),
+        tokio::select! {
+            event = events.recv() => match event {
+                Ok(event) => subtitles.on_event(event),
+                Err(_) => subtitles.on_closed(),
+            },
+            Some(finished) = done_rx.recv() => {
+                // 断られた鍵へは送らない。待っていた結果は捨てる
+                if let Some(refused) = subtitles.on_finished(finished) {
+                    subtitles.store.discard_unsettled();
+                    return Err(refused.into());
+                }
+            }
         }
     }
 }
@@ -398,21 +453,34 @@ struct Subtitles {
     store: Arc<Store>,
     lang: LangCode,
     annotator: Annotator,
-    /// 翻訳を待っている発話
+    finisher: Arc<Finisher>,
+    done_tx: tokio::sync::mpsc::Sender<Finished>,
+    /// 確定の仕上げを待っている発話
     live: HashMap<String, Segment>,
     current: Option<String>,
     seq: u64,
+    /// 直前の確定字幕（LLM の文脈）
+    context: VecDeque<String>,
 }
 
 impl Subtitles {
-    fn new(store: Arc<Store>, settings: &Settings, annotator: Annotator) -> Self {
+    fn new(
+        store: Arc<Store>,
+        settings: &Settings,
+        annotator: Annotator,
+        finisher: Arc<Finisher>,
+        done_tx: tokio::sync::mpsc::Sender<Finished>,
+    ) -> Self {
         Self {
             store,
             lang: settings.mic_language.clone(),
             annotator,
+            finisher,
+            done_tx,
             live: HashMap::new(),
             current: None,
             seq: 0,
+            context: VecDeque::new(),
         }
     }
 
@@ -450,18 +518,27 @@ impl Subtitles {
         let Some(seg) = self.live.get_mut(&id) else {
             return;
         };
-        seg.text = text;
-        seg.tokens = Some(tokens);
-        if is_final {
-            seg.stage = Stage::Final;
-            self.current = None;
+        seg.text.clone_from(&text);
+        seg.tokens = Some(tokens.clone());
+        if !is_final {
+            self.store.upsert_segment(seg.clone());
+            if phase.translation.is_some() {
+                ask_translation(&self.store, id, translate, false);
+            }
+            return;
         }
+        seg.stage = Stage::Final;
+        self.current = None;
         self.store.upsert_segment(seg.clone());
-        let asked = phase.translation.is_some()
-            && ask_translation(&self.store, id.clone(), translate, is_final);
-        if is_final && !asked {
-            self.settle(&id, Translations::new());
-        }
+        let context = subtitles::push_context(&mut self.context, &text);
+        let heard = finish::Heard {
+            id,
+            text,
+            context,
+            tokens,
+        };
+        self.finisher
+            .spawn(heard, translate, phase, self.done_tx.clone());
     }
 
     fn discard(&mut self, id: &str) {
@@ -470,16 +547,16 @@ impl Subtitles {
         }
     }
 
+    /// 途中の文の訳。確定の文の訳は `Finisher` が待つ
     fn on_translated(&mut self, translated: Translated) {
         let Translated {
             id,
-            is_final,
+            is_final: false,
             translations,
-        } = translated;
-        if is_final {
-            self.settle(&id, translations);
+        } = translated
+        else {
             return;
-        }
+        };
         if let Some(seg) = self.live.get_mut(&id) {
             let translation_only = self.store.settings().plan().translation_only;
             if subtitles::apply_draft(seg, translations, translation_only) {
@@ -488,28 +565,31 @@ impl Subtitles {
         }
     }
 
-    fn settle(&mut self, id: &str, translations: Translations) {
-        let Some(seg) = self.live.remove(id) else {
-            return;
-        };
-        let source = seg.tokens.clone().unwrap_or_default();
-        let enriched = Enriched {
-            source,
-            translations,
-        };
+    /// 断られたら、その理由を返す
+    fn on_finished(&mut self, finished: Finished) -> Option<TranscriptionError> {
         let translation_only = self.store.settings().plan().translation_only;
-        self.store
-            .upsert_segment(subtitles::settled(seg, enriched, translation_only));
+        match finished {
+            Finished::Draft { id, translations } => {
+                if let Some(seg) = self.live.get_mut(&id) {
+                    subtitles::apply_llm_draft(seg, translations, translation_only);
+                    self.store.upsert_segment(seg.clone());
+                }
+            }
+            Finished::Done { id, enriched } => {
+                if let Some(seg) = self.live.remove(&id) {
+                    self.store
+                        .upsert_segment(subtitles::settled(seg, enriched, translation_only));
+                }
+            }
+            Finished::Refused(refused) => return Some(refused),
+        }
+        None
     }
 
-    /// ページが閉じられた。開いている発話を捨て、訳を待っている発話は訳なしで閉じる
+    /// ページが閉じられた。開いている発話を捨てる。訳を待っている発話は訳なしで仕上がる（`final_translation`）
     fn on_closed(&mut self) {
         if let Some(id) = self.current.take() {
             self.discard(&id);
-        }
-        let waiting: Vec<String> = self.live.keys().cloned().collect();
-        for id in waiting {
-            self.settle(&id, Translations::new());
         }
     }
 }
@@ -552,7 +632,7 @@ mod tests {
 
     fn running_store() -> Arc<Store> {
         let settings = Settings {
-            speech_engine: crate::settings::SpeechEngine::Chrome,
+            toppings: crate::settings::Toppings::FREE,
             transcription_enabled: true,
             ..Settings::default()
         };
@@ -668,16 +748,31 @@ mod tests {
             .unwrap();
     }
 
-    async fn subtitles() -> (Subtitles, tokio::sync::broadcast::Receiver<ServerMsg>) {
+    type Messages = tokio::sync::broadcast::Receiver<ServerMsg>;
+    type Done = tokio::sync::mpsc::Receiver<Finished>;
+
+    async fn subtitles() -> (Subtitles, Messages, Done) {
         let settings = Settings {
-            speech_engine: crate::settings::SpeechEngine::Chrome,
+            toppings: crate::settings::Toppings::FREE,
             translate_to: vec!["en".into()],
             ..Settings::default()
         };
         let store = Store::new(Ok(settings.clone()), std::path::PathBuf::new());
         let messages = store.subscribe();
         let annotator = Annotator::new(store.clone(), &settings).await;
-        (Subtitles::new(store, &settings, annotator), messages)
+        let finisher = Arc::new(Finisher::new(store.clone(), &settings, None));
+        let (done_tx, done) = tokio::sync::mpsc::channel(8);
+        let subs = Subtitles::new(store, &settings, annotator, finisher, done_tx);
+        (subs, messages, done)
+    }
+
+    /// 確定の仕上げが終わるのを待って、字幕の処理に渡す
+    async fn finish_next(subs: &mut Subtitles, done: &mut Done) {
+        let finished = tokio::time::timeout(Duration::from_secs(1), done.recv())
+            .await
+            .expect("finished")
+            .unwrap();
+        subs.on_finished(finished);
     }
 
     fn heard(text: &str, is_final: bool) -> Heard {
@@ -717,7 +812,7 @@ mod tests {
 
     #[tokio::test]
     async fn a_text_goes_through_the_translator_to_the_overlay() {
-        let (mut subs, mut messages) = subtitles().await;
+        let (mut subs, mut messages, mut done) = subtitles().await;
         let mut tasks = subs.store.subscribe_chrome_commands();
         subs.on_heard(heard("ヘイズ", false));
         assert_eq!(
@@ -737,7 +832,9 @@ mod tests {
             Some((Stage::Final, "ヘイズが強い".to_owned()))
         );
         assert!(matches!(tasks.try_recv(), Ok(ChromeCommand::Translate(t)) if t.is_final));
-        subs.on_translated(translated(&id, true));
+        subs.store
+            .send_chrome_event(ChromeEvent::Translated(translated(&id, true)));
+        finish_next(&mut subs, &mut done).await;
         assert_eq!(
             last_upsert(&mut messages),
             Some((Stage::Enriched, "ヘイズが強い".to_owned()))
@@ -748,12 +845,14 @@ mod tests {
     /// 文と読みは同時に変わるので、確定でふりがなやアイコンが消える瞬間がない
     #[tokio::test]
     async fn every_update_has_tokens_for_its_text() {
-        let (mut subs, mut messages) = subtitles().await;
+        let (mut subs, mut messages, mut done) = subtitles().await;
         let _tasks = subs.store.subscribe_chrome_commands();
         subs.on_heard(heard("呪いの", false));
         subs.on_heard(heard("呪いの遺物", true));
         let id = subs.live.keys().next().unwrap().clone();
-        subs.on_translated(translated(&id, true));
+        subs.store
+            .send_chrome_event(ChromeEvent::Translated(translated(&id, true)));
+        finish_next(&mut subs, &mut done).await;
         let segments = upserts(&mut messages);
         assert_eq!(segments.len(), 3);
         for segment in segments {
@@ -771,7 +870,7 @@ mod tests {
 
     #[tokio::test]
     async fn a_late_draft_does_not_settle_the_subtitle() {
-        let (mut subs, _messages) = subtitles().await;
+        let (mut subs, _messages, _done) = subtitles().await;
         let _tasks = subs.store.subscribe_chrome_commands();
         subs.on_heard(heard("リロード", true));
         let id = subs.live.keys().next().unwrap().clone();
@@ -781,8 +880,9 @@ mod tests {
 
     #[tokio::test]
     async fn without_a_page_the_subtitle_settles_without_a_translation() {
-        let (mut subs, mut messages) = subtitles().await;
+        let (mut subs, mut messages, mut done) = subtitles().await;
         subs.on_heard(heard("リロード", true));
+        finish_next(&mut subs, &mut done).await;
         assert_eq!(
             last_upsert(&mut messages),
             Some((Stage::Enriched, "リロード".to_owned()))
@@ -791,18 +891,20 @@ mod tests {
 
     #[tokio::test]
     async fn closing_the_page_clears_what_is_waiting() {
-        let (mut subs, mut messages) = subtitles().await;
+        let (mut subs, mut messages, mut done) = subtitles().await;
         let _tasks = subs.store.subscribe_chrome_commands();
         subs.on_heard(heard("リロード", true));
         subs.on_heard(heard("ヘイズ", false));
+        subs.store.send_chrome_event(ChromeEvent::Closed);
         subs.on_closed();
+        finish_next(&mut subs, &mut done).await;
         assert!(subs.live.is_empty() && subs.current.is_none());
         assert!(last_upsert(&mut messages).is_some());
     }
 
     #[tokio::test]
     async fn an_empty_final_text_discards_the_open_subtitle() {
-        let (mut subs, mut messages) = subtitles().await;
+        let (mut subs, mut messages, _done) = subtitles().await;
         subs.on_heard(heard("", true));
         assert!(subs.live.is_empty(), "開いている字幕がない");
 
