@@ -14,7 +14,7 @@
 
   let rank = $state<RankState | undefined>();
   /** ランク名の言語と、出すもの。操作パネルで変え、サーバーから届く（名前がなければ英語） */
-  let lang = $state("ja");
+  let lang = $state<string | undefined>();
   /** 表示の設定が届くまでは描かない（設定と違う形で一瞬出さない） */
   let content = $state<RankContent | undefined>();
   let anchor = $state<Anchor>("top-left");
@@ -26,9 +26,20 @@
 
   /** 操作パネルのプレビュー（`?preview`）では、アカウントを入れる前でも見本を出しておく。OBS には出さない */
   const preview = new URLSearchParams(location.search).has("preview");
-  /** 見本は core が本物と同じ作り方で返す（ゲームの画像は配布物に入れず、取ってくる） */
-  let sample = $state<RankState | undefined>();
-  const shown = $derived(rank ?? sample);
+  /** 見本は core が本物と同じ作り方で返す（ゲームの画像は配布物に入れず、取ってくる）。
+   * 名前はランクの言語の分だけ取るので、言語を変えたら、届くまで前の言語の名前のまま出す */
+  let sample = $state<{ rank: RankState; lang: string } | undefined>();
+  const shown = $derived(rank && lang ? { rank, lang } : sample);
+
+  $effect(() => {
+    if (!preview || !lang) return;
+    const want = lang;
+    let stale = false;
+    void api.rankSample(want).then((s) => {
+      if (!stale) sample = { rank: { ...s, image: s.image ?? FALLBACK_IMAGE }, lang: want };
+    });
+    return () => (stale = true);
+  });
 
   // 大きさは --scale で描く（zoom だとポイントの数字のアニメーションの位置がずれる）
   $effect(() =>
@@ -40,8 +51,6 @@
   );
 
   onMount(() => {
-    if (preview)
-      void api.rankSample().then((s) => (sample = { ...s, image: s.image ?? FALLBACK_IMAGE }));
     return connect(["rank", "display"], (msg) => {
       if (msg.type === "rank.update") rank = msg.rank ?? undefined;
       if (msg.type === "display") {
@@ -59,9 +68,9 @@
 <div class="stage" style:place-items={placeItems(anchor)}>
   {#if shown && content}
     <!-- バッジが変わったら作り直してアニメーションさせる -->
-    {#key shown.badge}
+    {#key shown.rank.badge}
       <div class="card" in:scale={{ start: 0.8, duration: 400 }}>
-        <RankBadge rank={shown} {lang} {content} {look} />
+        <RankBadge rank={shown.rank} lang={shown.lang} {content} {look} />
       </div>
     {/key}
   {/if}

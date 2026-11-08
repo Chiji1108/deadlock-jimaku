@@ -78,7 +78,7 @@ async fn run(store: Arc<Store>, account_id: u32) {
     // アイコンを持っているバッジと、配る URL。取れなかったら次の回に取り直す
     let mut image: Option<(u32, String)> = None;
     loop {
-        load_tiers(&mut tiers, &languages).await;
+        load_tiers(&mut tiers, API, &languages).await;
         match fetch_rank(account_id).await {
             Ok(player) => {
                 if image
@@ -201,13 +201,13 @@ async fn fetch_rank(account_id: u32) -> anyhow::Result<PlayerRank> {
 }
 
 /// まだ取れていない言語の名前を、並べて取る。失敗した言語は警告して次の回に回す
-async fn load_tiers(tiers: &mut Tiers, languages: &[LangCode]) {
+async fn load_tiers(tiers: &mut Tiers, api: &str, languages: &[LangCode]) {
     let missing: Vec<&LangCode> = languages
         .iter()
         .filter(|code| !tiers.loaded.contains(code))
         .collect();
     let fetched =
-        futures_util::future::join_all(missing.iter().map(|code| fetch_tiers(code))).await;
+        futures_util::future::join_all(missing.iter().map(|code| fetch_tiers(api, code))).await;
     for (code, result) in missing.into_iter().zip(fetched) {
         match result {
             Ok(list) => {
@@ -228,10 +228,10 @@ async fn load_tiers(tiers: &mut Tiers, languages: &[LangCode]) {
     }
 }
 
-async fn fetch_tiers(code: &str) -> anyhow::Result<Vec<Tier>> {
+async fn fetch_tiers(api: &str, code: &str) -> anyhow::Result<Vec<Tier>> {
     let api_name = lang::find(code).context("unknown language")?.api;
     Ok(crate::http()
-        .get(format!("{API}/assets/ranks?language={api_name}"))
+        .get(format!("{api}/assets/ranks?language={api_name}"))
         .send()
         .await?
         .error_for_status()?
@@ -318,8 +318,7 @@ async fn player_image(dir: &Path, player: &PlayerRank, tiers: &Tiers) -> anyhow:
     ensure_image(dir, player.badge, &image_source(player, tiers)?).await
 }
 
-/// 見本のティアの名前。プレビューを開いたまま翻訳先とランクの言語を変えても名前が出るよう、全部の言語の分を
-/// 取れたものから覚えておく
+/// 見本のティアの名前。表示の言語の分だけ取り、取れた言語は覚えて取り直さない
 static SAMPLE_TIERS: LazyLock<tokio::sync::Mutex<Tiers>> = LazyLock::new(Default::default);
 
 fn sample_player() -> PlayerRank {
@@ -335,11 +334,11 @@ fn sample_player() -> PlayerRank {
 }
 
 /// プレビューの見本。本物と同じく、名前はティアの一覧から、進み具合はポイントから出し、アイコンは取ってきて保存する。
+/// 名前は `language` の分を取り、それまでに取れたほかの言語の名前も返す。
 /// 取れなかった名前やアイコンは欠けたまま返し、次に開いたときに取り直す
-pub async fn sample(store: &Store) -> RankState {
-    let languages: Vec<LangCode> = lang::LANGUAGES.iter().map(|l| l.code.to_owned()).collect();
+pub async fn sample(store: &Store, language: &LangCode) -> RankState {
     let mut tiers = SAMPLE_TIERS.lock().await;
-    load_tiers(&mut tiers, &languages).await;
+    load_tiers(&mut tiers, API, std::slice::from_ref(language)).await;
     let player = sample_player();
     let image = player_image(&store.rank_images(), &player, &tiers)
         .await
@@ -413,6 +412,54 @@ mod tests {
                 max: SUBRANK_POINTS
             })
         );
+    }
+
+    /// `/assets/ranks?language=…` に言語ごとのティアの一覧を返し、取りに来た言語を記録するサーバー。元の URL を返す
+    async fn serve_tiers(asked: Arc<std::sync::Mutex<Vec<String>>>) -> String {
+        use axum::extract::Query;
+        let app = axum::Router::new().route(
+            "/assets/ranks",
+            axum::routing::get(
+                move |Query(q): Query<BTreeMap<String, String>>| async move {
+                    let language = q["language"].clone();
+                    asked.lock().unwrap().push(language.clone());
+                    axum::Json(serde_json::json!([
+                        { "tier": 7, "name": format!("Emissary ({language})"), "images": {} }
+                    ]))
+                },
+            ),
+        );
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move { axum::serve(listener, app).await });
+        format!("http://{addr}")
+    }
+
+    #[tokio::test]
+    async fn names_are_fetched_once_per_language_and_kept() {
+        let asked = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let api = serve_tiers(asked.clone()).await;
+        let mut tiers = Tiers::default();
+        // 見本と同じく、表示の言語だけを渡す
+        for code in ["en", "en", "ja", "en", "ko", "ja"] {
+            load_tiers(&mut tiers, &api, &[code.into()]).await;
+        }
+        assert_eq!(*asked.lock().unwrap(), ["english", "japanese", "koreana"]);
+        let names = &tiers.names[&7];
+        assert_eq!(names["en"], "Emissary (english)");
+        assert_eq!(names["ja"], "Emissary (japanese)");
+        assert_eq!(names["ko"], "Emissary (koreana)");
+    }
+
+    #[tokio::test]
+    async fn a_language_that_failed_is_fetched_again() {
+        let mut tiers = Tiers::default();
+        load_tiers(&mut tiers, "http://127.0.0.1:9", &["en".into()]).await;
+        assert!(tiers.names.is_empty());
+        let asked = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let api = serve_tiers(asked.clone()).await;
+        load_tiers(&mut tiers, &api, &["en".into()]).await;
+        assert_eq!(*asked.lock().unwrap(), ["english"]);
     }
 
     #[test]
