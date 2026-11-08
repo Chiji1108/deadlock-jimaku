@@ -267,7 +267,7 @@
         <Field.Content>
           <Field.Label for="deadlock-mode">デッドロックモード</Field.Label>
           <Field.Description>
-            ヒーロー・スキル・アイテムを強調し、アイテム説明を出します。雑談やほかのゲームの配信では、オフにすると普通の字幕になります
+            ヒーロー・スキル・アイテムを強調し、アイテム説明を出します
             <DeadlockModeDialog />
           </Field.Description>
         </Field.Content>
