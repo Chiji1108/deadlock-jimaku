@@ -1097,6 +1097,16 @@ mod tests {
         }
     }
 
+    /// ダウンロードしたファイルは 1 つのフォルダに置き、ファイルの有無で取得済みかを見る。
+    /// 大文字と小文字を区別しないファイルシステムでも、ファミリーをまたいで重ならない
+    #[test]
+    fn file_names_are_unique_across_the_catalog() {
+        let mut names = HashSet::new();
+        for file in CATALOG.fonts.iter().flat_map(|font| &font.files) {
+            assert!(names.insert(file.name.to_lowercase()), "{}", file.name);
+        }
+    }
+
     fn recommended(language: &str) -> Vec<&'static str> {
         CATALOG
             .fonts
