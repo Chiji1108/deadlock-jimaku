@@ -26,7 +26,7 @@
   import RankTab from "./tabs/RankTab.svelte";
   import ShareTab from "./tabs/ShareTab.svelte";
   import UsageTab from "./tabs/UsageTab.svelte";
-  import { FREE, anyPaid, chromeFinals } from "../lib/toppings";
+  import { CHROME, anyPaid, chromeFinals } from "../lib/engines";
 
   onMount(() => panel.start());
 
@@ -52,7 +52,7 @@
       label: "API キー",
       icon: KeyRoundIcon,
       page: KeysTab,
-      heading: "有料の品",
+      heading: "有料のモード",
     },
     { value: "share", label: "おすそ分け", icon: GiftIcon, page: ShareTab },
     { value: "usage", label: "料金", icon: WalletIcon, page: UsageTab },
@@ -70,7 +70,7 @@
     window.scrollTo({ top: 0 });
   });
 
-  /** 確定の文を Chrome が作るなら、字幕は Chrome のウィンドウが動いて出る */
+  /** 確定の文を Chrome が作るなら（Chrome のモード）、字幕は Chrome のウィンドウが動いて出る */
   function chromeStatus() {
     if (panel.chromeStatus?.state === "failed")
       return { label: "止まっています", dot: "bg-destructive" };
@@ -89,7 +89,7 @@
     if (!s?.transcriptionEnabled) return { label: "停止中", dot: "bg-muted-foreground/50" };
     if (panel.transcriptionError) return { label: "止まっています", dot: "bg-destructive" };
     if (panel.silent) return { label: "音が届いていません", dot: "bg-amber-500" };
-    if (chromeFinals(s.toppings)) return chromeStatus();
+    if (chromeFinals(s.engines)) return chromeStatus();
     if (panel.level === undefined)
       return { label: "準備しています…", dot: "bg-sky-500 animate-pulse" };
     return { label: "字幕を出しています", dot: "bg-emerald-500 animate-pulse" };
@@ -112,8 +112,8 @@
           <span class="size-2 shrink-0 rounded-full {status.dot}"></span>
           {panel.server === "open" ? status.label : "アプリに接続しています…"}
         </p>
-        <!-- 無料の品だけなら出さない。使用量が届く前も行の高さを取っておく（届いたときにページがずれない） -->
-        {#if s && anyPaid(s.toppings)}
+        <!-- OpenAI を使わないなら無料なので出さない。使用量が届く前も行の高さを取っておく（届いたときにページがずれない） -->
+        {#if s && anyPaid(s.engines)}
           <p class="h-4 text-xs text-muted-foreground tabular-nums">
             {#if panel.server === "open" && panel.usage}
               <button class="hover:text-foreground hover:underline" onclick={() => (tab = "usage")}>
@@ -135,7 +135,7 @@
             <Button variant="outline" onclick={() => (tab = "keys")}
               >キーかギフトコードを入れる</Button
             >
-            <Button onclick={panel.startFree}>無料で始める</Button>
+            <Button onclick={panel.startWithChrome}>無料の Chrome モードで始める</Button>
           </div>
         {:else}
           <Button onclick={() => panel.setTranscription(true)}>
@@ -200,17 +200,15 @@
           {#if panel.needsKey && s.onboardingClosed}
             <Alert.Root>
               <KeyRoundIcon />
-              <Alert.Title
-                >選んだ有料の品には OpenAI の API キーかギフトコードが要ります</Alert.Title
-              >
+              <Alert.Title>このモードには OpenAI の API キーかギフトコードが要ります</Alert.Title>
               <Alert.Description class="flex flex-wrap gap-2 pt-1">
                 <Button size="sm" onclick={() => (tab = "keys")}>キーかギフトコードを入れる</Button>
                 <Button
                   size="sm"
                   variant="outline"
-                  onclick={() => panel.update({ toppings: FREE })}
+                  onclick={() => panel.update({ engines: CHROME })}
                 >
-                  すべて無料にする
+                  無料の Chrome モードにする
                 </Button>
               </Alert.Description>
             </Alert.Root>

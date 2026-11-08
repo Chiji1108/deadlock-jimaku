@@ -4,7 +4,7 @@ import { panel, type FontTarget } from "./panel.svelte";
 import { addFontFaces, fontWeights } from "../lib/overlay-fonts";
 import type { FontEntry } from "../generated/FontEntry";
 import type { SettingsView } from "../generated/SettingsView";
-import { FREE } from "../lib/toppings";
+import { CHROME } from "../lib/engines";
 
 vi.mock("../lib/overlay-fonts", () => ({ addFontFaces: vi.fn(), fontWeights: vi.fn() }));
 vi.mock("../lib/ws", () => ({ connect: vi.fn(() => () => {}) }));
@@ -221,7 +221,7 @@ test.each([
   (transcription, openai, gift, shown) => {
     const fresh = freshPanel();
     fresh.view = {
-      settings: { toppings: { ...FREE, transcription } },
+      settings: { engines: { ...CHROME, transcription } },
       keys: { openai: { state: openai }, gift: { state: gift } },
     } as unknown as SettingsView;
     expect(fresh.needsKey).toBe(shown);

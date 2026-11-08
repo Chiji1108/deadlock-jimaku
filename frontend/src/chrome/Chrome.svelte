@@ -22,7 +22,7 @@
     type MicTrouble,
   } from "./speech";
   import { Translation } from "./translation";
-  import { chromeFinals, usesChrome } from "../lib/toppings";
+  import { chromeFinals, usesChrome } from "../lib/engines";
 
   /** ブロックしたあとは確認が出ない。OS で止めていても同じエラーになる */
   const MIC_DENIED =
@@ -164,8 +164,8 @@
 
   const key = (s: Settings) =>
     JSON.stringify([
-      s.toppings.live,
-      s.toppings.transcription,
+      s.engines.live,
+      s.engines.transcription,
       s.micDevice,
       s.micLanguage,
       s.translateTo,
@@ -174,7 +174,7 @@
     ]);
   /** 字幕を止めているか、core の準備ができていないなら聞かない（音声を Google に送らない） */
   const wanted = (s: Settings) =>
-    usesChrome(s.toppings) &&
+    usesChrome(s.engines) &&
     s.transcriptionEnabled &&
     helper?.state === "listening" &&
     socket?.readyState === WebSocket.OPEN;
@@ -268,7 +268,7 @@
       micChosen = using?.deviceId ?? DEFAULT_MIC.deviceId;
     };
     showMic(microphone.trouble, microphone.opened);
-    hybrid = !chromeFinals(s.toppings);
+    hybrid = !chromeFinals(s.engines);
     const sink = hybrid ? hybridSink() : chromeSink(s);
     const recognition = listen(s.micLanguage, {
       silenceMs: sink.silenceMs,

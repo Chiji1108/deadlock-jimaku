@@ -221,7 +221,7 @@
               {#if noTargets}
                 翻訳先がないときは、話した言葉を出します
               {:else}
-                オフにすると翻訳だけを出します。{#if s.toppings.live === "gptLiveTranscribe" || s.toppings.furigana === "llm"}有料の途中の字幕とふりがなの料金がかかりません。{/if}字幕は翻訳が終わってから出ます。切り替えると、字幕は始め直します
+                オフにすると翻訳だけを出します。{#if s.engines.live === "gptLiveTranscribe" || s.engines.furigana === "llm"}途中の字幕とふりがなの料金がかかりません。{/if}字幕は翻訳が終わってから出ます。切り替えると、字幕は始め直します
               {/if}
             </Field.Description>
           </Field.Content>

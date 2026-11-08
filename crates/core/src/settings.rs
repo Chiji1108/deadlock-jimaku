@@ -28,8 +28,8 @@ const MAX_FONT_NAME: usize = 256;
 pub struct Settings {
     /// マイクを字幕にするか（操作パネルの開始・停止）
     pub transcription_enabled: bool,
-    /// 品ごとに、無料（Chrome と PC の中）か有料（OpenAI）か
-    pub toppings: Toppings,
+    /// 字幕の工程ごとに、何で作るか（モードを選ぶと決まり、詳しく選ぶと変えられる）
+    pub engines: Engines,
     /// 配信者が話す言語
     pub mic_language: LangCode,
     /// マイクのデバイス名。None なら OS の既定の入力デバイス
@@ -552,12 +552,12 @@ impl Region {
     }
 }
 
-/// 字幕の作り方。品ごとに、無料（Chrome と PC の中）か有料（OpenAI）かを選ぶ（DESIGN.md 9.6）。
+/// 字幕の工程ごとに、何で作るか。無料（Chrome と PC の中）か有料（OpenAI）か（DESIGN.md 9.6）。
 /// 今の仕組みで作れない組み合わせは `sanitized` が直す
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(default, rename_all = "camelCase")]
 #[ts(export)]
-pub struct Toppings {
+pub struct Engines {
     /// 途中の字幕
     pub live: LiveSource,
     /// 確定の文字起こし
@@ -568,28 +568,28 @@ pub struct Toppings {
     pub furigana: RubySource,
 }
 
-impl Toppings {
-    /// すべて無料。新しく使い始める人の既定
-    pub const FREE: Self = Self {
+impl Engines {
+    /// Chrome のモード。すべて無料で、新しく使い始める人の既定
+    pub const CHROME: Self = Self {
         live: LiveSource::Chrome,
         transcription: FinalSource::Chrome,
         translation: TranslationSource::ChromeTranslator,
         furigana: RubySource::Lindera,
     };
-    /// おすすめ。途中の字幕は Chrome、確定は OpenAI
-    pub const RECOMMENDED: Self = Self {
+    /// ハイブリッドのモード（おすすめ）。途中の字幕は Chrome、確定は OpenAI
+    pub const HYBRID: Self = Self {
         live: LiveSource::Chrome,
         transcription: FinalSource::GptTranscribe,
         translation: TranslationSource::Llm,
         furigana: RubySource::Llm,
     };
-    /// すべて OpenAI。Chrome を使わない
+    /// OpenAI のモード。すべて OpenAI で、Chrome を使わない
     pub const OPENAI: Self = Self {
         live: LiveSource::GptLiveTranscribe,
-        ..Self::RECOMMENDED
+        ..Self::HYBRID
     };
 
-    /// 有料の品を選んでいて、API キーかギフトコードが要る。表示の設定（翻訳先、ふりがな）では変わらないので、
+    /// OpenAI を使う工程があり、API キーかギフトコードが要る。表示の設定（翻訳先、ふりがな）では変わらないので、
     /// 表示を切り替えても字幕の処理を始め直さない
     pub fn paid(&self) -> bool {
         self.live == LiveSource::GptLiveTranscribe
@@ -611,9 +611,9 @@ impl Toppings {
     }
 }
 
-impl Default for Toppings {
+impl Default for Engines {
     fn default() -> Self {
-        Self::FREE
+        Self::CHROME
     }
 }
 
@@ -679,8 +679,8 @@ pub struct Phase {
     pub emphasis: Option<EmphasisSource>,
 }
 
-/// 品の選択と設定から決まる、字幕の作り方。README の「しくみ」の表を写したもの。
-/// 呼び出し側は品の選択ではなくこれを見る（DESIGN.md 9.6）
+/// 工程ごとの選択と設定から決まる、字幕の作り方。README の「しくみ」の表を写したもの。
+/// 呼び出し側は工程ごとの選択ではなくこれを見る（DESIGN.md 9.6）
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Plan {
     pub partial: Phase,
@@ -734,7 +734,7 @@ impl Default for Settings {
     fn default() -> Self {
         Self {
             transcription_enabled: false,
-            toppings: Toppings::default(),
+            engines: Engines::default(),
             mic_language: "ja".into(),
             mic_device: None,
             translate_to: vec!["en".into()],
@@ -804,14 +804,14 @@ impl Settings {
             .unwrap_or_else(|| self.mic_language.clone())
     }
 
-    /// 品の選択と設定から決まる、字幕の作り方
+    /// 工程ごとの選択と設定から決まる、字幕の作り方
     pub fn plan(&self) -> Plan {
         use EmphasisSource as Emphasis;
         use RubySource as Ruby;
         use TextSource as Text;
         use TranslationSource as Translation;
 
-        let toppings = self.toppings;
+        let engines = self.engines;
         let translates = !self.translate_to.is_empty();
         let translation_only = translates && !self.subtitle_display.show_source;
         // 翻訳だけなら見えないので、作らない。形態素解析の辞書は日本語だけ
@@ -819,7 +819,7 @@ impl Settings {
         let ja = self.mic_language == "ja";
         let lindera = (ruby && ja).then_some(Ruby::Lindera);
         let terms = (self.deadlock_mode && ja).then_some(Emphasis::Terms);
-        let partial = match toppings.live {
+        let partial = match engines.live {
             LiveSource::Chrome => Phase {
                 text: Some(Text::Chrome),
                 translation: translates.then_some(Translation::ChromeTranslator),
@@ -836,16 +836,16 @@ impl Settings {
             LiveSource::GptLiveTranscribe | LiveSource::Off => Phase::NONE,
         };
         let finals = Phase {
-            text: Some(match toppings.transcription {
+            text: Some(match engines.transcription {
                 FinalSource::Chrome => Text::Chrome,
                 FinalSource::GptTranscribe => Text::GptTranscribe,
             }),
-            translation: translates.then_some(toppings.translation),
-            ruby: match toppings.furigana {
+            translation: translates.then_some(engines.translation),
+            ruby: match engines.furigana {
                 Ruby::Lindera => lindera,
                 Ruby::Llm => ruby.then_some(Ruby::Llm),
             },
-            emphasis: match toppings.translation {
+            emphasis: match engines.translation {
                 Translation::ChromeTranslator => terms,
                 Translation::Llm => self.deadlock_mode.then_some(Emphasis::Llm),
             },
@@ -872,7 +872,7 @@ impl Settings {
             self.mic_language = Settings::default().mic_language;
         }
         let mic = self.mic_language.clone();
-        self.toppings = self.toppings.sanitized();
+        self.engines = self.engines.sanitized();
         self.translate_to = lang::normalize(self.translate_to)
             .into_iter()
             .filter(|t| *t != mic)
@@ -964,8 +964,8 @@ impl Settings {
         if let Some(enabled) = patch.deadlock_mode {
             next.deadlock_mode = enabled;
         }
-        if let Some(toppings) = patch.toppings {
-            next.toppings = toppings.sanitized();
+        if let Some(engines) = patch.engines {
+            next.engines = engines.sanitized();
         }
         if let Some(content) = patch.rank_content {
             next.rank_content = content;
@@ -1016,7 +1016,7 @@ pub struct SettingsPatch {
     pub deadlock_mode: Option<bool>,
     /// 今の仕組みで作れない組み合わせは直して保存する
     #[ts(optional)]
-    pub toppings: Option<Toppings>,
+    pub engines: Option<Engines>,
     /// SteamID64 か 32bit のアカウント ID。空文字列ならランクを表示しない
     #[ts(optional)]
     pub rank_account: Option<String>,
@@ -1093,30 +1093,30 @@ fn parse(bytes: &[u8]) -> serde_json::Result<Settings> {
 }
 
 /// 0.4 までは 3 つのモード（`speechEngine`）から選び、OpenAI のモードだけ途中の字幕を切れた（`liveSubtitles`）。
-/// 品の選択に置き換える
+/// 工程ごとの選択に置き換える
 fn from_modes(json: &mut Value) {
     let Value::Object(fields) = json else {
         return;
     };
     let engine = fields.remove("speechEngine");
     let live = fields.remove("liveSubtitles");
-    if fields.contains_key("toppings") {
+    if fields.contains_key("engines") {
         return;
     }
-    let toppings = match engine.as_ref().and_then(Value::as_str) {
-        Some("hybrid") => Toppings::RECOMMENDED,
+    let engines = match engine.as_ref().and_then(Value::as_str) {
+        Some("hybrid") => Engines::HYBRID,
         // 0.3 の rc には `local` や `free` で保存した版がある
-        Some("chrome" | "local" | "free") => Toppings::FREE,
+        Some("chrome" | "local" | "free") => Engines::CHROME,
         // 0.3 より前の設定ファイルにはない（Chrome のウィンドウを黙って開かない）
-        _ if live == Some(Value::Bool(false)) => Toppings {
+        _ if live == Some(Value::Bool(false)) => Engines {
             live: LiveSource::Off,
-            ..Toppings::OPENAI
+            ..Engines::OPENAI
         },
-        _ => Toppings::OPENAI,
+        _ => Engines::OPENAI,
     };
     fields.insert(
-        "toppings".into(),
-        serde_json::to_value(toppings).expect("toppings"),
+        "engines".into(),
+        serde_json::to_value(engines).expect("engines"),
     );
 }
 
@@ -1303,7 +1303,7 @@ mod tests {
     fn translation_only_needs_a_translation_target() {
         let hide = |translate_to: Vec<LangCode>| Settings {
             translate_to,
-            toppings: Toppings::OPENAI,
+            engines: Engines::OPENAI,
             subtitle_display: SubtitleDisplay {
                 show_source: false,
                 ..Default::default()
@@ -1324,9 +1324,9 @@ mod tests {
         assert_eq!(source.plan().finals.ruby, Some(RubySource::Llm));
     }
 
-    fn plan_of(toppings: Toppings) -> Plan {
+    fn plan_of(engines: Engines) -> Plan {
         Settings {
-            toppings,
+            engines,
             translate_to: vec!["en".into()],
             deadlock_mode: true,
             ..Default::default()
@@ -1352,100 +1352,97 @@ mod tests {
         let llm = phase(T::GptTranscribe, Some(Tr::Llm), R::Llm, E::Llm);
         let live = phase(T::GptLiveTranscribe, None, R::Lindera, E::Terms);
 
-        let recommended = plan_of(Toppings::RECOMMENDED);
+        let recommended = plan_of(Engines::HYBRID);
         assert_eq!((recommended.partial, recommended.finals), (chrome, llm));
-        let openai = plan_of(Toppings::OPENAI);
+        let openai = plan_of(Engines::OPENAI);
         assert_eq!((openai.partial, openai.finals), (live, llm));
-        let free = plan_of(Toppings::FREE);
+        let free = plan_of(Engines::CHROME);
         assert_eq!((free.partial, free.finals), (chrome, chrome));
     }
 
     #[test]
-    fn each_topping_changes_only_its_part_of_the_finals() {
+    fn each_engine_changes_only_its_part_of_the_finals() {
         use EmphasisSource as E;
         use RubySource as R;
         use TextSource as T;
         use TranslationSource as Tr;
-        let llm_text = plan_of(Toppings {
+        let llm_text = plan_of(Engines {
             transcription: FinalSource::GptTranscribe,
-            ..Toppings::FREE
+            ..Engines::CHROME
         });
         assert_eq!(llm_text.finals.text, Some(T::GptTranscribe));
         assert_eq!(llm_text.finals.translation, Some(Tr::ChromeTranslator));
         assert_eq!(llm_text.finals.emphasis, Some(E::Terms));
         assert_eq!(llm_text.finals.ruby, Some(R::Lindera));
 
-        let llm_words = plan_of(Toppings {
+        let llm_words = plan_of(Engines {
             translation: Tr::Llm,
             furigana: R::Llm,
-            ..Toppings::FREE
+            ..Engines::CHROME
         });
         assert_eq!(llm_words.finals.text, Some(T::Chrome));
         assert_eq!(llm_words.finals.translation, Some(Tr::Llm));
         assert_eq!(llm_words.finals.emphasis, Some(E::Llm));
         assert_eq!(llm_words.finals.ruby, Some(R::Llm));
-        assert_eq!(llm_words.partial, plan_of(Toppings::FREE).partial);
+        assert_eq!(llm_words.partial, plan_of(Engines::CHROME).partial);
     }
 
     #[test]
-    fn chrome_and_keys_follow_the_toppings() {
-        assert!(plan_of(Toppings::RECOMMENDED).uses_chrome());
-        assert!(Toppings::RECOMMENDED.paid());
-        assert!(plan_of(Toppings::FREE).uses_chrome());
-        assert!(!Toppings::FREE.paid());
-        assert!(!plan_of(Toppings::OPENAI).uses_chrome());
-        assert!(Toppings::OPENAI.paid());
-        let paid_furigana = Toppings {
+    fn chrome_and_keys_follow_the_engines() {
+        assert!(plan_of(Engines::HYBRID).uses_chrome());
+        assert!(Engines::HYBRID.paid());
+        assert!(plan_of(Engines::CHROME).uses_chrome());
+        assert!(!Engines::CHROME.paid());
+        assert!(!plan_of(Engines::OPENAI).uses_chrome());
+        assert!(Engines::OPENAI.paid());
+        let paid_furigana = Engines {
             furigana: RubySource::Llm,
-            ..Toppings::FREE
+            ..Engines::CHROME
         };
         assert!(plan_of(paid_furigana).uses_chrome());
         assert!(paid_furigana.paid());
     }
 
     #[test]
-    fn toppings_that_cannot_work_together_are_fixed() {
+    fn engines_that_cannot_work_together_are_fixed() {
         // 確定の文が Chrome なら、発話の区切りも Chrome
-        let chrome_finals = Toppings {
+        let chrome_finals = Engines {
             live: LiveSource::Off,
-            ..Toppings::FREE
+            ..Engines::CHROME
         };
-        assert_eq!(chrome_finals.sanitized(), Toppings::FREE);
+        assert_eq!(chrome_finals.sanitized(), Engines::CHROME);
         // Chrome の翻訳は Chrome のページの中で動く
-        let no_page = Toppings {
+        let no_page = Engines {
             translation: TranslationSource::ChromeTranslator,
-            ..Toppings::OPENAI
+            ..Engines::OPENAI
         };
-        assert_eq!(no_page.sanitized(), Toppings::OPENAI);
+        assert_eq!(no_page.sanitized(), Engines::OPENAI);
         let patch = SettingsPatch {
-            toppings: Some(no_page),
+            engines: Some(no_page),
             ..Default::default()
         };
         let next = Settings::default().apply(patch).unwrap();
-        assert_eq!(next.toppings, Toppings::OPENAI);
+        assert_eq!(next.engines, Engines::OPENAI);
     }
 
     #[test]
-    fn the_modes_of_0_4_become_toppings() {
+    fn the_modes_of_0_4_become_engines() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join(FILE);
         let read = |json: Value| {
             std::fs::write(&path, json.to_string()).unwrap();
-            load(&path).unwrap().toppings
+            load(&path).unwrap().engines
         };
-        assert_eq!(
-            read(json!({ "speechEngine": "hybrid" })),
-            Toppings::RECOMMENDED
-        );
+        assert_eq!(read(json!({ "speechEngine": "hybrid" })), Engines::HYBRID);
         for saved in ["chrome", "local", "free"] {
-            assert_eq!(read(json!({ "speechEngine": saved })), Toppings::FREE);
+            assert_eq!(read(json!({ "speechEngine": saved })), Engines::CHROME);
         }
-        assert_eq!(read(json!({ "speechEngine": "openai" })), Toppings::OPENAI);
+        assert_eq!(read(json!({ "speechEngine": "openai" })), Engines::OPENAI);
         assert_eq!(
             read(json!({ "speechEngine": "openai", "liveSubtitles": false })),
-            Toppings {
+            Engines {
                 live: LiveSource::Off,
-                ..Toppings::OPENAI
+                ..Engines::OPENAI
             }
         );
         // 保存し直すと、モードは残らない
@@ -1454,14 +1451,14 @@ mod tests {
         let saved: Value = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
         assert!(saved.get("speechEngine").is_none());
         assert!(saved.get("liveSubtitles").is_none());
-        assert_eq!(load(&path).unwrap().toppings, s.toppings);
+        assert_eq!(load(&path).unwrap().engines, s.engines);
     }
 
     #[test]
     fn settings_turn_items_off_in_the_plan() {
         let with = |change: fn(&mut Settings)| {
             let mut settings = Settings {
-                toppings: Toppings::FREE,
+                engines: Engines::CHROME,
                 translate_to: vec!["en".into()],
                 deadlock_mode: true,
                 ..Default::default()
@@ -1491,17 +1488,17 @@ mod tests {
     fn chrome_is_only_for_new_users() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join(FILE);
-        assert_eq!(load(&path).unwrap().toppings, Toppings::FREE);
+        assert_eq!(load(&path).unwrap().engines, Engines::CHROME);
         // 0.3 より前の設定ファイルには `speechEngine` がない
         std::fs::write(&path, r#"{ "micLanguage": "ja" }"#).unwrap();
-        assert_eq!(load(&path).unwrap().toppings, Toppings::OPENAI);
-        // 選んだ品は保存される
+        assert_eq!(load(&path).unwrap().engines, Engines::OPENAI);
+        // 選んだものは保存される
         let recommended = Settings {
-            toppings: Toppings::RECOMMENDED,
+            engines: Engines::HYBRID,
             ..Default::default()
         };
         save(&path, &recommended).unwrap();
-        assert_eq!(load(&path).unwrap().toppings, Toppings::RECOMMENDED);
+        assert_eq!(load(&path).unwrap().engines, Engines::HYBRID);
     }
 
     #[test]
@@ -1935,7 +1932,7 @@ mod tests {
         )
         .unwrap();
         let s = load(&path).unwrap();
-        assert_eq!(s.toppings, Toppings::FREE);
+        assert_eq!(s.engines, Engines::CHROME);
         assert_eq!(s.mic_language, "ko");
         assert_eq!(s.rank_account, Some(308_386_819));
         assert_eq!(

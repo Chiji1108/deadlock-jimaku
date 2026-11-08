@@ -1,10 +1,11 @@
-// 字幕の作り方。品ごとに無料か有料かを選ぶ。操作パネルの「字幕の作り方」の欄と LP の節が、同じ並びと言い方で出す
-import type { Toppings } from "../generated/Toppings";
+// 字幕の作り方。モードで工程ごとの作り方がまとめて決まり、詳しく選ぶと工程ごとに変えられる。
+// 操作パネルのモードの欄と LP のモードの節が、同じ並びと言い方で出す
+import type { Engines } from "../generated/Engines";
 
-type Item = keyof Toppings;
+type Item = keyof Engines;
 
 export type Option<K extends Item = Item> = {
-  value: Toppings[K];
+  value: Engines[K];
   label: string;
   /** 料金（`crates/core/src/usage.rs` の単価と同じ）。無料なら「無料」 */
   price: string;
@@ -12,7 +13,7 @@ export type Option<K extends Item = Item> = {
   paid: boolean;
 };
 
-/** 品と、その選び方。無料のものを先に置く */
+/** 工程と、その作り方。無料のものを先に置く */
 export const ITEMS: { [K in Item]: { label: string; hint: string; options: Option<K>[] } } = {
   live: {
     label: "途中の字幕",
@@ -64,45 +65,45 @@ export const ITEMS: { [K in Item]: { label: string; hint: string; options: Optio
   },
 };
 
-/** 決まった組み合わせ。`crates/core/src/settings.rs` の `Toppings` の定数と同じ */
-export const FREE: Toppings = {
+/** モード。`crates/core/src/settings.rs` の `Engines` の定数と同じ */
+export const CHROME: Engines = {
   live: "chrome",
   transcription: "chrome",
   translation: "chromeTranslator",
   furigana: "lindera",
 };
-export const RECOMMENDED: Toppings = {
+export const HYBRID: Engines = {
   live: "chrome",
   transcription: "gptTranscribe",
   translation: "llm",
   furigana: "llm",
 };
-const OPENAI: Toppings = { ...RECOMMENDED, live: "gptLiveTranscribe" };
+const OPENAI: Engines = { ...HYBRID, live: "gptLiveTranscribe" };
 
-export const PRESETS: {
+export const MODES: {
   name: string;
   label: string;
   traits: string;
   price: string;
   hint: string;
-  toppings: Toppings;
+  engines: Engines;
   recommended?: boolean;
 }[] = [
   {
-    name: "free",
-    label: "無料",
+    name: "chrome",
+    label: "Chrome",
     traits: "高速・キー不要",
     price: "無料",
-    hint: "多くの字幕ソフトと同じく、Chrome の音声認識と翻訳を使います",
-    toppings: FREE,
+    hint: "多くの字幕ソフトと同じく、Chrome の音声認識を使います",
+    engines: CHROME,
   },
   {
-    name: "recommended",
-    label: "おすすめ",
+    name: "hybrid",
+    label: "ハイブリッド",
     traits: "高速・高精度",
     price: "約 $0.6／時間",
     hint: "途中の字幕は Chrome、確定の字幕は OpenAI の高い精度に置き換えます",
-    toppings: RECOMMENDED,
+    engines: HYBRID,
     recommended: true,
   },
   {
@@ -111,33 +112,39 @@ export const PRESETS: {
     traits: "低負荷・高精度",
     price: "約 $1／時間",
     hint: "すべて OpenAI で作ります。Chrome は使いません",
-    toppings: OPENAI,
+    engines: OPENAI,
   },
 ];
 
-const same = (a: Toppings, b: Toppings) =>
+const same = (a: Engines, b: Engines) =>
   (Object.keys(ITEMS) as Item[]).every((item) => a[item] === b[item]);
 
-/** 今の選び方に合う組み合わせ。自分で選んだなら undefined */
-export const presetOf = (t: Toppings) => PRESETS.find((p) => same(p.toppings, t));
+/** 今の選び方に合うモード。詳しく選んで変えたなら undefined */
+export const modeOf = (t: Engines) => MODES.find((m) => same(m.engines, t));
 
 /** Chrome のウィンドウを使う（途中の字幕が Chrome） */
-export const usesChrome = (t: Toppings) => t.live === "chrome";
+export const usesChrome = (t: Engines) => t.live === "chrome";
 
 /** 発話の区切りを Chrome が決める（アプリはマイクを開かない） */
-export const chromeFinals = (t: Toppings) => t.transcription === "chrome";
+export const chromeFinals = (t: Engines) => t.transcription === "chrome";
 
-/** 有料の品がある */
-export const anyPaid = (t: Toppings) =>
+/** OpenAI を使う工程がある（API キーかギフトコードが要る） */
+export const anyPaid = (t: Engines) =>
   (Object.keys(ITEMS) as Item[]).some(
     (item) => ITEMS[item].options.find((o) => o.value === t[item])?.paid,
   );
 
-/** 今の仕組みで作れない選び方。core の `Toppings::sanitized` と同じ決まり。
+/** 今の仕組みで作れない選び方。core の `Engines::sanitized` と同じ決まり。
  * Chrome の翻訳を使っている間は途中の字幕を Chrome から変えさせない（変えると core が翻訳を有料に直し、黙って料金がかかる） */
-export function unavailable<K extends Item>(t: Toppings, item: K, value: Toppings[K]) {
+export function unavailable<K extends Item>(t: Engines, item: K, value: Engines[K]) {
   if (item === "live")
     return (chromeFinals(t) || t.translation === "chromeTranslator") && value !== "chrome";
   if (item === "translation") return !usesChrome(t) && value === "chromeTranslator";
   return false;
 }
+
+/** OpenAI を使う工程の名前（詳しく選んだときの説明に使う） */
+export const paidItems = (t: Engines) =>
+  (Object.keys(ITEMS) as Item[])
+    .filter((item) => ITEMS[item].options.find((o) => o.value === t[item])?.paid)
+    .map((item) => ITEMS[item].label);

@@ -6,7 +6,7 @@
   import { Button } from "$lib/components/ui/button";
   import * as Card from "$lib/components/ui/card";
   import { panel } from "../panel.svelte";
-  import { FREE, anyPaid } from "../../lib/toppings";
+  import { CHROME, anyPaid } from "../../lib/engines";
 
   let { open }: { open: (tab: string) => void } = $props();
 
@@ -14,12 +14,12 @@
   /** 全部終わった画面は、この起動の間だけ出しておく（そのあと字幕を止めても崩さない） */
   let celebrating = $state(false);
   const steps = $derived([
-    // 無料の品だけなら鍵が要らないので、鍵の手順は有料の品を選んだ人にだけ出す
-    ...(!anyPaid(s.toppings)
+    // OpenAI を使わないなら鍵が要らないので、鍵の手順は鍵の要るモードを選んだ人にだけ出す
+    ...(!anyPaid(s.engines)
       ? []
       : [
           {
-            title: "有料の品に要る OpenAI の API キーかギフトコードを入れる",
+            title: "このモードに要る OpenAI の API キーかギフトコードを入れる",
             done: celebrating || panel.hasAccess,
             tab: "keys",
             go: "入れる",
@@ -83,14 +83,14 @@
               >
                 {step.go}
               </Button>
-              {#if i === 0 && anyPaid(s.toppings)}
+              {#if i === 0 && anyPaid(s.engines)}
                 <Button
                   variant="link"
                   size="sm"
                   class="h-auto p-0"
-                  onclick={() => panel.update({ toppings: FREE })}
+                  onclick={() => panel.update({ engines: CHROME })}
                 >
-                  すべて無料にする
+                  無料の Chrome モードにする
                 </Button>
               {/if}
             {/if}

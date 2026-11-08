@@ -1,4 +1,4 @@
-//! Chrome の品（DESIGN.md 9.6）。Chrome の起動と、ページが認識した文を字幕にする経路。
+//! Chrome の音声認識と翻訳（DESIGN.md 9.6）。Chrome の起動と、ページが認識した文を字幕にする経路。
 //!
 //! 全画面のゲームに隠れても認識が止まらないよう、省電力の働きを切った Chrome を専用のプロファイルで起動する。
 //! フラグは Chrome の起動時にしか効かないので、ふだんの Chrome のプロファイルとは分ける。
@@ -424,7 +424,7 @@ pub(crate) async fn final_translation(
 }
 
 /// ページが認識した文を字幕にする。止めるまで続く（ページが閉じられても、開き直せば続きが出る）。
-/// `access` は確定の仕上げに LLM を使う品があるときだけ
+/// `access` は確定の仕上げに LLM を使う工程があるときだけ
 pub async fn run(store: Arc<Store>, access: Option<Access>) -> anyhow::Result<()> {
     let settings = store.settings();
     let annotator = Annotator::new(store.clone(), &settings).await;
@@ -632,7 +632,7 @@ mod tests {
 
     fn running_store() -> Arc<Store> {
         let settings = Settings {
-            toppings: crate::settings::Toppings::FREE,
+            engines: crate::settings::Engines::CHROME,
             transcription_enabled: true,
             ..Settings::default()
         };
@@ -753,7 +753,7 @@ mod tests {
 
     async fn subtitles() -> (Subtitles, Messages, Done) {
         let settings = Settings {
-            toppings: crate::settings::Toppings::FREE,
+            engines: crate::settings::Engines::CHROME,
             translate_to: vec!["en".into()],
             ..Settings::default()
         };

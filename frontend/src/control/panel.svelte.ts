@@ -12,7 +12,7 @@ import type { MicError } from "../generated/MicError";
 import type { TranscriptionError } from "../generated/TranscriptionError";
 import type { UsageView } from "../generated/UsageView";
 import { api } from "../lib/api";
-import { FREE, anyPaid, chromeFinals } from "../lib/toppings";
+import { CHROME, anyPaid, chromeFinals } from "../lib/engines";
 import { addFontFaces, fontWeights } from "../lib/overlay-fonts";
 import type { MergePatch } from "../lib/text-style";
 import type { FontEntry } from "../generated/FontEntry";
@@ -86,22 +86,22 @@ class Panel {
     return this.view?.keys.openai.state === "missing" && this.view.keys.gift.state === "missing";
   }
 
-  /** 字幕を始められる鍵（自分のキーかギフトコード）がある。無料の品だけなら鍵が要らない */
+  /** 字幕を始められる鍵（自分のキーかギフトコード）がある。OpenAI を使わないなら鍵が要らない */
   get hasAccess() {
     return (
-      (!!this.settings && !anyPaid(this.settings.toppings)) ||
+      (!!this.settings && !anyPaid(this.settings.engines)) ||
       this.view?.keys.openai.state === "saved" ||
       this.view?.keys.gift.state === "saved"
     );
   }
 
-  /** 選んだ品に要る鍵がない。キーの案内を出し、字幕を始めさせない */
+  /** 選んだモードに要る鍵がない。キーの案内を出し、字幕を始めさせない */
   get needsKey() {
     return !!this.view && !this.hasAccess;
   }
 
-  /** 有料の品に使える鍵（自分のキーか、期限内のギフトコード）がある */
-  get paidReady() {
+  /** ハイブリッドで使える鍵（自分のキーか、期限内のギフトコード）がある */
+  get hybridReady() {
     return this.view?.keys.openai.state === "saved" || giftValid(this.gift);
   }
 
@@ -115,7 +115,7 @@ class Panel {
     return (
       this.running &&
       !!this.settings &&
-      !chromeFinals(this.settings.toppings) &&
+      !chromeFinals(this.settings.engines) &&
       this.level !== undefined &&
       this.now - this.heardAt > SILENT_MS
     );
@@ -195,10 +195,10 @@ class Panel {
       toast.success("Chrome をリセットしました");
     });
 
-  /** 鍵がないときの入口。押した人にだけ、すべて無料に切り替えて始める */
-  startFree = () => {
+  /** 鍵がないときの入口。押した人にだけ、Chrome のモードに切り替えて始める */
+  startWithChrome = () => {
     this.level = undefined;
-    return this.update({ toppings: FREE, transcriptionEnabled: true });
+    return this.update({ engines: CHROME, transcriptionEnabled: true });
   };
 
   setTranscription(enabled: boolean) {

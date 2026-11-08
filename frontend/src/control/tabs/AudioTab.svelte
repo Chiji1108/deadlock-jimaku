@@ -13,18 +13,16 @@
   import PauseDialog from "../parts/PauseDialog.svelte";
   import { Badge } from "$lib/components/ui/badge";
   import { panel } from "../panel.svelte";
+  import EnginesDialog from "../parts/EnginesDialog.svelte";
   import {
-    ITEMS,
-    PRESETS,
-    RECOMMENDED,
+    HYBRID,
+    MODES,
     anyPaid,
     chromeFinals,
-    presetOf,
-    unavailable,
+    modeOf,
+    paidItems,
     usesChrome,
-  } from "../../lib/toppings";
-  import type { Toppings } from "../../generated/Toppings";
-  import { translationOnly } from "../../lib/subtitle-lines";
+  } from "../../lib/engines";
 
   const MAX_TRANSLATE_TO = 4;
   /** 何 ms 黙ったら区切るか */
@@ -35,12 +33,9 @@
   ];
 
   const s = $derived(panel.settings!);
-  const onlyTranslation = $derived(translationOnly(s));
-  const t = $derived(s.toppings);
-  const preset = $derived(presetOf(t));
-  const items = Object.entries(ITEMS) as [keyof Toppings, (typeof ITEMS)[keyof Toppings]][];
-  const choose = <K extends keyof Toppings>(item: K, value: Toppings[K]) =>
-    panel.update({ toppings: { ...t, [item]: value } });
+  const t = $derived(s.engines);
+  const mode = $derived(modeOf(t));
+  const paid = $derived(paidItems(t));
   /** Chrome のウィンドウが字幕を止めている理由。止まっているか、回線の回復を待っている */
   const chromeProblem = $derived(
     panel.chromeStatus?.state === "failed" ||
@@ -49,7 +44,7 @@
       ? panel.chromeStatus.detail
       : undefined,
   );
-  /** 有料の品の字幕が止まったら Chrome を閉じる（字幕にならない音声を Google に送らない） */
+  /** OpenAI を使うモードの字幕が止まったら Chrome を閉じる（字幕にならない音声を Google に送らない） */
   const chromeClosed = $derived(anyPaid(t) && !!panel.transcriptionError);
   /** Chrome のウィンドウの今の状態 */
   const chromeNote = $derived.by(() => {
@@ -60,7 +55,7 @@
     return "字幕の準備をしています";
   });
   const pause = $derived(s.segmentation.minSilenceMs);
-  const pausePreset = $derived(PAUSES.find((p) => p.ms === pause));
+  const preset = $derived(PAUSES.find((p) => p.ms === pause));
 
   const DEFAULT_DEVICE = "__default__";
   let confirmingReset = $state(false);
@@ -69,40 +64,44 @@
 <div class="flex flex-col gap-6">
   <Card.Root>
     <Card.Header>
-      <Card.Title>字幕の作り方</Card.Title>
-      <Card.Description
-        >品ごとに、無料か有料かを選べます。まとめて選ぶなら、下の 3 つから</Card.Description
-      >
+      <Card.Title>モード</Card.Title>
+      <Card.Description>字幕をどこで作るかを選びます</Card.Description>
     </Card.Header>
-    <Card.Content class="flex flex-col gap-5">
-      <div class="grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label="まとめて選ぶ">
-        {#each PRESETS as p (p.name)}
+    <Card.Content class="flex flex-col gap-3">
+      <div class="grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label="モード">
+        {#each MODES as m (m.name)}
           <button
             type="button"
             role="radio"
-            aria-checked={preset?.name === p.name}
+            aria-checked={mode?.name === m.name}
             class="flex flex-col gap-1 rounded-lg border p-3 text-left transition-colors hover:bg-muted aria-checked:border-foreground aria-checked:bg-muted"
-            onclick={() => panel.update({ toppings: p.toppings })}
+            onclick={() => panel.update({ engines: m.engines })}
           >
             <span class="flex items-center gap-2 text-sm font-medium">
-              {p.label}
-              {#if p.recommended}<Badge variant="secondary">おすすめ</Badge>{/if}
+              {m.label}
+              {#if m.recommended}<Badge variant="secondary">おすすめ</Badge>{/if}
             </span>
-            <span class="text-xs text-muted-foreground">{p.traits}</span>
-            <span class="text-xs text-muted-foreground tabular-nums">{p.price}</span>
+            <span class="text-xs text-muted-foreground">{m.traits}</span>
+            <span class="text-xs text-muted-foreground tabular-nums">{m.price}</span>
           </button>
         {/each}
       </div>
-      {#if preset?.name === "free" && panel.paidReady && !s.hybridHintClosed}
+      <p class="text-sm text-muted-foreground">
+        {#if mode}
+          {mode.hint}
+        {:else if paid.length}
+          詳しく選んだ作り方です。OpenAI を使う工程: {paid.join("、")}
+        {:else}
+          詳しく選んだ作り方です。すべて無料です
+        {/if}{#if paid.length}。OpenAI の API キーかギフトコードが要ります{/if}
+      </p>
+      <EnginesDialog />
+      {#if mode?.name === "chrome" && panel.hybridReady && !s.hybridHintClosed}
         <div class="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3">
-          <p class="text-sm">おすすめにすると、確定の字幕が高い精度になります</p>
+          <p class="text-sm">ハイブリッドにすると、確定の字幕が高い精度になります</p>
           <div class="flex gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              onclick={() => panel.update({ toppings: RECOMMENDED })}
-            >
-              おすすめにする
+            <Button variant="outline" size="sm" onclick={() => panel.update({ engines: HYBRID })}>
+              ハイブリッドにする
             </Button>
             <Button
               variant="ghost"
@@ -113,56 +112,6 @@
             </Button>
           </div>
         </div>
-      {/if}
-
-      {#each items as [item, spec] (item)}
-        <Field.Field>
-          <Field.Label>{spec.label}</Field.Label>
-          <Field.Description>
-            {spec.hint}
-            {#if item === "live" && onlyTranslation && t.live === "gptLiveTranscribe"}
-              。翻訳だけを出しているので、途中の字幕は出ません
-            {/if}
-          </Field.Description>
-          <ToggleGroup.Root
-            type="single"
-            variant="outline"
-            spacing={2}
-            class="flex-wrap justify-start"
-            value={t[item]}
-            onValueChange={(v) => v && choose(item, v as Toppings[typeof item])}
-          >
-            {#each spec.options as o (o.value)}
-              <ToggleGroup.Item
-                value={o.value}
-                class="h-auto flex-col items-start gap-0 py-2"
-                disabled={unavailable(t, item, o.value)}
-              >
-                <span>{o.label}</span>
-                <span class="text-xs text-muted-foreground tabular-nums">{o.price}</span>
-              </ToggleGroup.Item>
-            {/each}
-          </ToggleGroup.Root>
-          {#if item === "live" && chromeFinals(t)}
-            <Field.Description
-              >確定の文字起こしが Chrome なら、途中の字幕も Chrome です</Field.Description
-            >
-          {:else if item === "live" && t.translation === "chromeTranslator"}
-            <Field.Description
-              >Chrome の翻訳を使っている間は、途中の字幕も Chrome です</Field.Description
-            >
-          {:else if item === "translation" && !usesChrome(t)}
-            <Field.Description
-              >Chrome の翻訳は、途中の字幕が Chrome のときだけ選べます</Field.Description
-            >
-          {/if}
-        </Field.Field>
-      {/each}
-      {#if anyPaid(t)}
-        <p class="text-sm text-muted-foreground">
-          有料の品には OpenAI の API
-          キーかギフトコードが要ります。料金は使った分だけで、目安は「料金」タブに品ごとに出ます
-        </p>
       {/if}
       {#if usesChrome(t)}
         {#if s.transcriptionEnabled}
@@ -357,7 +306,7 @@
         type="single"
         variant="outline"
         class="w-full"
-        value={pausePreset ? String(pause) : ""}
+        value={preset ? String(pause) : ""}
         onValueChange={(v) => v && panel.update({ minSilenceMs: Number(v) })}
       >
         {#each PAUSES as p (p.ms)}
@@ -368,7 +317,7 @@
         {/each}
       </ToggleGroup.Root>
       <p class="text-sm text-muted-foreground">
-        {pausePreset ? pausePreset.hint : `数値で指定しています（${pause} ミリ秒）`}
+        {preset ? preset.hint : `数値で指定しています（${pause} ミリ秒）`}
       </p>
     </Card.Content>
   </Card.Root>

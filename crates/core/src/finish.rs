@@ -1,4 +1,4 @@
-//! 確定した文に、品の選択どおりに用語・ふりがな・翻訳を付ける（DESIGN.md 9.2、9.6）。
+//! 確定した文に、工程ごとの選択（`Engines`）どおりに用語・ふりがな・翻訳を付ける（DESIGN.md 9.2、9.6）。
 //!
 //! 用語の区切りは LLM か辞書の一致、ふりがなは LLM か形態素解析、翻訳は LLM か Chrome の翻訳で作り、
 //! 文字の位置で 1 つの字幕にまとめる（`enrich::source_tokens`）。確定の文を Chrome と OpenAI の
@@ -18,7 +18,7 @@ use crate::types::{Enriched, RubySegment, Token, TranscriptionError, Translatabl
 
 pub struct Finisher {
     store: Arc<Store>,
-    /// LLM に聞く品があり、鍵があるときだけ
+    /// LLM に聞く工程があり、鍵があるときだけ
     enricher: Option<Enricher>,
 }
 

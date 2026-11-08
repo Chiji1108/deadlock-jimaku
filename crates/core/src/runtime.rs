@@ -11,7 +11,7 @@ use futures_util::FutureExt;
 use tokio::task::JoinHandle;
 
 use crate::openai::Access;
-use crate::settings::{FinalSource, Models, Region, Segmentation, Settings, TextSource, Toppings};
+use crate::settings::{Engines, FinalSource, Models, Region, Segmentation, Settings, TextSource};
 use crate::store::Store;
 use crate::types::{LangCode, TranscriptionError};
 use crate::{assets, audio, chrome, rank, secrets, share, subtitles};
@@ -89,7 +89,7 @@ struct AudioInput {
     deadlock_mode: bool,
     /// 途中の字幕の出どころ。表示の切り替えでは字幕を止めない
     partial_text: Option<TextSource>,
-    toppings: Toppings,
+    engines: Engines,
     models: Models,
     realtime_delay: String,
     segmentation: Segmentation,
@@ -104,10 +104,10 @@ struct ChromeInput {
     translate_to: Vec<LangCode>,
     deadlock_mode: bool,
     segmentation: Segmentation,
-    /// 確定の仕上げ（翻訳・用語・ふりがな）を LLM に聞く品
-    toppings: Toppings,
+    /// 確定の仕上げ（翻訳・用語・ふりがな）を何で作るか
+    engines: Engines,
     models: Models,
-    /// 有料の品があるのに鍵がなければ始めない
+    /// OpenAI を使う工程があるのに鍵がなければ始めない
     access: Option<Access>,
 }
 
@@ -135,10 +135,10 @@ pub async fn run(store: Arc<Store>, options: Options) {
             .await
             .unwrap_or_default();
         let languages = settings.glossary_languages();
-        // すべて無料の品なら OpenAI に何も送らない
+        // OpenAI を使う工程がなければ OpenAI に何も送らない
         let access = keys
             .access(&settings.api_base)
-            .filter(|_| settings.toppings.paid());
+            .filter(|_| settings.engines.paid());
 
         assets_slot
             .update(
@@ -191,7 +191,7 @@ fn subtitles_input(
     options: &Options,
     access: Option<Access>,
 ) -> SubtitlesInput {
-    if settings.toppings.transcription == FinalSource::Chrome {
+    if settings.engines.transcription == FinalSource::Chrome {
         if !settings.transcription_enabled {
             return SubtitlesInput::Stopped;
         }
@@ -201,7 +201,7 @@ fn subtitles_input(
             translate_to: settings.translate_to.clone(),
             deadlock_mode: settings.deadlock_mode,
             segmentation: settings.segmentation.clone(),
-            toppings: settings.toppings,
+            engines: settings.engines,
             models: settings.models.clone(),
             access,
         }));
@@ -217,7 +217,7 @@ fn subtitles_input(
         translate_to: settings.translate_to.clone(),
         deadlock_mode: settings.deadlock_mode,
         partial_text: settings.plan().partial.text,
-        toppings: settings.toppings,
+        engines: settings.engines,
         models: settings.models.clone(),
         realtime_delay: settings.realtime_delay.clone(),
         segmentation: settings.segmentation.clone(),
@@ -250,7 +250,7 @@ fn start_subtitles(
     match input {
         SubtitlesInput::Stopped => None,
         SubtitlesInput::Chrome(input) => {
-            if input.toppings.paid() && input.access.is_none() {
+            if input.engines.paid() && input.access.is_none() {
                 store.set_transcription_error(Some(TranscriptionError::MissingKey));
                 return None;
             }
@@ -351,7 +351,7 @@ mod tests {
             translate_to: Vec::new(),
             deadlock_mode: false,
             segmentation: Settings::default().segmentation,
-            toppings: Toppings::FREE,
+            engines: Engines::CHROME,
             models: Settings::default().models,
             access: None,
         }))
@@ -401,7 +401,7 @@ mod tests {
         async fn new() -> Self {
             let dir = tempfile::tempdir().unwrap();
             let settings = Settings {
-                toppings: Toppings::RECOMMENDED,
+                engines: Engines::HYBRID,
                 deadlock_mode: false,
                 ..Settings::default()
             };
@@ -425,7 +425,7 @@ mod tests {
                 translate_to: Vec::new(),
                 deadlock_mode: false,
                 partial_text: Some(TextSource::Chrome),
-                toppings: Toppings::RECOMMENDED,
+                engines: Engines::HYBRID,
                 models: Settings::default().models,
                 realtime_delay: "low".into(),
                 segmentation: Settings::default().segmentation,
@@ -486,14 +486,14 @@ mod tests {
         assert_eq!(app.error(), Some(TranscriptionError::GiftRevoked));
     }
 
-    /// 確定の文を Chrome が作っても、有料の品があって鍵がなければ始めない
+    /// 確定の文を Chrome が作っても、OpenAI を使う工程があって鍵がなければ始めない
     #[tokio::test]
-    async fn paid_toppings_on_chrome_need_a_key() {
+    async fn paid_engines_on_chrome_need_a_key() {
         let mut app = App::new().await;
         let SubtitlesInput::Chrome(mut input) = chrome() else {
             unreachable!()
         };
-        input.toppings.furigana = crate::settings::RubySource::Llm;
+        input.engines.furigana = crate::settings::RubySource::Llm;
         app.update(SubtitlesInput::Chrome(input)).await;
         assert_eq!(app.error(), Some(TranscriptionError::MissingKey));
     }

@@ -5,10 +5,10 @@ import type { RubySource } from "./RubySource";
 import type { TranslationSource } from "./TranslationSource";
 
 /**
- * 字幕の作り方。品ごとに、無料（Chrome と PC の中）か有料（OpenAI）かを選ぶ（DESIGN.md 9.6）。
+ * 字幕の工程ごとに、何で作るか。無料（Chrome と PC の中）か有料（OpenAI）か（DESIGN.md 9.6）。
  * 今の仕組みで作れない組み合わせは `sanitized` が直す
  */
-export type Toppings = { 
+export type Engines = { 
 /**
  * 途中の字幕
  */

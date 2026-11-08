@@ -44,10 +44,11 @@
     </summary>
     <Card.Content class="mt-5 flex flex-col gap-5">
       <p class="text-sm text-muted-foreground">
-        有料の品は OpenAI に頼むので、OpenAI の API
-        キーが必要です。すべて無料の品なら要りません。料金は使った分だけで、話していない間はかかりません。話す時間が半分くらいの配信なら、おすすめで
-        1 時間あたり約 0.6 ドル、すべて OpenAI で約 1 ドル（翻訳 1
-        言語・ふりがなあり）が目安です。使った分の目安は「料金」タブに品ごとに出ます
+        ハイブリッドと OpenAI のモードは、確定の字幕と翻訳を OpenAI に頼むので、OpenAI の API
+        キーが必要です。Chrome
+        のモードなら要りません。料金は使った分だけで、話していない間はかかりません。話す時間が半分くらいの配信なら
+        1 時間あたり約 1 ドル（翻訳 1
+        言語・ふりがなあり）が目安です。使った分の目安は「料金」タブに出ます
       </p>
       <ol class="flex flex-col gap-4">
         {#each steps as step, i (step.title)}
