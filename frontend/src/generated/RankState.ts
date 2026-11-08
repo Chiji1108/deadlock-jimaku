@@ -19,7 +19,7 @@ points?: number,
  */
 names: { [key in string]: string }, 
 /**
- * `/assets/rank/{badge}.webp`。アイコンをまだ取れていなければ None
+ * `/assets/rank/{badge}-{元の画像の URL のハッシュ}.webp`。アイコンをまだ取れていなければ None
  */
 image?: string, 
 /**

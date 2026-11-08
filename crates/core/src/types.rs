@@ -416,7 +416,7 @@ pub struct RankState {
     pub points: Option<u32>,
     /// ティアの名前（言語ごと）
     pub names: BTreeMap<LangCode, String>,
-    /// `/assets/rank/{badge}.webp`。アイコンをまだ取れていなければ None
+    /// `/assets/rank/{badge}-{元の画像の URL のハッシュ}.webp`。アイコンをまだ取れていなければ None
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub image: Option<String>,

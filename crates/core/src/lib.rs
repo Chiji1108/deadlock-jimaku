@@ -60,6 +60,15 @@ pub fn now_ms() -> u64 {
         .as_millis() as u64
 }
 
+/// 16 進の SHA-256
+pub(crate) fn sha256(data: &[u8]) -> String {
+    use sha2::{Digest, Sha256};
+    Sha256::digest(data)
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect()
+}
+
 /// 途中で止まっても壊れたファイルが残らないよう、一時ファイルに書いてから置き換える
 pub async fn write_atomic(path: &Path, bytes: &[u8]) -> anyhow::Result<()> {
     tokio::fs::create_dir_all(path.parent().expect("has parent")).await?;

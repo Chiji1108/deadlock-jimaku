@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use anyhow::Context;
+use anyhow::{Context, ensure};
 use serde::Deserialize;
 
 use crate::lang;
@@ -74,20 +74,26 @@ async fn run(store: Arc<Store>, account_id: u32) {
     let mut last: Option<RankState> = None;
     // 最後に取れた順位と、取った時刻
     let mut placement: Option<(Option<u32>, Instant)> = None;
-    // アイコンを持っているバッジ。取れなかったら次の回に取り直す
-    let mut image_badge: Option<u32> = None;
+    // アイコンを持っているバッジと、配る URL。取れなかったら次の回に取り直す
+    let mut image: Option<(u32, String)> = None;
     loop {
         load_tiers(&mut tiers, &languages).await;
         match fetch_rank(account_id).await {
             Ok(player) => {
-                if image_badge != Some(player.badge) {
-                    let url = || image_source(&player, &tiers);
-                    match ensure_image(&store.rank_images(), player.badge, url).await {
-                        Ok(()) => image_badge = Some(player.badge),
+                if image
+                    .as_ref()
+                    .is_none_or(|(badge, _)| *badge != player.badge)
+                {
+                    match player_image(&store.rank_images(), &player, &tiers).await {
+                        Ok(url) => image = Some((player.badge, url)),
                         Err(e) => tracing::warn!("rank image: {e:#}"),
                     }
                 }
-                let mut state = state(&player, &tiers, image_badge == Some(player.badge));
+                let current = image
+                    .as_ref()
+                    .filter(|(badge, _)| *badge == player.badge)
+                    .map(|(_, url)| url.clone());
+                let mut state = state(&player, &tiers, current);
                 if let (ETERNUS, Some(region)) = (player.rank, region) {
                     // 取れてから時間が経ったら取り直す。取れなければ次の回にまた取りに行き、
                     // それまでは前の順位のまま（古くなったら出さない）
@@ -114,7 +120,7 @@ async fn run(store: Arc<Store>, account_id: u32) {
     }
 }
 
-fn state(player: &PlayerRank, tiers: &Tiers, has_image: bool) -> RankState {
+fn state(player: &PlayerRank, tiers: &Tiers, image: Option<String>) -> RankState {
     let points = player
         .last_match
         .as_ref()
@@ -126,7 +132,7 @@ fn state(player: &PlayerRank, tiers: &Tiers, has_image: bool) -> RankState {
         // ゲージのないエターナスだけ累積のポイントを出す
         points: points.filter(|_| player.rank >= ETERNUS),
         names: tiers.names.get(&player.rank).cloned().unwrap_or_default(),
-        image: has_image.then(|| image_url(player.badge)),
+        image,
         progress: points.and_then(|p| progress(player.rank, player.subrank, p)),
         leaderboard: None,
     }
@@ -246,44 +252,77 @@ fn subrank_image(tier: u32, subrank: u32) -> String {
     format!("{API}/assets/ranks/{tier}/{subrank}/image?format=webp")
 }
 
-/// アイコンを配る URL（server.rs が `rank_images` の中から返す）
-fn image_url(badge: u32) -> String {
-    format!("/assets/rank/{badge}.webp")
+/// 保存と配信の名前。元の画像の URL ごとに別の名前にするので、同じ名前の中身は変わらない
+fn image_name(badge: u32, source: &str) -> String {
+    format!("{badge}-{}.webp", &crate::sha256(source.as_bytes())[..16])
 }
 
-pub fn image_path(dir: &Path, badge: u32) -> PathBuf {
-    dir.join(format!("{badge}.webp"))
+/// 配る URL の名前から、保存した場所を出す（server.rs）。`image_name` の形の名前だけを受け付ける
+pub fn image_path(dir: &Path, name: &str) -> Option<PathBuf> {
+    let (badge, hash) = name.strip_suffix(".webp")?.split_once('-')?;
+    let valid = !badge.is_empty()
+        && badge.bytes().all(|b| b.is_ascii_digit())
+        && hash.len() == 16
+        && hash.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f'));
+    valid.then(|| dir.join(name))
 }
 
-/// バッジのアイコンを保存しておく。保存したものがあれば取りに行かない
-async fn ensure_image(
-    dir: &Path,
-    badge: u32,
-    source: impl FnOnce() -> anyhow::Result<String>,
-) -> anyhow::Result<()> {
-    let path = image_path(dir, badge);
-    if tokio::fs::try_exists(&path).await? {
-        return Ok(());
+/// RIFF の WebP か。エラーのページなどを画像として保存しない
+fn is_webp(bytes: &[u8]) -> bool {
+    bytes.len() > 12 && bytes.starts_with(b"RIFF") && &bytes[8..12] == b"WEBP"
+}
+
+/// バッジのアイコンを保存して、配る URL を返す。同じ URL から取ったものがあれば取りに行かない。
+/// 新しく保存したら、そのバッジの前のアイコンは消す
+async fn ensure_image(dir: &Path, badge: u32, source: &str) -> anyhow::Result<String> {
+    let name = image_name(badge, source);
+    let path = dir.join(&name);
+    if !tokio::fs::try_exists(&path).await? {
+        let bytes = crate::http()
+            .get(source)
+            .send()
+            .await?
+            .error_for_status()?
+            .bytes()
+            .await?;
+        ensure!(is_webp(&bytes), "{source} is not a webp image");
+        crate::write_atomic(&path, &bytes).await?;
+        if let Err(e) = remove_old_images(dir, badge, &name).await {
+            tracing::warn!("rank image cleanup: {e:#}");
+        }
     }
-    let bytes = crate::http()
-        .get(source()?)
-        .send()
-        .await?
-        .error_for_status()?
-        .bytes()
-        .await?;
-    crate::write_atomic(&path, &bytes).await
+    Ok(format!("/assets/rank/{name}"))
+}
+
+/// 元の URL が変わる前のアイコンと、URL を名前に含めていなかった頃の `{badge}.webp`
+async fn remove_old_images(dir: &Path, badge: u32, kept: &str) -> std::io::Result<()> {
+    let mut files = tokio::fs::read_dir(dir).await?;
+    while let Some(file) = files.next_entry().await? {
+        let name = file.file_name();
+        let Some(name) = name.to_str() else { continue };
+        let old = name.strip_suffix(".webp").is_some_and(|stem| {
+            stem == badge.to_string() || stem.starts_with(&format!("{badge}-"))
+        });
+        if old && name != kept {
+            tokio::fs::remove_file(file.path()).await?;
+        }
+    }
+    Ok(())
+}
+
+async fn player_image(dir: &Path, player: &PlayerRank, tiers: &Tiers) -> anyhow::Result<String> {
+    ensure_image(dir, player.badge, &image_source(player, tiers)?).await
 }
 
 /// プレビューの見本のアイコンを用意して、その URL を返す。本物のアイコンと同じく取ってきて保存する
 pub async fn sample_image(store: &Store) -> anyhow::Result<String> {
     let (tier, subrank) = SAMPLE;
-    let badge = tier * 10 + subrank;
-    ensure_image(&store.rank_images(), badge, || {
-        Ok(subrank_image(tier, subrank))
-    })
-    .await?;
-    Ok(image_url(badge))
+    ensure_image(
+        &store.rank_images(),
+        tier * 10 + subrank,
+        &subrank_image(tier, subrank),
+    )
+    .await
 }
 
 #[cfg(test)]
@@ -304,10 +343,11 @@ mod tests {
             names: BTreeMap::from([(7, BTreeMap::from([("ja".into(), "エミッサリー".into())]))]),
             ..Tiers::default()
         };
-        let s = state(&player(73, Some(41000)), &tiers, true);
+        let image = "/assets/rank/73-0123456789abcdef.webp".to_owned();
+        let s = state(&player(73, Some(41000)), &tiers, Some(image.clone()));
         assert_eq!(s.points, None);
         assert_eq!(s.names["ja"], "エミッサリー");
-        assert_eq!(s.image.as_deref(), Some("/assets/rank/73.webp"));
+        assert_eq!(s.image, Some(image));
         assert_eq!(
             s.progress,
             Some(RankProgress {
@@ -320,17 +360,11 @@ mod tests {
     #[test]
     fn only_eternus_shows_points() {
         let tiers = Tiers::default();
-        let eternus = state(&player(110, Some(72_000)), &tiers, false);
+        let eternus = state(&player(110, Some(72_000)), &tiers, None);
         assert_eq!(eternus.points, Some(72_000));
-        let below_its_subrank = state(&player(43, Some(1_000)), &tiers, false);
+        let below_its_subrank = state(&player(43, Some(1_000)), &tiers, None);
         assert_eq!(below_its_subrank.points, None);
         assert_eq!(below_its_subrank.progress, None);
-    }
-
-    #[test]
-    fn no_image_url_until_the_icon_is_fetched() {
-        let s = state(&player(73, Some(44000)), &Tiers::default(), false);
-        assert_eq!(s.image, None);
     }
 
     #[test]
@@ -379,48 +413,129 @@ mod tests {
         assert_eq!(find_rank(&entries, 7), None);
     }
 
-    /// 取りに来た回数を数え、決まった中身を返すサーバー。URL を返す
-    async fn serve_image(hits: Arc<std::sync::atomic::AtomicU32>) -> String {
+    const WEBP: &[u8] = b"RIFF\x10\0\0\0WEBPVP8 \0\0\0\0";
+
+    /// 取りに来た回数を数え、`/a` と `/b` は WebP、`/html` は HTML を返すサーバー。元の URL を返す
+    async fn serve_images(hits: Arc<std::sync::atomic::AtomicU32>) -> String {
+        use axum::extract::Path as UrlPath;
         use std::sync::atomic::Ordering;
         let app = axum::Router::new().route(
-            "/image",
-            axum::routing::get(move || async move {
+            "/{name}",
+            axum::routing::get(move |UrlPath(name): UrlPath<String>| async move {
                 hits.fetch_add(1, Ordering::SeqCst);
-                "webp"
+                if name == "html" {
+                    b"<html>rate limited</html>".to_vec()
+                } else {
+                    WEBP.to_vec()
+                }
             }),
         );
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
         tokio::spawn(async move { axum::serve(listener, app).await });
-        format!("http://{addr}/image")
+        format!("http://{addr}")
+    }
+
+    fn saved(dir: &Path) -> Vec<String> {
+        let mut names: Vec<String> = std::fs::read_dir(dir)
+            .unwrap()
+            .map(|file| file.unwrap().file_name().into_string().unwrap())
+            .collect();
+        names.sort();
+        names
+    }
+
+    fn served_file(dir: &Path, url: &str) -> PathBuf {
+        let name = url.strip_prefix("/assets/rank/").unwrap();
+        image_path(dir, name).unwrap()
     }
 
     #[tokio::test]
-    async fn an_icon_is_fetched_once_and_kept() {
+    async fn an_icon_is_fetched_once_per_source_and_kept() {
         use std::sync::atomic::{AtomicU32, Ordering};
         let dir = tempfile::tempdir().unwrap();
         let hits = Arc::new(AtomicU32::new(0));
-        let url = serve_image(hits.clone()).await;
-        for _ in 0..2 {
-            ensure_image(dir.path(), 73, || Ok(url.clone()))
-                .await
-                .unwrap();
-        }
+        let origin = serve_images(hits.clone()).await;
+        let a = format!("{origin}/a");
+        let first = ensure_image(dir.path(), 73, &a).await.unwrap();
+        assert_eq!(ensure_image(dir.path(), 73, &a).await.unwrap(), first);
         assert_eq!(hits.load(Ordering::SeqCst), 1);
-        assert_eq!(std::fs::read(image_path(dir.path(), 73)).unwrap(), b"webp");
+        assert_eq!(
+            std::fs::read(served_file(dir.path(), &first)).unwrap(),
+            WEBP
+        );
+    }
+
+    #[tokio::test]
+    async fn a_new_source_gets_a_new_file_and_drops_the_old_one() {
+        use std::sync::atomic::AtomicU32;
+        let dir = tempfile::tempdir().unwrap();
+        let origin = serve_images(Arc::new(AtomicU32::new(0))).await;
+        std::fs::write(dir.path().join("73.webp"), WEBP).unwrap();
+        std::fs::write(dir.path().join("7.webp"), WEBP).unwrap();
+        let other = ensure_image(dir.path(), 74, &format!("{origin}/a"))
+            .await
+            .unwrap();
+        let old = ensure_image(dir.path(), 73, &format!("{origin}/a"))
+            .await
+            .unwrap();
+        let new = ensure_image(dir.path(), 73, &format!("{origin}/b"))
+            .await
+            .unwrap();
+        assert_ne!(old, new);
+        let mut kept = vec![
+            "7.webp".to_owned(),
+            other.replace("/assets/rank/", ""),
+            new.replace("/assets/rank/", ""),
+        ];
+        kept.sort();
+        assert_eq!(saved(dir.path()), kept);
+    }
+
+    #[tokio::test]
+    async fn only_a_webp_image_is_saved() {
+        use std::sync::atomic::AtomicU32;
+        let dir = tempfile::tempdir().unwrap();
+        let origin = serve_images(Arc::new(AtomicU32::new(0))).await;
+        assert!(
+            ensure_image(dir.path(), 73, &format!("{origin}/html"))
+                .await
+                .is_err()
+        );
+        assert!(saved(dir.path()).is_empty());
     }
 
     #[tokio::test]
     async fn a_failed_fetch_saves_nothing() {
         let dir = tempfile::tempdir().unwrap();
-        let unreachable = || Ok("http://127.0.0.1:9/image".to_owned());
+        let unreachable = "http://127.0.0.1:9/image";
         assert!(ensure_image(dir.path(), 73, unreachable).await.is_err());
-        assert!(!image_path(dir.path(), 73).exists());
+        assert!(!dir.path().join(image_name(73, unreachable)).exists());
+    }
+
+    #[test]
+    fn only_saved_icon_names_reach_the_folder() {
+        let dir = Path::new("rank");
+        assert_eq!(
+            image_path(dir, "73-0123456789abcdef.webp"),
+            Some(dir.join("73-0123456789abcdef.webp"))
+        );
+        for name in [
+            "73.webp",
+            "73-0123456789abcdef.png",
+            "73-0123456789ABCDEF.webp",
+            "73-0123456789abcde.webp",
+            "-0123456789abcdef.webp",
+            "+73-0123456789abcdef.webp",
+            "../73-0123456789abcdef.webp",
+        ] {
+            assert_eq!(image_path(dir, name), None, "{name}");
+        }
     }
 
     #[test]
     fn unranked_player_has_no_points() {
-        let s = state(&player(0, None), &Tiers::default(), false);
+        let s = state(&player(0, None), &Tiers::default(), None);
         assert_eq!(s.points, None);
         assert_eq!(s.progress, None);
     }

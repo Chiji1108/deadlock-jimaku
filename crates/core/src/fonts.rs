@@ -11,11 +11,11 @@ use anyhow::{Context, ensure};
 use fontdb::{Database, FaceInfo, Source, Stretch, Style};
 use percent_encoding::{NON_ALPHANUMERIC, utf8_percent_encode};
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 use tokio::time::timeout;
 use ts_rs::TS;
 
 use crate::settings::valid_font_name;
+use crate::sha256;
 
 /// 一覧の 1 行。`languages` があるものはカタログの Google Fonts のフォントで、その言語の一覧に出す。`size_bytes` があるものは未取得。
 /// `downloaded` は PC になくダウンロードで置いたフォントで、WebView が名前で描けない
@@ -131,13 +131,6 @@ impl Drop for Claim {
 pub enum DownloadError {
     Busy,
     Failed(anyhow::Error),
-}
-
-fn sha256(body: &[u8]) -> String {
-    Sha256::digest(body)
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect()
 }
 
 /// 大きさと SHA-256 がカタログと一致したものだけを返す

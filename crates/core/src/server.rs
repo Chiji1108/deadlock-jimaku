@@ -555,12 +555,12 @@ async fn icon(
     }
 }
 
-/// ランクのアイコン。URL にバッジを含み、そのバッジのアイコンだけを返すので中身は変わらない
+/// ランクのアイコン。名前に元の画像の URL のハッシュを含むので、同じ URL の中身は変わらない
 async fn rank_image(State(store): State<Arc<Store>>, Path(file): Path<String>) -> Response {
-    let Some(badge) = file.strip_suffix(".webp").and_then(|b| b.parse().ok()) else {
+    let Some(path) = rank::image_path(&store.rank_images(), &file) else {
         return StatusCode::NOT_FOUND.into_response();
     };
-    match tokio::fs::read(rank::image_path(&store.rank_images(), badge)).await {
+    match tokio::fs::read(path).await {
         Ok(bytes) => immutable("image/webp", bytes),
         Err(_) => StatusCode::NOT_FOUND.into_response(),
     }
@@ -769,15 +769,23 @@ mod tests {
     async fn serves_only_the_saved_rank_icons() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::create_dir(dir.path().join("rank")).unwrap();
+        std::fs::write(dir.path().join("rank/73-0123456789abcdef.webp"), b"webp").unwrap();
         std::fs::write(dir.path().join("rank/73.webp"), b"webp").unwrap();
         let addr = serve_with_data(dir.path().to_owned()).await;
-        let res = reqwest::get(format!("http://{addr}/assets/rank/73.webp"))
-            .await
-            .unwrap();
+        let res = reqwest::get(format!(
+            "http://{addr}/assets/rank/73-0123456789abcdef.webp"
+        ))
+        .await
+        .unwrap();
         assert_eq!(res.status(), StatusCode::OK);
         assert_eq!(res.headers()[header::CONTENT_TYPE], "image/webp");
         assert_eq!(&res.bytes().await.unwrap()[..], b"webp");
-        for file in ["74.webp", "73.png", "..%2F73.webp"] {
+        for file in [
+            "73.webp",
+            "74-0123456789abcdef.webp",
+            "73-0123456789abcdef.png",
+            "..%2Frank%2F73-0123456789abcdef.webp",
+        ] {
             let res = reqwest::get(format!("http://{addr}/assets/rank/{file}"))
                 .await
                 .unwrap();
