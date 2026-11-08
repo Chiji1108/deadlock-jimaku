@@ -1,6 +1,14 @@
 import { expect, test } from "vitest";
 import type { TextLook } from "../generated/TextLook";
-import { cleared, fontCss, shadowOn, syntheticBold, textVars, weightChoices } from "./text-style";
+import {
+  changedDetails,
+  cleared,
+  fontCss,
+  shadowOn,
+  syntheticBold,
+  textVars,
+  weightChoices,
+} from "./text-style";
 
 const standard = (): TextLook => ({
   color: null,
@@ -128,4 +136,28 @@ test("太字を合成するのは、600 以上を求めて 600 以上の面が�
 
 test("標準に戻す差分は全部の項目を null にする", () => {
   expect(cleared({ color: "#ffffff", languages: {} })).toEqual({ color: null, languages: null });
+});
+
+test("「詳しく」の中で変えている項目を数える（隠れている項目は数えない）", () => {
+  const look = standard();
+  expect(changedDetails(look, [])).toBe(0);
+  look.color = "#000000";
+  look.outline.color = "#ffffff";
+  expect(changedDetails(look, [])).toBe(2);
+  // 帯がないときの帯の色、影を消したときのぼかしは効かない
+  look.background.color = "#ffffff";
+  look.shadow = { enabled: false, blur: 0.3, color: null };
+  expect(changedDetails(look, [])).toBe(3);
+  look.background.enabled = true;
+  look.shadow.enabled = true;
+  expect(changedDetails(look, [])).toBe(5);
+});
+
+test("字幕は行間と言語ごとの字間、ランクは字間も数える", () => {
+  const look = standard();
+  // 字幕: 行間と、出している言語の字間（ない言語は undefined）
+  expect(changedDetails(look, [1.8, 0.05, undefined])).toBe(2);
+  expect(changedDetails(look, [null, null])).toBe(0);
+  // ランク: 字間
+  expect(changedDetails(look, [0.02])).toBe(1);
 });

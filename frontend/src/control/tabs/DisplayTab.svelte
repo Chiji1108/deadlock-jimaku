@@ -134,6 +134,10 @@
           bandHint="明るい場面でも読めるよう、行の後ろに帯を敷きます"
           onchange={setStyle}
           onreset={() => setStyle(cleared(s.subtitleStyle))}
+          detailValues={[
+            s.subtitleStyle.lineHeight,
+            ...languages.map((language) => s.subtitleStyle.languages[language]?.letterSpacing),
+          ]}
         >
           {#snippet fonts()}
             <Field.Description>

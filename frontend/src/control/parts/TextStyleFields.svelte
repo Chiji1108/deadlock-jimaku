@@ -6,6 +6,7 @@
   import { Switch } from "$lib/components/ui/switch";
   import type { TextLook } from "../../generated/TextLook";
   import {
+    changedDetails,
     outlineStandard,
     shadowOn,
     type MergePatch,
@@ -15,7 +16,7 @@
   import ConfirmDialog from "./ConfirmDialog.svelte";
   import StyleNumber from "./StyleNumber.svelte";
 
-  // 字幕とランクで共通の「文字の見た目」。基本の項目を見せ、残りは「詳しく」に畳む。
+  // 字幕とランクで共通の「文字の見た目」。フォントと帯だけを見せ、残りは「詳しく」に畳む。
   // 変えると表示中のオーバーレイとプレビューにそのまま届く
   let {
     look,
@@ -25,6 +26,7 @@
     onreset,
     fonts,
     details,
+    detailValues,
   }: {
     look: TextLook;
     standard: TextStandard;
@@ -35,12 +37,16 @@
     fonts: Snippet;
     /** 「詳しく」の行のうち、字幕とランクで違うもの */
     details: Snippet;
+    /** `details` の行の値（標準から変えている数を出す） */
+    detailValues: (number | null | undefined)[];
   } = $props();
 
   let confirming = $state(false);
   const OUTLINE_RANGE = { min: 0, max: 50, step: 1 };
   const BLUR_RANGE = { min: 0, max: 100, step: 1 };
   const outlineWidth = $derived(outlineStandard(look, standard));
+  const changed = $derived(changedDetails(look, detailValues));
+  const summary = $derived(changed ? `詳しく（${changed} つ変更中）` : "詳しく");
 </script>
 
 <div class="flex flex-col gap-6">
@@ -49,30 +55,6 @@
     {@render fonts()}
     <Field.Description>太字の面がないフォントは、太字を合成して描きます</Field.Description>
   </Field.Field>
-
-  <ColorField
-    label="文字の色"
-    description="ヒーロー名、スキル名、アイテム名の色分けはそのままです"
-    value={look.color}
-    standard={standard.color}
-    onchange={(color) => onchange({ color })}
-  />
-
-  <StyleNumber
-    label="縁取りの幅"
-    value={look.outline.width}
-    standard={outlineWidth}
-    presets={[0, 0.08, standard.outlineWidth, 0.3]}
-    percent
-    range={OUTLINE_RANGE}
-    onchange={(width) => onchange({ outline: { width } })}
-  />
-  <ColorField
-    label="縁取りの色"
-    value={look.outline.color}
-    standard={standard.outlineColor}
-    onchange={(color) => onchange({ outline: { color } })}
-  />
 
   <Field.Field orientation="horizontal">
     <Field.Content>
@@ -90,9 +72,33 @@
     <summary
       class="flex cursor-pointer list-none items-center gap-1 text-sm font-medium select-none"
     >
-      <ChevronRightIcon class="size-4 transition-transform group-open:rotate-90" />詳しく
+      <ChevronRightIcon class="size-4 transition-transform group-open:rotate-90" />{summary}
     </summary>
     <div class="flex flex-col gap-6 pt-4">
+      <ColorField
+        label="文字の色"
+        description="ヒーロー名、スキル名、アイテム名の色分けは残します"
+        value={look.color}
+        standard={standard.color}
+        onchange={(color) => onchange({ color })}
+      />
+
+      <StyleNumber
+        label="縁取りの幅"
+        value={look.outline.width}
+        standard={outlineWidth}
+        presets={[0, 0.08, standard.outlineWidth, 0.3]}
+        percent
+        range={OUTLINE_RANGE}
+        onchange={(width) => onchange({ outline: { width } })}
+      />
+      <ColorField
+        label="縁取りの色"
+        value={look.outline.color}
+        standard={standard.outlineColor}
+        onchange={(color) => onchange({ outline: { color } })}
+      />
+
       <Field.Field orientation="horizontal">
         <Field.Label class="flex-1">影</Field.Label>
         <Switch

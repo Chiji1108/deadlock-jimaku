@@ -30,6 +30,21 @@ export type TextStandard = typeof SUBTITLE_TEXT;
 /** 帯があれば標準では影を付けない */
 export const shadowOn = (look: TextLook) => look.shadow.enabled ?? !look.background.enabled;
 
+/**
+ * 「詳しく」の中で標準から変えている項目の数。隠れている項目（影を消したときのぼかし、帯がないときの帯の色）は
+ * 効かないので数えない。`extra` は字幕とランクで違う項目の値
+ */
+export const changedDetails = (look: TextLook, extra: (number | null | undefined)[]) =>
+  [
+    look.color,
+    look.outline.width,
+    look.outline.color,
+    look.shadow.enabled,
+    ...(shadowOn(look) ? [look.shadow.blur, look.shadow.color] : []),
+    ...(look.background.enabled ? [look.background.color, look.background.opacity] : []),
+    ...extra,
+  ].filter((value) => value !== null && value !== undefined).length;
+
 export const outlineStandard = (look: TextLook, standard: TextStandard) =>
   look.background.enabled ? BAND_OUTLINE : standard.outlineWidth;
 
