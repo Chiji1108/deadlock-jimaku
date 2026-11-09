@@ -1,6 +1,7 @@
 // API（api.jimaku.deadlock.jp。DESIGN.md 17.1）。パスは版（/v1）で区切る。
 // おすそ分け: 自分の OpenAI キーを預けた人がコードを作り、コードを持つ人の通信を、そのキーで OpenAI に中継する。
 // xAI のキーも預けていれば、確定の文字起こし（Grok）を xAI に中継する
+import { and, desc, eq, ne, sql } from "drizzle-orm";
 import { Hono, type Context } from "hono";
 import {
   addUsage,
@@ -12,11 +13,14 @@ import {
   providers,
   refusal,
   todayUsd,
+  open,
   type Code,
+  type Db,
 } from "./db";
 import { openai, validKey } from "./openai";
 import { audioUsd, tokensOf, tokensUsd, wavSeconds, type Provider } from "./price";
 import { relay } from "./realtime";
+import { codes, codeUsage, issuers } from "./schema";
 import { decrypt, encrypt, issuerToken, newCode, newId, normalizeCode, sha256 } from "./secrets";
 import { validXaiKey, xai } from "./xai";
 
@@ -28,9 +32,15 @@ export interface Env {
   GIFT_RATE: RateLimit;
 }
 
-type Ctx = Context<{ Bindings: Env }>;
+type App = { Bindings: Env; Variables: { db: Db } };
+type Ctx = Context<App>;
 
-export const app = new Hono<{ Bindings: Env }>().basePath("/v1");
+export const app = new Hono<App>().basePath("/v1");
+
+app.use(async (c, next) => {
+  c.set("db", open(c.env.DB));
+  await next();
+});
 
 /** memo の長さの上限 */
 const MAX_MEMO = 100;
@@ -76,12 +86,12 @@ app.post("/share", async (c) => {
   if (!(await validKey(key))) return c.json({ error: "invalidKey" }, 400);
   const keyHash = await sha256(key);
   const token = await issuerToken(keyHash, c.env.SHARE_KEY);
-  await c.env.DB.prepare(
-    `INSERT INTO issuers (id, admin_token_hash, key_hash, encrypted_key, created_at) VALUES (?, ?, ?, ?, ?)
-     ON CONFLICT (key_hash) DO UPDATE SET admin_token_hash = excluded.admin_token_hash, encrypted_key = excluded.encrypted_key`,
-  )
-    .bind(newId(), await sha256(token), keyHash, await encrypt(key, c.env.SHARE_KEY), Date.now())
-    .run();
+  const adminTokenHash = await sha256(token);
+  const encryptedKey = await encrypt(key, c.env.SHARE_KEY);
+  await c.var.db
+    .insert(issuers)
+    .values({ id: newId(), adminTokenHash, keyHash, encryptedKey, createdAt: Date.now() })
+    .onConflictDoUpdate({ target: issuers.keyHash, set: { adminTokenHash, encryptedKey } });
   return c.json({ token });
 });
 
@@ -94,17 +104,18 @@ app.put("/share/key", async (c) => {
     return c.json({ error: "invalidKey" }, 400);
   }
   const keyHash = await sha256(key);
-  const other = await c.env.DB.prepare("SELECT id FROM issuers WHERE key_hash = ? AND id != ?")
-    .bind(keyHash, issuer.id)
-    .first();
+  const other = await c.var.db
+    .select({ id: issuers.id })
+    .from(issuers)
+    .where(and(eq(issuers.keyHash, keyHash), ne(issuers.id, issuer.id)))
+    .get();
   // そのキーで別の人としておすそ分けを有効にしている。片方を無効にしてもらう
   if (other) return c.json({ error: "keyInUse" }, 409);
   const token = await issuerToken(keyHash, c.env.SHARE_KEY);
-  await c.env.DB.prepare(
-    "UPDATE issuers SET key_hash = ?, encrypted_key = ?, admin_token_hash = ? WHERE id = ?",
-  )
-    .bind(keyHash, await encrypt(key, c.env.SHARE_KEY), await sha256(token), issuer.id)
-    .run();
+  await c.var.db
+    .update(issuers)
+    .set({ keyHash, encryptedKey: await encrypt(key, c.env.SHARE_KEY), adminTokenHash: await sha256(token) })
+    .where(eq(issuers.id, issuer.id));
   return c.json({ token });
 });
 
@@ -116,9 +127,10 @@ app.put("/share/xai", async (c) => {
   if (typeof key !== "string" || !key || !(await validXaiKey(key))) {
     return c.json({ error: "invalidXaiKey" }, 400);
   }
-  await c.env.DB.prepare("UPDATE issuers SET encrypted_xai_key = ? WHERE id = ?")
-    .bind(await encrypt(key, c.env.SHARE_KEY), issuer.id)
-    .run();
+  await c.var.db
+    .update(issuers)
+    .set({ encryptedXaiKey: await encrypt(key, c.env.SHARE_KEY) })
+    .where(eq(issuers.id, issuer.id));
   return c.body(null, 204);
 });
 
@@ -126,7 +138,7 @@ app.put("/share/xai", async (c) => {
 app.delete("/share/xai", async (c) => {
   const issuer = await admin(c);
   if (!issuer) return c.json({ error: "unauthorized" }, 401);
-  await c.env.DB.prepare("UPDATE issuers SET encrypted_xai_key = NULL WHERE id = ?").bind(issuer.id).run();
+  await c.var.db.update(issuers).set({ encryptedXaiKey: null }).where(eq(issuers.id, issuer.id));
   return c.body(null, 204);
 });
 
@@ -134,7 +146,7 @@ app.delete("/share/xai", async (c) => {
 app.delete("/share", async (c) => {
   const issuer = await admin(c);
   if (!issuer) return c.json({ error: "unauthorized" }, 401);
-  await c.env.DB.prepare("DELETE FROM issuers WHERE id = ?").bind(issuer.id).run();
+  await c.var.db.delete(issuers).where(eq(issuers.id, issuer.id));
   return c.body(null, 204);
 });
 
@@ -142,26 +154,32 @@ app.get("/share/codes", async (c) => {
   const issuer = await admin(c);
   if (!issuer) return c.json({ error: "unauthorized" }, 401);
   const now = Date.now();
-  const { results } = await c.env.DB.prepare(
-    `SELECT c.id, c.memo, c.expires_at AS expiresAt, c.revoked, c.created_at AS createdAt,
-            c.daily_limit_usd, c.day, c.day_usd,
-            COALESCE(SUM(u.usd), 0) AS usd,
-            COALESCE(SUM(CASE WHEN u.month = ? THEN u.usd END), 0) AS monthUsd
-     FROM codes c LEFT JOIN code_usage u ON u.code_id = c.id
-     WHERE c.issuer_id = ? GROUP BY c.id ORDER BY c.created_at DESC`,
-  )
-    .bind(month(now), issuer.id)
-    .all<{ revoked: number } & Pick<Code, "daily_limit_usd" | "day" | "day_usd">>();
+  const rows = await c.var.db
+    .select({
+      id: codes.id,
+      memo: codes.memo,
+      expiresAt: codes.expiresAt,
+      revoked: codes.revoked,
+      createdAt: codes.createdAt,
+      dailyLimitUsd: codes.dailyLimitUsd,
+      day: codes.day,
+      dayUsd: codes.dayUsd,
+      usd: sql<number>`COALESCE(SUM(${codeUsage.usd}), 0)`,
+      monthUsd: sql<number>`COALESCE(SUM(CASE WHEN ${codeUsage.month} = ${month(now)} THEN ${codeUsage.usd} END), 0)`,
+    })
+    .from(codes)
+    .leftJoin(codeUsage, eq(codeUsage.codeId, codes.id))
+    .where(eq(codes.issuerId, issuer.id))
+    .groupBy(codes.id)
+    .orderBy(desc(codes.createdAt));
   // dailyLimitUsd は決めた額（null は既定）、effectiveLimitUsd は実際に効く額
-  const codes = results.map(({ daily_limit_usd, day, day_usd, ...r }) => ({
+  const list = rows.map(({ day, ...r }) => ({
     ...r,
-    revoked: !!r.revoked,
-    dayUsd: todayUsd({ day, day_usd }, now),
-    dailyLimitUsd: daily_limit_usd,
-    effectiveLimitUsd: dailyLimit({ daily_limit_usd }),
+    dayUsd: todayUsd({ day, dayUsd: r.dayUsd }, now),
+    effectiveLimitUsd: dailyLimit(r),
   }));
   // xai: xAI のキーを預けているか
-  return c.json({ codes, xai: issuer.encrypted_xai_key !== null });
+  return c.json({ codes: list, xai: issuer.encryptedXaiKey !== null });
 });
 
 /** コードを作る。コードそのものはこの応答でだけ返す（保存するのはハッシュ） */
@@ -172,20 +190,15 @@ app.post("/share/codes", async (c) => {
   if (!fields) return c.json({ error: "invalid" }, 400);
   const id = newId();
   const code = newCode();
-  await c.env.DB.prepare(
-    `INSERT INTO codes (id, code_hash, issuer_id, memo, expires_at, daily_limit_usd, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-  )
-    .bind(
-      id,
-      await sha256(normalizeCode(code)),
-      issuer.id,
-      fields.memo ?? "",
-      fields.expiresAt ?? null,
-      fields.dailyLimitUsd ?? null,
-      Date.now(),
-    )
-    .run();
+  await c.var.db.insert(codes).values({
+    id,
+    codeHash: await sha256(normalizeCode(code)),
+    issuerId: issuer.id,
+    memo: fields.memo,
+    expiresAt: fields.expiresAt,
+    dailyLimitUsd: fields.dailyLimitUsd,
+    createdAt: Date.now(),
+  });
   return c.json({ id, code });
 });
 
@@ -198,18 +211,13 @@ app.patch("/share/codes/:id", async (c) => {
   if (!fields || (body.revoked !== undefined && typeof body.revoked !== "boolean")) {
     return c.json({ error: "invalid" }, 400);
   }
-  const sets: string[] = [];
-  const values: unknown[] = [];
-  if (fields.memo !== undefined) sets.push("memo = ?"), values.push(fields.memo);
-  if (fields.expiresAt !== undefined) sets.push("expires_at = ?"), values.push(fields.expiresAt);
-  if (fields.dailyLimitUsd !== undefined) sets.push("daily_limit_usd = ?"), values.push(fields.dailyLimitUsd);
-  if (body.revoked !== undefined) sets.push("revoked = ?"), values.push(body.revoked ? 1 : 0);
-  if (sets.length === 0) return c.body(null, 204);
-  const { meta } = await c.env.DB.prepare(
-    `UPDATE codes SET ${sets.join(", ")} WHERE id = ? AND issuer_id = ?`,
-  )
-    .bind(...values, c.req.param("id"), issuer.id)
-    .run();
+  // undefined の欄は変えない
+  const set = { ...fields, revoked: body.revoked as boolean | undefined };
+  if (Object.values(set).every((v) => v === undefined)) return c.body(null, 204);
+  const { meta } = await c.var.db
+    .update(codes)
+    .set(set)
+    .where(and(eq(codes.id, c.req.param("id")), eq(codes.issuerId, issuer.id)));
   return meta.changes ? c.body(null, 204) : c.json({ error: "notFound" }, 404);
 });
 
@@ -220,11 +228,11 @@ app.get("/gift", async (c) => {
   const code = await giftCode(c);
   if (!code) return c.json({ error: "unknown" }, 401);
   if (code.revoked) return c.json({ error: "revoked" }, 403);
-  if (code.expires_at !== null && Date.now() >= code.expires_at) {
-    return c.json({ error: "expired", expiresAt: code.expires_at }, 403);
+  if (code.expiresAt !== null && Date.now() >= code.expiresAt) {
+    return c.json({ error: "expired", expiresAt: code.expiresAt }, 403);
   }
   if (overLimit(code, Date.now())) return c.json({ error: "limit" }, 403);
-  return c.json({ expiresAt: code.expires_at, providers: providers(code) });
+  return c.json({ expiresAt: code.expiresAt, providers: providers(code) });
 });
 
 app.post("/openai/responses", async (c) => {
@@ -256,7 +264,7 @@ app.post("/openai/responses", async (c) => {
     const [client, copy] = res.body.tee();
     const usage = new Response(copy).text().then(streamUsage);
     c.executionCtx.waitUntil(
-      usage.then((u) => addUsage(c.env.DB, gift.code.id, tokensUsd(model, tokensOf(u)) ?? 0, Date.now())),
+      usage.then((u) => addUsage(c.var.db, gift.code.id, tokensUsd(model, tokensOf(u)) ?? 0, Date.now())),
     );
     return new Response(client, { headers: { "Content-Type": "text/event-stream" } });
   }
@@ -264,7 +272,7 @@ app.post("/openai/responses", async (c) => {
   if (res.ok) {
     const usage = (JSON.parse(answer) as { usage?: unknown }).usage;
     const usd = tokensUsd(model, tokensOf(usage)) ?? 0;
-    c.executionCtx.waitUntil(addUsage(c.env.DB, gift.code.id, usd, Date.now()));
+    c.executionCtx.waitUntil(addUsage(c.var.db, gift.code.id, usd, Date.now()));
   }
   return new Response(answer, { status: res.status, headers: { "Content-Type": "application/json" } });
 });
@@ -281,7 +289,7 @@ app.post("/openai/audio/transcriptions", async (c) => {
   const usd = seconds === undefined ? undefined : audioUsd("openai", model, seconds);
   if (usd === undefined) return c.json({ error: "notAllowed" }, 400);
   const res = await openai("/v1/audio/transcriptions", gift.key, { method: "POST", body: form });
-  if (res.ok) c.executionCtx.waitUntil(addUsage(c.env.DB, gift.code.id, usd, Date.now()));
+  if (res.ok) c.executionCtx.waitUntil(addUsage(c.var.db, gift.code.id, usd, Date.now()));
   return new Response(res.body, {
     status: res.status,
     headers: { "Content-Type": res.headers.get("Content-Type") ?? "application/json" },
@@ -305,7 +313,7 @@ app.post("/xai/stt", async (c) => {
   }
   forwarded.append("file", file);
   const res = await xai("/v1/stt", gift.key, { method: "POST", body: forwarded });
-  if (res.ok) c.executionCtx.waitUntil(addUsage(c.env.DB, gift.code.id, usd, Date.now()));
+  if (res.ok) c.executionCtx.waitUntil(addUsage(c.var.db, gift.code.id, usd, Date.now()));
   return new Response(res.body, {
     status: res.status,
     headers: { "Content-Type": res.headers.get("Content-Type") ?? "application/json" },
@@ -316,7 +324,7 @@ app.get("/openai/realtime", async (c) => {
   if (c.req.header("Upgrade") !== "websocket") return c.json({ error: "websocket" }, 426);
   const gift = await giftKey(c);
   if (gift instanceof Response) return gift;
-  return relay(c.env.DB, gift.code, gift.key, c.executionCtx);
+  return relay(c.var.db, gift.code, gift.key, c.executionCtx);
 });
 
 // ---- 共通 ----
@@ -327,12 +335,12 @@ function bearer(c: Ctx): string | undefined {
 
 async function admin(c: Ctx) {
   const token = bearer(c);
-  return token ? issuerByToken(c.env.DB, token) : null;
+  return token ? issuerByToken(c.var.db, token) : null;
 }
 
 async function giftCode(c: Ctx): Promise<Code | null> {
   const code = bearer(c);
-  return code ? codeByValue(c.env.DB, code) : null;
+  return code ? codeByValue(c.var.db, code) : null;
 }
 
 /**
@@ -351,7 +359,7 @@ async function giftKey(
   if (error) return c.json({ error }, 403, { "X-Gift-Refusal": error });
   const { success } = await c.env.GIFT_RATE.limit({ key: code.id });
   if (!success) return c.json({ error: "rate" }, 429);
-  const encrypted = provider === "xai" ? code.encrypted_xai_key! : code.encrypted_key;
+  const encrypted = provider === "xai" ? code.encryptedXaiKey! : code.encryptedKey;
   return { code, key: await decrypt(encrypted, c.env.SHARE_KEY) };
 }
 

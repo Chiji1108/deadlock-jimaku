@@ -1,9 +1,6 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { getPlatformProxy } from "wrangler";
-import share0001 from "../migrations/0001_share.sql?raw";
-import limit0002 from "../migrations/0002_daily_limit.sql?raw";
-import xai0003 from "../migrations/0003_xai.sql?raw";
-import { addUsage, codeByValue, day, DEFAULT_DAILY_LIMIT_USD } from "./db";
+import { addUsage, codeByValue, day, DEFAULT_DAILY_LIMIT_USD, open, type Db } from "./db";
 import { app, type Env } from "./index";
 import { openai, validKey } from "./openai";
 import { appendSeconds, tokensUsd, wavSeconds } from "./price";
@@ -17,6 +14,7 @@ vi.mock("./xai", () => ({ xai: vi.fn(), validXaiKey: vi.fn() }));
 const KEY = "sk-issuer";
 let proxy: Awaited<ReturnType<typeof getPlatformProxy<{ DB: D1Database }>>>;
 let env: Env;
+let db: Db;
 let pending: Promise<unknown>[] = [];
 const ctx = { waitUntil: (p: Promise<unknown>) => pending.push(p), passThroughOnException() {}, props: {} };
 
@@ -44,7 +42,13 @@ beforeAll(async () => {
     SHARE_KEY: btoa(String.fromCharCode(...new Uint8Array(32).fill(7))),
     GIFT_RATE: { limit: rate },
   };
-  const sql = (share0001 + limit0002 + xai0003)
+  db = open(env.DB);
+  // 本番と同じく、migrations/ の SQL を番号の順に当てる
+  const migrations = import.meta.glob<string>("../migrations/*.sql", { query: "?raw", import: "default", eager: true });
+  const sql = Object.keys(migrations)
+    .sort()
+    .map((name) => migrations[name])
+    .join("\n")
     .replace(/--.*$/gm, "")
     .split(";")
     .map((s) => s.trim())
@@ -497,7 +501,7 @@ describe("rate limit", () => {
   it("does not count unknown or refused codes, and does not hide why a code stopped", async () => {
     const token = await share();
     const { code } = await createCode(token, { dailyLimitUsd: 1 });
-    await addUsage(env.DB, (await codeByValue(env.DB, code))!.id, 1, Date.now());
+    await addUsage(db, (await codeByValue(db, code))!.id, 1, Date.now());
     rate.mockResolvedValue({ success: false });
     const res = await call("/openai/responses", { method: "POST", token: code, ...json(responses) });
     expect(res.status).toBe(403);
@@ -521,7 +525,7 @@ describe("daily limit", () => {
 
   /** 使われた額を D1 に足す */
   async function spend(code: string, usd: number, now: number) {
-    await addUsage(env.DB, (await codeByValue(env.DB, code))!.id, usd, now);
+    await addUsage(db, (await codeByValue(db, code))!.id, usd, now);
   }
 
   beforeEach(() => {
@@ -703,8 +707,8 @@ describe("realtime relay", () => {
     vi.mocked(openai).mockResolvedValue({ webSocket: upstream } as unknown as Response);
     const token = await share();
     ({ code } = await createCode(token, { dailyLimitUsd: 0.001 }));
-    const gift = (await codeByValue(env.DB, code))!;
-    await relay(env.DB, gift, KEY, ctx);
+    const gift = (await codeByValue(db, code))!;
+    await relay(db, gift, KEY, ctx);
   });
 
   afterEach(() => {
@@ -731,7 +735,7 @@ describe("realtime relay", () => {
     // 切れたときに、送った音声の分（0.1 秒）を書く
     client.dispatchEvent(new CloseEvent("close", { code: 1000 }));
     await settled();
-    expect((await codeByValue(env.DB, code))!.day_usd).toBeCloseTo((0.1 / 60) * 0.017, 8);
+    expect((await codeByValue(db, code))!.dayUsd).toBeCloseTo((0.1 / 60) * 0.017, 8);
   });
 
   it.each([
@@ -785,7 +789,7 @@ describe("realtime relay", () => {
     expect(upstream.closed?.code).toBe(1008);
     expect(upstream.sent).toHaveLength(1);
     await settled();
-    expect((await codeByValue(env.DB, code))!.day_usd).toBeCloseTo((400_000 / 2 / 24_000 / 60) * 0.017, 8);
+    expect((await codeByValue(db, code))!.dayUsd).toBeCloseTo((400_000 / 2 / 24_000 / 60) * 0.017, 8);
   });
 
   it("adds up audio sent faster than real time", () => {
@@ -802,7 +806,7 @@ describe("realtime relay", () => {
     client = new FakeSocket();
     upstream = new FakeSocket();
     vi.mocked(openai).mockResolvedValue({ webSocket: upstream } as unknown as Response);
-    await relay(env.DB, (await codeByValue(env.DB, code))!, KEY, ctx);
+    await relay(db, (await codeByValue(db, code))!, KEY, ctx);
     client.message(sessionUpdate());
     client.message(append(96_000));
     expect(client.closed).toEqual({ code: 1008, reason: "limit" });
@@ -851,11 +855,11 @@ describe("realtime relay", () => {
     const batch = vi
       .fn((statements: D1PreparedStatement[]) => env.DB.batch(statements))
       .mockRejectedValueOnce(new Error("D1 is down"));
-    const db = { prepare: (sql: string) => env.DB.prepare(sql), batch } as unknown as D1Database;
+    const failing = open({ prepare: (sql: string) => env.DB.prepare(sql), batch } as unknown as D1Database);
     client = new FakeSocket();
     upstream = new FakeSocket();
     vi.mocked(openai).mockResolvedValue({ webSocket: upstream } as unknown as Response);
-    await relay(db, (await codeByValue(env.DB, code))!, KEY, ctx);
+    await relay(failing, (await codeByValue(db, code))!, KEY, ctx);
     client.message(sessionUpdate());
     client.message(append());
     vi.mocked(Date.now).mockReturnValue(NOW + 30_000);
@@ -865,7 +869,7 @@ describe("realtime relay", () => {
     expect(client.closed).toBeUndefined();
     client.dispatchEvent(new CloseEvent("close", { code: 1000 }));
     await settled();
-    expect((await codeByValue(env.DB, code))!.day_usd).toBeCloseTo((0.2 / 60) * 0.017, 8);
+    expect((await codeByValue(db, code))!.dayUsd).toBeCloseTo((0.2 / 60) * 0.017, 8);
   });
 
   it("counts an amount once when the session closes during a write", async () => {
@@ -875,7 +879,7 @@ describe("realtime relay", () => {
     client.message(append());
     client.dispatchEvent(new CloseEvent("close", { code: 1000 }));
     await settled();
-    expect((await codeByValue(env.DB, code))!.day_usd).toBeCloseTo((0.2 / 60) * 0.017, 8);
+    expect((await codeByValue(db, code))!.dayUsd).toBeCloseTo((0.2 / 60) * 0.017, 8);
   });
 });
 

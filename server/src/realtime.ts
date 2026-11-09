@@ -2,7 +2,7 @@
 // 数えられない音声を送らせないよう、アプリが送る種類の文字のメッセージだけを通し、
 // 単価の分かるモデルと音声の形を session.update で決めるまでは、ほかのメッセージを通さない
 
-import { addUsage, codeById, dailyLimit, refusal, todayUsd, type Code } from "./db";
+import { addUsage, codeById, dailyLimit, refusal, todayUsd, type Code, type Db } from "./db";
 import { openai } from "./openai";
 import { appendSeconds, audioUsd, REALTIME_RATE } from "./price";
 
@@ -18,7 +18,7 @@ const CLIENT_EVENTS = new Set([
 ]);
 
 export async function relay(
-  db: D1Database,
+  db: Db,
   code: Code,
   key: string,
   ctx: { waitUntil(promise: Promise<unknown>): void },

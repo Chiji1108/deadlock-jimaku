@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1793714713000,
+      "tag": "0001_share",
+      "breakpoints": false
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1794026777000,
+      "tag": "0002_daily_limit",
+      "breakpoints": false
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1794177320000,
+      "tag": "0003_xai",
+      "breakpoints": false
+    }
+  ]
+}
