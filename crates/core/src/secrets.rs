@@ -101,6 +101,8 @@ impl Keys {
         };
         match (own, &self.gift) {
             (Some(key), _) => Some(Access::key(provider, key.clone())),
+            // Qwen の中継はまだないので、ギフトコードでは足りない（鍵がないとして始めない）
+            (None, Some(_)) if provider == Provider::Qwen => None,
             (None, Some(code)) => Some(Access::gift(provider, code.clone(), api)),
             (None, None) => None,
         }
@@ -222,4 +224,27 @@ pub fn share_code(id: &str) -> Option<String> {
 /// 空文字列なら消す
 pub fn set_share_code(id: &str, code: &str) -> anyhow::Result<()> {
     put_account(&format!("{}:{id}", Slot::ShareCode.account()), code)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_gift_stands_in_for_a_missing_key_except_for_qwen() {
+        let keys = Keys {
+            xai: Some("xai".into()),
+            gift: Some("K7M2".into()),
+            ..Default::default()
+        };
+        let api = "http://worker/v1";
+        assert!(keys.access(Provider::OpenAi, api).unwrap().is_gift());
+        assert!(!keys.access(Provider::Xai, api).unwrap().is_gift());
+        assert_eq!(keys.access(Provider::Qwen, api), None);
+        let own = Keys {
+            qwen: Some("sk".into()),
+            ..keys
+        };
+        assert!(!own.access(Provider::Qwen, api).unwrap().is_gift());
+    }
 }

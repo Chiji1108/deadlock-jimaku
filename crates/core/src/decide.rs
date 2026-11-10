@@ -163,12 +163,12 @@ fn candidates(
 ) -> Vec<Candidate> {
     let mut found = named(text, index);
     // 文と前の発話に出たヒーロー（その言葉が指しうるものを全部）。「ウルト」と番号は、そのスキルから選ばせる
-    let heroes: Vec<&String> = context
+    let before: Vec<Candidate> = context.iter().flat_map(|c| named(c, index)).collect();
+    let heroes: Vec<&String> = before
         .iter()
-        .flat_map(|c| named(c, index))
-        .chain(named(text, index))
-        .flat_map(|c| c.refs)
-        .filter_map(|r| glossary.entities.get_key_value(&r))
+        .chain(&found)
+        .flat_map(|c| &c.refs)
+        .filter_map(|r| glossary.entities.get_key_value(r))
         .filter(|(_, e)| e.kind == EntityKind::Hero)
         .map(|(r, _)| r)
         .collect();
@@ -213,13 +213,14 @@ fn named(text: &str, index: &Index) -> Vec<Candidate> {
         let rest = &text[at..];
         match index.iter().find(|(s, _)| rest.starts_with(s.as_str())) {
             Some((surface, refs)) => {
+                let len = surface.len() + tail(&rest[surface.len()..], surface);
                 found.push(Candidate {
                     start: at,
-                    spoken: surface.clone(),
+                    spoken: rest[..len].to_owned(),
                     refs: refs.clone(),
                     guessed: false,
                 });
-                at += surface.len();
+                at += len;
             }
             None => at += rest.chars().next().map_or(1, char::len_utf8),
         }
@@ -241,6 +242,20 @@ fn named(text: &str, index: &Index) -> Vec<Candidate> {
     }
     found.sort_by_key(|c| c.start);
     found
+}
+
+/// 名前か別名のすぐ後ろに続く、カタカナの言葉の残り（2 字まで）の長さ。別名「アンスト」は「アンストッパ」の
+/// 途中までしか当たらないので、言葉の終わりまでを用語にする。3 字以上続くなら別の言葉（「ダイナモウルト」）
+fn tail(after: &str, surface: &str) -> usize {
+    let is_katakana = |c: char| matches!(c, '\u{30a1}'..='\u{30fc}');
+    if !surface.chars().next_back().is_some_and(is_katakana) {
+        return 0;
+    }
+    let run: Vec<char> = after.chars().take_while(|c| is_katakana(*c)).collect();
+    match run.len() {
+        1..=2 => run.iter().map(|c| c.len_utf8()).sum(),
+        _ => 0,
+    }
 }
 
 /// 候補に入っていないカタカナの言葉（2 字以上）
@@ -503,6 +518,24 @@ mod tests {
                 ("基礎拡張マガジン".to_owned(), refs(&["item:1"])),
             ]
         );
+    }
+
+    #[test]
+    fn a_name_takes_the_rest_of_its_katakana_word() {
+        // 「エコーシャー」まで話した（名前は「エコーシャード」ではなく、別名が途中まで当たる形）
+        let mut loaded = loaded();
+        loaded.aliases = Arc::new(Aliases::from([(
+            "item:2".to_owned(),
+            vec!["エコシャ".to_owned()],
+        )]));
+        let index = index(&loaded, "ja");
+        let spoken = |text: &str| -> Vec<String> {
+            named(text, &index).into_iter().map(|c| c.spoken).collect()
+        };
+        assert_eq!(spoken("エコシャー買う。"), ["エコシャー"]);
+        // 3 字以上続くなら別の言葉。かなでない字の前では伸ばさない
+        assert_eq!(spoken("ヘイズウルト。"), ["ヘイズ"]);
+        assert_eq!(spoken("エコシャ買う。"), ["エコシャ"]);
     }
 
     #[test]

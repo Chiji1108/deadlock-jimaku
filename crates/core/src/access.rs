@@ -30,7 +30,7 @@ impl Access {
     }
 
     /// `api` は開発者のサーバーの根元（設定の `apiBase`）。会社ごとに `/openai`、`/xai` の下で中継する
-    /// （Qwen の中継はまだない。ギフトコードが中継する会社に入らないので、字幕を始めるときに断る）
+    /// （Qwen の中継はまだない。`Keys::access` は Qwen にギフトコードを使わない）
     pub fn gift(provider: Provider, code: String, api: &str) -> Self {
         let path = match provider {
             Provider::OpenAi => "openai",

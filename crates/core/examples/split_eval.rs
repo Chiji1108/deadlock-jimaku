@@ -352,7 +352,7 @@ async fn pipeline(app: &App, text: &str, context: &[String]) -> anyhow::Result<O
     let translations = app
         .translator
         .translate(http, &spans, Some(&app.loaded.glossary))
-        .await;
+        .await?;
     let written = |lang: &'static str| {
         let tokens = translations
             .get(lang)

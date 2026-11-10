@@ -412,9 +412,7 @@ export function transcriptionErrorText(e: TranscriptionError): string {
     case "giftUnknown":
       return "ギフトコードが見つかりません。おすそ分けしてくれた人に確かめてください";
     case "giftUnsupported":
-      return giftable(e.provider)
-        ? `このギフトコードでは ${PROVIDER_NAMES[e.provider]} を使えません。おすそ分けしてくれた人に ${PROVIDER_NAMES[e.provider]} のキーも預けてもらうか、自分の API キーを入れてください`
-        : `ギフトコードでは ${PROVIDER_NAMES[e.provider]} を使えません。自分の ${PROVIDER_NAMES[e.provider]} の API キーを入れてください`;
+      return `このギフトコードでは ${PROVIDER_NAMES[e.provider]} を使えません。おすそ分けしてくれた人に ${PROVIDER_NAMES[e.provider]} のキーも預けてもらうか、自分の API キーを入れてください`;
     case "invalidKey":
       return `${PROVIDER_NAMES[e.provider]} の API キーが使えません。キーを確かめてください`;
     case "inputEnded":

@@ -14,12 +14,14 @@ use serde_json::{Value, json};
 use crate::access::Access;
 use crate::enrich::Span;
 use crate::lang;
-use crate::types::{Glossary, LangCode, Token, Translations};
+use crate::share;
+use crate::types::{Glossary, LangCode, Token, TranscriptionError, Translations};
 use crate::usage::{Meter, Tokens, Use};
 
 const MODEL: &str = "qwen-mt-flash";
 
-const TIMEOUT: Duration = Duration::from_secs(5);
+/// 応答は 0.3 秒ほど。送り直しを入れても、確定の字幕を 10 秒より長くは待たせない
+const TIMEOUT: Duration = Duration::from_secs(2);
 
 /// 回数の上限（429）で断られたら、待って送り直す（訳が遅れても、抜けるよりよい）。上限の値は公開されておらず、
 /// 続けて送ると 1 分に 100 回ほどで断られた（実測）
@@ -52,31 +54,32 @@ impl Translator {
         }
     }
 
-    /// 用語を決めた文を、翻訳先ごとに訳す。訳せなかった言語は含めない
+    /// 用語を決めた文を、翻訳先ごとに訳す。訳せなかった言語は含めない。鍵が断られたら `TranscriptionError`
     pub async fn translate(
         &self,
         http: &reqwest::Client,
         spans: &[Span],
         glossary: Option<&Glossary>,
-    ) -> Translations {
+    ) -> anyhow::Result<Translations> {
         let (source, terms) = tagged(spans, glossary);
         let (source, terms) = (&source, &terms);
         let asked = self.targets.iter().map(|target| async move {
-            let translated = self.ask(http, source, target).await;
-            match translated {
-                Ok(text) => Some((target.clone(), tokens(&text, terms))),
-                Err(e) => {
-                    tracing::warn!("translation ({target}): {e:#}");
-                    None
-                }
-            }
+            let translated = self.ask(http, source, target).await?;
+            anyhow::Ok((target.clone(), tokens(&translated, terms)))
         });
-        join_all(asked)
-            .await
-            .into_iter()
-            .flatten()
-            .filter(|(_, tokens)| !tokens.is_empty())
-            .collect()
+        let mut translations = Translations::new();
+        for translated in join_all(asked).await {
+            match translated {
+                Ok((target, tokens)) if !tokens.is_empty() => {
+                    translations.insert(target, tokens);
+                }
+                Ok(_) => {}
+                // 断られた鍵は、どの言語でも送り直しても断られる
+                Err(e) if e.is::<TranscriptionError>() => return Err(e),
+                Err(e) => tracing::warn!("translation: {e:#}"),
+            }
+        }
+        Ok(translations)
     }
 
     async fn ask(
@@ -110,8 +113,14 @@ impl Translator {
             res = send().await?;
         }
         let status = res.status();
+        if !status.is_success() {
+            let body = res.text().await.unwrap_or_default();
+            if let Some(refused) = share::refusal(&self.access, status, None) {
+                return Err(refused.into());
+            }
+            anyhow::bail!("{target}: {status}: {body}");
+        }
         let res: Value = res.json().await?;
-        anyhow::ensure!(status.is_success(), "{status}: {res}");
         let usage = &res["usage"];
         let n = |key: &str| usage[key].as_u64().unwrap_or(0);
         self.meter.tokens(
@@ -318,6 +327,44 @@ mod tests {
             tokens("⟦Хейз⟧ с ⟦Bullet Dance⟧.", &terms()),
             [text("Хейз с "), term("ability:4"), text(".")]
         );
+    }
+
+    /// 断られた鍵は字幕を止める理由にし、ほかの失敗はその言語だけ諦める
+    #[tokio::test]
+    async fn a_refused_key_stops_and_other_failures_skip_the_language() {
+        use crate::secrets::Provider;
+        use axum::http::StatusCode;
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let api = format!("http://{}", listener.local_addr().unwrap());
+        let router = axum::Router::new()
+            .route(
+                "/qwen/chat/completions",
+                axum::routing::post(|| async { StatusCode::UNAUTHORIZED }),
+            )
+            .route(
+                "/openai/chat/completions",
+                axum::routing::post(|| async { StatusCode::BAD_GATEWAY }),
+            );
+        tokio::spawn(async move { axum::serve(listener, router).await });
+        let translator = |provider| {
+            let meter = Arc::new(Meter::new(std::env::temp_dir().join("mt_test_usage.json")));
+            let access = Access::gift(provider, "code".into(), &api);
+            Translator::new(access, "ja".into(), vec!["en".into()], meter)
+        };
+        let spans = [Span::Text("強い".into())];
+        let http = reqwest::Client::new();
+        let refused = translator(Provider::Qwen)
+            .translate(&http, &spans, None)
+            .await
+            .unwrap_err();
+        assert_eq!(
+            refused.downcast::<TranscriptionError>().unwrap(),
+            TranscriptionError::GiftUnknown
+        );
+        let failed = translator(Provider::OpenAi)
+            .translate(&http, &spans, None)
+            .await;
+        assert!(failed.unwrap().is_empty());
     }
 
     #[test]

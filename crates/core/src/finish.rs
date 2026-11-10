@@ -201,7 +201,8 @@ impl Finisher {
                     Some(TranslationSource::QwenMt) => match &self.translator {
                         Some(t) => {
                             let spans = decided.as_deref().unwrap_or(&local);
-                            t.translate(crate::http(), spans, glossary.as_deref()).await
+                            let asked = t.translate(crate::http(), spans, glossary.as_deref());
+                            answer("translation", asked.await.map(Some))?.unwrap_or_default()
                         }
                         None => Translations::new(),
                     },
