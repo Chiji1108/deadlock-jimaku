@@ -3,7 +3,7 @@
 @import "../../../frontend/src/lib/lang.css" layer(base);
 
 @theme {
-  /* フォントは読み込まず、アプリの字幕と同じく端末のものを使う（ふりがなの位置も揃う） */
+  /* 本文はフォントを読み込まず、アプリの字幕と同じく端末のものを使う（ふりがなの位置も揃う）。大きい見出しだけ .display で読み込む */
   --font-sans: system-ui, "Hiragino Sans", "Yu Gothic UI", "Meiryo", sans-serif;
   --color-ink: #12110e;
   --color-paper: #f1efe9;
@@ -32,8 +32,18 @@ h3 {
   text-wrap: balance;
 }
 
+/* 大きい見出しのフォント。Windows の標準のフォントには 900 の太さがないので、見出しだけ読み込む。
+   見出しの字だけを入れた woff2（scripts/fonts.ts。見出しを変えたら mise run lp-fonts で作り直す） */
+@font-face {
+  font-family: "Display";
+  src: url("../assets/fonts/noto-sans-jp-900.woff2") format("woff2");
+  font-weight: 900;
+  font-display: swap;
+}
+
 /* 大きい見出し。詰めて組み、1 語に字幕の帯を敷く */
 .display {
+  font-family: "Display", var(--font-sans);
   font-feature-settings: "palt";
   font-weight: 900;
   letter-spacing: -0.035em;

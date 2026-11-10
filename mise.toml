@@ -35,8 +35,8 @@ description = "Google Fonts のフォントの見本の SVG を作り直し、�
 run = "node frontend/scripts/font-samples.ts"
 
 [tasks.lp-fonts]
-description = "LP の文字の見た目の見本のフォントを、見本の字だけの woff2 に作り直す（GitHub からフォントを取る）"
-run = "node web/scripts/fonts.ts"
+description = "LP の文字の見た目の見本と大きい見出しのフォントを、使う字だけの woff2 に作り直す（LP をビルドして見出しの字を拾い、GitHub からフォントを取る）"
+run = ["pnpm --dir web build", "node web/scripts/fonts.ts"]
 
 [tasks.check]
 description = "整形・リント・型チェック・テストをまとめて実行する"
