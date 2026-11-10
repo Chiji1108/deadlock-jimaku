@@ -8,7 +8,8 @@
 //!   `claude-` で始まるモデルは Anthropic の Messages API に、同じ問い合わせ（`Enricher::question`）を
 //!   構造化出力で送る。`qwen` で始まるモデルは QwenCloud（シンガポール）の OpenAI 互換の口に、
 //!   同じ問い合わせを Chat Completions の構造化出力で送る（`QWEN_SOUTH_API_KEY`）。
-//!   どちらも推論は止める（OpenAI の `reasoning_effort: none` に合わせる）
+//!   どちらも推論は止める（OpenAI の `reasoning_effort: none` に合わせる）。
+//!   `会社/モデル` の形のモデル（`openrouter/free` など）は OpenRouter に送る（`OPENROUTER_API_KEY`）
 
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -91,7 +92,10 @@ async fn main() -> anyhow::Result<()> {
             true,
             meter.clone(),
         );
-        let other = model.starts_with("claude-") || model.starts_with("qwen");
+        let other =
+            model.starts_with("claude-") || model.starts_with("qwen") || model.contains('/');
+        // OpenRouter が実際に答えさせたモデル（`openrouter/free` は無料のモデルから毎回選ぶ）
+        let mut answered: BTreeMap<String, usize> = BTreeMap::new();
         let mut runs = Vec::new();
         let (mut correct, mut leftovers, mut stray, mut raw, mut failed, mut total_ms) =
             (0, 0, 0, 0, 0, 0u128);
@@ -108,6 +112,13 @@ async fn main() -> anyhow::Result<()> {
                         .context("nothing to ask")?;
                     let asked = if model.starts_with("claude-") {
                         ask_claude(&http, &anthropic_key, model, question).await
+                    } else if model.contains('/') {
+                        ask_openrouter(&http, model, question)
+                            .await
+                            .map(|(a, usd, by)| {
+                                *answered.entry(by).or_default() += 1;
+                                (a, usd)
+                            })
                     } else {
                         ask_qwen(&http, &qwen_key, model, question).await
                     };
@@ -178,6 +189,7 @@ async fn main() -> anyhow::Result<()> {
             "strayTermsInTranslation": stray,
             "rawReferencesInTranslation": raw,
             "averageMs": total_ms / n as u128,
+            "answeredBy": answered,
             "usage": usage,
         });
         println!("{model}: {summary}");
@@ -301,6 +313,47 @@ async fn ask_qwen(
         + n(&u["completion_tokens"]) * output)
         / 1e6;
     Ok((serde_json::from_str(text)?, usd))
+}
+
+/// OpenRouter の Chat Completions に、アプリと同じ問い合わせを送る（`会社/モデル` の形の MODEL。`OPENROUTER_API_KEY`）。
+/// 答えの JSON、料金（答えの `usage.cost`）、実際に答えたモデルを返す
+async fn ask_openrouter(
+    http: &reqwest::Client,
+    model: &str,
+    question: Question,
+) -> anyhow::Result<(Value, f64, String)> {
+    let body = json!({
+        "model": model,
+        "messages": [
+            { "role": "system", "content": &*question.system },
+            { "role": "user", "content": question.user },
+        ],
+        "response_format": {
+            "type": "json_schema",
+            "json_schema": { "name": "analysis", "strict": true, "schema": question.schema },
+        },
+    });
+    let res = http
+        .post("https://openrouter.ai/api/v1/chat/completions")
+        .bearer_auth(std::env::var("OPENROUTER_API_KEY").unwrap_or_default())
+        // 無料のモデルは遅いことがある。アプリの待ち時間（8 秒）より長く待って、どのくらい遅いかを見る
+        .timeout(std::time::Duration::from_secs(30))
+        .json(&body)
+        .send()
+        .await?;
+    let status = res.status();
+    let res: Value = res.json().await?;
+    anyhow::ensure!(status.is_success(), "{status}: {res}");
+    let by = res["model"].as_str().unwrap_or("?").to_owned();
+    let text = res["choices"][0]["message"]["content"]
+        .as_str()
+        .with_context(|| format!("no text from {by}: {}", res["choices"][0]))?;
+    let usd = res["usage"]["cost"].as_f64().unwrap_or(0.0);
+    Ok((
+        serde_json::from_str(text).with_context(|| format!("not JSON from {by}"))?,
+        usd,
+        by,
+    ))
 }
 
 /// 正解の用語（話した言葉と参照）。Terra の 3 回の答えは同じなので、最初の答えを使う

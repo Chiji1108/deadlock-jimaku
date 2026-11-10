@@ -8073,5 +8073,776 @@
         }
       }
     ]
+  },
+  "openrouter/free": {
+    "summary": {
+      "runs": 63,
+      "termsCorrect": 22,
+      "failed": 32,
+      "japaneseLeftInTranslation": 3,
+      "strayTermsInTranslation": 5,
+      "rawReferencesInTranslation": 2,
+      "averageMs": 22366,
+      "answeredBy": {
+        "cohere/north-mini-code:free": 4,
+        "dots-studio/dots-3-note-preview:free": 7,
+        "liquid/lfm-2.5-2.6b:free": 5,
+        "liquid/lfm-3-1.7b:free": 3,
+        "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free": 3,
+        "nvidia/nemotron-3-ultra-550b-a55b:free": 3,
+        "nvidia/nemotron-3.5-super-vl:free": 4,
+        "recursive/flint-v1.0:free": 1,
+        "xingchen-agi/xing4.0-29b-a4b:free": 1
+      },
+      "usage": {
+        "translate": {
+          "usd": 0.0
+        }
+      }
+    },
+    "runs": [
+      {
+        "text": "インファーナスのナパームが痛すぎる。",
+        "ms": 7583,
+        "ok": false,
+        "terms": [],
+        "expected": [
+          [
+            "インファーナス",
+            "hero:1"
+          ],
+          [
+            "ナパーム",
+            "ability:491391007"
+          ]
+        ],
+        "translations": {
+          "en": "Infernus' napalm is too painful.",
+          "ru": "Ульта ⟦Infernus⟧а，忘却noneのexplosivenessun会谈es too intense."
+        }
+      },
+      {
+        "text": "ケルビンのアイスパスで逃げられた。",
+        "ms": 30002,
+        "error": "Err(error decoding response body for url (https://openrouter.ai/api/v1/chat/completions)\n\nCaused by:\n    0: request or response body error\n    1: operation timed out)"
+      },
+      {
+        "text": "ダイナモのシンギュラリティに全員捕まった。",
+        "ms": 19863,
+        "ok": true,
+        "terms": [
+          [
+            "ダイナモ",
+            "hero:11"
+          ],
+          [
+            "シンギュラリティ",
+            "ability:249410288"
+          ]
+        ],
+        "expected": [
+          [
+            "ダイナモ",
+            "hero:11"
+          ],
+          [
+            "シンギュラリティ",
+            "ability:249410288"
+          ]
+        ],
+        "translations": {
+          "en": "Everyone got caught in Dynamo's ⟦Singularity⟧.",
+          "ru": "Все попали в ⟦Singularity⟧ ⟦Dynamo⟧."
+        }
+      },
+      {
+        "text": "ノックダウン買ってヴィンディクタ落とそう。",
+        "ms": 30003,
+        "error": "Err(error decoding response body for url (https://openrouter.ai/api/v1/chat/completions)\n\nCaused by:\n    0: request or response body error\n    1: operation timed out)"
+      },
+      {
+        "text": "メタルスキン切らされたのがきつい。",
+        "ms": 30003,
+        "error": "Err(error decoding response body for url (https://openrouter.ai/api/v1/chat/completions)\n\nCaused by:\n    0: request or response body error\n    1: operation timed out)"
+      },
+      {
+        "text": "ワープストーンで壁抜けた。",
+        "ms": 30002,
+        "error": "Err(error decoding response body for url (https://openrouter.ai/api/v1/chat/completions)\n\nCaused by:\n    0: request or response body error\n    1: operation timed out)"
+      },
+      {
+        "text": "アンストッパブル間に合った。",
+        "ms": 30003,
+        "error": "Err(error decoding response body for url (https://openrouter.ai/api/v1/chat/completions)\n\nCaused by:\n    0: request or response body error\n    1: operation timed out)"
+      },
+      {
+        "text": "不屈の心は序盤に買っておきたい。",
+        "ms": 3027,
+        "error": "Err(no text from recursive/flint-v1.0:free: {\"index\":0,\"logprobs\":null,\"finish_reason\":\"error\",\"native_finish_reason\":null,\"error\":{\"code\":502,\"message\":\"Network connection lost.\",\"metadata\":{\"error_type\":\"provider_unavailable\"}},\"message\":{\"role\":\"assistant\",\"content\":null,\"refusal\":null,\"reasoning\":\"We need answer user. Need parse task. We need produce final? We need solve current request. We have context empty, transcript: \\\"不屈の心は序盤に買っておきたい。\\\"\\n\\nWe need follow rules. Need output likely JSON with translations first then segments? User didn't explicitly ask language? The instruction says translate\",\"reasoning_details\":[{\"type\":\"reasoning.text\",\"text\":\"We need answer user. Need parse task. We need produce final? We need solve current request. We have context empty, transcript: \\\"不屈の心は序盤に買っておきたい。\\\"\\n\\nWe need follow rules. Need output likely JSON with translations first then segments? User didn't explicitly ask language? The instruction says translate\",\"format\":\"unknown\",\"index\":0}]}})"
+      },
+      {
+        "text": "ビバップのスティッキーボム二個付けられた。",
+        "ms": 30003,
+        "error": "Err(error decoding response body for url (https://openrouter.ai/api/v1/chat/completions)\n\nCaused by:\n    0: request or response body error\n    1: operation timed out)"
+      },
+      {
+        "text": "トキシックバレットとヒールベインで回復止めよう。",
+        "ms": 26832,
+        "ok": true,
+        "terms": [
+          [
+            "トキシックバレット",
+            "item:3696726732"
+          ],
+          [
+            "ヒールベイン",
+            "item:2603935618"
+          ]
+        ],
+        "expected": [
+          [
+            "トキシックバレット",
+            "item:3696726732"
+          ],
+          [
+            "ヒールベイン",
+            "item:2603935618"
+          ]
+        ],
+        "translations": {
+          "en": "Let's stop healing with ⟦Toxic Bullets⟧ and ⟦Healbane⟧.",
+          "ru": "Остановим исцеление с помощью ⟦Toxic Bullets⟧ и ⟦Healbane⟧."
+        }
+      },
+      {
+        "text": "スピリットシールドかバレットレジリエンスどっちがいいかな。",
+        "ms": 30002,
+        "error": "Err(error decoding response body for url (https://openrouter.ai/api/v1/chat/completions)\n\nCaused by:\n    0: request or response body error\n    1: operation timed out)"
+      },
+      {
+        "text": "ミラージュ強いな今のパッチ。",
+        "ms": 17767,
+        "ok": true,
+        "terms": [
+          [
+            "ミラージュ",
+            "hero:52"
+          ]
+        ],
+        "expected": [
+          [
+            "ミラージュ",
+            "hero:52"
+          ]
+        ],
+        "translations": {
+          "en": "Mirage is strong in this patch.",
+          "ru": "Мираж силен в этом патче."
+        }
+      },
+      {
+        "text": "インファーナスのウルトでスタン入った。",
+        "ms": 30002,
+        "error": "Err(error decoding response body for url (https://openrouter.ai/api/v1/chat/completions)\n\nCaused by:\n    0: request or response body error\n    1: operation timed out)"
+      },
+      {
+        "text": "ラッシュの2番で屋根に上がって。",
+        "ms": 23992,
+        "ok": false,
+        "terms": [],
+        "expected": [
+          [
+            "ラッシュ",
+            "hero:31"
+          ],
+          [
+            "2番",
+            "ability:2670099061"
+          ]
+        ],
+        "translations": {
+          "en": "Get on the roof with ⟦Lash⟧'s ⟦Grapple⟧.",
+          "ru": "Поднимитесь на крышу с помощью ⟦Lash⟧'s ⟦Grapple⟧."
+        }
+      },
+      {
+        "text": "ミナのウルトでサイレンス食らった。",
+        "ms": 30002,
+        "error": "Err(error decoding response body for url (https://openrouter.ai/api/v1/chat/completions)\n\nCaused by:\n    0: request or response body error\n    1: operation timed out)"
+      },
+      {
+        "text": "そのあとウルトで焼かれた。",
+        "ms": 19775,
+        "ok": false,
+        "terms": [],
+        "expected": [
+          [
+            "ウルト",
+            "ability:3832675871"
+          ]
+        ],
+        "translations": {
+          "en": "Bebop got me hooked. Then I got burned by the ult.",
+          "ru": "БеБоп меня зацепил. Потом я сожжёг у ульты."
+        }
+      },
+      {
+        "text": "ヤマトの１番溜めてから当てて。",
+        "ms": 30004,
+        "error": "Err(error decoding response body for url (https://openrouter.ai/api/v1/chat/completions)\n\nCaused by:\n    0: request or response body error\n    1: operation timed out)"
+      },
+      {
+        "text": "ダイナモウルト来るから散って。",
+        "ms": 30003,
+        "error": "Err(error decoding response body for url (https://openrouter.ai/api/v1/chat/completions)\n\nCaused by:\n    0: request or response body error\n    1: operation timed out)"
+      },
+      {
+        "text": "アイビーの３番で耐えた。",
+        "ms": 24533,
+        "ok": false,
+        "terms": [],
+        "expected": [
+          [
+            "アイビー",
+            "hero:20"
+          ],
+          [
+            "３番",
+            "ability:3642273386"
+          ]
+        ],
+        "translations": {
+          "en": "I survived with ⟦Ivy⟧'s ⟦Stone Form⟧.",
+          "ru": "Выжил с помощью ⟦Ivy⟧'s ⟦Stone Form⟧."
+        }
+      },
+      {
+        "text": "ラッシュのウルトで全員叩きつけられた。",
+        "ms": 30003,
+        "error": "Err(error decoding response body for url (https://openrouter.ai/api/v1/chat/completions)\n\nCaused by:\n    0: request or response body error\n    1: operation timed out)"
+      },
+      {
+        "text": "シルバーにウルト当てられた。",
+        "ms": 30003,
+        "error": "Err(error decoding response body for url (https://openrouter.ai/api/v1/chat/completions)\n\nCaused by:\n    0: request or response body error\n    1: operation timed out)"
+      },
+      {
+        "text": "3番のクールダウン長いな。",
+        "ms": 23732,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Your 3rd cooldown is long!",
+          "ru": "Ваше третье ожидание на крутке длится долго!"
+        }
+      },
+      {
+        "text": "ウルトあと10秒。",
+        "ms": 30002,
+        "error": "Err(error decoding response body for url (https://openrouter.ai/api/v1/chat/completions)\n\nCaused by:\n    0: request or response body error\n    1: operation timed out)"
+      },
+      {
+        "text": "エコーシャードでウルト二回撃てる。",
+        "ms": 30002,
+        "error": "Err(error decoding response body for url (https://openrouter.ai/api/v1/chat/completions)\n\nCaused by:\n    0: request or response body error\n    1: operation timed out)"
+      },
+      {
+        "text": "リフレッシャー持ってるからウルト二連発くるよ。",
+        "ms": 30003,
+        "error": "Err(error decoding response body for url (https://openrouter.ai/api/v1/chat/completions)\n\nCaused by:\n    0: request or response body error\n    1: operation timed out)"
+      },
+      {
+        "text": "エイブラムスのチャージで壁に当てられた。",
+        "ms": 23128,
+        "ok": true,
+        "terms": [
+          [
+            "エイブラムス",
+            "hero:6"
+          ],
+          [
+            "チャージ",
+            "ability:2824119765"
+          ]
+        ],
+        "expected": [
+          [
+            "エイブラムス",
+            "hero:6"
+          ],
+          [
+            "チャージ",
+            "ability:2824119765"
+          ]
+        ],
+        "translations": {
+          "en": "I got hit against the wall by ⟦Abrams⟧'s ⟦Shoulder Charge⟧.",
+          "ru": "Меня отбросило в стену от ⟦Abrams⟧'s ⟦Shoulder Charge⟧."
+        }
+      },
+      {
+        "text": "ケルビンのビームで足遅くされた。",
+        "ms": 5164,
+        "ok": false,
+        "terms": [
+          [
+            "ケルビンのビームで足遅くされた。",
+            "hero:12"
+          ]
+        ],
+        "expected": [
+          [
+            "ケルビン",
+            "hero:12"
+          ],
+          [
+            "ビーム",
+            "ability:2351041382"
+          ]
+        ],
+        "translations": {
+          "en": "Kelvin was slowed down by Kelvin's beam.",
+          "ru": "ケルビンがビームで足遅くされた。"
+        }
+      },
+      {
+        "text": "ビバップのフックに気をつけて。",
+        "ms": 30004,
+        "error": "Err(error decoding response body for url (https://openrouter.ai/api/v1/chat/completions)\n\nCaused by:\n    0: request or response body error\n    1: operation timed out)"
+      },
+      {
+        "text": "インファ強すぎない？",
+        "ms": 15129,
+        "ok": true,
+        "terms": [
+          [
+            "インファ",
+            "hero:1"
+          ]
+        ],
+        "expected": [
+          [
+            "インファ",
+            "hero:1"
+          ]
+        ],
+        "translations": {
+          "en": "Is ⟦Infernus⟧ too strong?",
+          "ru": "Сильный ли Инфа?"
+        }
+      },
+      {
+        "text": "ガイストのウルトで体力入れ替えられた。",
+        "ms": 30003,
+        "error": "Err(error decoding response body for url (https://openrouter.ai/api/v1/chat/completions)\n\nCaused by:\n    0: request or response body error\n    1: operation timed out)"
+      },
+      {
+        "text": "タロンに遠くから抜かれた。",
+        "ms": 6843,
+        "ok": false,
+        "terms": [
+          [
+            "タロンに遠くから抜かれた。",
+            "hero:84"
+          ]
+        ],
+        "expected": [
+          [
+            "タロン",
+            "hero:17"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Rat King⟧ was shot from afar.",
+          "ru": "⟦Rat King⟧ отстрелили издалека."
+        }
+      },
+      {
+        "text": "モークリのウルトに捕まった。",
+        "ms": 30003,
+        "error": "Err(error decoding response body for url (https://openrouter.ai/api/v1/chat/completions)\n\nCaused by:\n    0: request or response body error\n    1: operation timed out)"
+      },
+      {
+        "text": "ヴィンにずっと撃たれてる。",
+        "ms": 30002,
+        "error": "Err(error decoding response body for url (https://openrouter.ai/api/v1/chat/completions)\n\nCaused by:\n    0: request or response body error\n    1: operation timed out)"
+      },
+      {
+        "text": "ヴィンディのウルトで落とされた。",
+        "ms": 8145,
+        "ok": true,
+        "terms": [
+          [
+            "ヴィンディ",
+            "hero:3"
+          ],
+          [
+            "ウルト",
+            "ability:775377419"
+          ]
+        ],
+        "expected": [
+          [
+            "ヴィンディ",
+            "hero:3"
+          ],
+          [
+            "ウルト",
+            "ability:775377419"
+          ]
+        ],
+        "translations": {
+          "en": "Dropped by ⟦Vindicta⟧'s ⟦Assassinate⟧."
+        }
+      },
+      {
+        "text": "メタスキ押すの遅れた。",
+        "ms": 22409,
+        "ok": false,
+        "terms": [],
+        "expected": [
+          [
+            "メタスキ",
+            "item:1378931225"
+          ]
+        ],
+        "translations": {
+          "en": "I was late pressing the meta skill.",
+          "ru": "Я опоздал нажать мета-скилл."
+        }
+      },
+      {
+        "text": "アンストッパ買っとけばよかった。",
+        "ms": 30002,
+        "error": "Err(error decoding response body for url (https://openrouter.ai/api/v1/chat/completions)\n\nCaused by:\n    0: request or response body error\n    1: operation timed out)"
+      },
+      {
+        "text": "インフェルノスのアフターバーンが痛い。",
+        "ms": 15473,
+        "ok": true,
+        "terms": [
+          [
+            "インフェルノス",
+            "hero:1"
+          ],
+          [
+            "アフターバーン",
+            "ability:1593133799"
+          ]
+        ],
+        "expected": [
+          [
+            "インフェルノス",
+            "hero:1"
+          ],
+          [
+            "アフターバーン",
+            "ability:1593133799"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Infernus⟧'s ⟦Afterburn⟧ hurts.",
+          "ru": "Ульта ⟦Afterburn⟧ от ⟦Infernus⟧ больно."
+        }
+      },
+      {
+        "text": "ビーバップのボムに気をつけて。",
+        "ms": 30004,
+        "error": "Err(error decoding response body for url (https://openrouter.ai/api/v1/chat/completions)\n\nCaused by:\n    0: request or response body error\n    1: operation timed out)"
+      },
+      {
+        "text": "ワーデンのウルト止めて。",
+        "ms": 30003,
+        "error": "Err(error decoding response body for url (https://openrouter.ai/api/v1/chat/completions)\n\nCaused by:\n    0: request or response body error\n    1: operation timed out)"
+      },
+      {
+        "text": "ビンディクタのウルトで狙われてる。",
+        "ms": 9719,
+        "ok": true,
+        "terms": [
+          [
+            "ビンディクタ",
+            "hero:3"
+          ],
+          [
+            "ウルト",
+            "ability:775377419"
+          ]
+        ],
+        "expected": [
+          [
+            "ビンディクタ",
+            "hero:3"
+          ],
+          [
+            "ウルト",
+            "ability:775377419"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Vindicta⟧'s ⟦Assassinate⟧ is targeting me."
+        }
+      },
+      {
+        "text": "ワープストンで逃げた。",
+        "ms": 30003,
+        "error": "Err(error decoding response body for url (https://openrouter.ai/api/v1/chat/completions)\n\nCaused by:\n    0: request or response body error\n    1: operation timed out)"
+      },
+      {
+        "text": "メタルスキーン使った。",
+        "ms": 30003,
+        "error": "Err(error decoding response body for url (https://openrouter.ai/api/v1/chat/completions)\n\nCaused by:\n    0: request or response body error\n    1: operation timed out)"
+      },
+      {
+        "text": "セブンのパワーサージで火力上がってる。",
+        "ms": 17274,
+        "ok": true,
+        "terms": [
+          [
+            "セブン",
+            "hero:2"
+          ],
+          [
+            "パワーサージ",
+            "ability:539192269"
+          ]
+        ],
+        "expected": [
+          [
+            "セブン",
+            "hero:2"
+          ],
+          [
+            "パワーサージ",
+            "ability:539192269"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Seven⟧'s ⟦Power Surge⟧ is cranking up the damage.",
+          "ru": "⟦Power Surge⟧ от ⟦Seven⟧ урон поднимает."
+        }
+      },
+      {
+        "text": "パワーサージ買ったら移動速くなった。",
+        "ms": 29049,
+        "ok": false,
+        "terms": [],
+        "expected": [
+          [
+            "パワーサージ",
+            "item:1292979587"
+          ]
+        ],
+        "translations": {
+          "en": "Bought , movement got faster.",
+          "ru": "Купил , движение стало быстрее."
+        }
+      },
+      {
+        "text": "ガイストのライフドレインで吸われた。",
+        "ms": 17890,
+        "ok": true,
+        "terms": [
+          [
+            "ガイスト",
+            "hero:4"
+          ],
+          [
+            "ライフドレイン",
+            "ability:218284420"
+          ]
+        ],
+        "expected": [
+          [
+            "ガイスト",
+            "hero:4"
+          ],
+          [
+            "ライフドレイン",
+            "ability:218284420"
+          ]
+        ],
+        "translations": {
+          "en": "Got drained by ⟦Lady Geist⟧'s ⟦Life Drain⟧.",
+          "ru": "Задрало от ⟦Lady Geist⟧'s ⟦Life Drain⟧."
+        }
+      },
+      {
+        "text": "ライフドレイン買って耐久上げる。",
+        "ms": 5695,
+        "ok": true,
+        "terms": [
+          [
+            "ライフドレイン",
+            "item:865846625"
+          ]
+        ],
+        "expected": [
+          [
+            "ライフドレイン",
+            "item:865846625"
+          ]
+        ],
+        "translations": {
+          "en": "Buy ⟦Leech⟧ to increase durability."
+        }
+      },
+      {
+        "text": "今シルバー帯だからね。",
+        "ms": 3944,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I'm in Silver rank right now.",
+          "ru": "Я сейчас в серебре."
+        }
+      },
+      {
+        "text": "ヤマトの荷物まだ届かないんだよね。",
+        "ms": 30003,
+        "error": "Err(error decoding response body for url (https://openrouter.ai/api/v1/chat/completions)\n\nCaused by:\n    0: request or response body error\n    1: operation timed out)"
+      },
+      {
+        "text": "アポロチョコ食べながらやってます。",
+        "ms": 30002,
+        "error": "Err(error decoding response body for url (https://openrouter.ai/api/v1/chat/completions)\n\nCaused by:\n    0: request or response body error\n    1: operation timed out)"
+      },
+      {
+        "text": "それストーカーみたいで怖いな。",
+        "ms": 14170,
+        "ok": false,
+        "terms": [
+          [
+            "ストーカー",
+            "item:98582110"
+          ]
+        ],
+        "expected": [],
+        "translations": {
+          "en": "That looks like ⟦Stalker⟧, scary.",
+          "ru": "Похоже на ⟦Stalker⟧, страшно."
+        }
+      },
+      {
+        "text": "昨日ボクシングでノックダウン見た。",
+        "ms": 20121,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I saw a knockdown in boxing yesterday.",
+          "ru": "Я видел нокаут в боксе вчера."
+        }
+      },
+      {
+        "text": "レム睡眠が足りてない。",
+        "ms": 30002,
+        "error": "Err(error decoding response body for url (https://openrouter.ai/api/v1/chat/completions)\n\nCaused by:\n    0: request or response body error\n    1: operation timed out)"
+      },
+      {
+        "text": "ビリーって友達が見に来てる。",
+        "ms": 30003,
+        "error": "Err(error decoding response body for url (https://openrouter.ai/api/v1/chat/completions)\n\nCaused by:\n    0: request or response body error\n    1: operation timed out)"
+      },
+      {
+        "text": "アイビーリーグ出身らしいよ。",
+        "ms": 3997,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Seems like they're from the Ivy League.",
+          "ru": "Похоже, что они из Иви Лиг."
+        }
+      },
+      {
+        "text": "ポケットWi-Fiの調子が悪い。",
+        "ms": 24707,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Pocket Wi‑Fi's connection's acting up.",
+          "ru": "Покет Wi‑Fi' с соединением плохо работает."
+        }
+      },
+      {
+        "text": "セブンでいいか。",
+        "ms": 20165,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Is [hero:2] okay?",
+          "ru": "Хорошо ли [hero:2]?"
+        }
+      },
+      {
+        "text": "今日はセブンで行くか。",
+        "ms": 30001,
+        "error": "Err(error decoding response body for url (https://openrouter.ai/api/v1/chat/completions)\n\nCaused by:\n    0: request or response body error\n    1: operation timed out)"
+      },
+      {
+        "text": "コメントありがとうございます。",
+        "ms": 6190,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Thanks for the comments.",
+          "ru": "Спасибо за комменты."
+        }
+      },
+      {
+        "text": "今日は3時間くらいやる予定です。",
+        "ms": 7613,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I'm planning to play for about 3 hours.",
+          "ru": "3時間くらいやる予定です。"
+        }
+      },
+      {
+        "text": "ちょっと水飲むね。",
+        "ms": 30004,
+        "error": "Err(error decoding response body for url (https://openrouter.ai/api/v1/chat/completions)\n\nCaused by:\n    0: request or response body error\n    1: operation timed out)"
+      },
+      {
+        "text": "1番レーンが押されてる。",
+        "ms": 15084,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Lane 1 is being pushed.",
+          "ru": "Линию 1 давят."
+        }
+      },
+      {
+        "text": "ミッドボス取りに行こう。",
+        "ms": 13357,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Let's go get the mid-boss.",
+          "ru": "Пойдём заберём мид-босса."
+        }
+      },
+      {
+        "text": "ソウル差が5000ある。",
+        "ms": 6627,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "The soul difference is 5000."
+        }
+      }
+    ]
   }
 }

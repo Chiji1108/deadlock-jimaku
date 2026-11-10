@@ -352,6 +352,9 @@ async fn terms_decisions(app: &App, text: &str, context: &[String]) -> anyhow::R
 /// （料金の解説の記事から。料金のページはない）
 const JEV_PRICE: (f64, f64) = (0.042, 0.0);
 
+/// Drex Max の単価（OpenRouter に載っている値と同じ。入力 100 万トークン $0.06、出力は無料）
+const DREX_MAX_PRICE: (f64, f64) = (0.06, 0.0);
+
 /// アプリと同じ候補と問いを、TypeSafe AI の Jev に確かめさせる（`TYPESAFE_AI_API_KEY`）。
 /// 問いの形だけ Jev に合わせる（`state` と、名前ごとの `questions`、選択肢は `criteria`）
 async fn terms_jev(
@@ -379,14 +382,24 @@ async fn terms_jev(
     }
     let body = json!({ "model": model, "state": asked.request["input"], "questions": questions });
     // `会社/モデル` の形なら OpenRouter（判定モデルをまとめて同じ形で呼べる。`OPENROUTER_API_KEY`）
-    let (url, key) = match model.contains('/') {
-        true => (
+    // `drex-` は Nace に直接（`NACE_API_KEY`）。どこも同じ形の口
+    let (url, key, price) = match model {
+        m if m.contains('/') => (
             "https://openrouter.ai/api/v1/systemone",
             "OPENROUTER_API_KEY",
+            JEV_PRICE,
         ),
-        false => (
+        // `local-` は、この PC で待たせた判定モデル（experiments/local_decider_server.py）。料金はかからない
+        m if m.starts_with("local-") => ("http://127.0.0.1:8765/v1/systemone", "", (0.0, 0.0)),
+        m if m.starts_with("drex-") => (
+            "https://console.nace.ai/v1/systemone",
+            "NACE_API_KEY",
+            DREX_MAX_PRICE,
+        ),
+        _ => (
             "https://api.typesafe.ai/v1/systemone",
             "TYPESAFE_AI_API_KEY",
+            JEV_PRICE,
         ),
     };
     let res = client
@@ -401,7 +414,7 @@ async fn terms_jev(
     let res: Value = res.json().await?;
     anyhow::ensure!(status.is_success(), "{status}: {res}");
     let n = |k: &str| res["usage"][k].as_f64().unwrap_or(0.0);
-    let (input, output) = JEV_PRICE;
+    let (input, output) = price;
     // OpenRouter は料金を答えに入れる
     let cost = res["usage"]["cost"].as_f64();
     client.spent(cost.unwrap_or((n("input_tokens") * input + n("output_tokens") * output) / 1e6));
