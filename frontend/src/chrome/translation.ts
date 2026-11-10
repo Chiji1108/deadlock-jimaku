@@ -4,17 +4,14 @@ import type { Token } from "../generated/Token";
 import type { Translated } from "../generated/Translated";
 import type { Translator } from "./speech";
 
-const joined = (char: string | undefined) => !!char && /[0-9A-Za-z]/.test(char);
-
-/** 別の単語の一部（Rem と Remember）は名前にしない */
+/** 別の単語の一部（Rem と Remember）は名前にしない。大文字と小文字は区別しない
+ * （Chrome の翻訳は "Napalm" を "napalm"、"Metal Skin" を "METAL SKIN" と書くことがある） */
 function findWord(text: string, word: string) {
-  for (let i = text.indexOf(word); i >= 0; i = text.indexOf(word, i + 1)) {
-    if (!joined(text[i - 1]) && !joined(text[i + word.length])) return i;
-  }
-  return -1;
+  const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return text.search(new RegExp(`(?<![0-9A-Za-z])${escaped}(?![0-9A-Za-z])`, "i"));
 }
 
-/** 訳文に残った英語名を用語にする。原文で見つけた用語だけを探す。同じ位置からは長い名前を取る */
+/** 訳文に残った英語名を用語にする。原文で見つけた用語だけを探す（だから大文字と小文字が違っても名前とみなせる）。同じ位置からは長い名前を取る */
 export function markNames(translation: string, terms: TermName[]) {
   const tokens: Token[] = [];
   const text = (part: string) => {

@@ -182,12 +182,13 @@ fn tokens(translation: &str, terms: &[(String, String)]) -> Vec<Token> {
     let mut text = String::new();
     let mut rest = translation;
     while !rest.is_empty() {
-        // 別の単語の一部（Rem と Remember）は名前にしない（Chrome の翻訳の `findWord` と同じ）
+        // 別の単語の一部（Rem と Remember）は名前にしない。大文字と小文字は区別しない（Chrome の翻訳の `findWord` と同じ）
         let joined = |c: Option<char>| c.is_some_and(|c| c.is_ascii_alphanumeric());
         let begins = !joined(text.chars().next_back());
         let term = terms.iter().filter(|_| begins).find(|(name, _)| {
-            rest.strip_prefix(name.as_str())
-                .is_some_and(|after| !joined(after.chars().next()))
+            rest.get(..name.len())
+                .is_some_and(|found| found.eq_ignore_ascii_case(name))
+                && !joined(rest[name.len()..].chars().next())
         });
         let Some((name, reference)) = term else {
             let ch = rest.chars().next().expect("not empty");
@@ -321,6 +322,19 @@ mod tests {
                 text(" от "),
                 term("hero:13"),
                 text(" очень сильна.")
+            ]
+        );
+    }
+
+    #[test]
+    fn names_are_found_in_any_letter_case() {
+        assert_eq!(
+            tokens("HAZE's bullet dance is strong.", &terms()),
+            [
+                term("hero:13"),
+                text("'s "),
+                term("ability:4"),
+                text(" is strong.")
             ]
         );
     }
