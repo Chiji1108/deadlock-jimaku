@@ -30,22 +30,22 @@ macOS 版は Apple の署名と公証を済ませています。Windows 版は�
 
 開発する人のための地図です。理由は [DESIGN.md](DESIGN.md) を見てください（モードは 9.6、おすそ分けは 17.1、LP は 17 章）。
 
-字幕を何で作るかは、工程ごとの選択（設定の `engines`。モードを選ぶとまとめて決まる）と設定から `Settings::plan` が決めます（`crates/core/src/settings.rs`。この表は 3 つのモードの値で、テストに同じ値があります）。工程を 1 つ変えると、確定の欄はその工程の行だけが変わります。
+字幕を何で作るかは、工程ごとの選択（設定の `engines`。モードを選ぶとまとめて決まる）と設定から `Settings::plan` が決めます（`crates/core/src/settings.rs`。この表は 4 つのモードの値で、テストに同じ値があります）。工程を 1 つ変えると、確定の欄はその工程の行だけが変わります。
 
-| | スタンダード | OpenAI | Chrome |
-|---|---|---|---|
-| 途中の字幕 | Chrome | GPT-Live-Transcribe | Chrome |
-| 途中の翻訳 | Chrome Translator | なし | Chrome Translator |
-| 途中のふりがな | Lindera | Lindera | Lindera |
-| 途中の強調 | 辞書の一致 | 辞書の一致 | 辞書の一致 |
-| 確定の字幕 | GPT-Transcribe | GPT-Transcribe | Chrome |
-| 確定の翻訳 | GPT-6.1 Terra | GPT-6.1 Terra | Chrome Translator |
-| 確定のふりがな | GPT-6.1 Terra | GPT-6.1 Terra | Lindera |
-| 確定の強調 | GPT-6.1 Terra | GPT-6.1 Terra | 辞書の一致 |
+| | スタンダード | ライト | OpenAI | Chrome |
+|---|---|---|---|---|
+| 途中の字幕 | Chrome | Chrome | GPT-Live-Transcribe | Chrome |
+| 途中の翻訳 | Chrome Translator | Chrome Translator | なし | Chrome Translator |
+| 途中のふりがな | Lindera | Lindera | Lindera | Lindera |
+| 途中の強調 | 辞書の一致 | 辞書の一致 | 辞書の一致 | 辞書の一致 |
+| 確定の字幕 | GPT-Transcribe | Grok Voice Transcribe | GPT-Transcribe | Chrome |
+| 確定の翻訳 | GPT-6.1 Terra | GPT-6 Luna | GPT-6.1 Terra | Chrome Translator |
+| 確定のふりがな | GPT-6.1 Terra | Lindera | GPT-6.1 Terra | Lindera |
+| 確定の強調 | GPT-6.1 Terra | GPT-6 Luna | GPT-6.1 Terra | 辞書の一致 |
 
 翻訳先がない、翻訳だけを見せる、ふりがなやデッドロックモードを切る、話す言語が日本語でない（Lindera と辞書の一致は日本語だけ）ときは、その項目が「なし」になります。
 
-確定の文字起こしは、詳しく選べば xAI の Grok Voice Transcribe にもできます（xAI の API キーが要ります）。作れない組み合わせは `Engines::sanitized` が直します。確定の文字起こしが Chrome なら途中の字幕も Chrome（発話の区切りを Chrome が決める）、Chrome の翻訳は途中の字幕が Chrome のときだけです。翻訳と用語は 1 つの工程です（訳文の名前を用語から作るので）。確定の文には、どちらの経路でも `finish.rs` が工程ごとに用語・ふりがな・翻訳を付け、1 つの字幕にまとめます。
+確定の文字起こしが Grok Voice Transcribe のとき（ライトか、詳しく選んだとき）は xAI の API キーが要ります。作れない組み合わせは `Engines::sanitized` が直します。確定の文字起こしが Chrome なら途中の字幕も Chrome（発話の区切りを Chrome が決める）、Chrome の翻訳は途中の字幕が Chrome のときだけです。翻訳と用語は 1 つの工程です（訳文の名前を用語から作るので）。確定の文には、どちらの経路でも `finish.rs` が工程ごとに用語・ふりがな・翻訳を付け、1 つの字幕にまとめます。
 
 ```mermaid
 flowchart LR
@@ -82,12 +82,12 @@ flowchart LR
 ```
 
 - 操作パネルは Tauri のウィンドウでも OBS のドックでも同じ画面で、`/api` と `/ws` だけを使います。
-- スタンダードと Chrome のモードでは、アプリが専用のプロファイルの Chrome を起動します。音声認識と翻訳は Chrome が行い、ふりがなと辞書の一致は中核の中で Lindera + IPADIC が行います。
+- OpenAI のモード以外では、アプリが専用のプロファイルの Chrome を起動します。音声認識と翻訳は Chrome が行い、ふりがなと辞書の一致は中核の中で Lindera + IPADIC が行います。
 - 自分の API キーがあれば OpenAI（確定の文字起こしを Grok にしたら xAI）へ直接送ります。なければギフトコードで Worker を通します。Worker は会社ごとに同じパスで中継するので、下の図の OpenAI はどちらの経路でも同じです。ギフトコードは、おすそ分けした人がキーを預けた会社（OpenAI、xAI、または両方）に使えます。
 
 ### 声と文字の流れ
 
-図は 3 つのモードの処理の順です（確定の文字起こしが OpenAI なら上の 2 つ、Chrome なら 3 つ目の経路）。黄色は PC の外です。OpenAI とのやりとりは、すべて中核が行います。字幕は `/ws` でオーバーレイと操作パネルに届きます。
+図はモードごとの処理の順です（確定の文字起こしが OpenAI か xAI なら上の 2 つ、Chrome なら 3 つ目の経路）。ライトはスタンダードの図と同じ流れで、確定の字幕を xAI の `/stt`、用語と翻訳を GPT-6 Luna で作り、ふりがなは中核の Lindera のままです。黄色は PC の外です。OpenAI とのやりとりは、すべて中核が行います。字幕は `/ws` でオーバーレイと操作パネルに届きます。
 
 **`standard`（スタンダード）。** 途中の字幕は Chrome で作ります。発話が終わると、アプリのマイクの声と文字を OpenAI に送ります。Chrome にも同じマイクを渡します（渡せない環境では Chrome の既定のマイクを使い、操作パネルに出します）。
 
