@@ -15,7 +15,7 @@
   import { panel } from "../panel.svelte";
   import EnginesDialog from "../parts/EnginesDialog.svelte";
   import {
-    HYBRID,
+    STANDARD,
     MODES,
     monthly,
     price,
@@ -105,10 +105,10 @@
       <EnginesDialog />
       {#if mode?.name === "chrome" && panel.hybridReady && !s.hybridHintClosed}
         <div class="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3">
-          <p class="text-sm">ハイブリッドにすると、確定の字幕が高い精度になります</p>
+          <p class="text-sm">スタンダードにすると、確定の字幕が高い精度になります</p>
           <div class="flex gap-1">
-            <Button variant="outline" size="sm" onclick={() => panel.update({ engines: HYBRID })}>
-              ハイブリッドにする
+            <Button variant="outline" size="sm" onclick={() => panel.update({ engines: STANDARD })}>
+              スタンダードにする
             </Button>
             <Button
               variant="ghost"

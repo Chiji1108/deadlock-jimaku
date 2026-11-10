@@ -576,15 +576,15 @@ impl Engines {
         translation: TranslationEngine::ChromeTranslator,
         furigana: RubySource::Lindera,
     };
-    /// コスパのモード。途中の字幕は Chrome、確定は Grok、翻訳と用語は Luna、ふりがなは辞書
-    pub const VALUE: Self = Self {
+    /// ライトのモード。途中の字幕は Chrome、確定は Grok、翻訳と用語は Luna、ふりがなは辞書
+    pub const LIGHT: Self = Self {
         live: LiveSource::Chrome,
         transcription: FinalSource::GrokVoiceTranscribe,
         translation: TranslationEngine::Gpt6Luna,
         furigana: RubySource::Lindera,
     };
-    /// ハイブリッドのモード（おすすめ）。途中の字幕は Chrome、確定は OpenAI
-    pub const HYBRID: Self = Self {
+    /// スタンダードのモード（おすすめ）。途中の字幕は Chrome、確定は OpenAI
+    pub const STANDARD: Self = Self {
         live: LiveSource::Chrome,
         transcription: FinalSource::GptTranscribe,
         translation: TranslationEngine::Gpt61Terra,
@@ -593,7 +593,7 @@ impl Engines {
     /// OpenAI のモード。すべて OpenAI で、Chrome を使わない
     pub const OPENAI: Self = Self {
         live: LiveSource::GptLiveTranscribe,
-        ..Self::HYBRID
+        ..Self::STANDARD
     };
 
     /// 有料の工程があり、鍵が要る。表示の設定（翻訳先、ふりがな）では変わらないので、
@@ -1158,7 +1158,7 @@ fn from_modes(json: &mut Value) {
         return;
     }
     let engines = match engine.as_ref().and_then(Value::as_str) {
-        Some("hybrid") => Engines::HYBRID,
+        Some("hybrid") => Engines::STANDARD,
         // 0.3 の rc には `local` や `free` で保存した版がある
         Some("chrome" | "local" | "free") => Engines::CHROME,
         // 0.3 より前の設定ファイルにはない（Chrome のウィンドウを黙って開かない）
@@ -1406,7 +1406,7 @@ mod tests {
         let llm = phase(T::GptTranscribe, Some(Tr::Llm), R::Llm, E::Llm);
         let live = phase(T::GptLiveTranscribe, None, R::Lindera, E::Terms);
 
-        let recommended = plan_of(Engines::HYBRID);
+        let recommended = plan_of(Engines::STANDARD);
         assert_eq!((recommended.partial, recommended.finals), (chrome, llm));
         let openai = plan_of(Engines::OPENAI);
         assert_eq!((openai.partial, openai.finals), (live, llm));
@@ -1446,14 +1446,14 @@ mod tests {
         let luna = Settings {
             engines: Engines {
                 translation: TranslationEngine::Gpt6Luna,
-                ..Engines::HYBRID
+                ..Engines::STANDARD
             },
             ..Default::default()
         };
         assert_eq!(
             luna.plan(),
             Settings {
-                engines: Engines::HYBRID,
+                engines: Engines::STANDARD,
                 ..Default::default()
             }
             .plan()
@@ -1462,7 +1462,7 @@ mod tests {
         assert_eq!(luna.models_in_use().readings, Models::default().readings);
         assert_eq!(
             Settings {
-                engines: Engines::HYBRID,
+                engines: Engines::STANDARD,
                 ..Default::default()
             }
             .models_in_use(),
@@ -1473,14 +1473,14 @@ mod tests {
 
     #[test]
     fn chrome_and_keys_follow_the_engines() {
-        assert!(plan_of(Engines::HYBRID).uses_chrome());
-        assert!(Engines::HYBRID.paid());
+        assert!(plan_of(Engines::STANDARD).uses_chrome());
+        assert!(Engines::STANDARD.paid());
         assert!(plan_of(Engines::CHROME).uses_chrome());
         assert!(!Engines::CHROME.paid());
         assert!(!plan_of(Engines::OPENAI).uses_chrome());
         assert!(Engines::OPENAI.paid());
-        assert!(plan_of(Engines::VALUE).uses_chrome());
-        assert!(Engines::VALUE.uses_openai() && Engines::VALUE.uses_xai());
+        assert!(plan_of(Engines::LIGHT).uses_chrome());
+        assert!(Engines::LIGHT.uses_openai() && Engines::LIGHT.uses_xai());
         let paid_furigana = Engines {
             furigana: RubySource::Llm,
             ..Engines::CHROME
@@ -1507,7 +1507,7 @@ mod tests {
             settings.plan().finals.text,
             Some(TextSource::GrokVoiceTranscribe)
         );
-        assert_eq!(settings.plan().partial, plan_of(Engines::HYBRID).partial);
+        assert_eq!(settings.plan().partial, plan_of(Engines::STANDARD).partial);
         assert_eq!(settings.models_in_use().batch, "grok-voice-transcribe-2.0");
         assert_eq!(Settings::default().models_in_use().batch, "gpt-transcribe");
     }
@@ -1542,7 +1542,7 @@ mod tests {
             std::fs::write(&path, json.to_string()).unwrap();
             load(&path).unwrap().engines
         };
-        assert_eq!(read(json!({ "speechEngine": "hybrid" })), Engines::HYBRID);
+        assert_eq!(read(json!({ "speechEngine": "hybrid" })), Engines::STANDARD);
         for saved in ["chrome", "local", "free"] {
             assert_eq!(read(json!({ "speechEngine": saved })), Engines::CHROME);
         }
@@ -1603,11 +1603,11 @@ mod tests {
         assert_eq!(load(&path).unwrap().engines, Engines::OPENAI);
         // 選んだものは保存される
         let recommended = Settings {
-            engines: Engines::HYBRID,
+            engines: Engines::STANDARD,
             ..Default::default()
         };
         save(&path, &recommended).unwrap();
-        assert_eq!(load(&path).unwrap().engines, Engines::HYBRID);
+        assert_eq!(load(&path).unwrap().engines, Engines::STANDARD);
     }
 
     #[test]

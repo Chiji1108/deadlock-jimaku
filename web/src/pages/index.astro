@@ -78,7 +78,7 @@ const steps = [
   },
   {
     title: "字幕を始める",
-    body: "まずは無料の Chrome のモードで始められます（Google Chrome が必要です）。API キーかギフトコードを入れると、ハイブリッドに切り替えられます。",
+    body: "まずは無料の Chrome のモードで始められます（Google Chrome が必要です）。API キーかギフトコードを入れると、スタンダードに切り替えられます。",
     link: { href: "#openai-key", label: "キーの作り方を見る" },
   },
 ];
@@ -99,11 +99,11 @@ const faqs = [
   },
   {
     q: "字幕はどこで作っていますか？",
-    a: "ハイブリッドは、途中の字幕を Chrome で作り、確定の字幕と翻訳を OpenAI で作ります。コスパは、確定の字幕を xAI の Grok で、翻訳を OpenAI の安いモデルで作ります。OpenAI のモードは、すべて OpenAI で作ります。Chrome のモードは、音声認識も翻訳も Chrome で行います。OpenAI のモード以外は Google Chrome が必要で、字幕を始めると小さな Chrome のウィンドウが開きます。翻訳のモデルは初回に Chrome がダウンロードします。",
+    a: "スタンダードは、途中の字幕を Chrome で作り、確定の字幕と翻訳を OpenAI で作ります。ライトは、確定の字幕を xAI の Grok で、翻訳を OpenAI の安いモデルで作ります。OpenAI のモードは、すべて OpenAI で作ります。Chrome のモードは、音声認識も翻訳も Chrome で行います。OpenAI のモード以外は Google Chrome が必要で、字幕を始めると小さな Chrome のウィンドウが開きます。翻訳のモデルは初回に Chrome がダウンロードします。",
   },
   {
     q: "どんな情報が送信されますか？",
-    a: "ハイブリッドと OpenAI のモードでは、字幕を出している間の話し声と字幕の文字を OpenAI に送ります。コスパのモードでは、話し声を xAI に、字幕の文字を OpenAI に送ります。OpenAI のモード以外では、話し声が Chrome を通じて Google に送られます。Chrome のモードの字幕の文字は外に送りません。ランクを出すときは、Steam のアカウント ID を deadlock-api に送ります。デドロ字幕のサーバーを通るのはおすそ分けのときだけで、音声や字幕の文字は保存しません。",
+    a: "スタンダードと OpenAI のモードでは、字幕を出している間の話し声と字幕の文字を OpenAI に送ります。ライトのモードでは、話し声を xAI に、字幕の文字を OpenAI に送ります。OpenAI のモード以外では、話し声が Chrome を通じて Google に送られます。Chrome のモードの字幕の文字は外に送りません。ランクを出すときは、Steam のアカウント ID を deadlock-api に送ります。デドロ字幕のサーバーを通るのはおすそ分けのときだけで、音声や字幕の文字は保存しません。",
     link: { href: "/privacy", label: "プライバシーポリシーを見る" },
   },
   {
@@ -136,8 +136,8 @@ const faqs = [
 /** モードの一覧はアプリと同じもの（engines.ts）を出し、LP では「必要なもの」だけを足す */
 const needs: Record<string, string> = {
   chrome: "Google Chrome（字幕を始めると小さなウィンドウが開く）",
-  value: "OpenAI と xAI の API キーかギフトコード、Google Chrome",
-  hybrid: "API キーかギフトコード、Google Chrome",
+  light: "OpenAI と xAI の API キーかギフトコード、Google Chrome",
+  standard: "API キーかギフトコード、Google Chrome",
   openai: "API キーかギフトコード",
 };
 
@@ -166,7 +166,7 @@ const official = [
     </div>
 
     <LiveDemo client:load cards={cards} />
-    <p class="mt-3 text-center text-sm text-muted">見本はハイブリッドのモードの字幕です</p>
+    <p class="mt-3 text-center text-sm text-muted">見本はスタンダードのモードの字幕です</p>
   </section>
 
   <section class="mx-auto mt-24 grid max-w-6xl items-center gap-10 px-4 sm:mt-32 md:grid-cols-2">
@@ -175,7 +175,7 @@ const official = [
         聞き取りの<br /><span class="band">精度が違う。</span>
       </h2>
       <p class="reveal mt-5 text-lg leading-relaxed text-muted">
-        ハイブリッドと OpenAI のモードでは、確定の字幕を OpenAI の最新モデルで作ります。略して呼んでも、どのアイテムやスキルのことか見分けます。
+        スタンダードと OpenAI のモードでは、確定の字幕を OpenAI の最新モデルで作ります。略して呼んでも、どのアイテムやスキルのことか見分けます。
       </p>
     </div>
     <div class="reveal plate relative h-64 overflow-hidden">
@@ -202,7 +202,7 @@ const official = [
       <span class="band">デッドロック特化。</span>
     </h2>
     <p class="reveal mt-5 max-w-2xl text-lg leading-relaxed text-muted">
-      ヒーロー・スキル・アイテムの名前は色とアイコンで強調します。アイテムの名前が出たら、ゲーム内と同じカードで説明も出します。ハイブリッドと OpenAI のモードでは、略して話しても、翻訳はゲーム内の正式な名前になります。Chrome のモードでは、日本語で正式な名前を話したときだけ色とアイコンが付きます。
+      ヒーロー・スキル・アイテムの名前は色とアイコンで強調します。アイテムの名前が出たら、ゲーム内と同じカードで説明も出します。スタンダードと OpenAI のモードでは、略して話しても、翻訳はゲーム内の正式な名前になります。Chrome のモードでは、日本語で正式な名前を話したときだけ色とアイコンが付きます。
     </p>
     <div class="mt-10 grid gap-4 md:grid-cols-2">
       <figure class="reveal">
@@ -231,7 +231,7 @@ const official = [
         </div>
         <figcaption class="mt-4">
           <h3 class="text-xl font-bold">正式名への翻訳</h3>
-          <p class="mt-1 leading-relaxed text-muted">海外の視聴者にも、何の話か伝わります（ハイブリッドと OpenAI のモード）。</p>
+          <p class="mt-1 leading-relaxed text-muted">海外の視聴者にも、何の話か伝わります（スタンダードと OpenAI のモード）。</p>
         </figcaption>
       </figure>
     </div>
@@ -346,8 +346,8 @@ const official = [
         <h2 class="text-sm font-bold text-gold">料金</h2>
         <p class="display mt-3 text-[clamp(2.6rem,7vw,5.5rem)]">アプリは無料。<br />上乗せなし。</p>
         <p class="mt-5 text-lg leading-relaxed text-paper/70">
-          有料プランや手数料はありません。コスパ・ハイブリッド・OpenAI のモードの料金は、ご自身の
-          <a href="#openai-key" class="underline hover:text-paper">OpenAI の API キー</a>（コスパは xAI の API キーも）で、各社に直接払う分だけです。まずは Chrome のモードを無料で試せます。API キーは要りません。
+          有料プランや手数料はありません。ライト・スタンダード・OpenAI のモードの料金は、ご自身の
+          <a href="#openai-key" class="underline hover:text-paper">OpenAI の API キー</a>（ライトは xAI の API キーも）で、各社に直接払う分だけです。まずは Chrome のモードを無料で試せます。API キーは要りません。
         </p>
       </div>
       <div class="md:pt-9">
@@ -413,7 +413,7 @@ const official = [
     <details id="openai-key" class="mt-12 border-y border-line py-6">
       <summary class="cursor-pointer text-xl font-bold">OpenAI の API キーの作り方</summary>
       <p class="mt-4 text-muted">
-        ハイブリッドと OpenAI のモードは文字起こしと翻訳を OpenAI に頼むので、OpenAI の API キーが必要です。支払いは使った分だけです。デドロ字幕を使っている人からコードをもらった場合は、キーがなくても使えます。アプリの「API
+        スタンダードと OpenAI のモードは文字起こしと翻訳を OpenAI に頼むので、OpenAI の API キーが必要です。支払いは使った分だけです。デドロ字幕を使っている人からコードをもらった場合は、キーがなくても使えます。アプリの「API
         キー」のタブの「ギフトコード」に入れてください。
       </p>
       <ol class="mt-6 flex flex-col gap-5">

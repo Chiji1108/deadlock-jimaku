@@ -548,7 +548,7 @@ mod tests {
 
     #[tokio::test]
     async fn a_stopped_hybrid_closes_chrome_and_does_not_open_it_again() {
-        let (_dir, store) = chrome_store(Engines::HYBRID);
+        let (_dir, store) = chrome_store(Engines::STANDARD);
         *store.browser.lock().unwrap() = Some(Browser::exited());
         store.set_transcription_error(Some(TranscriptionError::GiftRevoked));
         assert!(store.browser.lock().unwrap().is_none());
@@ -558,7 +558,7 @@ mod tests {
 
     #[tokio::test]
     async fn a_missing_key_keeps_chrome_closed_in_hybrid() {
-        let (_dir, store) = chrome_store(Engines::HYBRID);
+        let (_dir, store) = chrome_store(Engines::STANDARD);
         store.set_transcription_error(Some(TranscriptionError::MissingKey {
             provider: crate::secrets::Provider::OpenAi,
         }));

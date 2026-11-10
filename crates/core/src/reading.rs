@@ -1,5 +1,5 @@
 //! Chrome が認識した文のふりがな（DESIGN.md 9.6）。読みは形態素解析（Lindera + IPADIC）で決める。
-//! 文脈で決まる読みや造語は誤るが、速く、OpenAI も要らない。ハイブリッドは最後に OpenAI の読みに置き換える
+//! 文脈で決まる読みや造語は誤るが、速く、OpenAI も要らない。スタンダードは最後に OpenAI の読みに置き換える
 
 use std::borrow::Cow;
 

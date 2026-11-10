@@ -96,14 +96,14 @@ export const CHROME: Engines = {
   translation: "chromeTranslator",
   furigana: "lindera",
 };
-export const HYBRID: Engines = {
+export const STANDARD: Engines = {
   live: "chrome",
   transcription: "gptTranscribe",
   translation: "gpt61Terra",
   furigana: "llm",
 };
-const OPENAI: Engines = { ...HYBRID, live: "gptLiveTranscribe" };
-const VALUE: Engines = {
+const OPENAI: Engines = { ...STANDARD, live: "gptLiveTranscribe" };
+const LIGHT: Engines = {
   live: "chrome",
   transcription: "grokVoiceTranscribe",
   translation: "gpt6Luna",
@@ -141,20 +141,20 @@ export const MODES: {
     engines: CHROME,
   },
   {
-    name: "value",
-    label: "コスパ",
+    name: "light",
+    label: "ライト",
     traits: "安い・高精度",
     hourlyUsd: 0.1,
     hint: "途中の字幕は Chrome、確定の字幕は xAI の Grok、翻訳は OpenAI の安いモデルで作ります",
-    engines: VALUE,
+    engines: LIGHT,
   },
   {
-    name: "hybrid",
-    label: "ハイブリッド",
+    name: "standard",
+    label: "スタンダード",
     traits: "高速・高精度",
     hourlyUsd: 0.6,
     hint: "途中の字幕は Chrome、確定の字幕は OpenAI の高い精度に置き換えます",
-    engines: HYBRID,
+    engines: STANDARD,
     recommended: true,
   },
   {

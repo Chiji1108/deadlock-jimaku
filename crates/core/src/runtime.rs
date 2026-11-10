@@ -447,7 +447,7 @@ mod tests {
         async fn new() -> Self {
             let dir = tempfile::tempdir().unwrap();
             let settings = Settings {
-                engines: Engines::HYBRID,
+                engines: Engines::STANDARD,
                 deadlock_mode: false,
                 ..Settings::default()
             };
@@ -471,7 +471,7 @@ mod tests {
                 translate_to: Vec::new(),
                 deadlock_mode: false,
                 partial_text: Some(TextSource::Chrome),
-                engines: Engines::HYBRID,
+                engines: Engines::STANDARD,
                 models: Settings::default().models,
                 realtime_delay: "low".into(),
                 segmentation: Settings::default().segmentation,
@@ -572,12 +572,12 @@ mod tests {
         };
         let missing = |provider| Some(TranscriptionError::MissingKey { provider });
 
-        let input = grok(app.audio(Some("good"), "ja"), None, Engines::HYBRID);
+        let input = grok(app.audio(Some("good"), "ja"), None, Engines::STANDARD);
         app.update(input).await;
         assert_eq!(app.error(), missing(Provider::Xai));
 
         let xai = || Some(Access::key(Provider::Xai, "xai".into()));
-        let input = grok(app.audio(None, "ja"), xai(), Engines::HYBRID);
+        let input = grok(app.audio(None, "ja"), xai(), Engines::STANDARD);
         app.update(input).await;
         assert_eq!(app.error(), missing(Provider::OpenAi));
 

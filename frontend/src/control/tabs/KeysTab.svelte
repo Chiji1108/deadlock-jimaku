@@ -12,12 +12,12 @@
     {
       provider: "openai",
       name: "OpenAI",
-      use: "コスパ・ハイブリッド・OpenAI のモードの文字起こし・翻訳・ふりがなに使います。作り方は上にあります",
+      use: "ライト・スタンダード・OpenAI のモードの文字起こし・翻訳・ふりがなに使います。作り方は上にあります",
     },
     {
       provider: "xai",
       name: "xAI",
-      use: "コスパのモードの確定の文字起こし（Grok Voice Transcribe）に使います。xAI の API コンソール（console.x.ai）で作れます。ギフトコードでも、おすそ分けした人が xAI のキーを預けていれば使えます",
+      use: "ライトのモードの確定の文字起こし（Grok Voice Transcribe）に使います。xAI の API コンソール（console.x.ai）で作れます。ギフトコードでも、おすそ分けした人が xAI のキーを預けていれば使えます",
     },
   ];
 

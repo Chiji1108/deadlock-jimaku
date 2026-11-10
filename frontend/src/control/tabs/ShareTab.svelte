@@ -21,7 +21,7 @@
     {
       provider: "openai",
       uses: "途中の字幕（GPT-Live-Transcribe）・確定の文字起こし（GPT-Transcribe）・翻訳と用語・ふりがな",
-      price: "使い方で変わります（ハイブリッドで 1 時間 約 $0.6）",
+      price: "使い方で変わります（スタンダードで 1 時間 約 $0.6）",
     },
     {
       provider: "xai",

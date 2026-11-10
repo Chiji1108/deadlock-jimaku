@@ -116,7 +116,7 @@ class Panel {
     return this.missingKeys.length > 0;
   }
 
-  /** ハイブリッドで使える鍵（自分のキーか、期限内のギフトコード）がある */
+  /** スタンダードで使える鍵（自分のキーか、期限内のギフトコード）がある */
   get hybridReady() {
     return this.view?.keys.openai.state === "saved" || giftValid(this.gift);
   }

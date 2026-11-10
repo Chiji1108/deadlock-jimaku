@@ -847,7 +847,7 @@ mod tests {
         done_tx: mpsc::Sender<Done>,
     ) -> (Pipeline, mpsc::Receiver<Finished>) {
         let settings = Settings {
-            engines: crate::settings::Engines::HYBRID,
+            engines: crate::settings::Engines::STANDARD,
             ..Settings::default()
         };
         let store = Store::new(Ok(settings.clone()), std::path::PathBuf::new());
