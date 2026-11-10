@@ -12,7 +12,14 @@ import type { MicError } from "../generated/MicError";
 import type { TranscriptionError } from "../generated/TranscriptionError";
 import type { UsageView } from "../generated/UsageView";
 import { api } from "../lib/api";
-import { CHROME, PROVIDER_NAMES, chromeFinals, keyNames, providers } from "../lib/engines";
+import {
+  CHROME,
+  PROVIDER_NAMES,
+  chromeFinals,
+  giftable,
+  keyNames,
+  providers,
+} from "../lib/engines";
 import { addFontFaces, fontWeights } from "../lib/overlay-fonts";
 import type { MergePatch } from "../lib/text-style";
 import type { FontEntry } from "../generated/FontEntry";
@@ -96,14 +103,15 @@ class Panel {
   /** 選んだ作り方に要るのに、自分のキーもギフトコードもない会社。ギフトコードが xAI を中継するかは、
    * 字幕を始めるときに中核が確かめる（中継しなければ `giftUnsupported` で止まる） */
   get missingKeys(): Provider[] {
-    return this.view?.keys.gift.state === "saved" ? [] : this.withoutKey;
+    const gift = this.view?.keys.gift.state === "saved";
+    return this.withoutKey.filter((p) => !gift || !giftable(p));
   }
 
   /** ギフトコードで使う（おすそ分けしてくれた人に請求される）会社。コードが中継する会社が分かれば、それだけ */
   get giftPaid(): Provider[] {
     if (this.view?.keys.gift.state !== "saved") return [];
     const relayed = this.gift?.state === "active" ? this.gift.providers : undefined;
-    return this.withoutKey.filter((p) => !relayed || relayed.includes(p));
+    return this.withoutKey.filter((p) => giftable(p) && (!relayed || relayed.includes(p)));
   }
 
   /** 字幕を始められる鍵がそろっている。有料の工程がなければ鍵は要らない */
@@ -404,7 +412,9 @@ export function transcriptionErrorText(e: TranscriptionError): string {
     case "giftUnknown":
       return "ギフトコードが見つかりません。おすそ分けしてくれた人に確かめてください";
     case "giftUnsupported":
-      return `このギフトコードでは ${PROVIDER_NAMES[e.provider]} を使えません。おすそ分けしてくれた人に ${PROVIDER_NAMES[e.provider]} のキーも預けてもらうか、自分の API キーを入れてください`;
+      return giftable(e.provider)
+        ? `このギフトコードでは ${PROVIDER_NAMES[e.provider]} を使えません。おすそ分けしてくれた人に ${PROVIDER_NAMES[e.provider]} のキーも預けてもらうか、自分の API キーを入れてください`
+        : `ギフトコードでは ${PROVIDER_NAMES[e.provider]} を使えません。自分の ${PROVIDER_NAMES[e.provider]} の API キーを入れてください`;
     case "invalidKey":
       return `${PROVIDER_NAMES[e.provider]} の API キーが使えません。キーを確かめてください`;
     case "inputEnded":

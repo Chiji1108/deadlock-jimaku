@@ -6,7 +6,7 @@ Deadlock の配信者向けの OBS オーバーレイ（非公式）。
 - **ランク**: ランクのアイコン・名前・ポイントのゲージ
 - **アイテム説明**: 字幕でアイテム名が出たら、その説明をゲーム内と同じカードで出す
 
-字幕の作り方は 4 つのモードから選べます。まず無料の Chrome のモード（既定）で、キーなしで始められます。API キーかギフトコードを入れると、おすすめのスタンダードに切り替えられます。安いライト（確定の字幕は xAI の Grok、翻訳は OpenAI の GPT-6 Luna）と、OpenAI のモードも API キーかギフトコードで使います。「詳しく選ぶ」から、工程（途中の字幕・確定の文字起こし・翻訳と用語・ふりがな）ごとに作り方を変えることもできます。OpenAI のモード以外は Google Chrome が必要で、字幕を始めると小さな Chrome のウィンドウが開きます。設定はアプリの操作パネルから行います。
+字幕の作り方は 4 つのモードから選べます。まず無料の Chrome のモード（既定）で、キーなしで始められます。API キーかギフトコードを入れると、おすすめのスタンダードに切り替えられます。安いライト（確定の字幕は xAI の Grok、翻訳は OpenAI の GPT-6 Luna）と、OpenAI のモードも API キーかギフトコードで使います。「詳しく選ぶ」から、工程（途中の字幕・確定の文字起こし・用語・翻訳・ふりがな）ごとに作り方を変えることもできます。OpenAI のモード以外は Google Chrome が必要で、字幕を始めると小さな Chrome のウィンドウが開きます。設定はアプリの操作パネルから行います。
 
 サイトは [jimaku.deadlock.jp](https://jimaku.deadlock.jp)。設計は [DESIGN.md](DESIGN.md) を見てください。
 
@@ -45,7 +45,9 @@ macOS 版は Apple の署名と公証を済ませています。Windows 版は�
 
 翻訳先がない、翻訳だけを見せる、ふりがなやデッドロックモードを切る、話す言語が日本語でない（Lindera と辞書の一致は日本語だけ）ときは、その項目が「なし」になります。
 
-確定の文字起こしが Grok Voice Transcribe のとき（ライトか、詳しく選んだとき）は xAI の API キーが要ります。作れない組み合わせは `Engines::sanitized` が直します。確定の文字起こしが Chrome なら途中の字幕も Chrome（発話の区切りを Chrome が決める）、Chrome の翻訳は途中の字幕が Chrome のときだけです。翻訳と用語は 1 つの工程です（訳文の名前を用語から作るので）。確定の文には、どちらの経路でも `finish.rs` が工程ごとに用語・ふりがな・翻訳を付け、1 つの字幕にまとめます。
+確定の文字起こしが Grok Voice Transcribe のとき（ライトか、詳しく選んだとき）は xAI の API キーが要ります。
+
+用語と翻訳は、表の 4 つのモードでは 1 回の問い合わせ（GPT）か、辞書の一致と Chrome の翻訳です。詳しく選ぶと、2 つを別々に作れます（DESIGN.md 9.7）。用語は、PC の中で出した候補を OpenAI の Decisions API に確かめさせます（`decide.rs`）。翻訳は、用語を英語名に置き換えた文を Chrome か Qwen-MT-Flash（`mt.rs`。Qwen の API キーが要ります）に渡します。作れない組み合わせは `Engines::sanitized` が直します。確定の文字起こしが Chrome なら途中の字幕も Chrome（発話の区切りを Chrome が決める）、Chrome の翻訳は途中の字幕が Chrome のときだけです。翻訳を GPT にしたときは、用語も同じ問い合わせで判定します（訳文の名前を用語から作るので）。確定の文には、どちらの経路でも `finish.rs` が工程ごとに用語・ふりがな・翻訳を付け、1 つの字幕にまとめます。
 
 ```mermaid
 flowchart LR
@@ -61,6 +63,7 @@ flowchart LR
   worker["Cloudflare Worker（server/）<br/>おすそ分け"]
   openai["OpenAI"]
   xai["xAI"]
+  qwen["Qwen"]
   google["Google の音声認識"]
   deadlockapi["deadlock-api"]
   releases["GitHub Releases"]
@@ -76,6 +79,7 @@ flowchart LR
   worker -- "おすそ分けした人のキー" --> xai
   core -- "自分の API キー" --> openai
   core -- "自分の API キー" --> xai
+  core -- "自分の API キー" --> qwen
   core -- "ランク、辞書" --> deadlockapi
   shell -- "新しい版を確認" --> releases
   lp -- "ダウンロードのリンク" --> releases

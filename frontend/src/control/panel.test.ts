@@ -254,6 +254,22 @@ test("ギフトコードで払ってもらうのは、自分のキーがない�
   expect(fresh.giftPaid).toEqual(["xai"]);
 });
 
+test("Qwen はギフトコードでは使えないので、自分のキーが要る", () => {
+  const fresh = freshPanel();
+  const keys = (qwen: string) => ({
+    openai: { state: "missing" },
+    gift: { state: "saved" },
+    xai: { state: "missing" },
+    qwen: { state: qwen },
+  });
+  const engines = { ...CHROME, terms: "decisions", translation: "qwenMtFlash" };
+  fresh.view = { settings: { engines }, keys: keys("missing") } as unknown as SettingsView;
+  expect(fresh.missingKeys).toEqual(["qwen"]);
+  expect(fresh.giftPaid).toEqual(["openai"]);
+  fresh.view = { settings: { engines }, keys: keys("saved") } as unknown as SettingsView;
+  expect(fresh.missingKeys).toEqual([]);
+});
+
 test("設定が届く前はキーの案内を出さない", () => {
   expect(freshPanel().needsKey).toBe(false);
 });

@@ -10,6 +10,7 @@
     anyPaid,
     chromeFinals,
     keyNames,
+    llmTranslation,
     providers,
     unavailable,
     usesChrome,
@@ -34,7 +35,7 @@
     <Dialog.Header>
       <Dialog.Title>字幕の作り方を詳しく選ぶ</Dialog.Title>
       <Dialog.Description>
-        工程ごとに、無料か有料（OpenAI・xAI）かを選べます。料金はそれぞれの会社の単価です。切り替えると、字幕は始め直します
+        工程ごとに、無料か有料（OpenAI・xAI・Qwen）かを選べます。料金はそれぞれの会社の単価です。切り替えると、字幕は始め直します
       </Dialog.Description>
     </Dialog.Header>
     <div class="flex flex-col gap-5">
@@ -73,6 +74,10 @@
           {:else if item === "live" && t.translation === "chromeTranslator"}
             <Field.Description
               >Chrome の翻訳を使っている間は、途中の字幕も Chrome です</Field.Description
+            >
+          {:else if item === "terms" && llmTranslation(t)}
+            <Field.Description
+              >翻訳が GPT なので、用語は GPT が翻訳と同時に判定します</Field.Description
             >
           {:else if item === "translation" && !usesChrome(t)}
             <Field.Description

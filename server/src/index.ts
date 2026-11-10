@@ -64,6 +64,13 @@ const XAI_STT_FIELDS = ["model", "language", "keyterm"];
 /** 本文の長さの上限（文字数）。いちばん長い用語の判定（辞書の全部を送る。32,000 文字ほど）の 8 倍 */
 const MAX_RESPONSES_BODY = 256_000;
 
+/** Decisions API が使えるモデル（これだけ） */
+const DECISIONS_MODEL = "gpt-6-luna";
+
+/** Decisions の本文と問いの数の上限。アプリは 1 発話で候補の数だけ問い（多くて 10 ほど、1 問 1,000 文字ほど）を送る */
+const MAX_DECISIONS_BODY = 64_000;
+const MAX_DECISIONS_QUESTIONS = 40;
+
 /** ストリームの最後の応答の usage */
 function streamUsage(text: string): unknown {
   for (const line of text.split("\n").reverse()) {
@@ -319,6 +326,56 @@ app.post("/openai/responses", async (c) => {
   if (res.ok) {
     const usage = (JSON.parse(answer) as { usage?: unknown }).usage;
     const usd = tokensUsd(model, tokensOf(usage)) ?? 0;
+    c.executionCtx.waitUntil(addUsage(c.var.db, gift.code.id, usd, Date.now()));
+  }
+  return new Response(answer, { status: res.status, headers: { "Content-Type": "application/json" } });
+});
+
+/**
+ * Decisions API（用語を確かめる。DESIGN.md 9.7）。アプリが送る形だけを通す: 文字の input と、文字だけの選択の問い。
+ * 出力は課金されず、入力は Luna の単価で数える
+ */
+app.post("/openai/decisions", async (c) => {
+  const gift = await giftKey(c);
+  if (gift instanceof Response) return gift;
+  const text = await c.req.text();
+  if (text.length > MAX_DECISIONS_BODY) return c.json({ error: "tooLarge" }, 413);
+  const body = parsed<Record<string, unknown>>(text) ?? {};
+  const { model, input, questions } = body;
+  // 画像やファイルを渡せる形（配列の input、部品の配列の instructions）は、長さの上限が効かないので通さない
+  const choice = (q: unknown) => {
+    const { type, name, instructions, choices } = (q ?? {}) as Record<string, unknown>;
+    const option = (o: unknown) => {
+      const { value, description } = (o ?? {}) as Record<string, unknown>;
+      return typeof value === "string" && typeof description === "string";
+    };
+    return (
+      type === "choice" &&
+      typeof name === "string" &&
+      typeof instructions === "string" &&
+      Array.isArray(choices) &&
+      choices.every(option)
+    );
+  };
+  if (
+    model !== DECISIONS_MODEL ||
+    typeof input !== "string" ||
+    !Array.isArray(questions) ||
+    questions.length === 0 ||
+    questions.length > MAX_DECISIONS_QUESTIONS ||
+    !questions.every(choice)
+  ) {
+    return c.json({ error: "notAllowed" }, 400);
+  }
+  const res = await openai("/v1/decisions", gift.key, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ model, input, questions }),
+  });
+  const answer = await res.text();
+  if (res.ok) {
+    const usage = (JSON.parse(answer) as { usage?: unknown }).usage;
+    const usd = tokensUsd(DECISIONS_MODEL, { ...tokensOf(usage), output: 0 }) ?? 0;
     c.executionCtx.waitUntil(addUsage(c.var.db, gift.code.id, usd, Date.now()));
   }
   return new Response(answer, { status: res.status, headers: { "Content-Type": "application/json" } });

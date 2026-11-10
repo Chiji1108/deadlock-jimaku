@@ -19,9 +19,14 @@
       name: "xAI",
       use: "ライトのモードの確定の文字起こし（Grok Voice Transcribe）に使います。xAI の API コンソール（console.x.ai）で作れます。ギフトコードでも、おすそ分けした人が xAI のキーを預けていれば使えます",
     },
+    {
+      provider: "qwen",
+      name: "Qwen",
+      use: "翻訳を Qwen-MT-Flash にするときに使います。QwenCloud のシンガポール（国際）の API キーです（ほかの地域のキーは使えません）。ギフトコードでは使えません",
+    },
   ];
 
-  let inputs = $state<Record<Provider, string>>({ openai: "", xai: "" });
+  let inputs = $state<Record<Provider, string>>({ openai: "", xai: "", qwen: "" });
 
   async function save(provider: Provider, key: string) {
     // 失敗したら貼り直さずにやり直せるよう、入力は残す

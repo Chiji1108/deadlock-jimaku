@@ -454,6 +454,111 @@ mod tests {
         );
     }
 
+    /// 偽の Worker。Decisions は「拡マガ」を item:1 と答え（`decides` が false なら 404）、Qwen は英語名をそのまま返す
+    async fn split_server(decides: bool) -> String {
+        use axum::Json;
+        use axum::http::StatusCode;
+        use serde_json::{Value, json};
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let api = format!("http://{}", listener.local_addr().unwrap());
+        let decisions = move |Json(body): Json<Value>| async move {
+            if !decides {
+                return Err(StatusCode::NOT_FOUND);
+            }
+            let asked = body["questions"][0]["instructions"].as_str().unwrap();
+            assert!(asked.contains("拡マガ"), "{asked}");
+            Ok(Json(json!({
+                "answers": [{ "type": "choice", "name": "c0", "choice": "item:1" }],
+                "usage": { "input_tokens": 100, "output_tokens": 0 },
+            })))
+        };
+        let translate = |Json(body): Json<Value>| async move {
+            let source = body["messages"][0]["content"].as_str().unwrap();
+            let text = source.replace("を取る", " first");
+            Json(json!({
+                "choices": [{ "message": { "content": text } }],
+                "usage": { "prompt_tokens": 10, "completion_tokens": 5 },
+            }))
+        };
+        let router = axum::Router::new()
+            .route("/openai/decisions", axum::routing::post(decisions))
+            .route("/qwen/chat/completions", axum::routing::post(translate));
+        tokio::spawn(async move { axum::serve(listener, router).await });
+        api
+    }
+
+    /// 用語を Decisions で決めてから、その用語で訳す。「拡マガ」は辞書の名前と一致しないので、PC の中では付かない
+    async fn finished_split(decides: bool) -> Enriched {
+        use crate::secrets::Provider;
+        use crate::settings::{Engines, TermsEngine, TranslationEngine};
+        let api = split_server(decides).await;
+        let settings = Settings {
+            engines: Engines {
+                terms: TermsEngine::Decisions,
+                translation: TranslationEngine::QwenMtFlash,
+                ..Engines::CHROME
+            },
+            ..Default::default()
+        };
+        let store = Store::new(Ok(settings.clone()), std::path::PathBuf::new());
+        let glossary: Glossary = serde_json::from_value(serde_json::json!({
+            "clientVersion": 1, "languages": ["ja", "en"],
+            "entities": {
+                "item:1": { "kind": "item", "className": "i", "names": { "ja": "基礎拡張マガジン", "en": "Extended Magazine" } }
+            }
+        }))
+        .unwrap();
+        store.set_glossary(crate::assets::Loaded {
+            glossary: Arc::new(glossary),
+            requested: Vec::new(),
+            root: std::path::PathBuf::new(),
+            aliases: Arc::new([("item:1".to_owned(), vec!["拡マガ".to_owned()])].into()),
+        });
+        let finisher = Finisher::new(
+            store,
+            &settings,
+            Some(Access::gift(Provider::OpenAi, "code".into(), &api)),
+            Some(Access::gift(Provider::Qwen, "code".into(), &api)),
+        );
+        let heard = Heard {
+            id: "1".into(),
+            text: "拡マガを取る".into(),
+            context: Vec::new(),
+            tokens: vec![text("拡マガを取る", None)],
+        };
+        let phase = settings.plan().finals;
+        finisher
+            .finish(heard, Translatable::default(), None, &phase, |_| {})
+            .await
+            .unwrap()
+    }
+
+    #[tokio::test]
+    async fn decided_terms_mark_the_source_and_the_translation() {
+        let enriched = finished_split(true).await;
+        let term = |spoken: Option<&str>| Token::Entity {
+            reference: "item:1".into(),
+            spoken: spoken.map(Into::into),
+            ruby: None,
+        };
+        assert_eq!(
+            enriched.source,
+            [term(Some("拡マガ")), text("を取る", None)]
+        );
+        assert_eq!(
+            enriched.translations["en"],
+            [term(None), text(" first", None)]
+        );
+    }
+
+    #[tokio::test]
+    async fn without_an_answer_the_local_terms_are_translated() {
+        // 古いサーバーには Decisions の口がない。PC の中で付けた用語（ここではなし）のまま訳す
+        let enriched = finished_split(false).await;
+        assert_eq!(enriched.source, [text("拡マガを取る", None)]);
+        assert_eq!(enriched.translations["en"], [text("拡マガ first", None)]);
+    }
+
     #[tokio::test]
     async fn without_llm_the_local_marks_are_kept() {
         let store = Store::new(Ok(Settings::default()), std::path::PathBuf::new());

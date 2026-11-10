@@ -21,8 +21,9 @@ const MODEL: &str = "qwen-mt-flash";
 
 const TIMEOUT: Duration = Duration::from_secs(5);
 
-/// 回数の上限（429）で断られたら、1 度だけ待って送り直す
-const RETRY_AFTER: Duration = Duration::from_millis(700);
+/// 回数の上限（429）で断られたら、待って送り直す（訳が遅れても、抜けるよりよい）。上限の値は公開されておらず、
+/// 続けて送ると 1 分に 100 回ほどで断られた（実測）
+const RETRY_AFTER: [Duration; 2] = [Duration::from_millis(700), Duration::from_millis(1500)];
 
 /// 訳し方の指示。これがないと、括弧を外すことが多い（実測）
 const DOMAINS: &str = "Casual live commentary by a streamer playing the video game Deadlock, like gamers talk. \
@@ -101,8 +102,11 @@ impl Translator {
                 .send()
         };
         let mut res = send().await?;
-        if res.status() == reqwest::StatusCode::TOO_MANY_REQUESTS {
-            tokio::time::sleep(RETRY_AFTER).await;
+        for wait in RETRY_AFTER {
+            if res.status() != reqwest::StatusCode::TOO_MANY_REQUESTS {
+                break;
+            }
+            tokio::time::sleep(wait).await;
             res = send().await?;
         }
         let status = res.status();

@@ -44,6 +44,8 @@ struct Candidate {
     start: usize,
     spoken: String,
     refs: Vec<String>,
+    /// 名前が似ているだけの言葉（名前・別名・スキルの呼び方ではない）
+    guessed: bool,
 }
 
 impl Candidate {
@@ -106,7 +108,7 @@ impl Decider {
             let reference = c.refs.iter().find(|r| *r == choice)?.clone();
             Some((c, reference))
         });
-        Ok(spans(text, chosen))
+        Ok(spans(text, without_echoes(chosen.collect()).into_iter()))
     }
 
     fn index(&self, loaded: &Loaded) -> Arc<Index> {
@@ -194,6 +196,7 @@ fn candidates(
                 start: at,
                 spoken: rest[..len].to_owned(),
                 refs,
+                guessed: false,
             });
         }
         at += len;
@@ -214,6 +217,7 @@ fn named(text: &str, index: &Index) -> Vec<Candidate> {
                     start: at,
                     spoken: surface.clone(),
                     refs: refs.clone(),
+                    guessed: false,
                 });
                 at += surface.len();
             }
@@ -231,6 +235,7 @@ fn named(text: &str, index: &Index) -> Vec<Candidate> {
                 start,
                 spoken: word.to_owned(),
                 refs,
+                guessed: true,
             });
         }
     }
@@ -401,6 +406,20 @@ fn question(
     })
 }
 
+/// 名前が似ているだけの言葉が、同じ文でもう呼ばれている用語を指したら、用語にしない
+/// （「インファーナスのウルトでスタン入った」の「スタン」は、ウルトの名前「スタンバースト」の一部だが、効果の話）
+fn without_echoes(chosen: Vec<(Candidate, String)>) -> Vec<(Candidate, String)> {
+    let named: Vec<String> = chosen
+        .iter()
+        .filter(|(c, _)| !c.guessed)
+        .map(|(_, reference)| reference.clone())
+        .collect();
+    chosen
+        .into_iter()
+        .filter(|(c, reference)| !c.guessed || !named.contains(reference))
+        .collect()
+}
+
 /// 選ばれた候補を用語にした区切り。隣り合う同じ用語は 1 つにする
 fn spans(text: &str, chosen: impl Iterator<Item = (Candidate, String)>) -> Vec<Span> {
     let mut spans = Vec::new();
@@ -549,6 +568,25 @@ mod tests {
                 Span::Text("で寝かせてからウルト。".into()),
             ]
         );
+    }
+
+    #[test]
+    fn a_similar_word_does_not_repeat_a_term_already_named() {
+        let loaded = loaded();
+        // 「バレット」はバレットダンスに似ている。ウルトがバレットダンスなら、同じ用語を 2 度付けない
+        let text = "ヘイズのウルトのバレットが痛い。";
+        let found = candidates(text, &[], &index(&loaded, "ja"), &loaded.glossary);
+        let spoken: Vec<&str> = found.iter().map(|c| c.spoken.as_str()).collect();
+        assert_eq!(spoken, ["ヘイズ", "ウルト", "バレット"]);
+        let chosen: Vec<(Candidate, String)> = found
+            .into_iter()
+            .zip(["hero:13", "ability:4", "ability:4"].map(String::from))
+            .collect();
+        let kept: Vec<String> = without_echoes(chosen)
+            .into_iter()
+            .map(|(c, _)| c.spoken)
+            .collect();
+        assert_eq!(kept, ["ヘイズ", "ウルト"]);
     }
 
     #[test]

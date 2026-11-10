@@ -1534,6 +1534,87 @@ mod tests {
         assert!(paid_furigana.uses_openai() && !paid_furigana.uses_xai());
     }
 
+    /// 用語と翻訳を分けた作り方（DESIGN.md 9.7）。翻訳が LLM なら、用語の選択は使わない
+    #[test]
+    fn terms_and_translation_are_chosen_apart_unless_the_llm_does_both() {
+        use EmphasisSource as E;
+        use TranslationSource as Tr;
+        let split = Engines {
+            terms: TermsEngine::Decisions,
+            translation: TranslationEngine::QwenMtFlash,
+            ..Engines::CHROME
+        };
+        assert_eq!(split.sanitized(), split);
+        assert!(split.decides_terms() && split.uses_openai() && split.uses_qwen());
+        assert!(!split.uses_xai());
+        let finals = plan_of(split).finals;
+        assert_eq!(
+            (finals.emphasis, finals.translation),
+            (Some(E::Decisions), Some(Tr::QwenMt))
+        );
+        // 確かめられなかったときのために、PC の中の一致も付ける
+        assert!(finals.marks() && finals.local_terms());
+        // 途中の字幕は今までどおり
+        assert_eq!(plan_of(split).partial, plan_of(Engines::CHROME).partial);
+
+        // 用語だけ Decisions、翻訳は Chrome
+        let decided = Engines {
+            terms: TermsEngine::Decisions,
+            ..Engines::CHROME
+        };
+        assert!(decided.uses_openai() && !decided.uses_qwen());
+        let finals = plan_of(decided).finals;
+        assert_eq!(
+            (finals.emphasis, finals.translation),
+            (Some(E::Decisions), Some(Tr::ChromeTranslator))
+        );
+
+        // 翻訳だけ Qwen、用語は辞書の一致（OpenAI は使わない）
+        let translated = Engines {
+            translation: TranslationEngine::QwenMtFlash,
+            ..Engines::CHROME
+        };
+        assert!(translated.paid() && translated.uses_qwen() && !translated.uses_openai());
+        assert_eq!(plan_of(translated).finals.emphasis, Some(E::Terms));
+
+        // LLM が翻訳と同時に判定する
+        let llm = Engines {
+            terms: TermsEngine::Decisions,
+            ..Engines::STANDARD
+        };
+        assert!(!llm.decides_terms());
+        assert_eq!(plan_of(llm), plan_of(Engines::STANDARD));
+    }
+
+    /// 候補の出し方は日本語だけなので、ほかの言語では Decisions に聞かない
+    #[test]
+    fn decisions_are_asked_only_for_japanese() {
+        let settings = Settings {
+            engines: Engines {
+                terms: TermsEngine::Decisions,
+                ..Engines::CHROME
+            },
+            mic_language: "en".into(),
+            translate_to: vec!["ja".into()],
+            ..Default::default()
+        };
+        assert_eq!(settings.plan().finals.emphasis, None);
+    }
+
+    /// 0.5 までの設定ファイルには用語の選択がない。辞書の一致として読む
+    #[test]
+    fn engines_without_terms_read_as_the_dictionary() {
+        let engines: Engines = serde_json::from_value(json!({
+            "live": "chrome",
+            "transcription": "gptTranscribe",
+            "translation": "gpt6Luna",
+            "furigana": "lindera",
+        }))
+        .unwrap();
+        assert_eq!(engines.terms, TermsEngine::Dictionary);
+        assert_eq!(engines.translation, TranslationEngine::Gpt6Luna);
+    }
+
     /// Grok の確定は xAI だけを使い、確定の文の出どころとモデルだけが変わる
     #[test]
     fn grok_uses_xai_for_the_finals() {

@@ -258,6 +258,50 @@ describe("relay", () => {
     expect(listed!.monthUsd).toBeCloseTo(0.0074);
   });
 
+  it("relays decisions with only text choices, and counts the input", async () => {
+    const token = await share();
+    const { code } = await createCode(token);
+    vi.mocked(openai).mockResolvedValue(
+      Response.json({
+        answers: [{ type: "choice", name: "c0", choice: "hero:13" }],
+        usage: { input_tokens: 10_000, input_tokens_details: { cached_tokens: 0 }, output_tokens: 0 },
+      }),
+    );
+    const question = {
+      type: "choice",
+      name: "c0",
+      instructions: "What does ヘイズ mean?",
+      choices: [
+        { value: "hero:13", description: "Haze" },
+        { value: "none", description: "None" },
+      ],
+    };
+    const ask = (body: unknown) => call("/openai/decisions", { method: "POST", token: code, ...json(body) });
+    const good = { model: "gpt-6-luna", input: "ヘイズ強い", questions: [question] };
+    const res = await ask({ ...good, store: true });
+    expect(await res.json()).toMatchObject({ answers: [{ choice: "hero:13" }] });
+    const [path, key, init] = vi.mocked(openai).mock.calls[0]!;
+    expect([path, key]).toEqual(["/v1/decisions", KEY]);
+    expect(JSON.parse(init!.body as string)).toEqual(good);
+    // 10,000 × $0.10（100 万トークンあたり）。出力は数えない
+    expect((await listCodes(token))[0]!.usd).toBeCloseTo(0.001);
+
+    // ほかのモデル、文字でない input、画像を渡せる問い、問いの数
+    const image = { ...question, instructions: [{ type: "input_image", image_url: "https://example.com/a.png" }] };
+    for (const bad of [
+      { ...good, model: "gpt-6.1-terra" },
+      { ...good, input: [{ role: "user", content: "x" }] },
+      { ...good, questions: [image] },
+      { ...good, questions: [{ ...question, type: "predicate" }] },
+      { ...good, questions: [] },
+      { ...good, questions: Array(41).fill(question) },
+    ]) {
+      expect((await ask(bad)).status).toBe(400);
+    }
+    expect((await ask({ ...good, input: "x".repeat(64_001) })).status).toBe(413);
+    expect(openai).toHaveBeenCalledOnce();
+  });
+
   it("passes a stream through and counts the cost from its last response", async () => {
     const token = await share();
     const { code } = await createCode(token);

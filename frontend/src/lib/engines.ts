@@ -53,21 +53,47 @@ export const ITEMS: { [K in Item]: { label: string; hint: string; options: Optio
       },
     ],
   },
-  translation: {
-    label: "翻訳と用語",
-    hint: "訳文と、ヒーロー・スキル・アイテムの判定。訳文の名前を用語から作るので、いっしょに選びます",
+  terms: {
+    label: "用語",
+    hint: "ヒーロー・スキル・アイテムの判定。翻訳を GPT にしたときは、翻訳と同時に判定するので選びません",
     options: [
-      { value: "chromeTranslator", label: "Chrome の翻訳 ＋ 辞書", price: "無料" },
+      {
+        value: "dictionary",
+        label: "辞書の一致（PC の中）",
+        price: "無料",
+        note: "正式な名前だけ",
+      },
+      {
+        value: "decisions",
+        label: "GPT-6 Luna（確かめるだけ）",
+        price: "100 万トークンで入力 $0.1",
+        provider: "openai",
+        note: "略称・聞き違い・「〇〇のウルト」も判定する。PC の中で出した候補を確かめるだけなので、速くて安い",
+      },
+    ],
+  },
+  translation: {
+    label: "翻訳",
+    hint: "訳文。GPT は用語も同時に判定します（訳文の名前を用語から作るので、1 回で聞きます）",
+    options: [
+      { value: "chromeTranslator", label: "Chrome の翻訳", price: "無料" },
+      {
+        value: "qwenMtFlash",
+        label: "Qwen-MT-Flash",
+        price: "100 万トークンで入力 $0.16・出力 $0.49",
+        provider: "qwen",
+        note: "翻訳専門のモデル。速くて安い。Qwen の API キーが要る（ギフトコードでは使えない）",
+      },
       {
         value: "gpt61Terra",
-        label: "GPT-6.1 Terra",
+        label: "GPT-6.1 Terra（用語も）",
         price: "100 万トークンで入力 $1・出力 $5",
         provider: "openai",
-        note: "略称やスキルの呼び方もよく判定する",
+        note: "訳がいちばん自然で、略称やスキルの呼び方もよく判定する",
       },
       {
         value: "gpt6Luna",
-        label: "GPT-6 Luna",
+        label: "GPT-6 Luna（用語も）",
         price: "100 万トークンで入力 $0.1・出力 $0.5",
         provider: "openai",
         note: "Terra の約 6 分の 1 の料金。「〇〇のウルト」などの判定は Terra より弱い",
@@ -93,12 +119,14 @@ export const ITEMS: { [K in Item]: { label: string; hint: string; options: Optio
 export const CHROME: Engines = {
   live: "chrome",
   transcription: "chrome",
+  terms: "dictionary",
   translation: "chromeTranslator",
   furigana: "lindera",
 };
 export const STANDARD: Engines = {
   live: "chrome",
   transcription: "gptTranscribe",
+  terms: "dictionary",
   translation: "gpt61Terra",
   furigana: "llm",
 };
@@ -106,6 +134,7 @@ const OPENAI: Engines = { ...STANDARD, live: "gptLiveTranscribe" };
 const LIGHT: Engines = {
   live: "chrome",
   transcription: "grokVoiceTranscribe",
+  terms: "dictionary",
   translation: "gpt6Luna",
   furigana: "lindera",
 };
@@ -167,8 +196,15 @@ export const MODES: {
   },
 ];
 
+/** 翻訳が GPT なら、用語も GPT が同時に判定する（用語の選択は使わない） */
+export const llmTranslation = (t: Engines) =>
+  t.translation === "gpt61Terra" || t.translation === "gpt6Luna";
+
+/** 実際に使う用語の作り方 */
+const effective = (t: Engines): Engines => (llmTranslation(t) ? { ...t, terms: "dictionary" } : t);
+
 const same = (a: Engines, b: Engines) =>
-  (Object.keys(ITEMS) as Item[]).every((item) => a[item] === b[item]);
+  (Object.keys(ITEMS) as Item[]).every((item) => effective(a)[item] === effective(b)[item]);
 
 /** 今の選び方に合うモード。詳しく選んで変えたなら undefined */
 export const modeOf = (t: Engines) => MODES.find((m) => same(m.engines, t));
@@ -180,11 +216,11 @@ export const usesChrome = (t: Engines) => t.live === "chrome";
 export const chromeFinals = (t: Engines) => t.transcription === "chrome";
 
 const providerOf = (t: Engines, item: Item) =>
-  ITEMS[item].options.find((o) => o.value === t[item])?.provider;
+  ITEMS[item].options.find((o) => o.value === effective(t)[item])?.provider;
 
 /** 有料の工程で使う会社（その鍵が要る）。OpenAI を先に置く */
 export const providers = (t: Engines): Provider[] =>
-  (["openai", "xai"] as const).filter((p) =>
+  (["openai", "xai", "qwen"] as const).filter((p) =>
     (Object.keys(ITEMS) as Item[]).some((item) => providerOf(t, item) === p),
   );
 
@@ -192,11 +228,18 @@ export const providers = (t: Engines): Provider[] =>
 export const anyPaid = (t: Engines) => providers(t).length > 0;
 
 /** 会社の名前 */
-export const PROVIDER_NAMES: Record<Provider, string> = { openai: "OpenAI", xai: "xAI" };
+export const PROVIDER_NAMES: Record<Provider, string> = {
+  openai: "OpenAI",
+  xai: "xAI",
+  qwen: "Qwen",
+};
 
-/** 要る鍵の名前。ギフトコードはどの会社にも使える（xAI は、おすそ分けした人が xAI のキーを預けていれば） */
+/** ギフトコードで使える会社（おすそ分けした人がその会社のキーを預けていれば）。Qwen の中継はまだない */
+export const giftable = (p: Provider) => p !== "qwen";
+
+/** 要る鍵の名前。ギフトコードで足りる会社があれば、そう添える */
 export const keyNames = (list: Provider[]) =>
-  `${list.map((p) => PROVIDER_NAMES[p]).join(" と ")} の API キーかギフトコード`;
+  `${list.map((p) => PROVIDER_NAMES[p]).join(" と ")} の API キー${list.some(giftable) ? "かギフトコード" : ""}`;
 
 /** 今の仕組みで作れない選び方。core の `Engines::sanitized` と同じ決まり。
  * Chrome の翻訳を使っている間は途中の字幕を Chrome から変えさせない（変えると core が翻訳を有料に直し、黙って料金がかかる） */
@@ -204,6 +247,7 @@ export function unavailable<K extends Item>(t: Engines, item: K, value: Engines[
   if (item === "live")
     return (chromeFinals(t) || t.translation === "chromeTranslator") && value !== "chrome";
   if (item === "translation") return !usesChrome(t) && value === "chromeTranslator";
+  if (item === "terms") return llmTranslation(t);
   return false;
 }
 

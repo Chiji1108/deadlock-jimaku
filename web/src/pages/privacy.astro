@@ -2,7 +2,7 @@
 import Layout from "../layouts/Layout.astro";
 import { DISCORD } from "../site";
 
-const UPDATED = "2026 年 11 月 10 日";
+const UPDATED = "2026 年 11 月 11 日";
 ---
 
 <Layout title="プライバシーポリシー" description="デドロ字幕が扱う情報と、その送り先について。">
@@ -17,7 +17,7 @@ const UPDATED = "2026 年 11 月 10 日";
 
     <h2>OpenAI に送るもの</h2>
     <ul>
-      <li>Chrome のモードでは、OpenAI に字幕も音声も送りません。ここからはスタンダードと OpenAI のモードの話です。モードを詳しく選んで工程ごとに変えたときは、OpenAI を選んだ工程に要るものだけを送ります（文字起こしなら音声、翻訳と用語・ふりがななら字幕の文字）。</li>
+      <li>Chrome のモードでは、OpenAI に字幕も音声も送りません。ここからはスタンダードと OpenAI のモードの話です。モードを詳しく選んで工程ごとに変えたときは、OpenAI を選んだ工程に要るものだけを送ります（文字起こしなら音声、用語・翻訳・ふりがななら字幕の文字）。</li>
       <li>
         字幕を出している間、マイクの音声を OpenAI に送って文字にします。話している間の音声だけを送り、黙っている間は送りません。
       </li>
@@ -39,6 +39,17 @@ const UPDATED = "2026 年 11 月 10 日";
       <li>
         送るときは、利用者ご自身の xAI の API キーか、人からもらったギフトコードを使います（おすそ分けした人が xAI のキーも預けているとき。下の「おすそ分け」）。送った内容の扱いは
         <a href="https://x.ai/legal" class="underline">xAI の API の規約とポリシー</a>に従います。
+      </li>
+    </ul>
+
+    <h2>Qwen に送るもの（翻訳に Qwen-MT-Flash を選んだとき）</h2>
+    <ul>
+      <li>
+        モードを詳しく選んで、翻訳を Qwen-MT-Flash にしたときだけ、確定した字幕の文字を Alibaba Cloud の QwenCloud（シンガポール）に送って訳します。用語は英語の名前に置き換えて送ります。音声は送りません。
+      </li>
+      <li>
+        送るときは、利用者ご自身の Qwen の API キーを使います（ギフトコードでは使えません）。送った内容の扱いは
+        <a href="https://www.alibabacloud.com/help/en/model-studio/" class="underline">Alibaba Cloud Model Studio の規約とポリシー</a>に従います。
       </li>
     </ul>
 
@@ -105,7 +116,7 @@ const UPDATED = "2026 年 11 月 10 日";
     <h2>PC の中に保存するもの</h2>
     <ul>
       <li>
-        OpenAI と xAI の API キー、ギフトコード、おすそ分けの管理に使う値と作ったコードは、OS
+        OpenAI・xAI・Qwen の API キー、ギフトコード、おすそ分けの管理に使う値と作ったコードは、OS
         の資格情報ストア（Windows の資格情報マネージャー、Mac のキーチェーンなど）に保存します。
       </li>
       <li>設定、OpenAI と xAI の使用量の目安、ゲームのデータのキャッシュ、ダウンロードしたフォントを、PC の中に保存します。</li>
