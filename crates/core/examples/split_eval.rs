@@ -6,7 +6,8 @@
 //!     terms-segments  アプリが翻訳先なしのときに送る問い合わせ（`Enricher::question`。原文をすべて区切って返す）
 //!     terms-list      用語だけを並べて返す問い合わせ（原文をつなぎ直さなくてよい）
 //!     terms-decisions アプリと同じ処理（`decide::Decider`）。PC の中で候補を出し、OpenAI の Decisions API に確かめさせる
-//!     terms-jev       アプリと同じ候補を、TypeSafe AI の Jev に確かめさせる（MODEL は `jev-latest` など）
+//!     terms-jev       アプリと同じ候補を、TypeSafe AI の Jev に確かめさせる（MODEL は `jev-latest` など）。
+//!                     `会社/モデル` の形なら、OpenRouter の判定モデル（`perplexity/pplx-decider-v1.2` など）に送る
 //!     pipeline        アプリと同じ処理で、用語を決めてから訳す（`Decider` → `mt::Translator`）。MODEL は名前だけ
 //!     translate       正解の用語を `⟦英語名⟧` に置き換えた原文を訳すだけの問い合わせ（辞書の一覧は送らない）
 //!   `SPLIT_EVAL_ASSETS` で辞書の置き場所を替えられる（別名のキャッシュをアプリの置き場所に書かないとき）。
@@ -110,6 +111,7 @@ async fn main() -> anyhow::Result<()> {
     )
     .await?;
     for model in &models {
+        let app_usd_before = translate_usd(&app.meter)?;
         let client = Client {
             http: reqwest::Client::new(),
             openai: Access::key(Provider::OpenAi, env("OPENAI_API_KEY")),
@@ -202,11 +204,10 @@ async fn main() -> anyhow::Result<()> {
             }
         }
         times.sort_unstable();
-        let usd = serde_json::to_value(client.meter.watch().borrow().session.clone())?["translate"]
-            ["usd"]
-            .as_f64()
-            .unwrap_or(0.0)
-            + *client.other_usd.lock().unwrap();
+        // アプリの部品（Decider と Translator）は、アプリの数え方で数える。このモデルの分だけを取る
+        let usd = translate_usd(&client.meter)?
+            + *client.other_usd.lock().unwrap()
+            + (translate_usd(&app.meter)? - app_usd_before);
         let summary = json!({
             "runs": times.len(),
             "ok": ok_count,
@@ -377,10 +378,21 @@ async fn terms_jev(
         );
     }
     let body = json!({ "model": model, "state": asked.request["input"], "questions": questions });
+    // `会社/モデル` の形なら OpenRouter（判定モデルをまとめて同じ形で呼べる。`OPENROUTER_API_KEY`）
+    let (url, key) = match model.contains('/') {
+        true => (
+            "https://openrouter.ai/api/v1/systemone",
+            "OPENROUTER_API_KEY",
+        ),
+        false => (
+            "https://api.typesafe.ai/v1/systemone",
+            "TYPESAFE_AI_API_KEY",
+        ),
+    };
     let res = client
         .http
-        .post("https://api.typesafe.ai/v1/systemone")
-        .bearer_auth(std::env::var("TYPESAFE_AI_API_KEY").unwrap_or_default())
+        .post(url)
+        .bearer_auth(std::env::var(key).unwrap_or_default())
         .timeout(TIMEOUT)
         .json(&body)
         .send()
@@ -390,7 +402,9 @@ async fn terms_jev(
     anyhow::ensure!(status.is_success(), "{status}: {res}");
     let n = |k: &str| res["usage"][k].as_f64().unwrap_or(0.0);
     let (input, output) = JEV_PRICE;
-    client.spent((n("input_tokens") * input + n("output_tokens") * output) / 1e6);
+    // OpenRouter は料金を答えに入れる
+    let cost = res["usage"]["cost"].as_f64();
+    client.spent(cost.unwrap_or((n("input_tokens") * input + n("output_tokens") * output) / 1e6));
     let spans = asked.spans(|name| res["answers"][name]["choice"].as_str().map(str::to_owned));
     Ok(Outcome::Terms(entities(spans)))
 }
@@ -427,6 +441,12 @@ async fn pipeline(app: &App, text: &str, context: &[String]) -> anyhow::Result<O
     ))
 }
 
+/// 用語と翻訳に使った額（ドル）
+fn translate_usd(meter: &Meter) -> anyhow::Result<f64> {
+    let session = serde_json::to_value(meter.watch().borrow().session.clone())?;
+    Ok(session["translate"]["usd"].as_f64().unwrap_or(0.0))
+}
+
 fn entities(spans: Vec<Span>) -> Vec<(String, String)> {
     spans
         .into_iter()
@@ -439,6 +459,8 @@ fn entities(spans: Vec<Span>) -> Vec<(String, String)> {
 
 /// アプリの部品。辞書と別名はアプリと同じ処理（`assets::load_into`）で用意する
 struct App {
+    /// アプリの部品が使った分（辞書の読みと別名は `Use::Readings` で、ここには入らない）
+    meter: Arc<Meter>,
     loaded: Loaded,
     decider: Decider,
     translator: Translator,
@@ -456,6 +478,7 @@ impl App {
         assets::load_into(store.clone(), root, Some(openai.clone()), true).await;
         let loaded = store.glossary().context("no glossary")?;
         Ok(Self {
+            meter: store.meter(),
             loaded,
             decider: Decider::new(openai, settings.mic_language.clone(), store.meter()),
             translator: Translator::new(

@@ -182,9 +182,13 @@ fn tokens(translation: &str, terms: &[(String, String)]) -> Vec<Token> {
     let mut text = String::new();
     let mut rest = translation;
     while !rest.is_empty() {
-        let term = terms
-            .iter()
-            .find(|(name, _)| rest.starts_with(name.as_str()));
+        // 別の単語の一部（Rem と Remember）は名前にしない（Chrome の翻訳の `findWord` と同じ）
+        let joined = |c: Option<char>| c.is_some_and(|c| c.is_ascii_alphanumeric());
+        let begins = !joined(text.chars().next_back());
+        let term = terms.iter().filter(|_| begins).find(|(name, _)| {
+            rest.strip_prefix(name.as_str())
+                .is_some_and(|after| !joined(after.chars().next()))
+        });
         let Some((name, reference)) = term else {
             let ch = rest.chars().next().expect("not empty");
             text.push(ch);
@@ -318,6 +322,20 @@ mod tests {
                 term("hero:13"),
                 text(" очень сильна.")
             ]
+        );
+    }
+
+    #[test]
+    fn a_name_inside_another_word_is_not_a_term() {
+        let rem = vec![("Rem".to_owned(), "hero:1".to_owned())];
+        assert_eq!(
+            tokens("Remember, Rem's theorem.", &rem),
+            [text("Remember, "), term("hero:1"), text("'s theorem.")]
+        );
+        // 括弧で囲んだ名前は、語尾が付いていても用語
+        assert_eq!(
+            tokens("ульта ⟦Rem⟧а", &rem),
+            [text("ульта "), term("hero:1"), text("а")]
         );
     }
 
