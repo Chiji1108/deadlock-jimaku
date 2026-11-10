@@ -143,7 +143,7 @@ export const MODES: {
   {
     name: "light",
     label: "ライト",
-    traits: "安い・高精度",
+    traits: "高速・高精度",
     hourlyUsd: 0.1,
     hint: "途中の字幕は Chrome、確定の字幕は xAI の Grok、翻訳は OpenAI の安いモデルで作ります",
     engines: LIGHT,
@@ -151,7 +151,7 @@ export const MODES: {
   {
     name: "standard",
     label: "スタンダード",
-    traits: "高速・高精度",
+    traits: "高速・最高精度",
     hourlyUsd: 0.6,
     hint: "途中の字幕は Chrome、確定の字幕は OpenAI の高い精度に置き換えます",
     engines: STANDARD,
@@ -160,7 +160,7 @@ export const MODES: {
   {
     name: "openai",
     label: "OpenAI",
-    traits: "低負荷・高精度",
+    traits: "低負荷・最高精度",
     hourlyUsd: 1,
     hint: "すべて OpenAI で作ります。Chrome は使いません",
     engines: OPENAI,

@@ -627,9 +627,9 @@ interface Enriched {
 
 | モード | 途中の字幕 | 確定の字幕・翻訳・用語 | 特徴 |
 |---|---|---|---|
-| `light`（ライト） | Chrome（Google）。途中の訳は Translator | 確定の文は xAI の Grok、翻訳と用語は GPT-6 Luna、読みは PC の中 | 安くて高精度。約 $0.1/時間。OpenAI と xAI の鍵が要る。音声は Google と xAI に送られる |
-| `standard` | Chrome（Google）。途中の訳は Translator | OpenAI | 高速で、最後は高精度。約 $0.6/時間。音声は Google と OpenAI に送られる |
-| `openai` | GPT-Live-Transcribe | OpenAI | 低負荷で高精度。Chrome を使わない |
+| `light`（ライト） | Chrome（Google）。途中の訳は Translator | 確定の文は xAI の Grok、翻訳と用語は GPT-6 Luna、読みは PC の中 | 高速で高精度。約 $0.1/時間。OpenAI と xAI の鍵が要る。音声は Google と xAI に送られる |
+| `standard` | Chrome（Google）。途中の訳は Translator | OpenAI | 高速で、最後は最高精度。約 $0.6/時間。音声は Google と OpenAI に送られる |
+| `openai` | GPT-Live-Transcribe | OpenAI | 低負荷で最高精度。Chrome を使わないので、途中の字幕は Chrome を使うモードより遅い |
 | `chrome` | Chrome（Google） | 確定の文は Chrome、翻訳は Translator、読みと用語は PC の中 | 無料、API キー不要。音声は Google に送られる。翻訳は Chrome の中で動く |
 
 | 工程 | 無料 | 有料 |
