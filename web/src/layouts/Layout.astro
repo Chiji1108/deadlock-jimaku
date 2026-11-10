@@ -1,5 +1,6 @@
 ---
 import "../styles/global.css";
+import displayFont from "../assets/fonts/noto-sans-jp-900.woff2?url";
 import { siDiscord, siGithub, siTwitch } from "simple-icons";
 import BrandIcon from "../components/BrandIcon.astro";
 import { DISCORD, REPO, TWITCH } from "../site";
@@ -31,6 +32,8 @@ const year = new Date().getFullYear();
     <link rel="icon" href="/favicon.ico" sizes="32x32" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <!-- 最初に見える大きい見出しのフォント（global.css の @font-face と同じファイル） -->
+    <link rel="preload" href={displayFont} as="font" type="font/woff2" crossorigin />
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />

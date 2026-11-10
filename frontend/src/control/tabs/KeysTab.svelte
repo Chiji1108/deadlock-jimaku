@@ -12,11 +12,16 @@
     {
       provider: "openai",
       name: "OpenAI",
-      use: "ハイブリッドと OpenAI のモードの文字起こし・翻訳・ふりがなに使います。作り方は上にあります",
+      use: "ライト・スタンダード・OpenAI のモードの文字起こし・翻訳・ふりがなに使います。作り方は上にあります",
+    },
+    {
+      provider: "xai",
+      name: "xAI",
+      use: "ライトのモードの確定の文字起こし（Grok Voice Transcribe）に使います。xAI の API コンソール（console.x.ai）で作れます。ギフトコードでも、おすそ分けした人が xAI のキーを預けていれば使えます",
     },
   ];
 
-  let inputs = $state<Record<Provider, string>>({ openai: "" });
+  let inputs = $state<Record<Provider, string>>({ openai: "", xai: "" });
 
   async function save(provider: Provider, key: string) {
     // 失敗したら貼り直さずにやり直せるよう、入力は残す
@@ -122,9 +127,9 @@
               {giftStatusText(panel.gift)}
             </Field.Description>
           {/if}
-          {#if giftSaved && panel.view?.keys.openai.state === "saved"}
+          {#if giftSaved && (panel.view?.keys.openai.state === "saved" || panel.view?.keys.xai.state === "saved")}
             <Field.Description
-              >自分の API キーを保存しているあいだは、自分のキーを使います</Field.Description
+              >自分の API キーを保存している会社には、自分のキーを使います</Field.Description
             >
           {/if}
           <div class="flex gap-2">

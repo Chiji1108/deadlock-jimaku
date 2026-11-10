@@ -1,5 +1,5 @@
 <script lang="ts">
-  // Chrome のモードのページ。アプリが起動し、認識した文を core に送り、頼まれた文を訳す（DESIGN.md 9.6）
+  // Chrome の品のページ。アプリが起動し、認識した文を core に送り、頼まれた文を訳す（DESIGN.md 9.6）
   import { onMount } from "svelte";
   import type { ChromeMsg } from "../generated/ChromeMsg";
   import type { ChromeCommand } from "../generated/ChromeCommand";
@@ -22,6 +22,7 @@
     type MicTrouble,
   } from "./speech";
   import { Translation } from "./translation";
+  import { chromeFinals, usesChrome } from "../lib/engines";
 
   /** ブロックしたあとは確認が出ない。OS で止めていても同じエラーになる */
   const MIC_DENIED =
@@ -61,9 +62,9 @@
   let settings: Settings | undefined;
   let socket: WebSocket | undefined;
   let stop: (() => void) | undefined;
-  /** ハイブリッドの発話が閉じた */
+  /** アプリが区切る発話が閉じた */
   let cut: (() => void) | undefined;
-  /** ハイブリッドの発話が開いた */
+  /** アプリが区切る発話が開いた */
   let reset: (() => void) | undefined;
   /** 今の区切りの番号。core が前の発話の文を見分ける */
   let cuts = 0;
@@ -91,7 +92,7 @@
   let micChosen = $state("");
   /** 選択欄を押した回数。同じマイクを選び直しても開き直す */
   let micPicks = 0;
-  /** ハイブリッドなら、選んだマイクはアプリのマイクとずれることがある */
+  /** 確定の文をアプリが作るなら、選んだマイクはアプリのマイクとずれることがある */
   let hybrid = $state(false);
   /** マイクを調べるための記録。機器の名前が入るので、外に送らず、押されたらコピーするだけ */
   let micLog = $state<string[]>([]);
@@ -163,7 +164,8 @@
 
   const key = (s: Settings) =>
     JSON.stringify([
-      s.speechEngine,
+      s.engines.live,
+      s.engines.transcription,
       s.micDevice,
       s.micLanguage,
       s.translateTo,
@@ -172,12 +174,12 @@
     ]);
   /** 字幕を止めているか、core の準備ができていないなら聞かない（音声を Google に送らない） */
   const wanted = (s: Settings) =>
-    s.speechEngine !== "openai" &&
+    usesChrome(s.engines) &&
     s.transcriptionEnabled &&
     helper?.state === "listening" &&
     socket?.readyState === WebSocket.OPEN;
 
-  /** ハイブリッドの発話はアプリが区切るので、Chrome が途中で確定した文をつなげる。
+  /** 確定の文をアプリが作るなら発話はアプリが区切るので、Chrome が途中で確定した文をつなげる。
    * 英語などは単語の前の空白も認識の結果に入っている */
   function hybridSink() {
     let settled = "";
@@ -192,7 +194,7 @@
     };
   }
 
-  /** Chrome のモードの発話は、Chrome の確定と文の区切りの時間で分かれる */
+  /** 確定の文を Chrome が作るなら、発話は Chrome の確定と文の区切りの時間で分かれる */
   function chromeSink(s: Settings) {
     return {
       silenceMs: s.segmentation.minSilenceMs,
@@ -266,8 +268,8 @@
       micChosen = using?.deviceId ?? DEFAULT_MIC.deviceId;
     };
     showMic(microphone.trouble, microphone.opened);
-    hybrid = s.speechEngine === "hybrid";
-    const sink = s.speechEngine === "hybrid" ? hybridSink() : chromeSink(s);
+    hybrid = !chromeFinals(s.engines);
+    const sink = hybrid ? hybridSink() : chromeSink(s);
     const recognition = listen(s.micLanguage, {
       silenceMs: sink.silenceMs,
       onText: sink.onText,

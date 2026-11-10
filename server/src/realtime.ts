@@ -2,7 +2,7 @@
 // 数えられない音声を送らせないよう、アプリが送る種類の文字のメッセージだけを通し、
 // 単価の分かるモデルと音声の形を session.update で決めるまでは、ほかのメッセージを通さない
 
-import { addUsage, codeById, dailyLimit, refusal, todayUsd, type Code } from "./db";
+import { addUsage, codeById, dailyLimit, refusal, todayUsd, type Code, type Db } from "./db";
 import { openai } from "./openai";
 import { appendSeconds, audioUsd, REALTIME_RATE } from "./price";
 
@@ -18,7 +18,7 @@ const CLIENT_EVENTS = new Set([
 ]);
 
 export async function relay(
-  db: D1Database,
+  db: Db,
   code: Code,
   key: string,
   ctx: { waitUntil(promise: Promise<unknown>): void },
@@ -76,7 +76,8 @@ export async function relay(
         .then(() => codeById(db, code.id))
         .then((now) => {
           if (now) remaining = budget(now);
-          const error = now ? refusal(now, Date.now()) : "revoked";
+          // OpenAI のキーを預けるのをやめたら切る
+          const error = now ? (refusal(now, Date.now()) ?? (now.keys.openai ? undefined : "unsupported")) : "revoked";
           if (error) close(1008, error === "limit" ? "limit" : "gift code is no longer usable");
         }),
     );
@@ -101,12 +102,12 @@ export async function relay(
       }
       model = input.transcription?.model;
       // 単価の分からないモデルは使わせない（おすそ分けした人の料金を数えられない）
-      if (!model || audioUsd(model, 0) === undefined) return close(1008, "model not allowed");
+      if (!model || audioUsd("openai", model, 0) === undefined) return close(1008, "model not allowed");
     } else if (!model) {
       return close(1008, "session.update with a model comes first");
     } else if (msg.type === "input_audio_buffer.append") {
       if (typeof msg.audio !== "string") return close(1008, "message not allowed");
-      const usd = audioUsd(model, appendSeconds(msg.audio)) ?? 0;
+      const usd = audioUsd("openai", model, appendSeconds(msg.audio)) ?? 0;
       pending += usd;
       remaining -= usd;
       if (remaining <= 0) return close(1008, "limit");

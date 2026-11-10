@@ -13,8 +13,20 @@
   import PauseDialog from "../parts/PauseDialog.svelte";
   import { Badge } from "$lib/components/ui/badge";
   import { panel } from "../panel.svelte";
-  import { ENGINES } from "../../lib/engines";
-  import { translationOnly } from "../../lib/subtitle-lines";
+  import EnginesDialog from "../parts/EnginesDialog.svelte";
+  import {
+    STANDARD,
+    MODES,
+    monthly,
+    price,
+    anyPaid,
+    chromeFinals,
+    modeOf,
+    keyNames,
+    paidItems,
+    providers,
+    usesChrome,
+  } from "../../lib/engines";
 
   const MAX_TRANSLATE_TO = 4;
   /** 何 ms 黙ったら区切るか */
@@ -25,8 +37,9 @@
   ];
 
   const s = $derived(panel.settings!);
-  const onlyTranslation = $derived(translationOnly(s));
-  const engine = $derived(ENGINES.find((e) => e.value === s.speechEngine)!);
+  const t = $derived(s.engines);
+  const mode = $derived(modeOf(t));
+  const paid = $derived(paidItems(t));
   /** Chrome のウィンドウが字幕を止めている理由。止まっているか、回線の回復を待っている */
   const chromeProblem = $derived(
     panel.chromeStatus?.state === "failed" ||
@@ -35,8 +48,8 @@
       ? panel.chromeStatus.detail
       : undefined,
   );
-  /** ハイブリッドは確定の字幕を作れないと Chrome を閉じる */
-  const chromeClosed = $derived(s.speechEngine === "hybrid" && !!panel.transcriptionError);
+  /** 有料の工程がある字幕が止まったら Chrome を閉じる（字幕にならない音声を Google に送らない） */
+  const chromeClosed = $derived(anyPaid(t) && !!panel.transcriptionError);
   /** Chrome のウィンドウの今の状態 */
   const chromeNote = $derived.by(() => {
     if (chromeClosed) return "字幕が止まっているので閉じています";
@@ -59,37 +72,43 @@
       <Card.Description>字幕をどこで作るかを選びます</Card.Description>
     </Card.Header>
     <Card.Content class="flex flex-col gap-3">
-      <div class="grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label="モード">
-        {#each ENGINES as e (e.value)}
+      <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-4" role="radiogroup" aria-label="モード">
+        {#each MODES as m (m.name)}
           <button
             type="button"
             role="radio"
-            aria-checked={s.speechEngine === e.value}
+            aria-checked={mode?.name === m.name}
             class="flex flex-col gap-1 rounded-lg border p-3 text-left transition-colors hover:bg-muted aria-checked:border-foreground aria-checked:bg-muted"
-            onclick={() => panel.update({ speechEngine: e.value })}
+            onclick={() => panel.update({ engines: m.engines })}
           >
             <span class="flex items-center gap-2 text-sm font-medium">
-              {e.label}
-              {#if e.recommended}<Badge variant="secondary">おすすめ</Badge>{/if}
+              {m.label}
+              {#if m.recommended}<Badge variant="secondary">おすすめ</Badge>{/if}
             </span>
-            <span class="text-xs text-muted-foreground">{e.traits}</span>
-            <span class="text-xs text-muted-foreground tabular-nums">{e.price}</span>
+            <span class="text-xs text-muted-foreground">{m.traits}</span>
+            <span class="text-xs text-muted-foreground tabular-nums">{price(m.hourlyUsd)}</span>
+            {#if m.hourlyUsd}
+              <span class="text-xs text-muted-foreground tabular-nums">{monthly(m.hourlyUsd)}</span>
+            {/if}
           </button>
         {/each}
       </div>
       <p class="text-sm text-muted-foreground">
-        {engine.hint}{#if engine.needsKey}。OpenAI の API キーかギフトコードが要ります{/if}
+        {#if mode}
+          {mode.hint}
+        {:else if paid.length}
+          詳しく選んだ作り方です。有料の工程: {paid.join("、")}
+        {:else}
+          詳しく選んだ作り方です。すべて無料です
+        {/if}{#if paid.length}。{keyNames(providers(t))}が要ります{/if}
       </p>
-      {#if s.speechEngine === "chrome" && panel.hybridReady && !s.hybridHintClosed}
+      <EnginesDialog />
+      {#if mode?.name === "chrome" && panel.standardReady && !s.hybridHintClosed}
         <div class="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3">
-          <p class="text-sm">ハイブリッドにすると、確定の字幕が高い精度になります</p>
+          <p class="text-sm">スタンダードにすると、確定の字幕が高い精度になります</p>
           <div class="flex gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              onclick={() => panel.update({ speechEngine: "hybrid" })}
-            >
-              ハイブリッドにする
+            <Button variant="outline" size="sm" onclick={() => panel.update({ engines: STANDARD })}>
+              スタンダードにする
             </Button>
             <Button
               variant="ghost"
@@ -101,7 +120,7 @@
           </div>
         </div>
       {/if}
-      {#if s.speechEngine !== "openai"}
+      {#if usesChrome(t)}
         {#if s.transcriptionEnabled}
           <div class="flex flex-wrap items-center gap-3">
             {#if !chromeClosed}
@@ -121,7 +140,7 @@
           <Alert.Root variant="destructive">
             <Alert.Title>{chromeProblem}</Alert.Title>
             <Alert.Description class="flex flex-col items-start gap-2">
-              {#if s.speechEngine === "hybrid"}
+              {#if !chromeFinals(t)}
                 確定の字幕は出ています。話している途中の字幕だけが止まっています。
               {/if}
               {#if panel.chromeStatus?.state === "missing"}
@@ -190,7 +209,7 @@
         {/if}
       </Field.Field>
 
-      {#if s.speechEngine !== "chrome"}
+      {#if !chromeFinals(t)}
         <Field.Field>
           <Field.Label>入力レベル</Field.Label>
           <LevelMeter />
@@ -233,7 +252,7 @@
             {/each}
           </Select.Content>
         </Select.Root>
-        {#if s.speechEngine === "chrome" && s.micLanguage !== "ja"}
+        {#if t.translation === "chromeTranslator" && s.micLanguage !== "ja"}
           <Field.Description>ふりがなと用語の強調は日本語のときだけ出ます</Field.Description>
         {/if}
       </Field.Field>
@@ -253,30 +272,13 @@
         />
       </Field.Field>
 
-      {#if s.speechEngine === "openai"}<Field.Field orientation="horizontal">
-          <Field.Content>
-            <Field.Label for="live-subtitles">話している途中から字幕を出す</Field.Label>
-            <Field.Description>
-              {#if onlyTranslation}
-                翻訳だけを出しているので、途中の字幕は出ません
-              {:else}
-                オフにすると途中の字幕の料金がかかりません。字幕は話し終えてから出ます。切り替えると、字幕は始め直します
-              {/if}
-            </Field.Description>
-          </Field.Content>
-          <Switch
-            id="live-subtitles"
-            checked={s.liveSubtitles}
-            disabled={onlyTranslation}
-            onCheckedChange={(v) => panel.update({ liveSubtitles: v })}
-          />
-        </Field.Field>{/if}
-
       <Field.Field>
         <Field.Label>翻訳先</Field.Label>
         <Field.Description>
-          最大 {MAX_TRANSLATE_TO} つ（{s.translateTo.length} / {MAX_TRANSLATE_TO}）{#if s.speechEngine !== "chrome"}。1
-            つ増えるごとに、話し続けて 1 時間あたり約 $0.3{/if}
+          最大 {MAX_TRANSLATE_TO} つ（{s.translateTo.length} / {MAX_TRANSLATE_TO}）{#if t.translation !== "chromeTranslator"}。1
+            つ増えるごとに、話し続けて 1 時間あたり約 ${t.translation === "gpt6Luna"
+              ? "0.05"
+              : "0.3"}{/if}
         </Field.Description>
         <ToggleGroup.Root
           type="multiple"

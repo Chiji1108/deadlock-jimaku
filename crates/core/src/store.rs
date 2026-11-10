@@ -344,7 +344,7 @@ impl Store {
     fn chrome_needed(&self) -> bool {
         let settings = self.settings();
         let plan = settings.plan();
-        let stalled = plan.needs_key() && self.transcription_error().is_some();
+        let stalled = settings.engines.paid() && self.transcription_error().is_some();
         settings.transcription_enabled && plan.uses_chrome() && !stalled
     }
 
@@ -511,7 +511,7 @@ mod tests {
     use super::*;
     use serde_json::json;
 
-    use crate::settings::SpeechEngine;
+    use crate::settings::Engines;
     use crate::types::Stage;
 
     fn seg(id: &str, text: &str) -> Segment {
@@ -535,10 +535,10 @@ mod tests {
         }
     }
 
-    fn chrome_store(speech_engine: SpeechEngine) -> (tempfile::TempDir, Arc<Store>) {
+    fn chrome_store(engines: Engines) -> (tempfile::TempDir, Arc<Store>) {
         let dir = tempfile::tempdir().unwrap();
         let settings = Settings {
-            speech_engine,
+            engines,
             transcription_enabled: true,
             ..Settings::default()
         };
@@ -548,7 +548,7 @@ mod tests {
 
     #[tokio::test]
     async fn a_stopped_hybrid_closes_chrome_and_does_not_open_it_again() {
-        let (_dir, store) = chrome_store(SpeechEngine::Hybrid);
+        let (_dir, store) = chrome_store(Engines::STANDARD);
         *store.browser.lock().unwrap() = Some(Browser::exited());
         store.set_transcription_error(Some(TranscriptionError::GiftRevoked));
         assert!(store.browser.lock().unwrap().is_none());
@@ -558,16 +558,18 @@ mod tests {
 
     #[tokio::test]
     async fn a_missing_key_keeps_chrome_closed_in_hybrid() {
-        let (_dir, store) = chrome_store(SpeechEngine::Hybrid);
-        store.set_transcription_error(Some(TranscriptionError::MissingKey));
+        let (_dir, store) = chrome_store(Engines::STANDARD);
+        store.set_transcription_error(Some(TranscriptionError::MissingKey {
+            provider: crate::secrets::Provider::OpenAi,
+        }));
         store.sync_chrome();
         assert!(store.browser.lock().unwrap().is_none());
     }
 
-    /// Chrome のモードの字幕は OpenAI を使わないので、ウィンドウは残す
+    /// Chrome のモードは OpenAI を使わないので、ウィンドウは残す
     #[tokio::test]
     async fn an_error_leaves_chrome_open_in_chrome_mode() {
-        let (_dir, store) = chrome_store(SpeechEngine::Chrome);
+        let (_dir, store) = chrome_store(Engines::CHROME);
         *store.browser.lock().unwrap() = Some(Browser::exited());
         store.set_transcription_error(Some(TranscriptionError::Crashed {
             detail: "panic".into(),
@@ -578,7 +580,7 @@ mod tests {
     /// 閉じられたままなら、起動されて `Browser` が入れ替わることもない
     #[tokio::test]
     async fn a_closed_chrome_stays_closed_when_settings_change() {
-        let (_dir, store) = chrome_store(SpeechEngine::Chrome);
+        let (_dir, store) = chrome_store(Engines::CHROME);
         let closed = Browser::exited();
         let pid = closed.pid();
         *store.browser.lock().unwrap() = Some(closed);
@@ -588,8 +590,8 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn stopping_forgets_the_closed_chrome() {
-        let (_dir, store) = chrome_store(SpeechEngine::Chrome);
+    async fn sengine_forgets_the_closed_chrome() {
+        let (_dir, store) = chrome_store(Engines::CHROME);
         *store.browser.lock().unwrap() = Some(Browser::exited());
         let stop = SettingsPatch {
             transcription_enabled: Some(false),

@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::IDENTIFIER;
-use crate::openai::Access;
+use crate::access::Access;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "lowercase")]
@@ -17,12 +17,15 @@ pub enum Provider {
     /// 文字起こし・翻訳・辞書の漢字名の読み
     #[serde(rename = "openai")]
     OpenAi,
+    /// 確定の文字起こし（Grok Voice Transcribe）
+    Xai,
 }
 
 impl Provider {
     fn slot(self) -> Slot {
         match self {
             Self::OpenAi => Slot::OpenAi,
+            Self::Xai => Slot::Xai,
         }
     }
 }
@@ -31,6 +34,7 @@ impl Provider {
 #[derive(Clone, Copy, Debug)]
 enum Slot {
     OpenAi,
+    Xai,
     /// 人からもらったギフトコード（DESIGN.md 17.1）
     Gift,
     /// おすそ分けを管理する合言葉（サーバーが発行）
@@ -43,6 +47,7 @@ impl Slot {
     fn account(self) -> &'static str {
         match self {
             Self::OpenAi => "openai",
+            Self::Xai => "xai",
             Self::Gift => "gift",
             Self::ShareToken => "share-token",
             Self::ShareCode => "share-code",
@@ -66,6 +71,7 @@ pub enum KeyState {
 #[ts(export)]
 pub struct KeyStatus {
     pub openai: KeyState,
+    pub xai: KeyState,
     /// ギフトコード。コードそのものは返さない
     pub gift: KeyState,
 }
@@ -73,15 +79,21 @@ pub struct KeyStatus {
 #[derive(Clone, Debug, Default)]
 pub struct Keys {
     pub openai: Option<String>,
+    pub xai: Option<String>,
     pub gift: Option<String>,
 }
 
 impl Keys {
-    /// 自分のキーがあれば OpenAI へ直接、なければギフトコードで開発者のサーバーを通す（`api` はその根元）
-    pub fn access(&self, api: &str) -> Option<Access> {
-        match (&self.openai, &self.gift) {
-            (Some(key), _) => Some(Access::key(key.clone())),
-            (None, Some(code)) => Some(Access::gift(code.clone(), api)),
+    /// 自分のキーがあればその会社へ直接、なければギフトコードで開発者のサーバーを通す（`api` はその根元）。
+    /// ギフトコードでその会社を使えるか（xAI のキーを預けているか）は、字幕を始めるときに確かめる
+    pub fn access(&self, provider: Provider, api: &str) -> Option<Access> {
+        let own = match provider {
+            Provider::OpenAi => &self.openai,
+            Provider::Xai => &self.xai,
+        };
+        match (own, &self.gift) {
+            (Some(key), _) => Some(Access::key(provider, key.clone())),
+            (None, Some(code)) => Some(Access::gift(provider, code.clone(), api)),
             (None, None) => None,
         }
     }
@@ -139,6 +151,7 @@ fn state(slot: Slot) -> KeyState {
 pub fn load() -> Keys {
     Keys {
         openai: get_or_warn(Slot::OpenAi),
+        xai: get_or_warn(Slot::Xai),
         gift: get_or_warn(Slot::Gift),
     }
 }
@@ -146,6 +159,7 @@ pub fn load() -> Keys {
 pub fn status() -> KeyStatus {
     KeyStatus {
         openai: state(Slot::OpenAi),
+        xai: state(Slot::Xai),
         gift: state(Slot::Gift),
     }
 }
@@ -155,8 +169,17 @@ pub fn set(provider: Provider, key: &str) -> anyhow::Result<()> {
     put(provider.slot(), key)
 }
 
+/// その会社の自分のキー
+pub fn key(provider: Provider) -> Option<String> {
+    get_or_warn(provider.slot())
+}
+
 pub fn openai() -> Option<String> {
     get_or_warn(Slot::OpenAi)
+}
+
+pub fn xai() -> Option<String> {
+    get_or_warn(Slot::Xai)
 }
 
 pub fn gift() -> Option<String> {

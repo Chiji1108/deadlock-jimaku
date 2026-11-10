@@ -14,8 +14,8 @@ use std::sync::Arc;
 
 use futures_util::{StreamExt, future::try_join_all, stream};
 
+use crate::access::Access;
 use crate::lang;
-use crate::openai::Access;
 use crate::store::Store;
 use crate::types::{Glossary, LangCode};
 use glossary::{Icon, Sources};

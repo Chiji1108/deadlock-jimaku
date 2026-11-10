@@ -1,19 +1,20 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { getPlatformProxy } from "wrangler";
-import share0001 from "../migrations/0001_share.sql?raw";
-import limit0002 from "../migrations/0002_daily_limit.sql?raw";
-import { addUsage, codeByValue, day, DEFAULT_DAILY_LIMIT_USD } from "./db";
+import { addUsage, codeByValue, day, DEFAULT_DAILY_LIMIT_USD, open, type Db } from "./db";
 import { app, type Env } from "./index";
 import { openai, validKey } from "./openai";
 import { appendSeconds, tokensUsd, wavSeconds } from "./price";
 import { relay } from "./realtime";
 import { normalizeCode } from "./secrets";
+import { validXaiKey, xai } from "./xai";
 
 vi.mock("./openai", () => ({ openai: vi.fn(), validKey: vi.fn() }));
+vi.mock("./xai", () => ({ xai: vi.fn(), validXaiKey: vi.fn() }));
 
 const KEY = "sk-issuer";
 let proxy: Awaited<ReturnType<typeof getPlatformProxy<{ DB: D1Database }>>>;
 let env: Env;
+let db: Db;
 let pending: Promise<unknown>[] = [];
 const ctx = { waitUntil: (p: Promise<unknown>) => pending.push(p), passThroughOnException() {}, props: {} };
 
@@ -41,7 +42,13 @@ beforeAll(async () => {
     SHARE_KEY: btoa(String.fromCharCode(...new Uint8Array(32).fill(7))),
     GIFT_RATE: { limit: rate },
   };
-  const sql = (share0001 + limit0002)
+  db = open(env.DB);
+  // 本番と同じく、migrations/ の SQL を番号の順に当てる
+  const migrations = import.meta.glob<string>("../migrations/*.sql", { query: "?raw", import: "default", eager: true });
+  const sql = Object.keys(migrations)
+    .sort()
+    .map((name) => migrations[name])
+    .join("\n")
     .replace(/--.*$/gm, "")
     .split(";")
     .map((s) => s.trim())
@@ -52,19 +59,33 @@ beforeAll(async () => {
 afterAll(() => proxy.dispose());
 
 beforeEach(async () => {
-  for (const table of ["code_usage", "codes", "issuers"]) {
+  for (const table of ["code_usage", "codes", "issuer_keys", "issuers"]) {
     await env.DB.prepare(`DELETE FROM ${table}`).run();
   }
   vi.mocked(validKey).mockImplementation(async (key) => key.startsWith("sk-"));
   vi.mocked(openai).mockReset();
+  vi.mocked(validXaiKey).mockImplementation(async (key) => key.startsWith("xai-"));
+  vi.mocked(xai).mockReset();
   rate.mockReset();
   rate.mockResolvedValue({ success: true });
 });
 
-async function share(key = KEY): Promise<string> {
-  const res = await call("/share", { method: "POST", ...json({ key }) });
+async function share(key = KEY, provider?: string): Promise<string> {
+  const res = await call("/share", { method: "POST", ...json(provider ? { provider, key } : { key }) });
   expect(res.status).toBe(200);
   return ((await res.json()) as { token: string }).token;
+}
+
+const XAI_KEY = "xai-issuer";
+
+/** その会社のキーを預ける・替える。新しい合言葉を返す */
+async function deposit(token: string, provider: string, key: string) {
+  const res = await call(`/share/keys/${provider}`, { method: "PUT", token, ...json({ key }) });
+  return { status: res.status, token: res.ok ? ((await res.json()) as { token: string }).token : undefined };
+}
+
+async function deposited(token: string) {
+  return ((await (await call("/share/codes", { token })).json()) as { providers: string[] }).providers;
 }
 
 async function createCode(
@@ -176,7 +197,7 @@ describe("gift", () => {
     const token = await share();
     const future = Date.now() + 60_000;
     const { code, id } = await createCode(token, { expiresAt: future });
-    expect(await (await call("/gift", { token: code })).json()).toEqual({ expiresAt: future });
+    expect(await (await call("/gift", { token: code })).json()).toEqual({ expiresAt: future, providers: ["openai"] });
 
     // 期限を過ぎた直後: 始められないが、中継はする
     const past = Date.now() - 60_000;
@@ -203,7 +224,7 @@ describe("gift", () => {
     await revoke(true);
     expect(await (await call("/gift", { token: code })).json()).toEqual({ error: "revoked" });
     await revoke(false);
-    expect(await (await call("/gift", { token: code })).json()).toEqual({ expiresAt: null });
+    expect(await (await call("/gift", { token: code })).json()).toEqual({ expiresAt: null, providers: ["openai"] });
   });
 
   it("unknown codes are refused", async () => {
@@ -392,6 +413,125 @@ describe("relay", () => {
   });
 });
 
+describe("keys", () => {
+  it("deposits a key per provider, only for the issuer and with a working key", async () => {
+    const token = await share();
+    const { code } = await createCode(token);
+    expect((await deposit("nobody", "xai", XAI_KEY)).status).toBe(401);
+    expect((await deposit(token, "xai", "bad")).status).toBe(400);
+    expect((await deposit(token, "other", XAI_KEY)).status).toBe(404);
+    expect(await (await call("/gift", { token: code })).json()).toMatchObject({ providers: ["openai"] });
+
+    expect(await deposit(token, "xai", XAI_KEY)).toEqual({ status: 200, token });
+    expect(await deposited(token)).toEqual(["openai", "xai"]);
+    expect(await (await call("/gift", { token: code })).json()).toMatchObject({ providers: ["openai", "xai"] });
+
+    const res = await call("/share/keys/xai", { method: "DELETE", token });
+    const { token: after } = (await res.json()) as { token: string };
+    expect(after).not.toBe(token);
+    expect((await call("/share/codes", { token })).status).toBe(401);
+    expect(await deposited(after)).toEqual(["openai"]);
+  });
+
+  it("shares with an xAI key alone, which relays to xAI but not to OpenAI", async () => {
+    const token = await share(XAI_KEY, "xai");
+    const { code } = await createCode(token);
+    expect(await (await call("/gift", { token: code })).json()).toMatchObject({ providers: ["xai"] });
+    const res = await call("/openai/responses", { method: "POST", token: code, ...json({ model: "gpt-6.1-terra", input: "x" }) });
+    expect(res.status).toBe(403);
+    expect(res.headers.get("X-Gift-Refusal")).toBe("unsupported");
+    expect(openai).not.toHaveBeenCalled();
+  });
+
+  it("is the same issuer and token from any of the deposited keys", async () => {
+    const token = await share();
+    await deposit(token, "xai", XAI_KEY);
+    expect(await share(XAI_KEY, "xai")).toBe(token);
+  });
+
+  it("joins only an existing share", async () => {
+    const join = (key: string, provider: string) =>
+      call("/share", { method: "POST", ...json({ provider, key, join: true }) });
+    expect((await join(XAI_KEY, "xai")).status).toBe(404);
+    const token = await share(XAI_KEY, "xai");
+    expect(await (await join(XAI_KEY, "xai")).json()).toEqual({ token });
+  });
+
+  it("replaces the token when a key is replaced, keeping the other keys", async () => {
+    const old = await share();
+    await deposit(old, "xai", XAI_KEY);
+    const { token } = await deposit(old, "xai", "xai-new");
+    expect(token).not.toBe(old);
+    expect((await call("/share/codes", { token: old })).status).toBe(401);
+    expect(await deposited(token!)).toEqual(["openai", "xai"]);
+    expect(await share(XAI_KEY, "xai")).not.toBe(token);
+  });
+
+  it("keeps the xAI key when the OpenAI key changes", async () => {
+    const old = await share();
+    await deposit(old, "xai", XAI_KEY);
+    const res = await call("/share/key", { method: "PUT", token: old, ...json({ key: "sk-new" }) });
+    const { token } = (await res.json()) as { token: string };
+    expect(await deposited(token)).toEqual(["openai", "xai"]);
+  });
+
+  it("refuses a key that someone else shares, and to remove the last key", async () => {
+    const mine = await share();
+    await share(XAI_KEY, "xai");
+    expect((await deposit(mine, "xai", XAI_KEY)).status).toBe(409);
+    expect((await call("/share/keys/openai", { method: "DELETE", token: mine })).status).toBe(409);
+  });
+});
+
+describe("xai", () => {
+  function sttForm(model = "grok-voice-transcribe-2.0") {
+    const form = new FormData();
+    form.set("model", model);
+    form.set("language", "ja");
+    form.append("keyterm", "ヘイズ");
+    form.append("keyterm", "デッドロック");
+    form.set("prompt", "not passed");
+    form.set("file", new File([wav(36)], "segment.wav", { type: "audio/wav" }));
+    return form;
+  }
+
+  it("refuses to relay when no xAI key is deposited", async () => {
+    const token = await share();
+    const { code } = await createCode(token);
+    const res = await call("/xai/stt", { method: "POST", token: code, body: sttForm() });
+    expect(res.status).toBe(403);
+    expect(res.headers.get("X-Gift-Refusal")).toBe("unsupported");
+    expect(xai).not.toHaveBeenCalled();
+  });
+
+  it("relays with the issuer's xAI key, only the app's fields with the file last, and counts the cost", async () => {
+    const token = await share();
+    await deposit(token, "xai", XAI_KEY);
+    const { code } = await createCode(token);
+    vi.mocked(xai).mockResolvedValue(Response.json({ text: "ヘイズ", duration: 36 }));
+    const res = await call("/xai/stt", { method: "POST", token: code, body: sttForm() });
+    expect(await res.json()).toMatchObject({ text: "ヘイズ" });
+    const [path, key, init] = vi.mocked(xai).mock.calls[0]!;
+    expect([path, key]).toEqual(["/v1/stt", XAI_KEY]);
+    const sent = init!.body as FormData;
+    expect([...sent.keys()]).toEqual(["model", "language", "keyterm", "keyterm", "file"]);
+    expect((await listCodes(token))[0]!.usd).toBeCloseTo(0.001);
+  });
+
+  it("refuses OpenAI models on xAI, and Grok on OpenAI", async () => {
+    const token = await share();
+    await deposit(token, "xai", XAI_KEY);
+    const { code } = await createCode(token);
+    const res = await call("/xai/stt", { method: "POST", token: code, body: sttForm("gpt-transcribe") });
+    expect(res.status).toBe(400);
+    const form = sttForm();
+    const openaiRes = await call("/openai/audio/transcriptions", { method: "POST", token: code, body: form });
+    expect(openaiRes.status).toBe(400);
+    expect(xai).not.toHaveBeenCalled();
+    expect(openai).not.toHaveBeenCalled();
+  });
+});
+
 describe("rate limit", () => {
   const responses = { model: "gpt-6.1-terra", input: "x" };
 
@@ -414,7 +554,7 @@ describe("rate limit", () => {
   it("does not count unknown or refused codes, and does not hide why a code stopped", async () => {
     const token = await share();
     const { code } = await createCode(token, { dailyLimitUsd: 1 });
-    await addUsage(env.DB, (await codeByValue(env.DB, code))!.id, 1, Date.now());
+    await addUsage(db, (await codeByValue(db, code))!.id, 1, Date.now());
     rate.mockResolvedValue({ success: false });
     const res = await call("/openai/responses", { method: "POST", token: code, ...json(responses) });
     expect(res.status).toBe(403);
@@ -438,7 +578,7 @@ describe("daily limit", () => {
 
   /** 使われた額を D1 に足す */
   async function spend(code: string, usd: number, now: number) {
-    await addUsage(env.DB, (await codeByValue(env.DB, code))!.id, usd, now);
+    await addUsage(db, (await codeByValue(db, code))!.id, usd, now);
   }
 
   beforeEach(() => {
@@ -620,8 +760,8 @@ describe("realtime relay", () => {
     vi.mocked(openai).mockResolvedValue({ webSocket: upstream } as unknown as Response);
     const token = await share();
     ({ code } = await createCode(token, { dailyLimitUsd: 0.001 }));
-    const gift = (await codeByValue(env.DB, code))!;
-    await relay(env.DB, gift, KEY, ctx);
+    const gift = (await codeByValue(db, code))!;
+    await relay(db, gift, KEY, ctx);
   });
 
   afterEach(() => {
@@ -648,7 +788,7 @@ describe("realtime relay", () => {
     // 切れたときに、送った音声の分（0.1 秒）を書く
     client.dispatchEvent(new CloseEvent("close", { code: 1000 }));
     await settled();
-    expect((await codeByValue(env.DB, code))!.day_usd).toBeCloseTo((0.1 / 60) * 0.017, 8);
+    expect((await codeByValue(db, code))!.dayUsd).toBeCloseTo((0.1 / 60) * 0.017, 8);
   });
 
   it.each([
@@ -702,7 +842,7 @@ describe("realtime relay", () => {
     expect(upstream.closed?.code).toBe(1008);
     expect(upstream.sent).toHaveLength(1);
     await settled();
-    expect((await codeByValue(env.DB, code))!.day_usd).toBeCloseTo((400_000 / 2 / 24_000 / 60) * 0.017, 8);
+    expect((await codeByValue(db, code))!.dayUsd).toBeCloseTo((400_000 / 2 / 24_000 / 60) * 0.017, 8);
   });
 
   it("adds up audio sent faster than real time", () => {
@@ -719,7 +859,7 @@ describe("realtime relay", () => {
     client = new FakeSocket();
     upstream = new FakeSocket();
     vi.mocked(openai).mockResolvedValue({ webSocket: upstream } as unknown as Response);
-    await relay(env.DB, (await codeByValue(env.DB, code))!, KEY, ctx);
+    await relay(db, (await codeByValue(db, code))!, KEY, ctx);
     client.message(sessionUpdate());
     client.message(append(96_000));
     expect(client.closed).toEqual({ code: 1008, reason: "limit" });
@@ -739,6 +879,17 @@ describe("realtime relay", () => {
   it("gives the general reason when a code is stopped", async () => {
     client.message(sessionUpdate());
     await env.DB.prepare("UPDATE codes SET revoked = 1").run();
+    vi.mocked(Date.now).mockReturnValue(NOW + 30_000);
+    client.message(append());
+    await settled();
+    expect(client.closed).toEqual({ code: 1008, reason: "gift code is no longer usable" });
+  });
+
+  it("cuts the session when the OpenAI key is no longer deposited", async () => {
+    client.message(sessionUpdate());
+    const issuer = (await codeByValue(db, code))!.issuerId;
+    await env.DB.prepare("INSERT INTO issuer_keys VALUES (?, 'xai', 'h', 'e')").bind(issuer).run();
+    await env.DB.prepare("DELETE FROM issuer_keys WHERE provider = 'openai'").run();
     vi.mocked(Date.now).mockReturnValue(NOW + 30_000);
     client.message(append());
     await settled();
@@ -768,11 +919,11 @@ describe("realtime relay", () => {
     const batch = vi
       .fn((statements: D1PreparedStatement[]) => env.DB.batch(statements))
       .mockRejectedValueOnce(new Error("D1 is down"));
-    const db = { prepare: (sql: string) => env.DB.prepare(sql), batch } as unknown as D1Database;
+    const failing = open({ prepare: (sql: string) => env.DB.prepare(sql), batch } as unknown as D1Database);
     client = new FakeSocket();
     upstream = new FakeSocket();
     vi.mocked(openai).mockResolvedValue({ webSocket: upstream } as unknown as Response);
-    await relay(db, (await codeByValue(env.DB, code))!, KEY, ctx);
+    await relay(failing, (await codeByValue(db, code))!, KEY, ctx);
     client.message(sessionUpdate());
     client.message(append());
     vi.mocked(Date.now).mockReturnValue(NOW + 30_000);
@@ -782,7 +933,7 @@ describe("realtime relay", () => {
     expect(client.closed).toBeUndefined();
     client.dispatchEvent(new CloseEvent("close", { code: 1000 }));
     await settled();
-    expect((await codeByValue(env.DB, code))!.day_usd).toBeCloseTo((0.2 / 60) * 0.017, 8);
+    expect((await codeByValue(db, code))!.dayUsd).toBeCloseTo((0.2 / 60) * 0.017, 8);
   });
 
   it("counts an amount once when the session closes during a write", async () => {
@@ -792,7 +943,7 @@ describe("realtime relay", () => {
     client.message(append());
     client.dispatchEvent(new CloseEvent("close", { code: 1000 }));
     await settled();
-    expect((await codeByValue(env.DB, code))!.day_usd).toBeCloseTo((0.2 / 60) * 0.017, 8);
+    expect((await codeByValue(db, code))!.dayUsd).toBeCloseTo((0.2 / 60) * 0.017, 8);
   });
 });
 

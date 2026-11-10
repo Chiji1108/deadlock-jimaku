@@ -1,4 +1,5 @@
-//! OpenAI の音声認識（DESIGN.md 3 章）。リアルタイム（GPT-Live-Transcribe）とバッチ（GPT-Transcribe）。
+//! 音声認識（DESIGN.md 3 章）。リアルタイム（OpenAI の GPT-Live-Transcribe）とバッチ（OpenAI の
+//! GPT-Transcribe か xAI の Grok Voice Transcribe）。
 //!
 //! リアルタイムはサーバー側で発話を区切らない。こちらの VAD で発話を開いたら音声を送り始め、
 //! 閉じたら commit する。commit までの音声が 1 つの item になり、delta には item の ID が付いて届く。
@@ -11,12 +12,14 @@ use std::time::Duration;
 use anyhow::{Context, bail};
 use base64::Engine;
 use futures_util::{SinkExt, StreamExt};
+use reqwest::StatusCode;
 use serde_json::{Value, json};
 use tokio::sync::mpsc;
 use tokio_tungstenite::tungstenite::{self, Message, client::IntoClientRequest, http::HeaderValue};
 
+use crate::access::Access;
 use crate::audio::{SAMPLE_RATE, to_i16};
-use crate::openai::Access;
+use crate::secrets::Provider;
 use crate::share;
 use crate::types::TranscriptionError;
 use crate::usage::{Meter, Use};
@@ -389,7 +392,26 @@ async fn expect_event(stream: &mut Stream, expected: &str) -> anyhow::Result<()>
     bail!("realtime closed before {expected}")
 }
 
+/// xAI に渡せる用語は 100 件、1 件 50 文字まで
+const XAI_MAX_KEYTERMS: usize = 100;
+const XAI_MAX_KEYTERM_CHARS: usize = 50;
+
+/// xAI の言語コード。アプリの話す言語は、ノルウェー語のほかは同じコードで xAI も受け付ける（2026-11 の一覧）
+fn xai_language(code: &str) -> &str {
+    match code {
+        "no" => "nb",
+        code => code,
+    }
+}
+
+/// xAI が鍵を断った（DESIGN.md 3）。間違った鍵には 401 ではなく 400 と「Incorrect API key provided」を返す（2026-11 の実測）
+fn xai_refused(status: StatusCode, body: &str) -> bool {
+    status == StatusCode::UNAUTHORIZED
+        || (status == StatusCode::BAD_REQUEST && body.contains("Incorrect API key"))
+}
+
 pub struct BatchRequest<'a> {
+    /// OpenAI なら GPT-Transcribe、xAI なら Grok Voice Transcribe（どちらも自分のキーかギフトコード）
     pub access: &'a Access,
     pub model: &'a str,
     pub hints: &'a Hints,
@@ -404,26 +426,45 @@ pub async fn transcribe(http: &reqwest::Client, req: BatchRequest<'_>) -> anyhow
     let file = reqwest::multipart::Part::bytes(req.wav)
         .file_name("segment.wav")
         .mime_str("audio/wav")?;
-    let mut form = reqwest::multipart::Form::new()
-        .text("model", req.model.to_owned())
-        .text("prompt", req.hints.prompt.clone())
-        .text("languages[]", req.hints.language.clone())
-        .part("file", file);
-    for keyword in &req.hints.keywords {
-        form = form.text("keywords[]", keyword.clone());
-    }
-    let res = http
-        .post(req.access.url("/audio/transcriptions"))
-        .bearer_auth(req.access.token())
-        .multipart(form)
-        .send()
-        .await?;
+    let form = reqwest::multipart::Form::new().text("model", req.model.to_owned());
+    let access = req.access;
+    let request = match access.provider() {
+        Provider::OpenAi => {
+            let mut form = form
+                .text("prompt", req.hints.prompt.clone())
+                .text("languages[]", req.hints.language.clone());
+            for keyword in &req.hints.keywords {
+                form = form.text("keywords[]", keyword.clone());
+            }
+            http.post(access.url("/audio/transcriptions"))
+                .bearer_auth(access.token())
+                .multipart(form.part("file", file))
+        }
+        Provider::Xai => {
+            // ファイルより後ろの欄は読まれないことがあるので、ファイルは最後に置く
+            let mut form = form.text("language", xai_language(&req.hints.language).to_owned());
+            let keyterms = req.hints.keywords.iter();
+            let keyterms = keyterms.filter(|k| k.chars().count() <= XAI_MAX_KEYTERM_CHARS);
+            for keyword in keyterms.take(XAI_MAX_KEYTERMS) {
+                form = form.text("keyterm", keyword.clone());
+            }
+            http.post(access.url("/stt"))
+                .bearer_auth(access.token())
+                .multipart(form.part("file", file))
+        }
+    };
+    let res = request.send().await?;
     let status = res.status();
     if !status.is_success() {
         // 400 の理由は本文にしか書かれていない
         let body = res.text().await.unwrap_or_default();
+        // xAI の断り方を OpenAI と同じ 401 にそろえる
+        let status = match access.provider() {
+            Provider::Xai if xai_refused(status, &body) => StatusCode::UNAUTHORIZED,
+            _ => status,
+        };
         let reason = share::refusal_reason(&body);
-        if let Some(refused) = share::refusal(req.access, status, reason.as_deref()) {
+        if let Some(refused) = share::refusal(access, status, reason.as_deref()) {
             return Err(refused.into());
         }
         bail!("{status}: {body}");

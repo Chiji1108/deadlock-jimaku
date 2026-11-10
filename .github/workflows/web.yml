@@ -22,5 +22,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --dir web check
       - run: pnpm --dir web build
+      # 見出しのフォントに、ビルドした見出しの字がすべて入っているか
+      - run: node web/scripts/fonts.ts --check
       - run: pnpm --dir server check
       - run: pnpm --dir server test

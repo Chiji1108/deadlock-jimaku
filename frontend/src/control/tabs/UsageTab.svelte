@@ -1,6 +1,7 @@
 <script lang="ts">
   import * as Card from "$lib/components/ui/card";
   import type { Use } from "../../generated/Use";
+  import { PROVIDER_NAMES } from "../../lib/engines";
   import { panel } from "../panel.svelte";
   import { total, unpriced as hasUnpriced, usd } from "../usage";
 
@@ -26,20 +27,19 @@
   const shared = $derived(
     panel.share?.enabled ? panel.share.codes.reduce((sum, c) => sum + c.monthUsd, 0) : undefined,
   );
-  const gift = $derived(
-    panel.view?.keys.openai.state !== "saved" && panel.view?.keys.gift.state === "saved",
-  );
+  const giftPaid = $derived(panel.giftPaid.map((p) => PROVIDER_NAMES[p]).join(" と "));
 </script>
 
 <Card.Root>
   <Card.Header>
-    <Card.Title>OpenAI の料金（概算）</Card.Title>
+    <Card.Title>料金（概算）</Card.Title>
     <Card.Description>
-      送った音声の長さと使ったトークン数に、OpenAI の単価を掛けた目安です。正確な金額は
+      送った音声の長さと使ったトークン数に、OpenAI と xAI の単価を掛けた目安です。正確な金額は
       <a class="underline" href="https://platform.openai.com/usage" target="_blank" rel="noreferrer"
-        >OpenAI の使用量のページ</a
-      >で確かめてください。今月は UTC
-      の月で数えます。応答が届かなかった分（タイムアウトなど）は数えられないので、少なめに出ることがあります
+        >OpenAI</a
+      >
+      と <a class="underline" href="https://console.x.ai" target="_blank" rel="noreferrer">xAI</a> の使用量のページで確かめてください。今月は
+      UTC の月で数えます。応答が届かなかった分（タイムアウトなど）は数えられないので、少なめに出ることがあります
     </Card.Description>
   </Card.Header>
   <Card.Content>
@@ -72,9 +72,9 @@
         </div>
       {/each}
     </div>
-    {#if gift}
+    {#if giftPaid}
       <p class="mt-4 text-xs text-muted-foreground">
-        ギフトコードで使っているので、この料金はおすそ分けしてくれた人に請求されます
+        ギフトコードで使っているので、{giftPaid} の料金はおすそ分けしてくれた人に請求されます
       </p>
     {/if}
     {#if unpriced}

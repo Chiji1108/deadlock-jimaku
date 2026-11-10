@@ -19,8 +19,8 @@ export function normalizeCode(code: string): string {
     .replace(/[IL]/g, "1");
 }
 
-/** おすそ分けする人の合言葉。キーごとに決まった値にして、同じキーの PC で同じものを使う */
-export async function issuerToken(keyHash: string, secret: string): Promise<string> {
+/** おすそ分けする人の合言葉。人（id）と、キーを替えるたびに変わる salt で決まり、預けたキーのどれを持つ PC でも同じものを使う */
+export async function issuerToken(id: string, salt: string, secret: string): Promise<string> {
   const key = await crypto.subtle.importKey(
     "raw",
     rawKey(secret),
@@ -28,7 +28,7 @@ export async function issuerToken(keyHash: string, secret: string): Promise<stri
     false,
     ["sign"],
   );
-  const mac = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`issuer:${keyHash}`));
+  const mac = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`issuer:${id}:${salt}`));
   return base64url(new Uint8Array(mac));
 }
 

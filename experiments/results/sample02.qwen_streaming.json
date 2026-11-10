@@ -1,0 +1,50 @@
+[
+  {
+    "text": "角マガをちゃんとね、撮りたいよね、最初はエクストラスピリットも重要だけど、角マガは武器ダメージも上がるから。そこはちゃんと撮りたいよね。まあ、あとは呪いの遺物、まあ、いわゆるカースだね。カースは最終盤に撮りたいよね、ちゃんと。",
+    "connect_s": 0.45,
+    "first_partial_s": 1.75,
+    "last_final_after_audio_s": -1.35,
+    "finished_after_audio_s": 10.17,
+    "partials": 31,
+    "sentences": 4,
+    "usage": {
+      "duration": 27,
+      "input_tokens": 276,
+      "output_tokens": 64,
+      "total_tokens": 340
+    },
+    "cer": 0.049
+  },
+  {
+    "text": "角マガをちゃんとね取りたいよね。最初はエクストラスピリットも重要だけど、角マガは武器ダメージも上がるから。そこはちゃんとね取りたいよね。まあ、あとは呪いの遺物、まあ、いわゆるカースだね。カースは最終盤に取りたいよね。ちゃんと。",
+    "connect_s": 0.74,
+    "first_partial_s": 1.76,
+    "last_final_after_audio_s": -1.3,
+    "finished_after_audio_s": 10.18,
+    "partials": 31,
+    "sentences": 4,
+    "usage": {
+      "duration": 27,
+      "input_tokens": 276,
+      "output_tokens": 63,
+      "total_tokens": 339
+    },
+    "cer": 0.0294
+  },
+  {
+    "text": "角マガをちゃんとね取りたいよね。最初はエクストラスピリットも重要だけど、角マガは武器ダメージも上がるから。そこはちゃんとね取りたいよね。まあ、あとは呪いの遺物、まあ、いわゆるカースだね。カースは最終盤に取りたいよね。ちゃんと。",
+    "connect_s": 0.39,
+    "first_partial_s": 1.77,
+    "last_final_after_audio_s": -1.23,
+    "finished_after_audio_s": 10.17,
+    "partials": 31,
+    "sentences": 4,
+    "usage": {
+      "duration": 27,
+      "input_tokens": 276,
+      "output_tokens": 63,
+      "total_tokens": 339
+    },
+    "cer": 0.0294
+  }
+]

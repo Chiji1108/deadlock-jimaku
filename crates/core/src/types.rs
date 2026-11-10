@@ -261,7 +261,8 @@ pub struct TermName {
 )]
 #[ts(export)]
 pub enum TranscriptionError {
-    MissingKey,
+    /// 選んだ工程に要る鍵がない（その会社の API キーもギフトコードもない）
+    MissingKey { provider: crate::secrets::Provider },
     /// ギフトコードの期限が切れた（DESIGN.md 17.1）
     GiftExpired {
         /// 中継の 403 は期限を返さない
@@ -274,8 +275,10 @@ pub enum TranscriptionError {
     GiftLimit,
     /// ないギフトコード（おすそ分けをやめたなど）
     GiftUnknown,
-    /// OpenAI が API キーを断った
-    InvalidKey,
+    /// おすそ分けした人が、その会社のキーを預けていない（xAI。DESIGN.md 17.1）
+    GiftUnsupported { provider: crate::secrets::Provider },
+    /// API キーを断られた
+    InvalidKey { provider: crate::secrets::Provider },
     /// マイクの入力が途切れた
     InputEnded,
     /// マイクを開けない
@@ -284,13 +287,9 @@ pub enum TranscriptionError {
         error: crate::audio::MicError,
     },
     /// そのほかのエラー（通信や API のエラー。`detail` は英語の技術的な説明）
-    Failed {
-        detail: String,
-    },
+    Failed { detail: String },
     /// 想定外のエラー（panic）
-    Crashed {
-        detail: String,
-    },
+    Crashed { detail: String },
 }
 
 impl std::fmt::Display for TranscriptionError {

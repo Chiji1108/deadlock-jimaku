@@ -4,6 +4,7 @@ import { panel, type FontTarget } from "./panel.svelte";
 import { addFontFaces, fontWeights } from "../lib/overlay-fonts";
 import type { FontEntry } from "../generated/FontEntry";
 import type { SettingsView } from "../generated/SettingsView";
+import { CHROME } from "../lib/engines";
 
 vi.mock("../lib/overlay-fonts", () => ({ addFontFaces: vi.fn(), fontWeights: vi.fn() }));
 vi.mock("../lib/ws", () => ({ connect: vi.fn(() => () => {}) }));
@@ -211,19 +212,46 @@ test("太さは 1 回だけ読み、読めなければ覚えずに読み直す",
 });
 
 test.each([
-  ["chrome", "missing", "missing", false],
-  ["hybrid", "missing", "missing", true],
-  ["openai", "missing", "missing", true],
-  ["hybrid", "saved", "missing", false],
-  ["hybrid", "missing", "saved", false],
-  ["openai", "missing", "saved", false],
-] as const)("キーの案内: %s、API キー %s、ギフトコード %s → %s", (engine, openai, gift, shown) => {
+  ["chrome", "missing", "missing", "missing", []],
+  ["gptTranscribe", "missing", "missing", "missing", ["openai"]],
+  ["gptTranscribe", "saved", "missing", "missing", []],
+  ["gptTranscribe", "missing", "saved", "missing", []],
+  ["grokVoiceTranscribe", "missing", "missing", "missing", ["xai"]],
+  ["grokVoiceTranscribe", "missing", "saved", "missing", []],
+  ["grokVoiceTranscribe", "missing", "missing", "saved", []],
+] as const)(
+  "キーの案内: 確定の文字起こし %s、OpenAI %s、ギフトコード %s、xAI %s → %j",
+  (transcription, openai, gift, xai, missing) => {
+    const fresh = freshPanel();
+    fresh.view = {
+      settings: { engines: { ...CHROME, transcription } },
+      keys: { openai: { state: openai }, gift: { state: gift }, xai: { state: xai } },
+    } as unknown as SettingsView;
+    expect(fresh.missingKeys).toEqual(missing);
+    expect(fresh.needsKey).toBe(missing.length > 0);
+  },
+);
+
+test("Grok と Terra なら、xAI と OpenAI の鍵が要る", () => {
   const fresh = freshPanel();
   fresh.view = {
-    settings: { speechEngine: engine },
-    keys: { openai: { state: openai }, gift: { state: gift } },
+    settings: {
+      engines: { ...CHROME, transcription: "grokVoiceTranscribe", translation: "gpt61Terra" },
+    },
+    keys: { openai: { state: "missing" }, gift: { state: "missing" }, xai: { state: "missing" } },
   } as unknown as SettingsView;
-  expect(fresh.needsKey).toBe(shown);
+  expect(fresh.missingKeys).toEqual(["openai", "xai"]);
+});
+
+test("ギフトコードで払ってもらうのは、自分のキーがない会社の分", () => {
+  const fresh = freshPanel();
+  fresh.view = {
+    settings: {
+      engines: { ...CHROME, transcription: "grokVoiceTranscribe", translation: "gpt61Terra" },
+    },
+    keys: { openai: { state: "saved" }, gift: { state: "saved" }, xai: { state: "missing" } },
+  } as unknown as SettingsView;
+  expect(fresh.giftPaid).toEqual(["xai"]);
 });
 
 test("設定が届く前はキーの案内を出さない", () => {

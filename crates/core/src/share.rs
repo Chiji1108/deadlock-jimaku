@@ -8,7 +8,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use ts_rs::TS;
 
-use crate::openai::Access;
+use crate::access::Access;
+use crate::secrets::Provider;
 use crate::types::TranscriptionError;
 
 const TIMEOUT: Duration = Duration::from_secs(10);
@@ -28,6 +29,8 @@ pub enum GiftStatus {
         /// ミリ秒。None は期限なし
         #[ts(type = "number | null")]
         expires_at: Option<i64>,
+        /// 中継する会社（おすそ分けした人がキーを預けた会社）
+        providers: Vec<Provider>,
     },
     Expired {
         #[ts(type = "number")]
@@ -57,11 +60,21 @@ struct GiftAnswer {
     error: Option<String>,
     #[serde(default)]
     expires_at: Option<i64>,
+    /// 前のサーバーは返さない（OpenAI だけを中継する）
+    #[serde(default = "openai_only")]
+    providers: Vec<Provider>,
+}
+
+fn openai_only() -> Vec<Provider> {
+    vec![Provider::OpenAi]
 }
 
 /// サーバーが今日の上限で断るときの理由。JSON の `error`、Realtime の close の reason、
 /// [`REFUSAL_HEADER`] で同じ値を使う
 pub const LIMIT: &str = "limit";
+
+/// おすそ分けした人がその会社のキーを預けていないので、サーバーが中継を断るときの理由
+pub const UNSUPPORTED: &str = "unsupported";
 
 /// サーバーが中継を断った理由のヘッダー。WebSocket のハンドシェイクでは、断られたときの本文は
 /// 届いた分しか読めないので、これで見分ける
@@ -82,12 +95,19 @@ pub fn refusal(
 ) -> Option<TranscriptionError> {
     match (status, reason) {
         (StatusCode::UNAUTHORIZED, _) if access.is_gift() => Some(TranscriptionError::GiftUnknown),
-        (StatusCode::UNAUTHORIZED, _) => Some(TranscriptionError::InvalidKey),
+        (StatusCode::UNAUTHORIZED, _) => Some(TranscriptionError::InvalidKey {
+            provider: access.provider(),
+        }),
+        // 403 の理由は Worker のもの。xAI の `error` も文字列なので、自分のキーでは読まない
+        (StatusCode::FORBIDDEN, _) if !access.is_gift() => None,
         (StatusCode::FORBIDDEN, Some("revoked")) => Some(TranscriptionError::GiftRevoked),
         (StatusCode::FORBIDDEN, Some("expired")) => {
             Some(TranscriptionError::GiftExpired { expires_at: None })
         }
         (StatusCode::FORBIDDEN, Some(LIMIT)) => Some(TranscriptionError::GiftLimit),
+        (StatusCode::FORBIDDEN, Some(UNSUPPORTED)) => Some(TranscriptionError::GiftUnsupported {
+            provider: access.provider(),
+        }),
         _ => None,
     }
 }
@@ -117,7 +137,10 @@ pub async fn gift_status(api: &str, code: &str) -> GiftStatus {
         }
     };
     match (status, answer.error.as_deref(), answer.expires_at) {
-        (StatusCode::OK, _, expires_at) => GiftStatus::Active { expires_at },
+        (StatusCode::OK, _, expires_at) => GiftStatus::Active {
+            expires_at,
+            providers: answer.providers,
+        },
         (_, Some("expired"), Some(expires_at)) => GiftStatus::Expired { expires_at },
         (_, Some("revoked"), _) => GiftStatus::Revoked,
         (_, Some("limit"), _) => GiftStatus::Limit,
@@ -128,10 +151,10 @@ pub async fn gift_status(api: &str, code: &str) -> GiftStatus {
     }
 }
 
-/// 動いていない字幕を始めるときに、ギフトコードがまだ使えるか確かめる
-pub async fn check_gift(api: &str, code: &str) -> Result<(), TranscriptionError> {
+/// 動いていない字幕を始めるときに、ギフトコードがまだ使えるか確かめる。使えれば中継する会社
+pub async fn check_gift(api: &str, code: &str) -> Result<Vec<Provider>, TranscriptionError> {
     match gift_status(api, code).await {
-        GiftStatus::Active { .. } => Ok(()),
+        GiftStatus::Active { providers, .. } => Ok(providers),
         GiftStatus::Expired { expires_at } => Err(TranscriptionError::GiftExpired {
             expires_at: Some(expires_at),
         }),
@@ -212,8 +235,13 @@ async fn call(
         return Ok(value);
     }
     let message = match value["error"].as_str() {
-        Some("invalidKey" | "noKey") => "OpenAI の API キーが使えません".to_owned(),
+        Some("invalidKey") => "OpenAI の API キーが使えません".to_owned(),
+        Some("invalidXaiKey") => "xAI の API キーが使えません".to_owned(),
         Some("keyInUse") => "そのキーは、別のおすそ分けで使っています".to_owned(),
+        Some("lastKey") => {
+            "最後のキーは預けるのをやめられません。やめるときは「おすそ分けをやめる」を押してください"
+                .to_owned()
+        }
         Some("unauthorized") => {
             "おすそ分けの登録が見つかりません。「おすそ分けをやめる」を押してから、ギフトコードを作り直してください"
                 .to_owned()
@@ -224,17 +252,18 @@ async fn call(
     Err(Refused { status, message })
 }
 
-/// キーを預ける。管理の合言葉を返す
-pub async fn enable(api: &str, key: &str) -> Result<String, Refused> {
-    let body = json!({ "key": key });
+/// キーを預けておすそ分けを始める。同じキーをもう預けていれば、その人になる。管理の合言葉を返す
+pub async fn enable(api: &str, provider: Provider, key: &str) -> Result<String, Refused> {
+    let body = json!({ "provider": provider, "key": key });
     let value = call(api, reqwest::Method::POST, "/share", None, Some(body)).await?;
-    value["token"]
-        .as_str()
-        .map(str::to_owned)
-        .ok_or_else(|| Refused {
-            status: StatusCode::BAD_GATEWAY,
-            message: "サーバーの答えを読めません".to_owned(),
-        })
+    token_of(&value)
+}
+
+/// ほかの PC で預けたキーと同じなら、その人の合言葉を返す。まだ預けていなければ 404（新しく始めない）
+pub async fn join(api: &str, provider: Provider, key: &str) -> Result<String, Refused> {
+    let body = json!({ "provider": provider, "key": key, "join": true });
+    let value = call(api, reqwest::Method::POST, "/share", None, Some(body)).await?;
+    token_of(&value)
 }
 
 pub async fn disable(api: &str, token: &str) -> Result<(), Refused> {
@@ -243,17 +272,35 @@ pub async fn disable(api: &str, token: &str) -> Result<(), Refused> {
         .map(drop)
 }
 
-/// 預けたキーを替える。合言葉も新しくなる
-pub async fn update_key(api: &str, token: &str, key: &str) -> Result<String, Refused> {
+/// その会社のキーを預ける・替える。新しい合言葉を返す（替えたときは前の合言葉が使えなくなる）
+pub async fn set_key(
+    api: &str,
+    token: &str,
+    provider: Provider,
+    key: &str,
+) -> Result<String, Refused> {
+    let path = format!("/share/keys/{}", provider_path(provider));
     let body = json!({ "key": key });
-    let value = call(
-        api,
-        reqwest::Method::PUT,
-        "/share/key",
-        Some(token),
-        Some(body),
-    )
-    .await?;
+    let value = call(api, reqwest::Method::PUT, &path, Some(token), Some(body)).await?;
+    token_of(&value)
+}
+
+/// 預けたその会社のキーを消す（最後の 1 つは消せない）。新しい合言葉を返す（前の合言葉は使えなくなる）
+pub async fn remove_key(api: &str, token: &str, provider: Provider) -> Result<String, Refused> {
+    let path = format!("/share/keys/{}", provider_path(provider));
+    let value = call(api, reqwest::Method::DELETE, &path, Some(token), None).await?;
+    token_of(&value)
+}
+
+/// パスに入れる会社の名前（serde と同じ "openai" / "xai"）
+fn provider_path(provider: Provider) -> String {
+    match serde_json::to_value(provider) {
+        Ok(Value::String(name)) => name,
+        _ => unreachable!("Provider serializes to a string"),
+    }
+}
+
+fn token_of(value: &Value) -> Result<String, Refused> {
     value["token"]
         .as_str()
         .map(str::to_owned)
@@ -263,9 +310,18 @@ pub async fn update_key(api: &str, token: &str, key: &str) -> Result<String, Ref
         })
 }
 
-pub async fn codes(api: &str, token: &str) -> Result<Vec<SharedCode>, Refused> {
+/// 預けているもの（作ったコードと、キーを預けた会社）
+#[derive(Deserialize)]
+pub struct Shared {
+    pub codes: Vec<SharedCode>,
+    /// 前のサーバーは返さない（OpenAI のキーだけを預かる）
+    #[serde(default = "openai_only")]
+    pub providers: Vec<Provider>,
+}
+
+pub async fn shared(api: &str, token: &str) -> Result<Shared, Refused> {
     let value = call(api, reqwest::Method::GET, "/share/codes", Some(token), None).await?;
-    serde_json::from_value(value["codes"].clone()).map_err(|e| Refused {
+    serde_json::from_value(value).map_err(|e| Refused {
         status: StatusCode::BAD_GATEWAY,
         message: format!("サーバーの答えを読めません（{e}）"),
     })
@@ -305,15 +361,21 @@ mod tests {
     #[test]
     fn a_gift_at_its_daily_limit_stays_valid() {
         assert!(GiftStatus::Limit.is_valid());
-        assert!(GiftStatus::Active { expires_at: None }.is_valid());
+        let active = GiftStatus::Active {
+            expires_at: None,
+            providers: vec![Provider::OpenAi],
+        };
+        assert!(active.is_valid());
         assert!(!GiftStatus::Revoked.is_valid());
         assert!(!GiftStatus::Unknown.is_valid());
     }
 
     #[test]
     fn only_answers_that_would_repeat_stop_the_subtitles() {
-        let gift = Access::gift("code".into(), "http://worker");
-        let key = Access::key("sk".into());
+        let gift = Access::gift(Provider::OpenAi, "code".into(), "http://worker");
+        let key = Access::key(Provider::OpenAi, "sk".into());
+        let xai_gift = Access::gift(Provider::Xai, "code".into(), "http://worker");
+        let xai_key = Access::key(Provider::Xai, "xai".into());
         let refusal =
             |access, status, body| refusal(access, status, refusal_reason(body).as_deref());
         for (access, status, body, expected) in [
@@ -348,10 +410,40 @@ mod tests {
                 Some(TranscriptionError::GiftLimit),
             ),
             (
+                &xai_gift,
+                StatusCode::FORBIDDEN,
+                r#"{"error":"unsupported"}"#,
+                Some(TranscriptionError::GiftUnsupported {
+                    provider: Provider::Xai,
+                }),
+            ),
+            (
+                &xai_gift,
+                StatusCode::UNAUTHORIZED,
+                "",
+                Some(TranscriptionError::GiftUnknown),
+            ),
+            (
+                &xai_key,
+                StatusCode::FORBIDDEN,
+                r#"{"error":"limit"}"#,
+                None,
+            ),
+            (
+                &xai_key,
+                StatusCode::UNAUTHORIZED,
+                "",
+                Some(TranscriptionError::InvalidKey {
+                    provider: Provider::Xai,
+                }),
+            ),
+            (
                 &key,
                 StatusCode::UNAUTHORIZED,
                 r#"{"error":{"code":"invalid_api_key"}}"#,
-                Some(TranscriptionError::InvalidKey),
+                Some(TranscriptionError::InvalidKey {
+                    provider: Provider::OpenAi,
+                }),
             ),
             // OpenAI の 403 の error はオブジェクト
             (

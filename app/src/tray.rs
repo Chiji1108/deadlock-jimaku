@@ -123,7 +123,7 @@ fn toggle_subtitles(app: AppHandle, store: Arc<Store>) {
         let settings = store.settings();
         let start = !settings.transcription_enabled;
         if start
-            && settings.plan().needs_key()
+            && settings.engines.paid()
             && secrets::openai().is_none()
             && secrets::gift().is_none()
         {

@@ -12,6 +12,7 @@ import type { MicError } from "../generated/MicError";
 import type { TranscriptionError } from "../generated/TranscriptionError";
 import type { UsageView } from "../generated/UsageView";
 import { api } from "../lib/api";
+import { CHROME, PROVIDER_NAMES, chromeFinals, keyNames, providers } from "../lib/engines";
 import { addFontFaces, fontWeights } from "../lib/overlay-fonts";
 import type { MergePatch } from "../lib/text-style";
 import type { FontEntry } from "../generated/FontEntry";
@@ -85,23 +86,42 @@ class Panel {
     return this.view?.keys.openai.state === "missing" && this.view.keys.gift.state === "missing";
   }
 
-  /** 字幕を始められる鍵（自分のキーかギフトコード）がある。Chrome のモードは鍵が要らない */
+  /** 選んだ作り方に要る会社のうち、自分のキーがないもの */
+  private get withoutKey(): Provider[] {
+    const view = this.view;
+    if (!view) return [];
+    return providers(view.settings.engines).filter((p) => view.keys[p].state !== "saved");
+  }
+
+  /** 選んだ作り方に要るのに、自分のキーもギフトコードもない会社。ギフトコードが xAI を中継するかは、
+   * 字幕を始めるときに中核が確かめる（中継しなければ `giftUnsupported` で止まる） */
+  get missingKeys(): Provider[] {
+    return this.view?.keys.gift.state === "saved" ? [] : this.withoutKey;
+  }
+
+  /** ギフトコードで使う（おすそ分けしてくれた人に請求される）会社。コードが中継する会社が分かれば、それだけ */
+  get giftPaid(): Provider[] {
+    if (this.view?.keys.gift.state !== "saved") return [];
+    const relayed = this.gift?.state === "active" ? this.gift.providers : undefined;
+    return this.withoutKey.filter((p) => !relayed || relayed.includes(p));
+  }
+
+  /** 字幕を始められる鍵がそろっている。有料の工程がなければ鍵は要らない */
   get hasAccess() {
-    return (
-      this.settings?.speechEngine === "chrome" ||
-      this.view?.keys.openai.state === "saved" ||
-      this.view?.keys.gift.state === "saved"
-    );
+    return !!this.view && this.missingKeys.length === 0;
   }
 
   /** 選んだモードに要る鍵がない。キーの案内を出し、字幕を始めさせない */
   get needsKey() {
-    return !!this.view && !this.hasAccess;
+    return this.missingKeys.length > 0;
   }
 
-  /** ハイブリッドで使える鍵（自分のキーか、期限内のギフトコード）がある */
-  get hybridReady() {
-    return this.view?.keys.openai.state === "saved" || giftValid(this.gift);
+  /** スタンダードで使える鍵（自分の OpenAI のキーか、OpenAI に使える期限内のギフトコード）がある。
+   * 今日の上限に達したコードは、中継する会社が分からないが、日が変われば使えるので含める */
+  get standardReady() {
+    if (this.view?.keys.openai.state === "saved") return true;
+    const gift = this.gift;
+    return gift?.state === "active" ? gift.providers.includes("openai") : gift?.state === "limit";
   }
 
   /** 字幕を始める操作をしていて、止まった理由もない */
@@ -109,11 +129,12 @@ class Panel {
     return !!this.settings?.transcriptionEnabled && !this.transcriptionError;
   }
 
-  /** 動いているのに、しばらく音が来ていない。Chrome のモードのマイクはページが開く */
+  /** 動いているのに、しばらく音が来ていない。確定の文を Chrome が作るなら、マイクはページが開く */
   get silent() {
     return (
       this.running &&
-      this.settings?.speechEngine !== "chrome" &&
+      !!this.settings &&
+      !chromeFinals(this.settings.engines) &&
       this.level !== undefined &&
       this.now - this.heardAt > SILENT_MS
     );
@@ -196,7 +217,7 @@ class Panel {
   /** 鍵がないときの入口。押した人にだけ、Chrome のモードに切り替えて始める */
   startWithChrome = () => {
     this.level = undefined;
-    return this.update({ speechEngine: "chrome", transcriptionEnabled: true });
+    return this.update({ engines: CHROME, transcriptionEnabled: true });
   };
 
   setTranscription(enabled: boolean) {
@@ -371,7 +392,7 @@ export const LIMIT_RESET = "日本時間の朝 9 時（UTC の 0 時）にまた
 export function transcriptionErrorText(e: TranscriptionError): string {
   switch (e.code) {
     case "missingKey":
-      return "OpenAI の API キーかギフトコードが設定されていません";
+      return `${keyNames([e.provider])}が設定されていません`;
     case "giftExpired":
       return e.expiresAt === null
         ? "ギフトコードの期限が切れました"
@@ -382,8 +403,10 @@ export function transcriptionErrorText(e: TranscriptionError): string {
       return `ギフトコードの今日の上限に達しました。${LIMIT_RESET}`;
     case "giftUnknown":
       return "ギフトコードが見つかりません。おすそ分けしてくれた人に確かめてください";
+    case "giftUnsupported":
+      return `このギフトコードでは ${PROVIDER_NAMES[e.provider]} を使えません。おすそ分けしてくれた人に ${PROVIDER_NAMES[e.provider]} のキーも預けてもらうか、自分の API キーを入れてください`;
     case "invalidKey":
-      return "OpenAI の API キーが使えません。キーを確かめてください";
+      return `${PROVIDER_NAMES[e.provider]} の API キーが使えません。キーを確かめてください`;
     case "inputEnded":
       return "マイクの入力が途切れました";
     case "microphone":
@@ -424,8 +447,11 @@ export function giftStatusText(s: GiftStatus): string {
   switch (s.state) {
     case "none":
       return "ギフトコードがありません";
-    case "active":
-      return s.expiresAt === null ? "期限なしで使えます" : `${dateTime(s.expiresAt)} まで使えます`;
+    case "active": {
+      const until = s.expiresAt === null ? "期限なしで" : `${dateTime(s.expiresAt)} まで`;
+      const names = s.providers.map((p) => PROVIDER_NAMES[p]).join(" と ");
+      return `${until}使えます（${names}）`;
+    }
     case "expired":
       return `期限が切れています（${dateTime(s.expiresAt)} まで）`;
     case "revoked":

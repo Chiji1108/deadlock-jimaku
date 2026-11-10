@@ -6,6 +6,7 @@
   import { Button } from "$lib/components/ui/button";
   import * as Card from "$lib/components/ui/card";
   import { panel } from "../panel.svelte";
+  import { CHROME, anyPaid, keyNames, providers } from "../../lib/engines";
 
   let { open }: { open: (tab: string) => void } = $props();
 
@@ -13,12 +14,12 @@
   /** 全部終わった画面は、この起動の間だけ出しておく（そのあと字幕を止めても崩さない） */
   let celebrating = $state(false);
   const steps = $derived([
-    // Chrome のモードは鍵が要らないので、鍵の手順は鍵の要るモードを選んだ人にだけ出す
-    ...(s.speechEngine === "chrome"
+    // 有料の工程がなければ鍵が要らないので、鍵の手順は鍵の要るモードを選んだ人にだけ出す
+    ...(!anyPaid(s.engines)
       ? []
       : [
           {
-            title: "このモードに要る OpenAI の API キーかギフトコードを入れる",
+            title: `このモードに要る ${keyNames(providers(s.engines))}を入れる`,
             done: celebrating || panel.hasAccess,
             tab: "keys",
             go: "入れる",
@@ -82,12 +83,12 @@
               >
                 {step.go}
               </Button>
-              {#if i === 0 && s.speechEngine !== "chrome"}
+              {#if i === 0 && anyPaid(s.engines)}
                 <Button
                   variant="link"
                   size="sm"
                   class="h-auto p-0"
-                  onclick={() => panel.update({ speechEngine: "chrome" })}
+                  onclick={() => panel.update({ engines: CHROME })}
                 >
                   無料の Chrome モードにする
                 </Button>
