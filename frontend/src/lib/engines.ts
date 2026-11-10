@@ -1,4 +1,5 @@
 // 字幕の作り方。モードで工程ごとの作り方がまとめて決まり、詳しく選ぶと工程ごとに変えられる。
+// モードは `crates/core/src/settings.rs` の `Engines` の定数と同じ組み合わせ
 // 操作パネルのモードの欄と LP のモードの節が、同じ並びと言い方で出す
 import type { Engines } from "../generated/Engines";
 import type { Provider } from "../generated/Provider";
@@ -88,7 +89,7 @@ export const ITEMS: { [K in Item]: { label: string; hint: string; options: Optio
   },
 };
 
-/** モード。`crates/core/src/settings.rs` の `Engines` の定数と同じ */
+/** モードの組み合わせ */
 export const CHROME: Engines = {
   live: "chrome",
   transcription: "chrome",
@@ -102,12 +103,31 @@ export const HYBRID: Engines = {
   furigana: "llm",
 };
 const OPENAI: Engines = { ...HYBRID, live: "gptLiveTranscribe" };
+const VALUE: Engines = {
+  live: "chrome",
+  transcription: "grokVoiceTranscribe",
+  translation: "gpt6Luna",
+  furigana: "lindera",
+};
+
+/** 月の目安の使い方（毎日 3 時間、30 日） */
+const MONTHLY_HOURS = 3 * 30;
+/** 月の目安を円にするときの 1 ドル（為替で動くので目安） */
+export const YEN_PER_USD = 150;
+
+/** 月の目安。「毎日 3 時間で月 約 ¥8,100（$54）」 */
+export function monthly(hourlyUsd: number) {
+  const usd = hourlyUsd * MONTHLY_HOURS;
+  const yen = Math.round((usd * YEN_PER_USD) / 100) * 100;
+  return `毎日 3 時間で月 約 ¥${yen.toLocaleString("ja-JP")}（$${Math.round(usd)}）`;
+}
 
 export const MODES: {
   name: string;
   label: string;
   traits: string;
-  price: string;
+  /** 1 時間の目安（DESIGN.md 3.3）。無料なら 0 */
+  hourlyUsd: number;
   hint: string;
   engines: Engines;
   recommended?: boolean;
@@ -116,15 +136,23 @@ export const MODES: {
     name: "chrome",
     label: "Chrome",
     traits: "高速・キー不要",
-    price: "無料",
+    hourlyUsd: 0,
     hint: "多くの字幕ソフトと同じく、Chrome の音声認識を使います",
     engines: CHROME,
+  },
+  {
+    name: "value",
+    label: "コスパ",
+    traits: "安い・高精度",
+    hourlyUsd: 0.1,
+    hint: "途中の字幕は Chrome、確定の字幕は xAI の Grok、翻訳は OpenAI の安いモデルで作ります",
+    engines: VALUE,
   },
   {
     name: "hybrid",
     label: "ハイブリッド",
     traits: "高速・高精度",
-    price: "約 $0.6／時間",
+    hourlyUsd: 0.6,
     hint: "途中の字幕は Chrome、確定の字幕は OpenAI の高い精度に置き換えます",
     engines: HYBRID,
     recommended: true,
@@ -133,7 +161,7 @@ export const MODES: {
     name: "openai",
     label: "OpenAI",
     traits: "低負荷・高精度",
-    price: "約 $1／時間",
+    hourlyUsd: 1,
     hint: "すべて OpenAI で作ります。Chrome は使いません",
     engines: OPENAI,
   },
@@ -184,3 +212,6 @@ export const paidItems = (t: Engines) =>
   (Object.keys(ITEMS) as Item[])
     .filter((item) => providerOf(t, item))
     .map((item) => ITEMS[item].label);
+
+/** モードの値段。「無料」か「約 $0.6／時間」 */
+export const price = (hourlyUsd: number) => (hourlyUsd ? `約 $${hourlyUsd}／時間` : "無料");

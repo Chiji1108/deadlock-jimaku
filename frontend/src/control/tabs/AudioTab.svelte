@@ -17,6 +17,8 @@
   import {
     HYBRID,
     MODES,
+    monthly,
+    price,
     anyPaid,
     chromeFinals,
     modeOf,
@@ -70,7 +72,7 @@
       <Card.Description>字幕をどこで作るかを選びます</Card.Description>
     </Card.Header>
     <Card.Content class="flex flex-col gap-3">
-      <div class="grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label="モード">
+      <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-4" role="radiogroup" aria-label="モード">
         {#each MODES as m (m.name)}
           <button
             type="button"
@@ -84,7 +86,10 @@
               {#if m.recommended}<Badge variant="secondary">おすすめ</Badge>{/if}
             </span>
             <span class="text-xs text-muted-foreground">{m.traits}</span>
-            <span class="text-xs text-muted-foreground tabular-nums">{m.price}</span>
+            <span class="text-xs text-muted-foreground tabular-nums">{price(m.hourlyUsd)}</span>
+            {#if m.hourlyUsd}
+              <span class="text-xs text-muted-foreground tabular-nums">{monthly(m.hourlyUsd)}</span>
+            {/if}
           </button>
         {/each}
       </div>

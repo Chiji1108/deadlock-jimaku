@@ -576,6 +576,13 @@ impl Engines {
         translation: TranslationEngine::ChromeTranslator,
         furigana: RubySource::Lindera,
     };
+    /// コスパのモード。途中の字幕は Chrome、確定は Grok、翻訳と用語は Luna、ふりがなは辞書
+    pub const VALUE: Self = Self {
+        live: LiveSource::Chrome,
+        transcription: FinalSource::GrokVoiceTranscribe,
+        translation: TranslationEngine::Gpt6Luna,
+        furigana: RubySource::Lindera,
+    };
     /// ハイブリッドのモード（おすすめ）。途中の字幕は Chrome、確定は OpenAI
     pub const HYBRID: Self = Self {
         live: LiveSource::Chrome,
@@ -1472,6 +1479,8 @@ mod tests {
         assert!(!Engines::CHROME.paid());
         assert!(!plan_of(Engines::OPENAI).uses_chrome());
         assert!(Engines::OPENAI.paid());
+        assert!(plan_of(Engines::VALUE).uses_chrome());
+        assert!(Engines::VALUE.uses_openai() && Engines::VALUE.uses_xai());
         let paid_furigana = Engines {
             furigana: RubySource::Llm,
             ..Engines::CHROME
