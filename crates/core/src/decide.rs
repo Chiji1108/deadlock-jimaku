@@ -72,18 +72,14 @@ impl Decider {
         context: &[String],
         loaded: &Loaded,
     ) -> anyhow::Result<Vec<Span>> {
-        let index = self.index(loaded);
-        let glossary = &loaded.glossary;
-        let candidates = candidates(text, context, &index, glossary);
-        if candidates.is_empty() {
+        let Some(asked) = self.ask(text, context, loaded) else {
             return Ok(vec![Span::Text(text.to_owned())]);
-        }
-        let body = question(text, context, &candidates, glossary);
+        };
         let res = http
             .post(self.access.url("/decisions"))
             .bearer_auth(self.access.token())
             .timeout(TIMEOUT)
-            .json(&body)
+            .json(&asked.request)
             .send()
             .await?;
         let status = res.status();
@@ -99,16 +95,21 @@ impl Decider {
         self.meter
             .tokens(Use::Translate, MODEL, Tokens::from_response(&res["usage"]));
         let answers = res["answers"].as_array().context("no answers")?;
-        let chosen = candidates.into_iter().enumerate().filter_map(|(i, c)| {
-            let name = name(i);
-            let choice = answers
-                .iter()
-                .find(|a| a["name"] == name.as_str())
-                .and_then(|a| a["choice"].as_str())?;
-            let reference = c.refs.iter().find(|r| *r == choice)?.clone();
-            Some((c, reference))
-        });
-        Ok(spans(text, without_echoes(chosen.collect()).into_iter()))
+        Ok(asked.spans(|name| {
+            let answer = answers.iter().find(|a| a["name"] == name)?;
+            answer["choice"].as_str().map(str::to_owned)
+        }))
+    }
+
+    /// 文の候補と、それを確かめる問い合わせ。候補がなければ None（聞かなくてよい）
+    pub fn ask(&self, text: &str, context: &[String], loaded: &Loaded) -> Option<Asked> {
+        let index = self.index(loaded);
+        let candidates = candidates(text, context, &index, &loaded.glossary);
+        (!candidates.is_empty()).then(|| Asked {
+            request: question(text, context, &candidates, &loaded.glossary),
+            text: text.to_owned(),
+            candidates,
+        })
     }
 
     fn index(&self, loaded: &Loaded) -> Arc<Index> {
@@ -126,6 +127,30 @@ impl Decider {
                 index
             }
         }
+    }
+}
+
+/// 1 つの文の候補と、Decisions API への問い合わせ
+pub struct Asked {
+    /// `POST /v1/decisions` の本文。問いは候補ごとに 1 つ
+    pub request: Value,
+    text: String,
+    candidates: Vec<Candidate>,
+}
+
+impl Asked {
+    /// 答えを当てはめた、文の区切り。`choice` は問いの名前から、選ばれた値を返す
+    pub fn spans(self, choice: impl Fn(&str) -> Option<String>) -> Vec<Span> {
+        let chosen = self
+            .candidates
+            .into_iter()
+            .enumerate()
+            .filter_map(|(i, c)| {
+                let choice = choice(&name(i))?;
+                let reference = c.refs.iter().find(|r| **r == choice)?.clone();
+                Some((c, reference))
+            });
+        spans(&self.text, without_echoes(chosen.collect()).into_iter())
     }
 }
 

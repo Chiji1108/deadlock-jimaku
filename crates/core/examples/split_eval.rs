@@ -6,6 +6,7 @@
 //!     terms-segments  アプリが翻訳先なしのときに送る問い合わせ（`Enricher::question`。原文をすべて区切って返す）
 //!     terms-list      用語だけを並べて返す問い合わせ（原文をつなぎ直さなくてよい）
 //!     terms-decisions アプリと同じ処理（`decide::Decider`）。PC の中で候補を出し、OpenAI の Decisions API に確かめさせる
+//!     terms-jev       アプリと同じ候補を、TypeSafe AI の Jev に確かめさせる（MODEL は `jev-latest` など）
 //!     pipeline        アプリと同じ処理で、用語を決めてから訳す（`Decider` → `mt::Translator`）。MODEL は名前だけ
 //!     translate       正解の用語を `⟦英語名⟧` に置き換えた原文を訳すだけの問い合わせ（辞書の一覧は送らない）
 //!   `SPLIT_EVAL_ASSETS` で辞書の置き場所を替えられる（別名のキャッシュをアプリの置き場所に書かないとき）。
@@ -147,6 +148,7 @@ async fn main() -> anyhow::Result<()> {
                         terms_list(&client, model, &enricher, text, &context, &glossary).await
                     }
                     "terms-decisions" => terms_decisions(&app, text, &context).await,
+                    "terms-jev" => terms_jev(&client, &app, model, text, &context).await,
                     "pipeline" => pipeline(&app, text, &context).await,
                     "translate" => translate(&client, model, case, &context, &glossary).await,
                     other => anyhow::bail!("unknown mode: {other}"),
@@ -342,6 +344,54 @@ async fn terms_decisions(app: &App, text: &str, context: &[String]) -> anyhow::R
         .decider
         .terms(overlays_core::http(), text, context, &app.loaded)
         .await?;
+    Ok(Outcome::Terms(entities(spans)))
+}
+
+/// Jev の単価（100 万トークンあたりのドル。入力、出力）。TypeSafe AI のサイトの「10 億トークン $42、出力は無料」
+/// （料金の解説の記事から。料金のページはない）
+const JEV_PRICE: (f64, f64) = (0.042, 0.0);
+
+/// アプリと同じ候補と問いを、TypeSafe AI の Jev に確かめさせる（`TYPESAFE_AI_API_KEY`）。
+/// 問いの形だけ Jev に合わせる（`state` と、名前ごとの `questions`、選択肢は `criteria`）
+async fn terms_jev(
+    client: &Client,
+    app: &App,
+    model: &str,
+    text: &str,
+    context: &[String],
+) -> anyhow::Result<Outcome> {
+    let Some(asked) = app.decider.ask(text, context, &app.loaded) else {
+        return Ok(Outcome::Terms(Vec::new()));
+    };
+    let mut questions = serde_json::Map::new();
+    for q in asked.request["questions"].as_array().into_iter().flatten() {
+        let criteria: serde_json::Map<String, Value> = q["choices"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(|c| Some((c["value"].as_str()?.to_owned(), c["description"].clone())))
+            .collect();
+        questions.insert(
+            q["name"].as_str().context("name")?.to_owned(),
+            json!({ "type": "choice", "instructions": q["instructions"], "criteria": criteria }),
+        );
+    }
+    let body = json!({ "model": model, "state": asked.request["input"], "questions": questions });
+    let res = client
+        .http
+        .post("https://api.typesafe.ai/v1/systemone")
+        .bearer_auth(std::env::var("TYPESAFE_AI_API_KEY").unwrap_or_default())
+        .timeout(TIMEOUT)
+        .json(&body)
+        .send()
+        .await?;
+    let status = res.status();
+    let res: Value = res.json().await?;
+    anyhow::ensure!(status.is_success(), "{status}: {res}");
+    let n = |k: &str| res["usage"][k].as_f64().unwrap_or(0.0);
+    let (input, output) = JEV_PRICE;
+    client.spent((n("input_tokens") * input + n("output_tokens") * output) / 1e6);
+    let spans = asked.spans(|name| res["answers"][name]["choice"].as_str().map(str::to_owned));
     Ok(Outcome::Terms(entities(spans)))
 }
 

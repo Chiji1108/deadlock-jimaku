@@ -1,0 +1,1479 @@
+[
+ {
+  "text": "インファーナスのナパームが痛すぎる。",
+  "context": [],
+  "group": "正式な名前",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "インファーナス",
+       "ref": "hero:1"
+      },
+      {
+       "text": "の",
+       "ref": null
+      },
+      {
+       "text": "ナパーム",
+       "ref": "ability:491391007"
+      },
+      {
+       "text": "が痛すぎる。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "ケルビンのアイスパスで逃げられた。",
+  "context": [],
+  "group": "正式な名前",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "ケルビン",
+       "ref": "hero:12"
+      },
+      {
+       "text": "の",
+       "ref": null
+      },
+      {
+       "text": "アイスパス",
+       "ref": "ability:1963397252"
+      },
+      {
+       "text": "で逃げられた。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "ダイナモのシンギュラリティに全員捕まった。",
+  "context": [],
+  "group": "正式な名前",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "ダイナモ",
+       "ref": "hero:11"
+      },
+      {
+       "text": "の",
+       "ref": null
+      },
+      {
+       "text": "シンギュラリティ",
+       "ref": "ability:249410288"
+      },
+      {
+       "text": "に全員捕まった。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "ノックダウン買ってヴィンディクタ落とそう。",
+  "context": [],
+  "group": "正式な名前",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "ノックダウン",
+       "ref": "item:1254091416"
+      },
+      {
+       "text": "買って",
+       "ref": null
+      },
+      {
+       "text": "ヴィンディクタ",
+       "ref": "hero:3"
+      },
+      {
+       "text": "落とそう。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "メタルスキン切らされたのがきつい。",
+  "context": [],
+  "group": "正式な名前",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "メタルスキン",
+       "ref": "item:1378931225"
+      },
+      {
+       "text": "切らされたのがきつい。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "ワープストーンで壁抜けた。",
+  "context": [],
+  "group": "正式な名前",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "ワープストーン",
+       "ref": "item:3270001687"
+      },
+      {
+       "text": "で壁抜けた。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "アンストッパブル間に合った。",
+  "context": [],
+  "group": "正式な名前",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "アンストッパブル",
+       "ref": "item:3357231760"
+      },
+      {
+       "text": "間に合った。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "不屈の心は序盤に買っておきたい。",
+  "context": [],
+  "group": "正式な名前",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "不屈の心",
+       "ref": "item:1672893796"
+      },
+      {
+       "text": "は序盤に買っておきたい。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "ビバップのスティッキーボム二個付けられた。",
+  "context": [],
+  "group": "正式な名前",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "ビバップ",
+       "ref": "hero:15"
+      },
+      {
+       "text": "の",
+       "ref": null
+      },
+      {
+       "text": "スティッキーボム",
+       "ref": "ability:2521902222"
+      },
+      {
+       "text": "二個付けられた。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "トキシックバレットとヒールベインで回復止めよう。",
+  "context": [],
+  "group": "正式な名前",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "トキシックバレット",
+       "ref": "item:3696726732"
+      },
+      {
+       "text": "と",
+       "ref": null
+      },
+      {
+       "text": "ヒールベイン",
+       "ref": "item:2603935618"
+      },
+      {
+       "text": "で回復止めよう。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "スピリットシールドかバレットレジリエンスどっちがいいかな。",
+  "context": [],
+  "group": "正式な名前",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "スピリットシールド",
+       "ref": "item:112198670"
+      },
+      {
+       "text": "か",
+       "ref": null
+      },
+      {
+       "text": "バレットレジリエンス",
+       "ref": "item:3140772621"
+      },
+      {
+       "text": "どっちがいいかな。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "ミラージュ強いな今のパッチ。",
+  "context": [],
+  "group": "正式な名前",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "ミラージュ",
+       "ref": "hero:52"
+      },
+      {
+       "text": "強いな今のパッチ。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "インファーナスのウルトでスタン入った。",
+  "context": [],
+  "group": "番号とウルト",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "インファーナス",
+       "ref": "hero:1"
+      },
+      {
+       "text": "の",
+       "ref": null
+      },
+      {
+       "text": "ウルト",
+       "ref": "ability:1142270357"
+      },
+      {
+       "text": "でスタン入った。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "ラッシュの2番で屋根に上がって。",
+  "context": [],
+  "group": "番号とウルト",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "ラッシュ",
+       "ref": "hero:31"
+      },
+      {
+       "text": "の",
+       "ref": null
+      },
+      {
+       "text": "2番",
+       "ref": "ability:2670099061"
+      },
+      {
+       "text": "で屋根に上がって。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "ミナのウルトでサイレンス食らった。",
+  "context": [],
+  "group": "番号とウルト",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "ミナ",
+       "ref": "hero:63"
+      },
+      {
+       "text": "の",
+       "ref": null
+      },
+      {
+       "text": "ウルト",
+       "ref": "ability:3379486147"
+      },
+      {
+       "text": "でサイレンス食らった。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "そのあとウルトで焼かれた。",
+  "context": [
+   "ビバップにフックされた。"
+  ],
+  "group": "番号とウルト",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "そのあと",
+       "ref": null
+      },
+      {
+       "text": "ウルト",
+       "ref": "ability:3832675871"
+      },
+      {
+       "text": "で焼かれた。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "ヤマトの１番溜めてから当てて。",
+  "context": [],
+  "group": "番号とウルト",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "ヤマト",
+       "ref": "hero:27"
+      },
+      {
+       "text": "の",
+       "ref": null
+      },
+      {
+       "text": "１番",
+       "ref": "ability:3255651252"
+      },
+      {
+       "text": "溜めてから当てて。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "ダイナモウルト来るから散って。",
+  "context": [],
+  "group": "番号とウルト",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "ダイナモ",
+       "ref": "hero:11"
+      },
+      {
+       "text": "ウルト",
+       "ref": "ability:249410288"
+      },
+      {
+       "text": "来るから散って。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "アイビーの３番で耐えた。",
+  "context": [],
+  "group": "番号とウルト",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "アイビー",
+       "ref": "hero:20"
+      },
+      {
+       "text": "の",
+       "ref": null
+      },
+      {
+       "text": "３番",
+       "ref": "ability:3642273386"
+      },
+      {
+       "text": "で耐えた。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "ラッシュのウルトで全員叩きつけられた。",
+  "context": [],
+  "group": "番号とウルト",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "ラッシュ",
+       "ref": "hero:31"
+      },
+      {
+       "text": "の",
+       "ref": null
+      },
+      {
+       "text": "ウルト",
+       "ref": "ability:397010810"
+      },
+      {
+       "text": "で全員叩きつけられた。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "シルバーにウルト当てられた。",
+  "context": [],
+  "group": "番号とウルト",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "シルバー",
+       "ref": "hero:80"
+      },
+      {
+       "text": "に",
+       "ref": null
+      },
+      {
+       "text": "ウルト",
+       "ref": "ability:515791019"
+      },
+      {
+       "text": "当てられた。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "3番のクールダウン長いな。",
+  "context": [],
+  "group": "番号とウルト",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "3番のクールダウン長いな。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "ウルトあと10秒。",
+  "context": [],
+  "group": "番号とウルト",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "ウルトあと10秒。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "エコーシャードでウルト二回撃てる。",
+  "context": [],
+  "group": "番号とウルト",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "エコーシャード",
+       "ref": "item:630839635"
+      },
+      {
+       "text": "でウルト二回撃てる。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "リフレッシャー持ってるからウルト二連発くるよ。",
+  "context": [],
+  "group": "番号とウルト",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "リフレッシャー",
+       "ref": "item:677738769"
+      },
+      {
+       "text": "持ってるからウルト二連発くるよ。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "エイブラムスのチャージで壁に当てられた。",
+  "context": [],
+  "group": "名前の一部",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "エイブラムス",
+       "ref": "hero:6"
+      },
+      {
+       "text": "の",
+       "ref": null
+      },
+      {
+       "text": "チャージ",
+       "ref": "ability:2824119765"
+      },
+      {
+       "text": "で壁に当てられた。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "ケルビンのビームで足遅くされた。",
+  "context": [],
+  "group": "名前の一部",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "ケルビン",
+       "ref": "hero:12"
+      },
+      {
+       "text": "の",
+       "ref": null
+      },
+      {
+       "text": "ビーム",
+       "ref": "ability:2351041382"
+      },
+      {
+       "text": "で足遅くされた。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "ビバップのフックに気をつけて。",
+  "context": [],
+  "group": "名前の一部",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "ビバップ",
+       "ref": "hero:15"
+      },
+      {
+       "text": "の",
+       "ref": null
+      },
+      {
+       "text": "フック",
+       "ref": "ability:1928108461"
+      },
+      {
+       "text": "に気をつけて。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "インファ強すぎない？",
+  "context": [],
+  "group": "略称",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "インファ",
+       "ref": "hero:1"
+      },
+      {
+       "text": "強すぎない？",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "ガイストのウルトで体力入れ替えられた。",
+  "context": [],
+  "group": "略称",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "ガイスト",
+       "ref": "hero:4"
+      },
+      {
+       "text": "の",
+       "ref": null
+      },
+      {
+       "text": "ウルト",
+       "ref": "ability:1307289689"
+      },
+      {
+       "text": "で体力入れ替えられた。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "タロンに遠くから抜かれた。",
+  "context": [],
+  "group": "略称",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "タロン",
+       "ref": "hero:17"
+      },
+      {
+       "text": "に遠くから抜かれた。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "モークリのウルトに捕まった。",
+  "context": [],
+  "group": "略称",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "モークリ",
+       "ref": "hero:18"
+      },
+      {
+       "text": "の",
+       "ref": null
+      },
+      {
+       "text": "ウルト",
+       "ref": "ability:1917840730"
+      },
+      {
+       "text": "に捕まった。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "ヴィンにずっと撃たれてる。",
+  "context": [],
+  "group": "略称",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "ヴィン",
+       "ref": "hero:3"
+      },
+      {
+       "text": "にずっと撃たれてる。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "ヴィンディのウルトで落とされた。",
+  "context": [],
+  "group": "聞いたことのない略称",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "ヴィンディ",
+       "ref": "hero:3"
+      },
+      {
+       "text": "の",
+       "ref": null
+      },
+      {
+       "text": "ウルト",
+       "ref": "ability:775377419"
+      },
+      {
+       "text": "で落とされた。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "メタスキ押すの遅れた。",
+  "context": [],
+  "group": "聞いたことのない略称",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "メタスキ",
+       "ref": "item:1378931225"
+      },
+      {
+       "text": "押すの遅れた。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "アンストッパ買っとけばよかった。",
+  "context": [],
+  "group": "聞いたことのない略称",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "アンストッパ",
+       "ref": "item:3357231760"
+      },
+      {
+       "text": "買っとけばよかった。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "インフェルノスのアフターバーンが痛い。",
+  "context": [],
+  "group": "聞き違い",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "インフェルノス",
+       "ref": "hero:1"
+      },
+      {
+       "text": "の",
+       "ref": null
+      },
+      {
+       "text": "アフターバーン",
+       "ref": "ability:1593133799"
+      },
+      {
+       "text": "が痛い。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "ビーバップのボムに気をつけて。",
+  "context": [],
+  "group": "聞き違い",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "ビーバップ",
+       "ref": "hero:15"
+      },
+      {
+       "text": "の",
+       "ref": null
+      },
+      {
+       "text": "ボム",
+       "ref": "ability:2521902222"
+      },
+      {
+       "text": "に気をつけて。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "ワーデンのウルト止めて。",
+  "context": [],
+  "group": "聞き違い",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "ワーデン",
+       "ref": "hero:25"
+      },
+      {
+       "text": "の",
+       "ref": null
+      },
+      {
+       "text": "ウルト",
+       "ref": "ability:2702908623"
+      },
+      {
+       "text": "止めて。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "ビンディクタのウルトで狙われてる。",
+  "context": [],
+  "group": "聞き違い",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "ビンディクタ",
+       "ref": "hero:3"
+      },
+      {
+       "text": "の",
+       "ref": null
+      },
+      {
+       "text": "ウルト",
+       "ref": "ability:775377419"
+      },
+      {
+       "text": "で狙われてる。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "ワープストンで逃げた。",
+  "context": [],
+  "group": "聞き違い",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "ワープストン",
+       "ref": "item:3270001687"
+      },
+      {
+       "text": "で逃げた。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "メタルスキーン使った。",
+  "context": [],
+  "group": "聞き違い",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "メタルスキーン",
+       "ref": "item:1378931225"
+      },
+      {
+       "text": "使った。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "セブンのパワーサージで火力上がってる。",
+  "context": [],
+  "group": "同じ名前の別物",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "セブン",
+       "ref": "hero:2"
+      },
+      {
+       "text": "の",
+       "ref": null
+      },
+      {
+       "text": "パワーサージ",
+       "ref": "ability:539192269"
+      },
+      {
+       "text": "で火力上がってる。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "パワーサージ買ったら移動速くなった。",
+  "context": [],
+  "group": "同じ名前の別物",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "パワーサージ",
+       "ref": "item:1292979587"
+      },
+      {
+       "text": "買ったら移動速くなった。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "ガイストのライフドレインで吸われた。",
+  "context": [],
+  "group": "同じ名前の別物",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "ガイスト",
+       "ref": "hero:4"
+      },
+      {
+       "text": "の",
+       "ref": null
+      },
+      {
+       "text": "ライフドレイン",
+       "ref": "ability:218284420"
+      },
+      {
+       "text": "で吸われた。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "ライフドレイン買って耐久上げる。",
+  "context": [],
+  "group": "同じ名前の別物",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "ライフドレイン",
+       "ref": "item:865846625"
+      },
+      {
+       "text": "買って耐久上げる。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "今シルバー帯だからね。",
+  "context": [],
+  "group": "ふつうの言葉",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "今シルバー帯だからね。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "ヤマトの荷物まだ届かないんだよね。",
+  "context": [],
+  "group": "ふつうの言葉",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "ヤマトの荷物まだ届かないんだよね。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "アポロチョコ食べながらやってます。",
+  "context": [],
+  "group": "ふつうの言葉",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "アポロチョコ食べながらやってます。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "それストーカーみたいで怖いな。",
+  "context": [],
+  "group": "ふつうの言葉",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "それストーカーみたいで怖いな。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "昨日ボクシングでノックダウン見た。",
+  "context": [],
+  "group": "ふつうの言葉",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "昨日ボクシングでノックダウン見た。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "レム睡眠が足りてない。",
+  "context": [],
+  "group": "ふつうの言葉",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "レム睡眠が足りてない。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "ビリーって友達が見に来てる。",
+  "context": [],
+  "group": "ふつうの言葉",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "ビリーって友達が見に来てる。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "アイビーリーグ出身らしいよ。",
+  "context": [],
+  "group": "ふつうの言葉",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "アイビーリーグ出身らしいよ。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "ポケットWi-Fiの調子が悪い。",
+  "context": [],
+  "group": "ふつうの言葉",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "ポケットWi-Fiの調子が悪い。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "セブンでいいか。",
+  "context": [
+   "コンビニ行ってくる。"
+  ],
+  "group": "ふつうの言葉",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "セブンでいいか。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "今日はセブンで行くか。",
+  "context": [
+   "キャラ何使おうかな。"
+  ],
+  "group": "ふつうの言葉",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "今日は",
+       "ref": null
+      },
+      {
+       "text": "セブン",
+       "ref": "hero:2"
+      },
+      {
+       "text": "で行くか。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "コメントありがとうございます。",
+  "context": [],
+  "group": "用語なし",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "コメントありがとうございます。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "今日は3時間くらいやる予定です。",
+  "context": [],
+  "group": "用語なし",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "今日は3時間くらいやる予定です。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "ちょっと水飲むね。",
+  "context": [],
+  "group": "用語なし",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "ちょっと水飲むね。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "1番レーンが押されてる。",
+  "context": [],
+  "group": "用語なし",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "1番レーンが押されてる。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "ミッドボス取りに行こう。",
+  "context": [],
+  "group": "用語なし",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "ミッドボス取りに行こう。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "ソウル差が5000ある。",
+  "context": [],
+  "group": "用語なし",
+  "llm": [
+   {
+    "answer": {
+     "segments": [
+      {
+       "text": "ソウル差が5000ある。",
+       "ref": null
+      }
+     ]
+    }
+   }
+  ]
+ }
+]
