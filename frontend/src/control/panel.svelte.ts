@@ -99,9 +99,11 @@ class Panel {
     return this.view?.keys.gift.state === "saved" ? [] : this.withoutKey;
   }
 
-  /** ギフトコードで使う（おすそ分けしてくれた人に請求される）会社 */
+  /** ギフトコードで使う（おすそ分けしてくれた人に請求される）会社。コードが中継する会社が分かれば、それだけ */
   get giftPaid(): Provider[] {
-    return this.view?.keys.gift.state === "saved" ? this.withoutKey : [];
+    if (this.view?.keys.gift.state !== "saved") return [];
+    const relayed = this.gift?.state === "active" ? this.gift.providers : undefined;
+    return this.withoutKey.filter((p) => !relayed || relayed.includes(p));
   }
 
   /** 字幕を始められる鍵がそろっている。有料の工程がなければ鍵は要らない */
@@ -444,8 +446,8 @@ export function giftStatusText(s: GiftStatus): string {
       return "ギフトコードがありません";
     case "active": {
       const until = s.expiresAt === null ? "期限なしで" : `${dateTime(s.expiresAt)} まで`;
-      const grok = s.providers.includes("xai") ? "。Grok（xAI）にも使えます" : "";
-      return `${until}使えます${grok}`;
+      const names = s.providers.map((p) => PROVIDER_NAMES[p]).join(" と ");
+      return `${until}使えます（${names}）`;
     }
     case "expired":
       return `期限が切れています（${dateTime(s.expiresAt)} まで）`;

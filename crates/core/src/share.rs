@@ -29,7 +29,7 @@ pub enum GiftStatus {
         /// ミリ秒。None は期限なし
         #[ts(type = "number | null")]
         expires_at: Option<i64>,
-        /// 中継する会社（xAI はおすそ分けした人がキーを預けていれば）
+        /// 中継する会社（おすそ分けした人がキーを預けた会社）
         providers: Vec<Provider>,
     },
     Expired {
@@ -235,9 +235,13 @@ async fn call(
         return Ok(value);
     }
     let message = match value["error"].as_str() {
-        Some("invalidKey" | "noKey") => "OpenAI の API キーが使えません".to_owned(),
+        Some("invalidKey") => "OpenAI の API キーが使えません".to_owned(),
         Some("invalidXaiKey") => "xAI の API キーが使えません".to_owned(),
         Some("keyInUse") => "そのキーは、別のおすそ分けで使っています".to_owned(),
+        Some("lastKey") => {
+            "最後のキーは預けるのをやめられません。やめるときは「おすそ分けをやめる」を押してください"
+                .to_owned()
+        }
         Some("unauthorized") => {
             "おすそ分けの登録が見つかりません。「おすそ分けをやめる」を押してから、ギフトコードを作り直してください"
                 .to_owned()
@@ -248,17 +252,18 @@ async fn call(
     Err(Refused { status, message })
 }
 
-/// キーを預ける。管理の合言葉を返す
-pub async fn enable(api: &str, key: &str) -> Result<String, Refused> {
-    let body = json!({ "key": key });
+/// キーを預けておすそ分けを始める。同じキーをもう預けていれば、その人になる。管理の合言葉を返す
+pub async fn enable(api: &str, provider: Provider, key: &str) -> Result<String, Refused> {
+    let body = json!({ "provider": provider, "key": key });
     let value = call(api, reqwest::Method::POST, "/share", None, Some(body)).await?;
-    value["token"]
-        .as_str()
-        .map(str::to_owned)
-        .ok_or_else(|| Refused {
-            status: StatusCode::BAD_GATEWAY,
-            message: "サーバーの答えを読めません".to_owned(),
-        })
+    token_of(&value)
+}
+
+/// ほかの PC で預けたキーと同じなら、その人の合言葉を返す。まだ預けていなければ 404（新しく始めない）
+pub async fn join(api: &str, provider: Provider, key: &str) -> Result<String, Refused> {
+    let body = json!({ "provider": provider, "key": key, "join": true });
+    let value = call(api, reqwest::Method::POST, "/share", None, Some(body)).await?;
+    token_of(&value)
 }
 
 pub async fn disable(api: &str, token: &str) -> Result<(), Refused> {
@@ -267,17 +272,35 @@ pub async fn disable(api: &str, token: &str) -> Result<(), Refused> {
         .map(drop)
 }
 
-/// 預けたキーを替える。合言葉も新しくなる
-pub async fn update_key(api: &str, token: &str, key: &str) -> Result<String, Refused> {
+/// その会社のキーを預ける・替える。新しい合言葉を返す（替えたときは前の合言葉が使えなくなる）
+pub async fn set_key(
+    api: &str,
+    token: &str,
+    provider: Provider,
+    key: &str,
+) -> Result<String, Refused> {
+    let path = format!("/share/keys/{}", provider_path(provider));
     let body = json!({ "key": key });
-    let value = call(
-        api,
-        reqwest::Method::PUT,
-        "/share/key",
-        Some(token),
-        Some(body),
-    )
-    .await?;
+    let value = call(api, reqwest::Method::PUT, &path, Some(token), Some(body)).await?;
+    token_of(&value)
+}
+
+/// 預けたその会社のキーを消す（最後の 1 つは消せない）。新しい合言葉を返す（前の合言葉は使えなくなる）
+pub async fn remove_key(api: &str, token: &str, provider: Provider) -> Result<String, Refused> {
+    let path = format!("/share/keys/{}", provider_path(provider));
+    let value = call(api, reqwest::Method::DELETE, &path, Some(token), None).await?;
+    token_of(&value)
+}
+
+/// パスに入れる会社の名前（serde と同じ "openai" / "xai"）
+fn provider_path(provider: Provider) -> String {
+    match serde_json::to_value(provider) {
+        Ok(Value::String(name)) => name,
+        _ => unreachable!("Provider serializes to a string"),
+    }
+}
+
+fn token_of(value: &Value) -> Result<String, Refused> {
     value["token"]
         .as_str()
         .map(str::to_owned)
@@ -287,13 +310,13 @@ pub async fn update_key(api: &str, token: &str, key: &str) -> Result<String, Ref
         })
 }
 
-/// 預けているもの（作ったコードと、xAI のキーを預けているか）
+/// 預けているもの（作ったコードと、キーを預けた会社）
 #[derive(Deserialize)]
 pub struct Shared {
     pub codes: Vec<SharedCode>,
-    /// 前のサーバーは返さない（xAI のキーを預かれない）
-    #[serde(default)]
-    pub xai: bool,
+    /// 前のサーバーは返さない（OpenAI のキーだけを預かる）
+    #[serde(default = "openai_only")]
+    pub providers: Vec<Provider>,
 }
 
 pub async fn shared(api: &str, token: &str) -> Result<Shared, Refused> {
@@ -302,17 +325,6 @@ pub async fn shared(api: &str, token: &str) -> Result<Shared, Refused> {
         status: StatusCode::BAD_GATEWAY,
         message: format!("サーバーの答えを読めません（{e}）"),
     })
-}
-
-/// xAI のキーを預ける（替える）。空なら預けたキーを消す
-pub async fn set_xai(api: &str, token: &str, key: &str) -> Result<(), Refused> {
-    let (method, body) = match key {
-        "" => (reqwest::Method::DELETE, None),
-        key => (reqwest::Method::PUT, Some(json!({ "key": key }))),
-    };
-    call(api, method, "/share/xai", Some(token), body)
-        .await
-        .map(drop)
 }
 
 /// コードを作る。(ID, コード)

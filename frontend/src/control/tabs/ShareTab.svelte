@@ -1,11 +1,13 @@
 <script lang="ts">
-  // おすそ分け（DESIGN.md 17.1）。ギフトコードを作って、知り合いに使ってもらう。
-  // 自分のキーをサーバーに預けるのは、初めてギフトコードを作るときに確かめてから
+  // おすそ分け（DESIGN.md 17.1）。自分のキーを預けてギフトコードを作り、知り合いに使ってもらう。
+  // キーは会社ごとに、確かめてから預ける。コードはどれも、預けたキーの会社に使える
   import { Badge } from "$lib/components/ui/badge";
   import { Button } from "$lib/components/ui/button";
   import * as Card from "$lib/components/ui/card";
+  import type { Provider } from "../../generated/Provider";
   import type { SharedCode } from "../../generated/SharedCode";
   import { api } from "../../lib/api";
+  import { PROVIDER_NAMES } from "../../lib/engines";
   import ConfirmDialog from "../parts/ConfirmDialog.svelte";
   import CodeFields, { validCode } from "../parts/CodeFields.svelte";
   import { DEFAULT_LIMIT, validLimit } from "../parts/DailyLimitField.svelte";
@@ -14,9 +16,24 @@
   import { dateTime, panel } from "../panel.svelte";
   import { usd } from "../usage";
 
-  const ownKey = $derived(panel.view?.keys.openai.state === "saved");
-  const ownXai = $derived(panel.view?.keys.xai.state === "saved");
+  /** 預けられる会社と、ギフトコードの人が使えるもの・料金 */
+  const PROVIDERS: { provider: Provider; uses: string; price: string }[] = [
+    {
+      provider: "openai",
+      uses: "途中の字幕（GPT-Live-Transcribe）・確定の文字起こし（GPT-Transcribe）・翻訳と用語・ふりがな",
+      price: "使い方で変わります（ハイブリッドで 1 時間 約 $0.6）",
+    },
+    {
+      provider: "xai",
+      uses: "確定の文字起こし（Grok Voice Transcribe）",
+      price: "1 時間 $0.10",
+    },
+  ];
+
   const share = $derived(panel.share);
+  const shared = $derived(share?.enabled ? share.providers : []);
+  const saved = (p: Provider) => panel.view?.keys[p].state === "saved";
+  const anySaved = $derived(PROVIDERS.some(({ provider }) => saved(provider)));
 
   // 新しいコード。期限の既定は 3 日後
   const threeDays = () => Date.now() + 3 * 24 * 60 * 60 * 1000;
@@ -41,14 +58,20 @@
     return created;
   }
 
-  /** 預けてから作る。分けておくと、作るのに失敗しても預けた状態が画面に出て、やめられる */
-  const consent = async () => (await panel.shareAction(api.enableShare)) && (joining || create());
-
-  let consenting = $state(false);
-  let consentingXai = $state(false);
-  /** ほかの PC のおすそ分けを見るだけで、コードは作らない */
-  let joining = $state(false);
+  /** 預ける前に確かめる会社 */
+  let consenting = $state<Provider | undefined>();
+  let consentOpen = $state(false);
+  const consent = $derived(PROVIDERS.find((p) => p.provider === consenting));
   let stopping = $state(false);
+
+  async function deposit() {
+    if (!consent) return false;
+    const { provider } = consent;
+    return panel.shareAction(
+      () => api.shareKey(provider),
+      `${PROVIDER_NAMES[provider]} のキーを預けました`,
+    );
+  }
 
   /** 設定を変えるダイアログの中身 */
   let editing = $state({
@@ -77,8 +100,8 @@
     <Card.Header>
       <Card.Title>おすそ分け</Card.Title>
       <Card.Description>
-        自分の OpenAI の API
-        キーで、知り合いにデドロ字幕を試してもらえます。ギフトコードを渡すと、その人はキーなしで字幕を出せます。使われた分は自分のキーに請求されます
+        自分の API
+        キーを預けて、知り合いにデドロ字幕を使ってもらえます。ギフトコードを渡すと、その人はキーなしで字幕を出せます。使われた分は、預けたキーの会社から自分に請求されます
       </Card.Description>
     </Card.Header>
     <Card.Content class="flex flex-col gap-4">
@@ -93,20 +116,71 @@
             おすそ分けをやめる
           </Button>
         {/if}
-      {:else if !share.enabled && !ownKey}
-        <p class="text-sm text-muted-foreground">
-          おすそ分けするには、先に「API キー」で自分の OpenAI のキーを保存してください
-        </p>
       {:else}
+        {#each PROVIDERS as p (p.provider)}
+          {@const on = shared.includes(p.provider)}
+          <div class="flex flex-col gap-2 rounded-lg border p-4">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="font-medium">{PROVIDER_NAMES[p.provider]}</span>
+              {#if on}<Badge variant="secondary">預けています</Badge>{/if}
+            </div>
+            <p class="text-sm text-muted-foreground">ギフトコードの人が使えるもの: {p.uses}</p>
+            {#if on}
+              <Button
+                variant="outline"
+                class="w-fit"
+                disabled={shared.length === 1}
+                onclick={() =>
+                  panel.shareAction(
+                    () => api.unshareKey(p.provider),
+                    `${PROVIDER_NAMES[p.provider]} のキーを消しました`,
+                  )}>預けるのをやめる</Button
+              >
+              {#if shared.length === 1}
+                <p class="text-xs text-muted-foreground">
+                  最後のキーです。やめるときは下の「おすそ分けをやめる」を押してください
+                </p>
+              {/if}
+            {:else if saved(p.provider)}
+              <Button
+                class="w-fit"
+                onclick={() => {
+                  consenting = p.provider;
+                  consentOpen = true;
+                }}>預ける</Button
+              >
+            {:else}
+              <p class="text-xs text-muted-foreground">
+                預けるには、先に「API キー」で自分の {PROVIDER_NAMES[p.provider]} のキーを保存してください
+              </p>
+            {/if}
+          </div>
+        {/each}
+        {#if !share.enabled && anySaved}
+          <Button variant="outline" class="w-fit" onclick={() => panel.shareAction(api.joinShare)}
+            >ほかの PC のおすそ分けを表示する</Button
+          >
+        {/if}
+      {/if}
+    </Card.Content>
+  </Card.Root>
+
+  {#if share?.enabled}
+    <Card.Root>
+      <Card.Header>
+        <Card.Title>ギフトコード</Card.Title>
+        <Card.Description>
+          同じコードを何人に渡しても使えます。どのコードも {shared
+            .map((p) => PROVIDER_NAMES[p])
+            .join(" と ")} に使えます
+        </Card.Description>
+      </Card.Header>
+      <Card.Content class="flex flex-col gap-4">
         <form
           class="flex flex-col gap-4"
           onsubmit={(e) => {
             e.preventDefault();
-            if (share.enabled) void create();
-            else {
-              joining = false;
-              consenting = true;
-            }
+            void create();
           }}
         >
           <CodeFields
@@ -116,32 +190,10 @@
             bind:dailyLimit
             placeholder="例: Discord の配信仲間"
           />
-          <div class="flex flex-wrap gap-2">
-            <Button type="submit" class="w-fit" disabled={!valid || creating}
-              >ギフトコードを作る</Button
-            >
-            {#if !share.enabled}
-              <Button
-                variant="outline"
-                onclick={() => {
-                  joining = true;
-                  consenting = true;
-                }}>ほかの PC のおすそ分けを表示する</Button
-              >
-            {/if}
-          </div>
+          <Button type="submit" class="w-fit" disabled={!valid || creating}
+            >ギフトコードを作る</Button
+          >
         </form>
-      {/if}
-    </Card.Content>
-  </Card.Root>
-
-  {#if share?.enabled}
-    <Card.Root>
-      <Card.Header>
-        <Card.Title>作ったギフトコード</Card.Title>
-        <Card.Description>同じコードを何人に渡しても使えます</Card.Description>
-      </Card.Header>
-      <Card.Content class="flex flex-col gap-4">
         {#each share.codes as c (c.id)}
           <div class="flex flex-col gap-2 rounded-lg border p-4">
             <div class="flex flex-wrap items-center gap-2">
@@ -202,69 +254,30 @@
         <Button variant="outline" onclick={() => (stopping = true)}>おすそ分けをやめる</Button>
       </Card.Footer>
     </Card.Root>
-
-    <Card.Root>
-      <Card.Header>
-        <Card.Title class="flex items-center gap-2">
-          Grok（xAI）
-          {#if share.xai}<Badge variant="secondary">預けています</Badge>{/if}
-        </Card.Title>
-        <Card.Description>
-          xAI の API キーも預けると、ギフトコードの人が確定の文字起こしに Grok Voice Transcribe
-          を使えます。使われた分は自分の xAI のキーに請求されます
-        </Card.Description>
-      </Card.Header>
-      <Card.Content>
-        {#if share.xai}
-          <Button
-            variant="outline"
-            onclick={() => panel.shareAction(api.unshareXai, "xAI のキーを消しました")}
-            >xAI のキーを預けるのをやめる</Button
-          >
-        {:else if ownXai}
-          <Button onclick={() => (consentingXai = true)}>xAI のキーも預ける</Button>
-        {:else}
-          <p class="text-sm text-muted-foreground">
-            預けるには、先に「API キー」で自分の xAI のキーを保存してください
-          </p>
-        {/if}
-      </Card.Content>
-    </Card.Root>
   {/if}
 </div>
 
 <ConfirmDialog
-  bind:open={consenting}
-  title="あなたの API キーをサーバーに預けます"
-  action={joining ? "預けて表示する" : "預けてギフトコードを作る"}
-  disabled={!joining && !valid}
-  onconfirm={consent}
->
-  <p>
-    ギフトコードをもらった人は、自分の API キーを持っていません。そこで、あなたの API
-    キーをデドロ字幕のサーバーに預けて、その人の字幕に使います。
-  </p>
-  <ul class="list-disc pl-5">
-    <li>料金: その人が使った分は、あなたの OpenAI に請求されます</li>
-    <li>保存: キーは暗号化して保存します。その人の声や字幕は保存しません</li>
-    <li>やめるとき: 「おすそ分けをやめる」で、いつでもキーを消せます</li>
-  </ul>
-</ConfirmDialog>
-
-<ConfirmDialog
-  bind:open={consentingXai}
-  title="あなたの xAI の API キーをサーバーに預けます"
+  bind:open={consentOpen}
+  title="あなたの {consent ? PROVIDER_NAMES[consent.provider] : ''} の API キーをサーバーに預けます"
   action="預ける"
-  onconfirm={() => panel.shareAction(api.shareXai, "xAI のキーを預けました")}
+  onconfirm={deposit}
 >
-  <p>ギフトコードをもらった人が Grok を選んだとき、その人の確定の文字起こしに使います。</p>
-  <ul class="list-disc pl-5">
-    <li>料金: その人が使った分は、あなたの xAI に請求されます（1 時間 $0.10）</li>
-    <li>保存: キーは暗号化して保存します。その人の声や字幕は保存しません</li>
-    <li>
-      やめるとき: 「xAI のキーを預けるのをやめる」か「おすそ分けをやめる」で、いつでも消せます
-    </li>
-  </ul>
+  {#if consent}
+    <p>
+      ギフトコードをもらった人は、自分の API
+      キーを持っていません。そこで、あなたのキーをデドロ字幕のサーバーに預けて、その人の字幕に使います。その人が使えるもの:
+      {consent.uses}。
+    </p>
+    <ul class="list-disc pl-5">
+      <li>
+        料金: その人が使った分は、あなたの {PROVIDER_NAMES[consent.provider]} に請求されます（{consent.price}。コードごとの
+        1 日の上限まで）
+      </li>
+      <li>保存: キーは暗号化して保存します。その人の声や字幕は保存しません</li>
+      <li>やめるとき: 「預けるのをやめる」か「おすそ分けをやめる」で、いつでも消せます</li>
+    </ul>
+  {/if}
 </ConfirmDialog>
 
 <ConfirmDialog
@@ -275,7 +288,7 @@
   onconfirm={() => panel.shareAction(api.disableShare, "おすそ分けをやめました")}
 >
   <p>
-    預けたキーと、作ったギフトコードがすべて消えます。配ったギフトコードは使えなくなります。同じキーでおすそ分けしているほかの
+    預けたキーと、作ったギフトコードがすべて消えます。配ったギフトコードは使えなくなります。同じおすそ分けを見ているほかの
     PC でも止まります。
   </p>
 </ConfirmDialog>

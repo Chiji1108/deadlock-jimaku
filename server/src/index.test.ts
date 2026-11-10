@@ -59,7 +59,7 @@ beforeAll(async () => {
 afterAll(() => proxy.dispose());
 
 beforeEach(async () => {
-  for (const table of ["code_usage", "codes", "issuers"]) {
+  for (const table of ["code_usage", "codes", "issuer_keys", "issuers"]) {
     await env.DB.prepare(`DELETE FROM ${table}`).run();
   }
   vi.mocked(validKey).mockImplementation(async (key) => key.startsWith("sk-"));
@@ -70,10 +70,22 @@ beforeEach(async () => {
   rate.mockResolvedValue({ success: true });
 });
 
-async function share(key = KEY): Promise<string> {
-  const res = await call("/share", { method: "POST", ...json({ key }) });
+async function share(key = KEY, provider?: string): Promise<string> {
+  const res = await call("/share", { method: "POST", ...json(provider ? { provider, key } : { key }) });
   expect(res.status).toBe(200);
   return ((await res.json()) as { token: string }).token;
+}
+
+const XAI_KEY = "xai-issuer";
+
+/** その会社のキーを預ける・替える。新しい合言葉を返す */
+async function deposit(token: string, provider: string, key: string) {
+  const res = await call(`/share/keys/${provider}`, { method: "PUT", token, ...json({ key }) });
+  return { status: res.status, token: res.ok ? ((await res.json()) as { token: string }).token : undefined };
+}
+
+async function deposited(token: string) {
+  return ((await (await call("/share/codes", { token })).json()) as { providers: string[] }).providers;
 }
 
 async function createCode(
@@ -401,13 +413,77 @@ describe("relay", () => {
   });
 });
 
+describe("keys", () => {
+  it("deposits a key per provider, only for the issuer and with a working key", async () => {
+    const token = await share();
+    const { code } = await createCode(token);
+    expect((await deposit("nobody", "xai", XAI_KEY)).status).toBe(401);
+    expect((await deposit(token, "xai", "bad")).status).toBe(400);
+    expect((await deposit(token, "other", XAI_KEY)).status).toBe(404);
+    expect(await (await call("/gift", { token: code })).json()).toMatchObject({ providers: ["openai"] });
+
+    expect(await deposit(token, "xai", XAI_KEY)).toEqual({ status: 200, token });
+    expect(await deposited(token)).toEqual(["openai", "xai"]);
+    expect(await (await call("/gift", { token: code })).json()).toMatchObject({ providers: ["openai", "xai"] });
+
+    const res = await call("/share/keys/xai", { method: "DELETE", token });
+    const { token: after } = (await res.json()) as { token: string };
+    expect(after).not.toBe(token);
+    expect((await call("/share/codes", { token })).status).toBe(401);
+    expect(await deposited(after)).toEqual(["openai"]);
+  });
+
+  it("shares with an xAI key alone, which relays to xAI but not to OpenAI", async () => {
+    const token = await share(XAI_KEY, "xai");
+    const { code } = await createCode(token);
+    expect(await (await call("/gift", { token: code })).json()).toMatchObject({ providers: ["xai"] });
+    const res = await call("/openai/responses", { method: "POST", token: code, ...json({ model: "gpt-6.1-terra", input: "x" }) });
+    expect(res.status).toBe(403);
+    expect(res.headers.get("X-Gift-Refusal")).toBe("unsupported");
+    expect(openai).not.toHaveBeenCalled();
+  });
+
+  it("is the same issuer and token from any of the deposited keys", async () => {
+    const token = await share();
+    await deposit(token, "xai", XAI_KEY);
+    expect(await share(XAI_KEY, "xai")).toBe(token);
+  });
+
+  it("joins only an existing share", async () => {
+    const join = (key: string, provider: string) =>
+      call("/share", { method: "POST", ...json({ provider, key, join: true }) });
+    expect((await join(XAI_KEY, "xai")).status).toBe(404);
+    const token = await share(XAI_KEY, "xai");
+    expect(await (await join(XAI_KEY, "xai")).json()).toEqual({ token });
+  });
+
+  it("replaces the token when a key is replaced, keeping the other keys", async () => {
+    const old = await share();
+    await deposit(old, "xai", XAI_KEY);
+    const { token } = await deposit(old, "xai", "xai-new");
+    expect(token).not.toBe(old);
+    expect((await call("/share/codes", { token: old })).status).toBe(401);
+    expect(await deposited(token!)).toEqual(["openai", "xai"]);
+    expect(await share(XAI_KEY, "xai")).not.toBe(token);
+  });
+
+  it("keeps the xAI key when the OpenAI key changes", async () => {
+    const old = await share();
+    await deposit(old, "xai", XAI_KEY);
+    const res = await call("/share/key", { method: "PUT", token: old, ...json({ key: "sk-new" }) });
+    const { token } = (await res.json()) as { token: string };
+    expect(await deposited(token)).toEqual(["openai", "xai"]);
+  });
+
+  it("refuses a key that someone else shares, and to remove the last key", async () => {
+    const mine = await share();
+    await share(XAI_KEY, "xai");
+    expect((await deposit(mine, "xai", XAI_KEY)).status).toBe(409);
+    expect((await call("/share/keys/openai", { method: "DELETE", token: mine })).status).toBe(409);
+  });
+});
+
 describe("xai", () => {
-  const XAI_KEY = "xai-issuer";
-
-  async function depositXai(token: string, key = XAI_KEY) {
-    return call("/share/xai", { method: "PUT", token, ...json({ key }) });
-  }
-
   function sttForm(model = "grok-voice-transcribe-2.0") {
     const form = new FormData();
     form.set("model", model);
@@ -418,29 +494,6 @@ describe("xai", () => {
     form.set("file", new File([wav(36)], "segment.wav", { type: "audio/wav" }));
     return form;
   }
-
-  it("is deposited only by the issuer, with a working key, and shows in the codes and the gift", async () => {
-    const token = await share();
-    const { code } = await createCode(token);
-    expect((await depositXai("nobody")).status).toBe(401);
-    expect((await depositXai(token, "bad")).status).toBe(400);
-    expect(await (await call("/gift", { token: code })).json()).toMatchObject({ providers: ["openai"] });
-
-    expect((await depositXai(token)).status).toBe(204);
-    expect(await (await call("/share/codes", { token })).json()).toMatchObject({ xai: true });
-    expect(await (await call("/gift", { token: code })).json()).toMatchObject({ providers: ["openai", "xai"] });
-
-    expect((await call("/share/xai", { method: "DELETE", token })).status).toBe(204);
-    expect(await (await call("/share/codes", { token })).json()).toMatchObject({ xai: false });
-  });
-
-  it("keeps the xAI key when the OpenAI key changes", async () => {
-    const old = await share();
-    await depositXai(old);
-    const res = await call("/share/key", { method: "PUT", token: old, ...json({ key: "sk-new" }) });
-    const { token } = (await res.json()) as { token: string };
-    expect(await (await call("/share/codes", { token })).json()).toMatchObject({ xai: true });
-  });
 
   it("refuses to relay when no xAI key is deposited", async () => {
     const token = await share();
@@ -453,7 +506,7 @@ describe("xai", () => {
 
   it("relays with the issuer's xAI key, only the app's fields with the file last, and counts the cost", async () => {
     const token = await share();
-    await depositXai(token);
+    await deposit(token, "xai", XAI_KEY);
     const { code } = await createCode(token);
     vi.mocked(xai).mockResolvedValue(Response.json({ text: "ヘイズ", duration: 36 }));
     const res = await call("/xai/stt", { method: "POST", token: code, body: sttForm() });
@@ -467,7 +520,7 @@ describe("xai", () => {
 
   it("refuses OpenAI models on xAI, and Grok on OpenAI", async () => {
     const token = await share();
-    await depositXai(token);
+    await deposit(token, "xai", XAI_KEY);
     const { code } = await createCode(token);
     const res = await call("/xai/stt", { method: "POST", token: code, body: sttForm("gpt-transcribe") });
     expect(res.status).toBe(400);
@@ -826,6 +879,17 @@ describe("realtime relay", () => {
   it("gives the general reason when a code is stopped", async () => {
     client.message(sessionUpdate());
     await env.DB.prepare("UPDATE codes SET revoked = 1").run();
+    vi.mocked(Date.now).mockReturnValue(NOW + 30_000);
+    client.message(append());
+    await settled();
+    expect(client.closed).toEqual({ code: 1008, reason: "gift code is no longer usable" });
+  });
+
+  it("cuts the session when the OpenAI key is no longer deposited", async () => {
+    client.message(sessionUpdate());
+    const issuer = (await codeByValue(db, code))!.issuerId;
+    await env.DB.prepare("INSERT INTO issuer_keys VALUES (?, 'xai', 'h', 'e')").bind(issuer).run();
+    await env.DB.prepare("DELETE FROM issuer_keys WHERE provider = 'openai'").run();
     vi.mocked(Date.now).mockReturnValue(NOW + 30_000);
     client.message(append());
     await settled();

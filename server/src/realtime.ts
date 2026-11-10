@@ -76,7 +76,8 @@ export async function relay(
         .then(() => codeById(db, code.id))
         .then((now) => {
           if (now) remaining = budget(now);
-          const error = now ? refusal(now, Date.now()) : "revoked";
+          // OpenAI のキーを預けるのをやめたら切る
+          const error = now ? (refusal(now, Date.now()) ?? (now.keys.openai ? undefined : "unsupported")) : "revoked";
           if (error) close(1008, error === "limit" ? "limit" : "gift code is no longer usable");
         }),
     );

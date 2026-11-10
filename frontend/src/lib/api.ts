@@ -66,11 +66,14 @@ export const api = {
 
   /** おすそ分け（自分のキーで人に使ってもらう） */
   share: () => request<ShareView>("/api/share"),
-  enableShare: () => request<ShareView>("/api/share", { method: "POST" }),
+  /** ほかの PC で始めたおすそ分けを、この PC のキーで見る */
+  joinShare: () => request<ShareView>("/api/share", { method: "POST" }),
   disableShare: () => request<ShareView>("/api/share", { method: "DELETE" }),
-  /** 自分の xAI のキーも預ける（ギフトコードで Grok を使ってもらう） */
-  shareXai: () => request<ShareView>("/api/share/xai", { method: "POST" }),
-  unshareXai: () => request<ShareView>("/api/share/xai", { method: "DELETE" }),
+  /** この PC のその会社のキーを預ける（おすそ分けしていなければ、これで始まる） */
+  shareKey: (provider: Provider) =>
+    request<ShareView>(`/api/share/keys/${provider}`, { method: "POST" }),
+  unshareKey: (provider: Provider) =>
+    request<ShareView>(`/api/share/keys/${provider}`, { method: "DELETE" }),
   /** `expiresAt` はミリ秒。null は期限なし */
   createCode: (body: { memo: string; expiresAt: number | null; dailyLimitUsd: number }) =>
     request<ShareView>("/api/share/codes", { method: "POST", body: JSON.stringify(body) }),

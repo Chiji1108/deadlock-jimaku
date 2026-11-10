@@ -2,18 +2,30 @@
 // 列の名前は snake_case（db.ts の casing）。変えたら `pnpm db:generate` で migrations/ に SQL を足す（DESIGN.md 17 章）
 import { index, integer, primaryKey, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-/** おすそ分けを有効にした人。同じキーで有効にし直したら同じ行（合言葉もキーで決まる） */
+/** おすそ分けを有効にした人。預けたキーのどれからでも同じ人になる（issuer_keys） */
 export const issuers = sqliteTable("issuers", {
   id: text().primaryKey(),
+  /** 合言葉は id と tokenSalt から決まる（secrets.ts の issuerToken）。キーを替えたら tokenSalt を替え、古い合言葉を使えなくする */
   adminTokenHash: text().notNull().unique(),
-  keyHash: text().notNull().unique(),
-  /** base64(iv || AES-GCM の暗号文) */
-  encryptedKey: text().notNull(),
+  tokenSalt: text().notNull(),
   /** ミリ秒 */
   createdAt: integer().notNull(),
-  /** 預けた xAI のキー。形は encryptedKey と同じ。NULL は預けていない（そのコードでは xAI を中継しない） */
-  encryptedXaiKey: text(),
 });
+
+/** 預けたキー。会社ごとに 1 つ。同じキーは 1 人だけが預けられる */
+export const issuerKeys = sqliteTable(
+  "issuer_keys",
+  {
+    issuerId: text()
+      .notNull()
+      .references(() => issuers.id, { onDelete: "cascade" }),
+    provider: text({ enum: ["openai", "xai"] }).notNull(),
+    keyHash: text().notNull().unique(),
+    /** base64(iv || AES-GCM の暗号文) */
+    encryptedKey: text().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.issuerId, t.provider] })],
+);
 
 export const codes = sqliteTable(
   "codes",

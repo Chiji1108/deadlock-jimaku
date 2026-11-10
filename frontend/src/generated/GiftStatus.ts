@@ -10,6 +10,6 @@ export type GiftStatus = { "state": "none" } | { "state": "active",
  */
 expiresAt: number | null, 
 /**
- * 中継する会社（xAI はおすそ分けした人がキーを預けていれば）
+ * 中継する会社（おすそ分けした人がキーを預けた会社）
  */
 providers: Array<Provider>, } | { "state": "expired", expiresAt: number, } | { "state": "revoked" } | { "state": "limit" } | { "state": "unknown" } | { "state": "unreachable", detail: string, };

@@ -169,6 +169,11 @@ pub fn set(provider: Provider, key: &str) -> anyhow::Result<()> {
     put(provider.slot(), key)
 }
 
+/// その会社の自分のキー
+pub fn key(provider: Provider) -> Option<String> {
+    get_or_warn(provider.slot())
+}
+
 pub fn openai() -> Option<String> {
     get_or_warn(Slot::OpenAi)
 }

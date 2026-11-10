@@ -1,26 +1,30 @@
 // API（api.jimaku.deadlock.jp。DESIGN.md 17.1）。パスは版（/v1）で区切る。
 // おすそ分け: 自分の OpenAI キーを預けた人がコードを作り、コードを持つ人の通信を、そのキーで OpenAI に中継する。
 // xAI のキーも預けていれば、確定の文字起こし（Grok）を xAI に中継する
-import { and, desc, eq, ne, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { Hono, type Context } from "hono";
 import {
   addUsage,
   codeByValue,
   dailyLimit,
+  issuerByKey,
   issuerByToken,
+  issuerProviders,
   month,
   overLimit,
   providers,
   refusal,
   todayUsd,
   open,
+  PROVIDERS,
   type Code,
   type Db,
+  type Issuer,
 } from "./db";
 import { openai, validKey } from "./openai";
 import { audioUsd, tokensOf, tokensUsd, wavSeconds, type Provider } from "./price";
 import { relay } from "./realtime";
-import { codes, codeUsage, issuers } from "./schema";
+import { codes, codeUsage, issuerKeys, issuers } from "./schema";
 import { decrypt, encrypt, issuerToken, newCode, newId, normalizeCode, sha256 } from "./secrets";
 import { validXaiKey, xai } from "./xai";
 
@@ -79,67 +83,110 @@ function parsedUsage(data: string): unknown {
 
 // ---- おすそ分けする人（合言葉で見分ける） ----
 
-/** キーを預ける。同じキーならどの PC からでも同じ人になり、同じ合言葉とコードを使う */
-app.post("/share", async (c) => {
-  const key = (await json<{ key?: unknown }>(c))?.key;
+/** 会社ごとのキーの確かめ方と、使えないときのエラー */
+const KEY_CHECKS: Record<Provider, { valid: (key: string) => Promise<boolean>; error: string }> = {
+  openai: { valid: validKey, error: "invalidKey" },
+  xai: { valid: validXaiKey, error: "invalidXaiKey" },
+};
+
+function provider(value: unknown): Provider | undefined {
+  return PROVIDERS.find((p) => p === value);
+}
+
+/** 合言葉を決め直して返す（id と tokenSalt で決まるので、どの PC でも同じものになる） */
+async function issueToken(c: Ctx, issuer: Issuer): Promise<string> {
+  const token = await issuerToken(issuer.id, issuer.tokenSalt, c.env.SHARE_KEY);
+  await c.var.db
+    .update(issuers)
+    .set({ adminTokenHash: await sha256(token) })
+    .where(eq(issuers.id, issuer.id));
+  return token;
+}
+
+/** 本文のキーを確かめる。使えなければ返す応答 */
+async function checkedKey(c: Ctx, p: Provider, key: unknown): Promise<string | Response> {
   if (typeof key !== "string" || !key) return c.json({ error: "noKey" }, 400);
-  if (!(await validKey(key))) return c.json({ error: "invalidKey" }, 400);
+  if (!(await KEY_CHECKS[p].valid(key))) return c.json({ error: KEY_CHECKS[p].error }, 400);
+  return key;
+}
+
+/**
+ * キーを預けておすそ分けを始める。預けたキーのどれかと同じキーなら、どの PC からでも同じ人になり、同じ合言葉とコードを使う。
+ * provider を省いた本文（0.4 までのアプリ）は OpenAI のキー。join なら新しく始めず、預けていないキーは 404
+ */
+app.post("/share", async (c) => {
+  const body = (await json<{ provider?: unknown; key?: unknown; join?: unknown }>(c)) ?? {};
+  const p = body.provider === undefined ? "openai" : provider(body.provider);
+  if (!p) return c.json({ error: "invalid" }, 400);
+  const key = await checkedKey(c, p, body.key);
+  if (key instanceof Response) return key;
   const keyHash = await sha256(key);
-  const token = await issuerToken(keyHash, c.env.SHARE_KEY);
-  const adminTokenHash = await sha256(token);
-  const encryptedKey = await encrypt(key, c.env.SHARE_KEY);
-  await c.var.db
-    .insert(issuers)
-    .values({ id: newId(), adminTokenHash, keyHash, encryptedKey, createdAt: Date.now() })
-    .onConflictDoUpdate({ target: issuers.keyHash, set: { adminTokenHash, encryptedKey } });
+  const found = await issuerByKey(c.var.db, keyHash);
+  if (found) return c.json({ token: await issueToken(c, found) });
+  if (body.join === true) return c.json({ error: "notShared" }, 404);
+  const issuer = { id: newId(), tokenSalt: newId() };
+  const token = await issuerToken(issuer.id, issuer.tokenSalt, c.env.SHARE_KEY);
+  await c.var.db.batch([
+    c.var.db.insert(issuers).values({ ...issuer, adminTokenHash: await sha256(token), createdAt: Date.now() }),
+    c.var.db.insert(issuerKeys).values({
+      issuerId: issuer.id,
+      provider: p,
+      keyHash,
+      encryptedKey: await encrypt(key, c.env.SHARE_KEY),
+    }),
+  ]);
   return c.json({ token });
 });
 
-/** キーを替えたとき。コードはそのまま、新しいキーで動く。合言葉も新しくなり、古いキーのものは使えなくなる */
-app.put("/share/key", async (c) => {
+/**
+ * その会社のキーを預ける・替える。替えたときは合言葉も新しくなり、古いキーで得た合言葉は使えなくなる。
+ * 新しい合言葉を返す（0.4 までのアプリは PUT /share/key で OpenAI のキーを替える）
+ */
+async function putKey(c: Ctx, p: Provider) {
   const issuer = await admin(c);
   if (!issuer) return c.json({ error: "unauthorized" }, 401);
-  const key = (await json<{ key?: unknown }>(c))?.key;
-  if (typeof key !== "string" || !key || !(await validKey(key))) {
-    return c.json({ error: "invalidKey" }, 400);
-  }
+  const key = await checkedKey(c, p, (await json<{ key?: unknown }>(c))?.key);
+  if (key instanceof Response) return key;
   const keyHash = await sha256(key);
-  const other = await c.var.db
-    .select({ id: issuers.id })
-    .from(issuers)
-    .where(and(eq(issuers.keyHash, keyHash), ne(issuers.id, issuer.id)))
-    .get();
+  const owner = await issuerByKey(c.var.db, keyHash);
   // そのキーで別の人としておすそ分けを有効にしている。片方を無効にしてもらう
-  if (other) return c.json({ error: "keyInUse" }, 409);
-  const token = await issuerToken(keyHash, c.env.SHARE_KEY);
-  await c.var.db
-    .update(issuers)
-    .set({ keyHash, encryptedKey: await encrypt(key, c.env.SHARE_KEY), adminTokenHash: await sha256(token) })
-    .where(eq(issuers.id, issuer.id));
-  return c.json({ token });
+  if (owner && owner.id !== issuer.id) return c.json({ error: "keyInUse" }, 409);
+  if (owner) return c.json({ token: await issueToken(c, issuer) });
+  const replaced = (await issuerProviders(c.var.db, issuer.id)).includes(p);
+  const tokenSalt = replaced ? newId() : issuer.tokenSalt;
+  const encryptedKey = await encrypt(key, c.env.SHARE_KEY);
+  await c.var.db.batch([
+    c.var.db
+      .insert(issuerKeys)
+      .values({ issuerId: issuer.id, provider: p, keyHash, encryptedKey })
+      .onConflictDoUpdate({ target: [issuerKeys.issuerId, issuerKeys.provider], set: { keyHash, encryptedKey } }),
+    c.var.db.update(issuers).set({ tokenSalt }).where(eq(issuers.id, issuer.id)),
+  ]);
+  return c.json({ token: await issueToken(c, { ...issuer, tokenSalt }) });
+}
+
+app.put("/share/keys/:provider", async (c) => {
+  const p = provider(c.req.param("provider"));
+  return p ? putKey(c, p) : c.json({ error: "notFound" }, 404);
 });
 
-/** xAI のキーを預ける（替える）。OpenAI のキーとは別に、預けた人が選んだときだけ */
-app.put("/share/xai", async (c) => {
-  const issuer = await admin(c);
-  if (!issuer) return c.json({ error: "unauthorized" }, 401);
-  const key = (await json<{ key?: unknown }>(c))?.key;
-  if (typeof key !== "string" || !key || !(await validXaiKey(key))) {
-    return c.json({ error: "invalidXaiKey" }, 400);
-  }
-  await c.var.db
-    .update(issuers)
-    .set({ encryptedXaiKey: await encrypt(key, c.env.SHARE_KEY) })
-    .where(eq(issuers.id, issuer.id));
-  return c.body(null, 204);
-});
+app.put("/share/key", (c) => putKey(c, "openai"));
 
-/** 預けた xAI のキーを消す。コードは OpenAI だけで使える */
-app.delete("/share/xai", async (c) => {
+/** 預けたキーを消す。最後の 1 つは消せない（おすそ分けをやめる）。消したキーで得た合言葉を残さないよう、新しい合言葉を返す */
+app.delete("/share/keys/:provider", async (c) => {
   const issuer = await admin(c);
   if (!issuer) return c.json({ error: "unauthorized" }, 401);
-  await c.var.db.update(issuers).set({ encryptedXaiKey: null }).where(eq(issuers.id, issuer.id));
-  return c.body(null, 204);
+  const p = provider(c.req.param("provider"));
+  if (!p) return c.json({ error: "notFound" }, 404);
+  const deposited = await issuerProviders(c.var.db, issuer.id);
+  if (!deposited.includes(p)) return c.json({ token: await issueToken(c, issuer) });
+  if (deposited.length === 1) return c.json({ error: "lastKey" }, 409);
+  const tokenSalt = newId();
+  await c.var.db.batch([
+    c.var.db.delete(issuerKeys).where(and(eq(issuerKeys.issuerId, issuer.id), eq(issuerKeys.provider, p))),
+    c.var.db.update(issuers).set({ tokenSalt }).where(eq(issuers.id, issuer.id)),
+  ]);
+  return c.json({ token: await issueToken(c, { ...issuer, tokenSalt }) });
 });
 
 /** おすそ分けをやめる。預けたキーとコードを消す */
@@ -178,8 +225,8 @@ app.get("/share/codes", async (c) => {
     dayUsd: todayUsd({ day, dayUsd: r.dayUsd }, now),
     effectiveLimitUsd: dailyLimit(r),
   }));
-  // xai: xAI のキーを預けているか
-  return c.json({ codes: list, xai: issuer.encryptedXaiKey !== null });
+  // providers: キーを預けている会社（コードはどれもこの会社に使える）
+  return c.json({ codes: list, providers: await issuerProviders(c.var.db, issuer.id) });
 });
 
 /** コードを作る。コードそのものはこの応答でだけ返す（保存するのはハッシュ） */
@@ -354,12 +401,14 @@ async function giftKey(
 ): Promise<{ code: Code; key: string } | Response> {
   const code = await giftCode(c);
   if (!code) return c.json({ error: "unknown" }, 401);
-  // xAI のキーを預けていなければ "unsupported"
-  const error = refusal(code, Date.now()) ?? (providers(code).includes(provider) ? undefined : "unsupported");
-  if (error) return c.json({ error }, 403, { "X-Gift-Refusal": error });
+  const deny = (error: string) => c.json({ error }, 403, { "X-Gift-Refusal": error });
+  const error = refusal(code, Date.now());
+  if (error) return deny(error);
+  const encrypted = code.keys[provider];
+  // その会社のキーを預けていない
+  if (encrypted === undefined) return deny("unsupported");
   const { success } = await c.env.GIFT_RATE.limit({ key: code.id });
   if (!success) return c.json({ error: "rate" }, 429);
-  const encrypted = provider === "xai" ? code.encryptedXaiKey! : code.encryptedKey;
   return { code, key: await decrypt(encrypted, c.env.SHARE_KEY) };
 }
 

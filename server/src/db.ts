@@ -3,7 +3,7 @@
 import { eq, sql, type SQL } from "drizzle-orm";
 import { drizzle, type DrizzleD1Database } from "drizzle-orm/d1";
 import type { Provider } from "./price";
-import { codes, codeUsage, issuers } from "./schema";
+import { codes, codeUsage, issuerKeys, issuers } from "./schema";
 import { normalizeCode, sha256 } from "./secrets";
 
 /** 期限を過ぎても、始めていた配信はこの間だけ続けられる（期限は字幕を始めるときに確かめる） */
@@ -19,13 +19,10 @@ export function open(d1: D1Database): Db {
   return drizzle(d1, { casing: "snake_case" });
 }
 
-const issuerColumns = {
-  id: issuers.id,
-  encryptedKey: issuers.encryptedKey,
-  encryptedXaiKey: issuers.encryptedXaiKey,
-};
+export type Issuer = Pick<typeof issuers.$inferSelect, "id" | "tokenSalt">;
 
-export type Issuer = Pick<typeof issuers.$inferSelect, keyof typeof issuerColumns>;
+/** 会社の並び。OpenAI を先に置く */
+export const PROVIDERS: readonly Provider[] = ["openai", "xai"];
 
 const codeColumns = {
   id: codes.id,
@@ -35,22 +32,40 @@ const codeColumns = {
   dailyLimitUsd: codes.dailyLimitUsd,
   day: codes.day,
   dayUsd: codes.dayUsd,
-  /** おすそ分けした人の暗号化したキー */
-  encryptedKey: issuers.encryptedKey,
-  /** おすそ分けした人の暗号化した xAI のキー。NULL は預けていない */
-  encryptedXaiKey: issuers.encryptedXaiKey,
 };
 
-export type Code = Omit<typeof codes.$inferSelect, "codeHash" | "memo" | "createdAt"> &
-  Pick<typeof issuers.$inferSelect, "encryptedKey" | "encryptedXaiKey">;
+export type Code = { [K in keyof typeof codeColumns]: (typeof codes.$inferSelect)[K] } & {
+  /** おすそ分けした人が預けた、会社ごとの暗号化したキー */
+  keys: Partial<Record<Provider, string>>;
+};
 
 export async function issuerByToken(db: Db, token: string): Promise<Issuer | null> {
   const row = await db
-    .select(issuerColumns)
+    .select({ id: issuers.id, tokenSalt: issuers.tokenSalt })
     .from(issuers)
     .where(eq(issuers.adminTokenHash, await sha256(token)))
     .get();
   return row ?? null;
+}
+
+/** 預けたキーの持ち主（キーのハッシュで探す） */
+export async function issuerByKey(db: Db, keyHash: string): Promise<Issuer | null> {
+  const row = await db
+    .select({ id: issuers.id, tokenSalt: issuers.tokenSalt })
+    .from(issuerKeys)
+    .innerJoin(issuers, eq(issuers.id, issuerKeys.issuerId))
+    .where(eq(issuerKeys.keyHash, keyHash))
+    .get();
+  return row ?? null;
+}
+
+/** 預けたキーの会社 */
+export async function issuerProviders(db: Db, issuerId: string): Promise<Provider[]> {
+  const rows = await db
+    .select({ provider: issuerKeys.provider })
+    .from(issuerKeys)
+    .where(eq(issuerKeys.issuerId, issuerId));
+  return PROVIDERS.filter((p) => rows.some((r) => r.provider === p));
 }
 
 export async function codeByValue(db: Db, code: string): Promise<Code | null> {
@@ -61,14 +76,18 @@ export async function codeById(db: Db, id: string): Promise<Code | null> {
   return codeWhere(db, eq(codes.id, id));
 }
 
+/** コードと、預けたキー（会社ごとに 1 行になるので、1 つにまとめる） */
 async function codeWhere(db: Db, where: SQL): Promise<Code | null> {
-  const row = await db
-    .select(codeColumns)
+  const rows = await db
+    .select({ code: codeColumns, provider: issuerKeys.provider, key: issuerKeys.encryptedKey })
     .from(codes)
-    .innerJoin(issuers, eq(issuers.id, codes.issuerId))
-    .where(where)
-    .get();
-  return row ?? null;
+    .leftJoin(issuerKeys, eq(issuerKeys.issuerId, codes.issuerId))
+    .where(where);
+  const first = rows[0];
+  if (!first) return null;
+  const keys: Code["keys"] = {};
+  for (const { provider, key } of rows) if (provider && key) keys[provider] = key;
+  return { ...first.code, keys };
 }
 
 /** 中継しない理由。期限は猶予（GRACE_MS）を足して見る。使えれば undefined */
@@ -79,9 +98,9 @@ export function refusal(code: Code, now: number): "revoked" | "expired" | "limit
   return undefined;
 }
 
-/** コードで中継する会社（OpenAI はいつも。xAI はキーを預けていれば） */
-export function providers(code: Pick<Code, "encryptedXaiKey">): Provider[] {
-  return code.encryptedXaiKey === null ? ["openai"] : ["openai", "xai"];
+/** コードで中継する会社（おすそ分けした人がキーを預けた会社） */
+export function providers(code: Pick<Code, "keys">): Provider[] {
+  return PROVIDERS.filter((p) => code.keys[p] !== undefined);
 }
 
 /** 実際に効く 1 日の上限 */
