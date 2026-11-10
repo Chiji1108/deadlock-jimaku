@@ -4,6 +4,7 @@
 //! アイコンは `/assets/{clientVersion}/icons/...` で配信する（URL に版を含めるので、長くキャッシュできる）。
 //! 起動時に最新の clientVersion を確認し、キャッシュがなければ作る。通信できなければ手元の最新を使う。
 
+mod aliases;
 mod api;
 mod glossary;
 mod readings;
@@ -18,6 +19,7 @@ use crate::access::Access;
 use crate::lang;
 use crate::store::Store;
 use crate::types::{Glossary, LangCode};
+pub use aliases::Aliases;
 use glossary::{Icon, Sources};
 
 /// キャッシュの形式。Glossary の形やアイコンの置き方を変えたら上げる（古いキャッシュは読まない）
@@ -29,6 +31,12 @@ const LLM_READINGS: &str = "readings-llm.ja.json";
 /// 1 回の問い合わせで読ませる名前の数
 const READINGS_PER_REQUEST: usize = 40;
 
+/// LLM に作らせた別名のキャッシュ（`aliases`）
+const LLM_ALIASES: &str = "aliases-llm.ja.json";
+
+/// 1 回の問い合わせで別名を作らせる用語の数
+const ALIASES_PER_REQUEST: usize = 60;
+
 /// 同時にダウンロードするアイコンの数
 const ICON_CONCURRENCY: usize = 8;
 
@@ -39,6 +47,8 @@ pub struct Loaded {
     pub requested: Vec<LangCode>,
     /// clientVersion ごとのディレクトリを並べる場所
     pub root: PathBuf,
+    /// 用語の別名（参照ごと）。用語を Decisions API で確かめるときだけ作る
+    pub aliases: Arc<Aliases>,
 }
 
 impl Loaded {
@@ -49,8 +59,14 @@ impl Loaded {
 
 /// 辞書を用意して store に載せる。失敗してもアプリは辞書なしで動き続ける。
 /// 漢字名の読みは手書きの読みと、キャッシュ済みの LLM の読みを重ねて配信し、
-/// 足りない名前は配信した後に問い合わせて配信し直す（`access` がなければ手書きとキャッシュの読みだけ）
-pub async fn load_into(store: Arc<Store>, root: PathBuf, access: Option<Access>) {
+/// 足りない名前は配信した後に問い合わせて配信し直す（`access` がなければ手書きとキャッシュの読みだけ）。
+/// `with_aliases` なら、用語の別名も同じように作る
+pub async fn load_into(
+    store: Arc<Store>,
+    root: PathBuf,
+    access: Option<Access>,
+    with_aliases: bool,
+) {
     let settings = store.settings();
     let loaded = match load(&root, &settings.glossary_languages()).await {
         Ok(loaded) => loaded,
@@ -60,10 +76,20 @@ pub async fn load_into(store: Arc<Store>, root: PathBuf, access: Option<Access>)
         }
     };
     let cache_path = root.join(LLM_READINGS);
-    let cache = readings::load_cache(&cache_path).await;
-    let publish = |cache: &readings::Cache| {
+    let cache = readings::load_cache::<readings::Cache>(&cache_path).await;
+    let aliases_path = root.join(LLM_ALIASES);
+    // 読めなければ別名なしで動く（問い合わせて上書きしない）
+    let mut aliases = match with_aliases {
+        true => readings::load_cache::<aliases::Cache>(&aliases_path)
+            .await
+            .inspect_err(|e| tracing::warn!("aliases cache unreadable, aliases are off: {e:#}"))
+            .ok(),
+        false => None,
+    };
+    let publish = |cache: &readings::Cache, aliases: Option<&aliases::Cache>| {
         let mut glossary = (*loaded.glossary).clone();
         readings::apply(&mut glossary, cache);
+        let aliases = aliases.map(|a| aliases::by_reference(&glossary, a));
         tracing::info!(
             "glossary {} ({} entities, {:?})",
             glossary.client_version,
@@ -74,6 +100,7 @@ pub async fn load_into(store: Arc<Store>, root: PathBuf, access: Option<Access>)
             glossary: Arc::new(glossary),
             requested: loaded.requested.clone(),
             root: loaded.root.clone(),
+            aliases: Arc::new(aliases.unwrap_or_default()),
         });
     };
     // キャッシュを読めないまま問い合わせると、保存で上書きしてしまうので、LLM の読みは使わない
@@ -84,9 +111,9 @@ pub async fn load_into(store: Arc<Store>, root: PathBuf, access: Option<Access>)
             (readings::Cache::new(), false)
         }
     };
-    publish(&cache);
+    publish(&cache, aliases.as_ref());
 
-    let (true, Some(access)) = (readable, access) else {
+    let Some(access) = access else {
         return;
     };
     let model = readings::ReadingModel {
@@ -95,8 +122,15 @@ pub async fn load_into(store: Arc<Store>, root: PathBuf, access: Option<Access>)
         reasoning_effort: settings.models.reasoning_effort.clone(),
         meter: store.meter(),
     };
-    let missing = readings::missing(&loaded.glossary, &cache);
-    if missing.is_empty() {
+    let missing = match readable {
+        true => readings::missing(&loaded.glossary, &cache),
+        false => Vec::new(),
+    };
+    let missing_aliases = aliases
+        .as_ref()
+        .map(|a| aliases::missing(&loaded.glossary, a))
+        .unwrap_or_default();
+    if missing.is_empty() && missing_aliases.is_empty() {
         return;
     }
     // 1 回の問い合わせを小さくし、届いた分ずつ保存する。失敗した分は次の起動で問い直す
@@ -112,7 +146,21 @@ pub async fn load_into(store: Arc<Store>, root: PathBuf, access: Option<Access>)
             Err(e) => tracing::warn!("readings: {e:#}"),
         }
     }
-    publish(&cache);
+    if let Some(aliases) = &mut aliases {
+        for terms in missing_aliases.chunks(ALIASES_PER_REQUEST) {
+            match aliases::ask(crate::http(), &model, terms).await {
+                Ok(found) => {
+                    tracing::info!("aliases: {}/{} terms", found.len(), terms.len());
+                    aliases.extend(found);
+                    if let Err(e) = readings::save_cache(&aliases_path, aliases).await {
+                        tracing::warn!("aliases cache: {e:#}");
+                    }
+                }
+                Err(e) => tracing::warn!("aliases: {e:#}"),
+            }
+        }
+    }
+    publish(&cache, aliases.as_ref());
 }
 
 /// 字幕を始めるときに、新しい版の辞書を裏で確かめる（DESIGN.md 8.2）。トレイに常駐すると、
@@ -217,6 +265,7 @@ async fn build_and_save(
         glossary: Arc::new(glossary),
         requested: Vec::new(),
         root: root.to_owned(),
+        aliases: Default::default(),
     })
 }
 
@@ -269,6 +318,7 @@ fn read_version(root: &Path, version: u32) -> Option<Loaded> {
         glossary: Arc::new(glossary),
         requested: Vec::new(),
         root: root.to_owned(),
+        aliases: Default::default(),
     })
 }
 
@@ -286,6 +336,7 @@ mod tests {
             }),
             requested: Vec::new(),
             root: PathBuf::new(),
+            aliases: Default::default(),
         };
         assert!(is_newer(6519, Some(&loaded(6518))));
         assert!(!is_newer(6518, Some(&loaded(6518))));

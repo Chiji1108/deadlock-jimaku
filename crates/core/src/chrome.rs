@@ -424,11 +424,15 @@ pub(crate) async fn final_translation(
 }
 
 /// ページが認識した文を字幕にする。止めるまで続く（ページが閉じられても、開き直せば続きが出る）。
-/// `access` は確定の仕上げに LLM を使う工程があるときだけ
-pub async fn run(store: Arc<Store>, access: Option<Access>) -> anyhow::Result<()> {
+/// `access` は確定の仕上げに OpenAI を使う工程があるときだけ、`qwen` は翻訳専門のモデルで訳すときだけ
+pub async fn run(
+    store: Arc<Store>,
+    access: Option<Access>,
+    qwen: Option<Access>,
+) -> anyhow::Result<()> {
     let settings = store.settings();
     let annotator = Annotator::new(store.clone(), &settings).await;
-    let finisher = Arc::new(Finisher::new(store.clone(), &settings, access));
+    let finisher = Arc::new(Finisher::new(store.clone(), &settings, access, qwen));
     let mut events = store.subscribe_chrome();
     let (done_tx, mut done_rx) = tokio::sync::mpsc::channel(64);
     let mut subtitles = Subtitles::new(store, &settings, annotator, finisher, done_tx);
@@ -760,7 +764,7 @@ mod tests {
         let store = Store::new(Ok(settings.clone()), std::path::PathBuf::new());
         let messages = store.subscribe();
         let annotator = Annotator::new(store.clone(), &settings).await;
-        let finisher = Arc::new(Finisher::new(store.clone(), &settings, None));
+        let finisher = Arc::new(Finisher::new(store.clone(), &settings, None, None));
         let (done_tx, done) = tokio::sync::mpsc::channel(8);
         let subs = Subtitles::new(store, &settings, annotator, finisher, done_tx);
         (subs, messages, done)

@@ -452,6 +452,7 @@ pub async fn transcribe(http: &reqwest::Client, req: BatchRequest<'_>) -> anyhow
                 .bearer_auth(access.token())
                 .multipart(form.part("file", file))
         }
+        Provider::Qwen => bail!("Qwen does not transcribe"),
     };
     let res = request.send().await?;
     let status = res.status();

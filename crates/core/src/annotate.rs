@@ -11,7 +11,7 @@ use tokio::sync::watch;
 
 use crate::assets::Loaded;
 use crate::reading::{Furigana, Morpheme, annotate};
-use crate::settings::{EmphasisSource, Phase, RubySource, Settings};
+use crate::settings::{Phase, RubySource, Settings};
 use crate::store::Store;
 use crate::terms::{Found, Term, Terms, ruby};
 use crate::types::{Entity, Glossary, LiveState, LiveStatus, TermName, Token, Translatable};
@@ -60,7 +60,7 @@ impl Annotator {
             let table = table.as_ref().map(|l| table_of(&l.glossary, self.furigana));
             self.terms = Terms::new(table.unwrap_or_default());
         }
-        let with_terms = phase.emphasis == Some(EmphasisSource::Terms);
+        let with_terms = phase.local_terms();
         let with_ruby = phase.ruby == Some(RubySource::Lindera);
         let furigana = self.furigana.filter(|_| with_ruby || with_terms);
         let terms = with_terms.then_some(&self.terms);
@@ -339,6 +339,7 @@ mod tests {
             glossary: Arc::new(magazine(None)),
             requested: Vec::new(),
             root: std::path::PathBuf::new(),
+            aliases: Default::default(),
         });
         let (_, translate) = annotator.annotate("基礎拡張マガジンを取る", &phase);
         assert_eq!(translate.terms.len(), 1);

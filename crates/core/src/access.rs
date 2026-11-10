@@ -18,6 +18,8 @@ impl Access {
         let base = match provider {
             Provider::OpenAi => "https://api.openai.com/v1",
             Provider::Xai => "https://api.x.ai/v1",
+            // QwenCloud のシンガポールの口（OpenAI 互換）。鍵は地域ごとに別で、ほかの地域の鍵は 401 になる
+            Provider::Qwen => "https://ap-southeast-1.maas.qwencloudapi.com/compatible-mode/v1",
         };
         Self {
             provider,
@@ -28,10 +30,12 @@ impl Access {
     }
 
     /// `api` は開発者のサーバーの根元（設定の `apiBase`）。会社ごとに `/openai`、`/xai` の下で中継する
+    /// （Qwen の中継はまだない。ギフトコードが中継する会社に入らないので、字幕を始めるときに断る）
     pub fn gift(provider: Provider, code: String, api: &str) -> Self {
         let path = match provider {
             Provider::OpenAi => "openai",
             Provider::Xai => "xai",
+            Provider::Qwen => "qwen",
         };
         Self {
             provider,

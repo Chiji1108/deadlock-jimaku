@@ -63,6 +63,8 @@ struct AssetsInput {
     access: Option<Access>,
     /// 新しい版の辞書があれば増える
     refreshes: u64,
+    /// 用語の別名も作る（用語を Decisions API で確かめるとき）
+    aliases: bool,
 }
 
 #[derive(PartialEq)]
@@ -97,6 +99,8 @@ struct AudioInput {
     access: Option<Access>,
     /// xAI の送り先と鍵（xAI を使う工程がなければ None）
     xai: Option<Access>,
+    /// Qwen の送り先と鍵（Qwen を使う工程がなければ None）
+    qwen: Option<Access>,
 }
 
 /// ページは準備が整い直すたびに設定を読むので、ページが使う設定もここに入れる
@@ -112,6 +116,8 @@ struct ChromeInput {
     models: Models,
     /// OpenAI を使う工程があるのに鍵がなければ始めない
     access: Option<Access>,
+    /// Qwen も同じ
+    qwen: Option<Access>,
 }
 
 #[derive(Clone, PartialEq)]
@@ -145,6 +151,9 @@ pub async fn run(store: Arc<Store>, options: Options) {
         let xai = keys
             .access(Provider::Xai, &settings.api_base)
             .filter(|_| settings.engines.uses_xai());
+        let qwen = keys
+            .access(Provider::Qwen, &settings.api_base)
+            .filter(|_| settings.engines.uses_qwen());
 
         assets_slot
             .update(
@@ -152,12 +161,14 @@ pub async fn run(store: Arc<Store>, options: Options) {
                     languages: languages.clone(),
                     access: access.clone(),
                     refreshes: store.glossary_refreshes(),
+                    aliases: settings.engines.decides_terms(),
                 },
                 || {
                     Some(tokio::spawn(assets::load_into(
                         store.clone(),
                         store.data_dir().join("assets"),
                         access.clone(),
+                        settings.engines.decides_terms(),
                     )))
                 },
             )
@@ -181,7 +192,7 @@ pub async fn run(store: Arc<Store>, options: Options) {
             })
             .await;
 
-        let input = subtitles_input(&settings, &options, access, xai);
+        let input = subtitles_input(&settings, &options, access, xai, qwen);
         update_subtitles(&mut subtitles_slot, &store, input, &settings.api_base).await;
         // 設定を変えて字幕の処理を作り直しても、ウィンドウは閉じない
         store.sync_chrome();
@@ -197,6 +208,7 @@ fn subtitles_input(
     options: &Options,
     access: Option<Access>,
     xai: Option<Access>,
+    qwen: Option<Access>,
 ) -> SubtitlesInput {
     if settings.engines.transcription == FinalSource::Chrome {
         if !settings.transcription_enabled {
@@ -211,6 +223,7 @@ fn subtitles_input(
             engines: settings.engines,
             models: settings.models.clone(),
             access,
+            qwen,
         }));
     }
     let source = match &options.input_file {
@@ -230,6 +243,7 @@ fn subtitles_input(
         segmentation: settings.segmentation.clone(),
         access,
         xai,
+        qwen,
     }))
 }
 
@@ -258,36 +272,23 @@ fn start_subtitles(
     match input {
         SubtitlesInput::Stopped => None,
         SubtitlesInput::Chrome(input) => {
-            if input.engines.uses_openai() && input.access.is_none() {
-                store.set_transcription_error(Some(TranscriptionError::MissingKey {
-                    provider: Provider::OpenAi,
-                }));
+            if let Some(provider) = missing_key(&input.engines, &input.access, &None, &input.qwen) {
+                store.set_transcription_error(Some(TranscriptionError::MissingKey { provider }));
                 return None;
             }
             tracing::info!("transcription started");
             let store = store.clone();
             Some(tokio::spawn(async move {
-                if !gift_accepted(&store, input.access.iter(), check_gift.as_deref()).await {
+                let accesses = input.access.iter().chain(&input.qwen);
+                if !gift_accepted(&store, accesses, check_gift.as_deref()).await {
                     return;
                 }
-                let run = chrome::run(store.clone(), input.access);
+                let run = chrome::run(store.clone(), input.access, input.qwen);
                 supervise(store, run, None).await;
             }))
         }
         SubtitlesInput::Audio(input) => {
-            // 足りない鍵があれば始めない（OpenAI を先に知らせる）
-            let missing = [
-                (
-                    Provider::OpenAi,
-                    input.engines.uses_openai() && input.access.is_none(),
-                ),
-                (
-                    Provider::Xai,
-                    input.engines.uses_xai() && input.xai.is_none(),
-                ),
-            ]
-            .into_iter()
-            .find_map(|(provider, missing)| missing.then_some(provider));
+            let missing = missing_key(&input.engines, &input.access, &input.xai, &input.qwen);
             if let Some(provider) = missing {
                 store.set_transcription_error(Some(TranscriptionError::MissingKey { provider }));
                 return None;
@@ -295,7 +296,7 @@ fn start_subtitles(
             // 確定が Chrome でなければ、xAI か OpenAI のどちらかを使う（鍵は上で確かめた）
             let transcriber =
                 (input.xai.clone().or_else(|| input.access.clone())).expect("finals without a key");
-            let (access, xai) = (input.access, input.xai);
+            let (access, xai, qwen) = (input.access, input.xai, input.qwen);
             tracing::info!("transcription started");
             let (input, ended) = match input.source {
                 Source::Mic(device) => (
@@ -306,14 +307,31 @@ fn start_subtitles(
             };
             let store = store.clone();
             Some(tokio::spawn(async move {
-                if !gift_accepted(&store, access.iter().chain(&xai), check_gift.as_deref()).await {
+                let accesses = access.iter().chain(&xai).chain(&qwen);
+                if !gift_accepted(&store, accesses, check_gift.as_deref()).await {
                     return;
                 }
-                let run = subtitles::run(store.clone(), input, access, transcriber);
+                let run = subtitles::run(store.clone(), input, access, transcriber, qwen);
                 supervise(store, run, ended).await;
             }))
         }
     }
+}
+
+/// 工程に要るのに、送り先と鍵のない会社（OpenAI を先に知らせる）
+fn missing_key(
+    engines: &Engines,
+    access: &Option<Access>,
+    xai: &Option<Access>,
+    qwen: &Option<Access>,
+) -> Option<Provider> {
+    [
+        (Provider::OpenAi, engines.uses_openai() && access.is_none()),
+        (Provider::Xai, engines.uses_xai() && xai.is_none()),
+        (Provider::Qwen, engines.uses_qwen() && qwen.is_none()),
+    ]
+    .into_iter()
+    .find_map(|(provider, missing)| missing.then_some(provider))
 }
 
 /// ギフトコードを使うなら、`check` の API の根元で、使えるか・使う会社を中継するかを確かめる。
@@ -395,6 +413,7 @@ mod tests {
             engines: Engines::CHROME,
             models: Settings::default().models,
             access: None,
+            qwen: None,
         }))
     }
 
@@ -477,6 +496,7 @@ mod tests {
                 segmentation: Settings::default().segmentation,
                 access: code.map(|code| Access::gift(Provider::OpenAi, code.into(), &self.api)),
                 xai: None,
+                qwen: None,
             }))
         }
 

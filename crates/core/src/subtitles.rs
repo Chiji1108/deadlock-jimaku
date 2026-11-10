@@ -49,12 +49,14 @@ const PROMPT: &str = "Live commentary by a streamer playing the video game Deadl
 const PLAIN_PROMPT: &str = "Live commentary by a streamer.";
 
 /// `access` は OpenAI（途中の字幕・翻訳・ふりがな）の送り先と鍵（OpenAI を使わなければ None）、
-/// `transcriber` は確定の文字起こしの送り先と鍵（OpenAI なら GPT-Transcribe、xAI なら Grok）
+/// `transcriber` は確定の文字起こしの送り先と鍵（OpenAI なら GPT-Transcribe、xAI なら Grok）、
+/// `qwen` は翻訳専門のモデルの送り先と鍵（使わなければ None）
 pub async fn run(
     store: Arc<Store>,
     input: audio::Input,
     access: Option<Access>,
     transcriber: Access,
+    qwen: Option<Access>,
 ) -> anyhow::Result<()> {
     let settings = store.settings();
 
@@ -119,7 +121,7 @@ pub async fn run(
         };
 
     let cloud = Cloud {
-        finisher: Arc::new(Finisher::new(store.clone(), &settings, access)),
+        finisher: Arc::new(Finisher::new(store.clone(), &settings, access, qwen)),
         finished_tx,
         batch: Arc::new(BatchContext {
             http: crate::http().clone(),
@@ -857,6 +859,7 @@ mod tests {
                 store.clone(),
                 &settings,
                 Some(access.clone()),
+                None,
             )),
             finished_tx,
             batch: Arc::new(BatchContext {

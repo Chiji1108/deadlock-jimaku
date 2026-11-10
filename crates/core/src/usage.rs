@@ -98,10 +98,17 @@ fn price(model: &str) -> Option<Price> {
             cached: 0.05,
             output: 5.00,
         },
+        // Decisions API も同じ入力の単価で、出力は数えられない
         "gpt-6-luna" => Price::PerMillion {
             input: 0.10,
             cached: 0.01,
             output: 0.50,
+        },
+        // 料金の比較サイトの値（QwenCloud の料金ページでは確かめていない。DESIGN.md 9.7）
+        "qwen-mt-flash" => Price::PerMillion {
+            input: 0.16,
+            cached: 0.16,
+            output: 0.49,
         },
         _ => return None,
     })

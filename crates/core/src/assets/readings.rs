@@ -12,6 +12,8 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use serde::Deserialize;
+use serde::Serialize;
+use serde::de::DeserializeOwned;
 use serde_json::json;
 
 use crate::access::Access;
@@ -35,10 +37,10 @@ pub type Cache = BTreeMap<String, Vec<RubySegment>>;
 
 /// ファイルがなければ空。壊れていたら脇に退けて空から始める。
 /// 読めない（権限など）、退けられないときは Err（黙って上書きしない）
-pub async fn load_cache(path: &Path) -> anyhow::Result<Cache> {
+pub async fn load_cache<T: DeserializeOwned + Default>(path: &Path) -> anyhow::Result<T> {
     let bytes = match tokio::fs::read(path).await {
         Ok(bytes) => bytes,
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Cache::new()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(T::default()),
         Err(e) => return Err(e.into()),
     };
     match serde_json::from_slice(&bytes) {
@@ -46,16 +48,13 @@ pub async fn load_cache(path: &Path) -> anyhow::Result<Cache> {
         Err(e) => {
             let aside = path.with_extension("json.broken");
             tokio::fs::rename(path, &aside).await?;
-            tracing::warn!(
-                "readings cache is broken ({e}); moved to {}",
-                aside.display()
-            );
-            Ok(Cache::new())
+            tracing::warn!("cache is broken ({e}); moved to {}", aside.display());
+            Ok(T::default())
         }
     }
 }
 
-pub async fn save_cache(path: &Path, cache: &Cache) -> anyhow::Result<()> {
+pub async fn save_cache<T: Serialize>(path: &Path, cache: &T) -> anyhow::Result<()> {
     crate::write_atomic(path, &serde_json::to_vec_pretty(cache)?).await
 }
 
@@ -214,7 +213,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("cache.json");
         tokio::fs::write(&path, b"{ broken").await.unwrap();
-        assert!(load_cache(&path).await.unwrap().is_empty());
+        assert!(load_cache::<Cache>(&path).await.unwrap().is_empty());
         assert!(dir.path().join("cache.json.broken").exists());
     }
 }

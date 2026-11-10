@@ -470,7 +470,7 @@ fn cover(text: &str, offset: usize, placed: &[(usize, usize, &RubySegment)]) -> 
 }
 
 /// 原文の区切り。用語なら参照
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Span {
     Text(String),
     Entity { reference: String, spoken: String },

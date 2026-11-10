@@ -19,6 +19,8 @@ pub enum Provider {
     OpenAi,
     /// 確定の文字起こし（Grok Voice Transcribe）
     Xai,
+    /// 翻訳（Qwen-MT-Flash）。QwenCloud のシンガポールの鍵（DESIGN.md 9.7）
+    Qwen,
 }
 
 impl Provider {
@@ -26,6 +28,7 @@ impl Provider {
         match self {
             Self::OpenAi => Slot::OpenAi,
             Self::Xai => Slot::Xai,
+            Self::Qwen => Slot::Qwen,
         }
     }
 }
@@ -35,6 +38,7 @@ impl Provider {
 enum Slot {
     OpenAi,
     Xai,
+    Qwen,
     /// 人からもらったギフトコード（DESIGN.md 17.1）
     Gift,
     /// おすそ分けを管理する合言葉（サーバーが発行）
@@ -48,6 +52,7 @@ impl Slot {
         match self {
             Self::OpenAi => "openai",
             Self::Xai => "xai",
+            Self::Qwen => "qwen",
             Self::Gift => "gift",
             Self::ShareToken => "share-token",
             Self::ShareCode => "share-code",
@@ -72,6 +77,7 @@ pub enum KeyState {
 pub struct KeyStatus {
     pub openai: KeyState,
     pub xai: KeyState,
+    pub qwen: KeyState,
     /// ギフトコード。コードそのものは返さない
     pub gift: KeyState,
 }
@@ -80,16 +86,18 @@ pub struct KeyStatus {
 pub struct Keys {
     pub openai: Option<String>,
     pub xai: Option<String>,
+    pub qwen: Option<String>,
     pub gift: Option<String>,
 }
 
 impl Keys {
     /// 自分のキーがあればその会社へ直接、なければギフトコードで開発者のサーバーを通す（`api` はその根元）。
-    /// ギフトコードでその会社を使えるか（xAI のキーを預けているか）は、字幕を始めるときに確かめる
+    /// ギフトコードでその会社を使えるか（おすそ分けした人がその会社のキーを預けているか）は、字幕を始めるときに確かめる
     pub fn access(&self, provider: Provider, api: &str) -> Option<Access> {
         let own = match provider {
             Provider::OpenAi => &self.openai,
             Provider::Xai => &self.xai,
+            Provider::Qwen => &self.qwen,
         };
         match (own, &self.gift) {
             (Some(key), _) => Some(Access::key(provider, key.clone())),
@@ -152,6 +160,7 @@ pub fn load() -> Keys {
     Keys {
         openai: get_or_warn(Slot::OpenAi),
         xai: get_or_warn(Slot::Xai),
+        qwen: get_or_warn(Slot::Qwen),
         gift: get_or_warn(Slot::Gift),
     }
 }
@@ -160,6 +169,7 @@ pub fn status() -> KeyStatus {
     KeyStatus {
         openai: state(Slot::OpenAi),
         xai: state(Slot::Xai),
+        qwen: state(Slot::Qwen),
         gift: state(Slot::Gift),
     }
 }

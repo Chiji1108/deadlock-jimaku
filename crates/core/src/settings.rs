@@ -562,7 +562,9 @@ pub struct Engines {
     pub live: LiveSource,
     /// 確定の文字起こし
     pub transcription: FinalSource,
-    /// 翻訳と用語。訳文の名前を用語から作るので、同じもので作る（DESIGN.md 9.1）
+    /// 用語の判定。翻訳を LLM にしたら、LLM が翻訳と同時に判定するので使わない（DESIGN.md 9.7）
+    pub terms: TermsEngine,
+    /// 翻訳。LLM なら用語も同時に判定する（訳文の名前を用語から作る。DESIGN.md 9.1）
     pub translation: TranslationEngine,
     /// ふりがな
     pub furigana: RubySource,
@@ -573,6 +575,7 @@ impl Engines {
     pub const CHROME: Self = Self {
         live: LiveSource::Chrome,
         transcription: FinalSource::Chrome,
+        terms: TermsEngine::Dictionary,
         translation: TranslationEngine::ChromeTranslator,
         furigana: RubySource::Lindera,
     };
@@ -580,6 +583,7 @@ impl Engines {
     pub const LIGHT: Self = Self {
         live: LiveSource::Chrome,
         transcription: FinalSource::GrokVoiceTranscribe,
+        terms: TermsEngine::Dictionary,
         translation: TranslationEngine::Gpt6Luna,
         furigana: RubySource::Lindera,
     };
@@ -587,6 +591,7 @@ impl Engines {
     pub const STANDARD: Self = Self {
         live: LiveSource::Chrome,
         transcription: FinalSource::GptTranscribe,
+        terms: TermsEngine::Dictionary,
         translation: TranslationEngine::Gpt61Terra,
         furigana: RubySource::Llm,
     };
@@ -599,15 +604,26 @@ impl Engines {
     /// 有料の工程があり、鍵が要る。表示の設定（翻訳先、ふりがな）では変わらないので、
     /// 表示を切り替えても字幕の処理を始め直さない
     pub fn paid(&self) -> bool {
-        self.uses_openai() || self.uses_xai()
+        self.uses_openai() || self.uses_xai() || self.uses_qwen()
     }
 
     /// OpenAI を使う工程があり、API キーかギフトコードが要る
     pub fn uses_openai(&self) -> bool {
         self.live == LiveSource::GptLiveTranscribe
             || self.transcription == FinalSource::GptTranscribe
-            || self.translation != TranslationEngine::ChromeTranslator
+            || self.translation.source() == TranslationSource::Llm
+            || self.decides_terms()
             || self.furigana == RubySource::Llm
+    }
+
+    /// 用語を Decisions API で確かめる（翻訳が LLM なら、LLM が同時に判定する）
+    pub fn decides_terms(&self) -> bool {
+        self.terms == TermsEngine::Decisions && self.translation.source() != TranslationSource::Llm
+    }
+
+    /// Qwen を使う工程があり、Qwen の API キーが要る（ギフトコードでは使えない）
+    pub fn uses_qwen(&self) -> bool {
+        self.translation == TranslationEngine::QwenMtFlash
     }
 
     /// xAI を使う工程があり、xAI の API キーが要る（ギフトコードは OpenAI だけ）
@@ -667,12 +683,25 @@ pub enum TextSource {
     GrokVoiceTranscribe,
 }
 
-/// 翻訳と用語を何で作るか。Chrome の翻訳なら、用語は辞書の一致で判定する
+/// 用語を何で判定するか（翻訳が LLM でないとき）
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum TermsEngine {
+    /// 辞書の名前との一致（PC の中）
+    Dictionary,
+    /// PC の中で候補を出し（名前、別名、似た名前、「ウルト」と番号）、OpenAI の Decisions API に確かめさせる
+    Decisions,
+}
+
+/// 翻訳を何で作るか。LLM（Terra と Luna）は用語も同時に判定する
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub enum TranslationEngine {
     ChromeTranslator,
+    /// 翻訳専門のモデル。速くて安い（DESIGN.md 9.7）
+    QwenMtFlash,
     Gpt61Terra,
     /// Terra より安く速いが、用語の判定は弱い（DESIGN.md 9.3）
     Gpt6Luna,
@@ -682,6 +711,7 @@ impl TranslationEngine {
     pub fn source(self) -> TranslationSource {
         match self {
             Self::ChromeTranslator => TranslationSource::ChromeTranslator,
+            Self::QwenMtFlash => TranslationSource::QwenMt,
             Self::Gpt61Terra | Self::Gpt6Luna => TranslationSource::Llm,
         }
     }
@@ -691,6 +721,7 @@ impl TranslationEngine {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TranslationSource {
     ChromeTranslator,
+    QwenMt,
     Llm,
 }
 
@@ -706,7 +737,10 @@ pub enum RubySource {
 /// 用語の強調の出どころ
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum EmphasisSource {
+    /// 辞書の名前との一致
     Terms,
+    /// 候補を Decisions API で確かめる。確かめられなければ辞書の一致を使う
+    Decisions,
     Llm,
 }
 
@@ -739,7 +773,15 @@ impl Phase {
 
     /// PC の中で読みか用語を付けるか
     pub fn marks(&self) -> bool {
-        self.ruby == Some(RubySource::Lindera) || self.emphasis == Some(EmphasisSource::Terms)
+        self.ruby == Some(RubySource::Lindera) || self.local_terms()
+    }
+
+    /// PC の中で辞書の一致を付けるか（Decisions で確かめるときも、確かめられなかったときのために付ける）
+    pub fn local_terms(&self) -> bool {
+        matches!(
+            self.emphasis,
+            Some(EmphasisSource::Terms | EmphasisSource::Decisions)
+        )
     }
 }
 
@@ -886,9 +928,11 @@ impl Settings {
                 Ruby::Lindera => lindera,
                 Ruby::Llm => ruby.then_some(Ruby::Llm),
             },
-            emphasis: match engines.translation.source() {
-                Translation::ChromeTranslator => terms,
-                Translation::Llm => self.deadlock_mode.then_some(Emphasis::Llm),
+            emphasis: match (engines.translation.source(), engines.terms) {
+                (Translation::Llm, _) => self.deadlock_mode.then_some(Emphasis::Llm),
+                (_, TermsEngine::Dictionary) => terms,
+                // 候補の出し方（かなの似た名前）は日本語だけ
+                (_, TermsEngine::Decisions) => terms.map(|_| Emphasis::Decisions),
             },
         };
         Plan {

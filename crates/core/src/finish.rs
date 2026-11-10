@@ -1,8 +1,9 @@
 //! 確定した文に、工程ごとの選択（`Engines`）どおりに用語・ふりがな・翻訳を付ける（DESIGN.md 9.2、9.6）。
 //!
-//! 用語の区切りは LLM か辞書の一致、ふりがなは LLM か形態素解析、翻訳は LLM か Chrome の翻訳で作り、
-//! 文字の位置で 1 つの字幕にまとめる（`enrich::source_tokens`）。確定の文を Chrome と OpenAI の
-//! どちらが作っても、この流れを通る。聞くものは同時に投げる
+//! 用語の区切りは LLM か辞書の一致か Decisions API、ふりがなは LLM か形態素解析、翻訳は LLM か Chrome の翻訳か
+//! 翻訳専門のモデルで作り、文字の位置で 1 つの字幕にまとめる（`enrich::source_tokens`）。確定の文を Chrome と
+//! OpenAI のどちらが作っても、この流れを通る。ふりがなは、用語と翻訳と同時に聞く。
+//! 用語と翻訳は、LLM なら 1 回で聞き、ほかは用語を決めてから訳す（訳文の名前を用語から作る。DESIGN.md 9.7）
 
 use std::sync::Arc;
 use std::time::Instant;
@@ -11,15 +12,24 @@ use tokio::sync::{broadcast, mpsc};
 
 use crate::access::Access;
 use crate::chrome;
+use crate::decide::Decider;
 use crate::enrich::{Enricher, Span, source_tokens};
+use crate::mt::Translator;
 use crate::settings::{EmphasisSource, Phase, RubySource, Settings, TranslationSource};
 use crate::store::{ChromeEvent, Store};
-use crate::types::{Enriched, RubySegment, Token, TranscriptionError, Translatable, Translations};
+use crate::types::{
+    Enriched, Glossary, RubySegment, TermName, Token, TranscriptionError, Translatable,
+    Translations,
+};
 
 pub struct Finisher {
     store: Arc<Store>,
     /// LLM に聞く工程があり、鍵があるときだけ
     enricher: Option<Enricher>,
+    /// 用語を Decisions API で確かめるときだけ
+    decider: Option<Decider>,
+    /// 翻訳専門のモデルで訳すときだけ
+    translator: Option<Translator>,
 }
 
 /// 字幕の処理に返すもの
@@ -45,7 +55,25 @@ pub struct Heard {
 }
 
 impl Finisher {
-    pub fn new(store: Arc<Store>, settings: &Settings, access: Option<Access>) -> Self {
+    /// `access` は OpenAI、`qwen` は Qwen の送り先と鍵
+    pub fn new(
+        store: Arc<Store>,
+        settings: &Settings,
+        access: Option<Access>,
+        qwen: Option<Access>,
+    ) -> Self {
+        let decider = access
+            .clone()
+            .filter(|_| settings.engines.decides_terms())
+            .map(|access| Decider::new(access, settings.mic_language.clone(), store.meter()));
+        let translator = qwen.filter(|_| settings.engines.uses_qwen()).map(|qwen| {
+            Translator::new(
+                qwen,
+                settings.mic_language.clone(),
+                settings.translate_to.clone(),
+                store.meter(),
+            )
+        });
         let enricher = access.map(|access| {
             Enricher::new(
                 access,
@@ -56,7 +84,12 @@ impl Finisher {
                 store.meter(),
             )
         });
-        Self { store, enricher }
+        Self {
+            store,
+            enricher,
+            decider,
+            translator,
+        }
     }
 
     /// `translate` は Chrome の翻訳に渡す文。`phase` は確定の作り方。
@@ -69,8 +102,13 @@ impl Finisher {
         done: mpsc::Sender<Finished>,
     ) {
         let finisher = self.clone();
-        let chrome = (phase.translation == Some(TranslationSource::ChromeTranslator))
-            .then(|| chrome::ask_final_translation(&self.store, heard.id.clone(), translate))
+        // 用語が PC の中の一致で決まっているなら、すぐページに頼む（頼んだときから聞くので、訳がすぐ届いても
+        // 取りこぼさない）。Decisions で確かめるなら、用語が決まってから頼む
+        let decides = phase.emphasis == Some(EmphasisSource::Decisions);
+        let chrome = (phase.translation == Some(TranslationSource::ChromeTranslator) && !decides)
+            .then(|| {
+                chrome::ask_final_translation(&self.store, heard.id.clone(), translate.clone())
+            })
             .flatten();
         tokio::spawn(async move {
             let started = Instant::now();
@@ -82,7 +120,8 @@ impl Finisher {
                     translations,
                 });
             };
-            let finished = match finisher.finish(heard, &phase, chrome, on_draft).await {
+            let asked = finisher.finish(heard, translate, chrome, &phase, on_draft);
+            let finished = match asked.await {
                 Ok(enriched) => Finished::Done { id, enriched },
                 Err(refused) => Finished::Refused(refused),
             };
@@ -91,12 +130,13 @@ impl Finisher {
         });
     }
 
-    /// `chrome` は Chrome のページに頼んだ訳
+    /// `translate` は、PC の中で付けた用語で作った、Chrome の翻訳に渡す文。`chrome` は、もうページに頼んだ訳
     async fn finish(
         &self,
         heard: Heard,
-        phase: &Phase,
+        translate: Translatable,
         chrome: Option<broadcast::Receiver<ChromeEvent>>,
+        phase: &Phase,
         on_draft: impl FnMut(Translations),
     ) -> Result<Enriched, TranscriptionError> {
         let Heard {
@@ -112,8 +152,10 @@ impl Finisher {
                 || phase.emphasis == Some(EmphasisSource::Llm)
         });
         // 辞書は文ごとに store から取る（後から届いたり、作り直されたりする）
-        let glossary = self.store.glossary().map(|l| l.glossary);
-        let (ruby, words, translated) = tokio::join!(
+        let loaded = self.store.glossary();
+        let glossary = loaded.as_ref().map(|l| l.glossary.clone());
+        let local = spans_of(&tokens);
+        let (ruby, words) = tokio::join!(
             async {
                 match llm_ruby {
                     Some(e) => answer("furigana", e.furigana(&text, &context).await)
@@ -122,30 +164,88 @@ impl Finisher {
                 }
             },
             async {
-                match llm_words {
-                    Some(e) => answer(
-                        "terms and translation",
-                        e.terms_and_translations(&text, &context, glossary.as_deref(), on_draft)
-                            .await,
-                    ),
-                    None => Ok(None),
+                if let Some(e) = llm_words {
+                    let asked = e
+                        .terms_and_translations(&text, &context, glossary.as_deref(), on_draft)
+                        .await;
+                    return answer("terms and translation", asked);
                 }
-            },
-            async {
-                match chrome {
-                    Some(events) => chrome::final_translation(events, &id).await,
-                    None => Translations::new(),
-                }
+                // 用語を決めてから訳す。確かめられなければ、PC の中で付けた用語のまま訳す
+                let decider = self
+                    .decider
+                    .as_ref()
+                    .filter(|_| phase.emphasis == Some(EmphasisSource::Decisions));
+                let decided = match (decider, &loaded) {
+                    (Some(d), Some(loaded)) => answer(
+                        "terms",
+                        d.terms(crate::http(), &text, &context, loaded)
+                            .await
+                            .map(Some),
+                    )?,
+                    _ => None,
+                };
+                let translations = match phase.translation {
+                    Some(TranslationSource::ChromeTranslator) => {
+                        let events = chrome.or_else(|| {
+                            let translate = match &decided {
+                                Some(spans) => translatable(spans, glossary.as_deref()),
+                                None => translate,
+                            };
+                            chrome::ask_final_translation(&self.store, id.clone(), translate)
+                        });
+                        match events {
+                            Some(events) => chrome::final_translation(events, &id).await,
+                            None => Translations::new(),
+                        }
+                    }
+                    Some(TranslationSource::QwenMt) => match &self.translator {
+                        Some(t) => {
+                            let spans = decided.as_deref().unwrap_or(&local);
+                            t.translate(crate::http(), spans, glossary.as_deref()).await
+                        }
+                        None => Translations::new(),
+                    },
+                    Some(TranslationSource::Llm) | None => Translations::new(),
+                };
+                Ok(Some((
+                    decided.unwrap_or_else(|| local.clone()),
+                    translations,
+                )))
             },
         );
         // LLM に聞かなかったものと、答えが通らなかったものは、PC の中で付けたものを使う
         let ruby = ruby?.unwrap_or_else(|| ruby_of(&tokens));
-        let (spans, translations) = words?.unwrap_or_else(|| (spans_of(&tokens), translated));
+        let (spans, translations) = words?.unwrap_or_else(|| (local, Translations::new()));
         Ok(Enriched {
             source: source_tokens(&spans, &ruby),
             translations,
         })
     }
+}
+
+/// Chrome の翻訳に渡す文。用語を英語の名前に置き換える（`annotate` が PC の中の用語で作るものと同じ形）
+fn translatable(spans: &[Span], glossary: Option<&Glossary>) -> Translatable {
+    let mut translate = Translatable::default();
+    for span in spans {
+        let named = match span {
+            Span::Entity { reference, .. } => glossary
+                .and_then(|g| g.entities.get(reference)?.names.get("en"))
+                .map(|en| (reference, en)),
+            Span::Text(_) => None,
+        };
+        match (span, named) {
+            (_, Some((reference, en))) => {
+                translate.text += en;
+                translate.terms.push(TermName {
+                    reference: reference.clone(),
+                    en: en.clone(),
+                });
+            }
+            (Span::Text(text), None) => translate.text += text,
+            (Span::Entity { spoken, .. }, None) => translate.text += spoken,
+        }
+    }
+    translate
 }
 
 /// LLM の答え。断られたら字幕を止める理由にし、ほかの失敗（回線、タイムアウト、読めない答え）はその文だけ諦める
@@ -303,14 +403,14 @@ mod tests {
             text: "Extended Magazineを取る".into(),
             terms: Vec::new(),
         };
-        let events = chrome::ask_final_translation(&store, "1".into(), translate).unwrap();
+        let events = chrome::ask_final_translation(&store, "1".into(), translate.clone()).unwrap();
         let translations: Translations = [("en".to_owned(), vec![text("Take it", None)])].into();
         store.send_chrome_event(ChromeEvent::Translated(crate::types::Translated {
             id: "1".into(),
             is_final: true,
             translations: translations.clone(),
         }));
-        let finisher = Finisher::new(store, &Settings::default(), None);
+        let finisher = Finisher::new(store, &Settings::default(), None, None);
         let phase = Settings::default().plan().finals;
         let heard = Heard {
             id: "1".into(),
@@ -319,17 +419,45 @@ mod tests {
             tokens: local(),
         };
         let enriched = finisher
-            .finish(heard, &phase, Some(events), |_| {})
+            .finish(heard, translate, Some(events), &phase, |_| {})
             .await
             .unwrap();
         assert_eq!(enriched.translations, translations);
         assert_eq!(enriched.source[0], local()[0]);
     }
 
+    #[test]
+    fn decided_terms_are_sent_to_chrome_as_english_names() {
+        let glossary: Glossary = serde_json::from_value(serde_json::json!({
+            "clientVersion": 1, "languages": ["ja", "en"],
+            "entities": {
+                "item:1": { "kind": "item", "className": "i", "names": { "ja": "基礎拡張マガジン", "en": "Extended Magazine" } }
+            }
+        }))
+        .unwrap();
+        let spans = [
+            Span::Entity {
+                reference: "item:1".into(),
+                spoken: "拡マガ".into(),
+            },
+            Span::Text("を取る".into()),
+        ];
+        assert_eq!(
+            translatable(&spans, Some(&glossary)),
+            Translatable {
+                text: "Extended Magazineを取る".into(),
+                terms: vec![TermName {
+                    reference: "item:1".into(),
+                    en: "Extended Magazine".into(),
+                }],
+            }
+        );
+    }
+
     #[tokio::test]
     async fn without_llm_the_local_marks_are_kept() {
         let store = Store::new(Ok(Settings::default()), std::path::PathBuf::new());
-        let finisher = Finisher::new(store, &Settings::default(), None);
+        let finisher = Finisher::new(store, &Settings::default(), None, None);
         let phase = Settings::default().plan().finals;
         let heard = Heard {
             id: "1".into(),
@@ -337,7 +465,11 @@ mod tests {
             context: Vec::new(),
             tokens: local(),
         };
-        let enriched = finisher.finish(heard, &phase, None, |_| {}).await.unwrap();
+        // ページが開いていないので、訳は付かない
+        let enriched = finisher
+            .finish(heard, Translatable::default(), None, &phase, |_| {})
+            .await
+            .unwrap();
         assert!(enriched.translations.is_empty());
         assert_eq!(enriched.source[0], local()[0]);
     }
