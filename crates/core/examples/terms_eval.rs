@@ -34,10 +34,13 @@ async fn main() -> anyhow::Result<()> {
     let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
     let mut models = Vec::new();
     let mut repeat = 3;
+    let mut cases_path = CASES.to_owned();
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
         match arg.as_str() {
             "--repeat" => repeat = args.next().context("--repeat N")?.parse()?,
+            // 別の文と正解で測る（`experiments/terms_cases.py` の出力）。結果は文の名前を付けた別のファイルに書く
+            "--cases" => cases_path = args.next().context("--cases PATH")?,
             model => models.push(model.to_owned()),
         }
     }
@@ -50,7 +53,17 @@ async fn main() -> anyhow::Result<()> {
     let qwen_key = std::env::var("QWEN_SOUTH_API_KEY").unwrap_or_default();
     let http = reqwest::Client::new();
 
-    let cases: Vec<Value> = serde_json::from_slice(&std::fs::read(CASES)?)?;
+    let cases: Vec<Value> = serde_json::from_slice(&std::fs::read(&cases_path)?)?;
+    let out = match cases_path.as_str() {
+        CASES => OUT.to_owned(),
+        path => {
+            let stem = Path::new(path)
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .context("--cases PATH")?;
+            OUT.replace(".json", &format!(".{stem}.json"))
+        }
+    };
     let languages: Vec<String> = ["ja"].into_iter().chain(TARGETS).map(Into::into).collect();
     let loaded = assets::load(
         &overlays_core::default_data_dir().join("assets"),
@@ -59,7 +72,7 @@ async fn main() -> anyhow::Result<()> {
     .await?;
     let glossary = loaded.glossary;
 
-    let mut report: BTreeMap<String, Value> = std::fs::read(OUT)
+    let mut report: BTreeMap<String, Value> = std::fs::read(&out)
         .ok()
         .and_then(|b| serde_json::from_slice(&b).ok())
         .unwrap_or_default();
@@ -170,8 +183,8 @@ async fn main() -> anyhow::Result<()> {
         println!("{model}: {summary}");
         report.insert(model.clone(), json!({ "summary": summary, "runs": runs }));
     }
-    std::fs::write(Path::new(OUT), serde_json::to_vec_pretty(&report)?)?;
-    println!("wrote {OUT}");
+    std::fs::write(Path::new(&out), serde_json::to_vec_pretty(&report)?)?;
+    println!("wrote {out}");
     Ok(())
 }
 
