@@ -1725,7 +1725,7 @@
    "ok": 59,
    "medianMs": 441,
    "p90Ms": 604,
-   "loadSeconds": 0.0,
+   "loadSeconds": 0,
    "memoryMb": 92,
    "gpuPeakMb": 0
   },
@@ -2569,7 +2569,7 @@
    "ok": 60,
    "medianMs": 1346,
    "p90Ms": 1915,
-   "loadSeconds": 0.0,
+   "loadSeconds": 0,
    "memoryMb": 92,
    "gpuPeakMb": 0
   },
@@ -3411,7 +3411,7 @@
    "ok": 60,
    "medianMs": 1996,
    "p90Ms": 2764,
-   "loadSeconds": 0.0,
+   "loadSeconds": 0,
    "memoryMb": 92,
    "gpuPeakMb": 0
   },
@@ -4239,6 +4239,1063 @@
     "translations": {
      "en": "There's a 5,000-unit difference in Seoul.",
      "ru": "Разница в Соуле составляет 5000."
+    },
+    "missing": {
+     "en": [],
+     "ru": []
+    }
+   }
+  ]
+ },
+ "chrome-translator": {
+  "summary": {
+   "runs": 63,
+   "ok": 19,
+   "medianMs": 9,
+   "p90Ms": 13
+  },
+  "runs": [
+   {
+    "text": "インファーナスのナパームが痛すぎる。",
+    "sent": "InfernusのNapalmが痛すぎる。",
+    "ms": 31,
+    "ok": false,
+    "translations": {
+     "en": "Infernus napalm is too painful.",
+     "ru": "Инфернус напалм слишком болезненный."
+    },
+    "missing": {
+     "en": [
+      "Napalm"
+     ],
+     "ru": [
+      "Infernus",
+      "Napalm"
+     ]
+    }
+   },
+   {
+    "text": "ケルビンのアイスパスで逃げられた。",
+    "sent": "KelvinのIce Pathで逃げられた。",
+    "ms": 10,
+    "ok": false,
+    "translations": {
+     "en": "I escaped with Kelvin's Ice Path.",
+     "ru": "Я сбежал со льдом Кельвина."
+    },
+    "missing": {
+     "en": [],
+     "ru": [
+      "Kelvin",
+      "Ice Path"
+     ]
+    }
+   },
+   {
+    "text": "ダイナモのシンギュラリティに全員捕まった。",
+    "sent": "DynamoのSingularityに全員捕まった。",
+    "ms": 13,
+    "ok": false,
+    "translations": {
+     "en": "All of them were caught by Dynamo's Singularity.",
+     "ru": "Все они были пойманы сингулярностью Динамо."
+    },
+    "missing": {
+     "en": [],
+     "ru": [
+      "Dynamo",
+      "Singularity"
+     ]
+    }
+   },
+   {
+    "text": "ノックダウン買ってヴィンディクタ落とそう。",
+    "sent": "Knockdown買ってVindicta落とそう。",
+    "ms": 13,
+    "ok": false,
+    "translations": {
+     "en": "I'm going to buy a KNOCKDOWN and drop VINDICTA.",
+     "ru": "Я собираюсь купить нокдаун и бросить Виндикту."
+    },
+    "missing": {
+     "en": [
+      "Knockdown",
+      "Vindicta"
+     ],
+     "ru": [
+      "Knockdown",
+      "Vindicta"
+     ]
+    }
+   },
+   {
+    "text": "メタルスキン切らされたのがきつい。",
+    "sent": "Metal Skin切らされたのがきつい。",
+    "ms": 10,
+    "ok": false,
+    "translations": {
+     "en": "It's hard to get out of METAL SKIN.",
+     "ru": "Трудно выйти из металлической кожи."
+    },
+    "missing": {
+     "en": [
+      "Metal Skin"
+     ],
+     "ru": [
+      "Metal Skin"
+     ]
+    }
+   },
+   {
+    "text": "ワープストーンで壁抜けた。",
+    "sent": "Warp Stoneで壁抜けた。",
+    "ms": 9,
+    "ok": false,
+    "translations": {
+     "en": "I passed through the wall with Warp Stone.",
+     "ru": "Я прошел сквозь стену с варп-камень."
+    },
+    "missing": {
+     "en": [],
+     "ru": [
+      "Warp Stone"
+     ]
+    }
+   },
+   {
+    "text": "アンストッパブル間に合った。",
+    "sent": "Unstoppable間に合った。",
+    "ms": 9,
+    "ok": false,
+    "translations": {
+     "en": "It was in time for unstoppable.",
+     "ru": "Это было вовремя для неудержимого."
+    },
+    "missing": {
+     "en": [
+      "Unstoppable"
+     ],
+     "ru": [
+      "Unstoppable"
+     ]
+    }
+   },
+   {
+    "text": "不屈の心は序盤に買っておきたい。",
+    "sent": "Gritは序盤に買っておきたい。",
+    "ms": 8,
+    "ok": false,
+    "translations": {
+     "en": "I want to buy GRIT early.",
+     "ru": "Я хочу купить зернистость рано."
+    },
+    "missing": {
+     "en": [
+      "Grit"
+     ],
+     "ru": [
+      "Grit"
+     ]
+    }
+   },
+   {
+    "text": "ビバップのスティッキーボム二個付けられた。",
+    "sent": "BebopのSticky Bomb二個付けられた。",
+    "ms": 10,
+    "ok": false,
+    "translations": {
+     "en": "Two Bebop Sticky Bombs are attached.",
+     "ru": "Прилагаются две липкие бомбы BEBOP."
+    },
+    "missing": {
+     "en": [
+      "Sticky Bomb"
+     ],
+     "ru": [
+      "Bebop",
+      "Sticky Bomb"
+     ]
+    }
+   },
+   {
+    "text": "トキシックバレットとヒールベインで回復止めよう。",
+    "sent": "Toxic BulletsとHealbaneで回復止めよう。",
+    "ms": 12,
+    "ok": false,
+    "translations": {
+     "en": "Stop recovery with Toxic Bulllets and Healbane.",
+     "ru": "Остановить выздоровление токсичными булочками и бодром."
+    },
+    "missing": {
+     "en": [
+      "Toxic Bullets"
+     ],
+     "ru": [
+      "Toxic Bullets",
+      "Healbane"
+     ]
+    }
+   },
+   {
+    "text": "スピリットシールドかバレットレジリエンスどっちがいいかな。",
+    "sent": "Spirit ShieldingかBullet Resilienceどっちがいいかな。",
+    "ms": 13,
+    "ok": false,
+    "translations": {
+     "en": "Which is better, Spirit Shielding or Bullet Resilience?",
+     "ru": "Что лучше, защита духа или стойкость пуль?"
+    },
+    "missing": {
+     "en": [],
+     "ru": [
+      "Spirit Shielding",
+      "Bullet Resilience"
+     ]
+    }
+   },
+   {
+    "text": "ミラージュ強いな今のパッチ。",
+    "sent": "Mirage強いな今のパッチ。",
+    "ms": 8,
+    "ok": false,
+    "translations": {
+     "en": "Mirage is strong today's patch.",
+     "ru": "Мираж силен сегодняшним патчем."
+    },
+    "missing": {
+     "en": [],
+     "ru": [
+      "Mirage"
+     ]
+    }
+   },
+   {
+    "text": "インファーナスのウルトでスタン入った。",
+    "sent": "InfernusのConcussive Combustionでスタン入った。",
+    "ms": 13,
+    "ok": false,
+    "translations": {
+     "en": "It stunned at the Infernus Concussive Combustion.",
+     "ru": "Он ошеломлен при возгорании адского сотрясения."
+    },
+    "missing": {
+     "en": [],
+     "ru": [
+      "Infernus",
+      "Concussive Combustion"
+     ]
+    }
+   },
+   {
+    "text": "ラッシュの2番で屋根に上がって。",
+    "sent": "LashのGrappleで屋根に上がって。",
+    "ms": 11,
+    "ok": false,
+    "translations": {
+     "en": "Go up to the roof with LASH's grapple.",
+     "ru": "Поднимитесь на крышу с захватом Лэша."
+    },
+    "missing": {
+     "en": [
+      "Lash",
+      "Grapple"
+     ],
+     "ru": [
+      "Lash",
+      "Grapple"
+     ]
+    }
+   },
+   {
+    "text": "ミナのウルトでサイレンス食らった。",
+    "sent": "MinaのNox Nostraでサイレンス食らった。",
+    "ms": 11,
+    "ok": false,
+    "translations": {
+     "en": "I got silence at MINA's NOX NOSTRA.",
+     "ru": "Я замолчал в Мине Нокс Ностра."
+    },
+    "missing": {
+     "en": [
+      "Mina",
+      "Nox Nostra"
+     ],
+     "ru": [
+      "Mina",
+      "Nox Nostra"
+     ]
+    }
+   },
+   {
+    "text": "そのあとウルトで焼かれた。",
+    "sent": "そのあとHyper Beamで焼かれた。",
+    "ms": 9,
+    "ok": true,
+    "translations": {
+     "en": "It was then baked with Hyper Beam.",
+     "ru": "Затем он был запечен с помощью Hyper Beam."
+    },
+    "missing": {
+     "en": [],
+     "ru": []
+    }
+   },
+   {
+    "text": "ヤマトの１番溜めてから当てて。",
+    "sent": "YamatoのPower Slash溜めてから当てて。",
+    "ms": 11,
+    "ok": false,
+    "translations": {
+     "en": "Accumulate Yamato's power slash and hit it.",
+     "ru": "Накапливайте сильную косую черту Ямато и бейте ее."
+    },
+    "missing": {
+     "en": [
+      "Power Slash"
+     ],
+     "ru": [
+      "Yamato",
+      "Power Slash"
+     ]
+    }
+   },
+   {
+    "text": "ダイナモウルト来るから散って。",
+    "sent": "DynamoSingularity来るから散って。",
+    "ms": 11,
+    "ok": false,
+    "translations": {
+     "en": "Dynamosingularity is coming, so get lost.",
+     "ru": "Приближается динамо-сингулярность, так что теряйтесь."
+    },
+    "missing": {
+     "en": [
+      "Dynamo",
+      "Singularity"
+     ],
+     "ru": [
+      "Dynamo",
+      "Singularity"
+     ]
+    }
+   },
+   {
+    "text": "アイビーの３番で耐えた。",
+    "sent": "IvyのStone Formで耐えた。",
+    "ms": 9,
+    "ok": false,
+    "translations": {
+     "en": "Endured with Ivy's Stone Form.",
+     "ru": "выдерживается каменной формой плюща."
+    },
+    "missing": {
+     "en": [],
+     "ru": [
+      "Ivy",
+      "Stone Form"
+     ]
+    }
+   },
+   {
+    "text": "ラッシュのウルトで全員叩きつけられた。",
+    "sent": "LashのDeath Slamで全員叩きつけられた。",
+    "ms": 12,
+    "ok": false,
+    "translations": {
+     "en": "Everyone was slammed in LASH's Death Slam.",
+     "ru": "Все были захлопнуты в смертельном ударе Лэша."
+    },
+    "missing": {
+     "en": [
+      "Lash"
+     ],
+     "ru": [
+      "Lash",
+      "Death Slam"
+     ]
+    }
+   },
+   {
+    "text": "シルバーにウルト当てられた。",
+    "sent": "SilverにLycan Curse当てられた。",
+    "ms": 9,
+    "ok": false,
+    "translations": {
+     "en": "Lycan Curse was applied to Silver.",
+     "ru": "Ликанское проклятие было нанесено на серебро."
+    },
+    "missing": {
+     "en": [],
+     "ru": [
+      "Silver",
+      "Lycan Curse"
+     ]
+    }
+   },
+   {
+    "text": "3番のクールダウン長いな。",
+    "sent": "3番のクールダウン長いな。",
+    "ms": 8,
+    "ok": true,
+    "translations": {
+     "en": "No. 3 cool down is long.",
+     "ru": "№ 3 остынь длинный."
+    },
+    "missing": {
+     "en": [],
+     "ru": []
+    }
+   },
+   {
+    "text": "ウルトあと10秒。",
+    "sent": "ウルトあと10秒。",
+    "ms": 7,
+    "ok": true,
+    "translations": {
+     "en": "10 seconds left in Ult.",
+     "ru": "Осталось 10 секунд в ULT."
+    },
+    "missing": {
+     "en": [],
+     "ru": []
+    }
+   },
+   {
+    "text": "エコーシャードでウルト二回撃てる。",
+    "sent": "Echo Shardでウルト二回撃てる。",
+    "ms": 11,
+    "ok": false,
+    "translations": {
+     "en": "You can shoot ultimate twice with Echo Shad.",
+     "ru": "Вы можете стрелять в Ultimate дважды с помощью Echo Shad."
+    },
+    "missing": {
+     "en": [
+      "Echo Shard"
+     ],
+     "ru": [
+      "Echo Shard"
+     ]
+    }
+   },
+   {
+    "text": "リフレッシャー持ってるからウルト二連発くるよ。",
+    "sent": "Refresher持ってるからウルト二連発くるよ。",
+    "ms": 15,
+    "ok": false,
+    "translations": {
+     "en": "I have a Refresher, so I'm going to hit two worts in a row.",
+     "ru": "У меня есть освежитель, так что я собираюсь ударить по два сусла подряд."
+    },
+    "missing": {
+     "en": [],
+     "ru": [
+      "Refresher"
+     ]
+    }
+   },
+   {
+    "text": "エイブラムスのチャージで壁に当てられた。",
+    "sent": "AbramsのShoulder Chargeで壁に当てられた。",
+    "ms": 12,
+    "ok": false,
+    "translations": {
+     "en": "It hit the wall at the SHOULDER CHARGE of ABRAMS.",
+     "ru": "Он ударился о стену у плеча Абрамса."
+    },
+    "missing": {
+     "en": [
+      "Abrams",
+      "Shoulder Charge"
+     ],
+     "ru": [
+      "Abrams",
+      "Shoulder Charge"
+     ]
+    }
+   },
+   {
+    "text": "ケルビンのビームで足遅くされた。",
+    "sent": "KelvinのArctic Beamで足遅くされた。",
+    "ms": 11,
+    "ok": false,
+    "translations": {
+     "en": "I was slowed down by Kelvin's Arctic Beam.",
+     "ru": "Меня замедлил арктический луч Кельвина."
+    },
+    "missing": {
+     "en": [],
+     "ru": [
+      "Kelvin",
+      "Arctic Beam"
+     ]
+    }
+   },
+   {
+    "text": "ビバップのフックに気をつけて。",
+    "sent": "BebopのGrapple Armに気をつけて。",
+    "ms": 10,
+    "ok": false,
+    "translations": {
+     "en": "Watch out for Bebop's grapple arm.",
+     "ru": "Остерегайтесь захватывающей руки Бибопа."
+    },
+    "missing": {
+     "en": [
+      "Grapple Arm"
+     ],
+     "ru": [
+      "Bebop",
+      "Grapple Arm"
+     ]
+    }
+   },
+   {
+    "text": "インファ強すぎない？",
+    "sent": "Infernus強すぎない？",
+    "ms": 8,
+    "ok": false,
+    "translations": {
+     "en": "Isn't infernus too strong?",
+     "ru": "Не слишком ли сильный Инфернус?"
+    },
+    "missing": {
+     "en": [
+      "Infernus"
+     ],
+     "ru": [
+      "Infernus"
+     ]
+    }
+   },
+   {
+    "text": "ガイストのウルトで体力入れ替えられた。",
+    "sent": "Lady GeistのSoul Exchangeで体力入れ替えられた。",
+    "ms": 14,
+    "ok": false,
+    "translations": {
+     "en": "The physical strength was replaced by the SOUL EXCHANGE of LADY GEIST.",
+     "ru": "Физическая сила была заменена душевным обменом леди Гейст."
+    },
+    "missing": {
+     "en": [
+      "Lady Geist",
+      "Soul Exchange"
+     ],
+     "ru": [
+      "Lady Geist",
+      "Soul Exchange"
+     ]
+    }
+   },
+   {
+    "text": "タロンに遠くから抜かれた。",
+    "sent": "Grey Talonに遠くから抜かれた。",
+    "ms": 10,
+    "ok": false,
+    "translations": {
+     "en": "Grey Talon overtakes him from afar.",
+     "ru": "Серый Кэлон догоняет его издалека."
+    },
+    "missing": {
+     "en": [],
+     "ru": [
+      "Grey Talon"
+     ]
+    }
+   },
+   {
+    "text": "モークリのウルトに捕まった。",
+    "sent": "Mo & KrillのComboに捕まった。",
+    "ms": 9,
+    "ok": false,
+    "translations": {
+     "en": "Catched by the Combo of Mo & Krill.",
+     "ru": "Поймал комбо MO & Krill."
+    },
+    "missing": {
+     "en": [],
+     "ru": [
+      "Mo & Krill",
+      "Combo"
+     ]
+    }
+   },
+   {
+    "text": "ヴィンにずっと撃たれてる。",
+    "sent": "Vindictaにずっと撃たれてる。",
+    "ms": 9,
+    "ok": false,
+    "translations": {
+     "en": "I've been shot by Vindicta all the time.",
+     "ru": "Меня все время стреляла виндикта."
+    },
+    "missing": {
+     "en": [],
+     "ru": [
+      "Vindicta"
+     ]
+    }
+   },
+   {
+    "text": "ヴィンディのウルトで落とされた。",
+    "sent": "VindictaのAssassinateで落とされた。",
+    "ms": 10,
+    "ok": false,
+    "translations": {
+     "en": "Dropped by Assassinate of Vindicta.",
+     "ru": "Снято убийством Виндикты."
+    },
+    "missing": {
+     "en": [],
+     "ru": [
+      "Vindicta",
+      "Assassinate"
+     ]
+    }
+   },
+   {
+    "text": "メタスキ押すの遅れた。",
+    "sent": "Metal Skin押すの遅れた。",
+    "ms": 9,
+    "ok": false,
+    "translations": {
+     "en": "It's too late to press METAL SKIN.",
+     "ru": "Слишком поздно прессовать металлическую кожу."
+    },
+    "missing": {
+     "en": [
+      "Metal Skin"
+     ],
+     "ru": [
+      "Metal Skin"
+     ]
+    }
+   },
+   {
+    "text": "アンストッパ買っとけばよかった。",
+    "sent": "Unstoppable買っとけばよかった。",
+    "ms": 8,
+    "ok": false,
+    "translations": {
+     "en": "I should have bought Unstoppable.",
+     "ru": "Я должен был купить неудержимый."
+    },
+    "missing": {
+     "en": [],
+     "ru": [
+      "Unstoppable"
+     ]
+    }
+   },
+   {
+    "text": "インフェルノスのアフターバーンが痛い。",
+    "sent": "InfernusのAfterburnが痛い。",
+    "ms": 9,
+    "ok": false,
+    "translations": {
+     "en": "Infernus Afterburn hurts.",
+     "ru": "Инфернус после ожога болит."
+    },
+    "missing": {
+     "en": [],
+     "ru": [
+      "Infernus",
+      "Afterburn"
+     ]
+    }
+   },
+   {
+    "text": "ビーバップのボムに気をつけて。",
+    "sent": "BebopのSticky Bombに気をつけて。",
+    "ms": 11,
+    "ok": false,
+    "translations": {
+     "en": "Watch out for Bebop's Sticky Bomb.",
+     "ru": "Остерегайтесь липкой бомбы Бибопа."
+    },
+    "missing": {
+     "en": [],
+     "ru": [
+      "Bebop",
+      "Sticky Bomb"
+     ]
+    }
+   },
+   {
+    "text": "ワーデンのウルト止めて。",
+    "sent": "WardenのLast Stand止めて。",
+    "ms": 9,
+    "ok": false,
+    "translations": {
+     "en": "Stop WARDEN's LAST STAND.",
+     "ru": "Остановите последнюю стойку надзирателя."
+    },
+    "missing": {
+     "en": [
+      "Warden",
+      "Last Stand"
+     ],
+     "ru": [
+      "Warden",
+      "Last Stand"
+     ]
+    }
+   },
+   {
+    "text": "ビンディクタのウルトで狙われてる。",
+    "sent": "VindictaのAssassinateで狙われてる。",
+    "ms": 11,
+    "ok": false,
+    "translations": {
+     "en": "It is targeted by Assassinate of Vindicta.",
+     "ru": "Оно нацелено на убийство Виндикты."
+    },
+    "missing": {
+     "en": [],
+     "ru": [
+      "Vindicta",
+      "Assassinate"
+     ]
+    }
+   },
+   {
+    "text": "ワープストンで逃げた。",
+    "sent": "Warp Stoneで逃げた。",
+    "ms": 7,
+    "ok": false,
+    "translations": {
+     "en": "I ran away with Warp Stone.",
+     "ru": "Я убежал с варп-камень."
+    },
+    "missing": {
+     "en": [],
+     "ru": [
+      "Warp Stone"
+     ]
+    }
+   },
+   {
+    "text": "メタルスキーン使った。",
+    "sent": "Metal Skin使った。",
+    "ms": 7,
+    "ok": false,
+    "translations": {
+     "en": "I used METAL SKIN.",
+     "ru": "Я использовал металлическую кожу."
+    },
+    "missing": {
+     "en": [
+      "Metal Skin"
+     ],
+     "ru": [
+      "Metal Skin"
+     ]
+    }
+   },
+   {
+    "text": "セブンのパワーサージで火力上がってる。",
+    "sent": "SevenのPower Surgeで火力上がってる。",
+    "ms": 11,
+    "ok": false,
+    "translations": {
+     "en": "Seven's power surge has increased firepower.",
+     "ru": "Всплеск силы Seven увеличился по увеличению огневой мощи."
+    },
+    "missing": {
+     "en": [
+      "Power Surge"
+     ],
+     "ru": [
+      "Power Surge"
+     ]
+    }
+   },
+   {
+    "text": "パワーサージ買ったら移動速くなった。",
+    "sent": "Surge of Power買ったら移動速くなった。",
+    "ms": 9,
+    "ok": false,
+    "translations": {
+     "en": "When I bought the Surge of Power, it became faster.",
+     "ru": "Когда я купил всплеск мощности, он стал быстрее."
+    },
+    "missing": {
+     "en": [],
+     "ru": [
+      "Surge of Power"
+     ]
+    }
+   },
+   {
+    "text": "ガイストのライフドレインで吸われた。",
+    "sent": "Lady GeistのLife Drainで吸われた。",
+    "ms": 11,
+    "ok": false,
+    "translations": {
+     "en": "Sucked by the Life Drain of Lady Geist.",
+     "ru": "Похвачен жизненным стоком леди Гейст."
+    },
+    "missing": {
+     "en": [],
+     "ru": [
+      "Lady Geist",
+      "Life Drain"
+     ]
+    }
+   },
+   {
+    "text": "ライフドレイン買って耐久上げる。",
+    "sent": "Leech買って耐久上げる。",
+    "ms": 9,
+    "ok": false,
+    "translations": {
+     "en": "Buy Leech and increase your endurance.",
+     "ru": "Покупайте пиявку и увеличивайте свою выносливость."
+    },
+    "missing": {
+     "en": [],
+     "ru": [
+      "Leech"
+     ]
+    }
+   },
+   {
+    "text": "今シルバー帯だからね。",
+    "sent": "今シルバー帯だからね。",
+    "ms": 7,
+    "ok": true,
+    "translations": {
+     "en": "It's the silver belt right now.",
+     "ru": "Сейчас серебряный пояс."
+    },
+    "missing": {
+     "en": [],
+     "ru": []
+    }
+   },
+   {
+    "text": "ヤマトの荷物まだ届かないんだよね。",
+    "sent": "ヤマトの荷物まだ届かないんだよね。",
+    "ms": 9,
+    "ok": true,
+    "translations": {
+     "en": "Yamato's package hasn't arrived yet.",
+     "ru": "Посылка Ямато еще не пришла."
+    },
+    "missing": {
+     "en": [],
+     "ru": []
+    }
+   },
+   {
+    "text": "アポロチョコ食べながらやってます。",
+    "sent": "アポロチョコ食べながらやってます。",
+    "ms": 9,
+    "ok": true,
+    "translations": {
+     "en": "I'm doing it while eating Apollo chocolate.",
+     "ru": "Я делаю это, пока ем шоколад Аполлон."
+    },
+    "missing": {
+     "en": [],
+     "ru": []
+    }
+   },
+   {
+    "text": "それストーカーみたいで怖いな。",
+    "sent": "それストーカーみたいで怖いな。",
+    "ms": 8,
+    "ok": true,
+    "translations": {
+     "en": "It's scary like a stalker.",
+     "ru": "Это страшно, как сталкер."
+    },
+    "missing": {
+     "en": [],
+     "ru": []
+    }
+   },
+   {
+    "text": "昨日ボクシングでノックダウン見た。",
+    "sent": "昨日ボクシングでノックダウン見た。",
+    "ms": 8,
+    "ok": true,
+    "translations": {
+     "en": "I saw a knockdown in boxing yesterday.",
+     "ru": "Вчера я видел нокдаун в боксе."
+    },
+    "missing": {
+     "en": [],
+     "ru": []
+    }
+   },
+   {
+    "text": "レム睡眠が足りてない。",
+    "sent": "レム睡眠が足りてない。",
+    "ms": 7,
+    "ok": true,
+    "translations": {
+     "en": "I don't have enough REM sleep.",
+     "ru": "Мне не хватает быстрого сна."
+    },
+    "missing": {
+     "en": [],
+     "ru": []
+    }
+   },
+   {
+    "text": "ビリーって友達が見に来てる。",
+    "sent": "ビリーって友達が見に来てる。",
+    "ms": 7,
+    "ok": true,
+    "translations": {
+     "en": "Billy has a friend to see it.",
+     "ru": "У Билли есть друг, чтобы увидеть это."
+    },
+    "missing": {
+     "en": [],
+     "ru": []
+    }
+   },
+   {
+    "text": "アイビーリーグ出身らしいよ。",
+    "sent": "アイビーリーグ出身らしいよ。",
+    "ms": 8,
+    "ok": true,
+    "translations": {
+     "en": "It seems to be from the Ivy League.",
+     "ru": "Кажется, это из Лиги плюща."
+    },
+    "missing": {
+     "en": [],
+     "ru": []
+    }
+   },
+   {
+    "text": "ポケットWi-Fiの調子が悪い。",
+    "sent": "ポケットWi-Fiの調子が悪い。",
+    "ms": 8,
+    "ok": true,
+    "translations": {
+     "en": "Pocket Wi-Fi is not working well.",
+     "ru": "Карманный Wi-Fi плохо работает."
+    },
+    "missing": {
+     "en": [],
+     "ru": []
+    }
+   },
+   {
+    "text": "セブンでいいか。",
+    "sent": "セブンでいいか。",
+    "ms": 7,
+    "ok": true,
+    "translations": {
+     "en": "Is Seven okay?",
+     "ru": "С семеркой все в порядке?"
+    },
+    "missing": {
+     "en": [],
+     "ru": []
+    }
+   },
+   {
+    "text": "今日はセブンで行くか。",
+    "sent": "今日はSevenで行くか。",
+    "ms": 7,
+    "ok": false,
+    "translations": {
+     "en": "Shall we go with SEVEN today?",
+     "ru": "Пойдем с семью сегодня?"
+    },
+    "missing": {
+     "en": [
+      "Seven"
+     ],
+     "ru": [
+      "Seven"
+     ]
+    }
+   },
+   {
+    "text": "コメントありがとうございます。",
+    "sent": "コメントありがとうございます。",
+    "ms": 6,
+    "ok": true,
+    "translations": {
+     "en": "Thank you for your comment.",
+     "ru": "Спасибо за ваш комментарий."
+    },
+    "missing": {
+     "en": [],
+     "ru": []
+    }
+   },
+   {
+    "text": "今日は3時間くらいやる予定です。",
+    "sent": "今日は3時間くらいやる予定です。",
+    "ms": 9,
+    "ok": true,
+    "translations": {
+     "en": "I'm planning on doing it for about 3 hours today.",
+     "ru": "Я планирую сделать это около 3 часов сегодня."
+    },
+    "missing": {
+     "en": [],
+     "ru": []
+    }
+   },
+   {
+    "text": "ちょっと水飲むね。",
+    "sent": "ちょっと水飲むね。",
+    "ms": 7,
+    "ok": true,
+    "translations": {
+     "en": "I'll drink some water.",
+     "ru": "Я выпью немного воды."
+    },
+    "missing": {
+     "en": [],
+     "ru": []
+    }
+   },
+   {
+    "text": "1番レーンが押されてる。",
+    "sent": "1番レーンが押されてる。",
+    "ms": 7,
+    "ok": true,
+    "translations": {
+     "en": "The first lane is pushed.",
+     "ru": "Первая полоса пройдена."
+    },
+    "missing": {
+     "en": [],
+     "ru": []
+    }
+   },
+   {
+    "text": "ミッドボス取りに行こう。",
+    "sent": "ミッドボス取りに行こう。",
+    "ms": 8,
+    "ok": true,
+    "translations": {
+     "en": "Let's go get a midboss.",
+     "ru": "Пойдем получим мидбосс."
+    },
+    "missing": {
+     "en": [],
+     "ru": []
+    }
+   },
+   {
+    "text": "ソウル差が5000ある。",
+    "sent": "ソウル差が5000ある。",
+    "ms": 9,
+    "ok": true,
+    "translations": {
+     "en": "There is a difference of 5000 in Seoul.",
+     "ru": "В Сеуле разница 5000."
     },
     "missing": {
      "en": [],
