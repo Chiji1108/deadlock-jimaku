@@ -67,6 +67,10 @@ pub struct Settings {
     pub tray_notice_seen: bool,
     /// 無料で使っている人への「おすすめにする」の提案を閉じた
     pub hybrid_hint_closed: bool,
+    /// 最後に自分で組んだ工程の組み合わせ（モードにないもの）。操作パネルの「カスタム」
+    #[ts(optional)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub custom_engines: Option<Engines>,
     // 以下の詳細項目は操作パネルで変えない（`ADVANCED`）
     pub models: Models,
     /// リアルタイムの音声認識の遅れ（`minimal` / `low` / `medium` / `high` / `xhigh`。
@@ -589,6 +593,15 @@ impl Engines {
         translation: TranslationEngine::HyMt2,
         furigana: RubySource::Lindera,
     };
+    /// ローカルのモード。途中の字幕も確定も PC の中の Haas-ja で作り、音声は PC から出ない（日本語だけ。DESIGN.md 9.8）。
+    /// 用語と翻訳は、ベータのモードと同じ（ベータの間は無料）
+    pub const LOCAL: Self = Self {
+        live: LiveSource::HaasJa,
+        transcription: FinalSource::HaasJa,
+        ..Self::BETA
+    };
+    /// 操作パネルに出すモード（おすすめの組み合わせ）。ほかの組み合わせは「カスタム」（`Settings::custom_engines`）
+    pub const MODES: [Self; 3] = [Self::BETA, Self::LOCAL, Self::CHROME];
     /// ライトのモード。途中の字幕は Chrome、確定は Grok、翻訳と用語は Luna、ふりがなは辞書
     pub const LIGHT: Self = Self {
         live: LiveSource::Chrome,
@@ -1031,6 +1044,7 @@ impl Default for Settings {
             obs_seen: false,
             onboarding_closed: false,
             hybrid_hint_closed: false,
+            custom_engines: None,
             tray_notice_seen: false,
             rank_region: None,
             rank_style: RankStyle::default(),
@@ -1287,6 +1301,10 @@ impl Settings {
         }
         if let Some(engines) = patch.engines {
             next.engines = engines.sanitized();
+            // 自分で組んだ組み合わせは覚えておく（モードを試したあとに戻れる）
+            if !Engines::MODES.contains(&next.engines) {
+                next.custom_engines = Some(next.engines);
+            }
         }
         if let Some(content) = patch.rank_content {
             next.rank_content = content;
@@ -1530,6 +1548,36 @@ mod tests {
         let next = loaded.apply(SettingsPatch::default()).unwrap();
         assert!(next.hybrid_hint_closed);
         assert!(!Settings::default().hybrid_hint_closed);
+    }
+
+    #[test]
+    fn a_combination_of_my_own_is_remembered_while_i_try_a_mode() {
+        let engines = |engines| SettingsPatch {
+            engines: Some(engines),
+            ..SettingsPatch::default()
+        };
+        let mine = Engines {
+            terms: TermsEngine::Jev,
+            ..Engines::BETA
+        };
+        // モードを選んでも、カスタムにはならない
+        let beta = Settings::default().apply(engines(Engines::BETA)).unwrap();
+        assert_eq!(beta.custom_engines, None);
+        // 自分で組んだ組み合わせは、モードを試したあとも残る（保存しても）
+        let custom = beta.apply(engines(mine)).unwrap();
+        let tried = custom.apply(engines(Engines::LOCAL)).unwrap();
+        assert_eq!(
+            (tried.engines, tried.custom_engines),
+            (Engines::LOCAL, Some(mine))
+        );
+        let saved = serde_json::to_string(&tried).unwrap();
+        let loaded: Settings = serde_json::from_str(&saved).unwrap();
+        assert_eq!(loaded.custom_engines, Some(mine));
+        // どのモードも、鍵なしで始められる組み合わせ（ベータのコードか、PC の中か、Chrome）
+        for mode in Engines::MODES {
+            let needs_own_key = |p: &Provider| p.info().relay != Some(crate::secrets::Relay::Beta);
+            assert!(!mode.providers().iter().any(needs_own_key), "{mode:?}");
+        }
     }
 
     #[test]

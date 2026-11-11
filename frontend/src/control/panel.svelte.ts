@@ -63,6 +63,8 @@ class Panel {
   private samplesRead: Promise<void> | undefined;
   server = $state<Status>("connecting");
   /** 字幕を始められなかった・止まった理由 */
+  /** 開いているタブ（ほかのタブへの案内から切り替える） */
+  tab = $state("audio");
   transcriptionError = $state<TranscriptionError | undefined>();
   /** PC の中の文字起こしを準備している（初回はダウンロードを待つ） */
   preparing = $state(false);
@@ -127,14 +129,6 @@ class Panel {
   /** 選んだモードに要る鍵がない。キーの案内を出し、字幕を始めさせない */
   get needsKey() {
     return this.missingKeys.length > 0;
-  }
-
-  /** スタンダードで使える鍵（自分の OpenAI のキーか、OpenAI に使える期限内のギフトコード）がある。
-   * 今日の上限に達したコードは、中継する会社が分からないが、日が変われば使えるので含める */
-  get standardReady() {
-    if (this.view?.keys.openai.state === "saved") return true;
-    const gift = this.gift;
-    return gift?.state === "active" ? gift.providers.includes("openai") : gift?.state === "limit";
   }
 
   /** 字幕を始める操作をしていて、止まった理由もない */

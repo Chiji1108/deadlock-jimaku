@@ -183,21 +183,8 @@ export const BETA: Engines = {
   translation: "hyMt2",
   furigana: "lindera",
 };
-export const STANDARD: Engines = {
-  live: "chrome",
-  transcription: "gptTranscribe",
-  terms: "dictionary",
-  translation: "gpt61Terra",
-  furigana: "llm",
-};
-const OPENAI: Engines = { ...STANDARD, live: "gptLiveTranscribe" };
-const LIGHT: Engines = {
-  live: "chrome",
-  transcription: "grokVoiceTranscribe",
-  terms: "dictionary",
-  translation: "gpt6Luna",
-  furigana: "lindera",
-};
+/** ローカルの組み合わせ。途中の字幕も確定も PC の中（Haas-ja）。用語と翻訳はベータと同じ */
+export const LOCAL: Engines = { ...BETA, live: "haasJa", transcription: "haasJa" };
 
 /** 月の目安の使い方（毎日 3 時間、30 日） */
 const MONTHLY_HOURS = 3 * 30;
@@ -211,6 +198,7 @@ export function monthly(hourlyUsd: number) {
   return `毎日 3 時間で月 約 ¥${yen.toLocaleString("ja-JP")}（$${Math.round(usd)}）`;
 }
 
+/** おすすめの組み合わせ。`crates/core/src/settings.rs` の `Engines::MODES` と同じ。ほかの組み合わせは「カスタム」 */
 export const MODES: {
   name: string;
   label: string;
@@ -222,45 +210,29 @@ export const MODES: {
   recommended?: boolean;
 }[] = [
   {
-    name: "chrome",
-    label: "Chrome",
-    traits: "高速・キー不要",
-    hourlyUsd: 0,
-    hint: "多くの字幕ソフトと同じく、Chrome の音声認識を使います",
-    engines: CHROME,
-  },
-  {
     name: "beta",
     label: "ベータ",
-    traits: "高速・高精度・キー不要",
+    traits: "高精度・キー不要",
     hourlyUsd: 0,
     hint: "ベータの間は無料です。途中の字幕は Chrome、確定の字幕・用語・翻訳は、開発者のサーバーを通して作ります（1 日の上限があります）",
     engines: BETA,
-  },
-  {
-    name: "light",
-    label: "ライト",
-    traits: "高速・高精度",
-    hourlyUsd: 0.1,
-    hint: "途中の字幕は Chrome、確定の字幕は xAI の Grok、翻訳は OpenAI の安いモデルで作ります",
-    engines: LIGHT,
-  },
-  {
-    name: "standard",
-    label: "スタンダード",
-    traits: "高速・最高精度",
-    hourlyUsd: 0.6,
-    hint: "途中の字幕は Chrome、確定の字幕は OpenAI の高い精度に置き換えます",
-    engines: STANDARD,
     recommended: true,
   },
   {
-    name: "openai",
-    label: "OpenAI",
-    traits: "低負荷・最高精度",
-    hourlyUsd: 1,
-    hint: "すべて OpenAI で作ります。Chrome は使いません",
-    engines: OPENAI,
+    name: "local",
+    label: "ローカル",
+    traits: "音声を送らない・キー不要",
+    hourlyUsd: 0,
+    hint: "途中の字幕も確定の字幕も、PC の中で作ります（日本語だけ。初回に約 400 MB をダウンロードします）。音声は PC から出ません。用語と翻訳は、ベータの間は無料で、開発者のサーバーを通して作ります。PC の負荷は上がります",
+    engines: LOCAL,
+  },
+  {
+    name: "chrome",
+    label: "Chrome",
+    traits: "サーバーを使わない・キー不要",
+    hourlyUsd: 0,
+    hint: "多くの字幕ソフトと同じく、Chrome の音声認識と翻訳だけを使います。開発者のサーバーは使いません",
+    engines: CHROME,
   },
 ];
 

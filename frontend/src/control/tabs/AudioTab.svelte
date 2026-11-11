@@ -11,22 +11,9 @@
   import DeadlockModeDialog from "../parts/DeadlockModeDialog.svelte";
   import LevelMeter from "../parts/LevelMeter.svelte";
   import PauseDialog from "../parts/PauseDialog.svelte";
-  import { Badge } from "$lib/components/ui/badge";
   import { panel } from "../panel.svelte";
-  import EnginesDialog from "../parts/EnginesDialog.svelte";
-  import {
-    STANDARD,
-    MODES,
-    monthly,
-    price,
-    anyPaid,
-    chromeFinals,
-    modeOf,
-    keyNames,
-    paidItems,
-    providers,
-    usesChrome,
-  } from "../../lib/engines";
+  import ModePicker from "../parts/ModePicker.svelte";
+  import { anyPaid, chromeFinals, usesChrome } from "../../lib/engines";
 
   const MAX_TRANSLATE_TO = 4;
   /** 何 ms 黙ったら区切るか */
@@ -38,8 +25,6 @@
 
   const s = $derived(panel.settings!);
   const t = $derived(s.engines);
-  const mode = $derived(modeOf(t));
-  const paid = $derived(paidItems(t));
   /** Chrome のウィンドウが字幕を止めている理由。止まっているか、回線の回復を待っている */
   const chromeProblem = $derived(
     panel.chromeStatus?.state === "failed" ||
@@ -75,54 +60,10 @@
       <Card.Description>字幕をどこで作るかを選びます</Card.Description>
     </Card.Header>
     <Card.Content class="flex flex-col gap-3">
-      <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-5" role="radiogroup" aria-label="モード">
-        {#each MODES as m (m.name)}
-          <button
-            type="button"
-            role="radio"
-            aria-checked={mode?.name === m.name}
-            class="flex flex-col gap-1 rounded-lg border p-3 text-left transition-colors hover:bg-muted aria-checked:border-foreground aria-checked:bg-muted"
-            onclick={() => panel.chooseMode(m.engines)}
-          >
-            <span class="flex items-center gap-2 text-sm font-medium">
-              {m.label}
-              {#if m.recommended}<Badge variant="secondary">おすすめ</Badge>{/if}
-            </span>
-            <span class="text-xs text-muted-foreground">{m.traits}</span>
-            <span class="text-xs text-muted-foreground tabular-nums">{price(m.hourlyUsd)}</span>
-            {#if m.hourlyUsd}
-              <span class="text-xs text-muted-foreground tabular-nums">{monthly(m.hourlyUsd)}</span>
-            {/if}
-          </button>
-        {/each}
-      </div>
-      <p class="text-sm text-muted-foreground">
-        {#if mode}
-          {mode.hint}
-        {:else if paid.length}
-          詳しく選んだ作り方です。有料の工程: {paid.join("、")}
-        {:else}
-          詳しく選んだ作り方です。すべて無料です
-        {/if}{#if paid.length}。{keyNames(providers(t))}が要ります{/if}
-      </p>
-      <EnginesDialog />
-      {#if mode?.name === "chrome" && panel.standardReady && !s.hybridHintClosed}
-        <div class="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3">
-          <p class="text-sm">スタンダードにすると、確定の字幕が高い精度になります</p>
-          <div class="flex gap-1">
-            <Button variant="outline" size="sm" onclick={() => panel.update({ engines: STANDARD })}>
-              スタンダードにする
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onclick={() => panel.update({ hybridHintClosed: true })}
-            >
-              閉じる
-            </Button>
-          </div>
-        </div>
-      {/if}
+      <ModePicker />
+      <Button variant="outline" size="sm" class="w-fit" onclick={() => (panel.tab = "engines")}>
+        工程ごとに選ぶ
+      </Button>
       {#if usesChrome(t)}
         {#if s.transcriptionEnabled}
           <div class="flex flex-wrap items-center gap-3">
