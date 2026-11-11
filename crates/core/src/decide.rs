@@ -89,35 +89,14 @@ impl Decider {
             http.post(self.access.url("/systemone"))
                 .json(&asked.systemone(self.model))
         };
-        let res = request
-            .bearer_auth(self.access.token())
-            .timeout(TIMEOUT)
-            .send()
-            .await?;
-        let status = res.status();
-        if !status.is_success() {
-            let body = res.text().await.unwrap_or_default();
-            let reason = share::refusal_reason(&body);
-            if let Some(refused) = share::refusal(&self.access, status, reason.as_deref()) {
-                return Err(refused.into());
-            }
-            anyhow::bail!("{status}: {body}");
-        }
-        let res: Value = res.json().await?;
-        let tokens = Tokens::from_response(&res["usage"]);
-        // OpenRouter は料金を答えに入れる
-        match res["usage"]["cost"].as_f64() {
-            Some(usd) => self.meter.billed(Use::Translate, tokens, usd),
-            None => self.meter.tokens(Use::Translate, self.model, tokens),
-        }
-        let answers = &res["answers"];
-        Ok(asked.spans(|name| {
-            let answer = match answers.as_array() {
-                Some(answers) => answers.iter().find(|a| a["name"] == name)?,
-                None => &answers[name],
-            };
-            answer["choice"].as_str().map(str::to_owned)
-        }))
+        let asking = Asking {
+            access: &self.access,
+            model: self.model,
+            meter: &self.meter,
+            purpose: Use::Translate,
+        };
+        let answers = answers(request, &asking).await?;
+        Ok(asked.spans(|name| choice(&answers, name)))
     }
 
     /// 文の候補と、それを確かめる問い合わせ。候補がなければ None（聞かなくてよい）
@@ -147,6 +126,52 @@ impl Decider {
             }
         }
     }
+}
+
+/// 判定モデルへの問い合わせの、送り先と数え方
+pub(crate) struct Asking<'a> {
+    pub access: &'a Access,
+    pub model: &'a str,
+    pub meter: &'a Meter,
+    pub purpose: Use,
+}
+
+/// 判定モデルに送って、答え（`answers`）を受け取る。鍵やギフトコードが断られたら `TranscriptionError`
+pub(crate) async fn answers(
+    request: reqwest::RequestBuilder,
+    asking: &Asking<'_>,
+) -> anyhow::Result<Value> {
+    let res = request
+        .bearer_auth(asking.access.token())
+        .timeout(TIMEOUT)
+        .send()
+        .await?;
+    let status = res.status();
+    if !status.is_success() {
+        let body = res.text().await.unwrap_or_default();
+        let reason = share::refusal_reason(&body);
+        if let Some(refused) = share::refusal(asking.access, status, reason.as_deref()) {
+            return Err(refused.into());
+        }
+        anyhow::bail!("{status}: {body}");
+    }
+    let mut res: Value = res.json().await?;
+    let tokens = Tokens::from_response(&res["usage"]);
+    // OpenRouter は料金を答えに入れる
+    match res["usage"]["cost"].as_f64() {
+        Some(usd) => asking.meter.billed(asking.purpose, tokens, usd),
+        None => asking.meter.tokens(asking.purpose, asking.model, tokens),
+    }
+    Ok(res["answers"].take())
+}
+
+/// `name` の問いで選ばれた値。答えは、問いの配列（OpenAI）か、名前ごとの表（Jev の形）
+pub(crate) fn choice(answers: &Value, name: &str) -> Option<String> {
+    let answer = match answers.as_array() {
+        Some(answers) => answers.iter().find(|a| a["name"] == name)?,
+        None => &answers[name],
+    };
+    answer["choice"].as_str().map(str::to_owned)
 }
 
 /// 1 つの文の候補と、Decisions API への問い合わせ

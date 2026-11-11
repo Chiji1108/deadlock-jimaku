@@ -13,7 +13,13 @@ use crate::types::RubySegment as Part;
 /// IPADIC の素性のうち「読み」の位置
 const READING: usize = 7;
 
+/// 分け方の候補を見る数。20 で、辞書が間違える読みの 9 割に正しい読みが入る（DESIGN.md 6.4）
+const PATHS: usize = 20;
+/// 1 か所の読みの候補の上限
+const MAX_OPTIONS: usize = 6;
+
 /// 字幕の 1 語。バイトの位置は元の文のもの
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Morpheme {
     pub start: usize,
     pub end: usize,
@@ -57,23 +63,124 @@ impl Furigana {
         let Ok(mut morphemes) = self.segmenter.segment(Cow::Borrowed(text)) else {
             return Vec::new();
         };
-        morphemes
-            .iter_mut()
-            .map(|m| {
-                let reading = m
-                    .details()
-                    .get(READING)
-                    .filter(|r| **r != "*")
-                    .map(|r| to_hiragana(r));
-                let surface = to_hiragana(&m.surface);
-                Morpheme {
-                    start: m.byte_start,
-                    end: m.byte_end,
-                    reading: reading.or_else(|| surface.chars().all(is_kana).then_some(surface)),
-                }
-            })
-            .collect()
+        morphemes.iter_mut().map(morpheme).collect()
     }
+
+    /// 辞書のいちばん良い分け方と、読みが分かれるところ（漢字を含む範囲だけ）。
+    /// 上位の分け方のうち、いちばん良い分け方と読みが違う範囲を集め、重なる範囲は 1 つにまとめる
+    pub fn alternatives(&self, text: &str) -> (Vec<Morpheme>, Vec<Alternatives>) {
+        let paths = self
+            .segmenter
+            .segment_nbest(Cow::Borrowed(text), PATHS, false, None)
+            .unwrap_or_default();
+        let mut paths: Vec<Vec<Morpheme>> = paths
+            .into_iter()
+            .map(|(mut tokens, _)| tokens.iter_mut().map(morpheme).collect())
+            .collect();
+        if paths.is_empty() {
+            return (self.morphemes(text), Vec::new());
+        }
+        let best = paths.remove(0);
+        let mut differing: Vec<(usize, usize)> = paths
+            .iter()
+            .flat_map(|path| differences(text, &best, path))
+            .collect();
+        differing.sort_unstable();
+        let mut spans: Vec<(usize, usize)> = Vec::new();
+        for (start, end) in differing {
+            match spans.last_mut() {
+                Some(last) if start < last.1 => last.1 = last.1.max(end),
+                _ => spans.push((start, end)),
+            }
+        }
+        let alternatives = spans.into_iter().filter_map(|(start, end)| {
+            let mut options: Vec<Vec<Morpheme>> = Vec::new();
+            for path in std::iter::once(&best).chain(&paths) {
+                let Some(option) = within(path, start, end) else {
+                    continue;
+                };
+                // 辞書の語をさらに割った分け方は使わない（「火力」を「火」「力」に割ると「ひりょく」と読む）。
+                // 同じ語の別の読み（辛い）と、語をまとめた分け方（「一」「人」を「一人」）だけを候補にする
+                let splits = option[1..]
+                    .iter()
+                    .any(|m| best.iter().all(|b| b.start != m.start));
+                let read = read(text, option);
+                if !splits
+                    && options.len() < MAX_OPTIONS
+                    && options.iter().all(|o| read != self::read(text, o))
+                {
+                    options.push(option.to_vec());
+                }
+            }
+            let kanji = text[start..end].chars().any(is_kanji);
+            (kanji && options.len() > 1).then_some(Alternatives {
+                start,
+                end,
+                options,
+            })
+        });
+        let alternatives = alternatives.collect();
+        (best, alternatives)
+    }
+}
+
+/// 読みが分かれるところ。`options` の先頭が、辞書のいちばん良い読み
+#[derive(Debug)]
+pub struct Alternatives {
+    pub start: usize,
+    pub end: usize,
+    pub options: Vec<Vec<Morpheme>>,
+}
+
+fn morpheme(token: &mut lindera::token::Token) -> Morpheme {
+    let reading = token
+        .details()
+        .get(READING)
+        .filter(|r| **r != "*")
+        .map(|r| to_hiragana(r));
+    let surface = to_hiragana(&token.surface);
+    Morpheme {
+        start: token.byte_start,
+        end: token.byte_end,
+        reading: reading.or_else(|| surface.chars().all(is_kana).then_some(surface)),
+    }
+}
+
+/// `start..end` をちょうど覆う語。この分け方の語の境目に合わなければ None
+fn within(path: &[Morpheme], start: usize, end: usize) -> Option<&[Morpheme]> {
+    let from = path.iter().position(|m| m.start == start)?;
+    let to = path.iter().position(|m| m.end == end)?;
+    path.get(from..=to)
+}
+
+/// 語をつなげた読み。読めない語は、文字のまま
+pub fn read(text: &str, morphemes: &[Morpheme]) -> String {
+    morphemes
+        .iter()
+        .map(|m| m.reading.as_deref().unwrap_or(&text[m.start..m.end]))
+        .collect()
+}
+
+/// 2 つの分け方で、読みが違う範囲。両方の語の境目になっている位置で区切って比べる
+fn differences(text: &str, best: &[Morpheme], path: &[Morpheme]) -> Vec<(usize, usize)> {
+    let mut out = Vec::new();
+    let (mut b, mut p, mut start) = (0, 0, 0);
+    let (mut from_b, mut from_p) = (0, 0);
+    while b < best.len() && p < path.len() {
+        match best[b].end.cmp(&path[p].end) {
+            std::cmp::Ordering::Less => b += 1,
+            std::cmp::Ordering::Greater => p += 1,
+            std::cmp::Ordering::Equal => {
+                let end = best[b].end;
+                (b, p) = (b + 1, p + 1);
+                if read(text, &best[from_b..b]) != read(text, &path[from_p..p]) {
+                    out.push((start, end));
+                }
+                (from_b, from_p, start) = (b, p, end);
+            }
+        }
+    }
+    out
 }
 
 /// 文の `from..to` にふりがなを付ける。形態素にならなかった文字（空白など）もそのまま残す
@@ -195,6 +302,39 @@ fn is_kanji(c: char) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// 読みが分かれるところの、文字と読みの候補
+    fn alternatives(text: &str) -> Vec<(String, Vec<String>)> {
+        let (_, found) = Furigana::shared().unwrap().alternatives(text);
+        let listed = found.iter().map(|a| {
+            let options = a.options.iter().map(|o| read(text, o)).collect();
+            (text[a.start..a.end].to_owned(), options)
+        });
+        listed.collect()
+    }
+
+    #[test]
+    fn alternatives_are_other_readings_of_the_same_words() {
+        let of = |text: &str, word: &str| {
+            let found = alternatives(text);
+            let (_, options) = found.into_iter().find(|(w, _)| w == word).expect(word);
+            options
+        };
+        // 先頭が、辞書のいちばん良い読み
+        let spicy = of("このカレー辛い", "辛い");
+        assert_eq!(spicy[0], "つらい");
+        assert!(spicy.contains(&"からい".to_owned()));
+        // 語をまとめた分け方（「一」「人」を「一人」）も候補にする
+        assert!(of("一人で倒した", "一人").contains(&"ひとり".to_owned()));
+        // 辞書の語をさらに割った読み（「火」「力」の「ひりょく」）は候補にしない
+        let all = alternatives("火力が上がってる");
+        assert!(
+            all.iter()
+                .all(|(_, options)| !options.iter().any(|o| o.contains("ひりょく")))
+        );
+        // かなだけのところは聞かない
+        assert!(alternatives("めっちゃつよい").is_empty());
+    }
 
     fn p(text: &str, ruby: Option<&str>) -> Part {
         Part {

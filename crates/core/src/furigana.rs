@@ -10,6 +10,7 @@ use serde::Deserialize;
 use serde_json::json;
 
 use crate::access::Access;
+use crate::decide;
 use crate::llm;
 use crate::reading::{self, Furigana, Morpheme};
 use crate::types::RubySegment;
@@ -86,6 +87,98 @@ pub async fn ask(
         correct(text, &mut morphemes, &words, out.readings);
     } else {
         tracing::warn!("furigana: rejected the answer for {text}");
+    }
+    Ok(reading::annotate(text, &morphemes, 0, text.len()))
+}
+
+/// 読みの候補に付けて見せる、続くかなの数
+const TAIL_CHARS: usize = 4;
+
+/// 判定モデル（Jev と同じ形の口。OpenRouter の Perplexity Decider）
+pub struct Judge<'a> {
+    pub deadlock: bool,
+    pub access: &'a Access,
+    pub model: &'a str,
+    pub meter: &'a Meter,
+}
+
+/// 文のふりがな。読みが分かれるところ（辛い、人気、一人）を、辞書の候補から判定モデルに選ばせる。
+/// 分かれるところがなければ聞かない。候補の中からしか選べないので、語の範囲を壊す答えは出ない
+pub async fn choose(
+    http: &reqwest::Client,
+    judge: &Judge<'_>,
+    dictionary: &Furigana,
+    text: &str,
+    context: &[String],
+) -> anyhow::Result<Vec<RubySegment>> {
+    let (mut morphemes, alternatives) = dictionary.alternatives(text);
+    if alternatives.is_empty() {
+        return Ok(reading::annotate(text, &morphemes, 0, text.len()));
+    }
+    let name = |i: usize| format!("r{i}");
+    let questions: serde_json::Map<String, serde_json::Value> = alternatives
+        .iter()
+        .enumerate()
+        .map(|(i, a)| {
+            // 続くかな（送り仮名や助詞）も見せる。語だけだと、活用する語の読みを選べない（「来」を「こ」）
+            let tail: String = text[a.end..]
+                .chars()
+                .take_while(|c| is_kana(*c))
+                .take(TAIL_CHARS)
+                .collect();
+            let criteria: serde_json::Map<String, serde_json::Value> = a
+                .options
+                .iter()
+                .enumerate()
+                .map(|(o, option)| {
+                    let read = format!("{}{}", reading::read(text, option), to_hiragana(&tail));
+                    (format!("o{o}"), read.into())
+                })
+                .collect();
+            let instructions = format!(
+                "In the transcript, right after \"{}\", how is \"{}\" read aloud? Each choice is a reading in hiragana. \
+                 Choose the reading that fits the meaning of this sentence.",
+                &text[..a.start],
+                &text[a.start..a.end + tail.len()]
+            );
+            let question = json!({ "type": "choice", "instructions": instructions, "criteria": criteria });
+            (name(i), question)
+        })
+        .collect();
+    let speaker = if judge.deadlock {
+        "a Japanese streamer playing the video game Deadlock"
+    } else {
+        "a Japanese streamer"
+    };
+    let body = json!({
+        "model": judge.model,
+        "state": format!(
+            "Live commentary from {speaker}, written by speech recognition.\n\
+             Previous utterances (context only): {}\nTranscript: {text}",
+            json!(context)
+        ),
+        "questions": questions,
+    });
+    let asking = decide::Asking {
+        access: judge.access,
+        model: judge.model,
+        meter: judge.meter,
+        purpose: Use::Furigana,
+    };
+    let request = http.post(judge.access.url("/systemone")).json(&body);
+    let answers = decide::answers(request, &asking).await?;
+    // 後ろから入れ替える（前の語の位置がずれない）
+    for (i, a) in alternatives.iter().enumerate().rev() {
+        let chosen = decide::choice(&answers, &name(i));
+        let chosen =
+            chosen.and_then(|c| a.options.get(c.strip_prefix('o')?.parse::<usize>().ok()?));
+        if let Some(option) = chosen {
+            let from = morphemes.iter().position(|m| m.start == a.start);
+            let to = morphemes.iter().position(|m| m.end == a.end);
+            if let (Some(from), Some(to)) = (from, to) {
+                morphemes.splice(from..=to, option.iter().cloned());
+            }
+        }
     }
     Ok(reading::annotate(text, &morphemes, 0, text.len()))
 }
@@ -262,6 +355,45 @@ mod tests {
             corrected("攻撃を避けて", &["こうげき", "ヨケ"])[2],
             seg("避", Some("よ"))
         );
+    }
+
+    /// 本物の判定モデルに選ばせる: `OPENROUTER_API_KEY=… cargo test -p overlays-core furigana_chooses -- --ignored --nocapture`
+    /// `BETA_TEST_API`（開発者のサーバーの根元）と `BETA_TEST_CODE`（ベータのコード）があれば、ベータの中継を通す
+    #[tokio::test]
+    #[ignore = "calls OpenRouter"]
+    async fn furigana_chooses_among_the_readings_of_the_dictionary() {
+        let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
+        let provider = crate::secrets::Provider::OpenRouter;
+        let access = match std::env::var("BETA_TEST_API") {
+            Ok(api) => Access::gift(provider, std::env::var("BETA_TEST_CODE").unwrap(), &api),
+            Err(_) => Access::key(provider, std::env::var("OPENROUTER_API_KEY").unwrap()),
+        };
+        let meter = Meter::new(std::env::temp_dir().join("overlays-furigana-test-usage.json"));
+        let judge = Judge {
+            deadlock: true,
+            access: &access,
+            model: "perplexity/pplx-decider-v1.2",
+            meter: &meter,
+        };
+        for (text, expected) in [
+            (
+                "このカレーめっちゃ辛いんだけど",
+                "このカレーめっちゃからいんだけど",
+            ),
+            ("一人で三人倒した", "ひとりでさんにんたおした"),
+            ("火力が上がってる", "かりょくがあがってる"),
+        ] {
+            let dictionary = Furigana::shared().unwrap();
+            let segments = choose(crate::http(), &judge, dictionary, text, &[])
+                .await
+                .unwrap();
+            let reading: String = segments
+                .iter()
+                .map(|s| s.ruby.as_deref().unwrap_or(&s.text))
+                .collect();
+            println!("{text} → {reading}");
+            assert_eq!(reading, expected);
+        }
     }
 
     /// 本物の OpenAI に聞く: `OPENAI_API_KEY=… cargo test -p overlays-core furigana_fixes -- --ignored --nocapture`

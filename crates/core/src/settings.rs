@@ -655,13 +655,14 @@ impl Engines {
         furigana: RubySource::Lindera,
     };
     /// ベータのモード。ベータの間は無料（開発者のサーバーが、開発者のキーで中継する。DESIGN.md 17.2）。
-    /// いちばん安い組み合わせ: 途中の字幕は Chrome、確定は Qwen、用語は Perplexity Decider、翻訳は Hy-MT2
+    /// いちばん安い組み合わせ: 途中の字幕は Chrome、確定は Qwen、用語は Perplexity Decider、翻訳は Hy-MT2、
+    /// ふりがなは辞書の候補から Perplexity Decider が選ぶ
     pub const BETA: Self = Self {
         live: LiveSource::Chrome,
         transcription: FinalSource::QwenAudio,
         terms: TermsEngine::PplxDecider,
         translation: TranslationEngine::HyMt2,
-        furigana: RubySource::Lindera,
+        furigana: RubySource::Decider,
     };
     /// ローカルのモード。途中の字幕も確定も PC の中の Haas-ja で作り、音声は PC から出ない（日本語だけ。DESIGN.md 9.8）。
     /// 用語と翻訳は、ベータのモードと同じ（ベータの間は無料）
@@ -1002,18 +1003,32 @@ pub enum RubySource {
     Llm,
     /// 同じことを GPT-6 Luna にさせる。Terra の約 7 分の 1 の料金で、直せる読みは少し減る（DESIGN.md 6.4）
     Luna,
+    /// 読みが分かれるところを、辞書の候補から判定モデル（OpenRouter の Perplexity Decider）に選ばせる。
+    /// 速くて安く、ベータの中継で使える。直せる読みは Luna より少し減る（DESIGN.md 6.4）
+    Decider,
 }
 
 impl RubySource {
-    pub const ALL: [Self; 3] = [Self::Lindera, Self::Llm, Self::Luna];
+    pub const ALL: [Self; 4] = [Self::Lindera, Self::Decider, Self::Luna, Self::Llm];
 
     /// 辞書の読みを LLM に直させる
     pub fn llm(self) -> bool {
-        self != Self::Lindera
+        matches!(self, Self::Llm | Self::Luna)
+    }
+
+    /// 辞書の候補から選ばせる判定モデル
+    pub fn judge(self) -> Option<Model> {
+        (self == Self::Decider).then_some(Model {
+            provider: Provider::OpenRouter,
+            name: "perplexity/pplx-decider-v1.2",
+        })
     }
 
     pub fn provider(self) -> Option<Provider> {
-        self.llm().then_some(Provider::OpenAi)
+        match self.judge() {
+            Some(judge) => Some(judge.provider),
+            None => self.llm().then_some(Provider::OpenAi),
+        }
     }
 }
 
@@ -1056,7 +1071,7 @@ impl Phase {
 
     /// PC の中で読みか用語を付けるか
     pub fn marks(&self) -> bool {
-        self.ruby == Some(RubySource::Lindera) || self.local_terms()
+        self.ruby.is_some() || self.local_terms()
     }
 
     /// PC の中で辞書の一致を付けるか（Decisions で確かめるときも、確かめられなかったときのために付ける）
@@ -1226,7 +1241,7 @@ impl Settings {
             ruby: match engines.furigana {
                 Ruby::Lindera => lindera,
                 // 直すもとの辞書の読みは日本語だけ
-                Ruby::Llm | Ruby::Luna => lindera.map(|_| engines.furigana),
+                Ruby::Llm | Ruby::Luna | Ruby::Decider => lindera.map(|_| engines.furigana),
             },
             emphasis: match (engines.translation.source(), engines.terms) {
                 (Translation::Llm, _) => self.deadlock_mode.then_some(Emphasis::Llm),
@@ -1830,6 +1845,24 @@ mod tests {
         assert_eq!(llm_words.partial, plan_of(Engines::CHROME).partial);
     }
 
+    /// ふりがなを判定モデルに選ばせるなら、OpenRouter を使う（ベータの中継で足りる）。OpenAI は要らない
+    #[test]
+    fn decider_furigana_uses_openrouter_and_starts_from_the_dictionary() {
+        let chosen = Settings {
+            engines: Engines {
+                furigana: RubySource::Decider,
+                ..Engines::CHROME
+            },
+            ..Default::default()
+        };
+        assert_eq!(chosen.plan().finals.ruby, Some(RubySource::Decider));
+        // 確定の文にも、まず辞書の読みを付ける
+        assert!(chosen.plan().finals.marks());
+        assert_eq!(chosen.engines.providers(), [Provider::OpenRouter]);
+        assert_eq!(Engines::BETA.furigana, RubySource::Decider);
+        assert!(!Engines::BETA.uses(Provider::OpenAi));
+    }
+
     /// ふりがなを GPT-6 Luna にすると、読みを直すモデルだけが変わる（辞書の名前の読みは `models.readings` のまま）
     #[test]
     fn luna_furigana_changes_only_the_model_of_readings() {
@@ -1971,6 +2004,7 @@ mod tests {
             engines,
             Engines {
                 transcription: FinalSource::GrokVoiceTranscribe,
+                furigana: RubySource::Lindera,
                 ..Engines::BETA
             }
         );

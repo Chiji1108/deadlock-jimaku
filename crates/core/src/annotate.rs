@@ -11,7 +11,7 @@ use tokio::sync::watch;
 
 use crate::assets::Loaded;
 use crate::reading::{Furigana, Morpheme, annotate};
-use crate::settings::{Phase, RubySource, Settings};
+use crate::settings::{Phase, Settings};
 use crate::store::Store;
 use crate::terms::{Found, Term, Terms, ruby};
 use crate::types::{Entity, Glossary, LiveState, LiveStatus, TermName, Token, Translatable};
@@ -64,7 +64,8 @@ impl Annotator {
             self.terms = Terms::new(table.unwrap_or_default());
         }
         let with_terms = phase.local_terms();
-        let with_ruby = phase.ruby == Some(RubySource::Lindera);
+        // ふりがなを LLM や判定モデルに直させるときも、まず辞書の読みを付ける（直らなかった語と、聞けなかった文に残る）
+        let with_ruby = phase.ruby.is_some();
         let furigana = self.furigana.filter(|_| with_ruby || with_terms);
         let terms = with_terms.then_some(&self.terms);
         annotated(furigana, terms, with_ruby, text)

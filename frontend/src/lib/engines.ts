@@ -158,6 +158,12 @@ export const ITEMS: { [K in Item]: { label: string; hint: string; options: Optio
         note: "文で読みが変わる語（辛い、一人、人気）は間違えることがある",
       },
       {
+        value: "decider",
+        label: "辞書 + Perplexity Decider",
+        price: "ほぼ無料（1 時間で 1 セント未満）",
+        note: "読みが分かれる語を、辞書の候補から選ぶ。速い。まれに、合っていた読みを替えてしまう",
+      },
+      {
         value: "llm",
         label: "辞書 + GPT-6.1 Terra",
         price: "100 万トークンで入力 $1・出力 $5",
@@ -187,7 +193,7 @@ export const BETA: Engines = {
   transcription: "qwenAudio",
   terms: "pplxDecider",
   translation: "hyMt2",
-  furigana: "lindera",
+  furigana: "decider",
 };
 /** ローカルの組み合わせ。途中の字幕も確定も PC の中（Haas-ja）。用語と翻訳はベータと同じ */
 export const LOCAL: Engines = { ...BETA, live: "haasJa", transcription: "haasJa" };
@@ -229,7 +235,7 @@ export const MODES: {
     label: "ベータ",
     traits: "高精度・キー不要",
     hourlyUsd: 0,
-    hint: "ベータの間は無料です。途中の字幕は Chrome、確定の字幕・用語・翻訳は、開発者のサーバーを通して作ります（1 日の上限があります）",
+    hint: "ベータの間は無料です。途中の字幕は Chrome、確定の字幕・用語・翻訳・ふりがなの読み分けは、開発者のサーバーを通して作ります（1 日の上限があります）",
     engines: BETA,
     recommended: true,
   },

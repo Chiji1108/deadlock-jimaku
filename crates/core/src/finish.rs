@@ -10,11 +10,13 @@ use std::time::Instant;
 
 use tokio::sync::{broadcast, mpsc};
 
-use crate::access::Accesses;
+use crate::access::{Access, Accesses};
 use crate::chrome;
 use crate::decide::Decider;
 use crate::enrich::{Enricher, Span, source_tokens};
+use crate::furigana;
 use crate::mt::Translator;
+use crate::reading::Furigana;
 use crate::secrets::Provider;
 use crate::settings::{EmphasisSource, Phase, RubySource, Settings, TranslationSource};
 use crate::store::{ChromeEvent, Store};
@@ -31,6 +33,15 @@ pub struct Finisher {
     decider: Option<Decider>,
     /// 翻訳専門のモデルで訳すときだけ
     translator: Option<Translator>,
+    /// ふりがなを判定モデルに選ばせるときだけ
+    chooser: Option<Chooser>,
+}
+
+/// ふりがなの読みを、辞書の候補から選ぶ判定モデル
+struct Chooser {
+    access: Access,
+    model: &'static str,
+    deadlock: bool,
 }
 
 /// 字幕の処理に返すもの
@@ -87,11 +98,19 @@ impl Finisher {
                 store.meter(),
             )
         });
+        let chooser = settings.engines.furigana.judge().and_then(|judge| {
+            Some(Chooser {
+                access: accesses.get(judge.provider)?,
+                model: judge.name,
+                deadlock: settings.deadlock_mode,
+            })
+        });
         Self {
             store,
             enricher,
             decider,
             translator,
+            chooser,
         }
     }
 
@@ -149,7 +168,6 @@ impl Finisher {
             tokens,
         } = heard;
         let llm = self.enricher.as_ref();
-        let llm_ruby = llm.filter(|_| phase.ruby.is_some_and(RubySource::llm));
         let llm_words = llm.filter(|_| {
             phase.translation == Some(TranslationSource::Llm)
                 || phase.emphasis == Some(EmphasisSource::Llm)
@@ -160,11 +178,25 @@ impl Finisher {
         let local = spans_of(&tokens);
         let (ruby, words) = tokio::join!(
             async {
-                match llm_ruby {
-                    Some(e) => answer("furigana", e.furigana(&text, &context).await)
-                        .map(|ruby| Some(ruby.unwrap_or_default())),
-                    None => Ok(None),
-                }
+                let asked = match (phase.ruby, llm, &self.chooser, Furigana::shared()) {
+                    (Some(source), Some(e), _, _) if source.llm() => {
+                        e.furigana(&text, &context).await
+                    }
+                    (Some(RubySource::Decider), _, Some(chooser), Some(dictionary)) => {
+                        let meter = self.store.meter();
+                        let judge = furigana::Judge {
+                            deadlock: chooser.deadlock,
+                            access: &chooser.access,
+                            model: chooser.model,
+                            meter: &meter,
+                        };
+                        furigana::choose(crate::http(), &judge, dictionary, &text, &context)
+                            .await
+                            .map(Some)
+                    }
+                    _ => Ok(None),
+                };
+                answer("furigana", asked)
             },
             async {
                 if let Some(e) = llm_words {
