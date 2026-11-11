@@ -1,8 +1,8 @@
-//! ふりがな（DESIGN.md 6.4）。読みは LLM（GPT-6.1 Terra）に文脈ごと決めさせる。
+//! ふりがな（DESIGN.md 6.4）。読みは辞書（Lindera）で付け、文に合わない読みを LLM に直させる。
 //!
-//! 字幕の文は発話ごとに、直前の発話を文脈に付けて問い合わせる（`ask`。「人気ないね」の人気(ひとけ)）。辞書の漢字名は名前ごとに問い合わせてキャッシュする
-//! （`assets::readings`）。どちらも答えを `check` で確かめ、合わなければふりがなを付けない
-//! （ふりがなは補助なので、まれに付かなくても字幕としては困らない）。
+//! 字幕の文は発話ごとに、辞書の語と読みを渡して、直前の発話を文脈に付けて問い合わせる（`ask`。「人気ないね」の人気(ひとけ)）。
+//! 答えが使えない語は辞書の読みのままにする。辞書の漢字名は名前ごとに LLM に読ませてキャッシュする
+//! （`assets::readings`。答えを `check` で確かめ、合わなければふりがなを付けない）。
 
 use std::time::Duration;
 
@@ -11,17 +11,20 @@ use serde_json::json;
 
 use crate::access::Access;
 use crate::llm;
+use crate::reading::{self, Furigana, Morpheme};
 use crate::types::RubySegment;
 use crate::usage::{Meter, Use};
 
 /// 1 文で 2〜3 秒。翻訳と同時に問い合わせる
 const TIMEOUT: Duration = Duration::from_secs(8);
 
-const RULES: &str = "\"sentence\" is a Japanese subtitle, \
-and \"context\" holds the previous subtitles (oldest first), given only to help you decide readings. \
-Split the sentence (never the context) into words and give the hiragana reading of each word that contains kanji, reading it the way it is meant in context. \
-A kanji compound is one segment with the reading of the whole word; never split a compound into single kanji. \
-Keep okurigana, kana and punctuation in their own segments with ruby null. Joining the segments' text must give the sentence exactly.";
+/// 測った聞き方（`experiments/furigana_fix.py`）に、文脈と、辞書が読めなかった語を足したもの
+const RULES: &str = "\"sentence\" is a Japanese subtitle, \"context\" holds the previous subtitles (oldest first), given only to help you decide readings, \
+and \"words\" lists the words of the sentence that contain kanji, each with the reading a dictionary gave, in hiragana (null when the dictionary does not know the word). \
+The dictionary reads each word without looking at the sentence, so some readings are wrong for this sentence \
+(for example 辛い as つらい when it means spicy, or 一 and 人 as いち and にん when the sentence says ひとり). \
+Answer with JSON {\"readings\": [...]}: the correct hiragana reading of each word, in the same order and the same number as \"words\". \
+Keep the dictionary's reading unless it is wrong in this sentence. A reading covers only the characters of its word.";
 
 pub struct Model<'a> {
     /// デッドロックの配信として読むか
@@ -32,30 +35,37 @@ pub struct Model<'a> {
     pub meter: &'a Meter,
 }
 
-/// 文のふりがな。`context` は直前の確定字幕（古い順）。答えが `check` に通らなければ None（ふりがなを付けない）
+/// 文のふりがな（つなげると `text` になる）。`context` は直前の確定字幕（古い順）。
+/// 漢字を含む語がなければ聞かない。答えが使えない語は、辞書の読みのまま
 pub async fn ask(
     http: &reqwest::Client,
     model: &Model<'_>,
+    dictionary: &Furigana,
     text: &str,
     context: &[String],
-) -> anyhow::Result<Option<Vec<RubySegment>>> {
+) -> anyhow::Result<Vec<RubySegment>> {
     #[derive(Deserialize)]
     struct Output {
-        segments: Vec<RubySegment>,
+        readings: Vec<String>,
     }
-    let segment = json!({
-        "type": "object", "additionalProperties": false, "required": ["text", "ruby"],
-        "properties": { "text": { "type": "string" }, "ruby": { "type": ["string", "null"] } },
-    });
+    let mut morphemes = dictionary.morphemes(text);
+    let words = words(text, &morphemes);
+    if words.is_empty() {
+        return Ok(reading::annotate(text, &morphemes, 0, text.len()));
+    }
     let schema = json!({
-        "type": "object", "additionalProperties": false, "required": ["segments"],
-        "properties": { "segments": { "type": "array", "items": segment } },
+        "type": "object", "additionalProperties": false, "required": ["readings"],
+        "properties": { "readings": { "type": "array", "items": { "type": "string" } } },
     });
     let speaker = if model.deadlock {
         "a streamer playing the video game Deadlock"
     } else {
         "a streamer"
     };
+    let asked: Vec<_> = words
+        .iter()
+        .map(|&i| json!({ "text": &text[morphemes[i].start..morphemes[i].end], "reading": morphemes[i].reading }))
+        .collect();
     let out: Output = llm::chat_json(
         http,
         llm::Request {
@@ -63,7 +73,7 @@ pub async fn ask(
             model: model.model,
             reasoning_effort: model.reasoning_effort,
             system: &format!("The input is JSON from {speaker}: {RULES}"),
-            user: json!({ "context": context, "sentence": text }).to_string(),
+            user: json!({ "context": context, "sentence": text, "words": asked }).to_string(),
             schema_name: "furigana",
             schema,
             timeout: TIMEOUT,
@@ -72,11 +82,33 @@ pub async fn ask(
         },
     )
     .await?;
-    let checked = check(text, out.segments);
-    if checked.is_none() {
+    if out.readings.len() == words.len() {
+        correct(text, &mut morphemes, &words, out.readings);
+    } else {
         tracing::warn!("furigana: rejected the answer for {text}");
     }
-    Ok(checked)
+    Ok(reading::annotate(text, &morphemes, 0, text.len()))
+}
+
+/// LLM に確かめさせる語（漢字を含む形態素）の位置
+fn words(text: &str, morphemes: &[Morpheme]) -> Vec<usize> {
+    let kanji = |m: &Morpheme| text[m.start..m.end].chars().any(is_kanji);
+    (0..morphemes.len())
+        .filter(|&i| kanji(&morphemes[i]))
+        .collect()
+}
+
+/// LLM の読みを語に入れる。ひらがなでない読みと、語のかなに合わない読み（「避け」に「さける」）は使わず、辞書の読みのまま
+fn correct(text: &str, morphemes: &mut [Morpheme], words: &[usize], readings: Vec<String>) {
+    for (&i, reading) in words.iter().zip(readings) {
+        let word = &text[morphemes[i].start..morphemes[i].end];
+        let reading = to_hiragana(&reading);
+        let hiragana =
+            !reading.is_empty() && reading.chars().all(|c| matches!(c, 'ぁ'..='ゟ' | 'ー'));
+        if hiragana && reading::align(word, &reading).is_some() {
+            morphemes[i].reading = Some(reading);
+        }
+    }
 }
 
 /// LLM の答えを確かめ、読みを漢字の部分ごとに割り当てる。どれかに合わなければ None
@@ -182,6 +214,102 @@ mod tests {
         RubySegment {
             text: text.into(),
             ruby: ruby.map(Into::into),
+        }
+    }
+
+    /// 辞書の読みに、LLM の答えを入れた文のふりがな
+    fn corrected(text: &str, readings: &[&str]) -> Vec<RubySegment> {
+        let mut morphemes = Furigana::shared().unwrap().morphemes(text);
+        let words = words(text, &morphemes);
+        assert_eq!(words.len(), readings.len(), "{text}");
+        let readings = readings.iter().map(|r| (*r).to_owned()).collect();
+        correct(text, &mut morphemes, &words, readings);
+        reading::annotate(text, &morphemes, 0, text.len())
+    }
+
+    #[test]
+    fn the_answer_replaces_the_readings_of_the_dictionary() {
+        // 辞書は「からい」を「つらい」、「ひとり」を「いち」「にん」と読む
+        assert_eq!(
+            corrected("このカレー辛い", &["からい"]),
+            [
+                seg("このカレー", None),
+                seg("辛", Some("から")),
+                seg("い", None)
+            ]
+        );
+        assert_eq!(
+            corrected("一人で倒した", &["ひと", "り", "たおし"]),
+            [
+                seg("一", Some("ひと")),
+                seg("人", Some("り")),
+                seg("で", None),
+                seg("倒", Some("たお")),
+                seg("した", None)
+            ]
+        );
+    }
+
+    #[test]
+    fn an_answer_that_does_not_fit_its_word_keeps_the_dictionary() {
+        let dictionary = corrected("攻撃を避けて", &["こうげき", "さけ"]);
+        // 送り仮名より先まで読んだ答え、ひらがなでない答え、空の答え
+        for wrong in ["さける", "sake", ""] {
+            assert_eq!(corrected("攻撃を避けて", &["こうげき", wrong]), dictionary);
+        }
+        // カタカナはひらがなにして使う
+        assert_eq!(
+            corrected("攻撃を避けて", &["こうげき", "ヨケ"])[2],
+            seg("避", Some("よ"))
+        );
+    }
+
+    /// 本物の OpenAI に聞く: `OPENAI_API_KEY=… cargo test -p overlays-core furigana_fixes -- --ignored --nocapture`
+    #[tokio::test]
+    #[ignore = "calls OpenAI"]
+    async fn furigana_fixes_the_readings_in_context() {
+        let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
+        let key = std::env::var("OPENAI_API_KEY").unwrap();
+        let access = Access::key(crate::secrets::Provider::OpenAi, key);
+        let meter = Meter::new(std::env::temp_dir().join("overlays-furigana-test-usage.json"));
+        for name in ["gpt-6.1-terra", "gpt-6-luna"] {
+            let model = Model {
+                deadlock: true,
+                access: &access,
+                model: name,
+                reasoning_effort: Some("none"),
+                meter: &meter,
+            };
+            let read = |text: &'static str, context: &'static [&'static str]| {
+                let model = &model;
+                async move {
+                    let context: Vec<String> = context.iter().map(|c| (*c).to_owned()).collect();
+                    let started = std::time::Instant::now();
+                    let dictionary = Furigana::shared().unwrap();
+                    let segments = ask(crate::http(), model, dictionary, text, &context)
+                        .await
+                        .unwrap();
+                    let reading: String = segments
+                        .iter()
+                        .map(|s| s.ruby.as_deref().unwrap_or(&s.text))
+                        .collect();
+                    println!("{name} {:?} {text} → {reading}", started.elapsed());
+                    reading
+                }
+            };
+            assert_eq!(
+                read("このカレーめっちゃ辛いんだけど", &[]).await,
+                "このカレーめっちゃからいんだけど"
+            );
+            assert_eq!(
+                read("一人で三人倒した", &[]).await,
+                "ひとりでさんにんたおした"
+            );
+            // 文だけでは決まらない読みは、前の発話で決まる
+            assert_eq!(
+                read("人気ないね", &["このレーン誰もいないな"]).await,
+                "ひとけないね"
+            );
         }
     }
 

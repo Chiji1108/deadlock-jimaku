@@ -33,7 +33,7 @@ export const ITEMS: { [K in Item]: { label: string; hint: string; options: Optio
         value: "qwenAudioStreaming",
         label: "Qwen-Audio-3.1-ASR-Flash-Streaming",
         price: "話した 1 分 約 $0.0008",
-        note: "Qwen の API キーが要る。GPT-Live-Transcribe の約 20 分の 1 の料金で、精度は同じくらい。用語のヒントは渡せない",
+        note: "Chrome を使わない。GPT-Live-Transcribe の約 20 分の 1 の料金で、精度は同じくらい。用語のヒントは渡せない",
       },
       {
         value: "haasJa",
@@ -76,7 +76,7 @@ export const ITEMS: { [K in Item]: { label: string; hint: string; options: Optio
         value: "haasJa",
         label: "Haas-ja（PC の中）",
         price: "無料",
-        note: "日本語だけ。精度は Grok と同じくらい。音声は PC から出ない。初回に約 400 MB をダウンロードする。Intel の Mac では動かない",
+        note: "日本語だけ。音声は PC から出ない。用語を教えられないので、カタカナの用語は Grok や Qwen より間違えやすい。初回に約 400 MB をダウンロードする。Intel の Mac では動かない",
       },
     ],
   },
@@ -151,11 +151,23 @@ export const ITEMS: { [K in Item]: { label: string; hint: string; options: Optio
     label: "ふりがな",
     hint: "日本語の漢字の読み",
     options: [
-      { value: "lindera", label: "辞書（PC の中）", price: "無料" },
+      {
+        value: "lindera",
+        label: "辞書（PC の中）",
+        price: "無料",
+        note: "文で読みが変わる語（辛い、一人、人気）は間違えることがある",
+      },
       {
         value: "llm",
-        label: "GPT-6.1 Terra",
+        label: "辞書 + GPT-6.1 Terra",
         price: "100 万トークンで入力 $1・出力 $5",
+        note: "辞書の読みを、文に合わせて直す。いちばん正確",
+      },
+      {
+        value: "luna",
+        label: "辞書 + GPT-6 Luna",
+        price: "Terra の約 7 分の 1",
+        note: "辞書の読みを、文に合わせて直す。Terra より少し直し残す",
       },
     ],
   },
@@ -226,7 +238,7 @@ export const MODES: {
     label: "ローカル",
     traits: "音声を送らない・キー不要",
     hourlyUsd: 0,
-    hint: "途中の字幕も確定の字幕も、PC の中で作ります（日本語だけ。初回に約 400 MB をダウンロードします）。音声は PC から出ません。用語と翻訳は、ベータの間は無料で、開発者のサーバーを通して作ります。PC の負荷は上がります",
+    hint: "途中の字幕も確定の字幕も、PC の中で作ります（日本語だけ。初回に約 400 MB をダウンロードします）。音声は PC から出ません。用語と翻訳は、ベータの間は無料で、開発者のサーバーを通して作ります。PC の負荷が上がるので、性能に余裕のない PC には向きません。カタカナの用語は、ベータより間違えやすいです",
     engines: LOCAL,
   },
   {

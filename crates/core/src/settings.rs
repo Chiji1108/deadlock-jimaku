@@ -996,15 +996,24 @@ pub enum TranslationSource {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub enum RubySource {
+    /// 辞書（PC の中）
     Lindera,
+    /// 辞書の読みを、GPT-6.1 Terra（`models.readings`）に文に合わせて直させる
     Llm,
+    /// 同じことを GPT-6 Luna にさせる。Terra の約 7 分の 1 の料金で、直せる読みは少し減る（DESIGN.md 6.4）
+    Luna,
 }
 
 impl RubySource {
-    pub const ALL: [Self; 2] = [Self::Lindera, Self::Llm];
+    pub const ALL: [Self; 3] = [Self::Lindera, Self::Llm, Self::Luna];
+
+    /// 辞書の読みを LLM に直させる
+    pub fn llm(self) -> bool {
+        self != Self::Lindera
+    }
 
     pub fn provider(self) -> Option<Provider> {
-        (self == Self::Llm).then_some(Provider::OpenAi)
+        self.llm().then_some(Provider::OpenAi)
     }
 }
 
@@ -1216,7 +1225,8 @@ impl Settings {
             translation: translates.then_some(engines.translation.source()),
             ruby: match engines.furigana {
                 Ruby::Lindera => lindera,
-                Ruby::Llm => ruby.then_some(Ruby::Llm),
+                // 直すもとの辞書の読みは日本語だけ
+                Ruby::Llm | Ruby::Luna => lindera.map(|_| engines.furigana),
             },
             emphasis: match (engines.translation.source(), engines.terms) {
                 (Translation::Llm, _) => self.deadlock_mode.then_some(Emphasis::Llm),
@@ -1245,6 +1255,9 @@ impl Settings {
             }
             LiveSource::HaasJa => models.realtime = crate::local::HAAS_JA.into(),
             LiveSource::Chrome | LiveSource::GptLiveTranscribe | LiveSource::Off => {}
+        }
+        if self.engines.furigana == RubySource::Luna {
+            models.readings = "gpt-6-luna".into();
         }
         models
     }
@@ -1815,6 +1828,29 @@ mod tests {
         assert_eq!(llm_words.finals.emphasis, Some(E::Llm));
         assert_eq!(llm_words.finals.ruby, Some(R::Llm));
         assert_eq!(llm_words.partial, plan_of(Engines::CHROME).partial);
+    }
+
+    /// ふりがなを GPT-6 Luna にすると、読みを直すモデルだけが変わる（辞書の名前の読みは `models.readings` のまま）
+    #[test]
+    fn luna_furigana_changes_only_the_model_of_readings() {
+        let luna = Settings {
+            engines: Engines {
+                furigana: RubySource::Luna,
+                ..Engines::CHROME
+            },
+            ..Default::default()
+        };
+        assert_eq!(luna.plan().finals.ruby, Some(RubySource::Luna));
+        assert_eq!(luna.plan().partial.ruby, Some(RubySource::Lindera));
+        assert_eq!(luna.models_in_use().readings, "gpt-6-luna");
+        assert_eq!(luna.models.readings, Models::default().readings);
+        assert!(luna.engines.uses(Provider::OpenAi));
+        // 直すもとの辞書の読みは日本語だけ
+        let english = Settings {
+            mic_language: "en".into(),
+            ..luna
+        };
+        assert_eq!(english.plan().finals.ruby, None);
     }
 
     #[test]

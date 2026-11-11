@@ -62,6 +62,7 @@ export const ENGINE_PROVIDERS = {
   },
   "furigana": {
     "lindera": null,
-    "llm": "openai"
+    "llm": "openai",
+    "luna": "openai"
   }
 } as const;

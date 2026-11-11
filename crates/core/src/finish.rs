@@ -149,7 +149,7 @@ impl Finisher {
             tokens,
         } = heard;
         let llm = self.enricher.as_ref();
-        let llm_ruby = llm.filter(|_| phase.ruby == Some(RubySource::Llm));
+        let llm_ruby = llm.filter(|_| phase.ruby.is_some_and(RubySource::llm));
         let llm_words = llm.filter(|_| {
             phase.translation == Some(TranslationSource::Llm)
                 || phase.emphasis == Some(EmphasisSource::Llm)

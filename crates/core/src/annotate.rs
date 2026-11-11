@@ -5,7 +5,7 @@
 //! 翻訳は Chrome のページがするので、用語を英語の名前に置き換えた文（`Translatable`）も作る。
 //! 形態素解析の辞書は日本語だけなので、ほかの言語の文はそのまま返す
 
-use std::sync::{Arc, OnceLock};
+use std::sync::Arc;
 
 use tokio::sync::watch;
 
@@ -29,7 +29,10 @@ impl Annotator {
     pub(crate) async fn new(store: Arc<Store>, settings: &Settings) -> Self {
         // 辞書の読み込みは最初の 1 回だけ時間がかかる
         let furigana = if settings.mic_language == "ja" {
-            tokio::task::spawn_blocking(furigana).await.ok().flatten()
+            tokio::task::spawn_blocking(Furigana::shared)
+                .await
+                .ok()
+                .flatten()
         } else {
             None
         };
@@ -72,18 +75,6 @@ impl Drop for Annotator {
     fn drop(&mut self) {
         self.store.set_live_status(None);
     }
-}
-
-/// 埋め込みの辞書なので、読めなければ文をそのまま使う
-fn furigana() -> Option<&'static Furigana> {
-    static FURIGANA: OnceLock<Option<Furigana>> = OnceLock::new();
-    FURIGANA
-        .get_or_init(|| {
-            Furigana::new()
-                .inspect_err(|e| tracing::warn!("furigana: {e:#}"))
-                .ok()
-        })
-        .as_ref()
 }
 
 fn annotated(

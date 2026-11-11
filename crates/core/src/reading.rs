@@ -1,7 +1,8 @@
 //! Chrome が認識した文のふりがな（DESIGN.md 9.6）。読みは形態素解析（Lindera + IPADIC）で決める。
-//! 文脈で決まる読みや造語は誤るが、速く、OpenAI も要らない。スタンダードは最後に OpenAI の読みに置き換える
+//! 文脈で決まる読みや造語は誤るが、速く、OpenAI も要らない。ふりがなを LLM にしていれば、確定の文で文に合わない読みを直させる（`furigana.rs`）
 
 use std::borrow::Cow;
+use std::sync::OnceLock;
 
 use lindera::dictionary::load_dictionary;
 use lindera::mode::Mode;
@@ -25,6 +26,18 @@ pub struct Furigana {
 }
 
 impl Furigana {
+    /// アプリで 1 つだけ作る辞書。埋め込みの辞書なので、読めなければ None（文をそのまま使う）
+    pub fn shared() -> Option<&'static Self> {
+        static FURIGANA: OnceLock<Option<Furigana>> = OnceLock::new();
+        FURIGANA
+            .get_or_init(|| {
+                Self::new()
+                    .inspect_err(|e| tracing::warn!("furigana: {e:#}"))
+                    .ok()
+            })
+            .as_ref()
+    }
+
     pub fn new() -> anyhow::Result<Self> {
         let dictionary = load_dictionary("embedded://ipadic")?;
         Ok(Self {

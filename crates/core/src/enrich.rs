@@ -23,6 +23,7 @@ use crate::access::Access;
 use crate::furigana;
 use crate::lang;
 use crate::llm;
+use crate::reading::Furigana;
 use crate::settings::Models;
 use crate::types::{EntityKind, Glossary, LangCode, RubySegment, Token, Translations};
 use crate::usage::{Meter, Use};
@@ -70,16 +71,17 @@ impl Enricher {
         }
     }
 
-    /// 文全体の読み。日本語で漢字を含む文だけ聞く。答えが通らなければ None。
+    /// 文全体の読み（辞書の読みを、文に合わせて直したもの）。日本語で漢字を含む文だけ聞く。
     /// `context` は直前の確定字幕（古い順）
     pub async fn furigana(
         &self,
         text: &str,
         context: &[String],
     ) -> anyhow::Result<Option<Vec<RubySegment>>> {
-        if self.source_lang != "ja" || !text.chars().any(furigana::is_kanji) {
+        let dictionary = Furigana::shared().filter(|_| self.source_lang == "ja");
+        let Some(dictionary) = dictionary.filter(|_| text.chars().any(furigana::is_kanji)) else {
             return Ok(None);
-        }
+        };
         let model = furigana::Model {
             deadlock: self.deadlock_mode,
             access: &self.access,
@@ -87,7 +89,8 @@ impl Enricher {
             reasoning_effort: self.reasoning_effort.as_deref(),
             meter: &self.meter,
         };
-        furigana::ask(&self.http, &model, text, context).await
+        let asked = furigana::ask(&self.http, &model, dictionary, text, context);
+        asked.await.map(Some)
     }
 
     /// 原文の用語の区切りと訳文。辞書も翻訳先もなければ聞くことがなく、None。
