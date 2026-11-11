@@ -1,22 +1,14 @@
 import { expect, test } from "vitest";
-import { CHROME, MODES, keyNames, modeOf, providers, unavailable } from "./engines";
-
-/** 翻訳も用語も GPT に任せる組み合わせ（モードにはない） */
-const GPT = {
-  ...CHROME,
-  transcription: "gptTranscribe",
-  translation: "gpt61Terra",
-  furigana: "llm",
-} as const;
+import { BEST, CHROME, MODES, keyNames, modeOf, providers, unavailable } from "./engines";
 
 test("モードの組み合わせは、そのモードとして見分ける", () => {
   for (const mode of MODES) expect(modeOf(mode.engines)?.name).toBe(mode.name);
 });
 
-test("翻訳が GPT なら用語も GPT が判定するので、用語の選択は選べない", () => {
-  const t = { ...GPT, terms: "decisions" } as const;
+test("翻訳が GPT なら用語も GPT が判定するので、用語の選択は選べず、モードも変わらない", () => {
+  const t = { ...BEST, terms: "decisions" } as const;
   expect(unavailable(t, "terms", "dictionary")).toBe(true);
-  expect(modeOf(t)).toBeUndefined();
+  expect(modeOf(t)?.name).toBe("best");
   expect(providers(t)).toEqual(["openai"]);
 });
 

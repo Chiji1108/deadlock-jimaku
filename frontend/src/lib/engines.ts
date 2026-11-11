@@ -186,6 +186,15 @@ export const BETA: Engines = {
 /** ローカルの組み合わせ。途中の字幕も確定も PC の中（Haas-ja）。用語と翻訳はベータと同じ */
 export const LOCAL: Engines = { ...BETA, live: "haasJa", transcription: "haasJa" };
 
+/** 最高精度の組み合わせ（0.5 までの「スタンダード」）。確定の文字起こし・翻訳と用語・ふりがなを GPT で作る */
+export const BEST: Engines = {
+  live: "chrome",
+  transcription: "gptTranscribe",
+  terms: "dictionary",
+  translation: "gpt61Terra",
+  furigana: "llm",
+};
+
 /** 月の目安の使い方（毎日 3 時間、30 日） */
 const MONTHLY_HOURS = 3 * 30;
 /** 月の目安を円にするときの 1 ドル（為替で動くので目安） */
@@ -233,6 +242,14 @@ export const MODES: {
     hourlyUsd: 0,
     hint: "多くの字幕ソフトと同じく、Chrome の音声認識と翻訳だけを使います。開発者のサーバーは使いません",
     engines: CHROME,
+  },
+  {
+    name: "best",
+    label: "最高精度",
+    traits: "OpenAI のキーが要る",
+    hourlyUsd: 0.6,
+    hint: "途中の字幕は Chrome、確定の字幕・翻訳・ふりがなは OpenAI の GPT で作ります。用語の判定と文字起こしがいちばん正確ですが、確定の字幕が出るまで 1〜2 秒長くかかります",
+    engines: BEST,
   },
 ];
 

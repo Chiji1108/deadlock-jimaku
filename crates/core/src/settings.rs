@@ -600,8 +600,9 @@ impl Engines {
         transcription: FinalSource::HaasJa,
         ..Self::BETA
     };
-    /// 操作パネルに出すモード（おすすめの組み合わせ）。ほかの組み合わせは「カスタム」（`Settings::custom_engines`）
-    pub const MODES: [Self; 3] = [Self::BETA, Self::LOCAL, Self::CHROME];
+    /// 操作パネルに出すモード（おすすめの組み合わせ）。ほかの組み合わせは「カスタム」（`Settings::custom_engines`）。
+    /// `STANDARD` は「最高精度」（OpenAI の鍵が要る）で、ほかは鍵なしで始められる
+    pub const MODES: [Self; 4] = [Self::BETA, Self::LOCAL, Self::CHROME, Self::STANDARD];
     /// ライトのモード。途中の字幕は Chrome、確定は Grok、翻訳と用語は Luna、ふりがなは辞書
     pub const LIGHT: Self = Self {
         live: LiveSource::Chrome,
@@ -610,7 +611,7 @@ impl Engines {
         translation: TranslationEngine::Gpt6Luna,
         furigana: RubySource::Lindera,
     };
-    /// スタンダードのモード（おすすめ）。途中の字幕は Chrome、確定は OpenAI
+    /// 最高精度のモード（0.5 までの「スタンダード」）。途中の字幕は Chrome、確定は OpenAI
     pub const STANDARD: Self = Self {
         live: LiveSource::Chrome,
         transcription: FinalSource::GptTranscribe,
@@ -1573,8 +1574,12 @@ mod tests {
         let saved = serde_json::to_string(&tried).unwrap();
         let loaded: Settings = serde_json::from_str(&saved).unwrap();
         assert_eq!(loaded.custom_engines, Some(mine));
-        // どのモードも、鍵なしで始められる組み合わせ（ベータのコードか、PC の中か、Chrome）
-        for mode in Engines::MODES {
+        // 最高精度のほかは、鍵なしで始められる組み合わせ（ベータのコードか、PC の中か、Chrome）
+        assert_eq!(Engines::STANDARD.providers(), [Provider::OpenAi]);
+        for mode in Engines::MODES
+            .into_iter()
+            .filter(|mode| *mode != Engines::STANDARD)
+        {
             let needs_own_key = |p: &Provider| p.info().relay != Some(crate::secrets::Relay::Beta);
             assert!(!mode.providers().iter().any(needs_own_key), "{mode:?}");
         }
