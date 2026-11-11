@@ -1,0 +1,4880 @@
+{
+ "perplexity/pplx-decider-v1.2": {
+  "summary": {
+   "runs": 180,
+   "dictionaryRight": 126,
+   "right": 162,
+   "fixed": 42,
+   "broken": 6,
+   "asked": 171,
+   "medianMs": 470,
+   "p90Ms": 766,
+   "usd": 0.00072
+  },
+  "runs": [
+   {
+    "text": "さっき行った店より、こっちの方がいいね",
+    "ms": 698,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "さっきいったみせより、こっちのほうがいいね",
+    "cost": 5.64e-06
+   },
+   {
+    "text": "今日は辛い試合が続いてるな",
+    "ms": 975,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "きょうはつらいしあいがつづいてるな",
+    "cost": 5.7e-06
+   },
+   {
+    "text": "このカレーめっちゃ辛いんだけど",
+    "ms": 685,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "このかれーめっちゃからいんだけど",
+    "cost": 2.8e-06
+   },
+   {
+    "text": "このヒーロー今めっちゃ人気だよね",
+    "ms": 749,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "このひーろーいまめっちゃにんきだよね",
+    "cost": 4.86e-06
+   },
+   {
+    "text": "人気のない場所で待ち伏せしよう",
+    "ms": 509,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "ひとけのないばしょでまちぶせしよう",
+    "cost": 3.62e-06
+   },
+   {
+    "text": "エイムが上手い人には勝てないわ",
+    "ms": 478,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "えいむがうまいひとにはかてないわ",
+    "cost": 3.82e-06
+   },
+   {
+    "text": "絵が上手だねって言われた",
+    "ms": 441,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "えがじょうずだねっていわれた",
+    "cost": 5.1e-06
+   },
+   {
+    "text": "下手に動くとやられるぞ",
+    "ms": 520,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "へたにうごくとやられるぞ",
+    "cost": 3.22e-06
+   },
+   {
+    "text": "俺は射撃が下手なんだよな",
+    "ms": 460,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "おれはしゃげきがへたなんだよな",
+    "cost": 3.32e-06
+   },
+   {
+    "text": "敵が何人いるか見てくれる？",
+    "ms": 705,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "てきがなんにんいるかみてくれる？",
+    "cost": 5.2e-06
+   },
+   {
+    "text": "何で今そこに行ったの",
+    "ms": 447,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "なんでいまそこにいったの",
+    "cost": 4.4e-06
+   },
+   {
+    "text": "一日中ランク回してた",
+    "ms": 434,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "いちにちじゅうらんくまわしてた",
+    "cost": 3.78e-06
+   },
+   {
+    "text": "来月の一日にアプデが来るらしい",
+    "ms": 766,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "らいげつのいちにちにあぷでがくるらしい",
+    "cost": 3.9e-06
+   },
+   {
+    "text": "今戦闘の最中だから待って",
+    "ms": 467,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "こんせんとうのさいちゅうだからまって",
+    "cost": 4.02e-06
+   },
+   {
+    "text": "もうやめたい、止めてくれ",
+    "ms": 497,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "もうやめたい、とめてくれ",
+    "cost": 3.14e-06
+   },
+   {
+    "text": "そこで足を止めるな",
+    "ms": 660,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "そこであしをとめるな",
+    "cost": 3.724e-06
+   },
+   {
+    "text": "後ろから来てる、気をつけて",
+    "ms": 563,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "うしろからきてる、きをつけて",
+    "cost": 4.24e-06
+   },
+   {
+    "text": "後で動画を見返そう",
+    "ms": 763,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "あとでどうがをみかえそう",
+    "cost": 4.38e-06
+   },
+   {
+    "text": "その間にタワーを折ろう",
+    "ms": 465,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "そのかんにたわーをおろう",
+    "cost": 3.1e-06
+   },
+   {
+    "text": "間に合った、危なかった",
+    "ms": 474,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "まにあった、あぶなかった",
+    "cost": 3.78e-06
+   },
+   {
+    "text": "この中に敵が隠れてる",
+    "ms": 484,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "このなかにてきがかくれてる",
+    "cost": 3.68e-06
+   },
+   {
+    "text": "今集中してるから話しかけないで",
+    "ms": 1331,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "いましゅうちゅうしてるからはなしかけないで",
+    "cost": 2.98e-06
+   },
+   {
+    "text": "世界中の人が見てるんだよ",
+    "ms": 1027,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "せかいじゅうのひとがみてるんだよ",
+    "cost": 3.705e-06
+   },
+   {
+    "text": "一人で三人倒したのは凄い",
+    "ms": 440,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "ひとりでさんにんたおしたのはすごい",
+    "cost": 4.38e-06
+   },
+   {
+    "text": "二人で裏から回ろう",
+    "ms": 3185,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "ふたりでうらからまわろう",
+    "cost": 3.534e-06
+   },
+   {
+    "text": "このスキルは来週上方修正されるらしい",
+    "ms": 534,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "このすきるはらいしゅうじょうほうしゅうせいされるらしい",
+    "cost": 7.04e-06
+   },
+   {
+    "text": "下方修正されてから弱くなった",
+    "ms": 462,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "かほうしゅうせいされてからよわくなった",
+    "cost": 5.02e-06
+   },
+   {
+    "text": "弾が切れた、リロードする",
+    "ms": 447,
+    "asked": true,
+    "dictionary": true,
+    "right": false,
+    "chosen": "だんがきれた、りろーどする",
+    "cost": 2.98e-06
+   },
+   {
+    "text": "金が足りないからまだ買えない",
+    "ms": 459,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "かねがたりないからまだかえない",
+    "cost": 3.44e-06
+   },
+   {
+    "text": "今日の大会は日本のチームが出るよ",
+    "ms": 1745,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "きょうのたいかいはにっぽんのちーむがでるよ",
+    "cost": 6.46e-06
+   },
+   {
+    "text": "明日も配信するから来てね",
+    "ms": 464,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "あしたもはいしんするからきてね",
+    "cost": 4.94e-06
+   },
+   {
+    "text": "昨日は全然勝てなかった",
+    "ms": 462,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "きのうはぜんぜんかてなかった",
+    "cost": 4.32e-06
+   },
+   {
+    "text": "他の人はどう思う？",
+    "ms": 573,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "ほかのひとはどうおもう？",
+    "cost": 3.32e-06
+   },
+   {
+    "text": "その他にも強いアイテムがある",
+    "ms": 483,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "そのほかにもつよいあいてむがある",
+    "cost": 3.38e-06
+   },
+   {
+    "text": "相手の体力が少ない、今だ",
+    "ms": 467,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "あいてのたいりょくがすくない、いまだ",
+    "cost": 7.16e-06
+   },
+   {
+    "text": "角に隠れて敵を待とう",
+    "ms": 645,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "かどにかくれててきをまとう",
+    "cost": 4.6e-06
+   },
+   {
+    "text": "この先に敵の拠点がある",
+    "ms": 1346,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "このさきにてきのきょてんがある",
+    "cost": 4.2e-06
+   },
+   {
+    "text": "先に行ってて、すぐ追いつく",
+    "ms": 469,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "さきにいってて、すぐおいつく",
+    "cost": 3.94e-06
+   },
+   {
+    "text": "敵の攻撃を避けてから撃つ",
+    "ms": 464,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "てきのこうげきをさけてからうつ",
+    "cost": 2.92e-06
+   },
+   {
+    "text": "あの人は私を避けてる気がする",
+    "ms": 663,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "あのひとはわたしをさけてるきがする",
+    "cost": 3.62e-06
+   },
+   {
+    "text": "味方が生き返るまで耐えよう",
+    "ms": 779,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "みかたがいきかえるまでたえよう",
+    "cost": 3.36e-06
+   },
+   {
+    "text": "このゲームは難しいけど面白い",
+    "ms": 463,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "このげーむはむずかしいけどおもしろい",
+    "cost": 4.08e-06
+   },
+   {
+    "text": "大分慣れてきた気がする",
+    "ms": 456,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "だいぶなれてきたきがする",
+    "cost": 3.02e-06
+   },
+   {
+    "text": "流石にそれは無理でしょ",
+    "ms": 0,
+    "asked": false,
+    "dictionary": true,
+    "right": true,
+    "cost": 0.0
+   },
+   {
+    "text": "丁度いいタイミングでウルトが溜まった",
+    "ms": 0,
+    "asked": false,
+    "dictionary": true,
+    "right": true,
+    "cost": 0.0
+   },
+   {
+    "text": "一旦下がって回復しよう",
+    "ms": 452,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "いったんさがってかいふくしよう",
+    "cost": 4.08e-06
+   },
+   {
+    "text": "敵を一発で倒せる火力がある",
+    "ms": 449,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "てきをいっぱつでたおせるひりょくがある",
+    "cost": 4.96e-06
+   },
+   {
+    "text": "序盤は耐えて、終盤で勝負しよう",
+    "ms": 471,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "じょばんはたえて、しゅうばんでしょうぶしよう",
+    "cost": 5.54e-06
+   },
+   {
+    "text": "床に罠が置いてあるから気をつけて",
+    "ms": 558,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "ゆかにわながおいてあるからきをつけて",
+    "cost": 2.98e-06
+   },
+   {
+    "text": "上から敵が降ってきた",
+    "ms": 454,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "うえからてきがふってきた",
+    "cost": 5.52e-06
+   },
+   {
+    "text": "三日ぶりに配信します",
+    "ms": 447,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "みっかぶりにはいしんします",
+    "cost": 3.72e-06
+   },
+   {
+    "text": "最後の一人まで諦めない",
+    "ms": 573,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "さいごのひとりまであきらめない",
+    "cost": 5.22e-06
+   },
+   {
+    "text": "彼の最期はかっこよかった",
+    "ms": 444,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "かれのさいごはかっこよかった",
+    "cost": 2.8e-06
+   },
+   {
+    "text": "何か食べてからやろうかな",
+    "ms": 449,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "なにかたべてからやろうかな",
+    "cost": 2.8e-06
+   },
+   {
+    "text": "外したら負けるから慎重に",
+    "ms": 447,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "はずしたらまけるからしんちょうに",
+    "cost": 3.9e-06
+   },
+   {
+    "text": "席を外すからちょっと待ってて",
+    "ms": 0,
+    "asked": false,
+    "dictionary": true,
+    "right": true,
+    "cost": 0.0
+   },
+   {
+    "text": "空いてるレーンに行こう",
+    "ms": 434,
+    "asked": true,
+    "dictionary": true,
+    "right": false,
+    "chosen": "すいてるれーんにいこう",
+    "cost": 3.4e-06
+   },
+   {
+    "text": "お腹空いたから休憩する",
+    "ms": 457,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "おなかすいたからきゅうけいする",
+    "cost": 4.22e-06
+   },
+   {
+    "text": "今年は大会に出たい",
+    "ms": 460,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "ことしはたいかいにでたい",
+    "cost": 4.34e-06
+   },
+   {
+    "text": "こっちは四人、向こうは六人だ",
+    "ms": 465,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "こっちはよんにん、むこうはろくにんだ",
+    "cost": 7.54e-06
+   },
+   {
+    "text": "さっき行った店より、こっちの方がいいね",
+    "ms": 445,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "さっきいったみせより、こっちのほうがいいね",
+    "cost": 5.64e-06
+   },
+   {
+    "text": "今日は辛い試合が続いてるな",
+    "ms": 474,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "きょうはつらいしあいがつづいてるな",
+    "cost": 5.7e-06
+   },
+   {
+    "text": "このカレーめっちゃ辛いんだけど",
+    "ms": 450,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "このかれーめっちゃからいんだけど",
+    "cost": 2.8e-06
+   },
+   {
+    "text": "このヒーロー今めっちゃ人気だよね",
+    "ms": 512,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "このひーろーいまめっちゃにんきだよね",
+    "cost": 4.86e-06
+   },
+   {
+    "text": "人気のない場所で待ち伏せしよう",
+    "ms": 452,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "ひとけのないばしょでまちぶせしよう",
+    "cost": 3.62e-06
+   },
+   {
+    "text": "エイムが上手い人には勝てないわ",
+    "ms": 436,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "えいむがうまいひとにはかてないわ",
+    "cost": 3.82e-06
+   },
+   {
+    "text": "絵が上手だねって言われた",
+    "ms": 648,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "えがじょうずだねっていわれた",
+    "cost": 4.845e-06
+   },
+   {
+    "text": "下手に動くとやられるぞ",
+    "ms": 460,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "へたにうごくとやられるぞ",
+    "cost": 3.22e-06
+   },
+   {
+    "text": "俺は射撃が下手なんだよな",
+    "ms": 446,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "おれはしゃげきがへたなんだよな",
+    "cost": 3.32e-06
+   },
+   {
+    "text": "敵が何人いるか見てくれる？",
+    "ms": 534,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "てきがなんにんいるかみてくれる？",
+    "cost": 5.2e-06
+   },
+   {
+    "text": "何で今そこに行ったの",
+    "ms": 470,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "なんでいまそこにいったの",
+    "cost": 4.4e-06
+   },
+   {
+    "text": "一日中ランク回してた",
+    "ms": 464,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "いちにちじゅうらんくまわしてた",
+    "cost": 3.78e-06
+   },
+   {
+    "text": "来月の一日にアプデが来るらしい",
+    "ms": 461,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "らいげつのいちにちにあぷでがくるらしい",
+    "cost": 3.9e-06
+   },
+   {
+    "text": "今戦闘の最中だから待って",
+    "ms": 473,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "こんせんとうのさいちゅうだからまって",
+    "cost": 4.02e-06
+   },
+   {
+    "text": "もうやめたい、止めてくれ",
+    "ms": 447,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "もうやめたい、とめてくれ",
+    "cost": 3.14e-06
+   },
+   {
+    "text": "そこで足を止めるな",
+    "ms": 452,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "そこであしをとめるな",
+    "cost": 3.92e-06
+   },
+   {
+    "text": "後ろから来てる、気をつけて",
+    "ms": 440,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "うしろからきてる、きをつけて",
+    "cost": 4.24e-06
+   },
+   {
+    "text": "後で動画を見返そう",
+    "ms": 437,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "あとでどうがをみかえそう",
+    "cost": 4.38e-06
+   },
+   {
+    "text": "その間にタワーを折ろう",
+    "ms": 707,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "そのかんにたわーをおろう",
+    "cost": 2.945e-06
+   },
+   {
+    "text": "間に合った、危なかった",
+    "ms": 1066,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "まにあった、あぶなかった",
+    "cost": 3.78e-06
+   },
+   {
+    "text": "この中に敵が隠れてる",
+    "ms": 439,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "このなかにてきがかくれてる",
+    "cost": 3.68e-06
+   },
+   {
+    "text": "今集中してるから話しかけないで",
+    "ms": 466,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "いましゅうちゅうしてるからはなしかけないで",
+    "cost": 2.98e-06
+   },
+   {
+    "text": "世界中の人が見てるんだよ",
+    "ms": 522,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "せかいじゅうのひとがみてるんだよ",
+    "cost": 3.9e-06
+   },
+   {
+    "text": "一人で三人倒したのは凄い",
+    "ms": 449,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "ひとりでさんにんたおしたのはすごい",
+    "cost": 4.38e-06
+   },
+   {
+    "text": "二人で裏から回ろう",
+    "ms": 486,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "ふたりでうらからまわろう",
+    "cost": 3.72e-06
+   },
+   {
+    "text": "このスキルは来週上方修正されるらしい",
+    "ms": 543,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "このすきるはらいしゅうじょうほうしゅうせいされるらしい",
+    "cost": 7.04e-06
+   },
+   {
+    "text": "下方修正されてから弱くなった",
+    "ms": 1819,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "かほうしゅうせいされてからよわくなった",
+    "cost": 4.769e-06
+   },
+   {
+    "text": "弾が切れた、リロードする",
+    "ms": 477,
+    "asked": true,
+    "dictionary": true,
+    "right": false,
+    "chosen": "だんがきれた、りろーどする",
+    "cost": 2.98e-06
+   },
+   {
+    "text": "金が足りないからまだ買えない",
+    "ms": 516,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "かねがたりないからまだかえない",
+    "cost": 3.44e-06
+   },
+   {
+    "text": "今日の大会は日本のチームが出るよ",
+    "ms": 467,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "きょうのたいかいはにっぽんのちーむがでるよ",
+    "cost": 6.8e-06
+   },
+   {
+    "text": "明日も配信するから来てね",
+    "ms": 754,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "あしたもはいしんするからきてね",
+    "cost": 4.693e-06
+   },
+   {
+    "text": "昨日は全然勝てなかった",
+    "ms": 491,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "きのうはぜんぜんかてなかった",
+    "cost": 4.32e-06
+   },
+   {
+    "text": "他の人はどう思う？",
+    "ms": 825,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "ほかのひとはどうおもう？",
+    "cost": 3.32e-06
+   },
+   {
+    "text": "その他にも強いアイテムがある",
+    "ms": 509,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "そのほかにもつよいあいてむがある",
+    "cost": 3.38e-06
+   },
+   {
+    "text": "相手の体力が少ない、今だ",
+    "ms": 492,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "あいてのたいりょくがすくない、いまだ",
+    "cost": 7.16e-06
+   },
+   {
+    "text": "角に隠れて敵を待とう",
+    "ms": 458,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "かどにかくれててきをまとう",
+    "cost": 4.6e-06
+   },
+   {
+    "text": "この先に敵の拠点がある",
+    "ms": 524,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "このさきにてきのきょてんがある",
+    "cost": 4.2e-06
+   },
+   {
+    "text": "先に行ってて、すぐ追いつく",
+    "ms": 629,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "さきにいってて、すぐおいつく",
+    "cost": 3.94e-06
+   },
+   {
+    "text": "敵の攻撃を避けてから撃つ",
+    "ms": 722,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "てきのこうげきをさけてからうつ",
+    "cost": 2.92e-06
+   },
+   {
+    "text": "あの人は私を避けてる気がする",
+    "ms": 448,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "あのひとはわたしをさけてるきがする",
+    "cost": 3.62e-06
+   },
+   {
+    "text": "味方が生き返るまで耐えよう",
+    "ms": 520,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "みかたがいきかえるまでたえよう",
+    "cost": 3.36e-06
+   },
+   {
+    "text": "このゲームは難しいけど面白い",
+    "ms": 447,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "このげーむはむずかしいけどおもしろい",
+    "cost": 4.08e-06
+   },
+   {
+    "text": "大分慣れてきた気がする",
+    "ms": 512,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "だいぶなれてきたきがする",
+    "cost": 3.02e-06
+   },
+   {
+    "text": "流石にそれは無理でしょ",
+    "ms": 0,
+    "asked": false,
+    "dictionary": true,
+    "right": true,
+    "cost": 0.0
+   },
+   {
+    "text": "丁度いいタイミングでウルトが溜まった",
+    "ms": 0,
+    "asked": false,
+    "dictionary": true,
+    "right": true,
+    "cost": 0.0
+   },
+   {
+    "text": "一旦下がって回復しよう",
+    "ms": 453,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "いったんさがってかいふくしよう",
+    "cost": 4.08e-06
+   },
+   {
+    "text": "敵を一発で倒せる火力がある",
+    "ms": 701,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "てきをいっぱつでたおせるひりょくがある",
+    "cost": 4.96e-06
+   },
+   {
+    "text": "序盤は耐えて、終盤で勝負しよう",
+    "ms": 457,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "じょばんはたえて、しゅうばんでしょうぶしよう",
+    "cost": 5.54e-06
+   },
+   {
+    "text": "床に罠が置いてあるから気をつけて",
+    "ms": 445,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "ゆかにわながおいてあるからきをつけて",
+    "cost": 2.98e-06
+   },
+   {
+    "text": "上から敵が降ってきた",
+    "ms": 460,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "うえからてきがふってきた",
+    "cost": 5.52e-06
+   },
+   {
+    "text": "三日ぶりに配信します",
+    "ms": 442,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "みっかぶりにはいしんします",
+    "cost": 3.72e-06
+   },
+   {
+    "text": "最後の一人まで諦めない",
+    "ms": 454,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "さいごのひとりまであきらめない",
+    "cost": 5.22e-06
+   },
+   {
+    "text": "彼の最期はかっこよかった",
+    "ms": 446,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "かれのさいごはかっこよかった",
+    "cost": 2.8e-06
+   },
+   {
+    "text": "何か食べてからやろうかな",
+    "ms": 443,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "なにかたべてからやろうかな",
+    "cost": 2.8e-06
+   },
+   {
+    "text": "外したら負けるから慎重に",
+    "ms": 494,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "はずしたらまけるからしんちょうに",
+    "cost": 3.9e-06
+   },
+   {
+    "text": "席を外すからちょっと待ってて",
+    "ms": 0,
+    "asked": false,
+    "dictionary": true,
+    "right": true,
+    "cost": 0.0
+   },
+   {
+    "text": "空いてるレーンに行こう",
+    "ms": 464,
+    "asked": true,
+    "dictionary": true,
+    "right": false,
+    "chosen": "すいてるれーんにいこう",
+    "cost": 3.4e-06
+   },
+   {
+    "text": "お腹空いたから休憩する",
+    "ms": 458,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "おなかすいたからきゅうけいする",
+    "cost": 4.22e-06
+   },
+   {
+    "text": "今年は大会に出たい",
+    "ms": 454,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "ことしはたいかいにでたい",
+    "cost": 4.34e-06
+   },
+   {
+    "text": "こっちは四人、向こうは六人だ",
+    "ms": 642,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "こっちはよんにん、むこうはろくにんだ",
+    "cost": 7.54e-06
+   },
+   {
+    "text": "さっき行った店より、こっちの方がいいね",
+    "ms": 448,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "さっきいったみせより、こっちのほうがいいね",
+    "cost": 5.64e-06
+   },
+   {
+    "text": "今日は辛い試合が続いてるな",
+    "ms": 615,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "きょうはつらいしあいがつづいてるな",
+    "cost": 5.415e-06
+   },
+   {
+    "text": "このカレーめっちゃ辛いんだけど",
+    "ms": 464,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "このかれーめっちゃからいんだけど",
+    "cost": 2.8e-06
+   },
+   {
+    "text": "このヒーロー今めっちゃ人気だよね",
+    "ms": 566,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "このひーろーいまめっちゃにんきだよね",
+    "cost": 4.86e-06
+   },
+   {
+    "text": "人気のない場所で待ち伏せしよう",
+    "ms": 501,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "ひとけのないばしょでまちぶせしよう",
+    "cost": 3.62e-06
+   },
+   {
+    "text": "エイムが上手い人には勝てないわ",
+    "ms": 506,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "えいむがうまいひとにはかてないわ",
+    "cost": 3.82e-06
+   },
+   {
+    "text": "絵が上手だねって言われた",
+    "ms": 523,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "えがじょうずだねっていわれた",
+    "cost": 5.1e-06
+   },
+   {
+    "text": "下手に動くとやられるぞ",
+    "ms": 472,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "へたにうごくとやられるぞ",
+    "cost": 3.22e-06
+   },
+   {
+    "text": "俺は射撃が下手なんだよな",
+    "ms": 486,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "おれはしゃげきがへたなんだよな",
+    "cost": 3.32e-06
+   },
+   {
+    "text": "敵が何人いるか見てくれる？",
+    "ms": 463,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "てきがなんにんいるかみてくれる？",
+    "cost": 5.2e-06
+   },
+   {
+    "text": "何で今そこに行ったの",
+    "ms": 456,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "なんでいまそこにいったの",
+    "cost": 4.4e-06
+   },
+   {
+    "text": "一日中ランク回してた",
+    "ms": 435,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "いちにちじゅうらんくまわしてた",
+    "cost": 3.78e-06
+   },
+   {
+    "text": "来月の一日にアプデが来るらしい",
+    "ms": 549,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "らいげつのいちにちにあぷでがくるらしい",
+    "cost": 3.9e-06
+   },
+   {
+    "text": "今戦闘の最中だから待って",
+    "ms": 442,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "こんせんとうのさいちゅうだからまって",
+    "cost": 4.02e-06
+   },
+   {
+    "text": "もうやめたい、止めてくれ",
+    "ms": 441,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "もうやめたい、とめてくれ",
+    "cost": 3.14e-06
+   },
+   {
+    "text": "そこで足を止めるな",
+    "ms": 1658,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "そこであしをとめるな",
+    "cost": 3.92e-06
+   },
+   {
+    "text": "後ろから来てる、気をつけて",
+    "ms": 567,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "うしろからきてる、きをつけて",
+    "cost": 4.028e-06
+   },
+   {
+    "text": "後で動画を見返そう",
+    "ms": 441,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "あとでどうがをみかえそう",
+    "cost": 4.38e-06
+   },
+   {
+    "text": "その間にタワーを折ろう",
+    "ms": 598,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "そのかんにたわーをおろう",
+    "cost": 2.945e-06
+   },
+   {
+    "text": "間に合った、危なかった",
+    "ms": 587,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "まにあった、あぶなかった",
+    "cost": 3.78e-06
+   },
+   {
+    "text": "この中に敵が隠れてる",
+    "ms": 483,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "このなかにてきがかくれてる",
+    "cost": 3.68e-06
+   },
+   {
+    "text": "今集中してるから話しかけないで",
+    "ms": 457,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "いましゅうちゅうしてるからはなしかけないで",
+    "cost": 2.98e-06
+   },
+   {
+    "text": "世界中の人が見てるんだよ",
+    "ms": 1134,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "せかいじゅうのひとがみてるんだよ",
+    "cost": 3.9e-06
+   },
+   {
+    "text": "一人で三人倒したのは凄い",
+    "ms": 449,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "ひとりでさんにんたおしたのはすごい",
+    "cost": 4.38e-06
+   },
+   {
+    "text": "二人で裏から回ろう",
+    "ms": 440,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "ふたりでうらからまわろう",
+    "cost": 3.72e-06
+   },
+   {
+    "text": "このスキルは来週上方修正されるらしい",
+    "ms": 586,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "このすきるはらいしゅうじょうほうしゅうせいされるらしい",
+    "cost": 7.04e-06
+   },
+   {
+    "text": "下方修正されてから弱くなった",
+    "ms": 468,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "かほうしゅうせいされてからよわくなった",
+    "cost": 5.02e-06
+   },
+   {
+    "text": "弾が切れた、リロードする",
+    "ms": 522,
+    "asked": true,
+    "dictionary": true,
+    "right": false,
+    "chosen": "だんがきれた、りろーどする",
+    "cost": 2.98e-06
+   },
+   {
+    "text": "金が足りないからまだ買えない",
+    "ms": 561,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "かねがたりないからまだかえない",
+    "cost": 3.44e-06
+   },
+   {
+    "text": "今日の大会は日本のチームが出るよ",
+    "ms": 1256,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "きょうのたいかいはにっぽんのちーむがでるよ",
+    "cost": 6.46e-06
+   },
+   {
+    "text": "明日も配信するから来てね",
+    "ms": 442,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "あしたもはいしんするからきてね",
+    "cost": 4.94e-06
+   },
+   {
+    "text": "昨日は全然勝てなかった",
+    "ms": 458,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "きのうはぜんぜんかてなかった",
+    "cost": 4.32e-06
+   },
+   {
+    "text": "他の人はどう思う？",
+    "ms": 440,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "ほかのひとはどうおもう？",
+    "cost": 3.32e-06
+   },
+   {
+    "text": "その他にも強いアイテムがある",
+    "ms": 452,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "そのほかにもつよいあいてむがある",
+    "cost": 3.38e-06
+   },
+   {
+    "text": "相手の体力が少ない、今だ",
+    "ms": 458,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "あいてのたいりょくがすくない、いまだ",
+    "cost": 7.16e-06
+   },
+   {
+    "text": "角に隠れて敵を待とう",
+    "ms": 506,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "かどにかくれててきをまとう",
+    "cost": 4.6e-06
+   },
+   {
+    "text": "この先に敵の拠点がある",
+    "ms": 501,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "このさきにてきのきょてんがある",
+    "cost": 4.2e-06
+   },
+   {
+    "text": "先に行ってて、すぐ追いつく",
+    "ms": 801,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "さきにいってて、すぐおいつく",
+    "cost": 3.743e-06
+   },
+   {
+    "text": "敵の攻撃を避けてから撃つ",
+    "ms": 463,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "てきのこうげきをさけてからうつ",
+    "cost": 2.92e-06
+   },
+   {
+    "text": "あの人は私を避けてる気がする",
+    "ms": 434,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "あのひとはわたしをさけてるきがする",
+    "cost": 3.62e-06
+   },
+   {
+    "text": "味方が生き返るまで耐えよう",
+    "ms": 438,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "みかたがいきかえるまでたえよう",
+    "cost": 3.36e-06
+   },
+   {
+    "text": "このゲームは難しいけど面白い",
+    "ms": 864,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "このげーむはむずかしいけどおもしろい",
+    "cost": 4.08e-06
+   },
+   {
+    "text": "大分慣れてきた気がする",
+    "ms": 452,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "だいぶなれてきたきがする",
+    "cost": 3.02e-06
+   },
+   {
+    "text": "流石にそれは無理でしょ",
+    "ms": 0,
+    "asked": false,
+    "dictionary": true,
+    "right": true,
+    "cost": 0.0
+   },
+   {
+    "text": "丁度いいタイミングでウルトが溜まった",
+    "ms": 0,
+    "asked": false,
+    "dictionary": true,
+    "right": true,
+    "cost": 0.0
+   },
+   {
+    "text": "一旦下がって回復しよう",
+    "ms": 981,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "いったんさがってかいふくしよう",
+    "cost": 4.08e-06
+   },
+   {
+    "text": "敵を一発で倒せる火力がある",
+    "ms": 436,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "てきをいっぱつでたおせるひりょくがある",
+    "cost": 4.96e-06
+   },
+   {
+    "text": "序盤は耐えて、終盤で勝負しよう",
+    "ms": 453,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "じょばんはたえて、しゅうばんでしょうぶしよう",
+    "cost": 5.54e-06
+   },
+   {
+    "text": "床に罠が置いてあるから気をつけて",
+    "ms": 489,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "ゆかにわながおいてあるからきをつけて",
+    "cost": 2.98e-06
+   },
+   {
+    "text": "上から敵が降ってきた",
+    "ms": 474,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "うえからてきがふってきた",
+    "cost": 5.52e-06
+   },
+   {
+    "text": "三日ぶりに配信します",
+    "ms": 498,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "みっかぶりにはいしんします",
+    "cost": 3.72e-06
+   },
+   {
+    "text": "最後の一人まで諦めない",
+    "ms": 540,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "さいごのひとりまであきらめない",
+    "cost": 5.22e-06
+   },
+   {
+    "text": "彼の最期はかっこよかった",
+    "ms": 469,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "かれのさいごはかっこよかった",
+    "cost": 2.8e-06
+   },
+   {
+    "text": "何か食べてからやろうかな",
+    "ms": 469,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "なにかたべてからやろうかな",
+    "cost": 2.8e-06
+   },
+   {
+    "text": "外したら負けるから慎重に",
+    "ms": 453,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "はずしたらまけるからしんちょうに",
+    "cost": 3.9e-06
+   },
+   {
+    "text": "席を外すからちょっと待ってて",
+    "ms": 0,
+    "asked": false,
+    "dictionary": true,
+    "right": true,
+    "cost": 0.0
+   },
+   {
+    "text": "空いてるレーンに行こう",
+    "ms": 474,
+    "asked": true,
+    "dictionary": true,
+    "right": false,
+    "chosen": "すいてるれーんにいこう",
+    "cost": 3.4e-06
+   },
+   {
+    "text": "お腹空いたから休憩する",
+    "ms": 903,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "おなかすいたからきゅうけいする",
+    "cost": 4.22e-06
+   },
+   {
+    "text": "今年は大会に出たい",
+    "ms": 440,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "ことしはたいかいにでたい",
+    "cost": 4.34e-06
+   },
+   {
+    "text": "こっちは四人、向こうは六人だ",
+    "ms": 660,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "こっちはよんにん、むこうはろくにんだ",
+    "cost": 7.54e-06
+   }
+  ]
+ },
+ "nace-ai/drex-max": {
+  "summary": {
+   "runs": 180,
+   "dictionaryRight": 126,
+   "right": 158,
+   "fixed": 35,
+   "broken": 3,
+   "asked": 171,
+   "medianMs": 631,
+   "p90Ms": 961,
+   "usd": 0.00215
+  },
+  "runs": [
+   {
+    "text": "さっき行った店より、こっちの方がいいね",
+    "ms": 714,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "さっきいったみせより、こっちのほうがいいね",
+    "cost": 1.71e-05
+   },
+   {
+    "text": "今日は辛い試合が続いてるな",
+    "ms": 802,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "きょうはつらいしあいがつづいてるな",
+    "cost": 1.728e-05
+   },
+   {
+    "text": "このカレーめっちゃ辛いんだけど",
+    "ms": 935,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "このかれーめっちゃからいんだけど",
+    "cost": 8.58e-06
+   },
+   {
+    "text": "このヒーロー今めっちゃ人気だよね",
+    "ms": 725,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "このひーろーいまめっちゃにんきだよね",
+    "cost": 1.476e-05
+   },
+   {
+    "text": "人気のない場所で待ち伏せしよう",
+    "ms": 700,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "ひとけのないばしょでまちふせしよう",
+    "cost": 1.104e-05
+   },
+   {
+    "text": "エイムが上手い人には勝てないわ",
+    "ms": 675,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "えいむがうまいひとにはかてないわ",
+    "cost": 1.164e-05
+   },
+   {
+    "text": "絵が上手だねって言われた",
+    "ms": 664,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "えがじょうずだねっていわれた",
+    "cost": 1.548e-05
+   },
+   {
+    "text": "下手に動くとやられるぞ",
+    "ms": 721,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "へたにうごくとやられるぞ",
+    "cost": 9.84e-06
+   },
+   {
+    "text": "俺は射撃が下手なんだよな",
+    "ms": 406,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "おれはしゃげきがへたなんだよな",
+    "cost": 1.014e-05
+   },
+   {
+    "text": "敵が何人いるか見てくれる？",
+    "ms": 786,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "てきがなんにんいるかみてくれる？",
+    "cost": 1.578e-05
+   },
+   {
+    "text": "何で今そこに行ったの",
+    "ms": 1062,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "なんでいまそこにいったの",
+    "cost": 1.338e-05
+   },
+   {
+    "text": "一日中ランク回してた",
+    "ms": 1459,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "いちにちちゅうらんくまわしてた",
+    "cost": 1.152e-05
+   },
+   {
+    "text": "来月の一日にアプデが来るらしい",
+    "ms": 801,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "らいげつのいちにちにあぷでがくるらしい",
+    "cost": 1.188e-05
+   },
+   {
+    "text": "今戦闘の最中だから待って",
+    "ms": 512,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "こんせんとうのさなかだからまって",
+    "cost": 1.224e-05
+   },
+   {
+    "text": "もうやめたい、止めてくれ",
+    "ms": 1235,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "もうやめたい、とめてくれ",
+    "cost": 9.6e-06
+   },
+   {
+    "text": "そこで足を止めるな",
+    "ms": 1154,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "そこであしをとめるな",
+    "cost": 1.194e-05
+   },
+   {
+    "text": "後ろから来てる、気をつけて",
+    "ms": 619,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "うしろからきてる、きをつけて",
+    "cost": 0.0
+   },
+   {
+    "text": "後で動画を見返そう",
+    "ms": 1278,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "あとでどうがをみかえそう",
+    "cost": 1.332e-05
+   },
+   {
+    "text": "その間にタワーを折ろう",
+    "ms": 697,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "そのあいだにたわーをおろう",
+    "cost": 9.48e-06
+   },
+   {
+    "text": "間に合った、危なかった",
+    "ms": 859,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "まにあった、あぶなかった",
+    "cost": 1.152e-05
+   },
+   {
+    "text": "この中に敵が隠れてる",
+    "ms": 918,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "このなかにてきがかくれてる",
+    "cost": 1.122e-05
+   },
+   {
+    "text": "今集中してるから話しかけないで",
+    "ms": 660,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "いましゅうちゅうしてるからはなしかけないで",
+    "cost": 9.12e-06
+   },
+   {
+    "text": "世界中の人が見てるんだよ",
+    "ms": 900,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "せかいじゅうのひとがみてるんだよ",
+    "cost": 1.188e-05
+   },
+   {
+    "text": "一人で三人倒したのは凄い",
+    "ms": 890,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "ひとりでさんにんたおしたのはすごい",
+    "cost": 1.332e-05
+   },
+   {
+    "text": "二人で裏から回ろう",
+    "ms": 1070,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "ふたりでうらからまわろう",
+    "cost": 1.134e-05
+   },
+   {
+    "text": "このスキルは来週上方修正されるらしい",
+    "ms": 877,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "このすきるはらいしゅうじょうほうしゅうせいされるらしい",
+    "cost": 2.13e-05
+   },
+   {
+    "text": "下方修正されてから弱くなった",
+    "ms": 748,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "かほうしゅうせいされてからよわくなった",
+    "cost": 1.524e-05
+   },
+   {
+    "text": "弾が切れた、リロードする",
+    "ms": 365,
+    "asked": true,
+    "dictionary": true,
+    "right": false,
+    "chosen": "だんがきれた、りろーどする",
+    "cost": 9.12e-06
+   },
+   {
+    "text": "金が足りないからまだ買えない",
+    "ms": 674,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "かねがたりないからまだかえない",
+    "cost": 1.05e-05
+   },
+   {
+    "text": "今日の大会は日本のチームが出るよ",
+    "ms": 640,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "きょうのたいかいはにっぽんのちーむがでるよ",
+    "cost": 2.058e-05
+   },
+   {
+    "text": "明日も配信するから来てね",
+    "ms": 665,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "あしたもはいしんするからきてね",
+    "cost": 1.5e-05
+   },
+   {
+    "text": "昨日は全然勝てなかった",
+    "ms": 362,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "きのうはぜんぜんかてなかった",
+    "cost": 1.314e-05
+   },
+   {
+    "text": "他の人はどう思う？",
+    "ms": 837,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "ほかのひとはどうおもう？",
+    "cost": 1.014e-05
+   },
+   {
+    "text": "その他にも強いアイテムがある",
+    "ms": 707,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "そのほかにもつよいあいてむがある",
+    "cost": 1.032e-05
+   },
+   {
+    "text": "相手の体力が少ない、今だ",
+    "ms": 672,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "あいてのたいりょくがすくない、いまだ",
+    "cost": 2.166e-05
+   },
+   {
+    "text": "角に隠れて敵を待とう",
+    "ms": 524,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "かどにかくれててきをまとう",
+    "cost": 1.398e-05
+   },
+   {
+    "text": "この先に敵の拠点がある",
+    "ms": 631,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "このさきにてきのきょてんがある",
+    "cost": 1.278e-05
+   },
+   {
+    "text": "先に行ってて、すぐ追いつく",
+    "ms": 631,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "さきにいってて、すぐおいつく",
+    "cost": 1.2e-05
+   },
+   {
+    "text": "敵の攻撃を避けてから撃つ",
+    "ms": 410,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "てきのこうげきをさけてからうつ",
+    "cost": 8.94e-06
+   },
+   {
+    "text": "あの人は私を避けてる気がする",
+    "ms": 851,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "あのひとはわたしをさけてるきがする",
+    "cost": 1.104e-05
+   },
+   {
+    "text": "味方が生き返るまで耐えよう",
+    "ms": 687,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "みかたがいきかえるまでたえよう",
+    "cost": 1.026e-05
+   },
+   {
+    "text": "このゲームは難しいけど面白い",
+    "ms": 450,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "このげーむはむずかしいけどおもしろい",
+    "cost": 1.242e-05
+   },
+   {
+    "text": "大分慣れてきた気がする",
+    "ms": 405,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "だいぶなれてきたきがする",
+    "cost": 9.24e-06
+   },
+   {
+    "text": "流石にそれは無理でしょ",
+    "ms": 0,
+    "asked": false,
+    "dictionary": true,
+    "right": true,
+    "cost": 0.0
+   },
+   {
+    "text": "丁度いいタイミングでウルトが溜まった",
+    "ms": 0,
+    "asked": false,
+    "dictionary": true,
+    "right": true,
+    "cost": 0.0
+   },
+   {
+    "text": "一旦下がって回復しよう",
+    "ms": 425,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "いったんさがってかいふくしよう",
+    "cost": 1.242e-05
+   },
+   {
+    "text": "敵を一発で倒せる火力がある",
+    "ms": 690,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "てきをいっぱつでたおせるかりょくがある",
+    "cost": 1.506e-05
+   },
+   {
+    "text": "序盤は耐えて、終盤で勝負しよう",
+    "ms": 402,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "じょばんはたえて、しゅうばんでしょうぶしよう",
+    "cost": 1.68e-05
+   },
+   {
+    "text": "床に罠が置いてあるから気をつけて",
+    "ms": 663,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "ゆかにわながおいてあるからきをつけて",
+    "cost": 9.12e-06
+   },
+   {
+    "text": "上から敵が降ってきた",
+    "ms": 614,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "うえからてきがふってきた",
+    "cost": 1.674e-05
+   },
+   {
+    "text": "三日ぶりに配信します",
+    "ms": 666,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "みっかぶりにはいしんします",
+    "cost": 1.134e-05
+   },
+   {
+    "text": "最後の一人まで諦めない",
+    "ms": 661,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "さいごのいちにんまであきらめない",
+    "cost": 1.584e-05
+   },
+   {
+    "text": "彼の最期はかっこよかった",
+    "ms": 427,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "かれのさいごはかっこよかった",
+    "cost": 8.58e-06
+   },
+   {
+    "text": "何か食べてからやろうかな",
+    "ms": 380,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "なにかたべてからやろうかな",
+    "cost": 8.58e-06
+   },
+   {
+    "text": "外したら負けるから慎重に",
+    "ms": 447,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "はずしたらまけるからしんちょうに",
+    "cost": 1.188e-05
+   },
+   {
+    "text": "席を外すからちょっと待ってて",
+    "ms": 0,
+    "asked": false,
+    "dictionary": true,
+    "right": true,
+    "cost": 0.0
+   },
+   {
+    "text": "空いてるレーンに行こう",
+    "ms": 503,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "あいてるれーんにいこう",
+    "cost": 1.038e-05
+   },
+   {
+    "text": "お腹空いたから休憩する",
+    "ms": 823,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "おなかすいたからきゅうけいする",
+    "cost": 1.284e-05
+   },
+   {
+    "text": "今年は大会に出たい",
+    "ms": 664,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "ことしはたいかいにでたい",
+    "cost": 1.32e-05
+   },
+   {
+    "text": "こっちは四人、向こうは六人だ",
+    "ms": 426,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "こっちはよんにん、むこうはろくにんだ",
+    "cost": 2.28e-05
+   },
+   {
+    "text": "さっき行った店より、こっちの方がいいね",
+    "ms": 498,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "さっきいったみせより、こっちのほうがいいね",
+    "cost": 1.71e-05
+   },
+   {
+    "text": "今日は辛い試合が続いてるな",
+    "ms": 706,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "きょうはつらいしあいがつづいてるな",
+    "cost": 1.728e-05
+   },
+   {
+    "text": "このカレーめっちゃ辛いんだけど",
+    "ms": 645,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "このかれーめっちゃからいんだけど",
+    "cost": 8.58e-06
+   },
+   {
+    "text": "このヒーロー今めっちゃ人気だよね",
+    "ms": 1172,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "このひーろーいまめっちゃにんきだよね",
+    "cost": 1.476e-05
+   },
+   {
+    "text": "人気のない場所で待ち伏せしよう",
+    "ms": 512,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "ひとけのないばしょでまちふせしよう",
+    "cost": 1.104e-05
+   },
+   {
+    "text": "エイムが上手い人には勝てないわ",
+    "ms": 872,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "えいむがうまいひとにはかてないわ",
+    "cost": 0.0
+   },
+   {
+    "text": "絵が上手だねって言われた",
+    "ms": 995,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "えがじょうずだねっていわれた",
+    "cost": 1.548e-05
+   },
+   {
+    "text": "下手に動くとやられるぞ",
+    "ms": 961,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "へたにうごくとやられるぞ",
+    "cost": 9.84e-06
+   },
+   {
+    "text": "俺は射撃が下手なんだよな",
+    "ms": 746,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "おれはしゃげきがへたなんだよな",
+    "cost": 1.014e-05
+   },
+   {
+    "text": "敵が何人いるか見てくれる？",
+    "ms": 648,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "てきがなんにんいるかみてくれる？",
+    "cost": 1.578e-05
+   },
+   {
+    "text": "何で今そこに行ったの",
+    "ms": 779,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "なんでいまそこにいったの",
+    "cost": 1.338e-05
+   },
+   {
+    "text": "一日中ランク回してた",
+    "ms": 1058,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "いちにちちゅうらんくまわしてた",
+    "cost": 1.152e-05
+   },
+   {
+    "text": "来月の一日にアプデが来るらしい",
+    "ms": 906,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "らいげつのいちにちにあぷでがくるらしい",
+    "cost": 1.188e-05
+   },
+   {
+    "text": "今戦闘の最中だから待って",
+    "ms": 738,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "こんせんとうのさなかだからまって",
+    "cost": 1.224e-05
+   },
+   {
+    "text": "もうやめたい、止めてくれ",
+    "ms": 637,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "もうやめたい、とめてくれ",
+    "cost": 9.6e-06
+   },
+   {
+    "text": "そこで足を止めるな",
+    "ms": 676,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "そこであしをとめるな",
+    "cost": 1.194e-05
+   },
+   {
+    "text": "後ろから来てる、気をつけて",
+    "ms": 823,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "うしろからきてる、きをつけて",
+    "cost": 1.29e-05
+   },
+   {
+    "text": "後で動画を見返そう",
+    "ms": 802,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "あとでどうがをみかえそう",
+    "cost": 1.332e-05
+   },
+   {
+    "text": "その間にタワーを折ろう",
+    "ms": 455,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "そのあいだにたわーをおろう",
+    "cost": 9.48e-06
+   },
+   {
+    "text": "間に合った、危なかった",
+    "ms": 540,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "まにあった、あぶなかった",
+    "cost": 1.152e-05
+   },
+   {
+    "text": "この中に敵が隠れてる",
+    "ms": 495,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "このなかにてきがかくれてる",
+    "cost": 1.122e-05
+   },
+   {
+    "text": "今集中してるから話しかけないで",
+    "ms": 824,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "いましゅうちゅうしてるからはなしかけないで",
+    "cost": 9.12e-06
+   },
+   {
+    "text": "世界中の人が見てるんだよ",
+    "ms": 796,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "せかいじゅうのひとがみてるんだよ",
+    "cost": 1.188e-05
+   },
+   {
+    "text": "一人で三人倒したのは凄い",
+    "ms": 572,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "ひとりでさんにんたおしたのはすごい",
+    "cost": 1.332e-05
+   },
+   {
+    "text": "二人で裏から回ろう",
+    "ms": 604,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "ふたりでうらからまわろう",
+    "cost": 1.134e-05
+   },
+   {
+    "text": "このスキルは来週上方修正されるらしい",
+    "ms": 486,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "このすきるはらいしゅうじょうほうしゅうせいされるらしい",
+    "cost": 2.13e-05
+   },
+   {
+    "text": "下方修正されてから弱くなった",
+    "ms": 1499,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "かほうしゅうせいされてからよわくなった",
+    "cost": 1.524e-05
+   },
+   {
+    "text": "弾が切れた、リロードする",
+    "ms": 736,
+    "asked": true,
+    "dictionary": true,
+    "right": false,
+    "chosen": "だんがきれた、りろーどする",
+    "cost": 9.12e-06
+   },
+   {
+    "text": "金が足りないからまだ買えない",
+    "ms": 574,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "かねがたりないからまだかえない",
+    "cost": 1.05e-05
+   },
+   {
+    "text": "今日の大会は日本のチームが出るよ",
+    "ms": 476,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "きょうのたいかいはにっぽんのちーむがでるよ",
+    "cost": 2.058e-05
+   },
+   {
+    "text": "明日も配信するから来てね",
+    "ms": 427,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "あしたもはいしんするからきてね",
+    "cost": 1.5e-05
+   },
+   {
+    "text": "昨日は全然勝てなかった",
+    "ms": 411,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "きのうはぜんぜんかてなかった",
+    "cost": 1.314e-05
+   },
+   {
+    "text": "他の人はどう思う？",
+    "ms": 659,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "ほかのひとはどうおもう？",
+    "cost": 1.014e-05
+   },
+   {
+    "text": "その他にも強いアイテムがある",
+    "ms": 718,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "そのほかにもつよいあいてむがある",
+    "cost": 1.032e-05
+   },
+   {
+    "text": "相手の体力が少ない、今だ",
+    "ms": 410,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "あいてのたいりょくがすくない、いまだ",
+    "cost": 2.166e-05
+   },
+   {
+    "text": "角に隠れて敵を待とう",
+    "ms": 541,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "かどにかくれててきをまとう",
+    "cost": 1.398e-05
+   },
+   {
+    "text": "この先に敵の拠点がある",
+    "ms": 616,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "このさきにてきのきょてんがある",
+    "cost": 1.278e-05
+   },
+   {
+    "text": "先に行ってて、すぐ追いつく",
+    "ms": 465,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "さきにいってて、すぐおいつく",
+    "cost": 1.2e-05
+   },
+   {
+    "text": "敵の攻撃を避けてから撃つ",
+    "ms": 465,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "てきのこうげきをさけてからうつ",
+    "cost": 8.94e-06
+   },
+   {
+    "text": "あの人は私を避けてる気がする",
+    "ms": 369,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "あのひとはわたしをさけてるきがする",
+    "cost": 1.104e-05
+   },
+   {
+    "text": "味方が生き返るまで耐えよう",
+    "ms": 493,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "みかたがいきかえるまでたえよう",
+    "cost": 1.026e-05
+   },
+   {
+    "text": "このゲームは難しいけど面白い",
+    "ms": 454,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "このげーむはむずかしいけどおもしろい",
+    "cost": 1.242e-05
+   },
+   {
+    "text": "大分慣れてきた気がする",
+    "ms": 727,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "だいぶなれてきたきがする",
+    "cost": 9.24e-06
+   },
+   {
+    "text": "流石にそれは無理でしょ",
+    "ms": 0,
+    "asked": false,
+    "dictionary": true,
+    "right": true,
+    "cost": 0.0
+   },
+   {
+    "text": "丁度いいタイミングでウルトが溜まった",
+    "ms": 0,
+    "asked": false,
+    "dictionary": true,
+    "right": true,
+    "cost": 0.0
+   },
+   {
+    "text": "一旦下がって回復しよう",
+    "ms": 630,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "いったんさがってかいふくしよう",
+    "cost": 1.242e-05
+   },
+   {
+    "text": "敵を一発で倒せる火力がある",
+    "ms": 425,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "てきをいっぱつでたおせるひりょくがある",
+    "cost": 1.506e-05
+   },
+   {
+    "text": "序盤は耐えて、終盤で勝負しよう",
+    "ms": 423,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "じょばんはたえて、しゅうばんでしょうぶしよう",
+    "cost": 1.68e-05
+   },
+   {
+    "text": "床に罠が置いてあるから気をつけて",
+    "ms": 410,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "ゆかにわながおいてあるからきをつけて",
+    "cost": 9.12e-06
+   },
+   {
+    "text": "上から敵が降ってきた",
+    "ms": 404,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "うえからてきがふってきた",
+    "cost": 1.674e-05
+   },
+   {
+    "text": "三日ぶりに配信します",
+    "ms": 660,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "みっかぶりにはいしんします",
+    "cost": 1.134e-05
+   },
+   {
+    "text": "最後の一人まで諦めない",
+    "ms": 402,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "さいごのいちにんまであきらめない",
+    "cost": 1.584e-05
+   },
+   {
+    "text": "彼の最期はかっこよかった",
+    "ms": 653,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "かれのさいごはかっこよかった",
+    "cost": 8.58e-06
+   },
+   {
+    "text": "何か食べてからやろうかな",
+    "ms": 438,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "なにかたべてからやろうかな",
+    "cost": 8.58e-06
+   },
+   {
+    "text": "外したら負けるから慎重に",
+    "ms": 402,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "はずしたらまけるからしんちょうに",
+    "cost": 1.188e-05
+   },
+   {
+    "text": "席を外すからちょっと待ってて",
+    "ms": 0,
+    "asked": false,
+    "dictionary": true,
+    "right": true,
+    "cost": 0.0
+   },
+   {
+    "text": "空いてるレーンに行こう",
+    "ms": 602,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "あいてるれーんにいこう",
+    "cost": 1.038e-05
+   },
+   {
+    "text": "お腹空いたから休憩する",
+    "ms": 501,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "おなかすいたからきゅうけいする",
+    "cost": 1.284e-05
+   },
+   {
+    "text": "今年は大会に出たい",
+    "ms": 398,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "ことしはたいかいにでたい",
+    "cost": 1.32e-05
+   },
+   {
+    "text": "こっちは四人、向こうは六人だ",
+    "ms": 393,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "こっちはよんにん、むこうはろくにんだ",
+    "cost": 2.28e-05
+   },
+   {
+    "text": "さっき行った店より、こっちの方がいいね",
+    "ms": 370,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "さっきいったみせより、こっちのほうがいいね",
+    "cost": 1.71e-05
+   },
+   {
+    "text": "今日は辛い試合が続いてるな",
+    "ms": 629,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "きょうはつらいしあいがつづいてるな",
+    "cost": 1.728e-05
+   },
+   {
+    "text": "このカレーめっちゃ辛いんだけど",
+    "ms": 481,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "このかれーめっちゃからいんだけど",
+    "cost": 8.58e-06
+   },
+   {
+    "text": "このヒーロー今めっちゃ人気だよね",
+    "ms": 392,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "このひーろーいまめっちゃにんきだよね",
+    "cost": 1.476e-05
+   },
+   {
+    "text": "人気のない場所で待ち伏せしよう",
+    "ms": 1014,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "ひとけのないばしょでまちふせしよう",
+    "cost": 1.104e-05
+   },
+   {
+    "text": "エイムが上手い人には勝てないわ",
+    "ms": 839,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "えいむがうまいひとにはかてないわ",
+    "cost": 1.164e-05
+   },
+   {
+    "text": "絵が上手だねって言われた",
+    "ms": 839,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "えがじょうずだねっていわれた",
+    "cost": 1.548e-05
+   },
+   {
+    "text": "下手に動くとやられるぞ",
+    "ms": 657,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "へたにうごくとやられるぞ",
+    "cost": 0.0
+   },
+   {
+    "text": "俺は射撃が下手なんだよな",
+    "ms": 1129,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "おれはしゃげきがへたなんだよな",
+    "cost": 1.014e-05
+   },
+   {
+    "text": "敵が何人いるか見てくれる？",
+    "ms": 537,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "てきがなんにんいるかみてくれる？",
+    "cost": 1.578e-05
+   },
+   {
+    "text": "何で今そこに行ったの",
+    "ms": 546,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "なんでいまそこにいったの",
+    "cost": 1.338e-05
+   },
+   {
+    "text": "一日中ランク回してた",
+    "ms": 529,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "いちにちちゅうらんくまわしてた",
+    "cost": 1.152e-05
+   },
+   {
+    "text": "来月の一日にアプデが来るらしい",
+    "ms": 1023,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "らいげつのいちにちにあぷでがくるらしい",
+    "cost": 1.188e-05
+   },
+   {
+    "text": "今戦闘の最中だから待って",
+    "ms": 742,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "こんせんとうのさなかだからまって",
+    "cost": 1.224e-05
+   },
+   {
+    "text": "もうやめたい、止めてくれ",
+    "ms": 988,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "もうやめたい、とめてくれ",
+    "cost": 9.6e-06
+   },
+   {
+    "text": "そこで足を止めるな",
+    "ms": 877,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "そこであしをとめるな",
+    "cost": 1.194e-05
+   },
+   {
+    "text": "後ろから来てる、気をつけて",
+    "ms": 510,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "うしろからきてる、きをつけて",
+    "cost": 1.29e-05
+   },
+   {
+    "text": "後で動画を見返そう",
+    "ms": 511,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "あとでどうがをみかえそう",
+    "cost": 1.332e-05
+   },
+   {
+    "text": "その間にタワーを折ろう",
+    "ms": 1668,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "そのあいだにたわーをおろう",
+    "cost": 9.48e-06
+   },
+   {
+    "text": "間に合った、危なかった",
+    "ms": 458,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "まにあった、あぶなかった",
+    "cost": 1.152e-05
+   },
+   {
+    "text": "この中に敵が隠れてる",
+    "ms": 424,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "このなかにてきがかくれてる",
+    "cost": 1.122e-05
+   },
+   {
+    "text": "今集中してるから話しかけないで",
+    "ms": 605,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "いましゅうちゅうしてるからはなしかけないで",
+    "cost": 9.12e-06
+   },
+   {
+    "text": "世界中の人が見てるんだよ",
+    "ms": 490,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "せかいじゅうのひとがみてるんだよ",
+    "cost": 1.188e-05
+   },
+   {
+    "text": "一人で三人倒したのは凄い",
+    "ms": 1477,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "ひとりでさんにんたおしたのはすごい",
+    "cost": 1.332e-05
+   },
+   {
+    "text": "二人で裏から回ろう",
+    "ms": 1097,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "ふたりでうらからまわろう",
+    "cost": 1.134e-05
+   },
+   {
+    "text": "このスキルは来週上方修正されるらしい",
+    "ms": 641,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "このすきるはらいしゅうじょうほうしゅうせいされるらしい",
+    "cost": 2.13e-05
+   },
+   {
+    "text": "下方修正されてから弱くなった",
+    "ms": 923,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "かほうしゅうせいされてからよわくなった",
+    "cost": 1.524e-05
+   },
+   {
+    "text": "弾が切れた、リロードする",
+    "ms": 866,
+    "asked": true,
+    "dictionary": true,
+    "right": false,
+    "chosen": "だんがきれた、りろーどする",
+    "cost": 9.12e-06
+   },
+   {
+    "text": "金が足りないからまだ買えない",
+    "ms": 584,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "かねがたりないからまだかえない",
+    "cost": 1.05e-05
+   },
+   {
+    "text": "今日の大会は日本のチームが出るよ",
+    "ms": 660,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "きょうのたいかいはにっぽんのちーむがでるよ",
+    "cost": 2.058e-05
+   },
+   {
+    "text": "明日も配信するから来てね",
+    "ms": 732,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "あしたもはいしんするからきてね",
+    "cost": 1.5e-05
+   },
+   {
+    "text": "昨日は全然勝てなかった",
+    "ms": 414,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "きのうはぜんぜんかてなかった",
+    "cost": 1.314e-05
+   },
+   {
+    "text": "他の人はどう思う？",
+    "ms": 422,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "ほかのひとはどうおもう？",
+    "cost": 1.014e-05
+   },
+   {
+    "text": "その他にも強いアイテムがある",
+    "ms": 413,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "そのほかにもつよいあいてむがある",
+    "cost": 1.032e-05
+   },
+   {
+    "text": "相手の体力が少ない、今だ",
+    "ms": 444,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "あいてのたいりょくがすくない、いまだ",
+    "cost": 2.166e-05
+   },
+   {
+    "text": "角に隠れて敵を待とう",
+    "ms": 358,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "かどにかくれててきをまとう",
+    "cost": 1.398e-05
+   },
+   {
+    "text": "この先に敵の拠点がある",
+    "ms": 613,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "このさきにてきのきょてんがある",
+    "cost": 1.278e-05
+   },
+   {
+    "text": "先に行ってて、すぐ追いつく",
+    "ms": 396,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "さきにいってて、すぐおいつく",
+    "cost": 1.2e-05
+   },
+   {
+    "text": "敵の攻撃を避けてから撃つ",
+    "ms": 712,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "てきのこうげきをさけてからうつ",
+    "cost": 8.94e-06
+   },
+   {
+    "text": "あの人は私を避けてる気がする",
+    "ms": 385,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "あのひとはわたしをさけてるきがする",
+    "cost": 1.104e-05
+   },
+   {
+    "text": "味方が生き返るまで耐えよう",
+    "ms": 657,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "みかたがいきかえるまでたえよう",
+    "cost": 1.026e-05
+   },
+   {
+    "text": "このゲームは難しいけど面白い",
+    "ms": 368,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "このげーむはむずかしいけどおもしろい",
+    "cost": 1.242e-05
+   },
+   {
+    "text": "大分慣れてきた気がする",
+    "ms": 440,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "だいぶなれてきたきがする",
+    "cost": 9.24e-06
+   },
+   {
+    "text": "流石にそれは無理でしょ",
+    "ms": 0,
+    "asked": false,
+    "dictionary": true,
+    "right": true,
+    "cost": 0.0
+   },
+   {
+    "text": "丁度いいタイミングでウルトが溜まった",
+    "ms": 0,
+    "asked": false,
+    "dictionary": true,
+    "right": true,
+    "cost": 0.0
+   },
+   {
+    "text": "一旦下がって回復しよう",
+    "ms": 372,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "いったんさがってかいふくしよう",
+    "cost": 1.242e-05
+   },
+   {
+    "text": "敵を一発で倒せる火力がある",
+    "ms": 363,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "てきをいっぱつでたおせるかりょくがある",
+    "cost": 1.506e-05
+   },
+   {
+    "text": "序盤は耐えて、終盤で勝負しよう",
+    "ms": 410,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "じょばんはたえて、しゅうばんでしょうぶしよう",
+    "cost": 1.68e-05
+   },
+   {
+    "text": "床に罠が置いてあるから気をつけて",
+    "ms": 371,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "ゆかにわながおいてあるからきをつけて",
+    "cost": 9.12e-06
+   },
+   {
+    "text": "上から敵が降ってきた",
+    "ms": 392,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "うえからてきがふってきた",
+    "cost": 1.674e-05
+   },
+   {
+    "text": "三日ぶりに配信します",
+    "ms": 443,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "みっかぶりにはいしんします",
+    "cost": 1.134e-05
+   },
+   {
+    "text": "最後の一人まで諦めない",
+    "ms": 646,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "さいごのいちにんまであきらめない",
+    "cost": 1.584e-05
+   },
+   {
+    "text": "彼の最期はかっこよかった",
+    "ms": 443,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "かれのさいごはかっこよかった",
+    "cost": 8.58e-06
+   },
+   {
+    "text": "何か食べてからやろうかな",
+    "ms": 573,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "なにかたべてからやろうかな",
+    "cost": 8.58e-06
+   },
+   {
+    "text": "外したら負けるから慎重に",
+    "ms": 368,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "はずしたらまけるからしんちょうに",
+    "cost": 1.188e-05
+   },
+   {
+    "text": "席を外すからちょっと待ってて",
+    "ms": 0,
+    "asked": false,
+    "dictionary": true,
+    "right": true,
+    "cost": 0.0
+   },
+   {
+    "text": "空いてるレーンに行こう",
+    "ms": 444,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "あいてるれーんにいこう",
+    "cost": 1.038e-05
+   },
+   {
+    "text": "お腹空いたから休憩する",
+    "ms": 684,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "おなかすいたからきゅうけいする",
+    "cost": 1.284e-05
+   },
+   {
+    "text": "今年は大会に出たい",
+    "ms": 380,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "ことしはたいかいにでたい",
+    "cost": 1.32e-05
+   },
+   {
+    "text": "こっちは四人、向こうは六人だ",
+    "ms": 425,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "こっちはよんにん、むこうはろくにんだ",
+    "cost": 2.28e-05
+   }
+  ]
+ },
+ "microsoft/microsoft-decision-1": {
+  "summary": {
+   "runs": 180,
+   "dictionaryRight": 126,
+   "right": 140,
+   "fixed": 26,
+   "broken": 12,
+   "asked": 171,
+   "medianMs": 443,
+   "p90Ms": 525,
+   "usd": 0.00104
+  },
+  "runs": [
+   {
+    "text": "さっき行った店より、こっちの方がいいね",
+    "ms": 445,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "さっきいったみせより、こっちのほうがいいね",
+    "cost": 9.114e-06
+   },
+   {
+    "text": "今日は辛い試合が続いてるな",
+    "ms": 793,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "きょうはつらいしあいがつづいてるな",
+    "cost": 9.03e-06
+   },
+   {
+    "text": "このカレーめっちゃ辛いんだけど",
+    "ms": 809,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "このかれーめっちゃからいんだけど",
+    "cost": 3.738e-06
+   },
+   {
+    "text": "このヒーロー今めっちゃ人気だよね",
+    "ms": 443,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "このひーろーいまめっちゃにんきだよね",
+    "cost": 7.644e-06
+   },
+   {
+    "text": "人気のない場所で待ち伏せしよう",
+    "ms": 415,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "にんきのないばしょでまちふせしよう",
+    "cost": 5.208e-06
+   },
+   {
+    "text": "エイムが上手い人には勝てないわ",
+    "ms": 405,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "えいむがうまいひとにはかてないわ",
+    "cost": 5.712e-06
+   },
+   {
+    "text": "絵が上手だねって言われた",
+    "ms": 484,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "えがじょうずだねっていわれた",
+    "cost": 7.896e-06
+   },
+   {
+    "text": "下手に動くとやられるぞ",
+    "ms": 420,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "へたにうごくとやられるぞ",
+    "cost": 4.41e-06
+   },
+   {
+    "text": "俺は射撃が下手なんだよな",
+    "ms": 490,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "おれはしゃげきがへたなんだよな",
+    "cost": 4.746e-06
+   },
+   {
+    "text": "敵が何人いるか見てくれる？",
+    "ms": 412,
+    "asked": true,
+    "dictionary": true,
+    "right": false,
+    "chosen": "てきがなににんいるかみてくれる？",
+    "cost": 8.19e-06
+   },
+   {
+    "text": "何で今そこに行ったの",
+    "ms": 523,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "なんでいまそこにいったの",
+    "cost": 6.258e-06
+   },
+   {
+    "text": "一日中ランク回してた",
+    "ms": 475,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "いちにちちゅうらんくまわしてた",
+    "cost": 5.502e-06
+   },
+   {
+    "text": "来月の一日にアプデが来るらしい",
+    "ms": 463,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "らいげつのいちにちにあぷでがくるらしい",
+    "cost": 5.544e-06
+   },
+   {
+    "text": "今戦闘の最中だから待って",
+    "ms": 425,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "こんせんとうのさいちゅうだからまって",
+    "cost": 5.712e-06
+   },
+   {
+    "text": "もうやめたい、止めてくれ",
+    "ms": 496,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "もうやめたい、とめてくれ",
+    "cost": 4.368e-06
+   },
+   {
+    "text": "そこで足を止めるな",
+    "ms": 727,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "そこであしをとめるな",
+    "cost": 5.67e-06
+   },
+   {
+    "text": "後ろから来てる、気をつけて",
+    "ms": 428,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "うしろからきてる、きをつけて",
+    "cost": 6.3e-06
+   },
+   {
+    "text": "後で動画を見返そう",
+    "ms": 488,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "あとでどうがをみかえそう",
+    "cost": 6.636e-06
+   },
+   {
+    "text": "その間にタワーを折ろう",
+    "ms": 421,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "そのあいだにたわーをおろう",
+    "cost": 4.284e-06
+   },
+   {
+    "text": "間に合った、危なかった",
+    "ms": 486,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "まにあった、あぶなかった",
+    "cost": 5.418e-06
+   },
+   {
+    "text": "この中に敵が隠れてる",
+    "ms": 473,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "このなかにてきがかくれてる",
+    "cost": 5.334e-06
+   },
+   {
+    "text": "今集中してるから話しかけないで",
+    "ms": 495,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "いましゅうちゅうしてるからはなしかけないで",
+    "cost": 4.074e-06
+   },
+   {
+    "text": "世界中の人が見てるんだよ",
+    "ms": 507,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "せかいじゅうのひとがみてるんだよ",
+    "cost": 5.586e-06
+   },
+   {
+    "text": "一人で三人倒したのは凄い",
+    "ms": 803,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "ひとりでさんにんたおしたのはすごい",
+    "cost": 6.468e-06
+   },
+   {
+    "text": "二人で裏から回ろう",
+    "ms": 430,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "ふたりでうらからまわろう",
+    "cost": 5.418e-06
+   },
+   {
+    "text": "このスキルは来週上方修正されるらしい",
+    "ms": 452,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "このすきるはらいしゅううえかたしゅうせいされるらしい",
+    "cost": 1.1886e-05
+   },
+   {
+    "text": "下方修正されてから弱くなった",
+    "ms": 439,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "かほうしゅうせいされてからよわくなった",
+    "cost": 7.686e-06
+   },
+   {
+    "text": "弾が切れた、リロードする",
+    "ms": 589,
+    "asked": true,
+    "dictionary": true,
+    "right": false,
+    "chosen": "だんがきれた、りろーどする",
+    "cost": 4.032e-06
+   },
+   {
+    "text": "金が足りないからまだ買えない",
+    "ms": 409,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "きんがたりないからまだかえない",
+    "cost": 4.83e-06
+   },
+   {
+    "text": "今日の大会は日本のチームが出るよ",
+    "ms": 440,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "きょうのたいかいはにっぽんのちーむがでるよ",
+    "cost": 1.1214e-05
+   },
+   {
+    "text": "明日も配信するから来てね",
+    "ms": 435,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "あしたもはいしんするからきてね",
+    "cost": 7.686e-06
+   },
+   {
+    "text": "昨日は全然勝てなかった",
+    "ms": 454,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "きのうはぜんぜんかてなかった",
+    "cost": 6.384e-06
+   },
+   {
+    "text": "他の人はどう思う？",
+    "ms": 434,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "ほかのひとはどうおもう？",
+    "cost": 4.62e-06
+   },
+   {
+    "text": "その他にも強いアイテムがある",
+    "ms": 449,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "そのほかにもつよいあいてむがある",
+    "cost": 4.788e-06
+   },
+   {
+    "text": "相手の体力が少ない、今だ",
+    "ms": 483,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "あいてのたいりょくがすくない、いまだ",
+    "cost": 1.1844e-05
+   },
+   {
+    "text": "角に隠れて敵を待とう",
+    "ms": 450,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "かどにかくれててきをまとう",
+    "cost": 6.762e-06
+   },
+   {
+    "text": "この先に敵の拠点がある",
+    "ms": 484,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "このさきにてきのきょてんがある",
+    "cost": 6.342e-06
+   },
+   {
+    "text": "先に行ってて、すぐ追いつく",
+    "ms": 427,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "さきにいってて、すぐおいつく",
+    "cost": 5.838e-06
+   },
+   {
+    "text": "敵の攻撃を避けてから撃つ",
+    "ms": 517,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "てきのこうげきをさけてからうつ",
+    "cost": 3.99e-06
+   },
+   {
+    "text": "あの人は私を避けてる気がする",
+    "ms": 444,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "あのひとはわたしをさけてるきがする",
+    "cost": 5.292e-06
+   },
+   {
+    "text": "味方が生き返るまで耐えよう",
+    "ms": 430,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "みかたがいきかえるまでたえよう",
+    "cost": 4.83e-06
+   },
+   {
+    "text": "このゲームは難しいけど面白い",
+    "ms": 457,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "このげーむはむずかしいけどおもしろい",
+    "cost": 6.174e-06
+   },
+   {
+    "text": "大分慣れてきた気がする",
+    "ms": 447,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "だいぶなれてきたきがする",
+    "cost": 3.99e-06
+   },
+   {
+    "text": "流石にそれは無理でしょ",
+    "ms": 0,
+    "asked": false,
+    "dictionary": true,
+    "right": true,
+    "cost": 0.0
+   },
+   {
+    "text": "丁度いいタイミングでウルトが溜まった",
+    "ms": 0,
+    "asked": false,
+    "dictionary": true,
+    "right": true,
+    "cost": 0.0
+   },
+   {
+    "text": "一旦下がって回復しよう",
+    "ms": 560,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "いったんさがってかいふくしよう",
+    "cost": 5.838e-06
+   },
+   {
+    "text": "敵を一発で倒せる火力がある",
+    "ms": 555,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "てきをいちはつでたおせるひりょくがある",
+    "cost": 7.854e-06
+   },
+   {
+    "text": "序盤は耐えて、終盤で勝負しよう",
+    "ms": 466,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "じょばんはたえて、しゅうばんでしょうぶしよう",
+    "cost": 8.82e-06
+   },
+   {
+    "text": "床に罠が置いてあるから気をつけて",
+    "ms": 438,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "ゆかにわながおいてあるからきをつけて",
+    "cost": 4.116e-06
+   },
+   {
+    "text": "上から敵が降ってきた",
+    "ms": 615,
+    "asked": true,
+    "dictionary": true,
+    "right": false,
+    "chosen": "うえからてきがくだってきた",
+    "cost": 8.274e-06
+   },
+   {
+    "text": "三日ぶりに配信します",
+    "ms": 455,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "みっかぶりにはいしんします",
+    "cost": 5.25e-06
+   },
+   {
+    "text": "最後の一人まで諦めない",
+    "ms": 440,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "さいごのいちにんまであきらめない",
+    "cost": 7.854e-06
+   },
+   {
+    "text": "彼の最期はかっこよかった",
+    "ms": 435,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "かれのさいごはかっこよかった",
+    "cost": 3.738e-06
+   },
+   {
+    "text": "何か食べてからやろうかな",
+    "ms": 533,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "なにかたべてからやろうかな",
+    "cost": 3.696e-06
+   },
+   {
+    "text": "外したら負けるから慎重に",
+    "ms": 514,
+    "asked": true,
+    "dictionary": true,
+    "right": false,
+    "chosen": "がいしたらまけるからしんちょうに",
+    "cost": 5.628e-06
+   },
+   {
+    "text": "席を外すからちょっと待ってて",
+    "ms": 0,
+    "asked": false,
+    "dictionary": true,
+    "right": true,
+    "cost": 0.0
+   },
+   {
+    "text": "空いてるレーンに行こう",
+    "ms": 457,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "あいてるれーんにいこう",
+    "cost": 4.83e-06
+   },
+   {
+    "text": "お腹空いたから休憩する",
+    "ms": 478,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "おなかすいたからきゅうけいする",
+    "cost": 6.384e-06
+   },
+   {
+    "text": "今年は大会に出たい",
+    "ms": 422,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "ことしはたいかいにでたい",
+    "cost": 6.3e-06
+   },
+   {
+    "text": "こっちは四人、向こうは六人だ",
+    "ms": 30003,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "こっちはよんにん、むこうはろくにんだ",
+    "cost": 0.0
+   },
+   {
+    "text": "さっき行った店より、こっちの方がいいね",
+    "ms": 30003,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "さっきおこなったみせより、こっちのほうがいいね",
+    "cost": 0.0
+   },
+   {
+    "text": "今日は辛い試合が続いてるな",
+    "ms": 30003,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "きょうはつらいしあいがつづいてるな",
+    "cost": 0.0
+   },
+   {
+    "text": "このカレーめっちゃ辛いんだけど",
+    "ms": 451,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "このかれーめっちゃからいんだけど",
+    "cost": 3.738e-06
+   },
+   {
+    "text": "このヒーロー今めっちゃ人気だよね",
+    "ms": 434,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "このひーろーいまめっちゃにんきだよね",
+    "cost": 7.644e-06
+   },
+   {
+    "text": "人気のない場所で待ち伏せしよう",
+    "ms": 441,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "にんきのないばしょでまちふせしよう",
+    "cost": 5.208e-06
+   },
+   {
+    "text": "エイムが上手い人には勝てないわ",
+    "ms": 457,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "えいむがうまいひとにはかてないわ",
+    "cost": 5.712e-06
+   },
+   {
+    "text": "絵が上手だねって言われた",
+    "ms": 425,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "えがじょうずだねっていわれた",
+    "cost": 7.896e-06
+   },
+   {
+    "text": "下手に動くとやられるぞ",
+    "ms": 456,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "へたにうごくとやられるぞ",
+    "cost": 4.41e-06
+   },
+   {
+    "text": "俺は射撃が下手なんだよな",
+    "ms": 408,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "おれはしゃげきがへたなんだよな",
+    "cost": 4.746e-06
+   },
+   {
+    "text": "敵が何人いるか見てくれる？",
+    "ms": 436,
+    "asked": true,
+    "dictionary": true,
+    "right": false,
+    "chosen": "てきがなににんいるかみてくれる？",
+    "cost": 8.19e-06
+   },
+   {
+    "text": "何で今そこに行ったの",
+    "ms": 430,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "なんでいまそこにいったの",
+    "cost": 6.258e-06
+   },
+   {
+    "text": "一日中ランク回してた",
+    "ms": 770,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "いちにちちゅうらんくまわしてた",
+    "cost": 5.502e-06
+   },
+   {
+    "text": "来月の一日にアプデが来るらしい",
+    "ms": 442,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "らいげつのいちにちにあぷでがくるらしい",
+    "cost": 5.544e-06
+   },
+   {
+    "text": "今戦闘の最中だから待って",
+    "ms": 451,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "こんせんとうのさいちゅうだからまって",
+    "cost": 5.712e-06
+   },
+   {
+    "text": "もうやめたい、止めてくれ",
+    "ms": 462,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "もうやめたい、とめてくれ",
+    "cost": 4.368e-06
+   },
+   {
+    "text": "そこで足を止めるな",
+    "ms": 418,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "そこであしをとめるな",
+    "cost": 5.67e-06
+   },
+   {
+    "text": "後ろから来てる、気をつけて",
+    "ms": 442,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "うしろからきてる、きをつけて",
+    "cost": 6.3e-06
+   },
+   {
+    "text": "後で動画を見返そう",
+    "ms": 438,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "あとでどうがをみかえそう",
+    "cost": 6.636e-06
+   },
+   {
+    "text": "その間にタワーを折ろう",
+    "ms": 426,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "そのあいだにたわーをおろう",
+    "cost": 4.284e-06
+   },
+   {
+    "text": "間に合った、危なかった",
+    "ms": 479,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "まにあった、あぶなかった",
+    "cost": 5.418e-06
+   },
+   {
+    "text": "この中に敵が隠れてる",
+    "ms": 454,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "このなかにてきがかくれてる",
+    "cost": 5.334e-06
+   },
+   {
+    "text": "今集中してるから話しかけないで",
+    "ms": 525,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "いましゅうちゅうしてるからはなしかけないで",
+    "cost": 4.074e-06
+   },
+   {
+    "text": "世界中の人が見てるんだよ",
+    "ms": 507,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "せかいじゅうのひとがみてるんだよ",
+    "cost": 5.586e-06
+   },
+   {
+    "text": "一人で三人倒したのは凄い",
+    "ms": 473,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "ひとりでさんにんたおしたのはすごい",
+    "cost": 6.468e-06
+   },
+   {
+    "text": "二人で裏から回ろう",
+    "ms": 421,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "ふたりでうらからまわろう",
+    "cost": 5.418e-06
+   },
+   {
+    "text": "このスキルは来週上方修正されるらしい",
+    "ms": 4003,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "このすきるはらいしゅううえかたしゅうせいされるらしい",
+    "cost": 1.1886e-05
+   },
+   {
+    "text": "下方修正されてから弱くなった",
+    "ms": 402,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "かほうしゅうせいされてからよわくなった",
+    "cost": 7.686e-06
+   },
+   {
+    "text": "弾が切れた、リロードする",
+    "ms": 480,
+    "asked": true,
+    "dictionary": true,
+    "right": false,
+    "chosen": "だんがきれた、りろーどする",
+    "cost": 4.032e-06
+   },
+   {
+    "text": "金が足りないからまだ買えない",
+    "ms": 407,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "きんがたりないからまだかえない",
+    "cost": 4.83e-06
+   },
+   {
+    "text": "今日の大会は日本のチームが出るよ",
+    "ms": 426,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "きょうのたいかいはにっぽんのちーむがでるよ",
+    "cost": 1.1214e-05
+   },
+   {
+    "text": "明日も配信するから来てね",
+    "ms": 468,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "あしたもはいしんするからきてね",
+    "cost": 7.686e-06
+   },
+   {
+    "text": "昨日は全然勝てなかった",
+    "ms": 411,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "きのうはぜんぜんかてなかった",
+    "cost": 6.384e-06
+   },
+   {
+    "text": "他の人はどう思う？",
+    "ms": 455,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "ほかのひとはどうおもう？",
+    "cost": 4.62e-06
+   },
+   {
+    "text": "その他にも強いアイテムがある",
+    "ms": 402,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "そのほかにもつよいあいてむがある",
+    "cost": 4.788e-06
+   },
+   {
+    "text": "相手の体力が少ない、今だ",
+    "ms": 451,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "あいてのたいりょくがすくない、いまだ",
+    "cost": 1.1844e-05
+   },
+   {
+    "text": "角に隠れて敵を待とう",
+    "ms": 390,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "かどにかくれててきをまとう",
+    "cost": 6.762e-06
+   },
+   {
+    "text": "この先に敵の拠点がある",
+    "ms": 426,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "このさきにてきのきょてんがある",
+    "cost": 6.342e-06
+   },
+   {
+    "text": "先に行ってて、すぐ追いつく",
+    "ms": 401,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "さきにいってて、すぐおいつく",
+    "cost": 5.838e-06
+   },
+   {
+    "text": "敵の攻撃を避けてから撃つ",
+    "ms": 398,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "てきのこうげきをさけてからうつ",
+    "cost": 3.99e-06
+   },
+   {
+    "text": "あの人は私を避けてる気がする",
+    "ms": 396,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "あのひとはわたしをさけてるきがする",
+    "cost": 5.292e-06
+   },
+   {
+    "text": "味方が生き返るまで耐えよう",
+    "ms": 464,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "みかたがいきかえるまでたえよう",
+    "cost": 4.83e-06
+   },
+   {
+    "text": "このゲームは難しいけど面白い",
+    "ms": 414,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "このげーむはむずかしいけどおもしろい",
+    "cost": 6.174e-06
+   },
+   {
+    "text": "大分慣れてきた気がする",
+    "ms": 425,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "だいぶなれてきたきがする",
+    "cost": 3.99e-06
+   },
+   {
+    "text": "流石にそれは無理でしょ",
+    "ms": 0,
+    "asked": false,
+    "dictionary": true,
+    "right": true,
+    "cost": 0.0
+   },
+   {
+    "text": "丁度いいタイミングでウルトが溜まった",
+    "ms": 0,
+    "asked": false,
+    "dictionary": true,
+    "right": true,
+    "cost": 0.0
+   },
+   {
+    "text": "一旦下がって回復しよう",
+    "ms": 498,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "いったんさがってかいふくしよう",
+    "cost": 5.838e-06
+   },
+   {
+    "text": "敵を一発で倒せる火力がある",
+    "ms": 417,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "てきをいちはつでたおせるひりょくがある",
+    "cost": 7.854e-06
+   },
+   {
+    "text": "序盤は耐えて、終盤で勝負しよう",
+    "ms": 411,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "じょばんはたえて、しゅうばんでしょうぶしよう",
+    "cost": 8.82e-06
+   },
+   {
+    "text": "床に罠が置いてあるから気をつけて",
+    "ms": 439,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "ゆかにわながおいてあるからきをつけて",
+    "cost": 4.116e-06
+   },
+   {
+    "text": "上から敵が降ってきた",
+    "ms": 436,
+    "asked": true,
+    "dictionary": true,
+    "right": false,
+    "chosen": "うえからてきがくだってきた",
+    "cost": 8.274e-06
+   },
+   {
+    "text": "三日ぶりに配信します",
+    "ms": 407,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "みっかぶりにはいしんします",
+    "cost": 5.25e-06
+   },
+   {
+    "text": "最後の一人まで諦めない",
+    "ms": 400,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "さいごのいちにんまであきらめない",
+    "cost": 7.854e-06
+   },
+   {
+    "text": "彼の最期はかっこよかった",
+    "ms": 402,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "かれのさいごはかっこよかった",
+    "cost": 3.738e-06
+   },
+   {
+    "text": "何か食べてからやろうかな",
+    "ms": 478,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "なにかたべてからやろうかな",
+    "cost": 3.696e-06
+   },
+   {
+    "text": "外したら負けるから慎重に",
+    "ms": 467,
+    "asked": true,
+    "dictionary": true,
+    "right": false,
+    "chosen": "がいしたらまけるからしんちょうに",
+    "cost": 5.628e-06
+   },
+   {
+    "text": "席を外すからちょっと待ってて",
+    "ms": 0,
+    "asked": false,
+    "dictionary": true,
+    "right": true,
+    "cost": 0.0
+   },
+   {
+    "text": "空いてるレーンに行こう",
+    "ms": 452,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "あいてるれーんにいこう",
+    "cost": 4.83e-06
+   },
+   {
+    "text": "お腹空いたから休憩する",
+    "ms": 467,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "おなかすいたからきゅうけいする",
+    "cost": 6.384e-06
+   },
+   {
+    "text": "今年は大会に出たい",
+    "ms": 481,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "ことしはたいかいにでたい",
+    "cost": 6.3e-06
+   },
+   {
+    "text": "こっちは四人、向こうは六人だ",
+    "ms": 437,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "こっちはよんひと、むこうはろくひとだ",
+    "cost": 1.2768e-05
+   },
+   {
+    "text": "さっき行った店より、こっちの方がいいね",
+    "ms": 463,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "さっきいったみせより、こっちのほうがいいね",
+    "cost": 9.114e-06
+   },
+   {
+    "text": "今日は辛い試合が続いてるな",
+    "ms": 424,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "きょうはつらいしあいがつづいてるな",
+    "cost": 9.03e-06
+   },
+   {
+    "text": "このカレーめっちゃ辛いんだけど",
+    "ms": 404,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "このかれーめっちゃからいんだけど",
+    "cost": 3.738e-06
+   },
+   {
+    "text": "このヒーロー今めっちゃ人気だよね",
+    "ms": 430,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "このひーろーいまめっちゃにんきだよね",
+    "cost": 7.644e-06
+   },
+   {
+    "text": "人気のない場所で待ち伏せしよう",
+    "ms": 834,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "にんきのないばしょでまちふせしよう",
+    "cost": 5.208e-06
+   },
+   {
+    "text": "エイムが上手い人には勝てないわ",
+    "ms": 445,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "えいむがうまいひとにはかてないわ",
+    "cost": 5.712e-06
+   },
+   {
+    "text": "絵が上手だねって言われた",
+    "ms": 458,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "えがじょうずだねっていわれた",
+    "cost": 7.896e-06
+   },
+   {
+    "text": "下手に動くとやられるぞ",
+    "ms": 416,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "へたにうごくとやられるぞ",
+    "cost": 4.41e-06
+   },
+   {
+    "text": "俺は射撃が下手なんだよな",
+    "ms": 406,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "おれはしゃげきがへたなんだよな",
+    "cost": 4.746e-06
+   },
+   {
+    "text": "敵が何人いるか見てくれる？",
+    "ms": 418,
+    "asked": true,
+    "dictionary": true,
+    "right": false,
+    "chosen": "てきがなににんいるかみてくれる？",
+    "cost": 8.19e-06
+   },
+   {
+    "text": "何で今そこに行ったの",
+    "ms": 443,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "なんでいまそこにいったの",
+    "cost": 6.258e-06
+   },
+   {
+    "text": "一日中ランク回してた",
+    "ms": 427,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "いちにちちゅうらんくまわしてた",
+    "cost": 5.502e-06
+   },
+   {
+    "text": "来月の一日にアプデが来るらしい",
+    "ms": 409,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "らいげつのいちにちにあぷでがくるらしい",
+    "cost": 5.544e-06
+   },
+   {
+    "text": "今戦闘の最中だから待って",
+    "ms": 464,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "こんせんとうのさいちゅうだからまって",
+    "cost": 5.712e-06
+   },
+   {
+    "text": "もうやめたい、止めてくれ",
+    "ms": 412,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "もうやめたい、とめてくれ",
+    "cost": 4.368e-06
+   },
+   {
+    "text": "そこで足を止めるな",
+    "ms": 526,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "そこであしをとめるな",
+    "cost": 5.67e-06
+   },
+   {
+    "text": "後ろから来てる、気をつけて",
+    "ms": 419,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "うしろからきてる、きをつけて",
+    "cost": 6.3e-06
+   },
+   {
+    "text": "後で動画を見返そう",
+    "ms": 451,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "あとでどうがをみかえそう",
+    "cost": 6.636e-06
+   },
+   {
+    "text": "その間にタワーを折ろう",
+    "ms": 433,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "そのあいだにたわーをおろう",
+    "cost": 4.284e-06
+   },
+   {
+    "text": "間に合った、危なかった",
+    "ms": 434,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "まにあった、あぶなかった",
+    "cost": 5.418e-06
+   },
+   {
+    "text": "この中に敵が隠れてる",
+    "ms": 421,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "このなかにてきがかくれてる",
+    "cost": 5.334e-06
+   },
+   {
+    "text": "今集中してるから話しかけないで",
+    "ms": 467,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "いましゅうちゅうしてるからはなしかけないで",
+    "cost": 4.074e-06
+   },
+   {
+    "text": "世界中の人が見てるんだよ",
+    "ms": 414,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "せかいじゅうのひとがみてるんだよ",
+    "cost": 5.586e-06
+   },
+   {
+    "text": "一人で三人倒したのは凄い",
+    "ms": 486,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "ひとりでさんにんたおしたのはすごい",
+    "cost": 6.468e-06
+   },
+   {
+    "text": "二人で裏から回ろう",
+    "ms": 454,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "ふたりでうらからまわろう",
+    "cost": 5.418e-06
+   },
+   {
+    "text": "このスキルは来週上方修正されるらしい",
+    "ms": 498,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "このすきるはらいしゅううえかたしゅうせいされるらしい",
+    "cost": 1.1886e-05
+   },
+   {
+    "text": "下方修正されてから弱くなった",
+    "ms": 415,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "かほうしゅうせいされてからよわくなった",
+    "cost": 7.686e-06
+   },
+   {
+    "text": "弾が切れた、リロードする",
+    "ms": 467,
+    "asked": true,
+    "dictionary": true,
+    "right": false,
+    "chosen": "だんがきれた、りろーどする",
+    "cost": 4.032e-06
+   },
+   {
+    "text": "金が足りないからまだ買えない",
+    "ms": 483,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "きんがたりないからまだかえない",
+    "cost": 4.83e-06
+   },
+   {
+    "text": "今日の大会は日本のチームが出るよ",
+    "ms": 485,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "きょうのたいかいはにっぽんのちーむがでるよ",
+    "cost": 1.1214e-05
+   },
+   {
+    "text": "明日も配信するから来てね",
+    "ms": 478,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "あしたもはいしんするからきてね",
+    "cost": 7.686e-06
+   },
+   {
+    "text": "昨日は全然勝てなかった",
+    "ms": 448,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "きのうはぜんぜんかてなかった",
+    "cost": 6.384e-06
+   },
+   {
+    "text": "他の人はどう思う？",
+    "ms": 854,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "ほかのひとはどうおもう？",
+    "cost": 4.62e-06
+   },
+   {
+    "text": "その他にも強いアイテムがある",
+    "ms": 517,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "そのほかにもつよいあいてむがある",
+    "cost": 4.788e-06
+   },
+   {
+    "text": "相手の体力が少ない、今だ",
+    "ms": 436,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "あいてのたいりょくがすくない、いまだ",
+    "cost": 1.1844e-05
+   },
+   {
+    "text": "角に隠れて敵を待とう",
+    "ms": 478,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "かどにかくれててきをまとう",
+    "cost": 6.762e-06
+   },
+   {
+    "text": "この先に敵の拠点がある",
+    "ms": 401,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "このさきにてきのきょてんがある",
+    "cost": 6.342e-06
+   },
+   {
+    "text": "先に行ってて、すぐ追いつく",
+    "ms": 463,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "さきにいってて、すぐおいつく",
+    "cost": 5.838e-06
+   },
+   {
+    "text": "敵の攻撃を避けてから撃つ",
+    "ms": 427,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "てきのこうげきをさけてからうつ",
+    "cost": 3.99e-06
+   },
+   {
+    "text": "あの人は私を避けてる気がする",
+    "ms": 434,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "あのひとはわたしをさけてるきがする",
+    "cost": 5.292e-06
+   },
+   {
+    "text": "味方が生き返るまで耐えよう",
+    "ms": 429,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "みかたがいきかえるまでたえよう",
+    "cost": 4.83e-06
+   },
+   {
+    "text": "このゲームは難しいけど面白い",
+    "ms": 427,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "このげーむはむずかしいけどおもしろい",
+    "cost": 6.174e-06
+   },
+   {
+    "text": "大分慣れてきた気がする",
+    "ms": 473,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "だいぶなれてきたきがする",
+    "cost": 3.99e-06
+   },
+   {
+    "text": "流石にそれは無理でしょ",
+    "ms": 0,
+    "asked": false,
+    "dictionary": true,
+    "right": true,
+    "cost": 0.0
+   },
+   {
+    "text": "丁度いいタイミングでウルトが溜まった",
+    "ms": 0,
+    "asked": false,
+    "dictionary": true,
+    "right": true,
+    "cost": 0.0
+   },
+   {
+    "text": "一旦下がって回復しよう",
+    "ms": 415,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "いったんさがってかいふくしよう",
+    "cost": 5.838e-06
+   },
+   {
+    "text": "敵を一発で倒せる火力がある",
+    "ms": 410,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "てきをいちはつでたおせるひりょくがある",
+    "cost": 7.854e-06
+   },
+   {
+    "text": "序盤は耐えて、終盤で勝負しよう",
+    "ms": 432,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "じょばんはたえて、しゅうばんでしょうぶしよう",
+    "cost": 8.82e-06
+   },
+   {
+    "text": "床に罠が置いてあるから気をつけて",
+    "ms": 409,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "ゆかにわながおいてあるからきをつけて",
+    "cost": 4.116e-06
+   },
+   {
+    "text": "上から敵が降ってきた",
+    "ms": 409,
+    "asked": true,
+    "dictionary": true,
+    "right": false,
+    "chosen": "うえからてきがくだってきた",
+    "cost": 8.274e-06
+   },
+   {
+    "text": "三日ぶりに配信します",
+    "ms": 422,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "みっかぶりにはいしんします",
+    "cost": 5.25e-06
+   },
+   {
+    "text": "最後の一人まで諦めない",
+    "ms": 418,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "さいごのいちにんまであきらめない",
+    "cost": 7.854e-06
+   },
+   {
+    "text": "彼の最期はかっこよかった",
+    "ms": 442,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "かれのさいごはかっこよかった",
+    "cost": 3.738e-06
+   },
+   {
+    "text": "何か食べてからやろうかな",
+    "ms": 490,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "なにかたべてからやろうかな",
+    "cost": 3.696e-06
+   },
+   {
+    "text": "外したら負けるから慎重に",
+    "ms": 393,
+    "asked": true,
+    "dictionary": true,
+    "right": false,
+    "chosen": "がいしたらまけるからしんちょうに",
+    "cost": 5.628e-06
+   },
+   {
+    "text": "席を外すからちょっと待ってて",
+    "ms": 0,
+    "asked": false,
+    "dictionary": true,
+    "right": true,
+    "cost": 0.0
+   },
+   {
+    "text": "空いてるレーンに行こう",
+    "ms": 425,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "あいてるれーんにいこう",
+    "cost": 4.83e-06
+   },
+   {
+    "text": "お腹空いたから休憩する",
+    "ms": 420,
+    "asked": true,
+    "dictionary": false,
+    "right": true,
+    "chosen": "おなかすいたからきゅうけいする",
+    "cost": 6.384e-06
+   },
+   {
+    "text": "今年は大会に出たい",
+    "ms": 443,
+    "asked": true,
+    "dictionary": true,
+    "right": true,
+    "chosen": "ことしはたいかいにでたい",
+    "cost": 6.3e-06
+   },
+   {
+    "text": "こっちは四人、向こうは六人だ",
+    "ms": 438,
+    "asked": true,
+    "dictionary": false,
+    "right": false,
+    "chosen": "こっちはよんひと、むこうはろくひとだ",
+    "cost": 1.2768e-05
+   }
+  ]
+ }
+}
