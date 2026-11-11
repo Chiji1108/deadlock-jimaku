@@ -32,6 +32,19 @@ pub enum Provider {
     TypeSafe,
 }
 
+/// 会社ごとの決まり。会社を足すときは、ここと `Provider` に足す（画面の一覧は `settings::catalog` から作る）
+pub struct ProviderInfo {
+    /// 資格情報ストアでの名前。設定や画面とのやりとりの名前（`Provider` の serde の名前）も、
+    /// 開発者のサーバーが中継するパスも同じ
+    pub id: &'static str,
+    /// 画面に出す名前
+    pub name: &'static str,
+    /// 自分のキーで送る先。`https://…/v1` まで
+    pub base: &'static str,
+    /// ギフトコードで使える（開発者のサーバーが中継する）。ほかの会社は自分のキーが要る
+    pub giftable: bool,
+}
+
 impl Provider {
     /// 鍵が要る順（足りない鍵は OpenAI を先に知らせる）
     pub const ALL: [Self; 5] = [
@@ -42,20 +55,36 @@ impl Provider {
         Self::TypeSafe,
     ];
 
-    /// 資格情報ストアでの名前。開発者のサーバーが中継するパスも同じ
-    pub fn account(self) -> &'static str {
-        match self {
-            Self::OpenAi => "openai",
-            Self::Xai => "xai",
-            Self::Qwen => "qwen",
-            Self::OpenRouter => "openrouter",
-            Self::TypeSafe => "typesafe",
+    pub const fn info(self) -> ProviderInfo {
+        let (id, name, base, giftable) = match self {
+            Self::OpenAi => ("openai", "OpenAI", "https://api.openai.com/v1", true),
+            Self::Xai => ("xai", "xAI", "https://api.x.ai/v1", true),
+            // QwenCloud のシンガポールの口（OpenAI 互換）。鍵は地域ごとに別で、ほかの地域の鍵は 401 になる
+            Self::Qwen => (
+                "qwen",
+                "Qwen",
+                "https://ap-southeast-1.maas.qwencloudapi.com/compatible-mode/v1",
+                false,
+            ),
+            Self::OpenRouter => (
+                "openrouter",
+                "OpenRouter",
+                "https://openrouter.ai/api/v1",
+                false,
+            ),
+            Self::TypeSafe => (
+                "typesafe",
+                "TypeSafe AI",
+                "https://api.typesafe.ai/v1",
+                false,
+            ),
+        };
+        ProviderInfo {
+            id,
+            name,
+            base,
+            giftable,
         }
-    }
-
-    /// ギフトコードで使える（開発者のサーバーが中継する）。ほかの会社は自分のキーが要る
-    pub fn giftable(self) -> bool {
-        matches!(self, Self::OpenAi | Self::Xai)
     }
 }
 
@@ -74,7 +103,7 @@ enum Slot {
 impl Slot {
     fn account(self) -> &'static str {
         match self {
-            Self::Key(provider) => provider.account(),
+            Self::Key(provider) => provider.info().id,
             Self::Gift => "gift",
             Self::ShareToken => "share-token",
             Self::ShareCode => "share-code",
@@ -120,7 +149,7 @@ impl Keys {
     pub fn access(&self, provider: Provider, api: &str) -> Option<Access> {
         match (self.own.get(&provider), &self.gift) {
             (Some(key), _) => Some(Access::key(provider, key.clone())),
-            (None, Some(code)) if provider.giftable() => {
+            (None, Some(code)) if provider.info().giftable => {
                 Some(Access::gift(provider, code.clone(), api))
             }
             _ => None,
@@ -270,6 +299,10 @@ mod tests {
         assert!(!keys.access(Provider::Xai, api).unwrap().is_gift());
         for provider in [Provider::Qwen, Provider::OpenRouter, Provider::TypeSafe] {
             assert_eq!(keys.access(provider, api), None);
+        }
+        // 設定や画面とやりとりする名前は、表の名前と同じ
+        for provider in Provider::ALL {
+            assert_eq!(serde_json::json!(provider), provider.info().id);
         }
         let own = Keys {
             own: BTreeMap::from([(Provider::Qwen, "sk".to_owned())]),

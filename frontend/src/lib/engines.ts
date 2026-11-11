@@ -1,6 +1,7 @@
 // 字幕の作り方。モードで工程ごとの作り方がまとめて決まり、詳しく選ぶと工程ごとに変えられる。
 // モードは `crates/core/src/settings.rs` の `Engines` の定数と同じ組み合わせ
 // 操作パネルのモードの欄と LP のモードの節が、同じ並びと言い方で出す
+import { ENGINE_PROVIDERS, PROVIDERS } from "../generated/catalog";
 import type { Engines } from "../generated/Engines";
 import type { Provider } from "../generated/Provider";
 
@@ -9,10 +10,9 @@ type Item = keyof Engines;
 export type Option<K extends Item = Item> = {
   value: Engines[K];
   label: string;
-  /** 料金（`crates/core/src/usage.rs` の単価と同じ）。無料なら「無料」 */
+  /** 料金（`crates/core/src/usage.rs` の単価と同じ）。無料なら「無料」。
+   * 使う会社は `ENGINE_PROVIDERS`（core が決める）にあるので、ここには書かない */
   price: string;
-  /** 有料なら、使う会社（その鍵が要る）。無料なら undefined */
-  provider?: Provider;
   /** ほかの選択肢との違い（測った結果。DESIGN.md 9.3） */
   note?: string;
 };
@@ -28,7 +28,6 @@ export const ITEMS: { [K in Item]: { label: string; hint: string; options: Optio
         value: "gptLiveTranscribe",
         label: "GPT-Live-Transcribe",
         price: "話した 1 分 $0.017",
-        provider: "openai",
       },
       { value: "off", label: "出さない", price: "無料" },
     ],
@@ -42,20 +41,17 @@ export const ITEMS: { [K in Item]: { label: string; hint: string; options: Optio
         value: "gptTranscribe",
         label: "GPT-Transcribe",
         price: "話した 1 分 $0.0045",
-        provider: "openai",
       },
       {
         value: "grokVoiceTranscribe",
         label: "Grok Voice Transcribe",
         price: "話した 1 分 $0.0017",
-        provider: "xai",
         note: "xAI の API キーが要る。GPT-Transcribe の約 3 分の 1 の料金で、精度は同じか少し下",
       },
       {
         value: "maiTranscribe2",
         label: "MAI-Transcribe 2",
         price: "話した 1 分 $0.0017",
-        provider: "openrouter",
         note: "OpenRouter の API キーが要る。精度も料金も Grok と同じくらい。用語のヒントは渡せない",
       },
       {
@@ -80,35 +76,30 @@ export const ITEMS: { [K in Item]: { label: string; hint: string; options: Optio
         value: "decisions",
         label: "GPT-6 Luna（確かめるだけ）",
         price: "100 万トークンで入力 $0.1",
-        provider: "openai",
         note: "略称・聞き違い・「〇〇のウルト」も判定する。PC の中で出した候補を確かめるだけなので、速くて安い",
       },
       {
         value: "jev",
         label: "Jev（確かめるだけ）",
         price: "GPT-6 Luna の約 6 割",
-        provider: "typesafe",
         note: "TypeSafe AI の API キーが要る。いちばん速い。精度は GPT-6 Luna と同じくらい",
       },
       {
         value: "drexMax",
         label: "Drex Max（確かめるだけ）",
         price: "GPT-6 Luna の約半分",
-        provider: "openrouter",
         note: "OpenRouter の API キーが要る。いちばんよく当たった。GPT-6 Luna より 0.2 秒ほど遅い",
       },
       {
         value: "decision1",
         label: "Microsoft Decision 1（確かめるだけ）",
         price: "GPT-6 Luna の約 3 割",
-        provider: "openrouter",
         note: "OpenRouter の API キーが要る。GPT-6 Luna より少しよく当たり、0.2 秒ほど遅い",
       },
       {
         value: "pplxDecider",
         label: "Perplexity Decider（確かめるだけ）",
         price: "GPT-6 Luna の約 6 分の 1",
-        provider: "openrouter",
         note: "OpenRouter の API キーが要る。いちばん安い。GPT-6 Luna より少しよく当たり、0.2 秒ほど遅い",
       },
     ],
@@ -122,28 +113,24 @@ export const ITEMS: { [K in Item]: { label: string; hint: string; options: Optio
         value: "qwenMtFlash",
         label: "Qwen-MT-Flash",
         price: "100 万トークンで入力 $0.16・出力 $0.49",
-        provider: "qwen",
         note: "翻訳専門のモデル。速くて安い。Qwen の API キーが要る（ギフトコードでは使えない）",
       },
       {
         value: "hyMt2",
         label: "Hy-MT2",
         price: "100 万トークンで入力 $0.074・出力 $0.295",
-        provider: "openrouter",
         note: "翻訳専門のモデル。OpenRouter の API キーが要る。Qwen-MT-Flash の約半分の料金で、0.5 秒ほど遅い",
       },
       {
         value: "gpt61Terra",
         label: "GPT-6.1 Terra（用語も）",
         price: "100 万トークンで入力 $1・出力 $5",
-        provider: "openai",
         note: "訳がいちばん自然で、略称やスキルの呼び方もよく判定する",
       },
       {
         value: "gpt6Luna",
         label: "GPT-6 Luna（用語も）",
         price: "100 万トークンで入力 $0.1・出力 $0.5",
-        provider: "openai",
         note: "Terra の約 6 分の 1 の料金。「〇〇のウルト」などの判定は Terra より弱い",
       },
     ],
@@ -157,7 +144,6 @@ export const ITEMS: { [K in Item]: { label: string; hint: string; options: Optio
         value: "llm",
         label: "GPT-6.1 Terra",
         price: "100 万トークンで入力 $1・出力 $5",
-        provider: "openai",
       },
     ],
   },
@@ -263,12 +249,15 @@ export const usesChrome = (t: Engines) => t.live === "chrome";
 /** 発話の区切りを Chrome が決める（アプリはマイクを開かない） */
 export const chromeFinals = (t: Engines) => t.transcription === "chrome";
 
-const providerOf = (t: Engines, item: Item) =>
-  ITEMS[item].options.find((o) => o.value === effective(t)[item])?.provider;
+/** その選択肢が使う会社（その鍵が要る）。無料なら null */
+export const providerOfOption = <K extends Item>(item: K, value: Engines[K]): Provider | null =>
+  (ENGINE_PROVIDERS[item] as Record<string, Provider | null>)[value] ?? null;
+
+const providerOf = (t: Engines, item: Item) => providerOfOption(item, effective(t)[item]);
 
 /** 有料の工程で使う会社（その鍵が要る）。OpenAI を先に置く */
 export const providers = (t: Engines): Provider[] =>
-  (["openai", "xai", "qwen", "openrouter", "typesafe"] as const).filter((p) =>
+  PROVIDERS.map((p) => p.id).filter((p) =>
     (Object.keys(ITEMS) as Item[]).some((item) => providerOf(t, item) === p),
   );
 
@@ -276,16 +265,13 @@ export const providers = (t: Engines): Provider[] =>
 export const anyPaid = (t: Engines) => providers(t).length > 0;
 
 /** 会社の名前 */
-export const PROVIDER_NAMES: Record<Provider, string> = {
-  openai: "OpenAI",
-  xai: "xAI",
-  qwen: "Qwen",
-  openrouter: "OpenRouter",
-  typesafe: "TypeSafe AI",
-};
+export const PROVIDER_NAMES = Object.fromEntries(PROVIDERS.map((p) => [p.id, p.name])) as Record<
+  Provider,
+  string
+>;
 
 /** ギフトコードで使える会社（おすそ分けした人がその会社のキーを預けていれば）。ほかの会社の中継はまだない */
-export const giftable = (p: Provider) => p === "openai" || p === "xai";
+export const giftable = (p: Provider) => PROVIDERS.some((info) => info.id === p && info.giftable);
 
 /** 要る鍵の名前。ギフトコードで足りる会社があれば、そう添える */
 export const keyNames = (list: Provider[]) =>

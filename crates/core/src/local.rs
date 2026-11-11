@@ -8,6 +8,8 @@ use std::io::Cursor;
 use std::net::{Ipv4Addr, TcpListener};
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
+use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::{Mutex, OnceLock};
 use std::time::Duration;
 
 use anyhow::{Context, bail, ensure};
@@ -54,11 +56,35 @@ const READY_TIMEOUT: Duration = Duration::from_secs(30 * 60);
 /// speech.cpp のダウンロード（Windows は 30 MB）。ふだんの API の待ち時間（60 秒）では足りない回線がある
 const DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(10 * 60);
 
+/// 動いている speech.cpp のプロセス。同時に動くのは 1 つ（字幕の処理は 1 つしか動かない）。
+/// `Speech` を落とすか、アプリを終わるとき（`stop`。タスクは落とされずに終わるので、ここから止める）に終わらせる
+static RUNNING: Mutex<Option<Child>> = Mutex::new(None);
+
+/// speech.cpp を終わらせる
+pub fn stop() {
+    if let Some(mut child) = RUNNING.lock().unwrap().take() {
+        let _ = child.start_kill();
+    }
+}
+
 /// 動いている speech.cpp のサーバー
 pub struct Speech {
     port: u16,
-    /// 落とすとプロセスも終わる（`kill_on_drop`）
-    _child: Child,
+}
+
+impl Drop for Speech {
+    fn drop(&mut self) {
+        stop();
+    }
+}
+
+/// この PC の中の口に送る。プロキシの設定があっても通さない
+fn client() -> &'static reqwest::Client {
+    static CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
+    CLIENT.get_or_init(|| {
+        let client = reqwest::Client::builder().no_proxy();
+        client.build().expect("valid client config")
+    })
 }
 
 impl Speech {
@@ -76,19 +102,28 @@ impl Speech {
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::null())
+            // このタスクごと捨てられても残さない（ふだんは `stop` が終わらせる）
             .kill_on_drop(true);
         #[cfg(windows)]
         command.creation_flags(0x0800_0000); // CREATE_NO_WINDOW（コンソールの窓を出さない）
-        let mut child = command
+        let child = command
             .spawn()
             .with_context(|| format!("cannot start {}", executable.display()))?;
+        stop();
+        *RUNNING.lock().unwrap() = Some(child);
+        // ここから先で失敗しても、待っている間に捨てられても、プロセスを残さない
+        let speech = Self { port };
         let speech_url = format!("http://127.0.0.1:{port}/health");
         let ready = async {
             loop {
-                if let Some(status) = child.try_wait()? {
+                let exited = match &mut *RUNNING.lock().unwrap() {
+                    Some(child) => child.try_wait()?,
+                    None => bail!("speech.cpp was stopped"),
+                };
+                if let Some(status) = exited {
                     bail!("speech.cpp exited: {status}");
                 }
-                let health = crate::http().get(&speech_url).send().await;
+                let health = client().get(&speech_url).send().await;
                 if health.is_ok_and(|res| res.status().is_success()) {
                     return Ok(());
                 }
@@ -99,15 +134,14 @@ impl Speech {
             .await
             .context("speech.cpp did not get ready")??;
         tracing::info!("speech.cpp {VERSION} serves {MODEL} on port {port}");
-        Ok(Self {
-            port,
-            _child: child,
-        })
+        Ok(speech)
     }
 
-    /// OpenAI の `/v1/audio/transcriptions` と同じ形の口
-    pub fn transcriptions_url(&self) -> String {
-        format!("http://127.0.0.1:{}/v1/audio/transcriptions", self.port)
+    /// OpenAI の `/v1/audio/transcriptions` と同じ形の口に送る
+    pub fn transcriptions(&self) -> reqwest::RequestBuilder {
+        let url = format!("http://127.0.0.1:{}/v1/audio/transcriptions", self.port);
+        // 長い発話を CPU だけで認識しても足りる長さ
+        client().post(url).timeout(Duration::from_secs(60))
     }
 }
 
@@ -132,15 +166,23 @@ async fn installed(dir: &Path) -> anyhow::Result<PathBuf> {
         .map(|byte| format!("{byte:02x}"))
         .collect();
     ensure!(digest == sha256, "speech.cpp download has a wrong checksum");
-    // 途中で止まっても半端なフォルダを使わないよう、別の名前に広げてから置き換える
-    let unpacking = dir.join(format!("{VERSION}.tmp"));
-    let (from, to) = (unpacking.clone(), folder);
+    // 途中で止まっても半端なフォルダを使わないよう、別の名前に広げてから置き換える。広げている間に字幕を
+    // 始め直されても（広げる処理は止められない）ぶつからないよう、名前は毎回変える
+    static UNPACKED: AtomicU32 = AtomicU32::new(0);
+    let count = UNPACKED.fetch_add(1, Ordering::Relaxed);
+    let from = dir.join(format!("{VERSION}.{}-{count}.tmp", std::process::id()));
+    let to = folder;
+    let installed = executable.clone();
     tokio::task::spawn_blocking(move || -> anyhow::Result<()> {
-        let _ = std::fs::remove_dir_all(&from);
         std::fs::create_dir_all(&from)?;
         zip::ZipArchive::new(Cursor::new(archive))?.extract(&from)?;
-        std::fs::rename(&from, &to)?;
-        Ok(())
+        let renamed = std::fs::rename(&from, &to);
+        // 先に置いた処理があれば、それを使う
+        if renamed.is_err() && installed.exists() {
+            let _ = std::fs::remove_dir_all(&from);
+            return Ok(());
+        }
+        Ok(renamed?)
     })
     .await??;
     Ok(executable)

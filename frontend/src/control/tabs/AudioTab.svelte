@@ -48,8 +48,11 @@
       ? panel.chromeStatus.detail
       : undefined,
   );
-  /** 有料の工程がある字幕が止まったら Chrome を閉じる（字幕にならない音声を Google に送らない） */
-  const chromeClosed = $derived(anyPaid(t) && !!panel.transcriptionError);
+  /** 鍵の要る工程があるか、確定をアプリが作る字幕が止まったら Chrome を閉じる（字幕にならない音声を Google に
+   * 送らない）。PC の中の文字起こしを準備している間も閉じる。core の `chrome_needed` と同じ決まり */
+  const chromeClosed = $derived(
+    ((anyPaid(t) || !chromeFinals(t)) && !!panel.transcriptionError) || panel.preparing,
+  );
   /** Chrome のウィンドウの今の状態 */
   const chromeNote = $derived.by(() => {
     if (chromeClosed) return "字幕が止まっているので閉じています";

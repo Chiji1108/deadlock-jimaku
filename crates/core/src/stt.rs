@@ -439,8 +439,7 @@ pub async fn transcribe(http: &reqwest::Client, req: BatchRequest<'_>) -> anyhow
         Transcriber::Local(speech) => {
             // 用語は渡さない（辞書の名前を全部渡すと、話していない用語を書いた。DESIGN.md 9.7）
             let form = reqwest::multipart::Form::new().part("file", file);
-            let res = http.post(speech.transcriptions_url()).multipart(form);
-            let res = res.send().await?;
+            let res = speech.transcriptions().multipart(form).send().await?;
             let status = res.status();
             if !status.is_success() {
                 bail!("{status}: {}", res.text().await.unwrap_or_default());

@@ -12,7 +12,7 @@ use tokio::sync::{broadcast, watch};
 use crate::assets::Loaded;
 use crate::chrome::{self, Browser};
 use crate::fonts::Library;
-use crate::settings::{self, Settings, SettingsPatch, SubtitleDisplay};
+use crate::settings::{self, FinalSource, Settings, SettingsPatch, SubtitleDisplay};
 use crate::types::{
     ChromeCommand, Heard, ItemCardsView, LiveState, LiveStatus, RankState, Segment, ServerMsg,
     Stage, TranscriptionError, Translated,
@@ -177,9 +177,11 @@ impl Store {
             .send(ServerMsg::TranscriptionStatus { error, preparing });
     }
 
-    /// PC の中の文字起こしを準備している（初回は speech.cpp とモデルのダウンロードを待つ）
-    pub fn set_preparing(&self, preparing: bool) {
+    /// PC の中の文字起こしを準備している（初回は speech.cpp とモデルのダウンロードを待つ）。
+    /// 準備の間は Chrome を閉じ、終わったら開く
+    pub fn set_preparing(self: &Arc<Self>, preparing: bool) {
         self.preparing.store(preparing, Ordering::Relaxed);
+        self.sync_chrome();
         let error = self.transcription_error();
         let _ = self
             .tx
@@ -355,13 +357,17 @@ impl Store {
         self.change_chrome_tab(|tab| tab.window = problem);
     }
 
-    /// Chrome を開いておくか。確定の字幕に鍵が要るのに字幕が止まっている（鍵がないときも）なら、
-    /// 音声だけを Google に送らない
+    /// Chrome を開いておくか。字幕にならない音声を Google に送らない: 鍵の要る工程があるか、確定をアプリが作る
+    /// （Chrome だけでは字幕にならない）のに字幕が止まっているとき（鍵がないときも）と、PC の中の文字起こしを
+    /// 準備している間は開かない
     fn chrome_needed(&self) -> bool {
         let settings = self.settings();
         let plan = settings.plan();
-        let stalled = settings.engines.paid() && self.transcription_error().is_some();
-        settings.transcription_enabled && plan.uses_chrome() && !stalled
+        let engines = settings.engines;
+        let stalled = (engines.paid() || engines.transcription != FinalSource::Chrome)
+            && self.transcription_error().is_some();
+        let preparing = self.preparing.load(Ordering::Relaxed);
+        settings.transcription_enabled && plan.uses_chrome() && !stalled && !preparing
     }
 
     /// 字幕を始めるなら Chrome を起動し、止めるなら閉じる（DESIGN.md 9.6）。
@@ -591,6 +597,21 @@ mod tests {
             detail: "panic".into(),
         }));
         assert!(store.browser.lock().unwrap().is_some());
+    }
+
+    /// PC の中の文字起こしは無料でも、確定をアプリが作る。止まったら Chrome だけでは字幕にならないので閉じる
+    #[tokio::test]
+    async fn an_error_closes_chrome_when_the_app_makes_the_finals() {
+        let local = Engines {
+            transcription: FinalSource::HaasJa,
+            ..Engines::CHROME
+        };
+        let (_dir, store) = chrome_store(local);
+        *store.browser.lock().unwrap() = Some(Browser::exited());
+        store.set_transcription_error(Some(TranscriptionError::Failed {
+            detail: "no build".into(),
+        }));
+        assert!(store.browser.lock().unwrap().is_none());
     }
 
     /// 閉じられたままなら、起動されて `Browser` が入れ替わることもない

@@ -294,10 +294,11 @@ async fn enable_share(State(store): State<Arc<Store>>) -> Response {
     }
 }
 
-/// この PC のキーを OpenAI、xAI の順に試し、預けてあるキーの人の合言葉を返す。どれも預けていなければ None。
+/// この PC のキーを、預けられる会社（OpenAI、xAI）の順に試し、預けてあるキーの人の合言葉を返す。どれも預けていなければ None。
 /// 使えないキー（期限切れなど）は飛ばして次を試す
 async fn join_any(api: &str) -> Result<Option<String>, Refused> {
-    for provider in [Provider::OpenAi, Provider::Xai] {
+    let relayed = Provider::ALL.into_iter().filter(|p| p.info().giftable);
+    for provider in relayed {
         let Some(key) = blocking(move || secrets::key(provider)).await else {
             continue;
         };

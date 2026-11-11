@@ -17,14 +17,7 @@ pub struct Access {
 
 impl Access {
     pub fn key(provider: Provider, key: String) -> Self {
-        let base = match provider {
-            Provider::OpenAi => "https://api.openai.com/v1",
-            Provider::Xai => "https://api.x.ai/v1",
-            // QwenCloud のシンガポールの口（OpenAI 互換）。鍵は地域ごとに別で、ほかの地域の鍵は 401 になる
-            Provider::Qwen => "https://ap-southeast-1.maas.qwencloudapi.com/compatible-mode/v1",
-            Provider::OpenRouter => "https://openrouter.ai/api/v1",
-            Provider::TypeSafe => "https://api.typesafe.ai/v1",
-        };
+        let base = provider.info().base;
         Self {
             provider,
             base: base.to_owned(),
@@ -38,7 +31,7 @@ impl Access {
     pub fn gift(provider: Provider, code: String, api: &str) -> Self {
         Self {
             provider,
-            base: format!("{}/{}", api.trim_end_matches('/'), provider.account()),
+            base: format!("{}/{}", api.trim_end_matches('/'), provider.info().id),
             token: code,
             gift: true,
         }

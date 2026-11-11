@@ -98,8 +98,12 @@ fn main() {
             tauri::RunEvent::ExitRequested {
                 api, code: None, ..
             } => api.prevent_exit(),
-            // 終了しても Chrome を残さない（残ると、次の起動で同じプロファイルを開けない）
-            tauri::RunEvent::Exit => _app.state::<std::sync::Arc<Store>>().close_chrome(),
+            // 終了しても Chrome を残さない（残ると、次の起動で同じプロファイルを開けない）。
+            // PC の中の文字起こしのプロセスも残さない
+            tauri::RunEvent::Exit => {
+                _app.state::<std::sync::Arc<Store>>().close_chrome();
+                overlays_core::local::stop();
+            }
             // Mac は Dock のアイコンを押したときに、閉じたウィンドウを開き直す
             #[cfg(target_os = "macos")]
             tauri::RunEvent::Reopen { .. } => show_window(_app),

@@ -308,13 +308,13 @@ fn missing_key(engines: &Engines, accesses: &Accesses) -> Option<Provider> {
 }
 
 /// PC の中の文字起こしを立てる。初回は speech.cpp とモデルを取るので、待っていることを操作パネルに出す
-async fn local_speech(store: &Store) -> anyhow::Result<Speech> {
+async fn local_speech(store: &Arc<Store>) -> anyhow::Result<Speech> {
     anyhow::ensure!(
         store.settings().mic_language == "ja",
         "Haas-ja only transcribes Japanese"
     );
     // 待っている間に字幕を止められても（この処理ごと捨てられる）、表示を戻す
-    struct Preparing<'a>(&'a Store);
+    struct Preparing<'a>(&'a Arc<Store>);
     impl Drop for Preparing<'_> {
         fn drop(&mut self) {
             self.0.set_preparing(false);

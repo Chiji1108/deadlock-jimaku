@@ -608,30 +608,21 @@ impl Engines {
         !self.providers().is_empty()
     }
 
-    /// 工程が使う会社（鍵が要る）。`Provider::ALL` の順
+    /// 工程が使う会社（鍵が要る）。`Provider::ALL` の順。どの選択肢がどの会社を使うかは、工程ごとの `provider`
     pub fn providers(&self) -> Vec<Provider> {
         let used = [
-            self.uses_openai().then_some(Provider::OpenAi),
+            self.live.provider(),
             self.transcription.provider(),
             self.judge().map(|judge| judge.provider),
-            self.translation.mt().map(|mt| mt.provider),
+            self.translation.provider(),
+            self.furigana.provider(),
         ];
         let all = Provider::ALL.into_iter();
         all.filter(|provider| used.contains(&Some(*provider)))
             .collect()
     }
 
-    /// OpenAI を使う工程があり、API キーかギフトコードが要る
-    pub fn uses_openai(&self) -> bool {
-        self.live == LiveSource::GptLiveTranscribe
-            || self.transcription == FinalSource::GptTranscribe
-            || self.translation.source() == TranslationSource::Llm
-            || self
-                .judge()
-                .is_some_and(|judge| judge.provider == Provider::OpenAi)
-            || self.furigana == RubySource::Llm
-    }
-
+    /// その会社を使う工程があり、鍵が要る
     pub fn uses(&self, provider: Provider) -> bool {
         self.providers().contains(&provider)
     }
@@ -663,6 +654,43 @@ impl Engines {
     }
 }
 
+/// 画面と LP が使う一覧（`frontend/src/generated/catalog.ts`）。会社の名前とギフトコードで使えるか、
+/// 工程の選択肢ごとの会社。同じことを TypeScript に手で書かない（`cargo test` が書き出す）
+pub fn catalog() -> String {
+    fn step<T: Serialize + Copy>(all: &[T], provider: impl Fn(T) -> Option<Provider>) -> Value {
+        let options = all.iter().map(|option| {
+            let name = serde_json::to_value(option).expect("a name");
+            let name = name.as_str().expect("a name").to_owned();
+            (name, serde_json::json!(provider(*option)))
+        });
+        Value::Object(options.collect())
+    }
+    let providers: Vec<Value> = Provider::ALL
+        .into_iter()
+        .map(|provider| {
+            let info = provider.info();
+            serde_json::json!({ "id": info.id, "name": info.name, "giftable": info.giftable })
+        })
+        .collect();
+    let engines = serde_json::json!({
+        "live": step(&LiveSource::ALL, LiveSource::provider),
+        "transcription": step(&FinalSource::ALL, FinalSource::provider),
+        "terms": step(&TermsEngine::ALL, |terms| terms.judge().map(|judge| judge.provider)),
+        "translation": step(&TranslationEngine::ALL, TranslationEngine::provider),
+        "furigana": step(&RubySource::ALL, RubySource::provider),
+    });
+    let json = |value: &Value| serde_json::to_string_pretty(value).expect("JSON");
+    format!(
+        "// crates/core/src/settings.rs の `catalog` が作る（`cargo test`）。手で書き換えない\n\n\
+         /** 会社。鍵が要る順 */\n\
+         export const PROVIDERS = {} as const;\n\n\
+         /** 工程の選択肢ごとの、使う会社（無料なら null） */\n\
+         export const ENGINE_PROVIDERS = {} as const;\n",
+        json(&Value::Array(providers)),
+        json(&engines),
+    )
+}
+
 impl Default for Engines {
     fn default() -> Self {
         Self::CHROME
@@ -678,6 +706,14 @@ pub enum LiveSource {
     GptLiveTranscribe,
     /// 話し終えてから出す。途中の字幕の料金がかからない
     Off,
+}
+
+impl LiveSource {
+    pub const ALL: [Self; 3] = [Self::Chrome, Self::GptLiveTranscribe, Self::Off];
+
+    pub fn provider(self) -> Option<Provider> {
+        (self == Self::GptLiveTranscribe).then_some(Provider::OpenAi)
+    }
 }
 
 /// 確定の文字起こしを何で作るか
@@ -696,6 +732,14 @@ pub enum FinalSource {
 }
 
 impl FinalSource {
+    pub const ALL: [Self; 5] = [
+        Self::Chrome,
+        Self::GptTranscribe,
+        Self::GrokVoiceTranscribe,
+        Self::MaiTranscribe2,
+        Self::HaasJa,
+    ];
+
     /// 文字起こしを頼む会社（Chrome と PC の中なら None）
     pub fn provider(self) -> Option<Provider> {
         match self {
@@ -755,7 +799,17 @@ pub enum TermsEngine {
 }
 
 impl TermsEngine {
-    fn judge(self) -> Option<Model> {
+    pub const ALL: [Self; 6] = [
+        Self::Dictionary,
+        Self::Decisions,
+        Self::Jev,
+        Self::DrexMax,
+        Self::Decision1,
+        Self::PplxDecider,
+    ];
+
+    /// 候補を確かめさせるモデル（辞書の一致なら None）
+    pub fn judge(self) -> Option<Model> {
         let (provider, name) = match self {
             Self::Dictionary => return None,
             Self::Decisions => (Provider::OpenAi, "gpt-6-luna"),
@@ -784,11 +838,28 @@ pub enum TranslationEngine {
 }
 
 impl TranslationEngine {
+    pub const ALL: [Self; 5] = [
+        Self::ChromeTranslator,
+        Self::QwenMtFlash,
+        Self::HyMt2,
+        Self::Gpt61Terra,
+        Self::Gpt6Luna,
+    ];
+
     pub fn source(self) -> TranslationSource {
         match self {
             Self::ChromeTranslator => TranslationSource::ChromeTranslator,
             Self::QwenMtFlash | Self::HyMt2 => TranslationSource::Mt,
             Self::Gpt61Terra | Self::Gpt6Luna => TranslationSource::Llm,
+        }
+    }
+
+    /// 翻訳を頼む会社（LLM は OpenAI）
+    pub fn provider(self) -> Option<Provider> {
+        match self.source() {
+            TranslationSource::ChromeTranslator => None,
+            TranslationSource::Mt => self.mt().map(|mt| mt.provider),
+            TranslationSource::Llm => Some(Provider::OpenAi),
         }
     }
 
@@ -819,6 +890,14 @@ pub enum TranslationSource {
 pub enum RubySource {
     Lindera,
     Llm,
+}
+
+impl RubySource {
+    pub const ALL: [Self; 2] = [Self::Lindera, Self::Llm];
+
+    pub fn provider(self) -> Option<Provider> {
+        (self == Self::Llm).then_some(Provider::OpenAi)
+    }
 }
 
 /// 用語の強調の出どころ
@@ -1613,14 +1692,14 @@ mod tests {
         assert!(!plan_of(Engines::OPENAI).uses_chrome());
         assert!(Engines::OPENAI.paid());
         assert!(plan_of(Engines::LIGHT).uses_chrome());
-        assert!(Engines::LIGHT.uses_openai() && Engines::LIGHT.uses(Provider::Xai));
+        assert!(Engines::LIGHT.uses(Provider::OpenAi) && Engines::LIGHT.uses(Provider::Xai));
         let paid_furigana = Engines {
             furigana: RubySource::Llm,
             ..Engines::CHROME
         };
         assert!(plan_of(paid_furigana).uses_chrome());
         assert!(paid_furigana.paid());
-        assert!(paid_furigana.uses_openai() && !paid_furigana.uses(Provider::Xai));
+        assert!(paid_furigana.uses(Provider::OpenAi) && !paid_furigana.uses(Provider::Xai));
     }
 
     /// 用語と翻訳を分けた作り方（DESIGN.md 9.7）。翻訳が LLM なら、用語の選択は使わない
@@ -1634,7 +1713,9 @@ mod tests {
             ..Engines::CHROME
         };
         assert_eq!(split.sanitized(), split);
-        assert!(split.decides_terms() && split.uses_openai() && split.uses(Provider::Qwen));
+        assert!(
+            split.decides_terms() && split.uses(Provider::OpenAi) && split.uses(Provider::Qwen)
+        );
         assert!(!split.uses(Provider::Xai));
         let finals = plan_of(split).finals;
         assert_eq!(
@@ -1651,7 +1732,7 @@ mod tests {
             terms: TermsEngine::Decisions,
             ..Engines::CHROME
         };
-        assert!(decided.uses_openai() && !decided.uses(Provider::Qwen));
+        assert!(decided.uses(Provider::OpenAi) && !decided.uses(Provider::Qwen));
         let finals = plan_of(decided).finals;
         assert_eq!(
             (finals.emphasis, finals.translation),
@@ -1663,7 +1744,11 @@ mod tests {
             translation: TranslationEngine::QwenMtFlash,
             ..Engines::CHROME
         };
-        assert!(translated.paid() && translated.uses(Provider::Qwen) && !translated.uses_openai());
+        assert!(
+            translated.paid()
+                && translated.uses(Provider::Qwen)
+                && !translated.uses(Provider::OpenAi)
+        );
         assert_eq!(plan_of(translated).finals.emphasis, Some(E::Terms));
 
         // LLM が翻訳と同時に判定する
@@ -1705,6 +1790,21 @@ mod tests {
     }
 
     /// Grok の確定は xAI だけを使い、確定の文の出どころとモデルだけが変わる
+    /// 画面と LP の一覧を書き出す（ts-rs の型と同じく、テストで作る）。中身が同じなら触らない
+    #[test]
+    fn export_catalog() {
+        let path = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../frontend/src/generated/catalog.ts"
+        );
+        let catalog = catalog();
+        if std::fs::read_to_string(path).ok().as_deref() != Some(&catalog) {
+            std::fs::write(path, &catalog).unwrap();
+        }
+        // 選択肢を足したら `ALL` にも足す（足し忘れると、画面の一覧に会社が出ない）
+        assert!(catalog.contains("\"haasJa\": null") && catalog.contains("\"jev\": \"typesafe\""));
+    }
+
     #[test]
     fn each_step_asks_for_the_key_of_its_company() {
         // 用語は Jev、翻訳は Hy-MT2、確定は MAI-Transcribe 2（OpenAI は使わない）
@@ -1757,7 +1857,7 @@ mod tests {
             transcription: FinalSource::GrokVoiceTranscribe,
             ..Engines::CHROME
         };
-        assert!(grok.paid() && grok.uses(Provider::Xai) && !grok.uses_openai());
+        assert!(grok.paid() && grok.uses(Provider::Xai) && !grok.uses(Provider::OpenAi));
         assert_eq!(grok.sanitized(), grok);
         let settings = Settings {
             engines: grok,
