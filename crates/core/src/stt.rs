@@ -469,7 +469,11 @@ mod tests {
         let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
         let access = match std::env::var("BETA_TEST_API") {
             Ok(api) => {
-                let code = crate::share::join_beta(&api).await.unwrap();
+                // コードは 1 日に同じ所から 3 つまでなので、持っていれば `BETA_TEST_CODE` で渡す
+                let code = match std::env::var("BETA_TEST_CODE") {
+                    Ok(code) => code,
+                    Err(_) => crate::share::join_beta(&api).await.unwrap(),
+                };
                 Access::gift(Provider::Qwen, code, &api)
             }
             Err(_) => Access::key(Provider::Qwen, std::env::var("QWEN_SOUTH_API_KEY").unwrap()),
