@@ -1,5 +1,71 @@
 // 管理画面のページ（DESIGN.md 17.3）。1 枚の HTML で、/api の口だけを使う。ビルドは要らない
 
+/** ページのスクリプト。応答の CSP に、このスクリプトのハッシュを書く（admin.ts） */
+export const script = `const $ = (id) => document.getElementById(id);
+const usd = (n) => "$" + n.toFixed(n < 1 ? 4 : 2);
+const date = (ms) => new Date(ms).toLocaleString("ja-JP", { dateStyle: "short", timeStyle: "short" });
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => "&#" + c.charCodeAt(0) + ";");
+
+async function api(path, method = "GET", body) {
+  const res = await fetch("/api" + path, {
+    method,
+    headers: method === "GET" ? {} : { "Content-Type": "application/json", "X-Admin": "1" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(path + ": " + res.status + " " + (await res.text()));
+  return res.status === 204 ? undefined : res.json();
+}
+
+async function act(run) {
+  $("error").hidden = true;
+  try { await run(); await load(); } catch (e) { $("error").textContent = e.message; $("error").hidden = false; }
+}
+
+async function load() {
+  const [s, k, c] = await Promise.all([api("/summary"), api("/keys"), api("/codes")]);
+  $("who").textContent = s.email;
+  $("state").textContent = s.closed ? "閉じています" : "開いています";
+  $("state").className = "tag " + (s.closed ? "bad" : "ok");
+  $("toggle").hidden = false;
+  $("toggle").textContent = s.closed ? "開ける" : "閉じる";
+  $("toggle").onclick = () => act(() => api("/settings", "PUT", { closed: !s.closed }));
+  const bar = (v, max) => '<div class="bar"><i style="width:' + Math.min(100, (v / max) * 100) + '%"></i></div>';
+  $("stats").innerHTML = [
+    ["今日の費用", usd(s.today.usd), "上限 " + usd(s.today.limitUsd) + bar(s.today.usd, s.today.limitUsd)],
+    ["今月の費用", usd(s.month.usd), "UTC の月"],
+    ["今日出したコード", s.today.codes, "上限 " + s.today.codesLimit + bar(s.today.codes, s.today.codesLimit)],
+    ["今日使ったコード", s.codes.activeToday, "全部で " + s.codes.total],
+    ["1 つのコードの上限", usd(s.limits.codeDailyUsd), "1 日。同じ所には 1 日 " + s.limits.codesPerPlace + " つ"],
+  ].map(([label, value, note]) => '<div class="stat"><span class="muted">' + label + "</span><b>" + value + '</b><span class="muted">' + note + "</span></div>").join("");
+
+  const fallback = Object.entries(k.fallback).filter(([, on]) => on).map(([p]) => p);
+  $("keys").innerHTML = "<tr><th>会社</th><th>キー</th><th>メモ</th><th>状態</th><th class=num>断られた回数</th><th>最後に断られた</th><th></th></tr>" +
+    k.keys.map((key) => "<tr><td>" + esc(key.provider) + "</td><td>…" + esc(key.tail) + "</td><td>" + esc(key.memo) + "</td><td>" +
+      (key.enabled ? '<span class="tag ok">有効</span>' : '<span class="tag">停止</span>') + "</td><td class=num>" + key.failures + "</td><td>" +
+      (key.failedAt ? date(key.failedAt) + "（" + (key.failedStatus === 0 ? "読めない" : key.failedStatus) + "）" : "") + '</td><td><button data-key="' + esc(key.id) + '" data-enabled="' + !key.enabled + '">' +
+      (key.enabled ? "止める" : "戻す") + '</button> <button class="danger" data-remove="' + esc(key.id) + '">消す</button></td></tr>').join("") +
+    fallback.map((p) => "<tr><td>" + esc(p) + '</td><td colspan="6" class="muted">秘密の設定（wrangler）のキー。ほかのキーが断られたときに使います</td></tr>').join("");
+
+  $("codes").innerHTML = "<tr><th>作った日</th><th class=num>今日</th><th class=num>今月</th><th class=num>全部</th><th>状態</th><th></th></tr>" +
+    c.codes.map((code) => "<tr><td>" + date(code.createdAt) + "</td><td class=num>" + usd(code.todayUsd) + "</td><td class=num>" + usd(code.monthUsd) + "</td><td class=num>" + usd(code.usd) + "</td><td>" +
+      (code.revoked ? '<span class="tag bad">停止</span>' : "") + '</td><td><button data-code="' + esc(code.id) + '" data-revoked="' + !code.revoked + '">' + (code.revoked ? "戻す" : "止める") + "</button></td></tr>").join("");
+}
+
+document.addEventListener("click", (e) => {
+  const d = e.target.dataset ?? {};
+  if (d.key) act(() => api("/keys/" + d.key, "PATCH", { enabled: d.enabled === "true" }));
+  if (d.remove && confirm("このキーを消しますか？")) act(() => api("/keys/" + d.remove, "DELETE"));
+  if (d.code) act(() => api("/codes/" + d.code, "PATCH", { revoked: d.revoked === "true" }));
+});
+$("add").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const form = new FormData(e.target);
+  act(async () => { await api("/keys", "POST", Object.fromEntries(form)); e.target.reset(); });
+});
+act(async () => {});
+setInterval(() => load().catch(() => {}), 60000);
+`;
+
 export const page = /* html */ `<!doctype html>
 <html lang="ja">
 <head>
@@ -70,70 +136,6 @@ export const page = /* html */ `<!doctype html>
     <table id="codes"></table>
   </section>
 </main>
-<script>
-const $ = (id) => document.getElementById(id);
-const usd = (n) => "$" + n.toFixed(n < 1 ? 4 : 2);
-const date = (ms) => new Date(ms).toLocaleString("ja-JP", { dateStyle: "short", timeStyle: "short" });
-const esc = (s) => String(s).replace(/[&<>"']/g, (c) => "&#" + c.charCodeAt(0) + ";");
-
-async function api(path, method = "GET", body) {
-  const res = await fetch("/api" + path, {
-    method,
-    headers: method === "GET" ? {} : { "Content-Type": "application/json", "X-Admin": "1" },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  if (!res.ok) throw new Error(path + ": " + res.status + " " + (await res.text()));
-  return res.status === 204 ? undefined : res.json();
-}
-
-async function act(run) {
-  $("error").hidden = true;
-  try { await run(); await load(); } catch (e) { $("error").textContent = e.message; $("error").hidden = false; }
-}
-
-async function load() {
-  const [s, k, c] = await Promise.all([api("/summary"), api("/keys"), api("/codes")]);
-  $("who").textContent = s.email;
-  $("state").textContent = s.closed ? "閉じています" : "開いています";
-  $("state").className = "tag " + (s.closed ? "bad" : "ok");
-  $("toggle").hidden = false;
-  $("toggle").textContent = s.closed ? "開ける" : "閉じる";
-  $("toggle").onclick = () => act(() => api("/settings", "PUT", { closed: !s.closed }));
-  const bar = (v, max) => '<div class="bar"><i style="width:' + Math.min(100, (v / max) * 100) + '%"></i></div>';
-  $("stats").innerHTML = [
-    ["今日の費用", usd(s.today.usd), "上限 " + usd(s.today.limitUsd) + bar(s.today.usd, s.today.limitUsd)],
-    ["今月の費用", usd(s.month.usd), "UTC の月"],
-    ["今日出したコード", s.today.codes, "上限 " + s.today.codesLimit + bar(s.today.codes, s.today.codesLimit)],
-    ["今日使ったコード", s.codes.activeToday, "全部で " + s.codes.total],
-    ["1 つのコードの上限", usd(s.limits.codeDailyUsd), "1 日。同じ所には 1 日 " + s.limits.codesPerPlace + " つ"],
-  ].map(([label, value, note]) => '<div class="stat"><span class="muted">' + label + "</span><b>" + value + '</b><span class="muted">' + note + "</span></div>").join("");
-
-  const fallback = Object.entries(k.fallback).filter(([, on]) => on).map(([p]) => p);
-  $("keys").innerHTML = "<tr><th>会社</th><th>キー</th><th>メモ</th><th>状態</th><th class=num>断られた回数</th><th>最後に断られた</th><th></th></tr>" +
-    k.keys.map((key) => "<tr><td>" + esc(key.provider) + "</td><td>…" + esc(key.tail) + "</td><td>" + esc(key.memo) + "</td><td>" +
-      (key.enabled ? '<span class="tag ok">有効</span>' : '<span class="tag">停止</span>') + "</td><td class=num>" + key.failures + "</td><td>" +
-      (key.failedAt ? date(key.failedAt) + "（" + key.failedStatus + "）" : "") + '</td><td><button data-key="' + esc(key.id) + '" data-enabled="' + !key.enabled + '">' +
-      (key.enabled ? "止める" : "戻す") + '</button> <button class="danger" data-remove="' + esc(key.id) + '">消す</button></td></tr>').join("") +
-    fallback.map((p) => "<tr><td>" + esc(p) + '</td><td colspan="6" class="muted">秘密の設定（wrangler）のキー。ほかのキーが断られたときに使います</td></tr>').join("");
-
-  $("codes").innerHTML = "<tr><th>作った日</th><th class=num>今日</th><th class=num>今月</th><th class=num>全部</th><th>状態</th><th></th></tr>" +
-    c.codes.map((code) => "<tr><td>" + date(code.createdAt) + "</td><td class=num>" + usd(code.todayUsd) + "</td><td class=num>" + usd(code.monthUsd) + "</td><td class=num>" + usd(code.usd) + "</td><td>" +
-      (code.revoked ? '<span class="tag bad">停止</span>' : "") + '</td><td><button data-code="' + esc(code.id) + '" data-revoked="' + !code.revoked + '">' + (code.revoked ? "戻す" : "止める") + "</button></td></tr>").join("");
-}
-
-document.addEventListener("click", (e) => {
-  const d = e.target.dataset ?? {};
-  if (d.key) act(() => api("/keys/" + d.key, "PATCH", { enabled: d.enabled === "true" }));
-  if (d.remove && confirm("このキーを消しますか？")) act(() => api("/keys/" + d.remove, "DELETE"));
-  if (d.code) act(() => api("/codes/" + d.code, "PATCH", { revoked: d.revoked === "true" }));
-});
-$("add").addEventListener("submit", (e) => {
-  e.preventDefault();
-  const form = new FormData(e.target);
-  act(async () => { await api("/keys", "POST", Object.fromEntries(form)); e.target.reset(); });
-});
-act(async () => {});
-setInterval(() => load().catch(() => {}), 60000);
-</script>
+<script>${script}</script>
 </body>
 </html>`;

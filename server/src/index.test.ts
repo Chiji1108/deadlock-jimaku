@@ -1249,9 +1249,11 @@ describe("admin", () => {
   it("keeps several keys, never shows them, and moves on to the next when one is refused", async () => {
     env.BETA_OPENROUTER_KEY = undefined;
     const add = (key: string, memo = "") => manage("/api/keys", "POST", { provider: "openrouter", key, memo });
-    expect((await add("sk-or-first", "main")).status).toBe(200);
-    expect((await add("sk-or-second")).status).toBe(200);
+    expect((await add("sk-or-0000000000000000-first", "main")).status).toBe(200);
+    expect((await add("sk-or-0000000000000000-second")).status).toBe(200);
+    // 空や短すぎるキー（打ち間違い。終わりの 4 文字で中身が分かってしまう）は受けない
     expect((await add("")).status).toBe(400);
+    expect((await add("sk-or-short")).status).toBe(400);
     expect((await manage("/api/keys", "POST", { provider: "openai", key: "sk-x" })).status).toBe(400);
     const list = async () => ((await (await manage("/api/keys")).json()) as { keys: Record<string, any>[] }).keys;
     const keys = await list();
@@ -1264,7 +1266,7 @@ describe("admin", () => {
     // 1 つ目に当たったキーが回数の上限で断られたら、もう 1 つで通す。断られたキーは覚える
     const code = await joined();
     vi.mocked(openrouter).mockImplementation(async (_path, key) =>
-      key === "sk-or-first" ? new Response("slow down", { status: 429 }) : answered(),
+      key === "sk-or-0000000000000000-first" ? new Response("slow down", { status: 429 }) : answered(),
     );
     for (let i = 0; i < 6; i++) expect((await translate(code)).status).toBe(200);
     const [first, second] = await list();
@@ -1273,7 +1275,7 @@ describe("admin", () => {
     // 断られたキーは後回しにするので、次からは通るキーを先に使う
     vi.mocked(openrouter).mockClear();
     await translate(code);
-    expect(vi.mocked(openrouter).mock.calls.map((call) => call[1])).toEqual(["sk-or-second"]);
+    expect(vi.mocked(openrouter).mock.calls.map((call) => call[1])).toEqual(["sk-or-0000000000000000-second"]);
 
     // 止めたキーは使わない。どれも使えなければ、その会社は中継しない
     expect((await manage(`/api/keys/${second!.id}`, "PATCH", { enabled: false })).status).toBe(204);
@@ -1281,6 +1283,43 @@ describe("admin", () => {
     expect((await manage(`/api/keys/${first!.id}`, "DELETE")).status).toBe(204);
     const none = await translate(code);
     expect([none.status, none.headers.get("X-Gift-Refusal")]).toEqual([403, "unsupported"]);
+  });
+
+  it("skips a key it cannot read, and does not blame the keys for a refused request", async () => {
+    env.BETA_OPENROUTER_KEY = undefined;
+    const add = (key: string) => manage("/api/keys", "POST", { provider: "openrouter", key });
+    await add("sk-or-0000000000000000-broken");
+    await add("sk-or-0000000000000000-works");
+    // 暗号化の鍵を替えたあとのような、読めなくなったキー
+    await env.DB.prepare("UPDATE beta_keys SET encrypted_key = 'AAAA' WHERE tail = 'oken'").run();
+    const code = await joined();
+    vi.mocked(openrouter).mockImplementation(async () => answered());
+    for (let i = 0; i < 6; i++) expect((await translate(code)).status).toBe(200);
+    expect(vi.mocked(openrouter).mock.calls.every((call) => call[1] === "sk-or-0000000000000000-works")).toBe(true);
+    const keys = ((await (await manage("/api/keys")).json()) as { keys: Record<string, any>[] }).keys;
+    expect(keys.find((k) => k.tail === "oken")!.failures).toBeGreaterThan(0);
+
+    // 本文が断られた（403）のは、キーのせいではない。ほかのキーに回さず、キーにも記録しない
+    await env.DB.prepare("DELETE FROM beta_keys WHERE tail = 'oken'").run();
+    await add("sk-or-0000000000000000-other");
+    vi.mocked(openrouter).mockClear();
+    vi.mocked(openrouter).mockImplementation(async () => new Response("moderation", { status: 403 }));
+    expect((await translate(code)).status).toBe(502);
+    expect(openrouter).toHaveBeenCalledOnce();
+    const after = ((await (await manage("/api/keys")).json()) as { keys: Record<string, any>[] }).keys;
+    expect(after.every((k) => k.failures === 0)).toBe(true);
+  });
+
+  it("serves the page so that only its own script runs, and nothing is framed or kept", async () => {
+    const res = await manage("/");
+    const csp = res.headers.get("Content-Security-Policy")!;
+    const html = await res.text();
+    const script = html.slice(html.indexOf("<script>") + "<script>".length, html.indexOf("</script>"));
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(script));
+    expect(csp).toContain(`script-src 'sha256-${btoa(String.fromCharCode(...new Uint8Array(digest)))}'`);
+    expect(csp).toContain("frame-ancestors 'none'");
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
+    expect((await manage("/api/summary")).headers.get("Cache-Control")).toBe("no-store");
   });
 
   it("closes the beta: no new codes, no relay, and opens it again", async () => {

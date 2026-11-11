@@ -23,6 +23,7 @@ import {
 } from "./db";
 import {
   BETA_ISSUER,
+  betaClosed,
   betaProviders,
   betaRelayKeys,
   grantBetaCode,
@@ -511,12 +512,19 @@ async function relayed(
     return c.json({ error: "limit" }, 403, { "X-Gift-Refusal": "limit" });
   }
   const settle = (actual: number) => c.executionCtx.waitUntil(settleBeta(c.var.db, codeId, estimate, actual, now));
-  // キーが断られたら（使えない、残高がない、回数の上限）、次のキーに回す
+  // キーが断られたら（使えない、残高がない、回数の上限）、次のキーに回す。キーを読めないとき（暗号化の鍵を
+  // 替えた、行が壊れた）も同じ。断られたキーは覚えて、次からは後回しにする
   let res: Response | undefined;
   for (const key of gift.keys) {
-    res = await send(await key.key()).catch(() => undefined);
-    if (res?.ok || !res || !KEY_TROUBLE.includes(res.status)) break;
-    if (key.id) c.executionCtx.waitUntil(keyFailed(c.var.db, key.id, res.status, now));
+    const secret = await key.key().catch(() => undefined);
+    const tried = secret === undefined ? undefined : await send(secret).catch(() => undefined);
+    void res?.body?.cancel();
+    res = tried;
+    // 読めなかったキーと、キーのせいで断られたとき（その番号）だけ、次に回す
+    const refused = tried && KEY_TROUBLE.includes(tried.status) ? tried.status : undefined;
+    const trouble = secret === undefined ? KEY_UNREADABLE : refused;
+    if (trouble === undefined) break;
+    if (key.id) c.executionCtx.waitUntil(keyFailed(c.var.db, key.id, trouble, now));
   }
   if (!res?.ok) {
     settle(0);
@@ -528,8 +536,10 @@ async function relayed(
   return new Response(answer, { headers: { "Content-Type": "application/json" } });
 }
 
-/** キーのせいで断られたときの番号（ほかのキーなら通るかもしれない） */
-const KEY_TROUBLE = [401, 402, 403, 429];
+/** キーのせいで断られたときの番号（ほかのキーなら通るかもしれない）。403 は入れない（本文が断られたときにも返る） */
+const KEY_TROUBLE = [401, 402, 429];
+/** キーを読めなかったときに覚える番号 */
+const KEY_UNREADABLE = 0;
 
 /** 100 万トークンあたりの単価から、額を出す */
 const usdOf = (tokens: number, perMillion: number) => (tokens * perMillion) / 1e6;
@@ -717,16 +727,11 @@ function giftKey(c: Ctx, provider: Provider = "openai") {
  */
 async function betaGift(c: Ctx, provider: BetaProvider): Promise<{ code: Code; keys: RelayKey[] } | Response> {
   const gift = await gifted(c, async (code) => {
-    if (code.issuerId !== BETA_ISSUER || (await betaClosedNow(c))) return undefined;
+    if (code.issuerId !== BETA_ISSUER || (await betaClosed(c.var.db))) return undefined;
     const keys = await betaRelayKeys(c.var.db, c.env, provider, c.env.SHARE_KEY);
     return keys.length > 0 ? keys : undefined;
   });
   return gift instanceof Response ? gift : { code: gift.code, keys: gift.key };
-}
-
-/** ベータを閉じているか */
-async function betaClosedNow(c: Ctx): Promise<boolean> {
-  return (await betaProviders(c.var.db, c.env)).length === 0;
 }
 
 /** JSON の本文。読めなければ undefined（400 にする） */

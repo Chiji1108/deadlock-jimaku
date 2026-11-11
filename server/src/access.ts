@@ -16,13 +16,19 @@ interface Jwk extends JsonWebKey {
 let cached: { team: string; at: number; keys: Jwk[] } | undefined;
 const KEYS_TTL_MS = 60 * 60 * 1000;
 
-async function signingKeys(team: string, now: number): Promise<Jwk[]> {
-  if (cached && cached.team === team && now - cached.at < KEYS_TTL_MS) return cached.keys;
-  const res = await fetch(`https://${team}.cloudflareaccess.com/cdn-cgi/access/certs`);
-  if (!res.ok) return cached?.team === team ? cached.keys : [];
-  const { keys } = (await res.json()) as { keys: Jwk[] };
-  cached = { team, at: now, keys };
-  return keys;
+/** 知らない鍵の名前（kid）が来たときに取り直す、いちばん短い間隔（鍵の入れ替えの直後に、1 時間待たせない） */
+const KEYS_RETRY_MS = 60 * 1000;
+
+async function signingKeys(team: string, now: number, kid: unknown): Promise<Jwk[]> {
+  const fresh = cached && cached.team === team ? cached : undefined;
+  const known = fresh?.keys.some((key) => key.kid === kid);
+  const age = fresh ? now - fresh.at : Infinity;
+  if (fresh && (known ? age < KEYS_TTL_MS : age < KEYS_RETRY_MS)) return fresh.keys;
+  const res = await fetch(`https://${team}.cloudflareaccess.com/cdn-cgi/access/certs`).catch(() => undefined);
+  const body = res?.ok ? ((await res.json().catch(() => undefined)) as { keys?: unknown } | undefined) : undefined;
+  if (!Array.isArray(body?.keys)) return fresh?.keys ?? [];
+  cached = { team, at: now, keys: body.keys as Jwk[] };
+  return cached.keys;
 }
 
 function decoded(part: string): Uint8Array {
@@ -57,7 +63,7 @@ export async function accessEmail(request: Request, env: AccessEnv, now = Date.n
     claims.exp * 1000 > now &&
     typeof claims.email === "string";
   if (!valid) return undefined;
-  const jwk = (await signingKeys(team, now)).find((key) => key.kid === header.kid);
+  const jwk = (await signingKeys(team, now, header.kid)).find((key) => key.kid === header.kid);
   if (!jwk) return undefined;
   const key = await crypto.subtle.importKey("jwk", jwk, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, [
     "verify",

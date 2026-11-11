@@ -4,7 +4,7 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { accessEmail, type AccessEnv } from "./access";
-import { page } from "./adminPage";
+import { page, script } from "./adminPage";
 import {
   BETA_CODE_DAILY_USD,
   BETA_CODES_PER_DAY,
@@ -32,8 +32,32 @@ export const admin = new Hono<App>();
 const PROVIDERS = ["qwen", "openrouter"] as const;
 /** 一覧に出すコードの数（今日よく使った順） */
 const LISTED_CODES = 100;
+/** キーの長さ。短すぎるもの（打ち間違い）は、終わりの 4 文字を出すと中身が分かってしまう */
+const MIN_KEY = 20;
 const MAX_KEY = 400;
 const MAX_MEMO = 100;
+
+/** ページに書いたスクリプトだけを動かす（ほかのスクリプトが紛れ込んでも動かない）。枠の中に入れさせず、残させない */
+admin.use(async (c, next) => {
+  await next();
+  const allowed = `'sha256-${await scriptHash()}'`;
+  c.header(
+    "Content-Security-Policy",
+    `default-src 'none'; script-src ${allowed}; style-src 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'`,
+  );
+  c.header("X-Frame-Options", "DENY");
+  c.header("Cache-Control", "no-store");
+  c.header("Referrer-Policy", "no-referrer");
+  c.header("X-Content-Type-Options", "nosniff");
+});
+
+let hashed: Promise<string> | undefined;
+function scriptHash(): Promise<string> {
+  hashed ??= crypto.subtle
+    .digest("SHA-256", new TextEncoder().encode(script))
+    .then((digest) => btoa(String.fromCharCode(...new Uint8Array(digest))));
+  return hashed;
+}
 
 admin.get("/", (c) => c.html(page));
 
@@ -148,7 +172,9 @@ admin.post("/api/keys", async (c) => {
   const provider = PROVIDERS.find((p) => p === body.provider);
   const key = typeof body.key === "string" ? body.key.trim() : "";
   const memo = typeof body.memo === "string" ? body.memo.trim() : "";
-  if (!provider || !key || key.length > MAX_KEY || memo.length > MAX_MEMO) return c.json({ error: "invalid" }, 400);
+  if (!provider || key.length < MIN_KEY || key.length > MAX_KEY || memo.length > MAX_MEMO) {
+    return c.json({ error: "invalid" }, 400);
+  }
   const id = newId();
   await c.var.db.insert(betaKeys).values({
     id,
