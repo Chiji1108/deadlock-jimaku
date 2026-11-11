@@ -402,7 +402,7 @@ mod tests {
     use super::*;
 
     /// 手元の Worker（`wrangler dev`。偽の開発者のキー）に、ベータのコードで、アプリの部品が実際に送る要求を通す。
-    /// 要求の形が Worker の検査を通れば、Worker は外に送り、偽のキーなので 401 が返る（400 なら形が合っていない）:
+    /// 要求の形が Worker の検査を通れば、Worker は外に送り、偽のキーなので「外の不調」（502）が返る（400 なら形が合っていない）:
     /// `BETA_TEST_API=http://127.0.0.1:8799/v1 cargo test -p overlays-core beta_requests -- --ignored --nocapture`
     #[tokio::test]
     #[ignore = "needs a local Worker"]
@@ -423,12 +423,8 @@ mod tests {
         ));
         let passed = |what: &str, e: anyhow::Error| {
             println!("{what}: {e:#}");
-            // 偽のキーが外で断られて 401 が返り、コードが使えないという扱いになる
-            assert_eq!(
-                e.downcast_ref(),
-                Some(&TranscriptionError::GiftUnknown),
-                "{what}"
-            );
+            // 偽のキーが外で断られ、Worker は「外の不調」（502）として返す
+            assert!(format!("{e:#}").contains("upstream"), "{what}: {e:#}");
         };
 
         let wav = concat!(
