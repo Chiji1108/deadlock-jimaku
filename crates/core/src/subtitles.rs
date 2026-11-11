@@ -23,7 +23,6 @@ use crate::chrome;
 use crate::finish::{self, Finished, Finisher};
 use crate::lang;
 use crate::now_ms;
-use crate::secrets::Provider;
 use crate::settings::{Settings, TextSource};
 use crate::store::{ChromeEvent, Store};
 use crate::stt::{self, BatchRequest, Hints, RealtimeConfig, Transcriber};
@@ -97,13 +96,14 @@ pub async fn run(
     let (delta_tx, delta_rx) = mpsc::channel(256);
     // オフなら Realtime につながず、確定の字幕だけを出す
     let plan = settings.plan();
-    let realtime = if let (Some(TextSource::GptLiveTranscribe), Some(access)) =
-        (plan.partial.text, accesses.get(Provider::OpenAi))
-    {
+    // 途中の字幕をアプリが作るなら（Chrome でなければ）、その会社につなぐ
+    let live = plan.partial.text.filter(|text| *text != TextSource::Chrome);
+    let live = live.and(settings.engines.live.provider());
+    let realtime = if let Some(access) = live.and_then(|provider| accesses.get(provider)) {
         let (tx, rx) = mpsc::unbounded_channel();
         let config = RealtimeConfig {
             access,
-            model: settings.models.realtime.clone(),
+            model: settings.models_in_use().realtime,
             delay: settings.realtime_delay.clone(),
             meter: store.meter(),
         };
@@ -406,7 +406,11 @@ impl Pipeline {
     fn on_delta(&mut self, delta: stt::Delta) {
         let seg = self.live.get_mut(&delta.segment);
         if let Some(seg) = seg.filter(|s| s.stage == Stage::Partial) {
-            seg.text.push_str(&delta.text);
+            if delta.whole {
+                seg.text = delta.text;
+            } else {
+                seg.text.push_str(&delta.text);
+            }
             let phase = self.store.settings().plan().partial;
             seg.tokens = phase
                 .marks()
@@ -1169,6 +1173,7 @@ mod tests {
         pipeline.on_delta(stt::Delta {
             segment: segment.clone(),
             text: "ヘイズ".into(),
+            whole: false,
         });
         segment
     }

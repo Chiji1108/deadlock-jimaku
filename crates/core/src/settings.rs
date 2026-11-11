@@ -704,15 +704,26 @@ impl Default for Engines {
 pub enum LiveSource {
     Chrome,
     GptLiveTranscribe,
+    /// QwenCloud の Qwen-Audio-3.1-ASR-Flash-Streaming。GPT-Live-Transcribe の約 20 分の 1 の料金（DESIGN.md 3.4）
+    QwenAudioStreaming,
     /// 話し終えてから出す。途中の字幕の料金がかからない
     Off,
 }
 
 impl LiveSource {
-    pub const ALL: [Self; 3] = [Self::Chrome, Self::GptLiveTranscribe, Self::Off];
+    pub const ALL: [Self; 4] = [
+        Self::Chrome,
+        Self::GptLiveTranscribe,
+        Self::QwenAudioStreaming,
+        Self::Off,
+    ];
 
     pub fn provider(self) -> Option<Provider> {
-        (self == Self::GptLiveTranscribe).then_some(Provider::OpenAi)
+        match self {
+            Self::Chrome | Self::Off => None,
+            Self::GptLiveTranscribe => Some(Provider::OpenAi),
+            Self::QwenAudioStreaming => Some(Provider::Qwen),
+        }
     }
 }
 
@@ -725,6 +736,8 @@ pub enum FinalSource {
     GptTranscribe,
     /// GPT-Transcribe より安い。精度は同じか少し下（DESIGN.md 3）
     GrokVoiceTranscribe,
+    /// QwenCloud の Qwen-Audio-3.1-ASR-Flash。Grok の約 7 分の 1 の料金で、少し遅い（DESIGN.md 3.4）
+    QwenAudio,
     /// OpenRouter の MAI-Transcribe 2。Grok と同じくらい（DESIGN.md 9.7）
     MaiTranscribe2,
     /// PC の中で動く Haas-ja（speech.cpp）。無料。日本語だけ（DESIGN.md 9.8）
@@ -732,10 +745,11 @@ pub enum FinalSource {
 }
 
 impl FinalSource {
-    pub const ALL: [Self; 5] = [
+    pub const ALL: [Self; 6] = [
         Self::Chrome,
         Self::GptTranscribe,
         Self::GrokVoiceTranscribe,
+        Self::QwenAudio,
         Self::MaiTranscribe2,
         Self::HaasJa,
     ];
@@ -746,6 +760,7 @@ impl FinalSource {
             Self::Chrome | Self::HaasJa => None,
             Self::GptTranscribe => Some(Provider::OpenAi),
             Self::GrokVoiceTranscribe => Some(Provider::Xai),
+            Self::QwenAudio => Some(Provider::Qwen),
             Self::MaiTranscribe2 => Some(Provider::OpenRouter),
         }
     }
@@ -755,6 +770,7 @@ impl FinalSource {
         match self {
             Self::Chrome | Self::GptTranscribe => None,
             Self::GrokVoiceTranscribe => Some("grok-voice-transcribe-2.0"),
+            Self::QwenAudio => Some("qwen-audio-3.1-asr-flash"),
             Self::MaiTranscribe2 => Some("microsoft/mai-transcribe-2"),
             Self::HaasJa => Some(crate::local::HAAS_JA),
         }
@@ -775,6 +791,8 @@ pub enum TextSource {
     GptLiveTranscribe,
     GptTranscribe,
     GrokVoiceTranscribe,
+    QwenAudio,
+    QwenAudioStreaming,
     MaiTranscribe2,
     HaasJa,
 }
@@ -1075,19 +1093,27 @@ impl Settings {
                 emphasis: terms,
             },
             // 翻訳だけなら途中の字幕は見えないので、料金をかけない
-            LiveSource::GptLiveTranscribe if !translation_only => Phase {
-                text: Some(Text::GptLiveTranscribe),
-                translation: None,
-                ruby: lindera,
-                emphasis: terms,
-            },
-            LiveSource::GptLiveTranscribe | LiveSource::Off => Phase::NONE,
+            LiveSource::GptLiveTranscribe | LiveSource::QwenAudioStreaming if !translation_only => {
+                Phase {
+                    text: Some(match engines.live {
+                        LiveSource::QwenAudioStreaming => Text::QwenAudioStreaming,
+                        _ => Text::GptLiveTranscribe,
+                    }),
+                    translation: None,
+                    ruby: lindera,
+                    emphasis: terms,
+                }
+            }
+            LiveSource::GptLiveTranscribe | LiveSource::QwenAudioStreaming | LiveSource::Off => {
+                Phase::NONE
+            }
         };
         let finals = Phase {
             text: Some(match engines.transcription {
                 FinalSource::Chrome => Text::Chrome,
                 FinalSource::GptTranscribe => Text::GptTranscribe,
                 FinalSource::GrokVoiceTranscribe => Text::GrokVoiceTranscribe,
+                FinalSource::QwenAudio => Text::QwenAudio,
                 FinalSource::MaiTranscribe2 => Text::MaiTranscribe2,
                 FinalSource::HaasJa => Text::HaasJa,
             }),
@@ -1116,6 +1142,9 @@ impl Settings {
         let mut models = self.models.clone();
         if let Some(model) = self.engines.transcription.model() {
             models.batch = model.into();
+        }
+        if self.engines.live == LiveSource::QwenAudioStreaming {
+            models.realtime = "qwen-audio-3.1-asr-flash-streaming".into();
         }
         if self.engines.translation == TranslationEngine::Gpt6Luna {
             models.translate = "gpt-6-luna".into();

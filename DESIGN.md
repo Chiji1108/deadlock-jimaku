@@ -20,7 +20,7 @@
 
 - 配信 PC は Windows が中心（Deadlock・OBS・本ツールを同じマシンで動かす。macOS と Linux の版も配る）
 - ヘッドホンを使う（マイクにゲーム音が回り込まない）
-- 音声認識: OpenAI（GPT-Live-Transcribe と GPT-Transcribe）か xAI（Grok Voice Transcribe。確定だけ）。3 章。確定は、OpenRouter の MAI-Transcribe 2（9.7）と、PC の中の Haas-ja（9.8）も選べる
+- 音声認識: OpenAI（GPT-Live-Transcribe と GPT-Transcribe）か xAI（Grok Voice Transcribe。確定だけ）。3 章。確定は、OpenRouter の MAI-Transcribe 2（9.7）と、PC の中の Haas-ja（9.8）も選べる。Qwen-Audio-3.1-ASR-Flash は、途中の字幕（Streaming）にも確定にも選べる（3.4）
 - 翻訳と用語: OpenAI GPT-6.1 Terra か GPT-6 Luna（ライト）。詳しく選べば、用語を判定モデル（Decisions API、Jev、OpenRouter の判定モデル）、翻訳を翻訳専門のモデル（Qwen-MT-Flash、Hy-MT2）で別々に作れる（9.7）。辞書の漢字名の読みは GPT-6.1 Terra（どちらも推論なし。9.3）
 - ふりがな: GPT-6.1 Terra（文ごと。答えは確かめてから使う）、固有名詞: 翻訳と同じ問い合わせで GPT-6.1 Terra に辞書の用語から選ばせる（9 章）
 - ゲームデータ: [deadlock-api](https://api.deadlock-api.com/docs)（MIT）
@@ -238,6 +238,20 @@
 「話した言葉を出す」をオフにすると、途中の字幕とふりがなが動かない。sample02 の実測で $0.0141 が $0.0062 になり、約 56% 下がった（最初の字幕は 2.7 秒が 15.0 秒に。最初の長い発話を話し終えて、翻訳が届くまで出ないため）。1 時間の目安は約 $0.5。
 
 Voxtral のときはリアルタイムに無音も含めて送り続けていた（delta を届いた時刻で発話に振り分けていたので、途中を抜けなかった）。OpenAI では発話ごとに commit するので、話していない間は送らない。
+
+### 3.4 Qwen-Audio-3.1-ASR-Flash（`stt/qwen.rs`）
+
+測った結果（上の表）が、途中の字幕は GPT-Live-Transcribe の約 20 分の 1、確定は Grok の約 7 分の 1 の料金で、精度は同じくらいだったので、0.6.0-rc.3 で選択肢に入れた。鍵は QwenCloud のシンガポールのもの（翻訳の Qwen-MT-Flash と同じ）。OpenAI 互換の口では使えず、独自の口に送る。
+
+- **確定（`qwen-audio-3.1-asr-flash`）:** `POST /api/v1/services/aigc/multimodal-generation/generation` に、発話の WAV を base64 で 1 回送る。用語は、前の発話の文として 400 文字まで添える（ヒーローの名前から）。料金は答えのトークン数で数える。22 秒の録音で約 5 秒かかった（発話はふつうもっと短い）
+- **途中の字幕（`qwen-audio-3.1-asr-flash-streaming`）:** WebSocket（`/api-ws/v1/inference`。`run-task` → 16kHz の PCM のバイナリ → `finish-task`）。OpenAI の Realtime と違い、文の区切りはサーバーが決める。アプリの発話（VAD の区切り）と合わせるために:
+  - 話している間の音声だけを流し、流したサンプル数を数える。発話を開いた位置を覚えておく
+  - 届く文には、文字ごとの時刻（流した音声の先頭からのミリ秒）が付く。その時刻に開いていた発話に、文字を割り当てる。サーバーの文はアプリの発話をまたぐことがある（発話の終わりで文が終わるとは限らない。実測）ので、文ではなく文字で分ける
+  - 文は書きかけのうちから何度も届き、届くたびに文字が置き換わる。だから字幕の処理には、追記ではなく「発話の今の文字の全部」を渡す（`Delta::whole`）
+  - 発話を閉じたら 0.6 秒の無音を流す（次の発話とつなげない）。音声を 23 秒送らないと切られる（実測）ので、黙っている間は 10 秒ごとに 0.1 秒の無音を流す（マイクの音は送らない）
+  - 使用量は接続を始めてからの合計で届くので、増えた分を数える
+- 確かめ方: `cargo test -p overlays-core qwen -- --ignored --nocapture`（本物に録音を送る。途中の字幕は、録音を 2 つの発話にして間を 30 秒空ける）。最初の文字は、つなぎ始めてから約 2 秒（接続に 1.4 秒）
+- 用語のヒントは、途中の字幕には渡せない。単価は料金の比較サイトの値（100 万トークンで、確定は入力 $0.15・出力 $0.47、途中の字幕は入力 $0.93・出力 $0.70。音声 1 秒が入力約 11 トークン）
 
 ## 4. リポジトリ構成
 
@@ -635,8 +649,8 @@ interface Enriched {
 
 | 工程 | 無料 | 有料 |
 |---|---|---|
-| 途中の字幕 | Chrome（Google）。途中の訳は Translator | GPT-Live-Transcribe（途中の訳なし）。「出さない」も選べる |
-| 確定の文字起こし | Chrome（発話の区切りも Chrome が決める）。PC の中の Haas-ja（9.8。日本語だけ。アプリのマイクと VAD で区切る） | GPT-Transcribe、xAI の Grok Voice Transcribe、OpenRouter の MAI-Transcribe 2（アプリのマイクと VAD で区切る。3.2） |
+| 途中の字幕 | Chrome（Google）。途中の訳は Translator | GPT-Live-Transcribe か Qwen-Audio-3.1-ASR-Flash-Streaming（3.4。どちらも途中の訳なし）。「出さない」も選べる |
+| 確定の文字起こし | Chrome（発話の区切りも Chrome が決める）。PC の中の Haas-ja（9.8。日本語だけ。アプリのマイクと VAD で区切る） | GPT-Transcribe、xAI の Grok Voice Transcribe、Qwen-Audio-3.1-ASR-Flash（3.4）、OpenRouter の MAI-Transcribe 2（アプリのマイクと VAD で区切る。3.2） |
 | 用語（翻訳が GPT でないとき） | 辞書の一致（`terms.rs`、日本語だけ） | PC の中の候補を判定モデルに確かめさせる（9.7。日本語だけ）。OpenAI の Decisions API（GPT-6 Luna）、TypeSafe AI の Jev、OpenRouter の Drex Max・Microsoft Decision 1・Perplexity Decider |
 | 翻訳 | Chrome の Translator | 翻訳専門のモデル（9.7。Qwen-MT-Flash、OpenRouter の Hy-MT2）か、GPT-6.1 Terra・GPT-6 Luna（用語も同時に判定する。9.3。選んだモデルを `Settings::models_in_use` が渡す） |
 | ふりがな | Lindera（日本語だけ） | GPT-6.1 Terra |

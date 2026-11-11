@@ -93,6 +93,17 @@ fn price(model: &str) -> Option<Price> {
         "gpt-transcribe" => Price::PerMinute(0.0045),
         // xAI の REST は 1 時間 $0.10
         "grok-voice-transcribe-2.0" => Price::PerMinute(0.10 / 60.0),
+        // QwenCloud シンガポール。音声 1 秒が入力約 11 トークン（料金の比較サイトの値。DESIGN.md 3.4）
+        "qwen-audio-3.1-asr-flash" => Price::PerMillion {
+            input: 0.15,
+            cached: 0.15,
+            output: 0.47,
+        },
+        "qwen-audio-3.1-asr-flash-streaming" => Price::PerMillion {
+            input: 0.93,
+            cached: 0.93,
+            output: 0.70,
+        },
         // OpenRouter でも 1 時間 $0.10
         "microsoft/mai-transcribe-2" => Price::PerMinute(0.10 / 60.0),
         // PC の中で動くので無料

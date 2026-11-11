@@ -23,7 +23,9 @@ use crate::local::Speech;
 use crate::secrets::Provider;
 use crate::share;
 use crate::types::TranscriptionError;
-use crate::usage::{Meter, Use};
+use crate::usage::{Meter, Tokens, Use};
+
+mod qwen;
 
 /// リアルタイムの `audio/pcm` は 24kHz（入力の 16kHz からちょうど 3/2 倍）
 const REALTIME_RATE: u32 = 24_000;
@@ -64,10 +66,12 @@ pub enum Input {
     Close,
 }
 
-/// 発話（Segment の ID）に追記する文字
+/// 発話（Segment の ID）の途中の文字
 pub struct Delta {
     pub segment: String,
     pub text: String,
+    /// `text` は発話の今の文字の全部（置き換える）。false なら、続きの文字（追記する）
+    pub whole: bool,
 }
 
 /// 接続をまたいで持つもの（今の発話と、開く前の音声）
@@ -151,6 +155,9 @@ pub async fn realtime(
     input: &mut mpsc::UnboundedReceiver<Input>,
     deltas: &mpsc::Sender<Delta>,
 ) -> anyhow::Result<()> {
+    if cfg.access.provider() == Provider::Qwen {
+        return qwen::live(cfg, hints, speaking, input, deltas).await;
+    }
     let (mut sink, mut stream) = tokio::time::timeout(HANDSHAKE_TIMEOUT, connect(cfg, hints))
         .await
         .context("realtime handshake timed out")??;
@@ -212,7 +219,8 @@ pub async fn realtime(
                     Some("conversation.item.input_audio_transcription.delta") => {
                         let segment = items.segment(item, speaking.current.as_ref());
                         if let (Some(segment), Some(text)) = (segment, event["delta"].as_str()) {
-                            let _ = deltas.send(Delta { segment, text: text.to_owned() }).await;
+                            let delta = Delta { segment, text: text.to_owned(), whole: false };
+                            let _ = deltas.send(delta).await;
                         }
                     }
                     Some("input_audio_buffer.committed") => items.committed(item.to_owned()),
@@ -431,6 +439,11 @@ pub struct BatchRequest<'a> {
 
 /// 発話区間の WAV を文字起こしする
 pub async fn transcribe(http: &reqwest::Client, req: BatchRequest<'_>) -> anyhow::Result<String> {
+    if let Transcriber::Api(access) = req.transcriber
+        && access.provider() == Provider::Qwen
+    {
+        return qwen::transcribe(http, access, req).await;
+    }
     let file = reqwest::multipart::Part::bytes(req.wav)
         .file_name("segment.wav")
         .mime_str("audio/wav")?;
@@ -480,6 +493,7 @@ pub async fn transcribe(http: &reqwest::Client, req: BatchRequest<'_>) -> anyhow
                 .bearer_auth(access.token())
                 .multipart(form.part("file", file))
         }
+        // Qwen は上で送っている
         Provider::Qwen | Provider::TypeSafe => bail!("{:?} does not transcribe", access.provider()),
     };
     let res = request.send().await?;
@@ -578,6 +592,110 @@ mod tests {
         assert!(text.contains("デッドロック"));
         let batch = meter.watch().borrow().session[&Use::Batch].clone();
         assert!(batch.usd > 0.0 && !batch.unpriced);
+    }
+
+    fn sample(name: &str) -> String {
+        format!(
+            "{}/../../experiments/data/{name}",
+            env!("CARGO_MANIFEST_DIR")
+        )
+    }
+
+    /// 本物の QwenCloud に録音を送る（`QWEN_SOUTH_API_KEY`）。ふだんは動かさない:
+    /// `cargo test -p overlays-core qwen_audio -- --ignored --nocapture`
+    #[tokio::test]
+    #[ignore = "calls QwenCloud"]
+    async fn qwen_audio_transcribes_a_recording() {
+        let key = std::env::var("QWEN_SOUTH_API_KEY").unwrap();
+        let meter = Meter::new(std::env::temp_dir().join("overlays-qwen-test-usage.json"));
+        let started = std::time::Instant::now();
+        let request = BatchRequest {
+            transcriber: &Transcriber::Api(Access::key(Provider::Qwen, key)),
+            model: "qwen-audio-3.1-asr-flash",
+            hints: &Hints {
+                language: "ja".into(),
+                prompt: String::new(),
+                keywords: vec!["ヘイズ".into(), "バイオレット".into()],
+            },
+            wav: std::fs::read(sample("sample01.wav")).unwrap(),
+            seconds: 21.8,
+            meter: &meter,
+        };
+        let text = transcribe(crate::http(), request).await.unwrap();
+        println!("{:?}: {text}", started.elapsed());
+        assert!(text.contains("デッドロック"));
+        let batch = meter.watch().borrow().session[&Use::Batch].clone();
+        println!("{batch:?}");
+        assert!(batch.usd > 0.0 && !batch.unpriced);
+    }
+
+    /// 本物の QwenCloud に、録音を 2 つの発話として実時間で流し、途中の文字がどの発話に届くかを見る:
+    /// `cargo test -p overlays-core qwen_streaming -- --ignored --nocapture`
+    #[tokio::test]
+    #[ignore = "calls QwenCloud"]
+    async fn qwen_streaming_writes_each_utterance_as_it_is_said() {
+        let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
+        let key = std::env::var("QWEN_SOUTH_API_KEY").unwrap();
+        let meter = Arc::new(Meter::new(
+            std::env::temp_dir().join("overlays-qwen-live-test-usage.json"),
+        ));
+        let cfg = RealtimeConfig {
+            access: Access::key(Provider::Qwen, key),
+            model: "qwen-audio-3.1-asr-flash-streaming".into(),
+            delay: "low".into(),
+            meter: meter.clone(),
+        };
+        let hints = Hints {
+            language: "ja".into(),
+            prompt: String::new(),
+            keywords: Vec::new(),
+        };
+        let samples: Vec<f32> = hound::WavReader::open(sample("sample01.wav"))
+            .unwrap()
+            .samples::<i16>()
+            .map(|s| f32::from(s.unwrap()) / f32::from(i16::MAX))
+            .collect();
+        let (input_tx, mut input) = mpsc::unbounded_channel();
+        let (deltas_tx, mut deltas) = mpsc::channel(256);
+        let started = std::time::Instant::now();
+        let feed = tokio::spawn(async move {
+            // 6.5 秒までを 1 つ目、そこから 30 秒黙って（切られないことも見る）、残りを 2 つ目の発話にする
+            let cut = SAMPLE_RATE as usize * 13 / 2;
+            for (id, part, pause) in [("a", &samples[..cut], 30), ("b", &samples[cut..], 4)] {
+                input_tx.send(Input::Open(id.into())).unwrap();
+                for chunk in part.chunks(SAMPLE_RATE as usize / 10) {
+                    input_tx.send(Input::Audio(chunk.to_vec())).unwrap();
+                    tokio::time::sleep(Duration::from_millis(100)).await;
+                }
+                input_tx.send(Input::Close).unwrap();
+                tokio::time::sleep(Duration::from_secs(pause)).await;
+            }
+        });
+        let mut speaking = Speaking::default();
+        let session = realtime(&cfg, &hints, &mut speaking, &mut input, &deltas_tx);
+        let mut last = std::collections::BTreeMap::new();
+        let print = async {
+            while let Some(delta) = deltas.recv().await {
+                println!(
+                    "{:5.1}s {} {}",
+                    started.elapsed().as_secs_f32(),
+                    delta.segment,
+                    delta.text
+                );
+                assert!(delta.whole);
+                last.insert(delta.segment, delta.text);
+            }
+        };
+        tokio::select! {
+            ended = session => ended.unwrap(),
+            () = print => {}
+        }
+        feed.await.unwrap();
+        println!("{last:?}");
+        assert!(last["a"].contains("デッドロック") && last["b"].contains("バイオレット"));
+        let live = meter.watch().borrow().session[&Use::Realtime].clone();
+        println!("{live:?}");
+        assert!(live.usd > 0.0 && !live.unpriced);
     }
 
     #[test]

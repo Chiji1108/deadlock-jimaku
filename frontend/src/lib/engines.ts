@@ -29,6 +29,12 @@ export const ITEMS: { [K in Item]: { label: string; hint: string; options: Optio
         label: "GPT-Live-Transcribe",
         price: "話した 1 分 $0.017",
       },
+      {
+        value: "qwenAudioStreaming",
+        label: "Qwen-Audio-3.1-ASR-Flash-Streaming",
+        price: "話した 1 分 約 $0.0008",
+        note: "Qwen の API キーが要る。GPT-Live-Transcribe の約 20 分の 1 の料金で、精度は同じくらい。用語のヒントは渡せない",
+      },
       { value: "off", label: "出さない", price: "無料" },
     ],
   },
@@ -47,6 +53,12 @@ export const ITEMS: { [K in Item]: { label: string; hint: string; options: Optio
         label: "Grok Voice Transcribe",
         price: "話した 1 分 $0.0017",
         note: "xAI の API キーが要る。GPT-Transcribe の約 3 分の 1 の料金で、精度は同じか少し下",
+      },
+      {
+        value: "qwenAudio",
+        label: "Qwen-Audio-3.1-ASR-Flash",
+        price: "話した 1 分 約 $0.0002",
+        note: "Qwen の API キーが要る。Grok の約 7 分の 1 の料金で、精度は同じくらい。Grok より 1 秒ほど遅い",
       },
       {
         value: "maiTranscribe2",
@@ -242,6 +254,9 @@ const same = (a: Engines, b: Engines) =>
 
 /** 今の選び方に合うモード。詳しく選んで変えたなら undefined */
 export const modeOf = (t: Engines) => MODES.find((m) => same(m.engines, t));
+
+/** 途中の字幕をアプリが作る（有料の音声認識につなぐ） */
+export const paidLive = (t: Engines) => providerOfOption("live", t.live) !== null;
 
 /** Chrome のウィンドウを使う（途中の字幕が Chrome） */
 export const usesChrome = (t: Engines) => t.live === "chrome";

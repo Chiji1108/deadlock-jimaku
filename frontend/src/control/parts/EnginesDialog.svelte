@@ -11,6 +11,7 @@
     chromeFinals,
     keyNames,
     llmTranslation,
+    paidLive,
     providers,
     unavailable,
     usesChrome,
@@ -43,7 +44,7 @@
         <Field.Field>
           <Field.Label>{spec.label}</Field.Label>
           <Field.Description>
-            {spec.hint}{#if item === "live" && translationOnly(s) && t.live === "gptLiveTranscribe"}。翻訳だけを出しているので、途中の字幕は出ません{/if}
+            {spec.hint}{#if item === "live" && translationOnly(s) && paidLive(t)}。翻訳だけを出しているので、途中の字幕は出ません{/if}
           </Field.Description>
           <ToggleGroup.Root
             type="single"

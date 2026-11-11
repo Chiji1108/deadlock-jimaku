@@ -42,8 +42,11 @@ const UPDATED = "2026 年 11 月 11 日";
       </li>
     </ul>
 
-    <h2>Qwen に送るもの（翻訳に Qwen-MT-Flash を選んだとき）</h2>
+    <h2>Qwen に送るもの（Qwen のモデルを選んだとき）</h2>
     <ul>
+      <li>
+        モードを詳しく選んで、途中の字幕を Qwen-Audio-3.1-ASR-Flash-Streaming に、または確定の文字起こしを Qwen-Audio-3.1-ASR-Flash にしたときだけ、話している間のマイクの音声を Alibaba Cloud の QwenCloud（シンガポール）に送って文字にします。黙っている間は、マイクの音声を送りません（途中の字幕では、接続を保つために無音のデータだけを送ります）。
+      </li>
       <li>
         モードを詳しく選んで、翻訳を Qwen-MT-Flash にしたときだけ、確定した字幕の文字を Alibaba Cloud の QwenCloud（シンガポール）に送って訳します。用語は英語の名前に置き換えて送ります。音声は送りません。
       </li>
