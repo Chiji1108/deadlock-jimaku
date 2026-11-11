@@ -74,7 +74,7 @@
     </div>
     {#if giftPaid}
       <p class="mt-4 text-xs text-muted-foreground">
-        ギフトコードで使っているので、{giftPaid} の料金はおすそ分けしてくれた人に請求されます
+        コードで使っているので、{giftPaid} の料金はあなたには請求されません（ギフトコードなら、おすそ分けしてくれた人に請求されます。ベータのコードなら、ベータの間は無料です）
       </p>
     {/if}
     {#if unpriced}

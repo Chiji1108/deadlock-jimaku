@@ -1,7 +1,17 @@
 // OpenAI と xAI の単価（2026-11）。アプリの crates/core/src/usage.rs と同じ表。
 // おすそ分けでは、ここにないモデル（単価が分からない）は使わせない
 
+/** キーを預けられる会社（おすそ分け） */
 export type Provider = "openai" | "xai";
+
+/** 中継する会社。Qwen と OpenRouter は、ベータの間の開発者のキーだけ（beta.ts） */
+export type Relayed = Provider | "qwen" | "openrouter";
+
+/** Qwen-Audio-3.1-ASR-Flash の単価（100 万トークンあたり。アプリの usage.rs と同じ） */
+export const QWEN_AUDIO = { model: "qwen-audio-3.1-asr-flash", input: 0.15, output: 0.47 };
+
+/** OpenRouter が料金を答えに入れなかったときに数える単価（100 万トークンあたり。入れてくるのがふつう） */
+export const OPENROUTER_FALLBACK = { input: 0.074, output: 0.295 };
 
 type Price =
   | { provider: Provider; perMinute: number }

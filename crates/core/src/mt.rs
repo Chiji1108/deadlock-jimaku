@@ -131,7 +131,8 @@ impl Translator {
         let status = res.status();
         if !status.is_success() {
             let body = res.text().await.unwrap_or_default();
-            if let Some(refused) = share::refusal(&self.access, status, None) {
+            let reason = share::refusal_reason(&body);
+            if let Some(refused) = share::refusal(&self.access, status, reason.as_deref()) {
                 return Err(refused.into());
             }
             anyhow::bail!("{target}: {status}: {body}");

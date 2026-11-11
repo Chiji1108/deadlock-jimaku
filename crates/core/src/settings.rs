@@ -580,6 +580,15 @@ impl Engines {
         translation: TranslationEngine::ChromeTranslator,
         furigana: RubySource::Lindera,
     };
+    /// ベータのモード。ベータの間は無料（開発者のサーバーが、開発者のキーで中継する。DESIGN.md 17.2）。
+    /// いちばん安い組み合わせ: 途中の字幕は Chrome、確定は Qwen、用語は Perplexity Decider、翻訳は Hy-MT2
+    pub const BETA: Self = Self {
+        live: LiveSource::Chrome,
+        transcription: FinalSource::QwenAudio,
+        terms: TermsEngine::PplxDecider,
+        translation: TranslationEngine::HyMt2,
+        furigana: RubySource::Lindera,
+    };
     /// ライトのモード。途中の字幕は Chrome、確定は Grok、翻訳と用語は Luna、ふりがなは辞書
     pub const LIGHT: Self = Self {
         live: LiveSource::Chrome,
@@ -669,7 +678,7 @@ pub fn catalog() -> String {
         .into_iter()
         .map(|provider| {
             let info = provider.info();
-            serde_json::json!({ "id": info.id, "name": info.name, "giftable": info.giftable })
+            serde_json::json!({ "id": info.id, "name": info.name, "relay": info.relay })
         })
         .collect();
     let engines = serde_json::json!({

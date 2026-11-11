@@ -14,9 +14,9 @@
     openai:
       "ライト・スタンダード・OpenAI のモードの文字起こし・翻訳・ふりがなに使います。作り方は上にあります",
     xai: "ライトのモードの確定の文字起こし（Grok Voice Transcribe）に使います。xAI の API コンソール（console.x.ai）で作れます。ギフトコードでも、おすそ分けした人が xAI のキーを預けていれば使えます",
-    qwen: "翻訳を Qwen-MT-Flash にするときに使います。QwenCloud のシンガポール（国際）の API キーです（ほかの地域のキーは使えません）。ギフトコードでは使えません",
+    qwen: "翻訳を Qwen-MT-Flash にするときに使います。QwenCloud のシンガポール（国際）の API キーです（ほかの地域のキーは使えません）。ベータのモードでは、キーがなくても使えます",
     openrouter:
-      "いろいろな会社のモデルを 1 つのキーで使えます（用語の Drex Max・Microsoft Decision 1・Perplexity Decider、翻訳の Hy-MT2、確定の文字起こしの MAI-Transcribe 2）。openrouter.ai で作れます。ギフトコードでは使えません",
+      "いろいろな会社のモデルを 1 つのキーで使えます（用語の Drex Max・Microsoft Decision 1・Perplexity Decider、翻訳の Hy-MT2、確定の文字起こしの MAI-Transcribe 2）。openrouter.ai で作れます。ベータのモードでは、キーがなくても使えます",
     typesafe: "用語を Jev で確かめるときに使います。ギフトコードでは使えません",
   };
   const providers = PROVIDERS.map((p) => ({ provider: p.id, name: p.name, use: USES[p.id] }));

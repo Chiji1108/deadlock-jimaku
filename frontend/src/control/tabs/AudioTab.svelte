@@ -75,14 +75,14 @@
       <Card.Description>字幕をどこで作るかを選びます</Card.Description>
     </Card.Header>
     <Card.Content class="flex flex-col gap-3">
-      <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-4" role="radiogroup" aria-label="モード">
+      <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-5" role="radiogroup" aria-label="モード">
         {#each MODES as m (m.name)}
           <button
             type="button"
             role="radio"
             aria-checked={mode?.name === m.name}
             class="flex flex-col gap-1 rounded-lg border p-3 text-left transition-colors hover:bg-muted aria-checked:border-foreground aria-checked:bg-muted"
-            onclick={() => panel.update({ engines: m.engines })}
+            onclick={() => panel.chooseMode(m.engines)}
           >
             <span class="flex items-center gap-2 text-sm font-medium">
               {m.label}

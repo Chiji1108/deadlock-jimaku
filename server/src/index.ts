@@ -21,14 +21,33 @@ import {
   type Db,
   type Issuer,
 } from "./db";
+import {
+  BETA_DAILY_USD,
+  BETA_ISSUER,
+  betaKey,
+  betaProviders,
+  betaSpentToday,
+  grantBetaCode,
+  type BetaEnv,
+} from "./beta";
 import { openai, validKey } from "./openai";
-import { audioUsd, tokensOf, tokensUsd, wavSeconds, type Provider } from "./price";
+import {
+  audioUsd,
+  OPENROUTER_FALLBACK,
+  QWEN_AUDIO,
+  tokensOf,
+  tokensUsd,
+  wavSeconds,
+  type Provider,
+  type Relayed,
+} from "./price";
 import { relay } from "./realtime";
 import { codes, codeUsage, issuerKeys, issuers } from "./schema";
 import { decrypt, encrypt, issuerToken, newCode, newId, normalizeCode, sha256 } from "./secrets";
+import { openrouter, qwen } from "./upstream";
 import { validXaiKey, xai } from "./xai";
 
-export interface Env {
+export interface Env extends BetaEnv {
   DB: D1Database;
   /** キーを暗号化する鍵（32 バイトの base64）。`wrangler secret put SHARE_KEY` */
   SHARE_KEY: string;
@@ -70,6 +89,19 @@ const DECISIONS_MODEL = "gpt-6-luna";
 /** Decisions の本文と問いの数の上限。アプリは 1 発話で候補の数だけ問い（多くて 10 ほど、1 問 1,000 文字ほど）を送る */
 const MAX_DECISIONS_BODY = 64_000;
 const MAX_DECISIONS_QUESTIONS = 40;
+
+/** ベータで中継するモデル（これだけ。いちばん安い組み合わせ。DESIGN.md 17.2） */
+const BETA_JUDGE = "perplexity/pplx-decider-v1.2";
+const BETA_TRANSLATOR = "tencent/hy-mt2-30b-a3b";
+
+/** Qwen の文字起こしの本文の上限（文字数）。発話はいちばん長くて 13 秒ほど（WAV で 0.4 MB、base64 で 0.6 MB） */
+const MAX_QWEN_BODY = 2_000_000;
+/** 文字起こしに添える文（用語）の上限。アプリは 400 文字まで送る */
+const MAX_QWEN_CONTEXT = 500;
+/** 翻訳の本文の上限。アプリは 1 発話と短い指示文を送る */
+const MAX_TRANSLATION_BODY = 16_000;
+/** 翻訳の出力の上限（アプリが送る値） */
+const MAX_TRANSLATION_TOKENS = 512;
 
 /** ストリームの最後の応答の usage */
 function streamUsage(text: string): unknown {
@@ -286,7 +318,21 @@ app.get("/gift", async (c) => {
     return c.json({ error: "expired", expiresAt: code.expiresAt }, 403);
   }
   if (overLimit(code, Date.now())) return c.json({ error: "limit" }, 403);
-  return c.json({ expiresAt: code.expiresAt, providers: providers(code) });
+  const relayed = code.issuerId === BETA_ISSUER ? betaProviders(c.env) : providers(code);
+  return c.json({ expiresAt: code.expiresAt, providers: relayed });
+});
+
+/**
+ * ベータのコードを 1 つ出す（DESIGN.md 17.2）。アプリが、ベータのモードを選んだときに 1 度だけ頼む。
+ * 誰でも頼めるので、同じ所に出す数と、1 日に出す数を限る。開発者がキーを入れていなければ閉じている
+ */
+app.post("/beta/codes", async (c) => {
+  if (betaProviders(c.env).length === 0) return c.json({ error: "closed" }, 503);
+  const now = Date.now();
+  const ip = c.req.header("CF-Connecting-IP") ?? "";
+  const place = await sha256(`beta:${new Date(now).toISOString().slice(0, 10)}:${ip}:${c.env.SHARE_KEY}`);
+  const granted = await grantBetaCode(c.var.db, place, now);
+  return "code" in granted ? c.json(granted) : c.json(granted, 429);
 });
 
 app.post("/openai/responses", async (c) => {
@@ -431,6 +477,129 @@ app.get("/openai/realtime", async (c) => {
   return relay(c.var.db, gift.code, gift.key, c.executionCtx);
 });
 
+// ---- ベータの間だけの中継（開発者のキー。DESIGN.md 17.2） ----
+
+/** OpenRouter の応答の料金。答えに入っていなければ、トークン数から数える */
+function openrouterUsd(usage: unknown): number {
+  const u = (usage ?? {}) as Record<string, unknown>;
+  if (typeof u.cost === "number") return u.cost;
+  const n = (...keys: string[]) => {
+    const found = keys.map((k) => u[k]).find((v) => typeof v === "number");
+    return typeof found === "number" ? found : 0;
+  };
+  const { input, output } = OPENROUTER_FALLBACK;
+  return (n("input_tokens", "prompt_tokens") * input + n("output_tokens", "completion_tokens") * output) / 1e6;
+}
+
+/** JSON の応答をそのまま返し、成功していれば料金を足す */
+async function relayed(c: Ctx, codeId: string, res: Response, usd: (answer: Record<string, unknown>) => number) {
+  const answer = await res.text();
+  if (res.ok) {
+    const cost = usd(parsed<Record<string, unknown>>(answer) ?? {});
+    c.executionCtx.waitUntil(addUsage(c.var.db, codeId, cost, Date.now()));
+  }
+  return new Response(answer, { status: res.status, headers: { "Content-Type": "application/json" } });
+}
+
+/** 確定の文字起こし（Qwen-Audio-3.1-ASR-Flash）。アプリが送る形だけを通す: 用語の文と、WAV が 1 つ */
+app.post("/qwen/api/v1/services/aigc/multimodal-generation/generation", async (c) => {
+  const gift = await giftKey(c, "qwen");
+  if (gift instanceof Response) return gift;
+  const text = await c.req.text();
+  if (text.length > MAX_QWEN_BODY) return c.json({ error: "tooLarge" }, 413);
+  const body = parsed<Record<string, unknown>>(text) ?? {};
+  const messages = (body.input as { messages?: unknown } | undefined)?.messages;
+  const message = Array.isArray(messages) && messages.length === 1 ? (messages[0] as Record<string, unknown>) : {};
+  const parts = Array.isArray(message.content) ? (message.content as Record<string, unknown>[]) : [];
+  const context = (p: Record<string, unknown>) =>
+    p?.type === "input_text" && typeof p.text === "string" && p.text.length <= MAX_QWEN_CONTEXT;
+  const audio = (p: Record<string, unknown>) => {
+    const data = (p?.input_audio as { data?: unknown } | undefined)?.data;
+    return p?.type === "input_audio" && typeof data === "string" && data.startsWith("data:audio/wav;base64,");
+  };
+  if (
+    body.model !== QWEN_AUDIO.model ||
+    message.role !== "user" ||
+    parts.filter(audio).length !== 1 ||
+    !parts.every((p) => context(p) || audio(p))
+  ) {
+    return c.json({ error: "notAllowed" }, 400);
+  }
+  const forwarded = {
+    model: body.model,
+    input: { messages: [{ role: "user", content: parts }] },
+    parameters: body.parameters,
+  };
+  const res = await qwen("/api/v1/services/aigc/multimodal-generation/generation", gift.key, forwarded);
+  return relayed(c, gift.code.id, res, (answer) => {
+    const { input, output } = tokensOf(answer.usage);
+    return (input * QWEN_AUDIO.input + output * QWEN_AUDIO.output) / 1e6;
+  });
+});
+
+/** 用語の判定（Perplexity Decider）。アプリが送る形だけを通す: 文字の state と、文字だけの選択の問い */
+app.post("/openrouter/systemone", async (c) => {
+  const gift = await giftKey(c, "openrouter");
+  if (gift instanceof Response) return gift;
+  const text = await c.req.text();
+  if (text.length > MAX_DECISIONS_BODY) return c.json({ error: "tooLarge" }, 413);
+  const { model, state, questions } = parsed<Record<string, unknown>>(text) ?? {};
+  const asked = questions !== null && typeof questions === "object" ? Object.values(questions) : [];
+  const choice = (q: unknown) => {
+    const { type, instructions, criteria } = (q ?? {}) as Record<string, unknown>;
+    return (
+      type === "choice" &&
+      typeof instructions === "string" &&
+      criteria !== null &&
+      typeof criteria === "object" &&
+      Object.values(criteria).every((description) => typeof description === "string")
+    );
+  };
+  if (
+    model !== BETA_JUDGE ||
+    typeof state !== "string" ||
+    asked.length === 0 ||
+    asked.length > MAX_DECISIONS_QUESTIONS ||
+    !asked.every(choice)
+  ) {
+    return c.json({ error: "notAllowed" }, 400);
+  }
+  const res = await openrouter("/systemone", gift.key, { model, state, questions });
+  return relayed(c, gift.code.id, res, (answer) => openrouterUsd(answer.usage));
+});
+
+/** 翻訳（Hy-MT2）。アプリが送る形だけを通す: user の文字の 1 通 */
+app.post("/openrouter/chat/completions", async (c) => {
+  const gift = await giftKey(c, "openrouter");
+  if (gift instanceof Response) return gift;
+  const text = await c.req.text();
+  if (text.length > MAX_TRANSLATION_BODY) return c.json({ error: "tooLarge" }, 413);
+  const body = parsed<Record<string, unknown>>(text) ?? {};
+  const messages = Array.isArray(body.messages) ? (body.messages as Record<string, unknown>[]) : [];
+  const [message] = messages;
+  if (
+    body.model !== BETA_TRANSLATOR ||
+    messages.length !== 1 ||
+    message?.role !== "user" ||
+    typeof message.content !== "string"
+  ) {
+    return c.json({ error: "notAllowed" }, 400);
+  }
+  const asked = typeof body.max_tokens === "number" ? body.max_tokens : MAX_TRANSLATION_TOKENS;
+  const res = await openrouter("/chat/completions", gift.key, {
+    model: body.model,
+    messages: [{ role: "user", content: message.content }],
+    temperature: body.temperature,
+    top_p: body.top_p,
+    max_tokens: Math.min(asked, MAX_TRANSLATION_TOKENS),
+  });
+  return relayed(c, gift.code.id, res, (answer) => openrouterUsd(answer.usage));
+});
+
+/** Qwen と OpenRouter のほかの口（途中の字幕、ほかのモデル）は中継しない。アプリは「このコードでは使えない」と出す */
+app.all("/qwen/*", (c) => c.json({ error: "unsupported" }, 403, { "X-Gift-Refusal": "unsupported" }));
+app.all("/openrouter/*", (c) => c.json({ error: "unsupported" }, 403, { "X-Gift-Refusal": "unsupported" }));
+
 // ---- 共通 ----
 
 function bearer(c: Ctx): string | undefined {
@@ -454,19 +623,33 @@ async function giftCode(c: Ctx): Promise<Code | null> {
  */
 async function giftKey(
   c: Ctx,
-  provider: Provider = "openai",
+  provider: Relayed = "openai",
 ): Promise<{ code: Code; key: string } | Response> {
   const code = await giftCode(c);
   if (!code) return c.json({ error: "unknown" }, 401);
   const deny = (error: string) => c.json({ error }, 403, { "X-Gift-Refusal": error });
-  const error = refusal(code, Date.now());
+  const now = Date.now();
+  const error = refusal(code, now);
   if (error) return deny(error);
-  const encrypted = code.keys[provider];
-  // その会社のキーを預けていない
-  if (encrypted === undefined) return deny("unsupported");
+  // ベータのコードは開発者のキー（Qwen と OpenRouter）、おすそ分けのコードは預けたキー（OpenAI と xAI）
+  const beta = code.issuerId === BETA_ISSUER;
+  const key = await relayKey(c, code, provider);
+  // その会社のキーがない
+  if (!key) return deny("unsupported");
+  // ベータ全体の今日の上限。1 つのコードの上限を越えなくても、全部を足して越えたら止める
+  if (beta && (await betaSpentToday(c.var.db, now)) >= BETA_DAILY_USD) return deny("limit");
   const { success } = await c.env.GIFT_RATE.limit({ key: code.id });
   if (!success) return c.json({ error: "rate" }, 429);
-  return { code, key: await decrypt(encrypted, c.env.SHARE_KEY) };
+  return { code, key };
+}
+
+/** そのコードで、その会社に送るキー。なければ undefined */
+async function relayKey(c: Ctx, code: Code, provider: Relayed): Promise<string | undefined> {
+  if (provider === "qwen" || provider === "openrouter") {
+    return code.issuerId === BETA_ISSUER ? betaKey(c.env, provider) : undefined;
+  }
+  const encrypted = code.keys[provider];
+  return encrypted === undefined ? undefined : decrypt(encrypted, c.env.SHARE_KEY);
 }
 
 /** JSON の本文。読めなければ undefined（400 にする） */

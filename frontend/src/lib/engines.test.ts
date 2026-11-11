@@ -36,4 +36,6 @@ test("OpenRouter と TypeSafe AI の工程は、その会社の鍵が要る（�
 test("ギフトコードで足りる会社があるときだけ、ギフトコードを案内する", () => {
   expect(keyNames(["openai", "xai"])).toBe("OpenAI と xAI の API キーかギフトコード");
   expect(keyNames(["qwen"])).toBe("Qwen の API キー");
+  // ベータのコードで使える会社は、ギフトコードとは案内しない（人からもらったコードでは使えない）
+  expect(keyNames(["qwen", "openrouter"])).toBe("Qwen と OpenRouter の API キー");
 });

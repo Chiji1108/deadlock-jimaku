@@ -61,3 +61,16 @@ export const codeUsage = sqliteTable(
   },
   (t) => [primaryKey({ columns: [t.codeId, t.month] })],
 );
+
+/** ベータのコードを出した数（DESIGN.md 17.2）。同じ所に出しすぎないために数える。古い日の行は使わない */
+export const betaGrants = sqliteTable(
+  "beta_grants",
+  {
+    /** IP アドレスと日付のハッシュ（IP アドレスそのものは保存しない） */
+    place: text().notNull(),
+    /** UTC の "2026-11-11" */
+    day: text().notNull(),
+    count: integer().notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.place, t.day] })],
+);

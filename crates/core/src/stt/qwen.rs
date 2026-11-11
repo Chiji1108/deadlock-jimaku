@@ -77,7 +77,8 @@ pub(super) async fn transcribe(
     let status = res.status();
     if !status.is_success() {
         let body = res.text().await.unwrap_or_default();
-        if let Some(refused) = share::refusal(access, status, None) {
+        let reason = share::refusal_reason(&body);
+        if let Some(refused) = share::refusal(access, status, reason.as_deref()) {
             return Err(refused.into());
         }
         bail!("{status}: {body}");
@@ -331,8 +332,14 @@ async fn connect(
     let (ws, _) = match tokio_tungstenite::connect_async(request).await {
         Ok(connected) => connected,
         Err(e) => {
+            // 開発者のサーバーは、途中の字幕を中継しない（断った理由をヘッダーに書く）
+            let reason = |res: &tungstenite::http::Response<Option<Vec<u8>>>| {
+                let reason = res.headers().get(share::REFUSAL_HEADER)?;
+                reason.to_str().ok().map(str::to_owned)
+            };
             if let tungstenite::Error::Http(res) = &e
-                && let Some(refused) = share::refusal(&cfg.access, res.status(), None)
+                && let Some(refused) =
+                    share::refusal(&cfg.access, res.status(), reason(res).as_deref())
             {
                 return Err(refused.into());
             }

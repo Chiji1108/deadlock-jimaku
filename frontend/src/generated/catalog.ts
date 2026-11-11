@@ -5,27 +5,27 @@ export const PROVIDERS = [
   {
     "id": "openai",
     "name": "OpenAI",
-    "giftable": true
+    "relay": "gift"
   },
   {
     "id": "xai",
     "name": "xAI",
-    "giftable": true
+    "relay": "gift"
   },
   {
     "id": "qwen",
     "name": "Qwen",
-    "giftable": false
+    "relay": "beta"
   },
   {
     "id": "openrouter",
     "name": "OpenRouter",
-    "giftable": false
+    "relay": "beta"
   },
   {
     "id": "typesafe",
     "name": "TypeSafe AI",
-    "giftable": false
+    "relay": null
   }
 ] as const;
 

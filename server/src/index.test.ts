@@ -6,8 +6,10 @@ import { openai, validKey } from "./openai";
 import { appendSeconds, tokensUsd, wavSeconds } from "./price";
 import { relay } from "./realtime";
 import { normalizeCode } from "./secrets";
+import { openrouter, qwen } from "./upstream";
 import { validXaiKey, xai } from "./xai";
 
+vi.mock("./upstream", () => ({ openrouter: vi.fn(), qwen: vi.fn() }));
 vi.mock("./openai", () => ({ openai: vi.fn(), validKey: vi.fn() }));
 vi.mock("./xai", () => ({ xai: vi.fn(), validXaiKey: vi.fn() }));
 
@@ -59,13 +61,17 @@ beforeAll(async () => {
 afterAll(() => proxy.dispose());
 
 beforeEach(async () => {
-  for (const table of ["code_usage", "codes", "issuer_keys", "issuers"]) {
+  for (const table of ["code_usage", "codes", "issuer_keys", "issuers", "beta_grants"]) {
     await env.DB.prepare(`DELETE FROM ${table}`).run();
   }
   vi.mocked(validKey).mockImplementation(async (key) => key.startsWith("sk-"));
   vi.mocked(openai).mockReset();
   vi.mocked(validXaiKey).mockImplementation(async (key) => key.startsWith("xai-"));
   vi.mocked(xai).mockReset();
+  vi.mocked(qwen).mockReset();
+  vi.mocked(openrouter).mockReset();
+  env.BETA_QWEN_KEY = "sk-beta-qwen";
+  env.BETA_OPENROUTER_KEY = "sk-beta-openrouter";
   rate.mockReset();
   rate.mockResolvedValue({ success: true });
 });
@@ -988,6 +994,160 @@ describe("realtime relay", () => {
     client.dispatchEvent(new CloseEvent("close", { code: 1000 }));
     await settled();
     expect((await codeByValue(db, code))!.dayUsd).toBeCloseTo((0.2 / 60) * 0.017, 8);
+  });
+});
+
+describe("beta", () => {
+  /** その所（IP アドレス）からコードをもらう */
+  const join = (ip = "203.0.113.1") =>
+    call("/beta/codes", { method: "POST", headers: { "CF-Connecting-IP": ip } });
+  const joined = async (ip?: string) => ((await (await join(ip)).json()) as { code: string }).code;
+  const dayUsd = async (code: string) => (await codeByValue(db, code))!.dayUsd;
+
+  const wavPart = { type: "input_audio", input_audio: { data: "data:audio/wav;base64,AAAA" } };
+  const transcription = (parts: unknown[] = [{ type: "input_text", text: "ヘイズ、" }, wavPart]) => ({
+    model: "qwen-audio-3.1-asr-flash",
+    input: { messages: [{ role: "user", content: parts }] },
+    parameters: { format: "wav", sample_rate: "16000", language_hints: ["ja"] },
+  });
+  const QWEN_PATH = "/api/v1/services/aigc/multimodal-generation/generation";
+  const transcribe = (code: string, body: unknown = transcription()) =>
+    call(`/qwen${QWEN_PATH}`, { method: "POST", token: code, ...json(body) });
+
+  it("gives a code that relays Qwen and OpenRouter with the developer's keys, under a small daily limit", async () => {
+    const code = await joined();
+    const gift = await call("/gift", { token: code });
+    expect(await gift.json()).toEqual({ expiresAt: null, providers: ["qwen", "openrouter"] });
+    expect((await codeByValue(db, code))!.dailyLimitUsd).toBe(0.5);
+    // おすそ分けの口（OpenAI）には使えない
+    const res = await call("/openai/responses", { method: "POST", token: code, ...json({ model: "gpt-6-luna", input: "x" }) });
+    expect([res.status, res.headers.get("X-Gift-Refusal")]).toEqual([403, "unsupported"]);
+    expect(openai).not.toHaveBeenCalled();
+  });
+
+  it("is closed without the developer's keys", async () => {
+    env.BETA_QWEN_KEY = undefined;
+    env.BETA_OPENROUTER_KEY = undefined;
+    expect((await join()).status).toBe(503);
+  });
+
+  it("gives a few codes per place a day", async () => {
+    for (let i = 0; i < 3; i++) expect((await join()).status).toBe(200);
+    const refused = await join();
+    expect([refused.status, await refused.json()]).toEqual([429, { error: "tooMany" }]);
+    // ほかの所には出す。IP アドレスそのものは保存しない
+    expect((await join("203.0.113.2")).status).toBe(200);
+    const { results } = await env.DB.prepare("SELECT place FROM beta_grants").all<{ place: string }>();
+    expect(results.every((r) => !r.place.includes("203.0.113"))).toBe(true);
+  });
+
+  it("transcribes through Qwen with only the app's request, and counts the tokens", async () => {
+    const code = await joined();
+    vi.mocked(qwen).mockResolvedValue(
+      Response.json({ output: { text: "ヘイズ強い" }, usage: { input_tokens: 200_000, output_tokens: 100_000 } }),
+    );
+    const res = await transcribe(code, { ...transcription(), extra: true });
+    expect(await res.json()).toMatchObject({ output: { text: "ヘイズ強い" } });
+    const [path, key, body] = vi.mocked(qwen).mock.calls[0]!;
+    expect([path, key, body]).toEqual([QWEN_PATH, "sk-beta-qwen", transcription()]);
+    // 200,000 × $0.15 + 100,000 × $0.47（100 万トークンあたり）
+    expect(await dayUsd(code)).toBeCloseTo(0.077);
+
+    // ほかのモデル、音声がない・2 つある、WAV でない、長すぎる用語の文
+    const mp3 = { type: "input_audio", input_audio: { data: "data:audio/mpeg;base64,AAAA" } };
+    for (const bad of [
+      { ...transcription(), model: "qwen3-max" },
+      transcription([{ type: "input_text", text: "ヘイズ" }]),
+      transcription([wavPart, wavPart]),
+      transcription([mp3]),
+      transcription([{ type: "input_text", text: "x".repeat(501) }, wavPart]),
+    ]) {
+      expect((await transcribe(code, bad)).status).toBe(400);
+    }
+    expect(qwen).toHaveBeenCalledOnce();
+  });
+
+  it("judges terms and translates through OpenRouter with only the cheapest models, and counts the reported cost", async () => {
+    const code = await joined();
+    const ask = (path: string, body: unknown) => call(`/openrouter${path}`, { method: "POST", token: code, ...json(body) });
+    const question = { type: "choice", instructions: "What does ヘイズ mean?", criteria: { "hero:13": "Haze", none: "None" } };
+    const judge = { model: "perplexity/pplx-decider-v1.2", state: "ヘイズ強い", questions: { c0: question } };
+    vi.mocked(openrouter).mockResolvedValue(
+      Response.json({ answers: { c0: { choice: "hero:13" } }, usage: { input_tokens: 100, cost: 0.002 } }),
+    );
+    expect(await (await ask("/systemone", judge)).json()).toMatchObject({ answers: { c0: { choice: "hero:13" } } });
+    expect(vi.mocked(openrouter).mock.calls[0]).toEqual(["/systemone", "sk-beta-openrouter", judge]);
+    for (const bad of [
+      { ...judge, model: "nace-ai/drex-max" },
+      { ...judge, state: ["x"] },
+      { ...judge, questions: {} },
+      { ...judge, questions: { c0: { ...question, criteria: { a: { image: "x" } } } } },
+    ]) {
+      expect((await ask("/systemone", bad)).status).toBe(400);
+    }
+
+    const translate = {
+      model: "tencent/hy-mt2-30b-a3b",
+      messages: [{ role: "user", content: "[Source Text]\n⟦Haze⟧強い" }],
+      temperature: 0.7,
+      top_p: 1,
+      max_tokens: 9_999,
+    };
+    vi.mocked(openrouter).mockResolvedValue(
+      Response.json({ choices: [{ message: { content: "⟦Haze⟧ is strong" } }], usage: { prompt_tokens: 1_000_000, completion_tokens: 0 } }),
+    );
+    expect((await ask("/chat/completions", { ...translate, tools: [{}] })).status).toBe(200);
+    // 出力の上限は越えさせず、アプリが送らない項目は通さない
+    expect(vi.mocked(openrouter).mock.calls[1]).toEqual([
+      "/chat/completions",
+      "sk-beta-openrouter",
+      { ...translate, max_tokens: 512 },
+    ]);
+    for (const bad of [
+      { ...translate, model: "openai/gpt-6.1-terra" },
+      { ...translate, messages: [{ role: "system", content: "x" }, translate.messages[0]] },
+      { ...translate, messages: [{ role: "user", content: [{ type: "image_url" }] }] },
+    ]) {
+      expect((await ask("/chat/completions", bad)).status).toBe(400);
+    }
+    expect(openrouter).toHaveBeenCalledTimes(2);
+    // 判定は答えに入っていた料金、翻訳は料金がなかったのでトークンから（100 万トークン $0.074）
+    expect(await dayUsd(code)).toBeCloseTo(0.002 + 0.074);
+  });
+
+  it("does not relay anything else to Qwen or OpenRouter (live captions, other endpoints)", async () => {
+    const code = await joined();
+    for (const path of ["/qwen/api-ws/v1/inference", "/qwen/chat/completions", "/openrouter/audio/transcriptions"]) {
+      const res = await call(path, { method: path.includes("api-ws") ? "GET" : "POST", token: code });
+      expect([res.status, res.headers.get("X-Gift-Refusal")]).toEqual([403, "unsupported"]);
+    }
+  });
+
+  it("does not relay Qwen or OpenRouter for a shared code", async () => {
+    const { code } = await createCode(await share());
+    const res = await transcribe(code);
+    expect([res.status, res.headers.get("X-Gift-Refusal")]).toEqual([403, "unsupported"]);
+    expect(qwen).not.toHaveBeenCalled();
+  });
+
+  it("stops a code at its daily limit, and every code at the limit of the whole beta", async () => {
+    const [mine, other] = [await joined(), await joined("203.0.113.2")];
+    const id = async (code: string) => (await codeByValue(db, code))!.id;
+    vi.mocked(qwen).mockImplementation(async () => Response.json({ output: { text: "" }, usage: {} }));
+    await addUsage(db, await id(mine), 0.5, Date.now());
+    const limited = await transcribe(mine);
+    expect([limited.status, limited.headers.get("X-Gift-Refusal")]).toEqual([403, "limit"]);
+    expect((await transcribe(other)).status).toBe(200);
+
+    // ほかのコードの分も足して、ベータ全体の上限に届いたら止める（おすそ分けのコードの分は足さない）
+    const shared = await createCode(await share());
+    await addUsage(db, shared.id, 100, Date.now());
+    expect((await transcribe(other)).status).toBe(200);
+    for (let i = 0; i < 9; i++) {
+      await addUsage(db, await id(await joined(`198.51.100.${i}`)), 0.5, Date.now());
+    }
+    const full = await transcribe(other);
+    expect([full.status, full.headers.get("X-Gift-Refusal")]).toEqual([403, "limit"]);
   });
 });
 

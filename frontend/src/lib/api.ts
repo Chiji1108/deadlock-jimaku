@@ -1,3 +1,4 @@
+import type { BetaRefusal } from "../generated/BetaRefusal";
 import type { FontEntry } from "../generated/FontEntry";
 import type { GiftStatus } from "../generated/GiftStatus";
 import type { Provider } from "../generated/Provider";
@@ -49,6 +50,12 @@ export const api = {
 
   /** もらったギフトコードの状態 */
   gift: () => request<GiftStatus>("/api/gift"),
+  /** ベータのコードをもらって保存する。もらえなければ理由を返す（投げない） */
+  joinBeta: async (): Promise<GiftStatus | BetaRefusal> => {
+    const res = await fetch("/api/beta", { method: "POST" });
+    if (res.ok || res.status === 400) return (await res.json()) as GiftStatus | BetaRefusal;
+    throw new Error((await res.text()) || res.statusText);
+  },
   /** 有効なコードだけ保存される。無効ならその状態を返す（投げない） */
   setGift: async (code: string): Promise<GiftStatus> => {
     const res = await fetch("/api/gift", {

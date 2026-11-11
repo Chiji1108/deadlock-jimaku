@@ -41,8 +41,19 @@ pub struct ProviderInfo {
     pub name: &'static str,
     /// 自分のキーで送る先。`https://…/v1` まで
     pub base: &'static str,
-    /// ギフトコードで使える（開発者のサーバーが中継する）。ほかの会社は自分のキーが要る
-    pub giftable: bool,
+    /// 開発者のサーバーが中継するなら、どのコードで使えるか。None の会社は自分のキーが要る。
+    /// そのコードがその会社を中継するかは、字幕を始めるときにサーバーに確かめる
+    pub relay: Option<Relay>,
+}
+
+/// 開発者のサーバーが中継するコードの種類。アプリはどちらも同じ所（ギフトコード）に保存する
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum Relay {
+    /// 人からもらったギフトコード（おすそ分けした人のキー。DESIGN.md 17.1）
+    Gift,
+    /// ベータのコード（開発者のキー。ベータの間は無料。DESIGN.md 17.2）
+    Beta,
 }
 
 impl Provider {
@@ -56,34 +67,39 @@ impl Provider {
     ];
 
     pub const fn info(self) -> ProviderInfo {
-        let (id, name, base, giftable) = match self {
-            Self::OpenAi => ("openai", "OpenAI", "https://api.openai.com/v1", true),
-            Self::Xai => ("xai", "xAI", "https://api.x.ai/v1", true),
+        let (id, name, base, relay) = match self {
+            Self::OpenAi => (
+                "openai",
+                "OpenAI",
+                "https://api.openai.com/v1",
+                Some(Relay::Gift),
+            ),
+            Self::Xai => ("xai", "xAI", "https://api.x.ai/v1", Some(Relay::Gift)),
             // QwenCloud のシンガポールの口（OpenAI 互換）。鍵は地域ごとに別で、ほかの地域の鍵は 401 になる
             Self::Qwen => (
                 "qwen",
                 "Qwen",
                 "https://ap-southeast-1.maas.qwencloudapi.com/compatible-mode/v1",
-                false,
+                Some(Relay::Beta),
             ),
             Self::OpenRouter => (
                 "openrouter",
                 "OpenRouter",
                 "https://openrouter.ai/api/v1",
-                false,
+                Some(Relay::Beta),
             ),
             Self::TypeSafe => (
                 "typesafe",
                 "TypeSafe AI",
                 "https://api.typesafe.ai/v1",
-                false,
+                None,
             ),
         };
         ProviderInfo {
             id,
             name,
             base,
-            giftable,
+            relay,
         }
     }
 }
@@ -149,7 +165,7 @@ impl Keys {
     pub fn access(&self, provider: Provider, api: &str) -> Option<Access> {
         match (self.own.get(&provider), &self.gift) {
             (Some(key), _) => Some(Access::key(provider, key.clone())),
-            (None, Some(code)) if provider.info().giftable => {
+            (None, Some(code)) if provider.info().relay.is_some() => {
                 Some(Access::gift(provider, code.clone(), api))
             }
             _ => None,
@@ -297,9 +313,8 @@ mod tests {
         let api = "http://worker/v1";
         assert!(keys.access(Provider::OpenAi, api).unwrap().is_gift());
         assert!(!keys.access(Provider::Xai, api).unwrap().is_gift());
-        for provider in [Provider::Qwen, Provider::OpenRouter, Provider::TypeSafe] {
-            assert_eq!(keys.access(provider, api), None);
-        }
+        assert!(keys.access(Provider::Qwen, api).unwrap().is_gift());
+        assert_eq!(keys.access(Provider::TypeSafe, api), None);
         // 設定や画面とやりとりする名前は、表の名前と同じ
         for provider in Provider::ALL {
             assert_eq!(serde_json::json!(provider), provider.info().id);

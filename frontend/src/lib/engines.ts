@@ -125,7 +125,7 @@ export const ITEMS: { [K in Item]: { label: string; hint: string; options: Optio
         value: "qwenMtFlash",
         label: "Qwen-MT-Flash",
         price: "100 万トークンで入力 $0.16・出力 $0.49",
-        note: "翻訳専門のモデル。速くて安い。Qwen の API キーが要る（ギフトコードでは使えない）",
+        note: "翻訳専門のモデル。速くて安い。Qwen の API キーが要る",
       },
       {
         value: "hyMt2",
@@ -167,6 +167,14 @@ export const CHROME: Engines = {
   transcription: "chrome",
   terms: "dictionary",
   translation: "chromeTranslator",
+  furigana: "lindera",
+};
+/** ベータの間は無料の組み合わせ（開発者のサーバーが中継する。DESIGN.md 17.2） */
+export const BETA: Engines = {
+  live: "chrome",
+  transcription: "qwenAudio",
+  terms: "pplxDecider",
+  translation: "hyMt2",
   furigana: "lindera",
 };
 export const STANDARD: Engines = {
@@ -214,6 +222,14 @@ export const MODES: {
     hourlyUsd: 0,
     hint: "多くの字幕ソフトと同じく、Chrome の音声認識を使います",
     engines: CHROME,
+  },
+  {
+    name: "beta",
+    label: "ベータ",
+    traits: "高速・高精度・キー不要",
+    hourlyUsd: 0,
+    hint: "ベータの間は無料です。途中の字幕は Chrome、確定の字幕・用語・翻訳は、開発者のサーバーを通して作ります（1 日の上限があります）",
+    engines: BETA,
   },
   {
     name: "light",
@@ -285,12 +301,16 @@ export const PROVIDER_NAMES = Object.fromEntries(PROVIDERS.map((p) => [p.id, p.n
   string
 >;
 
-/** ギフトコードで使える会社（おすそ分けした人がその会社のキーを預けていれば）。ほかの会社の中継はまだない */
-export const giftable = (p: Provider) => PROVIDERS.some((info) => info.id === p && info.giftable);
+/** その会社を中継するコードの種類。gift は人からもらったギフトコード（おすそ分けした人がその会社のキーを預けていれば）、
+ * beta はベータのコード（開発者のキー）。中継がなければ null */
+export const relayOf = (p: Provider) => PROVIDERS.find((info) => info.id === p)?.relay ?? null;
+
+/** コード（ギフトコードかベータのコード）で使える会社。どちらも同じ所に保存する */
+export const giftable = (p: Provider) => relayOf(p) !== null;
 
 /** 要る鍵の名前。ギフトコードで足りる会社があれば、そう添える */
 export const keyNames = (list: Provider[]) =>
-  `${list.map((p) => PROVIDER_NAMES[p]).join(" と ")} の API キー${list.some(giftable) ? "かギフトコード" : ""}`;
+  `${list.map((p) => PROVIDER_NAMES[p]).join(" と ")} の API キー${list.some((p) => relayOf(p) === "gift") ? "かギフトコード" : ""}`;
 
 /** 今の仕組みで作れない選び方。core の `Engines::sanitized` と同じ決まり。
  * Chrome の翻訳を使っている間は途中の字幕を Chrome から変えさせない（変えると core が翻訳を有料に直し、黙って料金がかかる） */
