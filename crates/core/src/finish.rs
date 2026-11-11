@@ -10,11 +10,12 @@ use std::time::Instant;
 
 use tokio::sync::{broadcast, mpsc};
 
-use crate::access::Access;
+use crate::access::Accesses;
 use crate::chrome;
 use crate::decide::Decider;
 use crate::enrich::{Enricher, Span, source_tokens};
 use crate::mt::Translator;
+use crate::secrets::Provider;
 use crate::settings::{EmphasisSource, Phase, RubySource, Settings, TranslationSource};
 use crate::store::{ChromeEvent, Store};
 use crate::types::{
@@ -55,26 +56,28 @@ pub struct Heard {
 }
 
 impl Finisher {
-    /// `access` は OpenAI、`qwen` は Qwen の送り先と鍵
-    pub fn new(
-        store: Arc<Store>,
-        settings: &Settings,
-        access: Option<Access>,
-        qwen: Option<Access>,
-    ) -> Self {
-        let decider = access
-            .clone()
-            .filter(|_| settings.engines.decides_terms())
-            .map(|access| Decider::new(access, settings.mic_language.clone(), store.meter()));
-        let translator = qwen.filter(|_| settings.engines.uses_qwen()).map(|qwen| {
-            Translator::new(
-                qwen,
-                settings.mic_language.clone(),
+    /// `accesses` は工程が使う会社の送り先と鍵
+    pub fn new(store: Arc<Store>, settings: &Settings, accesses: &Accesses) -> Self {
+        let lang = &settings.mic_language;
+        let decider = settings.engines.judge().and_then(|judge| {
+            let access = accesses.get(judge.provider)?;
+            Some(Decider::new(
+                access,
+                judge.name,
+                lang.clone(),
+                store.meter(),
+            ))
+        });
+        let translator = settings.engines.translation.mt().and_then(|mt| {
+            Some(Translator::new(
+                accesses.get(mt.provider)?,
+                mt.name,
+                lang.clone(),
                 settings.translate_to.clone(),
                 store.meter(),
-            )
+            ))
         });
-        let enricher = access.map(|access| {
+        let enricher = accesses.get(Provider::OpenAi).map(|access| {
             Enricher::new(
                 access,
                 &settings.models_in_use(),
@@ -198,7 +201,7 @@ impl Finisher {
                             None => Translations::new(),
                         }
                     }
-                    Some(TranslationSource::QwenMt) => match &self.translator {
+                    Some(TranslationSource::Mt) => match &self.translator {
                         Some(t) => {
                             let spans = decided.as_deref().unwrap_or(&local);
                             let asked = t.translate(crate::http(), spans, glossary.as_deref());
@@ -411,7 +414,7 @@ mod tests {
             is_final: true,
             translations: translations.clone(),
         }));
-        let finisher = Finisher::new(store, &Settings::default(), None, None);
+        let finisher = Finisher::new(store, &Settings::default(), &Accesses::default());
         let phase = Settings::default().plan().finals;
         let heard = Heard {
             id: "1".into(),
@@ -481,24 +484,61 @@ mod tests {
                 "usage": { "prompt_tokens": 10, "completion_tokens": 5 },
             }))
         };
+        // Jev の形の口。問いは名前ごとで、選択肢は `criteria`
+        let systemone = |Json(body): Json<Value>| async move {
+            assert_eq!(body["model"], "jev-latest");
+            assert!(body["questions"]["c0"]["criteria"]["item:1"].is_string());
+            Json(json!({
+                "answers": { "c0": { "choice": "item:1" } },
+                "usage": { "input_tokens": 100, "output_tokens": 0 },
+            }))
+        };
+        // Hy-MT2 は指示文の最後に原文がある。OpenRouter は料金を答えに入れる
+        let hy_mt = |Json(body): Json<Value>| async move {
+            let prompt = body["messages"][0]["content"].as_str().unwrap();
+            assert!(prompt.contains("into English"), "{prompt}");
+            let source = prompt.rsplit("[Source Text]\n").next().unwrap();
+            Json(json!({
+                "choices": [{ "message": { "content": source.replace("を取る", " first") } }],
+                "usage": { "prompt_tokens": 10, "completion_tokens": 5, "cost": 0.001 },
+            }))
+        };
         let router = axum::Router::new()
             .route("/openai/decisions", axum::routing::post(decisions))
-            .route("/qwen/chat/completions", axum::routing::post(translate));
+            .route("/qwen/chat/completions", axum::routing::post(translate))
+            .route("/typesafe/systemone", axum::routing::post(systemone))
+            .route("/openrouter/chat/completions", axum::routing::post(hy_mt));
         tokio::spawn(async move { axum::serve(listener, router).await });
         api
     }
 
     /// 用語を Decisions で決めてから、その用語で訳す。「拡マガ」は辞書の名前と一致しないので、PC の中では付かない
     async fn finished_split(decides: bool) -> Enriched {
-        use crate::secrets::Provider;
-        use crate::settings::{Engines, TermsEngine, TranslationEngine};
+        use crate::settings::{TermsEngine, TranslationEngine};
+        finished_with(
+            decides,
+            TermsEngine::Decisions,
+            TranslationEngine::QwenMtFlash,
+        )
+        .await
+        .0
+    }
+
+    /// 仕上げた文と、用語と翻訳にかかった額
+    async fn finished_with(
+        decides: bool,
+        terms: crate::settings::TermsEngine,
+        translation: crate::settings::TranslationEngine,
+    ) -> (Enriched, f64) {
+        use crate::settings::Engines;
         let api = split_server(decides).await;
         let settings = Settings {
             engines: Engines {
-                terms: TermsEngine::Decisions,
-                translation: TranslationEngine::QwenMtFlash,
+                terms,
+                translation,
                 ..Engines::CHROME
             },
+            translate_to: vec!["en".into()],
             ..Default::default()
         };
         let store = Store::new(Ok(settings.clone()), std::path::PathBuf::new());
@@ -515,12 +555,9 @@ mod tests {
             root: std::path::PathBuf::new(),
             aliases: Arc::new([("item:1".to_owned(), vec!["拡マガ".to_owned()])].into()),
         });
-        let finisher = Finisher::new(
-            store,
-            &settings,
-            Some(Access::gift(Provider::OpenAi, "code".into(), &api)),
-            Some(Access::gift(Provider::Qwen, "code".into(), &api)),
-        );
+        let gift = |provider| crate::access::Access::gift(provider, "code".into(), &api);
+        let accesses = Accesses::new(settings.engines.providers().into_iter().map(gift));
+        let finisher = Finisher::new(store.clone(), &settings, &accesses);
         let heard = Heard {
             id: "1".into(),
             text: "拡マガを取る".into(),
@@ -528,10 +565,20 @@ mod tests {
             tokens: vec![text("拡マガを取る", None)],
         };
         let phase = settings.plan().finals;
-        finisher
-            .finish(heard, Translatable::default(), None, &phase, |_| {})
-            .await
-            .unwrap()
+        let finished = finisher.finish(heard, Translatable::default(), None, &phase, |_| {});
+        let enriched = finished.await.unwrap();
+        let usage = store.meter().watch().borrow().session.clone();
+        (enriched, usage[&crate::usage::Use::Translate].usd)
+    }
+
+    /// 用語は Jev、翻訳は OpenRouter の Hy-MT2。どちらも口の形が違うだけで、結果は同じ
+    #[tokio::test]
+    async fn other_judges_and_translators_give_the_same_subtitle() {
+        use crate::settings::{TermsEngine, TranslationEngine};
+        let (enriched, usd) = finished_with(true, TermsEngine::Jev, TranslationEngine::HyMt2).await;
+        assert_eq!(enriched, finished_split(true).await);
+        // Jev は入力 100 トークン（100 万トークン $0.042）、Hy-MT2 は答えに入っていた料金
+        assert!((usd - (100.0 * 0.042 / 1e6 + 0.001)).abs() < 1e-9, "{usd}");
     }
 
     #[tokio::test]
@@ -563,7 +610,7 @@ mod tests {
     #[tokio::test]
     async fn without_llm_the_local_marks_are_kept() {
         let store = Store::new(Ok(Settings::default()), std::path::PathBuf::new());
-        let finisher = Finisher::new(store, &Settings::default(), None, None);
+        let finisher = Finisher::new(store, &Settings::default(), &Accesses::default());
         let phase = Settings::default().plan().finals;
         let heard = Heard {
             id: "1".into(),

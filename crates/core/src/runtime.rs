@@ -10,10 +10,12 @@ use std::sync::Arc;
 use futures_util::FutureExt;
 use tokio::task::JoinHandle;
 
-use crate::access::Access;
+use crate::access::{Access, Accesses};
+use crate::local::Speech;
 use crate::secrets::Provider;
 use crate::settings::{Engines, FinalSource, Models, Region, Segmentation, Settings, TextSource};
 use crate::store::Store;
+use crate::stt::Transcriber;
 use crate::types::{LangCode, TranscriptionError};
 use crate::{assets, audio, chrome, rank, secrets, share, subtitles};
 
@@ -96,11 +98,8 @@ struct AudioInput {
     models: Models,
     realtime_delay: String,
     segmentation: Segmentation,
-    access: Option<Access>,
-    /// xAI の送り先と鍵（xAI を使う工程がなければ None）
-    xai: Option<Access>,
-    /// Qwen の送り先と鍵（Qwen を使う工程がなければ None）
-    qwen: Option<Access>,
+    /// 工程が使う会社の送り先と鍵（鍵のない会社は入っていない）
+    accesses: Accesses,
 }
 
 /// ページは準備が整い直すたびに設定を読むので、ページが使う設定もここに入れる
@@ -114,10 +113,8 @@ struct ChromeInput {
     /// 確定の仕上げ（翻訳・用語・ふりがな）を何で作るか
     engines: Engines,
     models: Models,
-    /// OpenAI を使う工程があるのに鍵がなければ始めない
-    access: Option<Access>,
-    /// Qwen も同じ
-    qwen: Option<Access>,
+    /// 工程が使う会社の送り先と鍵。要るのに鍵のない会社があれば始めない
+    accesses: Accesses,
 }
 
 #[derive(Clone, PartialEq)]
@@ -144,16 +141,8 @@ pub async fn run(store: Arc<Store>, options: Options) {
             .await
             .unwrap_or_default();
         let languages = settings.glossary_languages();
-        // 使わない会社には何も送らない
-        let access = keys
-            .access(Provider::OpenAi, &settings.api_base)
-            .filter(|_| settings.engines.uses_openai());
-        let xai = keys
-            .access(Provider::Xai, &settings.api_base)
-            .filter(|_| settings.engines.uses_xai());
-        let qwen = keys
-            .access(Provider::Qwen, &settings.api_base)
-            .filter(|_| settings.engines.uses_qwen());
+        let accesses = keys.accesses(&settings.engines, &settings.api_base);
+        let access = accesses.get(Provider::OpenAi);
 
         assets_slot
             .update(
@@ -192,7 +181,7 @@ pub async fn run(store: Arc<Store>, options: Options) {
             })
             .await;
 
-        let input = subtitles_input(&settings, &options, access, xai, qwen);
+        let input = subtitles_input(&settings, &options, accesses);
         update_subtitles(&mut subtitles_slot, &store, input, &settings.api_base).await;
         // 設定を変えて字幕の処理を作り直しても、ウィンドウは閉じない
         store.sync_chrome();
@@ -203,13 +192,7 @@ pub async fn run(store: Arc<Store>, options: Options) {
     }
 }
 
-fn subtitles_input(
-    settings: &Settings,
-    options: &Options,
-    access: Option<Access>,
-    xai: Option<Access>,
-    qwen: Option<Access>,
-) -> SubtitlesInput {
+fn subtitles_input(settings: &Settings, options: &Options, accesses: Accesses) -> SubtitlesInput {
     if settings.engines.transcription == FinalSource::Chrome {
         if !settings.transcription_enabled {
             return SubtitlesInput::Stopped;
@@ -222,8 +205,7 @@ fn subtitles_input(
             segmentation: settings.segmentation.clone(),
             engines: settings.engines,
             models: settings.models.clone(),
-            access,
-            qwen,
+            accesses,
         }));
     }
     let source = match &options.input_file {
@@ -241,9 +223,7 @@ fn subtitles_input(
         models: settings.models.clone(),
         realtime_delay: settings.realtime_delay.clone(),
         segmentation: settings.segmentation.clone(),
-        access,
-        xai,
-        qwen,
+        accesses,
     }))
 }
 
@@ -272,31 +252,29 @@ fn start_subtitles(
     match input {
         SubtitlesInput::Stopped => None,
         SubtitlesInput::Chrome(input) => {
-            if let Some(provider) = missing_key(&input.engines, &input.access, &None, &input.qwen) {
+            if let Some(provider) = missing_key(&input.engines, &input.accesses) {
                 store.set_transcription_error(Some(TranscriptionError::MissingKey { provider }));
                 return None;
             }
             tracing::info!("transcription started");
             let store = store.clone();
             Some(tokio::spawn(async move {
-                let accesses = input.access.iter().chain(&input.qwen);
-                if !gift_accepted(&store, accesses, check_gift.as_deref()).await {
+                if !gift_accepted(&store, input.accesses.iter(), check_gift.as_deref()).await {
                     return;
                 }
-                let run = chrome::run(store.clone(), input.access, input.qwen);
+                let run = chrome::run(store.clone(), input.accesses);
                 supervise(store, run, None).await;
             }))
         }
         SubtitlesInput::Audio(input) => {
-            let missing = missing_key(&input.engines, &input.access, &input.xai, &input.qwen);
-            if let Some(provider) = missing {
+            if let Some(provider) = missing_key(&input.engines, &input.accesses) {
                 store.set_transcription_error(Some(TranscriptionError::MissingKey { provider }));
                 return None;
             }
-            // 確定が Chrome でなければ、xAI か OpenAI のどちらかを使う（鍵は上で確かめた）
-            let transcriber =
-                (input.xai.clone().or_else(|| input.access.clone())).expect("finals without a key");
-            let (access, xai, qwen) = (input.access, input.xai, input.qwen);
+            let accesses = input.accesses;
+            // 確定の文字起こしを頼む会社（鍵は上で確かめた）。会社がなければ PC の中
+            let transcriber = input.engines.transcription.provider();
+            let transcriber = transcriber.map(|p| accesses.get(p).expect("finals without a key"));
             tracing::info!("transcription started");
             let (input, ended) = match input.source {
                 Source::Mic(device) => (
@@ -307,31 +285,44 @@ fn start_subtitles(
             };
             let store = store.clone();
             Some(tokio::spawn(async move {
-                let accesses = access.iter().chain(&xai).chain(&qwen);
-                if !gift_accepted(&store, accesses, check_gift.as_deref()).await {
+                if !gift_accepted(&store, accesses.iter(), check_gift.as_deref()).await {
                     return;
                 }
-                let run = subtitles::run(store.clone(), input, access, transcriber, qwen);
-                supervise(store, run, ended).await;
+                let run = async {
+                    let transcriber = match transcriber {
+                        Some(access) => Transcriber::Api(access),
+                        None => Transcriber::Local(local_speech(&store).await?),
+                    };
+                    subtitles::run(store.clone(), input, accesses, transcriber).await
+                };
+                supervise(store.clone(), run, ended).await;
             }))
         }
     }
 }
 
 /// 工程に要るのに、送り先と鍵のない会社（OpenAI を先に知らせる）
-fn missing_key(
-    engines: &Engines,
-    access: &Option<Access>,
-    xai: &Option<Access>,
-    qwen: &Option<Access>,
-) -> Option<Provider> {
-    [
-        (Provider::OpenAi, engines.uses_openai() && access.is_none()),
-        (Provider::Xai, engines.uses_xai() && xai.is_none()),
-        (Provider::Qwen, engines.uses_qwen() && qwen.is_none()),
-    ]
-    .into_iter()
-    .find_map(|(provider, missing)| missing.then_some(provider))
+fn missing_key(engines: &Engines, accesses: &Accesses) -> Option<Provider> {
+    let mut needed = engines.providers().into_iter();
+    needed.find(|provider| accesses.get(*provider).is_none())
+}
+
+/// PC の中の文字起こしを立てる。初回は speech.cpp とモデルを取るので、待っていることを操作パネルに出す
+async fn local_speech(store: &Store) -> anyhow::Result<Speech> {
+    anyhow::ensure!(
+        store.settings().mic_language == "ja",
+        "Haas-ja only transcribes Japanese"
+    );
+    // 待っている間に字幕を止められても（この処理ごと捨てられる）、表示を戻す
+    struct Preparing<'a>(&'a Store);
+    impl Drop for Preparing<'_> {
+        fn drop(&mut self) {
+            self.0.set_preparing(false);
+        }
+    }
+    store.set_preparing(true);
+    let _preparing = Preparing(store);
+    Speech::start(&store.data_dir().join("speech")).await
 }
 
 /// ギフトコードを使うなら、`check` の API の根元で、使えるか・使う会社を中継するかを確かめる。
@@ -412,8 +403,7 @@ mod tests {
             segmentation: Settings::default().segmentation,
             engines: Engines::CHROME,
             models: Settings::default().models,
-            access: None,
-            qwen: None,
+            accesses: Accesses::default(),
         }))
     }
 
@@ -494,9 +484,9 @@ mod tests {
                 models: Settings::default().models,
                 realtime_delay: "low".into(),
                 segmentation: Settings::default().segmentation,
-                access: code.map(|code| Access::gift(Provider::OpenAi, code.into(), &self.api)),
-                xai: None,
-                qwen: None,
+                accesses: Accesses::new(
+                    code.map(|code| Access::gift(Provider::OpenAi, code.into(), &self.api)),
+                ),
             }))
         }
 
@@ -587,7 +577,7 @@ mod tests {
                 transcription: FinalSource::GrokVoiceTranscribe,
                 ..engines
             };
-            input.xai = xai;
+            input.accesses = Accesses::new(input.accesses.iter().cloned().chain(xai));
             SubtitlesInput::Audio(input)
         };
         let missing = |provider| Some(TranscriptionError::MissingKey { provider });
@@ -617,7 +607,8 @@ mod tests {
                 unreachable!()
             };
             input.engines.transcription = FinalSource::GrokVoiceTranscribe;
-            input.xai = Some(Access::gift(Provider::Xai, code.into(), &app.api));
+            let xai = Access::gift(Provider::Xai, code.into(), &app.api);
+            input.accesses = Accesses::new(input.accesses.iter().cloned().chain([xai]));
             SubtitlesInput::Audio(input)
         };
 

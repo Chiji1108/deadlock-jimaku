@@ -34,7 +34,7 @@
   <Card.Header>
     <Card.Title>料金（概算）</Card.Title>
     <Card.Description>
-      送った音声の長さと使ったトークン数に、OpenAI・xAI・Qwen の単価を掛けた目安です。正確な金額は
+      送った音声の長さと使ったトークン数に、それぞれの会社の単価を掛けた目安です。正確な金額は
       <a class="underline" href="https://platform.openai.com/usage" target="_blank" rel="noreferrer"
         >OpenAI</a
       >

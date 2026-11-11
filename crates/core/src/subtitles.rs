@@ -16,16 +16,17 @@ use std::time::{Duration, Instant};
 
 use tokio::sync::{broadcast, mpsc};
 
-use crate::access::Access;
+use crate::access::Accesses;
 use crate::annotate::Annotator;
 use crate::audio::{self, History, SAMPLE_RATE};
 use crate::chrome;
 use crate::finish::{self, Finished, Finisher};
 use crate::lang;
 use crate::now_ms;
+use crate::secrets::Provider;
 use crate::settings::{Settings, TextSource};
 use crate::store::{ChromeEvent, Store};
-use crate::stt::{self, BatchRequest, Hints, RealtimeConfig};
+use crate::stt::{self, BatchRequest, Hints, RealtimeConfig, Transcriber};
 use crate::types::{
     ChromeCommand, Enriched, EntityKind, Glossary, Heard, LangCode, Segment, Stage, Token,
     TranscriptionError, Translated, Translations,
@@ -48,15 +49,12 @@ const PROMPT: &str = "Live commentary by a streamer playing the video game Deadl
 /// デッドロックモードを切ったとき（雑談の配信など）
 const PLAIN_PROMPT: &str = "Live commentary by a streamer.";
 
-/// `access` は OpenAI（途中の字幕・翻訳・ふりがな）の送り先と鍵（OpenAI を使わなければ None）、
-/// `transcriber` は確定の文字起こしの送り先と鍵（OpenAI なら GPT-Transcribe、xAI なら Grok）、
-/// `qwen` は翻訳専門のモデルの送り先と鍵（使わなければ None）
+/// `accesses` は工程が使う会社の送り先と鍵、`transcriber` は確定の文字起こしを頼む相手
 pub async fn run(
     store: Arc<Store>,
     input: audio::Input,
-    access: Option<Access>,
-    transcriber: Access,
-    qwen: Option<Access>,
+    accesses: Accesses,
+    transcriber: Transcriber,
 ) -> anyhow::Result<()> {
     let settings = store.settings();
 
@@ -99,29 +97,30 @@ pub async fn run(
     let (delta_tx, delta_rx) = mpsc::channel(256);
     // オフなら Realtime につながず、確定の字幕だけを出す
     let plan = settings.plan();
-    let realtime =
-        if let (Some(TextSource::GptLiveTranscribe), Some(access)) = (plan.partial.text, &access) {
-            let (tx, rx) = mpsc::unbounded_channel();
-            let config = RealtimeConfig {
-                access: access.clone(),
-                model: settings.models.realtime.clone(),
-                delay: settings.realtime_delay.clone(),
-                meter: store.meter(),
-            };
-            tokio::spawn(realtime_loop(
-                config,
-                hints.clone(),
-                rx,
-                delta_tx,
-                done_tx.clone(),
-            ));
-            Some(tx)
-        } else {
-            None
+    let realtime = if let (Some(TextSource::GptLiveTranscribe), Some(access)) =
+        (plan.partial.text, accesses.get(Provider::OpenAi))
+    {
+        let (tx, rx) = mpsc::unbounded_channel();
+        let config = RealtimeConfig {
+            access,
+            model: settings.models.realtime.clone(),
+            delay: settings.realtime_delay.clone(),
+            meter: store.meter(),
         };
+        tokio::spawn(realtime_loop(
+            config,
+            hints.clone(),
+            rx,
+            delta_tx,
+            done_tx.clone(),
+        ));
+        Some(tx)
+    } else {
+        None
+    };
 
     let cloud = Cloud {
-        finisher: Arc::new(Finisher::new(store.clone(), &settings, access, qwen)),
+        finisher: Arc::new(Finisher::new(store.clone(), &settings, &accesses)),
         finished_tx,
         batch: Arc::new(BatchContext {
             http: crate::http().clone(),
@@ -635,7 +634,7 @@ async fn realtime_loop(
 
 struct BatchContext {
     http: reqwest::Client,
-    transcriber: Access,
+    transcriber: Transcriber,
     model: String,
     hints: Arc<Hints>,
     meter: Arc<Meter>,
@@ -656,7 +655,7 @@ async fn transcribe(
     done: mpsc::Sender<Done>,
 ) {
     let request = BatchRequest {
-        access: &ctx.transcriber,
+        transcriber: &ctx.transcriber,
         model: &ctx.model,
         hints: &ctx.hints,
         wav,
@@ -858,13 +857,12 @@ mod tests {
             finisher: Arc::new(Finisher::new(
                 store.clone(),
                 &settings,
-                Some(access.clone()),
-                None,
+                &Accesses::new([access.clone()]),
             )),
             finished_tx,
             batch: Arc::new(BatchContext {
                 http: crate::http().clone(),
-                transcriber: access,
+                transcriber: Transcriber::Api(access),
                 model: settings.models.batch.clone(),
                 hints: Arc::new(Hints {
                     language: "ja".into(),
@@ -951,7 +949,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let ctx = Arc::new(BatchContext {
             http: crate::http().clone(),
-            transcriber,
+            transcriber: Transcriber::Api(transcriber),
             model: "gpt-transcribe".into(),
             hints: Arc::new(Hints {
                 language: "ja".into(),

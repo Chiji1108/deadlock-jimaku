@@ -24,9 +24,25 @@
       name: "Qwen",
       use: "翻訳を Qwen-MT-Flash にするときに使います。QwenCloud のシンガポール（国際）の API キーです（ほかの地域のキーは使えません）。ギフトコードでは使えません",
     },
+    {
+      provider: "openrouter",
+      name: "OpenRouter",
+      use: "いろいろな会社のモデルを 1 つのキーで使えます（用語の Drex Max・Microsoft Decision 1・Perplexity Decider、翻訳の Hy-MT2、確定の文字起こしの MAI-Transcribe 2）。openrouter.ai で作れます。ギフトコードでは使えません",
+    },
+    {
+      provider: "typesafe",
+      name: "TypeSafe AI",
+      use: "用語を Jev で確かめるときに使います。ギフトコードでは使えません",
+    },
   ];
 
-  let inputs = $state<Record<Provider, string>>({ openai: "", xai: "", qwen: "" });
+  let inputs = $state<Record<Provider, string>>({
+    openai: "",
+    xai: "",
+    qwen: "",
+    openrouter: "",
+    typesafe: "",
+  });
 
   async function save(provider: Provider, key: string) {
     // 失敗したら貼り直さずにやり直せるよう、入力は残す

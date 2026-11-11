@@ -61,6 +61,8 @@ class Panel {
   server = $state<Status>("connecting");
   /** 字幕を始められなかった・止まった理由 */
   transcriptionError = $state<TranscriptionError | undefined>();
+  /** PC の中の文字起こしを準備している（初回はダウンロードを待つ） */
+  preparing = $state(false);
   /** 直近の入力レベル（dBFS）。字幕を動かしている間だけ届く */
   level = $state<number | undefined>();
   /** OpenAI の使用量と概算の料金 */
@@ -178,6 +180,7 @@ class Panel {
   private onMessage(msg: ServerMsg) {
     if (msg.type === "transcription.status") {
       this.transcriptionError = msg.error ?? undefined;
+      this.preparing = msg.preparing;
     } else if (msg.type === "chrome.status") {
       this.chromeStatus = msg.status ?? undefined;
     } else if (msg.type === "usage") {

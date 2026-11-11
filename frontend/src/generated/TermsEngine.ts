@@ -3,4 +3,4 @@
 /**
  * 用語を何で判定するか（翻訳が LLM でないとき）
  */
-export type TermsEngine = "dictionary" | "decisions";
+export type TermsEngine = "dictionary" | "decisions" | "jev" | "drexMax" | "decision1" | "pplxDecider";

@@ -123,7 +123,11 @@ pub enum ServerMsg {
     RankUpdate { rank: Option<RankState> },
     /// 字幕を始められなかった・止まった理由。None なら問題なし
     #[serde(rename = "transcription.status")]
-    TranscriptionStatus { error: Option<TranscriptionError> },
+    TranscriptionStatus {
+        error: Option<TranscriptionError>,
+        /// PC の中の文字起こしを準備している（初回はダウンロードを待つ）
+        preparing: bool,
+    },
     #[serde(rename = "display", rename_all = "camelCase")]
     Display {
         subtitles: crate::settings::SubtitleDisplay,

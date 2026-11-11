@@ -35,7 +35,7 @@
     <Dialog.Header>
       <Dialog.Title>字幕の作り方を詳しく選ぶ</Dialog.Title>
       <Dialog.Description>
-        工程ごとに、無料か有料（OpenAI・xAI・Qwen）かを選べます。料金はそれぞれの会社の単価です。切り替えると、字幕は始め直します
+        工程ごとに、無料か有料かを選べます。料金はそれぞれの会社の単価です。切り替えると、字幕は始め直します
       </Dialog.Description>
     </Dialog.Header>
     <div class="flex flex-col gap-5">

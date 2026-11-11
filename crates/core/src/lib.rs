@@ -11,6 +11,7 @@ pub mod fonts;
 pub mod furigana;
 pub mod lang;
 pub mod llm;
+pub mod local;
 pub mod markup;
 pub mod mt;
 pub mod rank;

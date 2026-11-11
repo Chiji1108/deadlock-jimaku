@@ -11,6 +11,7 @@ use serde_json::Value;
 use ts_rs::TS;
 
 use crate::lang;
+use crate::secrets::Provider;
 use crate::types::LangCode;
 
 /// `{データディレクトリ}` の中の設定ファイル
@@ -604,7 +605,20 @@ impl Engines {
     /// 有料の工程があり、鍵が要る。表示の設定（翻訳先、ふりがな）では変わらないので、
     /// 表示を切り替えても字幕の処理を始め直さない
     pub fn paid(&self) -> bool {
-        self.uses_openai() || self.uses_xai() || self.uses_qwen()
+        !self.providers().is_empty()
+    }
+
+    /// 工程が使う会社（鍵が要る）。`Provider::ALL` の順
+    pub fn providers(&self) -> Vec<Provider> {
+        let used = [
+            self.uses_openai().then_some(Provider::OpenAi),
+            self.transcription.provider(),
+            self.judge().map(|judge| judge.provider),
+            self.translation.mt().map(|mt| mt.provider),
+        ];
+        let all = Provider::ALL.into_iter();
+        all.filter(|provider| used.contains(&Some(*provider)))
+            .collect()
     }
 
     /// OpenAI を使う工程があり、API キーかギフトコードが要る
@@ -612,23 +626,26 @@ impl Engines {
         self.live == LiveSource::GptLiveTranscribe
             || self.transcription == FinalSource::GptTranscribe
             || self.translation.source() == TranslationSource::Llm
-            || self.decides_terms()
+            || self
+                .judge()
+                .is_some_and(|judge| judge.provider == Provider::OpenAi)
             || self.furigana == RubySource::Llm
     }
 
-    /// 用語を Decisions API で確かめる（翻訳が LLM なら、LLM が同時に判定する）
+    pub fn uses(&self, provider: Provider) -> bool {
+        self.providers().contains(&provider)
+    }
+
+    /// 用語の候補を確かめさせる相手（翻訳が LLM なら、LLM が同時に判定するので使わない）
+    pub fn judge(&self) -> Option<Model> {
+        self.terms
+            .judge()
+            .filter(|_| self.translation.source() != TranslationSource::Llm)
+    }
+
+    /// 用語を判定モデルで確かめる
     pub fn decides_terms(&self) -> bool {
-        self.terms == TermsEngine::Decisions && self.translation.source() != TranslationSource::Llm
-    }
-
-    /// Qwen を使う工程があり、Qwen の API キーが要る（ギフトコードでは使えない）
-    pub fn uses_qwen(&self) -> bool {
-        self.translation == TranslationEngine::QwenMtFlash
-    }
-
-    /// xAI を使う工程があり、xAI の API キーが要る（ギフトコードは OpenAI だけ）
-    pub fn uses_xai(&self) -> bool {
-        self.transcription == FinalSource::GrokVoiceTranscribe
+        self.judge().is_some()
     }
 
     /// 確定の文を Chrome が作るなら、発話の区切りも Chrome が決めるので、途中の字幕も Chrome。
@@ -672,6 +689,39 @@ pub enum FinalSource {
     GptTranscribe,
     /// GPT-Transcribe より安い。精度は同じか少し下（DESIGN.md 3）
     GrokVoiceTranscribe,
+    /// OpenRouter の MAI-Transcribe 2。Grok と同じくらい（DESIGN.md 9.7）
+    MaiTranscribe2,
+    /// PC の中で動く Haas-ja（speech.cpp）。無料。日本語だけ（DESIGN.md 9.8）
+    HaasJa,
+}
+
+impl FinalSource {
+    /// 文字起こしを頼む会社（Chrome と PC の中なら None）
+    pub fn provider(self) -> Option<Provider> {
+        match self {
+            Self::Chrome | Self::HaasJa => None,
+            Self::GptTranscribe => Some(Provider::OpenAi),
+            Self::GrokVoiceTranscribe => Some(Provider::Xai),
+            Self::MaiTranscribe2 => Some(Provider::OpenRouter),
+        }
+    }
+
+    /// 文字起こしのモデル。GPT-Transcribe は詳細設定の `models.batch`
+    fn model(self) -> Option<&'static str> {
+        match self {
+            Self::Chrome | Self::GptTranscribe => None,
+            Self::GrokVoiceTranscribe => Some("grok-voice-transcribe-2.0"),
+            Self::MaiTranscribe2 => Some("microsoft/mai-transcribe-2"),
+            Self::HaasJa => Some(crate::local::HAAS_JA),
+        }
+    }
+}
+
+/// 会社と、その会社でのモデルの名前
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Model {
+    pub provider: Provider,
+    pub name: &'static str,
 }
 
 /// 字幕の文字の出どころ
@@ -681,6 +731,8 @@ pub enum TextSource {
     GptLiveTranscribe,
     GptTranscribe,
     GrokVoiceTranscribe,
+    MaiTranscribe2,
+    HaasJa,
 }
 
 /// 用語を何で判定するか（翻訳が LLM でないとき）
@@ -692,6 +744,28 @@ pub enum TermsEngine {
     Dictionary,
     /// PC の中で候補を出し（名前、別名、似た名前、「ウルト」と番号）、OpenAI の Decisions API に確かめさせる
     Decisions,
+    /// 同じ候補を、ほかの判定モデルに確かめさせる（DESIGN.md 9.7 の実測）。TypeSafe AI の Jev はいちばん速い
+    Jev,
+    /// OpenRouter の Nace Drex Max。いちばんよく当たった
+    DrexMax,
+    /// OpenRouter の Microsoft Decision 1
+    Decision1,
+    /// OpenRouter の Perplexity Decider V1.2。いちばん安い
+    PplxDecider,
+}
+
+impl TermsEngine {
+    fn judge(self) -> Option<Model> {
+        let (provider, name) = match self {
+            Self::Dictionary => return None,
+            Self::Decisions => (Provider::OpenAi, "gpt-6-luna"),
+            Self::Jev => (Provider::TypeSafe, "jev-latest"),
+            Self::DrexMax => (Provider::OpenRouter, "nace-ai/drex-max"),
+            Self::Decision1 => (Provider::OpenRouter, "microsoft/microsoft-decision-1"),
+            Self::PplxDecider => (Provider::OpenRouter, "perplexity/pplx-decider-v1.2"),
+        };
+        Some(Model { provider, name })
+    }
 }
 
 /// 翻訳を何で作るか。LLM（Terra と Luna）は用語も同時に判定する
@@ -702,6 +776,8 @@ pub enum TranslationEngine {
     ChromeTranslator,
     /// 翻訳専門のモデル。速くて安い（DESIGN.md 9.7）
     QwenMtFlash,
+    /// OpenRouter の Hy-MT2-30B-A3B。Qwen-MT-Flash の半額で、少し遅い（DESIGN.md 9.7）
+    HyMt2,
     Gpt61Terra,
     /// Terra より安く速いが、用語の判定は弱い（DESIGN.md 9.3）
     Gpt6Luna,
@@ -711,9 +787,19 @@ impl TranslationEngine {
     pub fn source(self) -> TranslationSource {
         match self {
             Self::ChromeTranslator => TranslationSource::ChromeTranslator,
-            Self::QwenMtFlash => TranslationSource::QwenMt,
+            Self::QwenMtFlash | Self::HyMt2 => TranslationSource::Mt,
             Self::Gpt61Terra | Self::Gpt6Luna => TranslationSource::Llm,
         }
+    }
+
+    /// 翻訳専門のモデル
+    pub fn mt(self) -> Option<Model> {
+        let (provider, name) = match self {
+            Self::QwenMtFlash => (Provider::Qwen, "qwen-mt-flash"),
+            Self::HyMt2 => (Provider::OpenRouter, "tencent/hy-mt2-30b-a3b"),
+            Self::ChromeTranslator | Self::Gpt61Terra | Self::Gpt6Luna => return None,
+        };
+        Some(Model { provider, name })
     }
 }
 
@@ -721,7 +807,8 @@ impl TranslationEngine {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TranslationSource {
     ChromeTranslator,
-    QwenMt,
+    /// 翻訳専門のモデル（Qwen-MT-Flash、Hy-MT2）
+    Mt,
     Llm,
 }
 
@@ -922,6 +1009,8 @@ impl Settings {
                 FinalSource::Chrome => Text::Chrome,
                 FinalSource::GptTranscribe => Text::GptTranscribe,
                 FinalSource::GrokVoiceTranscribe => Text::GrokVoiceTranscribe,
+                FinalSource::MaiTranscribe2 => Text::MaiTranscribe2,
+                FinalSource::HaasJa => Text::HaasJa,
             }),
             translation: translates.then_some(engines.translation.source()),
             ruby: match engines.furigana {
@@ -932,7 +1021,7 @@ impl Settings {
                 (Translation::Llm, _) => self.deadlock_mode.then_some(Emphasis::Llm),
                 (_, TermsEngine::Dictionary) => terms,
                 // 候補の出し方（かなの似た名前）は日本語だけ
-                (_, TermsEngine::Decisions) => terms.map(|_| Emphasis::Decisions),
+                (_, _) => terms.map(|_| Emphasis::Decisions),
             },
         };
         Plan {
@@ -946,8 +1035,8 @@ impl Settings {
     /// 詳細設定の `models.batch` と `models.translate` のまま）
     pub fn models_in_use(&self) -> Models {
         let mut models = self.models.clone();
-        if self.engines.transcription == FinalSource::GrokVoiceTranscribe {
-            models.batch = "grok-voice-transcribe-2.0".into();
+        if let Some(model) = self.engines.transcription.model() {
+            models.batch = model.into();
         }
         if self.engines.translation == TranslationEngine::Gpt6Luna {
             models.translate = "gpt-6-luna".into();
@@ -1524,14 +1613,14 @@ mod tests {
         assert!(!plan_of(Engines::OPENAI).uses_chrome());
         assert!(Engines::OPENAI.paid());
         assert!(plan_of(Engines::LIGHT).uses_chrome());
-        assert!(Engines::LIGHT.uses_openai() && Engines::LIGHT.uses_xai());
+        assert!(Engines::LIGHT.uses_openai() && Engines::LIGHT.uses(Provider::Xai));
         let paid_furigana = Engines {
             furigana: RubySource::Llm,
             ..Engines::CHROME
         };
         assert!(plan_of(paid_furigana).uses_chrome());
         assert!(paid_furigana.paid());
-        assert!(paid_furigana.uses_openai() && !paid_furigana.uses_xai());
+        assert!(paid_furigana.uses_openai() && !paid_furigana.uses(Provider::Xai));
     }
 
     /// 用語と翻訳を分けた作り方（DESIGN.md 9.7）。翻訳が LLM なら、用語の選択は使わない
@@ -1545,12 +1634,12 @@ mod tests {
             ..Engines::CHROME
         };
         assert_eq!(split.sanitized(), split);
-        assert!(split.decides_terms() && split.uses_openai() && split.uses_qwen());
-        assert!(!split.uses_xai());
+        assert!(split.decides_terms() && split.uses_openai() && split.uses(Provider::Qwen));
+        assert!(!split.uses(Provider::Xai));
         let finals = plan_of(split).finals;
         assert_eq!(
             (finals.emphasis, finals.translation),
-            (Some(E::Decisions), Some(Tr::QwenMt))
+            (Some(E::Decisions), Some(Tr::Mt))
         );
         // 確かめられなかったときのために、PC の中の一致も付ける
         assert!(finals.marks() && finals.local_terms());
@@ -1562,7 +1651,7 @@ mod tests {
             terms: TermsEngine::Decisions,
             ..Engines::CHROME
         };
-        assert!(decided.uses_openai() && !decided.uses_qwen());
+        assert!(decided.uses_openai() && !decided.uses(Provider::Qwen));
         let finals = plan_of(decided).finals;
         assert_eq!(
             (finals.emphasis, finals.translation),
@@ -1574,7 +1663,7 @@ mod tests {
             translation: TranslationEngine::QwenMtFlash,
             ..Engines::CHROME
         };
-        assert!(translated.paid() && translated.uses_qwen() && !translated.uses_openai());
+        assert!(translated.paid() && translated.uses(Provider::Qwen) && !translated.uses_openai());
         assert_eq!(plan_of(translated).finals.emphasis, Some(E::Terms));
 
         // LLM が翻訳と同時に判定する
@@ -1617,12 +1706,58 @@ mod tests {
 
     /// Grok の確定は xAI だけを使い、確定の文の出どころとモデルだけが変わる
     #[test]
+    fn each_step_asks_for_the_key_of_its_company() {
+        // 用語は Jev、翻訳は Hy-MT2、確定は MAI-Transcribe 2（OpenAI は使わない）
+        let mixed = Engines {
+            transcription: FinalSource::MaiTranscribe2,
+            terms: TermsEngine::Jev,
+            translation: TranslationEngine::HyMt2,
+            ..Engines::CHROME
+        };
+        assert_eq!(
+            mixed.providers(),
+            [Provider::OpenRouter, Provider::TypeSafe]
+        );
+        assert_eq!(mixed.judge().unwrap().name, "jev-latest");
+        assert_eq!(
+            mixed.translation.mt().unwrap().name,
+            "tencent/hy-mt2-30b-a3b"
+        );
+        let settings = Settings {
+            engines: mixed,
+            ..Settings::default()
+        };
+        assert_eq!(settings.models_in_use().batch, "microsoft/mai-transcribe-2");
+        // 翻訳が LLM なら、判定モデルは使わない（その会社の鍵も要らない）
+        let llm = Engines {
+            terms: TermsEngine::DrexMax,
+            ..Engines::STANDARD
+        };
+        assert_eq!(llm.providers(), [Provider::OpenAi]);
+        // PC の中の文字起こしは鍵が要らない
+        let local = Engines {
+            transcription: FinalSource::HaasJa,
+            ..Engines::CHROME
+        };
+        assert!(!local.paid());
+        assert_eq!(
+            Settings {
+                engines: local,
+                ..Settings::default()
+            }
+            .models_in_use()
+            .batch,
+            crate::local::HAAS_JA
+        );
+    }
+
+    #[test]
     fn grok_uses_xai_for_the_finals() {
         let grok = Engines {
             transcription: FinalSource::GrokVoiceTranscribe,
             ..Engines::CHROME
         };
-        assert!(grok.paid() && grok.uses_xai() && !grok.uses_openai());
+        assert!(grok.paid() && grok.uses(Provider::Xai) && !grok.uses_openai());
         assert_eq!(grok.sanitized(), grok);
         let settings = Settings {
             engines: grok,

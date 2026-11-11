@@ -93,6 +93,10 @@ fn price(model: &str) -> Option<Price> {
         "gpt-transcribe" => Price::PerMinute(0.0045),
         // xAI の REST は 1 時間 $0.10
         "grok-voice-transcribe-2.0" => Price::PerMinute(0.10 / 60.0),
+        // OpenRouter でも 1 時間 $0.10
+        "microsoft/mai-transcribe-2" => Price::PerMinute(0.10 / 60.0),
+        // PC の中で動くので無料
+        crate::local::HAAS_JA => Price::PerMinute(0.0),
         "gpt-6.1-terra" => Price::PerMillion {
             input: 1.00,
             cached: 0.05,
@@ -109,6 +113,12 @@ fn price(model: &str) -> Option<Price> {
             input: 0.16,
             cached: 0.16,
             output: 0.49,
+        },
+        // TypeSafe AI の Jev。10 億トークン $42 で、出力は数えられない（解説の記事の値。DESIGN.md 9.7）
+        "jev-latest" => Price::PerMillion {
+            input: 0.042,
+            cached: 0.042,
+            output: 0.0,
         },
         _ => return None,
     })
@@ -190,6 +200,18 @@ impl Meter {
                 tokens: tokens.input + tokens.output,
                 usd: usd.unwrap_or(0.0),
                 unpriced: usd.is_none(),
+                ..Amount::default()
+            },
+        );
+    }
+
+    /// 料金を答えに入れてくる会社（OpenRouter）の分
+    pub fn billed(&self, what: Use, tokens: Tokens, usd: f64) {
+        self.add(
+            what,
+            Amount {
+                tokens: tokens.input + tokens.output,
+                usd,
                 ..Amount::default()
             },
         );

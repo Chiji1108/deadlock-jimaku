@@ -4888,6 +4888,6424 @@
       }
     ]
   },
+  "pipeline/decision1+hyMt2": {
+    "summary": {
+      "runs": 63,
+      "ok": 58,
+      "failed": 1,
+      "medianMs": 1313,
+      "p90Ms": 1526,
+      "usd": 0.0023694160000000027
+    },
+    "runs": [
+      {
+        "text": "インファーナスのナパームが痛すぎる。",
+        "ms": 1788,
+        "ok": true,
+        "terms": [
+          [
+            "インファーナス",
+            "hero:1"
+          ],
+          [
+            "ナパーム",
+            "ability:491391007"
+          ]
+        ],
+        "expected": [
+          [
+            "インファーナス",
+            "hero:1"
+          ],
+          [
+            "ナパーム",
+            "ability:491391007"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Infernus⟧'s ⟦Napalm⟧ is so painful.",
+          "ru": "Напалм от ⟦Infernus⟧ — просто невыносимо жжёт!"
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "missing: Napalm"
+          ]
+        }
+      },
+      {
+        "text": "ケルビンのアイスパスで逃げられた。",
+        "ms": 1532,
+        "ok": true,
+        "terms": [
+          [
+            "ケルビン",
+            "hero:12"
+          ],
+          [
+            "アイスパス",
+            "ability:1963397252"
+          ]
+        ],
+        "expected": [
+          [
+            "ケルビン",
+            "hero:12"
+          ],
+          [
+            "アイスパス",
+            "ability:1963397252"
+          ]
+        ],
+        "translations": {
+          "en": "I got away using ⟦Kelvin⟧’s ⟦Ice Path⟧.",
+          "ru": "От Кельвина удалось уйти с помощью его способности ⟦Ice Path⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "missing: Kelvin"
+          ]
+        }
+      },
+      {
+        "text": "ダイナモのシンギュラリティに全員捕まった。",
+        "ms": 1526,
+        "ok": true,
+        "terms": [
+          [
+            "ダイナモ",
+            "hero:11"
+          ],
+          [
+            "シンギュラリティ",
+            "ability:249410288"
+          ]
+        ],
+        "expected": [
+          [
+            "ダイナモ",
+            "hero:11"
+          ],
+          [
+            "シンギュラリティ",
+            "ability:249410288"
+          ]
+        ],
+        "translations": {
+          "en": "Everyone got caught in ⟦Dynamo⟧’s ⟦Singularity⟧.",
+          "ru": "Все попали в ловушку к ⟨⟦Dynamo⟧⟩ с его способностью ⟨⟦Singularity⟧⟩."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ノックダウン買ってヴィンディクタ落とそう。",
+        "ms": 1257,
+        "ok": true,
+        "terms": [
+          [
+            "ノックダウン",
+            "item:1254091416"
+          ],
+          [
+            "ヴィンディクタ",
+            "hero:3"
+          ]
+        ],
+        "expected": [
+          [
+            "ノックダウン",
+            "item:1254091416"
+          ],
+          [
+            "ヴィンディクタ",
+            "hero:3"
+          ]
+        ],
+        "translations": {
+          "en": "Let's buy ⟦Knockdown⟧ and take down ⟦Vindicta⟧.",
+          "ru": "Купим ⟦Knockdown⟧ и сбросим ⟦Vindicta⟧!"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "メタルスキン切らされたのがきつい。",
+        "ms": 1410,
+        "ok": true,
+        "terms": [
+          [
+            "メタルスキン",
+            "item:1378931225"
+          ]
+        ],
+        "expected": [
+          [
+            "メタルスキン",
+            "item:1378931225"
+          ]
+        ],
+        "translations": {
+          "en": "Running out of ⟦Metal Skin⟧ is really tough.",
+          "ru": "Очень обидно, что закончился ⟦Metal Skin⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ワープストーンで壁抜けた。",
+        "ms": 1437,
+        "ok": true,
+        "terms": [
+          [
+            "ワープストーン",
+            "item:3270001687"
+          ]
+        ],
+        "expected": [
+          [
+            "ワープストーン",
+            "item:3270001687"
+          ]
+        ],
+        "translations": {
+          "en": "I went through the wall using ⟦Warp Stone⟧.",
+          "ru": "Пробился сквозь стену с помощью ⟦Warp Stone⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "アンストッパブル間に合った。",
+        "ms": 1431,
+        "ok": true,
+        "terms": [
+          [
+            "アンストッパブル",
+            "item:3357231760"
+          ]
+        ],
+        "expected": [
+          [
+            "アンストッパブル",
+            "item:3357231760"
+          ]
+        ],
+        "translations": {
+          "en": "Made it in time for ⟨⟦Unstoppable⟧⟩.",
+          "ru": "Успел вовремя перед активацией ⟦Unstoppable⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "不屈の心は序盤に買っておきたい。",
+        "ms": 1361,
+        "ok": true,
+        "terms": [
+          [
+            "不屈の心",
+            "item:1672893796"
+          ]
+        ],
+        "expected": [
+          [
+            "不屈の心",
+            "item:1672893796"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Grit⟧ is something you should buy early on.",
+          "ru": "⟦Grit⟧ стоит купить в начале игры."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ビバップのスティッキーボム二個付けられた。",
+        "ms": 1316,
+        "ok": true,
+        "terms": [
+          [
+            "ビバップ",
+            "hero:15"
+          ],
+          [
+            "スティッキーボム",
+            "ability:2521902222"
+          ]
+        ],
+        "expected": [
+          [
+            "ビバップ",
+            "hero:15"
+          ],
+          [
+            "スティッキーボム",
+            "ability:2521902222"
+          ]
+        ],
+        "translations": {
+          "en": "Two of ⟦Bebop⟧'s ⟦Sticky Bomb⟧s were attached.",
+          "ru": "На ⟦Bebop⟧ прикреплено два ⟦Sticky Bomb⟧."
+        },
+        "problems": {
+          "en": [
+            "inflected: Sticky Bomb"
+          ],
+          "ru": []
+        }
+      },
+      {
+        "text": "トキシックバレットとヒールベインで回復止めよう。",
+        "ms": 1270,
+        "ok": true,
+        "terms": [
+          [
+            "トキシックバレット",
+            "item:3696726732"
+          ],
+          [
+            "ヒールベイン",
+            "item:2603935618"
+          ]
+        ],
+        "expected": [
+          [
+            "トキシックバレット",
+            "item:3696726732"
+          ],
+          [
+            "ヒールベイン",
+            "item:2603935618"
+          ]
+        ],
+        "translations": {
+          "en": "Let's use ⟦Toxic Bullets⟧ and ⟦Healbane⟧ to stop their healing.",
+          "ru": "Давайте заблокируем восстановление с помощью ⟦Toxic Bullets⟧ и ⟦Healbane⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "スピリットシールドかバレットレジリエンスどっちがいいかな。",
+        "ms": 1313,
+        "ok": true,
+        "terms": [
+          [
+            "スピリットシールド",
+            "item:112198670"
+          ],
+          [
+            "バレットレジリエンス",
+            "item:3140772621"
+          ]
+        ],
+        "expected": [
+          [
+            "スピリットシールド",
+            "item:112198670"
+          ],
+          [
+            "バレットレジリエンス",
+            "item:3140772621"
+          ]
+        ],
+        "translations": {
+          "en": "Which is better: ⟦Spirit Shielding⟧ or ⟦Bullet Resilience⟧?",
+          "ru": "Что лучше выбрать: ⟦Spirit Shielding⟧ или ⟦Bullet Resilience⟧?"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ミラージュ強いな今のパッチ。",
+        "ms": 1366,
+        "ok": true,
+        "terms": [
+          [
+            "ミラージュ",
+            "hero:52"
+          ]
+        ],
+        "expected": [
+          [
+            "ミラージュ",
+            "hero:52"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Mirage⟧ is so strong in the current patch.",
+          "ru": "⟦Mirage⟧ — реально сильный в текущем патче."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "インファーナスのウルトでスタン入った。",
+        "ms": 1344,
+        "ok": true,
+        "terms": [
+          [
+            "インファーナス",
+            "hero:1"
+          ],
+          [
+            "ウルト",
+            "ability:1142270357"
+          ]
+        ],
+        "expected": [
+          [
+            "インファーナス",
+            "hero:1"
+          ],
+          [
+            "ウルト",
+            "ability:1142270357"
+          ]
+        ],
+        "translations": {
+          "en": "I got stunned by ⟦Infernus⟧’s ⟦Concussive Combustion⟧.",
+          "ru": "От ⟨⟦Infernus⟧⟩ пришёл стан от способности ⟨⟦Concussive Combustion⟧⟩."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ラッシュの2番で屋根に上がって。",
+        "ms": 1429,
+        "ok": true,
+        "terms": [
+          [
+            "ラッシュ",
+            "hero:31"
+          ],
+          [
+            "2番",
+            "ability:2670099061"
+          ]
+        ],
+        "expected": [
+          [
+            "ラッシュ",
+            "hero:31"
+          ],
+          [
+            "2番",
+            "ability:2670099061"
+          ]
+        ],
+        "translations": {
+          "en": "Use ⟦Lash⟧'s ⟦Grapple⟧ to get up on the roof.",
+          "ru": "Залезаем на крышу с помощью ⟦Grapple⟧ у ⟦Lash⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ミナのウルトでサイレンス食らった。",
+        "ms": 1330,
+        "ok": true,
+        "terms": [
+          [
+            "ミナ",
+            "hero:63"
+          ],
+          [
+            "ウルト",
+            "ability:3379486147"
+          ]
+        ],
+        "expected": [
+          [
+            "ミナ",
+            "hero:63"
+          ],
+          [
+            "ウルト",
+            "ability:3379486147"
+          ]
+        ],
+        "translations": {
+          "en": "I got silenced by ⟦Mina⟧’s ⟦Nox Nostra⟧.",
+          "ru": "Меня заткнули способностью ⟦Nox Nostra⟧ у ⟦Mina⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "そのあとウルトで焼かれた。",
+        "ms": 3124,
+        "error": "no en"
+      },
+      {
+        "text": "ヤマトの１番溜めてから当てて。",
+        "ms": 1385,
+        "ok": true,
+        "terms": [
+          [
+            "ヤマト",
+            "hero:27"
+          ],
+          [
+            "１番",
+            "ability:3255651252"
+          ]
+        ],
+        "expected": [
+          [
+            "ヤマト",
+            "hero:27"
+          ],
+          [
+            "１番",
+            "ability:3255651252"
+          ]
+        ],
+        "translations": {
+          "en": "Charge up ⟦Yamato⟧’s ⟦Power Slash⟧ and then hit them with it.",
+          "ru": "Накопи энергию для способности ⟦Power Slash⟧ у ⟦Yamato⟧, а потом нанеси удар."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ダイナモウルト来るから散って。",
+        "ms": 1276,
+        "ok": false,
+        "terms": [
+          [
+            "ウルト",
+            "ability:249410288"
+          ]
+        ],
+        "expected": [
+          [
+            "ダイナモ",
+            "hero:11"
+          ],
+          [
+            "ウルト",
+            "ability:249410288"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Singularity⟧ is coming, so scatter!",
+          "ru": "Динамо с ⟨⟦Singularity⟧⟩ идёт — разбегайтесь!"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "アイビーの３番で耐えた。",
+        "ms": 1310,
+        "ok": true,
+        "terms": [
+          [
+            "アイビー",
+            "hero:20"
+          ],
+          [
+            "３番",
+            "ability:3642273386"
+          ]
+        ],
+        "expected": [
+          [
+            "アイビー",
+            "hero:20"
+          ],
+          [
+            "３番",
+            "ability:3642273386"
+          ]
+        ],
+        "translations": {
+          "en": "I survived using ⟦Ivy⟧'s ⟦Stone Form⟧.",
+          "ru": "Я выдержал удар благодаря ⟦Stone Form⟧ у ⟦Ivy⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ラッシュのウルトで全員叩きつけられた。",
+        "ms": 1335,
+        "ok": true,
+        "terms": [
+          [
+            "ラッシュ",
+            "hero:31"
+          ],
+          [
+            "ウルト",
+            "ability:397010810"
+          ]
+        ],
+        "expected": [
+          [
+            "ラッシュ",
+            "hero:31"
+          ],
+          [
+            "ウルト",
+            "ability:397010810"
+          ]
+        ],
+        "translations": {
+          "en": "Everyone got knocked down by ⟦Lash⟧'s ⟦Death Slam⟧.",
+          "ru": "Всех приложило ударом ⟦Death Slam⟧ от ⟦Lash⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "シルバーにウルト当てられた。",
+        "ms": 1326,
+        "ok": true,
+        "terms": [
+          [
+            "シルバー",
+            "hero:80"
+          ],
+          [
+            "ウルト",
+            "ability:515791019"
+          ]
+        ],
+        "expected": [
+          [
+            "シルバー",
+            "hero:80"
+          ],
+          [
+            "ウルト",
+            "ability:515791019"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Silver⟧ got hit by ⟦Lycan Curse⟧.",
+          "ru": "⟦Silver⟧ попал под действие ⟦Lycan Curse⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "3番のクールダウン長いな。",
+        "ms": 1276,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Number 3 has a long cooldown.",
+          "ru": "У 3-го долгий кулдаун, да."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ウルトあと10秒。",
+        "ms": 617,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Ultimate in 10 seconds.",
+          "ru": "Ульта через 10 секунд."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "エコーシャードでウルト二回撃てる。",
+        "ms": 1481,
+        "ok": true,
+        "terms": [
+          [
+            "エコーシャード",
+            "item:630839635"
+          ]
+        ],
+        "expected": [
+          [
+            "エコーシャード",
+            "item:630839635"
+          ]
+        ],
+        "translations": {
+          "en": "I can use my ult twice with an ⟦Echo Shard⟧.",
+          "ru": "С помощью ⟦Echo Shard⟧ можно использовать ульту дважды."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "リフレッシャー持ってるからウルト二連発くるよ。",
+        "ms": 1259,
+        "ok": true,
+        "terms": [
+          [
+            "リフレッシャー",
+            "item:677738769"
+          ]
+        ],
+        "expected": [
+          [
+            "リフレッシャー",
+            "item:677738769"
+          ]
+        ],
+        "translations": {
+          "en": "I’ve got an ⟦Refresher⟧, so I’ll be able to use my ultimate twice in a row.",
+          "ru": "Раз у меня есть ⟦Refresher⟧, смогу использовать ульту дважды подряд!"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "エイブラムスのチャージで壁に当てられた。",
+        "ms": 1440,
+        "ok": true,
+        "terms": [
+          [
+            "エイブラムス",
+            "hero:6"
+          ],
+          [
+            "チャージ",
+            "ability:2824119765"
+          ]
+        ],
+        "expected": [
+          [
+            "エイブラムス",
+            "hero:6"
+          ],
+          [
+            "チャージ",
+            "ability:2824119765"
+          ]
+        ],
+        "translations": {
+          "en": "I got hit into a wall by ⟦Abrams⟧’s ⟦Shoulder Charge⟧.",
+          "ru": "Абрамс попал в меня своим приёмом ⟦Shoulder Charge⟧ прямо о стену."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "missing: Abrams"
+          ]
+        }
+      },
+      {
+        "text": "ケルビンのビームで足遅くされた。",
+        "ms": 1340,
+        "ok": true,
+        "terms": [
+          [
+            "ケルビン",
+            "hero:12"
+          ],
+          [
+            "ビーム",
+            "ability:2351041382"
+          ]
+        ],
+        "expected": [
+          [
+            "ケルビン",
+            "hero:12"
+          ],
+          [
+            "ビーム",
+            "ability:2351041382"
+          ]
+        ],
+        "translations": {
+          "en": "I got slowed down by ⟦Kelvin⟧’s ⟦Arctic Beam⟧.",
+          "ru": "Меня замедлил ⟦Arctic Beam⟧ у ⟦Kelvin⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ビバップのフックに気をつけて。",
+        "ms": 1371,
+        "ok": false,
+        "terms": [],
+        "expected": [
+          [
+            "ビバップ",
+            "hero:15"
+          ],
+          [
+            "フック",
+            "ability:1928108461"
+          ]
+        ],
+        "translations": {
+          "en": "Watch out for Bivouac's hook.",
+          "ru": "Осторожно с крюком у Bebop!"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "インファ強すぎない？",
+        "ms": 1166,
+        "ok": true,
+        "terms": [
+          [
+            "インファ",
+            "hero:1"
+          ]
+        ],
+        "expected": [
+          [
+            "インファ",
+            "hero:1"
+          ]
+        ],
+        "translations": {
+          "en": "Isn’t ⟦Infernus⟧ overpowered?",
+          "ru": "Разве ⟦Infernus⟧ не слишком мощный?"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ガイストのウルトで体力入れ替えられた。",
+        "ms": 1504,
+        "ok": true,
+        "terms": [
+          [
+            "ガイスト",
+            "hero:4"
+          ],
+          [
+            "ウルト",
+            "ability:1307289689"
+          ]
+        ],
+        "expected": [
+          [
+            "ガイスト",
+            "hero:4"
+          ],
+          [
+            "ウルト",
+            "ability:1307289689"
+          ]
+        ],
+        "translations": {
+          "en": "I got my health swapped with ⟦Lady Geist⟧ via her ⟦Soul Exchange⟧.",
+          "ru": "Моё здоровье поменялось с ⟨⟦Lady Geist⟧⟩ благодаря её способности ⟨⟦Soul Exchange⟧⟩."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "タロンに遠くから抜かれた。",
+        "ms": 1732,
+        "ok": true,
+        "terms": [
+          [
+            "タロン",
+            "hero:17"
+          ]
+        ],
+        "expected": [
+          [
+            "タロン",
+            "hero:17"
+          ]
+        ],
+        "translations": {
+          "en": "I got picked off from afar by ⟦Grey Talon⟧.",
+          "ru": "⟦Grey Talon⟧ промахнулся по мне с большого расстояния."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "モークリのウルトに捕まった。",
+        "ms": 1308,
+        "ok": true,
+        "terms": [
+          [
+            "モークリ",
+            "hero:18"
+          ],
+          [
+            "ウルト",
+            "ability:1917840730"
+          ]
+        ],
+        "expected": [
+          [
+            "モークリ",
+            "hero:18"
+          ],
+          [
+            "ウルト",
+            "ability:1917840730"
+          ]
+        ],
+        "translations": {
+          "en": "I got caught in ⟦Mo & Krill⟧’s ⟦Combo⟧.",
+          "ru": "Я попался в комбо от ⟦Mo & Krill⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "missing: Combo"
+          ]
+        }
+      },
+      {
+        "text": "ヴィンにずっと撃たれてる。",
+        "ms": 1458,
+        "ok": true,
+        "terms": [
+          [
+            "ヴィン",
+            "hero:3"
+          ]
+        ],
+        "expected": [
+          [
+            "ヴィン",
+            "hero:3"
+          ]
+        ],
+        "translations": {
+          "en": "I’ve been getting shot at non-stop by ⟦Vindicta⟧.",
+          "ru": "Меня постоянно обстреливает ⟦Vindicta⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ヴィンディのウルトで落とされた。",
+        "ms": 1444,
+        "ok": true,
+        "terms": [
+          [
+            "ヴィンディ",
+            "hero:3"
+          ],
+          [
+            "ウルト",
+            "ability:775377419"
+          ]
+        ],
+        "expected": [
+          [
+            "ヴィンディ",
+            "hero:3"
+          ],
+          [
+            "ウルト",
+            "ability:775377419"
+          ]
+        ],
+        "translations": {
+          "en": "I got taken down by ⟦Vindicta⟧’s ⟦Assassinate⟧.",
+          "ru": "Меня убила ⟦Assassinate⟧ от ⟦Vindicta⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "メタスキ押すの遅れた。",
+        "ms": 1388,
+        "ok": false,
+        "terms": [],
+        "expected": [
+          [
+            "メタスキ",
+            "item:1378931225"
+          ]
+        ],
+        "translations": {
+          "en": "I pressed Meta-Skill too late.",
+          "ru": "Я опоздал нажать на Meta-Skill."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "アンストッパ買っとけばよかった。",
+        "ms": 1151,
+        "ok": true,
+        "terms": [
+          [
+            "アンストッパ",
+            "item:3357231760"
+          ]
+        ],
+        "expected": [
+          [
+            "アンストッパ",
+            "item:3357231760"
+          ]
+        ],
+        "translations": {
+          "en": "I should’ve bought ⟦Unstoppable⟧.",
+          "ru": "Надо было купить ⟦Unstoppable⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "インフェルノスのアフターバーンが痛い。",
+        "ms": 1227,
+        "ok": false,
+        "terms": [
+          [
+            "アフターバーン",
+            "ability:1593133799"
+          ]
+        ],
+        "expected": [
+          [
+            "インフェルノス",
+            "hero:1"
+          ],
+          [
+            "アフターバーン",
+            "ability:1593133799"
+          ]
+        ],
+        "translations": {
+          "en": "Infernos's ⟦Afterburn⟧ hurts.",
+          "ru": "⟦Afterburn⟧ у Инферноса — это реально больно."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ビーバップのボムに気をつけて。",
+        "ms": 1405,
+        "ok": true,
+        "terms": [
+          [
+            "ビーバップ",
+            "hero:15"
+          ],
+          [
+            "ボム",
+            "ability:2521902222"
+          ]
+        ],
+        "expected": [
+          [
+            "ビーバップ",
+            "hero:15"
+          ],
+          [
+            "ボム",
+            "ability:2521902222"
+          ]
+        ],
+        "translations": {
+          "en": "Watch out for ⟦Bebop⟧’s ⟦Sticky Bomb⟧.",
+          "ru": "Осторожно с ⟨⟦Sticky Bomb⟧⟩ от ⟨⟦Bebop⟧⟩!"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ワーデンのウルト止めて。",
+        "ms": 1230,
+        "ok": true,
+        "terms": [
+          [
+            "ワーデン",
+            "hero:25"
+          ],
+          [
+            "ウルト",
+            "ability:2702908623"
+          ]
+        ],
+        "expected": [
+          [
+            "ワーデン",
+            "hero:25"
+          ],
+          [
+            "ウルト",
+            "ability:2702908623"
+          ]
+        ],
+        "translations": {
+          "en": "Stop ⟦Warden⟧’s ⟦Last Stand⟧.",
+          "ru": "Останови ⟨⟦Last Stand⟧⟩ у ⟨⟦Warden⟧⟩!"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ビンディクタのウルトで狙われてる。",
+        "ms": 1296,
+        "ok": true,
+        "terms": [
+          [
+            "ビンディクタ",
+            "hero:3"
+          ],
+          [
+            "ウルト",
+            "ability:775377419"
+          ]
+        ],
+        "expected": [
+          [
+            "ビンディクタ",
+            "hero:3"
+          ],
+          [
+            "ウルト",
+            "ability:775377419"
+          ]
+        ],
+        "translations": {
+          "en": "I’m being targeted by ⟦Vindicta⟧’s ⟦Assassinate⟧.",
+          "ru": "Меня целится ⟦Assassinate⟧ у ⟦Vindicta⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ワープストンで逃げた。",
+        "ms": 1194,
+        "ok": true,
+        "terms": [
+          [
+            "ワープストン",
+            "item:3270001687"
+          ]
+        ],
+        "expected": [
+          [
+            "ワープストン",
+            "item:3270001687"
+          ]
+        ],
+        "translations": {
+          "en": "I escaped using ⟦Warp Stone⟧.",
+          "ru": "Сбежал с помощью ⟦Warp Stone⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "メタルスキーン使った。",
+        "ms": 1141,
+        "ok": true,
+        "terms": [
+          [
+            "メタルスキーン",
+            "item:1378931225"
+          ]
+        ],
+        "expected": [
+          [
+            "メタルスキーン",
+            "item:1378931225"
+          ]
+        ],
+        "translations": {
+          "en": "I used ⟦Metal Skin⟧.",
+          "ru": "Я использовал ⟦Metal Skin⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "セブンのパワーサージで火力上がってる。",
+        "ms": 1295,
+        "ok": true,
+        "terms": [
+          [
+            "セブン",
+            "hero:2"
+          ],
+          [
+            "パワーサージ",
+            "ability:539192269"
+          ]
+        ],
+        "expected": [
+          [
+            "セブン",
+            "hero:2"
+          ],
+          [
+            "パワーサージ",
+            "ability:539192269"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Seven⟧’s ⟦Power Surge⟧ is boosting the damage output.",
+          "ru": "Благодаря ⟨⟦Power Surge⟧⟩ у ⟨⟦Seven⟧⟩ значительно увеличилась огневая мощь."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "パワーサージ買ったら移動速くなった。",
+        "ms": 1364,
+        "ok": true,
+        "terms": [
+          [
+            "パワーサージ",
+            "item:1292979587"
+          ]
+        ],
+        "expected": [
+          [
+            "パワーサージ",
+            "item:1292979587"
+          ]
+        ],
+        "translations": {
+          "en": "I bought ⟦Surge of Power⟧ and my movement speed increased.",
+          "ru": "Купил ⟦Surge of Power⟧ — и скорость передвижения увеличилась."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ガイストのライフドレインで吸われた。",
+        "ms": 2090,
+        "ok": true,
+        "terms": [
+          [
+            "ガイスト",
+            "hero:4"
+          ],
+          [
+            "ライフドレイン",
+            "ability:218284420"
+          ]
+        ],
+        "expected": [
+          [
+            "ガイスト",
+            "hero:4"
+          ],
+          [
+            "ライフドレイン",
+            "ability:218284420"
+          ]
+        ],
+        "translations": {
+          "en": "I got drained by ⟦Lady Geist⟧’s ⟦Life Drain⟧.",
+          "ru": "Меня высосало с помощью способности ⟦Life Drain⟧ у ⟦Lady Geist⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ライフドレイン買って耐久上げる。",
+        "ms": 1801,
+        "ok": true,
+        "terms": [
+          [
+            "ライフドレイン",
+            "item:865846625"
+          ]
+        ],
+        "expected": [
+          [
+            "ライフドレイン",
+            "item:865846625"
+          ]
+        ],
+        "translations": {
+          "en": "I’ll buy ⟦Leech⟧ to boost my durability.",
+          "ru": "Покупаю ⟦Leech⟧, чтобы повысить выносливость."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "今シルバー帯だからね。",
+        "ms": 1225,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I'm in the Silver tier right now.",
+          "ru": "Сейчас я в серебряном дивизионе."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ヤマトの荷物まだ届かないんだよね。",
+        "ms": 1150,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Yamato's package still hasn’t arrived, huh.",
+          "ru": "Груз из Ямато до сих пор не прибыл."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "アポロチョコ食べながらやってます。",
+        "ms": 1345,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I’m playing while eating Apollo Chocolate.",
+          "ru": "Я играю, пока ем Apollo Chocolate."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "それストーカーみたいで怖いな。",
+        "ms": 1257,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "That’s kinda creepy—like a stalker.",
+          "ru": "Это как-то по-сталкерски и жутко."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "昨日ボクシングでノックダウン見た。",
+        "ms": 1110,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I saw a knockout in boxing yesterday.",
+          "ru": "Вчера я видел нокдаун в боксе."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "レム睡眠が足りてない。",
+        "ms": 1136,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I’m not getting enough REM sleep.",
+          "ru": "Недостаточно фазы REM-сна."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ビリーって友達が見に来てる。",
+        "ms": 1089,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "My friend Billy is watching me play.",
+          "ru": "Мой друг Билли пришел посмотреть."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "アイビーリーグ出身らしいよ。",
+        "ms": 1215,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "She seems to be from the Ivy League.",
+          "ru": "Похоже, она из Айви-Лиги."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ポケットWi-Fiの調子が悪い。",
+        "ms": 1127,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "My pocket Wi-Fi is acting up.",
+          "ru": "У моего портативного Wi-Fi-модема проблемы с соединением."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "セブンでいいか。",
+        "ms": 1271,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Is Seven fine?",
+          "ru": "Можно Seven?"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "今日はセブンで行くか。",
+        "ms": 1191,
+        "ok": true,
+        "terms": [
+          [
+            "セブン",
+            "hero:2"
+          ]
+        ],
+        "expected": [
+          [
+            "セブン",
+            "hero:2"
+          ]
+        ],
+        "translations": {
+          "en": "I guess I’ll go with ⟦Seven⟧ today.",
+          "ru": "Сегодня, наверное, сыграю за ⟦Seven⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "コメントありがとうございます。",
+        "ms": 1224,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Thanks for the comments.",
+          "ru": "Спасибо за комментарии!"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "今日は3時間くらいやる予定です。",
+        "ms": 755,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I plan to play for about 3 hours today.",
+          "ru": "Сегодня планирую играть около 3 часов."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ちょっと水飲むね。",
+        "ms": 632,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I’m gonna grab a drink real quick.",
+          "ru": "Сейчас выпью воды."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "1番レーンが押されてる。",
+        "ms": 1181,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "The 1st lane is being pushed.",
+          "ru": "Линия 1 под давлением."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ミッドボス取りに行こう。",
+        "ms": 643,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Let’s go for the Midboss.",
+          "ru": "Пойдём заберём Midboss."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ソウル差が5000ある。",
+        "ms": 1497,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "The soul difference is 5000.",
+          "ru": "Разница в душе составляет 5000."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      }
+    ]
+  },
+  "pipeline/drexMax+qwenMtFlash": {
+    "summary": {
+      "runs": 63,
+      "ok": 61,
+      "failed": 0,
+      "medianMs": 982,
+      "p90Ms": 1494,
+      "usd": 0.0052525199999999975
+    },
+    "runs": [
+      {
+        "text": "インファーナスのナパームが痛すぎる。",
+        "ms": 1771,
+        "ok": true,
+        "terms": [
+          [
+            "インファーナス",
+            "hero:1"
+          ],
+          [
+            "ナパーム",
+            "ability:491391007"
+          ]
+        ],
+        "expected": [
+          [
+            "インファーナス",
+            "hero:1"
+          ],
+          [
+            "ナパーム",
+            "ability:491391007"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Infernus⟧'s ⟦Napalm⟧ is hurting way too much.",
+          "ru": "⟦Infernus⟧ с ⟦Napalm⟧ просто убийственно болезненный."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ケルビンのアイスパスで逃げられた。",
+        "ms": 1198,
+        "ok": true,
+        "terms": [
+          [
+            "ケルビン",
+            "hero:12"
+          ],
+          [
+            "アイスパス",
+            "ability:1963397252"
+          ]
+        ],
+        "expected": [
+          [
+            "ケルビン",
+            "hero:12"
+          ],
+          [
+            "アイスパス",
+            "ability:1963397252"
+          ]
+        ],
+        "translations": {
+          "en": "I got escaped by ⟦Kelvin⟧ on the ⟦Ice Path⟧.",
+          "ru": "Меня утащили по ⟦Kelvin⟧ на ⟦Ice Path⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ダイナモのシンギュラリティに全員捕まった。",
+        "ms": 1043,
+        "ok": true,
+        "terms": [
+          [
+            "ダイナモ",
+            "hero:11"
+          ],
+          [
+            "シンギュラリティ",
+            "ability:249410288"
+          ]
+        ],
+        "expected": [
+          [
+            "ダイナモ",
+            "hero:11"
+          ],
+          [
+            "シンギュラリティ",
+            "ability:249410288"
+          ]
+        ],
+        "translations": {
+          "en": "Everyone got caught by ⟦Dynamo⟧'s ⟦Singularity⟧.",
+          "ru": "Все попали под действие ⟦Dynamo⟧ с ⟦Singularity⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ノックダウン買ってヴィンディクタ落とそう。",
+        "ms": 1169,
+        "ok": true,
+        "terms": [
+          [
+            "ノックダウン",
+            "item:1254091416"
+          ],
+          [
+            "ヴィンディクタ",
+            "hero:3"
+          ]
+        ],
+        "expected": [
+          [
+            "ノックダウン",
+            "item:1254091416"
+          ],
+          [
+            "ヴィンディクタ",
+            "hero:3"
+          ]
+        ],
+        "translations": {
+          "en": "Let's buy ⟦Knockdown⟧ and drop ⟦Vindicta⟧.",
+          "ru": "Купим ⟦Knockdown⟧ и скинем ⟦Vindicta⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "メタルスキン切らされたのがきつい。",
+        "ms": 1045,
+        "ok": true,
+        "terms": [
+          [
+            "メタルスキン",
+            "item:1378931225"
+          ]
+        ],
+        "expected": [
+          [
+            "メタルスキン",
+            "item:1378931225"
+          ]
+        ],
+        "translations": {
+          "en": "Getting hit with a full ⟦Metal Skin⟧ combo really stings.",
+          "ru": "Тяжело, когда ⟦Metal Skin⟧ закончился."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ワープストーンで壁抜けた。",
+        "ms": 1221,
+        "ok": true,
+        "terms": [
+          [
+            "ワープストーン",
+            "item:3270001687"
+          ]
+        ],
+        "expected": [
+          [
+            "ワープストーン",
+            "item:3270001687"
+          ]
+        ],
+        "translations": {
+          "en": "I warped through the wall with ⟦Warp Stone⟧.",
+          "ru": "С помощью ⟦Warp Stone⟧ прошёл сквозь стену."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "アンストッパブル間に合った。",
+        "ms": 1096,
+        "ok": true,
+        "terms": [
+          [
+            "アンストッパブル",
+            "item:3357231760"
+          ]
+        ],
+        "expected": [
+          [
+            "アンストッパブル",
+            "item:3357231760"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Unstoppable⟧ made it in time.",
+          "ru": "⟦Unstoppable⟧ успел."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "不屈の心は序盤に買っておきたい。",
+        "ms": 947,
+        "ok": true,
+        "terms": [
+          [
+            "不屈の心",
+            "item:1672893796"
+          ]
+        ],
+        "expected": [
+          [
+            "不屈の心",
+            "item:1672893796"
+          ]
+        ],
+        "translations": {
+          "en": "You’ll want to pick up ⟦Grit⟧ early on.",
+          "ru": "⟦Grit⟧ стоит купить в начале игры."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ビバップのスティッキーボム二個付けられた。",
+        "ms": 1496,
+        "ok": true,
+        "terms": [
+          [
+            "ビバップ",
+            "hero:15"
+          ],
+          [
+            "スティッキーボム",
+            "ability:2521902222"
+          ]
+        ],
+        "expected": [
+          [
+            "ビバップ",
+            "hero:15"
+          ],
+          [
+            "スティッキーボム",
+            "ability:2521902222"
+          ]
+        ],
+        "translations": {
+          "en": "Two Sticky Bombs from ⟦Bebop⟧ were attached.",
+          "ru": "У ⟦Bebop⟧ два наложенных ⟦Sticky Bomb⟧."
+        },
+        "problems": {
+          "en": [
+            "missing: Sticky Bomb"
+          ],
+          "ru": []
+        }
+      },
+      {
+        "text": "トキシックバレットとヒールベインで回復止めよう。",
+        "ms": 939,
+        "ok": true,
+        "terms": [
+          [
+            "トキシックバレット",
+            "item:3696726732"
+          ],
+          [
+            "ヒールベイン",
+            "item:2603935618"
+          ]
+        ],
+        "expected": [
+          [
+            "トキシックバレット",
+            "item:3696726732"
+          ],
+          [
+            "ヒールベイン",
+            "item:2603935618"
+          ]
+        ],
+        "translations": {
+          "en": "Let’s stop the healing with ⟦Toxic Bullets⟧ and ⟦Healbane⟧.",
+          "ru": "Давайте остановим восстановление с помощью ⟦Toxic Bullets⟧ и ⟦Healbane⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "スピリットシールドかバレットレジリエンスどっちがいいかな。",
+        "ms": 694,
+        "ok": true,
+        "terms": [
+          [
+            "スピリットシールド",
+            "item:112198670"
+          ],
+          [
+            "バレットレジリエンス",
+            "item:3140772621"
+          ]
+        ],
+        "expected": [
+          [
+            "スピリットシールド",
+            "item:112198670"
+          ],
+          [
+            "バレットレジリエンス",
+            "item:3140772621"
+          ]
+        ],
+        "translations": {
+          "en": "Should I go with ⟦Spirit Shielding⟧ or ⟦Bullet Resilience⟧?",
+          "ru": "Вот вопрос: что лучше — ⟦Spirit Shielding⟧ или ⟦Bullet Resilience⟧?"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ミラージュ強いな今のパッチ。",
+        "ms": 833,
+        "ok": true,
+        "terms": [
+          [
+            "ミラージュ",
+            "hero:52"
+          ]
+        ],
+        "expected": [
+          [
+            "ミラージュ",
+            "hero:52"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Mirage⟧ is strong in this current patch.",
+          "ru": "Мираж В нынешнем патче он действительно силён."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "missing: Mirage"
+          ]
+        }
+      },
+      {
+        "text": "インファーナスのウルトでスタン入った。",
+        "ms": 1122,
+        "ok": true,
+        "terms": [
+          [
+            "インファーナス",
+            "hero:1"
+          ],
+          [
+            "ウルト",
+            "ability:1142270357"
+          ]
+        ],
+        "expected": [
+          [
+            "インファーナス",
+            "hero:1"
+          ],
+          [
+            "ウルト",
+            "ability:1142270357"
+          ]
+        ],
+        "translations": {
+          "en": "I got stunned by ⟦Infernus⟧’s ⟦Concussive Combustion⟧.",
+          "ru": "На ⟦Infernus⟧ сработала стойка благодаря его ⟦Concussive Combustion⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ラッシュの2番で屋根に上がって。",
+        "ms": 985,
+        "ok": true,
+        "terms": [
+          [
+            "ラッシュ",
+            "hero:31"
+          ],
+          [
+            "2番",
+            "ability:2670099061"
+          ]
+        ],
+        "expected": [
+          [
+            "ラッシュ",
+            "hero:31"
+          ],
+          [
+            "2番",
+            "ability:2670099061"
+          ]
+        ],
+        "translations": {
+          "en": "Use ⟦Lash⟧'s ⟦Grapple⟧ to get up onto the roof.",
+          "ru": "Воспользуйся ⟦Lash⟧ с ⟦Grapple⟧, чтобы подняться на крышу."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ミナのウルトでサイレンス食らった。",
+        "ms": 1030,
+        "ok": true,
+        "terms": [
+          [
+            "ミナ",
+            "hero:63"
+          ],
+          [
+            "ウルト",
+            "ability:3379486147"
+          ]
+        ],
+        "expected": [
+          [
+            "ミナ",
+            "hero:63"
+          ],
+          [
+            "ウルト",
+            "ability:3379486147"
+          ]
+        ],
+        "translations": {
+          "en": "I got silenced by ⟦Mina⟧'s ⟦Nox Nostra⟧.",
+          "ru": "Получил сайд на ⟦Mina⟧ от её ⟦Nox Nostra⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "そのあとウルトで焼かれた。",
+        "ms": 958,
+        "ok": true,
+        "terms": [
+          [
+            "ウルト",
+            "ability:3832675871"
+          ]
+        ],
+        "expected": [
+          [
+            "ウルト",
+            "ability:3832675871"
+          ]
+        ],
+        "translations": {
+          "en": "After that, they got burned by ⟦Hyper Beam⟧.",
+          "ru": "После этого его сожгли ⟦Hyper Beam⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ヤマトの１番溜めてから当てて。",
+        "ms": 728,
+        "ok": true,
+        "terms": [
+          [
+            "ヤマト",
+            "hero:27"
+          ],
+          [
+            "１番",
+            "ability:3255651252"
+          ]
+        ],
+        "expected": [
+          [
+            "ヤマト",
+            "hero:27"
+          ],
+          [
+            "１番",
+            "ability:3255651252"
+          ]
+        ],
+        "translations": {
+          "en": "Charge up ⟦Yamato⟧'s ⟦Power Slash⟧ and then hit it.",
+          "ru": "Заряди ⟦Yamato⟧ с помощью ⟦Power Slash⟧ и потом используй."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ダイナモウルト来るから散って。",
+        "ms": 725,
+        "ok": true,
+        "terms": [
+          [
+            "ダイナモ",
+            "hero:11"
+          ],
+          [
+            "ウルト",
+            "ability:249410288"
+          ]
+        ],
+        "expected": [
+          [
+            "ダイナモ",
+            "hero:11"
+          ],
+          [
+            "ウルト",
+            "ability:249410288"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Dynamo⟧ and ⟦Singularity⟧ are coming, so scatter.",
+          "ru": "⟦Dynamo⟧ и ⟦Singularity⟧ уже идут, разбегайтесь."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "アイビーの３番で耐えた。",
+        "ms": 2099,
+        "ok": true,
+        "terms": [
+          [
+            "アイビー",
+            "hero:20"
+          ],
+          [
+            "３番",
+            "ability:3642273386"
+          ]
+        ],
+        "expected": [
+          [
+            "アイビー",
+            "hero:20"
+          ],
+          [
+            "３番",
+            "ability:3642273386"
+          ]
+        ],
+        "translations": {
+          "en": "I survived with ⟦Ivy⟧'s ⟦Stone Form⟧.",
+          "ru": "Выстоял благодаря ⟦Ivy⟧ в ⟦Stone Form⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ラッシュのウルトで全員叩きつけられた。",
+        "ms": 982,
+        "ok": true,
+        "terms": [
+          [
+            "ラッシュ",
+            "hero:31"
+          ],
+          [
+            "ウルト",
+            "ability:397010810"
+          ]
+        ],
+        "expected": [
+          [
+            "ラッシュ",
+            "hero:31"
+          ],
+          [
+            "ウルト",
+            "ability:397010810"
+          ]
+        ],
+        "translations": {
+          "en": "Everyone got knocked down by ⟦Lash⟧'s ⟦Death Slam⟧.",
+          "ru": "Все получили удар от ⟦Lash⟧ с её ⟦Death Slam⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "シルバーにウルト当てられた。",
+        "ms": 1189,
+        "ok": true,
+        "terms": [
+          [
+            "シルバー",
+            "hero:80"
+          ],
+          [
+            "ウルト",
+            "ability:515791019"
+          ]
+        ],
+        "expected": [
+          [
+            "シルバー",
+            "hero:80"
+          ],
+          [
+            "ウルト",
+            "ability:515791019"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Silver⟧ got hit with ⟦Lycan Curse⟧.",
+          "ru": "⟦Silver⟧ получил удар ⟦Lycan Curse⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "3番のクールダウン長いな。",
+        "ms": 716,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "3's cooldown is long.",
+          "ru": "У умения 3 слишком долгий кулдаун."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ウルトあと10秒。",
+        "ms": 217,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Ult 10 seconds left.",
+          "ru": "Ультимейт ещё 10 секунд."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "エコーシャードでウルト二回撃てる。",
+        "ms": 1139,
+        "ok": true,
+        "terms": [
+          [
+            "エコーシャード",
+            "item:630839635"
+          ]
+        ],
+        "expected": [
+          [
+            "エコーシャード",
+            "item:630839635"
+          ]
+        ],
+        "translations": {
+          "en": "With ⟦Echo Shard⟧, you can fire your ult twice.",
+          "ru": "С ⟦Echo Shard⟧ можно дважды использовать ульту."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "リフレッシャー持ってるからウルト二連発くるよ。",
+        "ms": 658,
+        "ok": true,
+        "terms": [
+          [
+            "リフレッシャー",
+            "item:677738769"
+          ]
+        ],
+        "expected": [
+          [
+            "リフレッシャー",
+            "item:677738769"
+          ]
+        ],
+        "translations": {
+          "en": "I’ve got a ⟦Refresher⟧, so we’re gonna get two ultimates in a row.",
+          "ru": "У меня есть ⟦Refresher⟧, так что будет двойной ульт."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "エイブラムスのチャージで壁に当てられた。",
+        "ms": 913,
+        "ok": true,
+        "terms": [
+          [
+            "エイブラムス",
+            "hero:6"
+          ],
+          [
+            "チャージ",
+            "ability:2824119765"
+          ]
+        ],
+        "expected": [
+          [
+            "エイブラムス",
+            "hero:6"
+          ],
+          [
+            "チャージ",
+            "ability:2824119765"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Abrams⟧ got hit into the wall with a ⟦Shoulder Charge⟧.",
+          "ru": "⟦Abrams⟧ задел стену своим ⟦Shoulder Charge⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ケルビンのビームで足遅くされた。",
+        "ms": 1494,
+        "ok": true,
+        "terms": [
+          [
+            "ケルビン",
+            "hero:12"
+          ],
+          [
+            "ビーム",
+            "ability:2351041382"
+          ]
+        ],
+        "expected": [
+          [
+            "ケルビン",
+            "hero:12"
+          ],
+          [
+            "ビーム",
+            "ability:2351041382"
+          ]
+        ],
+        "translations": {
+          "en": "I got slowed down by ⟦Kelvin⟧'s ⟦Arctic Beam⟧.",
+          "ru": "Кельвин замедлил меня своим ⟦Arctic Beam⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "missing: Kelvin"
+          ]
+        }
+      },
+      {
+        "text": "ビバップのフックに気をつけて。",
+        "ms": 1216,
+        "ok": false,
+        "terms": [
+          [
+            "ビバップ",
+            "hero:15"
+          ],
+          [
+            "フック",
+            "ability:519124136"
+          ]
+        ],
+        "expected": [
+          [
+            "ビバップ",
+            "hero:15"
+          ],
+          [
+            "フック",
+            "ability:1928108461"
+          ]
+        ],
+        "translations": {
+          "en": "Watch out for ⟦Bebop⟧'s ⟦Flog⟧.",
+          "ru": "Берегись ⟦Bebop⟧ и его ⟦Flog⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "インファ強すぎない？",
+        "ms": 1228,
+        "ok": true,
+        "terms": [
+          [
+            "インファ",
+            "hero:1"
+          ]
+        ],
+        "expected": [
+          [
+            "インファ",
+            "hero:1"
+          ]
+        ],
+        "translations": {
+          "en": "Isn’t ⟦Infernus⟧ too strong?",
+          "ru": "⟦Infernus⟧ не слишком сильный?"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ガイストのウルトで体力入れ替えられた。",
+        "ms": 908,
+        "ok": true,
+        "terms": [
+          [
+            "ガイスト",
+            "hero:4"
+          ],
+          [
+            "ウルト",
+            "ability:1307289689"
+          ]
+        ],
+        "expected": [
+          [
+            "ガイスト",
+            "hero:4"
+          ],
+          [
+            "ウルト",
+            "ability:1307289689"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Lady Geist⟧ had her HP swapped using ⟦Soul Exchange⟧.",
+          "ru": "У ⟦Lady Geist⟧ с помощью ⟦Soul Exchange⟧ поменяли здоровье."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "タロンに遠くから抜かれた。",
+        "ms": 921,
+        "ok": true,
+        "terms": [
+          [
+            "タロン",
+            "hero:17"
+          ]
+        ],
+        "expected": [
+          [
+            "タロン",
+            "hero:17"
+          ]
+        ],
+        "translations": {
+          "en": "I got passed from far away by ⟦Grey Talon⟧.",
+          "ru": "Меня обогнали издалека ⟦Grey Talon⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "モークリのウルトに捕まった。",
+        "ms": 1246,
+        "ok": true,
+        "terms": [
+          [
+            "モークリ",
+            "hero:18"
+          ],
+          [
+            "ウルト",
+            "ability:1917840730"
+          ]
+        ],
+        "expected": [
+          [
+            "モークリ",
+            "hero:18"
+          ],
+          [
+            "ウルト",
+            "ability:1917840730"
+          ]
+        ],
+        "translations": {
+          "en": "Got caught in ⟦Mo & Krill⟧’s ⟦Combo⟧.",
+          "ru": "Попал в ⟦Combo⟧ ⟦Mo & Krill⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ヴィンにずっと撃たれてる。",
+        "ms": 963,
+        "ok": true,
+        "terms": [
+          [
+            "ヴィン",
+            "hero:3"
+          ]
+        ],
+        "expected": [
+          [
+            "ヴィン",
+            "hero:3"
+          ]
+        ],
+        "translations": {
+          "en": "I've been getting shot at by ⟦Vindicta⟧ the whole time.",
+          "ru": "Меня всё время стреляют из ⟦Vindicta⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ヴィンディのウルトで落とされた。",
+        "ms": 654,
+        "ok": true,
+        "terms": [
+          [
+            "ヴィンディ",
+            "hero:3"
+          ],
+          [
+            "ウルト",
+            "ability:775377419"
+          ]
+        ],
+        "expected": [
+          [
+            "ヴィンディ",
+            "hero:3"
+          ],
+          [
+            "ウルト",
+            "ability:775377419"
+          ]
+        ],
+        "translations": {
+          "en": "It was taken down by ⟦Vindicta⟧’s ⟦Assassinate⟧.",
+          "ru": "Был убит с помощью ⟦Vindicta⟧ — ⟦Assassinate⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "メタスキ押すの遅れた。",
+        "ms": 1548,
+        "ok": true,
+        "terms": [
+          [
+            "メタスキ",
+            "item:1378931225"
+          ]
+        ],
+        "expected": [
+          [
+            "メタスキ",
+            "item:1378931225"
+          ]
+        ],
+        "translations": {
+          "en": "I was late pressing ⟦Metal Skin⟧.",
+          "ru": "Опоздал с нажатием ⟦Metal Skin⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "アンストッパ買っとけばよかった。",
+        "ms": 1379,
+        "ok": true,
+        "terms": [
+          [
+            "アンストッパ",
+            "item:3357231760"
+          ]
+        ],
+        "expected": [
+          [
+            "アンストッパ",
+            "item:3357231760"
+          ]
+        ],
+        "translations": {
+          "en": "I should’ve bought ⟦Unstoppable⟧.",
+          "ru": "Лучше бы я купил ⟦Unstoppable⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "インフェルノスのアフターバーンが痛い。",
+        "ms": 1154,
+        "ok": false,
+        "terms": [
+          [
+            "アフターバーン",
+            "ability:1593133799"
+          ]
+        ],
+        "expected": [
+          [
+            "インフェルノス",
+            "hero:1"
+          ],
+          [
+            "アフターバーン",
+            "ability:1593133799"
+          ]
+        ],
+        "translations": {
+          "en": "Infernos' ⟦Afterburn⟧ is hurting.",
+          "ru": "У Инферноса болезненный ⟦Afterburn⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ビーバップのボムに気をつけて。",
+        "ms": 1007,
+        "ok": true,
+        "terms": [
+          [
+            "ビーバップ",
+            "hero:15"
+          ],
+          [
+            "ボム",
+            "ability:2521902222"
+          ]
+        ],
+        "expected": [
+          [
+            "ビーバップ",
+            "hero:15"
+          ],
+          [
+            "ボム",
+            "ability:2521902222"
+          ]
+        ],
+        "translations": {
+          "en": "Watch out for ⟦Bebop⟧'s ⟦Sticky Bomb⟧.",
+          "ru": "Осторожно с ⟦Bebop⟧ и его ⟦Sticky Bomb⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ワーデンのウルト止めて。",
+        "ms": 1193,
+        "ok": true,
+        "terms": [
+          [
+            "ワーデン",
+            "hero:25"
+          ],
+          [
+            "ウルト",
+            "ability:2702908623"
+          ]
+        ],
+        "expected": [
+          [
+            "ワーデン",
+            "hero:25"
+          ],
+          [
+            "ウルト",
+            "ability:2702908623"
+          ]
+        ],
+        "translations": {
+          "en": "Stop ⟦Warden⟧'s ⟦Last Stand⟧.",
+          "ru": "Останови ⟦Warden⟧ с его ⟦Last Stand⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ビンディクタのウルトで狙われてる。",
+        "ms": 1117,
+        "ok": true,
+        "terms": [
+          [
+            "ビンディクタ",
+            "hero:3"
+          ],
+          [
+            "ウルト",
+            "ability:775377419"
+          ]
+        ],
+        "expected": [
+          [
+            "ビンディクタ",
+            "hero:3"
+          ],
+          [
+            "ウルト",
+            "ability:775377419"
+          ]
+        ],
+        "translations": {
+          "en": "I'm being targeted by ⟦Vindicta⟧'s ⟦Assassinate⟧.",
+          "ru": "На него нацелился ⟦Vindicta⟧ с умением ⟦Assassinate⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ワープストンで逃げた。",
+        "ms": 1647,
+        "ok": true,
+        "terms": [
+          [
+            "ワープストン",
+            "item:3270001687"
+          ]
+        ],
+        "expected": [
+          [
+            "ワープストン",
+            "item:3270001687"
+          ]
+        ],
+        "translations": {
+          "en": "I escaped with a ⟦Warp Stone⟧.",
+          "ru": "Убежал с помощью ⟦Warp Stone⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "メタルスキーン使った。",
+        "ms": 918,
+        "ok": true,
+        "terms": [
+          [
+            "メタルスキーン",
+            "item:1378931225"
+          ]
+        ],
+        "expected": [
+          [
+            "メタルスキーン",
+            "item:1378931225"
+          ]
+        ],
+        "translations": {
+          "en": "Used ⟦Metal Skin⟧.",
+          "ru": "Использовал ⟦Metal Skin⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "セブンのパワーサージで火力上がってる。",
+        "ms": 897,
+        "ok": true,
+        "terms": [
+          [
+            "セブン",
+            "hero:2"
+          ],
+          [
+            "パワーサージ",
+            "ability:539192269"
+          ]
+        ],
+        "expected": [
+          [
+            "セブン",
+            "hero:2"
+          ],
+          [
+            "パワーサージ",
+            "ability:539192269"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Seven⟧’s ⟦Power Surge⟧ is boosting their damage output.",
+          "ru": "У ⟦Seven⟧ повышена огневая мощь благодаря ⟦Power Surge⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "パワーサージ買ったら移動速くなった。",
+        "ms": 750,
+        "ok": true,
+        "terms": [
+          [
+            "パワーサージ",
+            "item:1292979587"
+          ]
+        ],
+        "expected": [
+          [
+            "パワーサージ",
+            "item:1292979587"
+          ]
+        ],
+        "translations": {
+          "en": "I bought ⟦Surge of Power⟧ and my movement speed went up.",
+          "ru": "Купил ⟦Surge of Power⟧ — скорость передвижения увеличилась."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ガイストのライフドレインで吸われた。",
+        "ms": 812,
+        "ok": true,
+        "terms": [
+          [
+            "ガイスト",
+            "hero:4"
+          ],
+          [
+            "ライフドレイン",
+            "ability:218284420"
+          ]
+        ],
+        "expected": [
+          [
+            "ガイスト",
+            "hero:4"
+          ],
+          [
+            "ライフドレイン",
+            "ability:218284420"
+          ]
+        ],
+        "translations": {
+          "en": "I got drained by ⟦Lady Geist⟧'s ⟦Life Drain⟧.",
+          "ru": "Меня съел ⟦Lady Geist⟧ своим ⟦Life Drain⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ライフドレイン買って耐久上げる。",
+        "ms": 842,
+        "ok": true,
+        "terms": [
+          [
+            "ライフドレイン",
+            "item:865846625"
+          ]
+        ],
+        "expected": [
+          [
+            "ライフドレイン",
+            "item:865846625"
+          ]
+        ],
+        "translations": {
+          "en": "Buy ⟦Leech⟧ to boost durability.",
+          "ru": "Куплю ⟦Leech⟧, чтобы повысить выносливость."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "今シルバー帯だからね。",
+        "ms": 890,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I’m in the Silver rank right now.",
+          "ru": "Сейчас я в серебряном дивизионе."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ヤマトの荷物まだ届かないんだよね。",
+        "ms": 958,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Yamato's cargo still hasn't arrived, has it?",
+          "ru": "Груз Ямато всё ещё не прибыл, да?"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "アポロチョコ食べながらやってます。",
+        "ms": 1836,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I'm playing while munching on Apollo chocolates.",
+          "ru": "Сижу и играю, попивая шоколад Аполло."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "それストーカーみたいで怖いな。",
+        "ms": 1116,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "That's kind of scary, like a stalker.",
+          "ru": "Это как-то жутковато, прямо как в стиле сталкера."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "昨日ボクシングでノックダウン見た。",
+        "ms": 718,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I saw a knockdown in boxing yesterday.",
+          "ru": "Вчера видел нокаут в боксе."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "レム睡眠が足りてない。",
+        "ms": 1153,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I’m not getting enough REM sleep.",
+          "ru": "Не хватает фазы быстрого сна."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ビリーって友達が見に来てる。",
+        "ms": 1073,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Billy's got some friends over to watch.",
+          "ru": "Билли, сюда пришли друзья посмотреть."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "アイビーリーグ出身らしいよ。",
+        "ms": 1035,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Apparently, they’re an Ivy League grad.",
+          "ru": "Говорят, он окончил Иви-лигу."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ポケットWi-Fiの調子が悪い。",
+        "ms": 739,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "My pocket Wi-Fi isn't working well.",
+          "ru": "У моего портативного Wi-Fi что-то не так."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "セブンでいいか。",
+        "ms": 934,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Seven it is.",
+          "ru": "Семёрка подойдёт?"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "今日はセブンで行くか。",
+        "ms": 1441,
+        "ok": true,
+        "terms": [
+          [
+            "セブン",
+            "hero:2"
+          ]
+        ],
+        "expected": [
+          [
+            "セブン",
+            "hero:2"
+          ]
+        ],
+        "translations": {
+          "en": "Shall we go with ⟦Seven⟧ today?",
+          "ru": "Сегодня пойдём с ⟦Seven⟧?"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "コメントありがとうございます。",
+        "ms": 823,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Thanks for the comment.",
+          "ru": "Спасибо за комментарий."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "今日は3時間くらいやる予定です。",
+        "ms": 300,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I’m planning to play for about three hours today.",
+          "ru": "Сегодня планирую поиграть около трёх часов."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ちょっと水飲むね。",
+        "ms": 304,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I'm gonna grab a quick drink.",
+          "ru": "Сейчас попью воды."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "1番レーンが押されてる。",
+        "ms": 785,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Top lane is being pushed.",
+          "ru": "Первая линия давит."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ミッドボス取りに行こう。",
+        "ms": 443,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Let's go take the mid boss.",
+          "ru": "Давай пойдём за мид-боссом."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ソウル差が5000ある。",
+        "ms": 981,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "There's a 5000 soul difference.",
+          "ru": "Разница в силах души — 5000."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      }
+    ]
+  },
+  "pipeline/jev+hyMt2": {
+    "summary": {
+      "runs": 63,
+      "ok": 57,
+      "failed": 0,
+      "medianMs": 973,
+      "p90Ms": 1111,
+      "usd": 0.003189588000000001
+    },
+    "runs": [
+      {
+        "text": "インファーナスのナパームが痛すぎる。",
+        "ms": 1780,
+        "ok": true,
+        "terms": [
+          [
+            "インファーナス",
+            "hero:1"
+          ],
+          [
+            "ナパーム",
+            "ability:491391007"
+          ]
+        ],
+        "expected": [
+          [
+            "インファーナス",
+            "hero:1"
+          ],
+          [
+            "ナパーム",
+            "ability:491391007"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Infernus⟧'s ⟦Napalm⟧ is so painful.",
+          "ru": "⟦Napalm⟧ от ⟦Infernus⟧ — просто невыносимо больно!"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ケルビンのアイスパスで逃げられた。",
+        "ms": 1054,
+        "ok": true,
+        "terms": [
+          [
+            "ケルビン",
+            "hero:12"
+          ],
+          [
+            "アイスパス",
+            "ability:1963397252"
+          ]
+        ],
+        "expected": [
+          [
+            "ケルビン",
+            "hero:12"
+          ],
+          [
+            "アイスパス",
+            "ability:1963397252"
+          ]
+        ],
+        "translations": {
+          "en": "I got away using ⟦Kelvin⟧’s ⟦Ice Path⟧.",
+          "ru": "От Кельвина удалось уйти с помощью его способности ⟦Ice Path⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "missing: Kelvin"
+          ]
+        }
+      },
+      {
+        "text": "ダイナモのシンギュラリティに全員捕まった。",
+        "ms": 1075,
+        "ok": true,
+        "terms": [
+          [
+            "ダイナモ",
+            "hero:11"
+          ],
+          [
+            "シンギュラリティ",
+            "ability:249410288"
+          ]
+        ],
+        "expected": [
+          [
+            "ダイナモ",
+            "hero:11"
+          ],
+          [
+            "シンギュラリティ",
+            "ability:249410288"
+          ]
+        ],
+        "translations": {
+          "en": "Everyone got caught in ⟦Dynamo⟧’s ⟦Singularity⟧.",
+          "ru": "Все попали в ⟦Singularity⟧ у ⟦Dynamo⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ノックダウン買ってヴィンディクタ落とそう。",
+        "ms": 1088,
+        "ok": false,
+        "terms": [
+          [
+            "ヴィンディクタ",
+            "hero:3"
+          ]
+        ],
+        "expected": [
+          [
+            "ノックダウン",
+            "item:1254091416"
+          ],
+          [
+            "ヴィンディクタ",
+            "hero:3"
+          ]
+        ],
+        "translations": {
+          "en": "Let's buy a knockdown and take down ⟨⟦Vindicta⟧⟩.",
+          "ru": "Купим ⟨Knockdown⟩ и сбросим ⟨⟦Vindicta⟧⟩!"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "メタルスキン切らされたのがきつい。",
+        "ms": 922,
+        "ok": true,
+        "terms": [
+          [
+            "メタルスキン",
+            "item:1378931225"
+          ]
+        ],
+        "expected": [
+          [
+            "メタルスキン",
+            "item:1378931225"
+          ]
+        ],
+        "translations": {
+          "en": "Running out of ⟦Metal Skin⟧ is really tough.",
+          "ru": "Крайне неприятно, что закончился ⟦Metal Skin⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ワープストーンで壁抜けた。",
+        "ms": 1124,
+        "ok": true,
+        "terms": [
+          [
+            "ワープストーン",
+            "item:3270001687"
+          ]
+        ],
+        "expected": [
+          [
+            "ワープストーン",
+            "item:3270001687"
+          ]
+        ],
+        "translations": {
+          "en": "I went through the wall using ⟦Warp Stone⟧.",
+          "ru": "Пробрался сквозь стену с помощью ⟦Warp Stone⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "アンストッパブル間に合った。",
+        "ms": 1056,
+        "ok": true,
+        "terms": [
+          [
+            "アンストッパブル",
+            "item:3357231760"
+          ]
+        ],
+        "expected": [
+          [
+            "アンストッパブル",
+            "item:3357231760"
+          ]
+        ],
+        "translations": {
+          "en": "Made it in time for ⟨⟦Unstoppable⟧⟩.",
+          "ru": "Успел вовремя во время ⟨⟦Unstoppable⟧⟩!"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "不屈の心は序盤に買っておきたい。",
+        "ms": 1010,
+        "ok": true,
+        "terms": [
+          [
+            "不屈の心",
+            "item:1672893796"
+          ]
+        ],
+        "expected": [
+          [
+            "不屈の心",
+            "item:1672893796"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Grit⟧ is something you want to buy early on.",
+          "ru": "⟦Grit⟧ стоит купить в начале игры."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ビバップのスティッキーボム二個付けられた。",
+        "ms": 889,
+        "ok": true,
+        "terms": [
+          [
+            "ビバップ",
+            "hero:15"
+          ],
+          [
+            "スティッキーボム",
+            "ability:2521902222"
+          ]
+        ],
+        "expected": [
+          [
+            "ビバップ",
+            "hero:15"
+          ],
+          [
+            "スティッキーボム",
+            "ability:2521902222"
+          ]
+        ],
+        "translations": {
+          "en": "Two of ⟦Bebop⟧'s ⟦Sticky Bomb⟧s were attached.",
+          "ru": "На ⟦Bebop⟧ установлено два ⟦Sticky Bomb⟧."
+        },
+        "problems": {
+          "en": [
+            "inflected: Sticky Bomb"
+          ],
+          "ru": []
+        }
+      },
+      {
+        "text": "トキシックバレットとヒールベインで回復止めよう。",
+        "ms": 1092,
+        "ok": true,
+        "terms": [
+          [
+            "トキシックバレット",
+            "item:3696726732"
+          ],
+          [
+            "ヒールベイン",
+            "item:2603935618"
+          ]
+        ],
+        "expected": [
+          [
+            "トキシックバレット",
+            "item:3696726732"
+          ],
+          [
+            "ヒールベイン",
+            "item:2603935618"
+          ]
+        ],
+        "translations": {
+          "en": "Let's use ⟦Toxic Bullets⟧ and ⟦Healbane⟧ to stop their healing.",
+          "ru": "Давайте заблокируем восстановление с помощью ⟦Toxic Bullets⟧ и ⟦Healbane⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "スピリットシールドかバレットレジリエンスどっちがいいかな。",
+        "ms": 920,
+        "ok": true,
+        "terms": [
+          [
+            "スピリットシールド",
+            "item:112198670"
+          ],
+          [
+            "バレットレジリエンス",
+            "item:3140772621"
+          ]
+        ],
+        "expected": [
+          [
+            "スピリットシールド",
+            "item:112198670"
+          ],
+          [
+            "バレットレジリエンス",
+            "item:3140772621"
+          ]
+        ],
+        "translations": {
+          "en": "Which is better: ⟦Spirit Shielding⟧ or ⟦Bullet Resilience⟧?",
+          "ru": "Что лучше — ⟦Spirit Shielding⟧ или ⟦Bullet Resilience⟧?"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ミラージュ強いな今のパッチ。",
+        "ms": 887,
+        "ok": true,
+        "terms": [
+          [
+            "ミラージュ",
+            "hero:52"
+          ]
+        ],
+        "expected": [
+          [
+            "ミラージュ",
+            "hero:52"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Mirage⟧ is strong in the current patch.",
+          "ru": "⟦Mirage⟧ — сильный герой в текущем патче."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "インファーナスのウルトでスタン入った。",
+        "ms": 920,
+        "ok": true,
+        "terms": [
+          [
+            "インファーナス",
+            "hero:1"
+          ],
+          [
+            "ウルト",
+            "ability:1142270357"
+          ]
+        ],
+        "expected": [
+          [
+            "インファーナス",
+            "hero:1"
+          ],
+          [
+            "ウルト",
+            "ability:1142270357"
+          ]
+        ],
+        "translations": {
+          "en": "I got stunned by ⟦Infernus⟧’s ⟦Concussive Combustion⟧.",
+          "ru": "От ⟨⟦Infernus⟧⟩ пришёл стан от способности ⟨⟦Concussive Combustion⟧⟩."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ラッシュの2番で屋根に上がって。",
+        "ms": 1087,
+        "ok": true,
+        "terms": [
+          [
+            "ラッシュ",
+            "hero:31"
+          ],
+          [
+            "2番",
+            "ability:2670099061"
+          ]
+        ],
+        "expected": [
+          [
+            "ラッシュ",
+            "hero:31"
+          ],
+          [
+            "2番",
+            "ability:2670099061"
+          ]
+        ],
+        "translations": {
+          "en": "Use ⟦Lash⟧'s ⟦Grapple⟧ to get up on the roof.",
+          "ru": "Залезаем на крышу с помощью ⟦Grapple⟧ у ⟦Lash⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ミナのウルトでサイレンス食らった。",
+        "ms": 1055,
+        "ok": true,
+        "terms": [
+          [
+            "ミナ",
+            "hero:63"
+          ],
+          [
+            "ウルト",
+            "ability:3379486147"
+          ]
+        ],
+        "expected": [
+          [
+            "ミナ",
+            "hero:63"
+          ],
+          [
+            "ウルト",
+            "ability:3379486147"
+          ]
+        ],
+        "translations": {
+          "en": "I got silenced by ⟦Mina⟧’s ⟦Nox Nostra⟧.",
+          "ru": "Меня заткнула ⟦Nox Nostra⟧ у ⟦Mina⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "そのあとウルトで焼かれた。",
+        "ms": 943,
+        "ok": false,
+        "terms": [],
+        "expected": [
+          [
+            "ウルト",
+            "ability:3832675871"
+          ]
+        ],
+        "translations": {
+          "en": "Then I got burned by an ult.",
+          "ru": "Потом меня поджёг ультой."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ヤマトの１番溜めてから当てて。",
+        "ms": 1064,
+        "ok": true,
+        "terms": [
+          [
+            "ヤマト",
+            "hero:27"
+          ],
+          [
+            "１番",
+            "ability:3255651252"
+          ]
+        ],
+        "expected": [
+          [
+            "ヤマト",
+            "hero:27"
+          ],
+          [
+            "１番",
+            "ability:3255651252"
+          ]
+        ],
+        "translations": {
+          "en": "Charge up ⟦Yamato⟧’s ⟦Power Slash⟧ and then hit them with it.",
+          "ru": "Накопи энергию для ⟨⟦Power Slash⟧⟩ у ⟨⟦Yamato⟧⟩, а потом используй её."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ダイナモウルト来るから散って。",
+        "ms": 931,
+        "ok": true,
+        "terms": [
+          [
+            "ダイナモ",
+            "hero:11"
+          ],
+          [
+            "ウルト",
+            "ability:249410288"
+          ]
+        ],
+        "expected": [
+          [
+            "ダイナモ",
+            "hero:11"
+          ],
+          [
+            "ウルト",
+            "ability:249410288"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Dynamo⟧ and ⟦Singularity⟧ are coming, so scatter!",
+          "ru": "Динамо и Сингулярность идут сюда, так что разбегайтесь!"
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "missing: Dynamo",
+            "missing: Singularity"
+          ]
+        }
+      },
+      {
+        "text": "アイビーの３番で耐えた。",
+        "ms": 1084,
+        "ok": true,
+        "terms": [
+          [
+            "アイビー",
+            "hero:20"
+          ],
+          [
+            "３番",
+            "ability:3642273386"
+          ]
+        ],
+        "expected": [
+          [
+            "アイビー",
+            "hero:20"
+          ],
+          [
+            "３番",
+            "ability:3642273386"
+          ]
+        ],
+        "translations": {
+          "en": "I survived using ⟦Ivy⟧'s ⟦Stone Form⟧.",
+          "ru": "Я выдержал удар благодаря ⟦Stone Form⟧ у ⟦Ivy⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ラッシュのウルトで全員叩きつけられた。",
+        "ms": 1019,
+        "ok": true,
+        "terms": [
+          [
+            "ラッシュ",
+            "hero:31"
+          ],
+          [
+            "ウルト",
+            "ability:397010810"
+          ]
+        ],
+        "expected": [
+          [
+            "ラッシュ",
+            "hero:31"
+          ],
+          [
+            "ウルト",
+            "ability:397010810"
+          ]
+        ],
+        "translations": {
+          "en": "Everyone got slammed to the ground by ⟦Lash⟧’s ⟦Death Slam⟧.",
+          "ru": "Всех приложило ударом ⟦Death Slam⟧ от ⟦Lash⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "シルバーにウルト当てられた。",
+        "ms": 893,
+        "ok": true,
+        "terms": [
+          [
+            "シルバー",
+            "hero:80"
+          ],
+          [
+            "ウルト",
+            "ability:515791019"
+          ]
+        ],
+        "expected": [
+          [
+            "シルバー",
+            "hero:80"
+          ],
+          [
+            "ウルト",
+            "ability:515791019"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Silver⟧ got hit by ⟦Lycan Curse⟧.",
+          "ru": "Сильвер попал под действие Ликанское проклятие."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "missing: Silver",
+            "missing: Lycan Curse"
+          ]
+        }
+      },
+      {
+        "text": "3番のクールダウン長いな。",
+        "ms": 973,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Number 3’s cooldown is long, huh.",
+          "ru": "У 3-го довольно долгий кулдаун."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ウルトあと10秒。",
+        "ms": 670,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Ultimate in 10 seconds.",
+          "ru": "Ульта через 10 секунд."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "エコーシャードでウルト二回撃てる。",
+        "ms": 938,
+        "ok": true,
+        "terms": [
+          [
+            "エコーシャード",
+            "item:630839635"
+          ]
+        ],
+        "expected": [
+          [
+            "エコーシャード",
+            "item:630839635"
+          ]
+        ],
+        "translations": {
+          "en": "I can use my ult twice with an ⟦Echo Shard⟧.",
+          "ru": "С помощью ⟦Echo Shard⟧ можно использовать ульту дважды."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "リフレッシャー持ってるからウルト二連発くるよ。",
+        "ms": 1338,
+        "ok": true,
+        "terms": [
+          [
+            "リフレッシャー",
+            "item:677738769"
+          ]
+        ],
+        "expected": [
+          [
+            "リフレッシャー",
+            "item:677738769"
+          ]
+        ],
+        "translations": {
+          "en": "I’ve got an ⟦Refresher⟧, so I’ll be able to use my ultimate twice in a row.",
+          "ru": "Раз у меня есть ⟦Refresher⟧, смогу использовать ульту дважды подряд!"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "エイブラムスのチャージで壁に当てられた。",
+        "ms": 1158,
+        "ok": true,
+        "terms": [
+          [
+            "エイブラムス",
+            "hero:6"
+          ],
+          [
+            "チャージ",
+            "ability:2824119765"
+          ]
+        ],
+        "expected": [
+          [
+            "エイブラムス",
+            "hero:6"
+          ],
+          [
+            "チャージ",
+            "ability:2824119765"
+          ]
+        ],
+        "translations": {
+          "en": "I got hit into a wall by ⟦Abrams⟧’s ⟦Shoulder Charge⟧.",
+          "ru": "Меня прижало к стене ударом плечом от ⟦Abrams⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "missing: Shoulder Charge"
+          ]
+        }
+      },
+      {
+        "text": "ケルビンのビームで足遅くされた。",
+        "ms": 1057,
+        "ok": true,
+        "terms": [
+          [
+            "ケルビン",
+            "hero:12"
+          ],
+          [
+            "ビーム",
+            "ability:2351041382"
+          ]
+        ],
+        "expected": [
+          [
+            "ケルビン",
+            "hero:12"
+          ],
+          [
+            "ビーム",
+            "ability:2351041382"
+          ]
+        ],
+        "translations": {
+          "en": "I got slowed down by ⟦Kelvin⟧’s ⟦Arctic Beam⟧.",
+          "ru": "Меня замедлил ⟦Arctic Beam⟧ у ⟦Kelvin⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ビバップのフックに気をつけて。",
+        "ms": 949,
+        "ok": false,
+        "terms": [
+          [
+            "ビバップ",
+            "hero:15"
+          ]
+        ],
+        "expected": [
+          [
+            "ビバップ",
+            "hero:15"
+          ],
+          [
+            "フック",
+            "ability:1928108461"
+          ]
+        ],
+        "translations": {
+          "en": "Watch out for ⟦Bebop⟧’s hook.",
+          "ru": "Осторожно с крюком у ⟦Bebop⟧!"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "インファ強すぎない？",
+        "ms": 1008,
+        "ok": true,
+        "terms": [
+          [
+            "インファ",
+            "hero:1"
+          ]
+        ],
+        "expected": [
+          [
+            "インファ",
+            "hero:1"
+          ]
+        ],
+        "translations": {
+          "en": "Isn’t ⟦Infernus⟧ too strong?",
+          "ru": "Разве ⟦Infernus⟧ не слишком мощный?"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ガイストのウルトで体力入れ替えられた。",
+        "ms": 1071,
+        "ok": true,
+        "terms": [
+          [
+            "ガイスト",
+            "hero:4"
+          ],
+          [
+            "ウルト",
+            "ability:1307289689"
+          ]
+        ],
+        "expected": [
+          [
+            "ガイスト",
+            "hero:4"
+          ],
+          [
+            "ウルト",
+            "ability:1307289689"
+          ]
+        ],
+        "translations": {
+          "en": "I got my health swapped via ⟦Lady Geist⟧’s ⟦Soul Exchange⟧.",
+          "ru": "Моё здоровье поменялось с ⟨⟦Lady Geist⟧⟩ благодаря её способности ⟨⟦Soul Exchange⟧⟩."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "タロンに遠くから抜かれた。",
+        "ms": 894,
+        "ok": true,
+        "terms": [
+          [
+            "タロン",
+            "hero:17"
+          ]
+        ],
+        "expected": [
+          [
+            "タロン",
+            "hero:17"
+          ]
+        ],
+        "translations": {
+          "en": "I got picked off from afar by ⟦Grey Talon⟧.",
+          "ru": "⟦Grey Talon⟧ пробил меня издалека."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "モークリのウルトに捕まった。",
+        "ms": 948,
+        "ok": true,
+        "terms": [
+          [
+            "モークリ",
+            "hero:18"
+          ],
+          [
+            "ウルト",
+            "ability:1917840730"
+          ]
+        ],
+        "expected": [
+          [
+            "モークリ",
+            "hero:18"
+          ],
+          [
+            "ウルト",
+            "ability:1917840730"
+          ]
+        ],
+        "translations": {
+          "en": "I got caught in ⟦Mo & Krill⟧’s ⟦Combo⟧.",
+          "ru": "Я попался в ловушку их ⟦Combo⟧ от ⟦Mo & Krill⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ヴィンにずっと撃たれてる。",
+        "ms": 1111,
+        "ok": true,
+        "terms": [
+          [
+            "ヴィン",
+            "hero:3"
+          ]
+        ],
+        "expected": [
+          [
+            "ヴィン",
+            "hero:3"
+          ]
+        ],
+        "translations": {
+          "en": "I’ve been getting shot at non-stop by ⟦Vindicta⟧.",
+          "ru": "Меня постоянно обстреливает ⟦Vindicta⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ヴィンディのウルトで落とされた。",
+        "ms": 957,
+        "ok": true,
+        "terms": [
+          [
+            "ヴィンディ",
+            "hero:3"
+          ],
+          [
+            "ウルト",
+            "ability:775377419"
+          ]
+        ],
+        "expected": [
+          [
+            "ヴィンディ",
+            "hero:3"
+          ],
+          [
+            "ウルト",
+            "ability:775377419"
+          ]
+        ],
+        "translations": {
+          "en": "I got taken down by ⟦Vindicta⟧’s ⟦Assassinate⟧.",
+          "ru": "Меня убила ⟦Assassinate⟧ от ⟦Vindicta⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "メタスキ押すの遅れた。",
+        "ms": 761,
+        "ok": false,
+        "terms": [],
+        "expected": [
+          [
+            "メタスキ",
+            "item:1378931225"
+          ]
+        ],
+        "translations": {
+          "en": "I pressed Meta-Skill too late.",
+          "ru": "Я опоздал нажать на Метаски."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "アンストッパ買っとけばよかった。",
+        "ms": 917,
+        "ok": true,
+        "terms": [
+          [
+            "アンストッパ",
+            "item:3357231760"
+          ]
+        ],
+        "expected": [
+          [
+            "アンストッパ",
+            "item:3357231760"
+          ]
+        ],
+        "translations": {
+          "en": "I should’ve bought ⟦Unstoppable⟧.",
+          "ru": "Надо было купить ⟦Unstoppable⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "インフェルノスのアフターバーンが痛い。",
+        "ms": 984,
+        "ok": false,
+        "terms": [
+          [
+            "アフターバーン",
+            "ability:1593133799"
+          ]
+        ],
+        "expected": [
+          [
+            "インフェルノス",
+            "hero:1"
+          ],
+          [
+            "アフターバーン",
+            "ability:1593133799"
+          ]
+        ],
+        "translations": {
+          "en": "Infernos's ⟦Afterburn⟧ hurts.",
+          "ru": "⟦Afterburn⟧ у Инферноса — это реально больно."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ビーバップのボムに気をつけて。",
+        "ms": 1000,
+        "ok": true,
+        "terms": [
+          [
+            "ビーバップ",
+            "hero:15"
+          ],
+          [
+            "ボム",
+            "ability:2521902222"
+          ]
+        ],
+        "expected": [
+          [
+            "ビーバップ",
+            "hero:15"
+          ],
+          [
+            "ボム",
+            "ability:2521902222"
+          ]
+        ],
+        "translations": {
+          "en": "Watch out for ⟦Bebop⟧’s ⟦Sticky Bomb⟧.",
+          "ru": "Осторожно с ⟦Sticky Bomb⟧ у ⟦Bebop⟧!"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ワーデンのウルト止めて。",
+        "ms": 1255,
+        "ok": true,
+        "terms": [
+          [
+            "ワーデン",
+            "hero:25"
+          ],
+          [
+            "ウルト",
+            "ability:2702908623"
+          ]
+        ],
+        "expected": [
+          [
+            "ワーデン",
+            "hero:25"
+          ],
+          [
+            "ウルト",
+            "ability:2702908623"
+          ]
+        ],
+        "translations": {
+          "en": "Stop ⟦Warden⟧’s ⟦Last Stand⟧.",
+          "ru": "Останови ⟨⟦Last Stand⟧⟩ у ⟨⟦Warden⟧⟩!"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ビンディクタのウルトで狙われてる。",
+        "ms": 1015,
+        "ok": true,
+        "terms": [
+          [
+            "ビンディクタ",
+            "hero:3"
+          ],
+          [
+            "ウルト",
+            "ability:775377419"
+          ]
+        ],
+        "expected": [
+          [
+            "ビンディクタ",
+            "hero:3"
+          ],
+          [
+            "ウルト",
+            "ability:775377419"
+          ]
+        ],
+        "translations": {
+          "en": "I’m being targeted by ⟦Vindicta⟧’s ⟦Assassinate⟧.",
+          "ru": "Меня целится ⟦Assassinate⟧ у ⟦Vindicta⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ワープストンで逃げた。",
+        "ms": 892,
+        "ok": true,
+        "terms": [
+          [
+            "ワープストン",
+            "item:3270001687"
+          ]
+        ],
+        "expected": [
+          [
+            "ワープストン",
+            "item:3270001687"
+          ]
+        ],
+        "translations": {
+          "en": "I escaped using ⟦Warp Stone⟧.",
+          "ru": "Сбежал с помощью ⟦Warp Stone⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "メタルスキーン使った。",
+        "ms": 793,
+        "ok": true,
+        "terms": [
+          [
+            "メタルスキーン",
+            "item:1378931225"
+          ]
+        ],
+        "expected": [
+          [
+            "メタルスキーン",
+            "item:1378931225"
+          ]
+        ],
+        "translations": {
+          "en": "Used ⟦Metal Skin⟧.",
+          "ru": "Я использовал ⟦Metal Skin⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "セブンのパワーサージで火力上がってる。",
+        "ms": 916,
+        "ok": true,
+        "terms": [
+          [
+            "セブン",
+            "hero:2"
+          ],
+          [
+            "パワーサージ",
+            "ability:539192269"
+          ]
+        ],
+        "expected": [
+          [
+            "セブン",
+            "hero:2"
+          ],
+          [
+            "パワーサージ",
+            "ability:539192269"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Seven⟧’s ⟦Power Surge⟧ is boosting the damage output.",
+          "ru": "Благодаря способности ⟦Power Surge⟧ у ⟦Seven⟧ заметно вырос урон."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "パワーサージ買ったら移動速くなった。",
+        "ms": 1040,
+        "ok": true,
+        "terms": [
+          [
+            "パワーサージ",
+            "item:1292979587"
+          ]
+        ],
+        "expected": [
+          [
+            "パワーサージ",
+            "item:1292979587"
+          ]
+        ],
+        "translations": {
+          "en": "I bought ⟦Surge of Power⟧ and my movement speed increased.",
+          "ru": "Купил ⟦Surge of Power⟧ — и скорость передвижения увеличилась."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ガイストのライフドレインで吸われた。",
+        "ms": 1048,
+        "ok": true,
+        "terms": [
+          [
+            "ガイスト",
+            "hero:4"
+          ],
+          [
+            "ライフドレイン",
+            "ability:218284420"
+          ]
+        ],
+        "expected": [
+          [
+            "ガイスト",
+            "hero:4"
+          ],
+          [
+            "ライフドレイン",
+            "ability:218284420"
+          ]
+        ],
+        "translations": {
+          "en": "I got drained by ⟦Lady Geist⟧’s ⟦Life Drain⟧.",
+          "ru": "Меня высосало силы с помощью способности ⟦Life Drain⟧ у ⟦Lady Geist⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ライフドレイン買って耐久上げる。",
+        "ms": 922,
+        "ok": true,
+        "terms": [
+          [
+            "ライフドレイン",
+            "item:865846625"
+          ]
+        ],
+        "expected": [
+          [
+            "ライフドレイン",
+            "item:865846625"
+          ]
+        ],
+        "translations": {
+          "en": "I’ll buy ⟦Leech⟧ to boost my durability.",
+          "ru": "Куплю ⟦Leech⟧, чтобы повысить выносливость."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "今シルバー帯だからね。",
+        "ms": 912,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I'm in the Silver tier right now.",
+          "ru": "Сейчас я в серебряном дивизионе."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ヤマトの荷物まだ届かないんだよね。",
+        "ms": 1001,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Yamato's package still hasn’t arrived yet.",
+          "ru": "Посылка из Японии до сих пор не пришла."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "アポロチョコ食べながらやってます。",
+        "ms": 860,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I’m playing while eating Apollo Chocolate.",
+          "ru": "Я играю, пока ем Apollo Choco."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "それストーカーみたいで怖いな。",
+        "ms": 1002,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "That’s kinda creepy—like a stalker.",
+          "ru": "Это как-то по-сталкерски и жутко."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "昨日ボクシングでノックダウン見た。",
+        "ms": 1056,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I saw a knockout in boxing yesterday.",
+          "ru": "Вчера я видел нокдаун в боксе."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "レム睡眠が足りてない。",
+        "ms": 950,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I’m not getting enough REM sleep.",
+          "ru": "Недостаточно REM-сна."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ビリーって友達が見に来てる。",
+        "ms": 961,
+        "ok": false,
+        "terms": [
+          [
+            "ビリー",
+            "hero:72"
+          ]
+        ],
+        "expected": [],
+        "translations": {
+          "en": "A friend of mine named ⟦Billy⟧ is watching.",
+          "ru": "Мой друг ⟨⟦Billy⟧⟩ пришёл посмотреть."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "アイビーリーグ出身らしいよ。",
+        "ms": 781,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "She seems to be from the Ivy League.",
+          "ru": "Похоже, она из Айви-Лиги."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ポケットWi-Fiの調子が悪い。",
+        "ms": 824,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "My pocket Wi-Fi is acting up.",
+          "ru": "Связь по портативному Wi-Fi плохая."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "セブンでいいか。",
+        "ms": 948,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Is Seven fine?",
+          "ru": "Можно Seven?"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "今日はセブンで行くか。",
+        "ms": 1054,
+        "ok": true,
+        "terms": [
+          [
+            "セブン",
+            "hero:2"
+          ]
+        ],
+        "expected": [
+          [
+            "セブン",
+            "hero:2"
+          ]
+        ],
+        "translations": {
+          "en": "I guess I’ll go with ⟦Seven⟧ today.",
+          "ru": "Сегодня, наверное, сыграю за ⟦Seven⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "コメントありがとうございます。",
+        "ms": 1161,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Thanks for the comments.",
+          "ru": "Спасибо за комментарии."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "今日は3時間くらいやる予定です。",
+        "ms": 771,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I plan to play for about 3 hours today.",
+          "ru": "Сегодня планирую играть около 3 часов."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ちょっと水飲むね。",
+        "ms": 688,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I’m gonna grab a drink real quick.",
+          "ru": "Сейчас выпью воды."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "1番レーンが押されてる。",
+        "ms": 1001,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Lane 1 is being pushed.",
+          "ru": "Линия 1 под давлением."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ミッドボス取りに行こう。",
+        "ms": 646,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Let’s go for the Midboss.",
+          "ru": "Пойдём заберём Midboss."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ソウル差が5000ある。",
+        "ms": 946,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "The soul difference is 5000.",
+          "ru": "Разница в душе составляет 5000."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      }
+    ]
+  },
+  "pipeline/pplxDecider+hyMt2": {
+    "summary": {
+      "runs": 63,
+      "ok": 58,
+      "failed": 2,
+      "medianMs": 1473,
+      "p90Ms": 1894,
+      "usd": 0.002014761000000004
+    },
+    "runs": [
+      {
+        "text": "インファーナスのナパームが痛すぎる。",
+        "ms": 579,
+        "error": "429 Too Many Requests: {\"error\":{\"message\":\"HTTP 429: {\\\"error\\\":{\\\"code\\\":null,\\\"message\\\":\\\"Request rate limit exceeded, please try again later.\\\",\\\"param\\\":null,\\\"type\\\":\\\"too_many_requests\\\"}}\\n\",\"code\":429}}"
+      },
+      {
+        "text": "ケルビンのアイスパスで逃げられた。",
+        "ms": 1894,
+        "ok": true,
+        "terms": [
+          [
+            "ケルビン",
+            "hero:12"
+          ],
+          [
+            "アイスパス",
+            "ability:1963397252"
+          ]
+        ],
+        "expected": [
+          [
+            "ケルビン",
+            "hero:12"
+          ],
+          [
+            "アイスパス",
+            "ability:1963397252"
+          ]
+        ],
+        "translations": {
+          "en": "I got away using ⟦Kelvin⟧’s ⟦Ice Path⟧.",
+          "ru": "От Кельвина удалось уйти с помощью его способности ⟦Ice Path⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "missing: Kelvin"
+          ]
+        }
+      },
+      {
+        "text": "ダイナモのシンギュラリティに全員捕まった。",
+        "ms": 1388,
+        "ok": true,
+        "terms": [
+          [
+            "ダイナモ",
+            "hero:11"
+          ],
+          [
+            "シンギュラリティ",
+            "ability:249410288"
+          ]
+        ],
+        "expected": [
+          [
+            "ダイナモ",
+            "hero:11"
+          ],
+          [
+            "シンギュラリティ",
+            "ability:249410288"
+          ]
+        ],
+        "translations": {
+          "en": "Everyone got caught in ⟦Dynamo⟧’s ⟦Singularity⟧.",
+          "ru": "Все попали в ⟦Singularity⟧ у ⟦Dynamo⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ノックダウン買ってヴィンディクタ落とそう。",
+        "ms": 1616,
+        "ok": true,
+        "terms": [
+          [
+            "ノックダウン",
+            "item:1254091416"
+          ],
+          [
+            "ヴィンディクタ",
+            "hero:3"
+          ]
+        ],
+        "expected": [
+          [
+            "ノックダウン",
+            "item:1254091416"
+          ],
+          [
+            "ヴィンディクタ",
+            "hero:3"
+          ]
+        ],
+        "translations": {
+          "en": "Let's buy ⟦Knockdown⟧ and take down ⟦Vindicta⟧.",
+          "ru": "Купим ⟦Knockdown⟧ и сбросим ⟦Vindicta⟧!"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "メタルスキン切らされたのがきつい。",
+        "ms": 1393,
+        "ok": true,
+        "terms": [
+          [
+            "メタルスキン",
+            "item:1378931225"
+          ]
+        ],
+        "expected": [
+          [
+            "メタルスキン",
+            "item:1378931225"
+          ]
+        ],
+        "translations": {
+          "en": "Running out of ⟦Metal Skin⟧ is really tough.",
+          "ru": "Крайне неприятно, что закончился ⟦Metal Skin⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ワープストーンで壁抜けた。",
+        "ms": 1515,
+        "ok": true,
+        "terms": [
+          [
+            "ワープストーン",
+            "item:3270001687"
+          ]
+        ],
+        "expected": [
+          [
+            "ワープストーン",
+            "item:3270001687"
+          ]
+        ],
+        "translations": {
+          "en": "I went through the wall using ⟦Warp Stone⟧.",
+          "ru": "Пробрался сквозь стену с помощью ⟦Warp Stone⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "アンストッパブル間に合った。",
+        "ms": 1269,
+        "ok": true,
+        "terms": [
+          [
+            "アンストッパブル",
+            "item:3357231760"
+          ]
+        ],
+        "expected": [
+          [
+            "アンストッパブル",
+            "item:3357231760"
+          ]
+        ],
+        "translations": {
+          "en": "Made it in time for ⟦Unstoppable⟧.",
+          "ru": "Успел вовремя для ⟦Unstoppable⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "不屈の心は序盤に買っておきたい。",
+        "ms": 1158,
+        "ok": true,
+        "terms": [
+          [
+            "不屈の心",
+            "item:1672893796"
+          ]
+        ],
+        "expected": [
+          [
+            "不屈の心",
+            "item:1672893796"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Grit⟧ is something you should buy early on.",
+          "ru": "⟦Grit⟧ стоит купить в начале игры."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ビバップのスティッキーボム二個付けられた。",
+        "ms": 1258,
+        "ok": true,
+        "terms": [
+          [
+            "ビバップ",
+            "hero:15"
+          ],
+          [
+            "スティッキーボム",
+            "ability:2521902222"
+          ]
+        ],
+        "expected": [
+          [
+            "ビバップ",
+            "hero:15"
+          ],
+          [
+            "スティッキーボム",
+            "ability:2521902222"
+          ]
+        ],
+        "translations": {
+          "en": "Two of ⟦Bebop⟧'s ⟦Sticky Bomb⟧ were attached.",
+          "ru": "На ⟦Bebop⟧ установлено два ⟦Sticky Bomb⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "トキシックバレットとヒールベインで回復止めよう。",
+        "ms": 1314,
+        "ok": true,
+        "terms": [
+          [
+            "トキシックバレット",
+            "item:3696726732"
+          ],
+          [
+            "ヒールベイン",
+            "item:2603935618"
+          ]
+        ],
+        "expected": [
+          [
+            "トキシックバレット",
+            "item:3696726732"
+          ],
+          [
+            "ヒールベイン",
+            "item:2603935618"
+          ]
+        ],
+        "translations": {
+          "en": "Let's use ⟦Toxic Bullets⟧ and ⟦Healbane⟧ to stop their healing.",
+          "ru": "Давайте заблокируем восстановление с помощью ⟦Toxic Bullets⟧ и ⟦Healbane⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "スピリットシールドかバレットレジリエンスどっちがいいかな。",
+        "ms": 1366,
+        "ok": true,
+        "terms": [
+          [
+            "スピリットシールド",
+            "item:112198670"
+          ],
+          [
+            "バレットレジリエンス",
+            "item:3140772621"
+          ]
+        ],
+        "expected": [
+          [
+            "スピリットシールド",
+            "item:112198670"
+          ],
+          [
+            "バレットレジリエンス",
+            "item:3140772621"
+          ]
+        ],
+        "translations": {
+          "en": "Which is better: ⟦Spirit Shielding⟧ or ⟦Bullet Resilience⟧?",
+          "ru": "Что лучше выбрать: ⟦Spirit Shielding⟧ или ⟦Bullet Resilience⟧?"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ミラージュ強いな今のパッチ。",
+        "ms": 1514,
+        "ok": true,
+        "terms": [
+          [
+            "ミラージュ",
+            "hero:52"
+          ]
+        ],
+        "expected": [
+          [
+            "ミラージュ",
+            "hero:52"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Mirage⟧ is so strong in the current patch.",
+          "ru": "⟦Mirage⟧ — сильный герой в текущем патче."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "インファーナスのウルトでスタン入った。",
+        "ms": 1761,
+        "ok": true,
+        "terms": [
+          [
+            "インファーナス",
+            "hero:1"
+          ],
+          [
+            "ウルト",
+            "ability:1142270357"
+          ]
+        ],
+        "expected": [
+          [
+            "インファーナス",
+            "hero:1"
+          ],
+          [
+            "ウルト",
+            "ability:1142270357"
+          ]
+        ],
+        "translations": {
+          "en": "I got stunned by ⟦Infernus⟧’s ⟦Concussive Combustion⟧.",
+          "ru": "От ⟨⟦Infernus⟧⟩ пришёл стан с помощью его способности ⟨⟦Concussive Combustion⟧⟩."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ラッシュの2番で屋根に上がって。",
+        "ms": 1934,
+        "ok": true,
+        "terms": [
+          [
+            "ラッシュ",
+            "hero:31"
+          ],
+          [
+            "2番",
+            "ability:2670099061"
+          ]
+        ],
+        "expected": [
+          [
+            "ラッシュ",
+            "hero:31"
+          ],
+          [
+            "2番",
+            "ability:2670099061"
+          ]
+        ],
+        "translations": {
+          "en": "Use ⟦Lash⟧'s ⟦Grapple⟧ to get up on the roof.",
+          "ru": "Залезаем на крышу с помощью ⟦Grapple⟧ у ⟦Lash⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ミナのウルトでサイレンス食らった。",
+        "ms": 1473,
+        "ok": true,
+        "terms": [
+          [
+            "ミナ",
+            "hero:63"
+          ],
+          [
+            "ウルト",
+            "ability:3379486147"
+          ]
+        ],
+        "expected": [
+          [
+            "ミナ",
+            "hero:63"
+          ],
+          [
+            "ウルト",
+            "ability:3379486147"
+          ]
+        ],
+        "translations": {
+          "en": "I got silenced by ⟦Mina⟧’s ⟦Nox Nostra⟧.",
+          "ru": "Я попал под эффект тишины от ⟦Nox Nostra⟧ у ⟦Mina⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "そのあとウルトで焼かれた。",
+        "ms": 1779,
+        "ok": true,
+        "terms": [
+          [
+            "ウルト",
+            "ability:3832675871"
+          ]
+        ],
+        "expected": [
+          [
+            "ウルト",
+            "ability:3832675871"
+          ]
+        ],
+        "translations": {
+          "en": "Then I got burned by ⟦Hyper Beam⟧.",
+          "ru": "После этого меня поджёг ⟦Hyper Beam⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ヤマトの１番溜めてから当てて。",
+        "ms": 1981,
+        "ok": true,
+        "terms": [
+          [
+            "ヤマト",
+            "hero:27"
+          ],
+          [
+            "１番",
+            "ability:3255651252"
+          ]
+        ],
+        "expected": [
+          [
+            "ヤマト",
+            "hero:27"
+          ],
+          [
+            "１番",
+            "ability:3255651252"
+          ]
+        ],
+        "translations": {
+          "en": "Charge up ⟦Yamato⟧’s ⟦Power Slash⟧ and then hit them with it.",
+          "ru": "Накопи энергию для способности ⟦Power Slash⟧ у ⟦Yamato⟧, а потом примени её."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ダイナモウルト来るから散って。",
+        "ms": 2383,
+        "ok": true,
+        "terms": [
+          [
+            "ダイナモ",
+            "hero:11"
+          ],
+          [
+            "ウルト",
+            "ability:249410288"
+          ]
+        ],
+        "expected": [
+          [
+            "ダイナモ",
+            "hero:11"
+          ],
+          [
+            "ウルト",
+            "ability:249410288"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Dynamo⟧ and ⟦Singularity⟧ are coming, so scatter!",
+          "ru": "Динамо и ⟨Сингулярность⟩ идут сюда, так что разбегайтесь!"
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "missing: Dynamo",
+            "missing: Singularity"
+          ]
+        }
+      },
+      {
+        "text": "アイビーの３番で耐えた。",
+        "ms": 1365,
+        "ok": true,
+        "terms": [
+          [
+            "アイビー",
+            "hero:20"
+          ],
+          [
+            "３番",
+            "ability:3642273386"
+          ]
+        ],
+        "expected": [
+          [
+            "アイビー",
+            "hero:20"
+          ],
+          [
+            "３番",
+            "ability:3642273386"
+          ]
+        ],
+        "translations": {
+          "en": "I endured it using ⟦Ivy⟧’s ⟦Stone Form⟧.",
+          "ru": "Я выстоял благодаря ⟦Stone Form⟧ у ⟦Ivy⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ラッシュのウルトで全員叩きつけられた。",
+        "ms": 1602,
+        "ok": true,
+        "terms": [
+          [
+            "ラッシュ",
+            "hero:31"
+          ],
+          [
+            "ウルト",
+            "ability:397010810"
+          ]
+        ],
+        "expected": [
+          [
+            "ラッシュ",
+            "hero:31"
+          ],
+          [
+            "ウルト",
+            "ability:397010810"
+          ]
+        ],
+        "translations": {
+          "en": "Everyone got knocked down by ⟦Lash⟧’s ⟦Death Slam⟧.",
+          "ru": "Всех приложило ударом ⟦Death Slam⟧ от ⟦Lash⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "シルバーにウルト当てられた。",
+        "ms": 1273,
+        "ok": true,
+        "terms": [
+          [
+            "シルバー",
+            "hero:80"
+          ],
+          [
+            "ウルト",
+            "ability:515791019"
+          ]
+        ],
+        "expected": [
+          [
+            "シルバー",
+            "hero:80"
+          ],
+          [
+            "ウルト",
+            "ability:515791019"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Silver⟧ got hit by ⟦Lycan Curse⟧.",
+          "ru": "Сильвер попал под действие Ликанское проклятие."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "missing: Silver",
+            "missing: Lycan Curse"
+          ]
+        }
+      },
+      {
+        "text": "3番のクールダウン長いな。",
+        "ms": 1790,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Number 3 has a long cooldown.",
+          "ru": "У 3-го героя довольно долгий кулдаун."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ウルトあと10秒。",
+        "ms": 617,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Ultimate in 10 seconds.",
+          "ru": "Ульта через 10 секунд."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "エコーシャードでウルト二回撃てる。",
+        "ms": 1223,
+        "ok": true,
+        "terms": [
+          [
+            "エコーシャード",
+            "item:630839635"
+          ]
+        ],
+        "expected": [
+          [
+            "エコーシャード",
+            "item:630839635"
+          ]
+        ],
+        "translations": {
+          "en": "I can use two ultimates with ⟦Echo Shard⟧.",
+          "ru": "С помощью ⟦Echo Shard⟧ можно использовать ульту дважды."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "リフレッシャー持ってるからウルト二連発くるよ。",
+        "ms": 1565,
+        "ok": true,
+        "terms": [
+          [
+            "リフレッシャー",
+            "item:677738769"
+          ]
+        ],
+        "expected": [
+          [
+            "リフレッシャー",
+            "item:677738769"
+          ]
+        ],
+        "translations": {
+          "en": "I’ve got an ⟦Refresher⟧, so I’ll be able to use my ultimate twice in a row.",
+          "ru": "Раз у меня есть ⟦Refresher⟧, смогу использовать ульту дважды подряд!"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "エイブラムスのチャージで壁に当てられた。",
+        "ms": 1468,
+        "ok": true,
+        "terms": [
+          [
+            "エイブラムス",
+            "hero:6"
+          ],
+          [
+            "チャージ",
+            "ability:2824119765"
+          ]
+        ],
+        "expected": [
+          [
+            "エイブラムス",
+            "hero:6"
+          ],
+          [
+            "チャージ",
+            "ability:2824119765"
+          ]
+        ],
+        "translations": {
+          "en": "I got hit into a wall by ⟦Abrams⟧’s ⟦Shoulder Charge⟧.",
+          "ru": "Меня прижало к стене способностью ⟦Shoulder Charge⟧ у ⟦Abrams⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ケルビンのビームで足遅くされた。",
+        "ms": 1474,
+        "ok": true,
+        "terms": [
+          [
+            "ケルビン",
+            "hero:12"
+          ],
+          [
+            "ビーム",
+            "ability:2351041382"
+          ]
+        ],
+        "expected": [
+          [
+            "ケルビン",
+            "hero:12"
+          ],
+          [
+            "ビーム",
+            "ability:2351041382"
+          ]
+        ],
+        "translations": {
+          "en": "I got slowed down by ⟦Kelvin⟧’s ⟦Arctic Beam⟧.",
+          "ru": "Меня замедлил ⟦Arctic Beam⟧ от ⟦Kelvin⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ビバップのフックに気をつけて。",
+        "ms": 1445,
+        "ok": false,
+        "terms": [
+          [
+            "ビバップ",
+            "hero:15"
+          ],
+          [
+            "フック",
+            "ability:519124136"
+          ]
+        ],
+        "expected": [
+          [
+            "ビバップ",
+            "hero:15"
+          ],
+          [
+            "フック",
+            "ability:1928108461"
+          ]
+        ],
+        "translations": {
+          "en": "Watch out for ⟦Bebop⟧’s ⟦Flog⟧.",
+          "ru": "Осторожно с ⟨⟦Flog⟧⟩ у ⟨⟦Bebop⟧⟩!"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "インファ強すぎない？",
+        "ms": 1346,
+        "ok": true,
+        "terms": [
+          [
+            "インファ",
+            "hero:1"
+          ]
+        ],
+        "expected": [
+          [
+            "インファ",
+            "hero:1"
+          ]
+        ],
+        "translations": {
+          "en": "Isn’t ⟦Infernus⟧ overpowered?",
+          "ru": "Разве ⟦Infernus⟧ не слишком мощный?"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ガイストのウルトで体力入れ替えられた。",
+        "ms": 1416,
+        "ok": true,
+        "terms": [
+          [
+            "ガイスト",
+            "hero:4"
+          ],
+          [
+            "ウルト",
+            "ability:1307289689"
+          ]
+        ],
+        "expected": [
+          [
+            "ガイスト",
+            "hero:4"
+          ],
+          [
+            "ウルト",
+            "ability:1307289689"
+          ]
+        ],
+        "translations": {
+          "en": "I got my health swapped with ⟦Lady Geist⟧ via her ⟦Soul Exchange⟧ ability.",
+          "ru": "Моё здоровье поменялось с ⟨⟦Lady Geist⟧⟩ из-за её способности ⟨⟦Soul Exchange⟧⟩."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "タロンに遠くから抜かれた。",
+        "ms": 1381,
+        "ok": true,
+        "terms": [
+          [
+            "タロン",
+            "hero:17"
+          ]
+        ],
+        "expected": [
+          [
+            "タロン",
+            "hero:17"
+          ]
+        ],
+        "translations": {
+          "en": "I got picked off from afar by ⟦Grey Talon⟧.",
+          "ru": "⟦Grey Talon⟧ пробил меня издалека."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "モークリのウルトに捕まった。",
+        "ms": 1474,
+        "ok": true,
+        "terms": [
+          [
+            "モークリ",
+            "hero:18"
+          ],
+          [
+            "ウルト",
+            "ability:1917840730"
+          ]
+        ],
+        "expected": [
+          [
+            "モークリ",
+            "hero:18"
+          ],
+          [
+            "ウルト",
+            "ability:1917840730"
+          ]
+        ],
+        "translations": {
+          "en": "I got caught in ⟦Mo & Krill⟧’s ⟦Combo⟧.",
+          "ru": "Я попался в ловушку их ⟦Combo⟧ от ⟦Mo & Krill⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ヴィンにずっと撃たれてる。",
+        "ms": 592,
+        "error": "429 Too Many Requests: {\"error\":{\"message\":\"HTTP 429: {\\\"error\\\":{\\\"code\\\":\\\"capacity\\\",\\\"message\\\":\\\"No capacity available for immediate service.\\\",\\\"param\\\":null,\\\"type\\\":\\\"rate_limit_error\\\"}}\",\"code\":429}}"
+      },
+      {
+        "text": "ヴィンディのウルトで落とされた。",
+        "ms": 1759,
+        "ok": true,
+        "terms": [
+          [
+            "ヴィンディ",
+            "hero:3"
+          ],
+          [
+            "ウルト",
+            "ability:775377419"
+          ]
+        ],
+        "expected": [
+          [
+            "ヴィンディ",
+            "hero:3"
+          ],
+          [
+            "ウルト",
+            "ability:775377419"
+          ]
+        ],
+        "translations": {
+          "en": "I got taken down by ⟦Vindicta⟧’s ⟦Assassinate⟧.",
+          "ru": "Меня убила ⟦Assassinate⟧ от ⟦Vindicta⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "メタスキ押すの遅れた。",
+        "ms": 1555,
+        "ok": true,
+        "terms": [
+          [
+            "メタスキ",
+            "item:1378931225"
+          ]
+        ],
+        "expected": [
+          [
+            "メタスキ",
+            "item:1378931225"
+          ]
+        ],
+        "translations": {
+          "en": "I pressed ⟦Metal Skin⟧ too late.",
+          "ru": "Я опоздал нажать на ⟦Metal Skin⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "アンストッパ買っとけばよかった。",
+        "ms": 1891,
+        "ok": true,
+        "terms": [
+          [
+            "アンストッパ",
+            "item:3357231760"
+          ]
+        ],
+        "expected": [
+          [
+            "アンストッパ",
+            "item:3357231760"
+          ]
+        ],
+        "translations": {
+          "en": "I should’ve bought ⟦Unstoppable⟧.",
+          "ru": "Надо было купить ⟦Unstoppable⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "インフェルノスのアフターバーンが痛い。",
+        "ms": 1894,
+        "ok": false,
+        "terms": [
+          [
+            "アフターバーン",
+            "ability:1593133799"
+          ]
+        ],
+        "expected": [
+          [
+            "インフェルノス",
+            "hero:1"
+          ],
+          [
+            "アフターバーン",
+            "ability:1593133799"
+          ]
+        ],
+        "translations": {
+          "en": "Infernos's ⟦Afterburn⟧ hurts so much.",
+          "ru": "⟦Afterburn⟧ у Инферноса — это больно."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ビーバップのボムに気をつけて。",
+        "ms": 1789,
+        "ok": true,
+        "terms": [
+          [
+            "ビーバップ",
+            "hero:15"
+          ],
+          [
+            "ボム",
+            "ability:2521902222"
+          ]
+        ],
+        "expected": [
+          [
+            "ビーバップ",
+            "hero:15"
+          ],
+          [
+            "ボム",
+            "ability:2521902222"
+          ]
+        ],
+        "translations": {
+          "en": "Watch out for ⟦Bebop⟧’s ⟦Sticky Bomb⟧.",
+          "ru": "Осторожно с ⟨⟦Sticky Bomb⟧⟩ от ⟨⟦Bebop⟧⟩!"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ワーデンのウルト止めて。",
+        "ms": 1562,
+        "ok": true,
+        "terms": [
+          [
+            "ワーデン",
+            "hero:25"
+          ],
+          [
+            "ウルト",
+            "ability:2702908623"
+          ]
+        ],
+        "expected": [
+          [
+            "ワーデン",
+            "hero:25"
+          ],
+          [
+            "ウルト",
+            "ability:2702908623"
+          ]
+        ],
+        "translations": {
+          "en": "Stop ⟦Warden⟧’s ⟦Last Stand⟧.",
+          "ru": "Останови ⟨⟦Last Stand⟧⟩ у ⟨⟦Warden⟧⟩!"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ビンディクタのウルトで狙われてる。",
+        "ms": 1570,
+        "ok": true,
+        "terms": [
+          [
+            "ビンディクタ",
+            "hero:3"
+          ],
+          [
+            "ウルト",
+            "ability:775377419"
+          ]
+        ],
+        "expected": [
+          [
+            "ビンディクタ",
+            "hero:3"
+          ],
+          [
+            "ウルト",
+            "ability:775377419"
+          ]
+        ],
+        "translations": {
+          "en": "I'm being targeted by ⟦Vindicta⟧'s ⟦Assassinate⟧.",
+          "ru": "Меня целится ⟦Assassinate⟧ у ⟦Vindicta⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ワープストンで逃げた。",
+        "ms": 1802,
+        "ok": true,
+        "terms": [
+          [
+            "ワープストン",
+            "item:3270001687"
+          ]
+        ],
+        "expected": [
+          [
+            "ワープストン",
+            "item:3270001687"
+          ]
+        ],
+        "translations": {
+          "en": "I escaped using ⟦Warp Stone⟧.",
+          "ru": "Я сбежал с помощью ⟦Warp Stone⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "メタルスキーン使った。",
+        "ms": 1628,
+        "ok": true,
+        "terms": [
+          [
+            "メタルスキーン",
+            "item:1378931225"
+          ]
+        ],
+        "expected": [
+          [
+            "メタルスキーン",
+            "item:1378931225"
+          ]
+        ],
+        "translations": {
+          "en": "I used ⟦Metal Skin⟧.",
+          "ru": "Я использовал ⟦Metal Skin⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "セブンのパワーサージで火力上がってる。",
+        "ms": 2202,
+        "ok": true,
+        "terms": [
+          [
+            "セブン",
+            "hero:2"
+          ],
+          [
+            "パワーサージ",
+            "ability:539192269"
+          ]
+        ],
+        "expected": [
+          [
+            "セブン",
+            "hero:2"
+          ],
+          [
+            "パワーサージ",
+            "ability:539192269"
+          ]
+        ],
+        "translations": {
+          "en": "⟦Seven⟧'s ⟦Power Surge⟧ is boosting the damage output.",
+          "ru": "Благодаря способности ⟦Power Surge⟧ у ⟦Seven⟧ заметно увеличилась огневая мощь."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "パワーサージ買ったら移動速くなった。",
+        "ms": 1462,
+        "ok": true,
+        "terms": [
+          [
+            "パワーサージ",
+            "item:1292979587"
+          ]
+        ],
+        "expected": [
+          [
+            "パワーサージ",
+            "item:1292979587"
+          ]
+        ],
+        "translations": {
+          "en": "I bought ⟦Surge of Power⟧ and my movement speed increased.",
+          "ru": "Купил ⟦Surge of Power⟧ — и скорость передвижения увеличилась."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ガイストのライフドレインで吸われた。",
+        "ms": 1526,
+        "ok": true,
+        "terms": [
+          [
+            "ガイスト",
+            "hero:4"
+          ],
+          [
+            "ライフドレイン",
+            "ability:218284420"
+          ]
+        ],
+        "expected": [
+          [
+            "ガイスト",
+            "hero:4"
+          ],
+          [
+            "ライフドレイン",
+            "ability:218284420"
+          ]
+        ],
+        "translations": {
+          "en": "I got drained by ⟦Lady Geist⟧’s ⟦Life Drain⟧.",
+          "ru": "Меня высосала способность ⟦Life Drain⟧ у ⟦Lady Geist⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ライフドレイン買って耐久上げる。",
+        "ms": 1391,
+        "ok": true,
+        "terms": [
+          [
+            "ライフドレイン",
+            "item:865846625"
+          ]
+        ],
+        "expected": [
+          [
+            "ライフドレイン",
+            "item:865846625"
+          ]
+        ],
+        "translations": {
+          "en": "I’ll buy ⟦Leech⟧ to boost my durability.",
+          "ru": "Куплю ⟦Leech⟧, чтобы повысить выносливость."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "今シルバー帯だからね。",
+        "ms": 1326,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I'm in the Silver tier right now.",
+          "ru": "Сейчас я в серебряном дивизионе."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ヤマトの荷物まだ届かないんだよね。",
+        "ms": 1802,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Yamato's package still hasn’t arrived, huh.",
+          "ru": "Посылка из Японии до сих пор не пришла."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "アポロチョコ食べながらやってます。",
+        "ms": 1264,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I’m playing while eating Apollo Chocolate.",
+          "ru": "Я играю, пока ем аполло-шоколад."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "それストーカーみたいで怖いな。",
+        "ms": 1552,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "That’s kinda creepy—like a stalker.",
+          "ru": "Это как-то по-сталкерски и жутко."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "昨日ボクシングでノックダウン見た。",
+        "ms": 1300,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I saw a knockout in boxing yesterday.",
+          "ru": "Вчера я видел нокдаун в боксе."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "レム睡眠が足りてない。",
+        "ms": 1186,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I’m not getting enough REM sleep.",
+          "ru": "У меня не хватает REM-сна."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ビリーって友達が見に来てる。",
+        "ms": 1116,
+        "ok": false,
+        "terms": [
+          [
+            "ビリー",
+            "hero:72"
+          ]
+        ],
+        "expected": [],
+        "translations": {
+          "en": "A friend of mine named ⟦Billy⟧ is watching me play.",
+          "ru": "Мой друг ⟨⟦Billy⟧⟩ пришёл посмотреть."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "アイビーリーグ出身らしいよ。",
+        "ms": 1307,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "She seems to be from the Ivy League.",
+          "ru": "Похоже, она из Ivy League."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ポケットWi-Fiの調子が悪い。",
+        "ms": 1415,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "My pocket Wi-Fi is acting up.",
+          "ru": "Связь по портативному Wi-Fi плохая."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "セブンでいいか。",
+        "ms": 2130,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Is Seven fine?",
+          "ru": "Можно Сэвена?"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "今日はセブンで行くか。",
+        "ms": 1296,
+        "ok": true,
+        "terms": [
+          [
+            "セブン",
+            "hero:2"
+          ]
+        ],
+        "expected": [
+          [
+            "セブン",
+            "hero:2"
+          ]
+        ],
+        "translations": {
+          "en": "I guess I’ll play as ⟦Seven⟧ today.",
+          "ru": "Сегодня, наверное, сыграю за ⟦Seven⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "コメントありがとうございます。",
+        "ms": 1726,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Thanks for the comments.",
+          "ru": "Спасибо за комментарии."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "今日は3時間くらいやる予定です。",
+        "ms": 722,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I plan to play for about 3 hours today.",
+          "ru": "Сегодня планирую играть около 3 часов."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ちょっと水飲むね。",
+        "ms": 952,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "I’m gonna grab a drink real quick.",
+          "ru": "Сейчас выпью воды."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "1番レーンが押されてる。",
+        "ms": 1487,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "The 1st lane is being pushed.",
+          "ru": "Линия 1 под давлением."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ミッドボス取りに行こう。",
+        "ms": 618,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "Let’s go for the Midboss.",
+          "ru": "Пойдём заберём Midboss."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ソウル差が5000ある。",
+        "ms": 1712,
+        "ok": true,
+        "terms": [],
+        "expected": [],
+        "translations": {
+          "en": "The soul difference is 5000.",
+          "ru": "Разница в душе составляет 5000."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      }
+    ]
+  },
   "terms-decisions/gpt-6-luna": {
     "summary": {
       "runs": 189,

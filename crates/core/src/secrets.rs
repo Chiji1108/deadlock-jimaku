@@ -8,9 +8,12 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::IDENTIFIER;
-use crate::access::Access;
+use std::collections::BTreeMap;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
+use crate::access::{Access, Accesses};
+use crate::settings::Engines;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, TS)]
 #[serde(rename_all = "lowercase")]
 #[ts(export)]
 pub enum Provider {
@@ -21,24 +24,45 @@ pub enum Provider {
     Xai,
     /// 翻訳（Qwen-MT-Flash）。QwenCloud のシンガポールの鍵（DESIGN.md 9.7）
     Qwen,
+    /// いろいろな会社のモデルを 1 つの鍵で呼べる（判定モデル、Hy-MT2、MAI-Transcribe 2。DESIGN.md 9.7）
+    #[serde(rename = "openrouter")]
+    OpenRouter,
+    /// 用語の判定（Jev）
+    #[serde(rename = "typesafe")]
+    TypeSafe,
 }
 
 impl Provider {
-    fn slot(self) -> Slot {
+    /// 鍵が要る順（足りない鍵は OpenAI を先に知らせる）
+    pub const ALL: [Self; 5] = [
+        Self::OpenAi,
+        Self::Xai,
+        Self::Qwen,
+        Self::OpenRouter,
+        Self::TypeSafe,
+    ];
+
+    /// 資格情報ストアでの名前。開発者のサーバーが中継するパスも同じ
+    pub fn account(self) -> &'static str {
         match self {
-            Self::OpenAi => Slot::OpenAi,
-            Self::Xai => Slot::Xai,
-            Self::Qwen => Slot::Qwen,
+            Self::OpenAi => "openai",
+            Self::Xai => "xai",
+            Self::Qwen => "qwen",
+            Self::OpenRouter => "openrouter",
+            Self::TypeSafe => "typesafe",
         }
+    }
+
+    /// ギフトコードで使える（開発者のサーバーが中継する）。ほかの会社は自分のキーが要る
+    pub fn giftable(self) -> bool {
+        matches!(self, Self::OpenAi | Self::Xai)
     }
 }
 
 /// 資格情報ストアに置くもの（画面から直接は書き換えないものも含む）
 #[derive(Clone, Copy, Debug)]
 enum Slot {
-    OpenAi,
-    Xai,
-    Qwen,
+    Key(Provider),
     /// 人からもらったギフトコード（DESIGN.md 17.1）
     Gift,
     /// おすそ分けを管理する合言葉（サーバーが発行）
@@ -50,9 +74,7 @@ enum Slot {
 impl Slot {
     fn account(self) -> &'static str {
         match self {
-            Self::OpenAi => "openai",
-            Self::Xai => "xai",
-            Self::Qwen => "qwen",
+            Self::Key(provider) => provider.account(),
             Self::Gift => "gift",
             Self::ShareToken => "share-token",
             Self::ShareCode => "share-code",
@@ -78,34 +100,37 @@ pub struct KeyStatus {
     pub openai: KeyState,
     pub xai: KeyState,
     pub qwen: KeyState,
+    pub openrouter: KeyState,
+    pub typesafe: KeyState,
     /// ギフトコード。コードそのものは返さない
     pub gift: KeyState,
 }
 
 #[derive(Clone, Debug, Default)]
 pub struct Keys {
-    pub openai: Option<String>,
-    pub xai: Option<String>,
-    pub qwen: Option<String>,
+    /// 自分のキー
+    pub own: BTreeMap<Provider, String>,
     pub gift: Option<String>,
 }
 
 impl Keys {
     /// 自分のキーがあればその会社へ直接、なければギフトコードで開発者のサーバーを通す（`api` はその根元）。
-    /// ギフトコードでその会社を使えるか（おすそ分けした人がその会社のキーを預けているか）は、字幕を始めるときに確かめる
+    /// ギフトコードでその会社を使えるか（おすそ分けした人がその会社のキーを預けているか）は、字幕を始めるときに確かめる。
+    /// 中継のない会社は、ギフトコードでは足りない（鍵がないとして始めない）
     pub fn access(&self, provider: Provider, api: &str) -> Option<Access> {
-        let own = match provider {
-            Provider::OpenAi => &self.openai,
-            Provider::Xai => &self.xai,
-            Provider::Qwen => &self.qwen,
-        };
-        match (own, &self.gift) {
+        match (self.own.get(&provider), &self.gift) {
             (Some(key), _) => Some(Access::key(provider, key.clone())),
-            // Qwen の中継はまだないので、ギフトコードでは足りない（鍵がないとして始めない）
-            (None, Some(_)) if provider == Provider::Qwen => None,
-            (None, Some(code)) => Some(Access::gift(provider, code.clone(), api)),
-            (None, None) => None,
+            (None, Some(code)) if provider.giftable() => {
+                Some(Access::gift(provider, code.clone(), api))
+            }
+            _ => None,
         }
+    }
+
+    /// 工程が使う会社の送り先と鍵。使わない会社には何も送らない
+    pub fn accesses(&self, engines: &Engines, api: &str) -> Accesses {
+        let providers = engines.providers().into_iter();
+        Accesses::new(providers.filter_map(|provider| self.access(provider, api)))
     }
 }
 
@@ -159,39 +184,43 @@ fn state(slot: Slot) -> KeyState {
 }
 
 pub fn load() -> Keys {
+    let own = Provider::ALL.into_iter();
     Keys {
-        openai: get_or_warn(Slot::OpenAi),
-        xai: get_or_warn(Slot::Xai),
-        qwen: get_or_warn(Slot::Qwen),
+        own: own
+            .filter_map(|provider| Some((provider, get_or_warn(Slot::Key(provider))?)))
+            .collect(),
         gift: get_or_warn(Slot::Gift),
     }
 }
 
 pub fn status() -> KeyStatus {
+    let key = |provider| state(Slot::Key(provider));
     KeyStatus {
-        openai: state(Slot::OpenAi),
-        xai: state(Slot::Xai),
-        qwen: state(Slot::Qwen),
+        openai: key(Provider::OpenAi),
+        xai: key(Provider::Xai),
+        qwen: key(Provider::Qwen),
+        openrouter: key(Provider::OpenRouter),
+        typesafe: key(Provider::TypeSafe),
         gift: state(Slot::Gift),
     }
 }
 
 /// 空文字列なら消す
 pub fn set(provider: Provider, key: &str) -> anyhow::Result<()> {
-    put(provider.slot(), key)
+    put(Slot::Key(provider), key)
 }
 
 /// その会社の自分のキー
 pub fn key(provider: Provider) -> Option<String> {
-    get_or_warn(provider.slot())
+    get_or_warn(Slot::Key(provider))
 }
 
 pub fn openai() -> Option<String> {
-    get_or_warn(Slot::OpenAi)
+    get_or_warn(Slot::Key(Provider::OpenAi))
 }
 
 pub fn xai() -> Option<String> {
-    get_or_warn(Slot::Xai)
+    get_or_warn(Slot::Key(Provider::Xai))
 }
 
 pub fn gift() -> Option<String> {
@@ -231,18 +260,19 @@ mod tests {
     use super::*;
 
     #[test]
-    fn a_gift_stands_in_for_a_missing_key_except_for_qwen() {
+    fn a_gift_stands_in_for_a_missing_key_only_where_the_server_relays() {
         let keys = Keys {
-            xai: Some("xai".into()),
+            own: BTreeMap::from([(Provider::Xai, "xai".to_owned())]),
             gift: Some("K7M2".into()),
-            ..Default::default()
         };
         let api = "http://worker/v1";
         assert!(keys.access(Provider::OpenAi, api).unwrap().is_gift());
         assert!(!keys.access(Provider::Xai, api).unwrap().is_gift());
-        assert_eq!(keys.access(Provider::Qwen, api), None);
+        for provider in [Provider::Qwen, Provider::OpenRouter, Provider::TypeSafe] {
+            assert_eq!(keys.access(provider, api), None);
+        }
         let own = Keys {
-            qwen: Some("sk".into()),
+            own: BTreeMap::from([(Provider::Qwen, "sk".to_owned())]),
             ..keys
         };
         assert!(!own.access(Provider::Qwen, api).unwrap().is_gift());

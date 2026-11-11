@@ -62,6 +62,23 @@ pub fn find(code: &str) -> Option<&'static Language> {
     LANGUAGES.iter().find(|l| l.code == code)
 }
 
+/// 英語での言語の名前（翻訳専門のモデルへの指示文に書く）。deadlock-api の名前から作る
+pub fn english_name(code: &str) -> String {
+    let api = find(code).map_or(code, |l| l.api);
+    match api {
+        "schinese" => "Simplified Chinese".to_owned(),
+        "tchinese" => "Traditional Chinese".to_owned(),
+        "koreana" => "Korean".to_owned(),
+        "latam" => "Latin American Spanish".to_owned(),
+        "brazilian" => "Brazilian Portuguese".to_owned(),
+        api => {
+            let mut letters = api.chars();
+            let first = letters.next().map(|c| c.to_ascii_uppercase());
+            first.into_iter().chain(letters).collect()
+        }
+    }
+}
+
 /// 未知のコードを取り除き、重複をなくす（順序は保つ）
 pub fn normalize(codes: impl IntoIterator<Item = LangCode>) -> Vec<LangCode> {
     let mut out: Vec<LangCode> = Vec::new();
@@ -84,6 +101,13 @@ mod tests {
         let apis: HashSet<_> = LANGUAGES.iter().map(|l| l.api).collect();
         assert_eq!(codes.len(), 29);
         assert_eq!(apis.len(), 29);
+    }
+
+    #[test]
+    fn english_names_come_from_the_api_names() {
+        assert_eq!(english_name("ru"), "Russian");
+        assert_eq!(english_name("zh-Hant"), "Traditional Chinese");
+        assert_eq!(english_name("pt-BR"), "Brazilian Portuguese");
     }
 
     #[test]

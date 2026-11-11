@@ -19,6 +19,7 @@ use tokio_tungstenite::tungstenite::{self, Message, client::IntoClientRequest, h
 
 use crate::access::Access;
 use crate::audio::{SAMPLE_RATE, to_i16};
+use crate::local::Speech;
 use crate::secrets::Provider;
 use crate::share;
 use crate::types::TranscriptionError;
@@ -410,9 +411,16 @@ fn xai_refused(status: StatusCode, body: &str) -> bool {
         || (status == StatusCode::BAD_REQUEST && body.contains("Incorrect API key"))
 }
 
+/// 確定の文字起こしを頼む相手
+pub enum Transcriber {
+    /// 会社の API（OpenAI の GPT-Transcribe、xAI の Grok、OpenRouter の MAI-Transcribe 2）
+    Api(Access),
+    /// PC の中で動く speech.cpp（Haas-ja）
+    Local(Speech),
+}
+
 pub struct BatchRequest<'a> {
-    /// OpenAI なら GPT-Transcribe、xAI なら Grok Voice Transcribe（どちらも自分のキーかギフトコード）
-    pub access: &'a Access,
+    pub transcriber: &'a Transcriber,
     pub model: &'a str,
     pub hints: &'a Hints,
     pub wav: Vec<u8>,
@@ -426,8 +434,22 @@ pub async fn transcribe(http: &reqwest::Client, req: BatchRequest<'_>) -> anyhow
     let file = reqwest::multipart::Part::bytes(req.wav)
         .file_name("segment.wav")
         .mime_str("audio/wav")?;
+    let access = match req.transcriber {
+        Transcriber::Api(access) => access,
+        Transcriber::Local(speech) => {
+            // 用語は渡さない（辞書の名前を全部渡すと、話していない用語を書いた。DESIGN.md 9.7）
+            let form = reqwest::multipart::Form::new().part("file", file);
+            let res = http.post(speech.transcriptions_url()).multipart(form);
+            let res = res.send().await?;
+            let status = res.status();
+            if !status.is_success() {
+                bail!("{status}: {}", res.text().await.unwrap_or_default());
+            }
+            req.meter.audio(Use::Batch, req.model, req.seconds);
+            return text(&res.json().await?);
+        }
+    };
     let form = reqwest::multipart::Form::new().text("model", req.model.to_owned());
-    let access = req.access;
     let request = match access.provider() {
         Provider::OpenAi => {
             let mut form = form
@@ -452,7 +474,14 @@ pub async fn transcribe(http: &reqwest::Client, req: BatchRequest<'_>) -> anyhow
                 .bearer_auth(access.token())
                 .multipart(form.part("file", file))
         }
-        Provider::Qwen => bail!("Qwen does not transcribe"),
+        // 用語を渡す欄はない
+        Provider::OpenRouter => {
+            let form = form.text("language", req.hints.language.clone());
+            http.post(access.url("/audio/transcriptions"))
+                .bearer_auth(access.token())
+                .multipart(form.part("file", file))
+        }
+        Provider::Qwen | Provider::TypeSafe => bail!("{:?} does not transcribe", access.provider()),
     };
     let res = request.send().await?;
     let status = res.status();
@@ -471,7 +500,10 @@ pub async fn transcribe(http: &reqwest::Client, req: BatchRequest<'_>) -> anyhow
         bail!("{status}: {body}");
     }
     req.meter.audio(Use::Batch, req.model, req.seconds);
-    let res: Value = res.json().await?;
+    text(&res.json().await?)
+}
+
+fn text(res: &Value) -> anyhow::Result<String> {
     res["text"]
         .as_str()
         .map(|t| t.trim().to_owned())
@@ -481,6 +513,73 @@ pub async fn transcribe(http: &reqwest::Client, req: BatchRequest<'_>) -> anyhow
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// 本物の speech.cpp とモデルを取って（約 400 MB）、録音を文字起こしする。ふだんは動かさない:
+    /// `cargo test -p overlays-core haas_ja -- --ignored --nocapture`
+    #[tokio::test]
+    #[ignore = "downloads speech.cpp and the model"]
+    async fn haas_ja_transcribes_a_recording_on_this_computer() {
+        let dir = std::env::var("HAAS_JA_TEST_DIR").map_or_else(
+            |_| std::env::temp_dir().join("overlays-speech-test"),
+            std::path::PathBuf::from,
+        );
+        let started = std::time::Instant::now();
+        let speech = Speech::start(&dir).await.unwrap();
+        println!("ready in {:?}", started.elapsed());
+        let wav = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../experiments/data/sample01.wav"
+        );
+        let meter = Meter::new(dir.join("usage.json"));
+        let started = std::time::Instant::now();
+        let request = BatchRequest {
+            transcriber: &Transcriber::Local(speech),
+            model: crate::local::HAAS_JA,
+            hints: &Hints {
+                language: "ja".into(),
+                prompt: String::new(),
+                keywords: Vec::new(),
+            },
+            wav: std::fs::read(wav).unwrap(),
+            seconds: 21.8,
+            meter: &meter,
+        };
+        let text = transcribe(crate::http(), request).await.unwrap();
+        println!("{:?}: {text}", started.elapsed());
+        assert!(text.contains("デッドロック"));
+        let batch = meter.watch().borrow().session[&Use::Batch].clone();
+        assert!(batch.seconds > 0.0 && batch.usd == 0.0 && !batch.unpriced);
+    }
+
+    /// 本物の OpenRouter に録音を送る（`OPENROUTER_API_KEY`）。ふだんは動かさない:
+    /// `cargo test -p overlays-core mai_transcribe -- --ignored --nocapture`
+    #[tokio::test]
+    #[ignore = "calls OpenRouter"]
+    async fn mai_transcribe_2_transcribes_through_openrouter() {
+        let key = std::env::var("OPENROUTER_API_KEY").unwrap();
+        let wav = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../experiments/data/sample01.wav"
+        );
+        let meter = Meter::new(std::env::temp_dir().join("overlays-mai-test-usage.json"));
+        let request = BatchRequest {
+            transcriber: &Transcriber::Api(Access::key(Provider::OpenRouter, key)),
+            model: "microsoft/mai-transcribe-2",
+            hints: &Hints {
+                language: "ja".into(),
+                prompt: String::new(),
+                keywords: vec!["ヘイズ".into()],
+            },
+            wav: std::fs::read(wav).unwrap(),
+            seconds: 21.8,
+            meter: &meter,
+        };
+        let text = transcribe(crate::http(), request).await.unwrap();
+        println!("{text}");
+        assert!(text.contains("デッドロック"));
+        let batch = meter.watch().borrow().session[&Use::Batch].clone();
+        assert!(batch.usd > 0.0 && !batch.unpriced);
+    }
 
     #[test]
     fn upsampler_makes_three_samples_from_two_without_holding_any() {

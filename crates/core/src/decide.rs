@@ -1,6 +1,6 @@
-//! 用語の判定を、PC の中の候補出しと OpenAI の Decisions API の確かめに分ける（DESIGN.md 9.7）。
+//! 用語の判定を、PC の中の候補出しと、判定モデルの確かめに分ける（DESIGN.md 9.7）。
 //!
-//! Decisions API は文を書かずに選択肢から選ぶだけなので、LLM に辞書の全部を渡して文を区切らせるより
+//! 判定モデル（OpenAI の Decisions API、TypeSafe AI の Jev、OpenRouter の判定モデル）は文を書かずに選択肢から選ぶだけなので、LLM に辞書の全部を渡して文を区切らせるより
 //! ずっと速く安い。ただ文の中から用語を探すことはできないので、候補は PC の中で出す:
 //! 辞書の名前と別名の一致、名前の似たカタカナの言葉（略称・名前の一部・聞き違い）、「ウルト」と番号。
 //! 候補は多めに出し、本当にその用語か（ふつうの言葉ではないか、どのスキルか）を文ごとに選ばせる
@@ -8,18 +8,15 @@
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use anyhow::Context;
 use serde_json::{Value, json};
 
 use crate::access::Access;
 use crate::assets::Loaded;
 use crate::enrich::Span;
+use crate::secrets::Provider;
 use crate::share;
 use crate::types::{EntityKind, Glossary, LangCode};
 use crate::usage::{Meter, Tokens, Use};
-
-/// Decisions API が使えるモデル（これだけ）
-const MODEL: &str = "gpt-6-luna";
 
 /// 応答は 0.3 秒ほど。待たせすぎずに、辞書の一致に切り替える
 const TIMEOUT: Duration = Duration::from_secs(3);
@@ -29,6 +26,8 @@ const MAX_SIMILAR: usize = 5;
 
 pub struct Decider {
     access: Access,
+    /// OpenAI の Decisions API が使えるのは `gpt-6-luna` だけ
+    model: &'static str,
     source_lang: LangCode,
     meter: Arc<Meter>,
     /// 辞書と別名から作った索引（辞書が差し替わったら作り直す）
@@ -55,9 +54,15 @@ impl Candidate {
 }
 
 impl Decider {
-    pub fn new(access: Access, source_lang: LangCode, meter: Arc<Meter>) -> Self {
+    pub fn new(
+        access: Access,
+        model: &'static str,
+        source_lang: LangCode,
+        meter: Arc<Meter>,
+    ) -> Self {
         Self {
             access,
+            model,
             source_lang,
             meter,
             index: Mutex::new(None),
@@ -75,11 +80,18 @@ impl Decider {
         let Some(asked) = self.ask(text, context, loaded) else {
             return Ok(vec![Span::Text(text.to_owned())]);
         };
-        let res = http
-            .post(self.access.url("/decisions"))
+        // OpenAI は Decisions API、ほかの会社は Jev と同じ形の口（OpenRouter も同じ形で中継する）
+        let openai = self.access.provider() == Provider::OpenAi;
+        let request = if openai {
+            http.post(self.access.url("/decisions"))
+                .json(&asked.request)
+        } else {
+            http.post(self.access.url("/systemone"))
+                .json(&asked.systemone(self.model))
+        };
+        let res = request
             .bearer_auth(self.access.token())
             .timeout(TIMEOUT)
-            .json(&asked.request)
             .send()
             .await?;
         let status = res.status();
@@ -92,11 +104,18 @@ impl Decider {
             anyhow::bail!("{status}: {body}");
         }
         let res: Value = res.json().await?;
-        self.meter
-            .tokens(Use::Translate, MODEL, Tokens::from_response(&res["usage"]));
-        let answers = res["answers"].as_array().context("no answers")?;
+        let tokens = Tokens::from_response(&res["usage"]);
+        // OpenRouter は料金を答えに入れる
+        match res["usage"]["cost"].as_f64() {
+            Some(usd) => self.meter.billed(Use::Translate, tokens, usd),
+            None => self.meter.tokens(Use::Translate, self.model, tokens),
+        }
+        let answers = &res["answers"];
         Ok(asked.spans(|name| {
-            let answer = answers.iter().find(|a| a["name"] == name)?;
+            let answer = match answers.as_array() {
+                Some(answers) => answers.iter().find(|a| a["name"] == name)?,
+                None => &answers[name],
+            };
             answer["choice"].as_str().map(str::to_owned)
         }))
     }
@@ -106,7 +125,7 @@ impl Decider {
         let index = self.index(loaded);
         let candidates = candidates(text, context, &index, &loaded.glossary);
         (!candidates.is_empty()).then(|| Asked {
-            request: question(text, context, &candidates, &loaded.glossary),
+            request: question(self.model, text, context, &candidates, &loaded.glossary),
             text: text.to_owned(),
             candidates,
         })
@@ -139,6 +158,22 @@ pub struct Asked {
 }
 
 impl Asked {
+    /// Jev の形の問い合わせ（`state` と、名前ごとの `questions`、選択肢は `criteria`）
+    pub fn systemone(&self, model: &str) -> Value {
+        let questions = self.request["questions"].as_array().into_iter().flatten();
+        let questions: serde_json::Map<String, Value> = questions
+            .filter_map(|q| {
+                let choices = q["choices"].as_array().into_iter().flatten();
+                let criteria: serde_json::Map<String, Value> = choices
+                    .filter_map(|c| Some((c["value"].as_str()?.to_owned(), c["description"].clone())))
+                    .collect();
+                let question = json!({ "type": "choice", "instructions": q["instructions"], "criteria": criteria });
+                Some((q["name"].as_str()?.to_owned(), question))
+            })
+            .collect();
+        json!({ "model": model, "state": self.request["input"], "questions": questions })
+    }
+
     /// 答えを当てはめた、文の区切り。`choice` は問いの名前から、選ばれた値を返す
     pub fn spans(self, choice: impl Fn(&str) -> Option<String>) -> Vec<Span> {
         let chosen = self
@@ -386,6 +421,7 @@ fn ability_word(rest: &str) -> Option<(u8, usize)> {
 
 /// 候補ごとに「どの用語か、どれでもないか」を選ばせる問い合わせ
 fn question(
+    model: &str,
     text: &str,
     context: &[String],
     candidates: &[Candidate],
@@ -436,7 +472,7 @@ fn question(
         })
         .collect();
     json!({
-        "model": MODEL,
+        "model": model,
         "input": format!(
             "Live commentary from a Japanese streamer playing the video game Deadlock, written by speech recognition.\n\
              Previous utterances (context only): {}\nTranscript: {text}",
@@ -653,12 +689,13 @@ mod tests {
         let text = "ポケットのウルト避けて。";
         let candidates = candidates(text, &[], &index(&loaded, "ja"), &loaded.glossary);
         let body = question(
+            "gpt-6-luna",
             text,
             &["前の発話".to_owned()],
             &candidates,
             &loaded.glossary,
         );
-        assert_eq!(body["model"], MODEL);
+        assert_eq!(body["model"], "gpt-6-luna");
         let questions = body["questions"].as_array().unwrap();
         assert_eq!(questions.len(), 2);
         let values: Vec<&str> = questions[1]["choices"]

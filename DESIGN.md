@@ -20,8 +20,8 @@
 
 - 配信 PC は Windows が中心（Deadlock・OBS・本ツールを同じマシンで動かす。macOS と Linux の版も配る）
 - ヘッドホンを使う（マイクにゲーム音が回り込まない）
-- 音声認識: OpenAI（GPT-Live-Transcribe と GPT-Transcribe）か xAI（Grok Voice Transcribe。確定だけ）。3 章
-- 翻訳と用語: OpenAI GPT-6.1 Terra か GPT-6 Luna（ライト）。詳しく選べば、用語を Decisions API、翻訳を Qwen-MT-Flash で別々に作れる（9.7）。辞書の漢字名の読みは GPT-6.1 Terra（どちらも推論なし。9.3）
+- 音声認識: OpenAI（GPT-Live-Transcribe と GPT-Transcribe）か xAI（Grok Voice Transcribe。確定だけ）。3 章。確定は、OpenRouter の MAI-Transcribe 2（9.7）と、PC の中の Haas-ja（9.8）も選べる
+- 翻訳と用語: OpenAI GPT-6.1 Terra か GPT-6 Luna（ライト）。詳しく選べば、用語を判定モデル（Decisions API、Jev、OpenRouter の判定モデル）、翻訳を翻訳専門のモデル（Qwen-MT-Flash、Hy-MT2）で別々に作れる（9.7）。辞書の漢字名の読みは GPT-6.1 Terra（どちらも推論なし。9.3）
 - ふりがな: GPT-6.1 Terra（文ごと。答えは確かめてから使う）、固有名詞: 翻訳と同じ問い合わせで GPT-6.1 Terra に辞書の用語から選ばせる（9 章）
 - ゲームデータ: [deadlock-api](https://api.deadlock-api.com/docs)（MIT）
 
@@ -636,18 +636,18 @@ interface Enriched {
 | 工程 | 無料 | 有料 |
 |---|---|---|
 | 途中の字幕 | Chrome（Google）。途中の訳は Translator | GPT-Live-Transcribe（途中の訳なし）。「出さない」も選べる |
-| 確定の文字起こし | Chrome（発話の区切りも Chrome が決める） | GPT-Transcribe か xAI の Grok Voice Transcribe（アプリのマイクと VAD で区切る。3.2） |
-| 用語（翻訳が GPT でないとき） | 辞書の一致（`terms.rs`、日本語だけ） | PC の中の候補を Decisions API（GPT-6 Luna）に確かめさせる（9.7。日本語だけ） |
-| 翻訳 | Chrome の Translator | Qwen-MT-Flash（9.7）か、GPT-6.1 Terra・GPT-6 Luna（用語も同時に判定する。9.3。選んだモデルを `Settings::models_in_use` が渡す） |
+| 確定の文字起こし | Chrome（発話の区切りも Chrome が決める）。PC の中の Haas-ja（9.8。日本語だけ。アプリのマイクと VAD で区切る） | GPT-Transcribe、xAI の Grok Voice Transcribe、OpenRouter の MAI-Transcribe 2（アプリのマイクと VAD で区切る。3.2） |
+| 用語（翻訳が GPT でないとき） | 辞書の一致（`terms.rs`、日本語だけ） | PC の中の候補を判定モデルに確かめさせる（9.7。日本語だけ）。OpenAI の Decisions API（GPT-6 Luna）、TypeSafe AI の Jev、OpenRouter の Drex Max・Microsoft Decision 1・Perplexity Decider |
+| 翻訳 | Chrome の Translator | 翻訳専門のモデル（9.7。Qwen-MT-Flash、OpenRouter の Hy-MT2）か、GPT-6.1 Terra・GPT-6 Luna（用語も同時に判定する。9.3。選んだモデルを `Settings::models_in_use` が渡す） |
 | ふりがな | Lindera（日本語だけ） | GPT-6.1 Terra |
 
 **組み合わせの決まり:** 今の仕組みで作れない組み合わせは `Engines::sanitized` が直し、操作パネルでは選べなくする（`frontend/src/lib/engines.ts` の `unavailable`）。
 
 - 確定の文字起こしが Chrome なら、途中の字幕も Chrome。発話の区切りを Chrome の確定で決めるので、アプリはマイクを開かない（`chrome::run`）
 - Chrome の翻訳は Chrome のページの中で動くので、途中の字幕が Chrome のときだけ選べる。途中の字幕が Chrome でないのにページを開くと、使わない音声認識まで動いて音声を Google に送ってしまう。操作パネルでは、Chrome の翻訳を使っている間は途中の字幕を Chrome から変えさせない（変えると翻訳が OpenAI に直り、黙って料金がかかる）
-- 用語と翻訳は、訳文の名前を用語の判定の結果から作る（LLM は訳文の用語を参照 `⟦hero:13⟧` で書き、ほかは用語を英語の名前に置き換えてから訳す）。だから翻訳を GPT にしたら、用語も同じ問い合わせで判定する（設定の `terms` は使わない。別のもので作ると、順に 2 回聞くので 3〜4 秒かかる）。翻訳が Chrome か Qwen-MT-Flash なら、用語を決めてから訳す（9.7）
+- 用語と翻訳は、訳文の名前を用語の判定の結果から作る（LLM は訳文の用語を参照 `⟦hero:13⟧` で書き、ほかは用語を英語の名前に置き換えてから訳す）。だから翻訳を GPT にしたら、用語も同じ問い合わせで判定する（設定の `terms` は使わない。別のもので作ると、順に 2 回聞くので 3〜4 秒かかる）。翻訳が Chrome か翻訳専門のモデルなら、用語を決めてから訳す（9.7）
 - ふりがなは別の工程にする。今も翻訳とは別の問い合わせで同時に投げているので、分けても遅くならない
-- 有料の工程は会社ごとに鍵が要る（`Engines::uses_openai`・`uses_xai`・`uses_qwen`）。鍵は自分のキーか、その会社に使えるギフトコード（`Keys::access`。Qwen はギフトコードでは使えず、操作パネルは自分のキーを求める）。始めるときに足りない鍵を 1 つ選んで `MissingKey { provider }` で止め、操作パネルは足りない鍵を全部出す（`panel.missingKeys`。ギフトコードがあれば足りるとみなす）。ギフトコードが xAI を中継しないと分かったら、始めるときに `GiftUnsupported { provider: xai }` で止める。使わない会社には鍵があっても何も送らない
+- 有料の工程は会社ごとに鍵が要る（`Engines::providers`。工程の選択肢が、会社とモデルの名前を決める）。鍵は自分のキーか、その会社に使えるギフトコード（`Keys::access`。中継のある OpenAI と xAI だけ。Qwen、OpenRouter、TypeSafe AI はギフトコードでは使えず、操作パネルは自分のキーを求める）。工程が使う会社の送り先と鍵は、1 つの一覧（`Accesses`）にして字幕の処理に渡す（会社を足しても、引き回す引数が増えない）。v1.0 でサブスクにして鍵の登録を減らすまでは、鍵が増えることより、選択肢を試せることを優先する。始めるときに足りない鍵を 1 つ選んで `MissingKey { provider }` で止め、操作パネルは足りない鍵を全部出す（`panel.missingKeys`。ギフトコードがあれば足りるとみなす）。ギフトコードが xAI を中継しないと分かったら、始めるときに `GiftUnsupported { provider: xai }` で止める。使わない会社には鍵があっても何も送らない
 - 工程の選択肢には各社の単価（`usage.rs` と同じ）を添える。1 時間あたりの目安は工程ごとには測っていないので書かず、モードの目安と「料金」タブの使い道ごとの額で見てもらう
 - モードには 1 時間の目安（`hourlyUsd`。3.3）と、毎日 3 時間配信したときの月の目安を出す（`engines.ts` の `monthly`）。1 時間の値段だけでは配信を続けたときの負担が分かりにくいため。月の目安は円も出し、1 ドル 150 円（`YEN_PER_USD`）で計算する（為替で動くので目安。LP にも書く）
 
@@ -754,8 +754,8 @@ LLM に用語と翻訳を 1 回で聞く形（9.1）は、いちばん正確だ�
 | GPT-6 Luna | 178 / 183 | 3.0 秒 | $0.011 |
 
 - つなげたものは、発話の間を 2.5 秒空けて送った（続けて送ると Qwen の回数の上限に当たり、63 回中 19 回で英語の訳が抜けた）。空ければ 189 回すべて訳が返った。ロシア語では 189 回中 19 回、用語の名前まで訳された（その用語は色もアイコンも付かず、訳された名前の文字で出る）
-- TypeSafe AI の Jev（`POST https://api.typesafe.ai/v1/systemone`。選択肢から選ぶだけのモデル）も、同じ候補と問いで測った。精度は Decisions と同じくらいで、0.1 秒速く、料金は約 6 割（単価は 10 億トークン $42、出力は無料。料金のページはなく、解説の記事の値）。外し方は違う（Jev は正式な名前「アンストッパブル」を用語にせず、Decisions は「サイレンス食らった」をアイテムにした）。差が小さく、鍵を用意する会社が増えるので、アプリには入れていない（`Decider::ask` の問いを別の相手に送る形なので、足すのは簡単）
-- OpenRouter には判定モデルが 36 個あり、Jev と同じ形の口（`POST https://openrouter.ai/api/v1/systemone`）で呼べる。同じ候補と問いで 9 個を測った（189 回中の正解、応答の中央値、189 回の料金）: Nace Drex Max 182・0.43 秒・$0.0040、Microsoft Decision 1 179・0.46 秒・$0.0021、Perplexity Decider V1.2 178・0.47 秒・$0.0012、OpenAI の Decisions 175・0.58 秒・$0.0070、Jev 1.14 171・0.33 秒・$0.0045、Perplexity Decider Flash V1.2 165・0.40 秒・$0.0006、Parallel Decisions Fast（無料。Web を調べる）152・0.67 秒、Nace Drex v1.5 152・0.48 秒、Nace Drex v2.0 143・0.42 秒。同じモデルでも OpenRouter を通すと遅い（OpenAI の Decisions は 0.27 → 0.58 秒、Jev は 0.17 → 0.33 秒）。上位は OpenAI に直接聞くのと同じくらい当たり、Perplexity Decider V1.2 は料金が約 6 分の 1。鍵 1 つで選べるのは利点だが、速さを取って OpenAI に直接聞く形のままにした
+- TypeSafe AI の Jev（`POST https://api.typesafe.ai/v1/systemone`。選択肢から選ぶだけのモデル）も、同じ候補と問いで測った。精度は Decisions と同じくらいで、0.1 秒速く、料金は約 6 割（単価は 10 億トークン $42、出力は無料。料金のページはなく、解説の記事の値）。外し方は違う（Jev は正式な名前「アンストッパブル」を用語にせず、Decisions は「サイレンス食らった」をアイテムにした）。0.6.0-rc.2 で、用語の選択肢として入れた（`TermsEngine::Jev`。問いの形だけ Jev に合わせる `Asked::systemone`）
+- OpenRouter には判定モデルが 36 個あり、Jev と同じ形の口（`POST https://openrouter.ai/api/v1/systemone`）で呼べる。同じ候補と問いで 9 個を測った（189 回中の正解、応答の中央値、189 回の料金）: Nace Drex Max 182・0.43 秒・$0.0040、Microsoft Decision 1 179・0.46 秒・$0.0021、Perplexity Decider V1.2 178・0.47 秒・$0.0012、OpenAI の Decisions 175・0.58 秒・$0.0070、Jev 1.14 171・0.33 秒・$0.0045、Perplexity Decider Flash V1.2 165・0.40 秒・$0.0006、Parallel Decisions Fast（無料。Web を調べる）152・0.67 秒、Nace Drex v1.5 152・0.48 秒、Nace Drex v2.0 143・0.42 秒。同じモデルでも OpenRouter を通すと遅い（OpenAI の Decisions は 0.27 → 0.58 秒、Jev は 0.17 → 0.33 秒）。上位は OpenAI に直接聞くのと同じくらい当たり、Perplexity Decider V1.2 は料金が約 6 分の 1。0.6.0-rc.2 で、上位の 3 つ（Drex Max、Microsoft Decision 1、Perplexity Decider V1.2）を用語の選択肢に、Hy-MT2 を翻訳の選択肢に、MAI-Transcribe 2 を確定の文字起こしの選択肢に入れた（鍵は OpenRouter の 1 つ。料金は答えの `usage.cost` をそのまま数える）。既定は、速い OpenAI の Decisions API のまま
 - MAI-Transcribe 2（OpenRouter の `/api/v1/audio/transcriptions`、`experiments/stt_eval_openrouter.py`）の確定の文字起こしは、文字誤り率が sample01 で 3.2%、sample02 で 5.9%（「拡マガ」を「カクマガ」と書く）、応答 0.8〜1.5 秒、1 時間 $0.10。Grok と同じくらいで、用語を渡す欄はない
 - Nace に直接聞いた Drex Max（`POST https://console.nace.ai/v1/systemone`）は 178・0.39 秒・$0.0036。OpenRouter を通すより少し速いだけで、OpenAI に直接聞く Decisions（0.22〜0.27 秒）より遅い
 - OpenRouter の無料のモデルに回す口（`openrouter/free`。`terms_eval.rs` で用語と翻訳を同時に聞く形）は、字幕には使えない。63 文を 1 回ずつで、用語の正解は 22、失敗 32（半分が 30 秒の待ち時間切れ）、応答は平均 22 秒。どのモデルに当たるかは毎回違う（9 種類）。推論を止める指定を付けると、指定を知らないモデルが断って 12 だった
@@ -773,6 +773,17 @@ LLM に用語と翻訳を 1 回で聞く形（9.1）は、いちばん正確だ�
 - 従来の翻訳 API は文字数で数え、Qwen-MT-Flash より 6〜15 倍高い（100 万文字で Azure $10、Amazon $15、Google $20。比較サイトの値。189 回は約 6,600 文字）。測っていない
 - DeepL は用語をいちばん守るが、Qwen-MT-Flash の 10 倍以上高く、無料プランは回数の上限が厳しい
 - 前の 37 文（9.3 の正解は Terra の答え）でも測ったが、候補の出し方をその文を見て直したので、数字は参考（Decisions の形は 99/111）
+
+### 9.8 PC の中の文字起こし（`local.rs`）
+
+確定の文字起こしを、PC の中で動く Haas-ja v1.0（Apache 2.0、日本語だけ）にできる。無料で、音声は PC から出ない。精度は Grok と同じくらいで、Chrome より少し良い（9.7 の実測。録音 2 本だけ）。途中の字幕は作れない（録音を最後まで聞いてから書くモデル）ので、途中の字幕は今までどおり Chrome か GPT-Live-Transcribe。
+
+- **動かし方:** speech.cpp（MIT。Metal、Windows と Linux は Vulkan、CPU）を別のプロセスで立て（`speech serve haas-ja-v1.0:q4_k --port N`）、OpenAI と同じ形の口（`/v1/audio/transcriptions`）に発話の WAV を送る。アプリに組み込まず別のプロセスにするのは、C++ のビルドをアプリのビルドに入れずに済み、落ちてもアプリを巻き込まないため。プロセスは字幕を止めると終わる（`kill_on_drop`）
+- **入れ方:** 初めて使うときに、GitHub のリリースの zip（版は `local.rs` に固定。Mac は 6 MB、Windows は 30 MB）を取り、SHA-256 を確かめてからデータフォルダの `speech/` に置く。モデル（Q4_K、約 0.35 GB。Q8_0 と文字誤り率が変わらなかった）は speech.cpp が初めての起動で Hugging Face から取る（版は speech.cpp が決めている。`SPEECH_MODEL_DIR` で同じフォルダに置かせる）。待っている間は、操作パネルに「準備しています」と出す（`ServerMsg::TranscriptionStatus` の `preparing`）。M5 Pro で、初回は約 55 秒、22 秒の録音の認識は 0.07 秒
+- **用語は渡さない:** 辞書の公式名を全部渡すと、話していない用語を書いた（9.7）
+- **動かない PC:** Intel の Mac（配布物がない）と、日本語以外の話す言語。始めるときにエラーで止める
+- **確かめていないこと:** Windows の実機（配布物の SHA-256 と中身は確かめたが、動かしていない）と、ゲームが GPU を使っている最中の速さ。rc.4 まで使っていた別プログラム（SenseVoice）は、Chrome より精度が低く、ダウンロードも要るのでやめた（9.6）。今回は精度が Chrome と同じか少し良く、選んだ人だけがダウンロードする
+- **確かめ方:** `cargo test -p overlays-core haas_ja -- --ignored --nocapture`（本物をダウンロードして、録音を文字にする）
 
 ## 10. イベントプロトコル（WS `/ws`）
 

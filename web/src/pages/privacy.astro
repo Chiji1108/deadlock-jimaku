@@ -53,6 +53,40 @@ const UPDATED = "2026 年 11 月 11 日";
       </li>
     </ul>
 
+    <h2>OpenRouter に送るもの（OpenRouter のモデルを選んだとき）</h2>
+    <ul>
+      <li>
+        モードを詳しく選んで、OpenRouter のモデルにした工程だけ、その工程に要るものを OpenRouter に送ります。OpenRouter は、選んだモデルの会社（Nace、Microsoft、Perplexity、Tencent など）に中継します。
+      </li>
+      <li>
+        用語（Drex Max、Microsoft Decision 1、Perplexity Decider）と翻訳（Hy-MT2）は、確定した字幕の文字を送ります。確定の文字起こし（MAI-Transcribe 2）は、話している間のマイクの音声を送ります。
+      </li>
+      <li>
+        送るときは、利用者ご自身の OpenRouter の API キーを使います（ギフトコードでは使えません）。送った内容の扱いは
+        <a href="https://openrouter.ai/privacy" class="underline">OpenRouter のポリシー</a>と、中継先の会社のポリシーに従います。
+      </li>
+    </ul>
+
+    <h2>TypeSafe AI に送るもの（用語に Jev を選んだとき）</h2>
+    <ul>
+      <li>
+        モードを詳しく選んで、用語を Jev にしたときだけ、確定した字幕の文字と、用語の候補を TypeSafe AI に送ります。音声は送りません。
+      </li>
+      <li>
+        送るときは、利用者ご自身の TypeSafe AI の API キーを使います（ギフトコードでは使えません）。送った内容の扱いは TypeSafe AI の規約とポリシーに従います。
+      </li>
+    </ul>
+
+    <h2>PC の中の文字起こし（確定の文字起こしに Haas-ja を選んだとき）</h2>
+    <ul>
+      <li>
+        モードを詳しく選んで、確定の文字起こしを Haas-ja にしたときは、音声をこの PC の中で文字にします。音声も字幕の文字も、この工程では外に送りません。
+      </li>
+      <li>
+        初めて使うときに、文字起こしのプログラム（speech.cpp）を GitHub から、モデルを Hugging Face からダウンロードします。このとき、ダウンロードの要求（IP アドレスなど）がそれぞれのサービスに届きます。
+      </li>
+    </ul>
+
     <h2>Google に送るもの（スタンダードと Chrome のモード）</h2>
     <ul>
       <li>
@@ -116,7 +150,7 @@ const UPDATED = "2026 年 11 月 11 日";
     <h2>PC の中に保存するもの</h2>
     <ul>
       <li>
-        OpenAI・xAI・Qwen の API キー、ギフトコード、おすそ分けの管理に使う値と作ったコードは、OS
+        OpenAI などの会社の API キー、ギフトコード、おすそ分けの管理に使う値と作ったコードは、OS
         の資格情報ストア（Windows の資格情報マネージャー、Mac のキーチェーンなど）に保存します。
       </li>
       <li>設定、OpenAI と xAI の使用量の目安、ゲームのデータのキャッシュ、ダウンロードしたフォントを、PC の中に保存します。</li>

@@ -1,4 +1,4 @@
-//! 翻訳専門のモデル（Qwen-MT-Flash）で訳す（DESIGN.md 9.7）。
+//! 翻訳専門のモデル（Qwen-MT-Flash、Hy-MT2）で訳す（DESIGN.md 9.7）。
 //!
 //! 用語は先に決めてあるので、英語名に置き換えて `⟦Haze⟧` と囲んだ文を渡し、訳文に残った名前を用語に戻す。
 //! 翻訳先ごとに 1 回ずつ、同時に聞く（1 回の応答は 0.2〜0.3 秒）。括弧を外したり引用符に替えたりすることが
@@ -14,13 +14,12 @@ use serde_json::{Value, json};
 use crate::access::Access;
 use crate::enrich::Span;
 use crate::lang;
+use crate::secrets::Provider;
 use crate::share;
 use crate::types::{Glossary, LangCode, Token, TranscriptionError, Translations};
 use crate::usage::{Meter, Tokens, Use};
 
-const MODEL: &str = "qwen-mt-flash";
-
-/// 応答は 0.3 秒ほど。送り直しを入れても、確定の字幕を 10 秒より長くは待たせない
+/// 応答は 0.3 秒ほど（OpenRouter の Hy-MT2 は 0.8 秒ほど）。送り直しを入れても、確定の字幕を 10 秒より長くは待たせない
 const TIMEOUT: Duration = Duration::from_secs(2);
 
 /// 回数の上限（429）で断られたら、待って送り直す（訳が遅れても、抜けるよりよい）。上限の値は公開されておらず、
@@ -34,6 +33,7 @@ const DOMAINS: &str = "Casual live commentary by a streamer playing the video ga
 
 pub struct Translator {
     access: Access,
+    model: &'static str,
     source_lang: LangCode,
     targets: Vec<LangCode>,
     meter: Arc<Meter>,
@@ -42,12 +42,14 @@ pub struct Translator {
 impl Translator {
     pub fn new(
         access: Access,
+        model: &'static str,
         source_lang: LangCode,
         targets: Vec<LangCode>,
         meter: Arc<Meter>,
     ) -> Self {
         Self {
             access,
+            model,
             source_lang,
             targets,
             meter,
@@ -88,15 +90,29 @@ impl Translator {
         source: &str,
         target: &str,
     ) -> anyhow::Result<String> {
-        let body = json!({
-            "model": MODEL,
-            "messages": [{ "role": "user", "content": source }],
-            "translation_options": {
-                "source_lang": code(&self.source_lang),
-                "target_lang": code(target),
-                "domains": DOMAINS,
-            },
-        });
+        let body = match self.access.provider() {
+            // Hy-MT2。system はなく、モデルの説明にある「背景を添えて訳す」指示文で送る。設定は説明の勧める値
+            Provider::OpenRouter => json!({
+                "model": self.model,
+                "messages": [{ "role": "user", "content": format!(
+                    "[Background Information]\n{DOMAINS}\n\nPlease translate the following text into {}, \
+                     taking the provided background information into consideration.\n\n[Source Text]\n{source}",
+                    lang::english_name(target),
+                ) }],
+                "temperature": 0.7,
+                "top_p": 1.0,
+                "max_tokens": 512,
+            }),
+            _ => json!({
+                "model": self.model,
+                "messages": [{ "role": "user", "content": source }],
+                "translation_options": {
+                    "source_lang": code(&self.source_lang),
+                    "target_lang": code(target),
+                    "domains": DOMAINS,
+                },
+            }),
+        };
         let send = || {
             http.post(self.access.url("/chat/completions"))
                 .bearer_auth(self.access.token())
@@ -123,18 +139,19 @@ impl Translator {
         let res: Value = res.json().await?;
         let usage = &res["usage"];
         let n = |key: &str| usage[key].as_u64().unwrap_or(0);
-        self.meter.tokens(
-            Use::Translate,
-            MODEL,
-            Tokens {
-                input: n("prompt_tokens"),
-                cached: 0,
-                output: n("completion_tokens"),
-            },
-        );
+        let tokens = Tokens {
+            input: n("prompt_tokens"),
+            cached: 0,
+            output: n("completion_tokens"),
+        };
+        // OpenRouter は料金を答えに入れる
+        match usage["cost"].as_f64() {
+            Some(usd) => self.meter.billed(Use::Translate, tokens, usd),
+            None => self.meter.tokens(Use::Translate, self.model, tokens),
+        }
         res["choices"][0]["message"]["content"]
             .as_str()
-            .map(str::to_owned)
+            .map(|text| text.trim().to_owned())
             .context("no translation")
     }
 }
@@ -381,7 +398,13 @@ mod tests {
         let translator = |provider| {
             let meter = Arc::new(Meter::new(std::env::temp_dir().join("mt_test_usage.json")));
             let access = Access::gift(provider, "code".into(), &api);
-            Translator::new(access, "ja".into(), vec!["en".into()], meter)
+            Translator::new(
+                access,
+                "qwen-mt-flash",
+                "ja".into(),
+                vec!["en".into()],
+                meter,
+            )
         };
         let spans = [Span::Text("強い".into())];
         let http = reqwest::Client::new();

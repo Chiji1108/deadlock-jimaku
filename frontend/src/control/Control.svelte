@@ -88,6 +88,11 @@
   const status = $derived.by(() => {
     if (!s?.transcriptionEnabled) return { label: "停止中", dot: "bg-muted-foreground/50" };
     if (panel.transcriptionError) return { label: "止まっています", dot: "bg-destructive" };
+    if (panel.preparing)
+      return {
+        label: "音声認識のモデルを準備しています（初回はダウンロードに数分かかります）…",
+        dot: "bg-sky-500 animate-pulse",
+      };
     if (panel.silent) return { label: "音が届いていません", dot: "bg-amber-500" };
     if (chromeFinals(s.engines)) return chromeStatus();
     if (panel.level === undefined)

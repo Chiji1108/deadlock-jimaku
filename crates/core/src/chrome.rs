@@ -26,7 +26,7 @@ use tokio::time::MissedTickBehavior;
 use tokio_tungstenite::tungstenite::Message;
 
 use crate::DEFAULT_PORT;
-use crate::access::Access;
+use crate::access::Accesses;
 use crate::annotate::Annotator;
 use crate::finish::{self, Finished, Finisher};
 use crate::settings::Settings;
@@ -424,15 +424,11 @@ pub(crate) async fn final_translation(
 }
 
 /// ページが認識した文を字幕にする。止めるまで続く（ページが閉じられても、開き直せば続きが出る）。
-/// `access` は確定の仕上げに OpenAI を使う工程があるときだけ、`qwen` は翻訳専門のモデルで訳すときだけ
-pub async fn run(
-    store: Arc<Store>,
-    access: Option<Access>,
-    qwen: Option<Access>,
-) -> anyhow::Result<()> {
+/// `accesses` は確定の仕上げ（用語、翻訳、ふりがな）に使う会社の送り先と鍵
+pub async fn run(store: Arc<Store>, accesses: Accesses) -> anyhow::Result<()> {
     let settings = store.settings();
     let annotator = Annotator::new(store.clone(), &settings).await;
-    let finisher = Arc::new(Finisher::new(store.clone(), &settings, access, qwen));
+    let finisher = Arc::new(Finisher::new(store.clone(), &settings, &accesses));
     let mut events = store.subscribe_chrome();
     let (done_tx, mut done_rx) = tokio::sync::mpsc::channel(64);
     let mut subtitles = Subtitles::new(store, &settings, annotator, finisher, done_tx);
@@ -764,7 +760,11 @@ mod tests {
         let store = Store::new(Ok(settings.clone()), std::path::PathBuf::new());
         let messages = store.subscribe();
         let annotator = Annotator::new(store.clone(), &settings).await;
-        let finisher = Arc::new(Finisher::new(store.clone(), &settings, None, None));
+        let finisher = Arc::new(Finisher::new(
+            store.clone(),
+            &settings,
+            &Accesses::default(),
+        ));
         let (done_tx, done) = tokio::sync::mpsc::channel(8);
         let subs = Subtitles::new(store, &settings, annotator, finisher, done_tx);
         (subs, messages, done)

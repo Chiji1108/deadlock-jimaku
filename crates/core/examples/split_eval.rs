@@ -8,7 +8,8 @@
 //!     terms-decisions アプリと同じ処理（`decide::Decider`）。PC の中で候補を出し、OpenAI の Decisions API に確かめさせる
 //!     terms-jev       アプリと同じ候補を、TypeSafe AI の Jev に確かめさせる（MODEL は `jev-latest` など）。
 //!                     `会社/モデル` の形なら、OpenRouter の判定モデル（`perplexity/pplx-decider-v1.2` など）に送る
-//!     pipeline        アプリと同じ処理で、用語を決めてから訳す（`Decider` → `mt::Translator`）。MODEL は名前だけ
+//!     pipeline        アプリと同じ処理で、用語を決めてから訳す（`Decider` → `mt::Translator`）。MODEL は `用語+翻訳` の
+//!                     工程の名前（設定と同じ。`decisions+qwenMtFlash`、`jev+hyMt2`、`drexMax+hyMt2` など）
 //!     translate       正解の用語を `⟦英語名⟧` に置き換えた原文を訳すだけの問い合わせ（辞書の一覧は送らない）
 //!   `SPLIT_EVAL_ASSETS` で辞書の置き場所を替えられる（別名のキャッシュをアプリの置き場所に書かないとき）。
 //!   出力: experiments/results/split_eval.json（"MODE/MODEL" ごとに足す。同じものは置き換える）
@@ -32,7 +33,7 @@ use overlays_core::llm;
 use overlays_core::mt::Translator;
 use overlays_core::secrets::Provider;
 use overlays_core::settings::Models;
-use overlays_core::settings::Settings;
+use overlays_core::settings::{Engines, Settings};
 use overlays_core::store::Store;
 use overlays_core::types::Token;
 use overlays_core::types::{EntityKind, Glossary};
@@ -112,7 +113,6 @@ async fn main() -> anyhow::Result<()> {
     let app = App::new(
         std::env::var("SPLIT_EVAL_ASSETS").map_or(root, Into::into),
         Access::key(Provider::OpenAi, env("OPENAI_API_KEY")),
-        Access::key(Provider::Qwen, env("QWEN_SOUTH_API_KEY")),
     )
     .await?;
     for model in &models {
@@ -138,6 +138,10 @@ async fn main() -> anyhow::Result<()> {
                 std::env::temp_dir().join("split_eval_unused.json"),
             )),
         );
+        let parts = match mode.as_str() {
+            "pipeline" => Some(app.parts(model)?),
+            _ => None,
+        };
         let mut runs = Vec::new();
         let (mut ok_count, mut failed) = (0, 0);
         let mut times = Vec::new();
@@ -156,7 +160,10 @@ async fn main() -> anyhow::Result<()> {
                     }
                     "terms-decisions" => terms_decisions(&app, text, &context).await,
                     "terms-jev" => terms_jev(&client, &app, model, text, &context).await,
-                    "pipeline" => pipeline(&app, text, &context).await,
+                    "pipeline" => {
+                        let (decider, translator) = parts.as_ref().expect("made for the mode");
+                        pipeline(&app, decider, translator, text, &context).await
+                    }
                     "translate" => translate(&client, model, case, &context, &glossary).await,
                     other => anyhow::bail!("unknown mode: {other}"),
                 };
@@ -361,7 +368,7 @@ const JEV_PRICE: (f64, f64) = (0.042, 0.0);
 const DREX_MAX_PRICE: (f64, f64) = (0.06, 0.0);
 
 /// アプリと同じ候補と問いを、TypeSafe AI の Jev に確かめさせる（`TYPESAFE_AI_API_KEY`）。
-/// 問いの形だけ Jev に合わせる（`state` と、名前ごとの `questions`、選択肢は `criteria`）
+/// 問いの形だけ Jev に合わせる（`Asked::systemone`）
 async fn terms_jev(
     client: &Client,
     app: &App,
@@ -372,20 +379,7 @@ async fn terms_jev(
     let Some(asked) = app.decider.ask(text, context, &app.loaded) else {
         return Ok(Outcome::Terms(Vec::new()));
     };
-    let mut questions = serde_json::Map::new();
-    for q in asked.request["questions"].as_array().into_iter().flatten() {
-        let criteria: serde_json::Map<String, Value> = q["choices"]
-            .as_array()
-            .into_iter()
-            .flatten()
-            .filter_map(|c| Some((c["value"].as_str()?.to_owned(), c["description"].clone())))
-            .collect();
-        questions.insert(
-            q["name"].as_str().context("name")?.to_owned(),
-            json!({ "type": "choice", "instructions": q["instructions"], "criteria": criteria }),
-        );
-    }
-    let body = json!({ "model": model, "state": asked.request["input"], "questions": questions });
+    let body = asked.systemone(model);
     // `会社/モデル` の形なら OpenRouter（判定モデルをまとめて同じ形で呼べる。`OPENROUTER_API_KEY`）
     // `drex-` は Nace に直接（`NACE_API_KEY`）。どこも同じ形の口
     let (url, key, price) = match model {
@@ -428,11 +422,16 @@ async fn terms_jev(
 }
 
 /// アプリと同じ処理で、用語を決めてから訳す（`decide::Decider` → `mt::Translator`）
-async fn pipeline(app: &App, text: &str, context: &[String]) -> anyhow::Result<Outcome> {
+async fn pipeline(
+    app: &App,
+    decider: &Decider,
+    translator: &Translator,
+    text: &str,
+    context: &[String],
+) -> anyhow::Result<Outcome> {
     let http = overlays_core::http();
-    let spans = app.decider.terms(http, text, context, &app.loaded).await?;
-    let translations = app
-        .translator
+    let spans = decider.terms(http, text, context, &app.loaded).await?;
+    let translations = translator
         .translate(http, &spans, Some(&app.loaded.glossary))
         .await?;
     let written = |lang: &'static str| {
@@ -481,12 +480,12 @@ struct App {
     meter: Arc<Meter>,
     loaded: Loaded,
     decider: Decider,
-    translator: Translator,
+    settings: Settings,
 }
 
 impl App {
     /// `root` はアプリの辞書の置き場所。別名がまだなければ、ここで LLM に作らせて置く
-    async fn new(root: std::path::PathBuf, openai: Access, qwen: Access) -> anyhow::Result<Self> {
+    async fn new(root: std::path::PathBuf, openai: Access) -> anyhow::Result<Self> {
         let settings = Settings {
             translate_to: TARGETS.map(|(code, _)| code.to_owned()).to_vec(),
             ..Default::default()
@@ -498,14 +497,57 @@ impl App {
         Ok(Self {
             meter: store.meter(),
             loaded,
-            decider: Decider::new(openai, settings.mic_language.clone(), store.meter()),
-            translator: Translator::new(
-                qwen,
-                settings.mic_language,
-                settings.translate_to,
+            decider: Decider::new(
+                openai,
+                "gpt-6-luna",
+                settings.mic_language.clone(),
                 store.meter(),
             ),
+            settings,
         })
+    }
+
+    /// `用語+翻訳` の工程の名前（設定と同じ。`decisions+qwenMtFlash`、`jev+hyMt2` など）から、アプリと同じ部品を作る
+    fn parts(&self, model: &str) -> anyhow::Result<(Decider, Translator)> {
+        let (terms, translation) = model
+            .split_once('+')
+            .context("pipeline TERMS+TRANSLATION")?;
+        let engines = Engines {
+            terms: serde_json::from_value(json!(terms))?,
+            translation: serde_json::from_value(json!(translation))?,
+            ..Engines::CHROME
+        };
+        let access = |provider| {
+            let key = match provider {
+                Provider::OpenAi => "OPENAI_API_KEY",
+                Provider::Xai => "XAI_API_KEY",
+                Provider::Qwen => "QWEN_SOUTH_API_KEY",
+                Provider::OpenRouter => "OPENROUTER_API_KEY",
+                Provider::TypeSafe => "TYPESAFE_AI_API_KEY",
+            };
+            Access::key(provider, std::env::var(key).unwrap_or_default())
+        };
+        let judge = engines.judge().context("terms need a judge")?;
+        let mt = engines
+            .translation
+            .mt()
+            .context("translation needs a model")?;
+        let lang = self.settings.mic_language.clone();
+        Ok((
+            Decider::new(
+                access(judge.provider),
+                judge.name,
+                lang.clone(),
+                self.meter.clone(),
+            ),
+            Translator::new(
+                access(mt.provider),
+                mt.name,
+                lang,
+                self.settings.translate_to.clone(),
+                self.meter.clone(),
+            ),
+        ))
     }
 }
 

@@ -3,7 +3,7 @@
 use std::collections::VecDeque;
 use std::io;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -57,6 +57,8 @@ pub struct Store {
     unsaved: Mutex<Option<String>>,
     /// 字幕を始められなかった理由（操作パネルに出す）
     transcription_error: Mutex<Option<TranscriptionError>>,
+    /// PC の中の文字起こしを準備している
+    preparing: AtomicBool,
     segments: Mutex<VecDeque<Segment>>,
     glossary: watch::Sender<Option<Loaded>>,
     /// 新しい版の辞書を作り直すよう頼んだ回数。変わると `runtime` が辞書の処理を張り直す
@@ -95,6 +97,7 @@ impl Store {
             data_dir,
             unsaved: Mutex::new(unsaved),
             transcription_error: Mutex::new(None),
+            preparing: AtomicBool::new(false),
             segments: Mutex::new(VecDeque::new()),
             glossary: watch::Sender::new(None),
             glossary_refreshes: AtomicU64::new(0),
@@ -168,7 +171,19 @@ impl Store {
         if !self.chrome_needed() {
             self.close_chrome();
         }
-        let _ = self.tx.send(ServerMsg::TranscriptionStatus { error });
+        let preparing = self.preparing.load(Ordering::Relaxed);
+        let _ = self
+            .tx
+            .send(ServerMsg::TranscriptionStatus { error, preparing });
+    }
+
+    /// PC の中の文字起こしを準備している（初回は speech.cpp とモデルのダウンロードを待つ）
+    pub fn set_preparing(&self, preparing: bool) {
+        self.preparing.store(preparing, Ordering::Relaxed);
+        let error = self.transcription_error();
+        let _ = self
+            .tx
+            .send(ServerMsg::TranscriptionStatus { error, preparing });
     }
 
     pub fn transcription_error(&self) -> Option<TranscriptionError> {
@@ -227,6 +242,7 @@ impl Store {
         }
         msgs.push(ServerMsg::TranscriptionStatus {
             error: self.transcription_error(),
+            preparing: self.preparing.load(Ordering::Relaxed),
         });
         msgs.push(ServerMsg::LiveStatus {
             status: self.live_status.lock().unwrap().clone(),
