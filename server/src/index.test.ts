@@ -1,5 +1,6 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { getPlatformProxy } from "wrangler";
+import { network } from "./beta";
 import { addUsage, codeByValue, day, DEFAULT_DAILY_LIMIT_USD, open, type Db } from "./db";
 import { app, type Env } from "./index";
 import { openai, validKey } from "./openai";
@@ -61,7 +62,7 @@ beforeAll(async () => {
 afterAll(() => proxy.dispose());
 
 beforeEach(async () => {
-  for (const table of ["code_usage", "codes", "issuer_keys", "issuers", "beta_grants"]) {
+  for (const table of ["code_usage", "codes", "issuer_keys", "issuers", "beta_grants", "beta_spend"]) {
     await env.DB.prepare(`DELETE FROM ${table}`).run();
   }
   vi.mocked(validKey).mockImplementation(async (key) => key.startsWith("sk-"));
@@ -1061,6 +1062,7 @@ describe("beta", () => {
       transcription([wavPart, wavPart]),
       transcription([mp3]),
       transcription([{ type: "input_text", text: "x".repeat(501) }, wavPart]),
+      { ...transcription(), parameters: { enable_search: true } },
     ]) {
       expect((await transcribe(code, bad)).status).toBe(400);
     }
@@ -1111,8 +1113,9 @@ describe("beta", () => {
       expect((await ask("/chat/completions", bad)).status).toBe(400);
     }
     expect(openrouter).toHaveBeenCalledTimes(2);
-    // 判定は答えに入っていた料金、翻訳は料金がなかったのでトークンから（100 万トークン $0.074）
-    expect(await dayUsd(code)).toBeCloseTo(0.002 + 0.074);
+    // 判定は答えに入っていた料金。翻訳は料金がなかったので、先に足した見積もり（本文の長さと出力の上限から）のまま
+    const sent = JSON.stringify({ ...translate, tools: [{}] });
+    expect(await dayUsd(code)).toBeCloseTo(0.002 + (sent.length * 0.074 + 512 * 0.295) / 1e6, 8);
   });
 
   it("does not relay anything else to Qwen or OpenRouter (live captions, other endpoints)", async () => {
@@ -1139,15 +1142,50 @@ describe("beta", () => {
     expect([limited.status, limited.headers.get("X-Gift-Refusal")]).toEqual([403, "limit"]);
     expect((await transcribe(other)).status).toBe(200);
 
-    // ほかのコードの分も足して、ベータ全体の上限に届いたら止める（おすそ分けのコードの分は足さない）
-    const shared = await createCode(await share());
-    await addUsage(db, shared.id, 100, Date.now());
-    expect((await transcribe(other)).status).toBe(200);
-    for (let i = 0; i < 9; i++) {
-      await addUsage(db, await id(await joined(`198.51.100.${i}`)), 0.5, Date.now());
-    }
+    // ベータ全体の今日の分が上限に届いたら、どのコードも止める。届いたコードに足した見積もりは戻す
+    await env.DB.prepare("INSERT OR REPLACE INTO beta_spend (day, usd) VALUES (?, 5)").bind(day(Date.now())).run();
+    const before = await dayUsd(other);
     const full = await transcribe(other);
     expect([full.status, full.headers.get("X-Gift-Refusal")]).toEqual([403, "limit"]);
+    expect(await dayUsd(other)).toBeCloseTo(before, 10);
+    expect(qwen).toHaveBeenCalledOnce();
+  });
+
+  it("holds the limits when requests arrive at the same time", async () => {
+    // 同じ所から同時に頼んでも、出すのは 3 つまで
+    const answers = await Promise.all(Array.from({ length: 20 }, () => join()));
+    expect(answers.filter((res) => res.status === 200)).toHaveLength(3);
+
+    // 上限の手前のコードに同時に送っても、通るのは上限に届くまで（1 回の見積もりは約 $0.0003）
+    const code = await joined("203.0.113.9");
+    await addUsage(db, (await codeByValue(db, code))!.id, 0.4995, Date.now());
+    vi.mocked(qwen).mockImplementation(async () => Response.json({ output: { text: "" }, usage: {} }));
+    const sent = await Promise.all(Array.from({ length: 20 }, () => transcribe(code)));
+    const passed = sent.filter((res) => res.status === 200).length;
+    expect(passed).toBeGreaterThan(0);
+    expect(passed).toBeLessThan(5);
+  });
+
+  it("hides the developer's upstream trouble, and gives back what it set aside", async () => {
+    const code = await joined();
+    // 開発者のキーが使えない。そのまま 401 を返すと、アプリは「コードが使えない」と出してしまう
+    vi.mocked(qwen).mockResolvedValue(Response.json({ code: "InvalidApiKey", message: "secret detail" }, { status: 401 }));
+    const res = await transcribe(code);
+    expect([res.status, await res.json()]).toEqual([502, { error: "upstream" }]);
+    expect(await dayUsd(code)).toBeCloseTo(0, 10);
+    // つながらないときも同じ。回数の上限（429）は、アプリが待って送り直せるように伝える
+    vi.mocked(qwen).mockRejectedValue(new Error("network"));
+    expect((await transcribe(code)).status).toBe(502);
+    vi.mocked(qwen).mockResolvedValue(new Response("slow down", { status: 429 }));
+    expect((await transcribe(code)).status).toBe(429);
+  });
+
+  it("counts every address of one IPv6 network as the same place", () => {
+    expect(network("203.0.113.7")).toBe("203.0.113.7");
+    expect(network("2001:db8:0:1:aaaa:bbbb:cccc:dddd")).toBe("2001:db8:0:1");
+    expect(network("2001:0DB8::1")).toBe("2001:db8:0:0");
+    expect(network("2001:db8:0:1::")).toBe(network("2001:db8:0:1:ffff::1"));
+    expect(network("")).toBe("");
   });
 });
 

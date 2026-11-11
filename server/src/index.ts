@@ -22,12 +22,13 @@ import {
   type Issuer,
 } from "./db";
 import {
-  BETA_DAILY_USD,
   BETA_ISSUER,
   betaKey,
   betaProviders,
-  betaSpentToday,
   grantBetaCode,
+  network,
+  reserveBeta,
+  settleBeta,
   type BetaEnv,
 } from "./beta";
 import { openai, validKey } from "./openai";
@@ -98,8 +99,10 @@ const BETA_TRANSLATOR = "tencent/hy-mt2-30b-a3b";
 const MAX_QWEN_BODY = 2_000_000;
 /** 文字起こしに添える文（用語）の上限。アプリは 400 文字まで送る */
 const MAX_QWEN_CONTEXT = 500;
-/** 翻訳の本文の上限。アプリは 1 発話と短い指示文を送る */
-const MAX_TRANSLATION_BODY = 16_000;
+/** 用語の判定の本文の上限。アプリは 1 発話で、多くて 10 ほどの問い（1 問 1,000 文字ほど）を送る */
+const MAX_JUDGE_BODY = 32_000;
+/** 翻訳の本文の上限。アプリは 1 発話と短い指示文（400 文字ほど）を送る */
+const MAX_TRANSLATION_BODY = 8_000;
 /** 翻訳の出力の上限（アプリが送る値） */
 const MAX_TRANSLATION_TOKENS = 512;
 
@@ -329,7 +332,7 @@ app.get("/gift", async (c) => {
 app.post("/beta/codes", async (c) => {
   if (betaProviders(c.env).length === 0) return c.json({ error: "closed" }, 503);
   const now = Date.now();
-  const ip = c.req.header("CF-Connecting-IP") ?? "";
+  const ip = network(c.req.header("CF-Connecting-IP") ?? "");
   const place = await sha256(`beta:${new Date(now).toISOString().slice(0, 10)}:${ip}:${c.env.SHARE_KEY}`);
   const granted = await grantBetaCode(c.var.db, place, now);
   return "code" in granted ? c.json(granted) : c.json(granted, 429);
@@ -479,27 +482,43 @@ app.get("/openai/realtime", async (c) => {
 
 // ---- ベータの間だけの中継（開発者のキー。DESIGN.md 17.2） ----
 
-/** OpenRouter の応答の料金。答えに入っていなければ、トークン数から数える */
-function openrouterUsd(usage: unknown): number {
-  const u = (usage ?? {}) as Record<string, unknown>;
-  if (typeof u.cost === "number") return u.cost;
-  const n = (...keys: string[]) => {
-    const found = keys.map((k) => u[k]).find((v) => typeof v === "number");
-    return typeof found === "number" ? found : 0;
-  };
-  const { input, output } = OPENROUTER_FALLBACK;
-  return (n("input_tokens", "prompt_tokens") * input + n("output_tokens", "completion_tokens") * output) / 1e6;
+/** OpenRouter の応答の料金。答えに入っていなければ undefined（見積もりで数える） */
+function openrouterUsd(usage: unknown): number | undefined {
+  const cost = (usage as { cost?: unknown } | undefined)?.cost;
+  return typeof cost === "number" ? cost : undefined;
 }
 
-/** JSON の応答をそのまま返し、成功していれば料金を足す */
-async function relayed(c: Ctx, codeId: string, res: Response, usd: (answer: Record<string, unknown>) => number) {
-  const answer = await res.text();
-  if (res.ok) {
-    const cost = usd(parsed<Record<string, unknown>>(answer) ?? {});
-    c.executionCtx.waitUntil(addUsage(c.var.db, codeId, cost, Date.now()));
+/**
+ * ベータのコードで外に送る。送る前に、かかりそうな額（多めの見積もり）を先に足し（上限に届いていたら送らない）、
+ * 応答のあとに実際の額に直す。額が分からない応答は、見積もりのまま数える。
+ * 外の不調（開発者のキーが使えない、残高がないなど）は、利用者には関係がないので、中身を返さず 502 にする
+ * （そのまま 401 を返すと、アプリは「コードが使えない」と出してしまう）
+ */
+async function relayed(
+  c: Ctx,
+  codeId: string,
+  estimate: number,
+  send: () => Promise<Response>,
+  usd: (answer: Record<string, unknown>) => number | undefined,
+): Promise<Response> {
+  const now = Date.now();
+  if (!(await reserveBeta(c.var.db, codeId, estimate, now))) {
+    return c.json({ error: "limit" }, 403, { "X-Gift-Refusal": "limit" });
   }
-  return new Response(answer, { status: res.status, headers: { "Content-Type": "application/json" } });
+  const settle = (actual: number) => c.executionCtx.waitUntil(settleBeta(c.var.db, codeId, estimate, actual, now));
+  const res = await send().catch(() => undefined);
+  if (!res?.ok) {
+    settle(0);
+    const status = res?.status === 429 ? 429 : 502;
+    return c.json({ error: "upstream" }, status);
+  }
+  const answer = await res.text();
+  settle(usd(parsed<Record<string, unknown>>(answer) ?? {}) ?? estimate);
+  return new Response(answer, { headers: { "Content-Type": "application/json" } });
 }
+
+/** 100 万トークンあたりの単価から、額を出す */
+const usdOf = (tokens: number, perMillion: number) => (tokens * perMillion) / 1e6;
 
 /** 確定の文字起こし（Qwen-Audio-3.1-ASR-Flash）。アプリが送る形だけを通す: 用語の文と、WAV が 1 つ */
 app.post("/qwen/api/v1/services/aigc/multimodal-generation/generation", async (c) => {
@@ -512,28 +531,45 @@ app.post("/qwen/api/v1/services/aigc/multimodal-generation/generation", async (c
   const message = Array.isArray(messages) && messages.length === 1 ? (messages[0] as Record<string, unknown>) : {};
   const parts = Array.isArray(message.content) ? (message.content as Record<string, unknown>[]) : [];
   const context = (p: Record<string, unknown>) =>
-    p?.type === "input_text" && typeof p.text === "string" && p.text.length <= MAX_QWEN_CONTEXT;
+    p?.type === "input_text" && typeof p.text === "string" && p.text.length <= MAX_QWEN_CONTEXT ? p.text : undefined;
   const audio = (p: Record<string, unknown>) => {
     const data = (p?.input_audio as { data?: unknown } | undefined)?.data;
-    return p?.type === "input_audio" && typeof data === "string" && data.startsWith("data:audio/wav;base64,");
+    const wav = p?.type === "input_audio" && typeof data === "string" && data.startsWith("data:audio/wav;base64,");
+    return wav ? (data as string) : undefined;
   };
+  const hints = (body.parameters as { language_hints?: unknown } | undefined)?.language_hints;
+  const language = Array.isArray(hints) && hints.length === 1 ? hints[0] : undefined;
+  const sounds = parts.flatMap((p) => audio(p) ?? []);
   if (
     body.model !== QWEN_AUDIO.model ||
     message.role !== "user" ||
-    parts.filter(audio).length !== 1 ||
-    !parts.every((p) => context(p) || audio(p))
+    sounds.length !== 1 ||
+    !parts.every((p) => context(p) !== undefined || audio(p) !== undefined) ||
+    typeof language !== "string" ||
+    language.length > 8
   ) {
     return c.json({ error: "notAllowed" }, 400);
   }
+  // アプリが送る項目だけを作り直して送る（ほかの項目やパラメータは通さない）
+  const content = parts.map((p) => {
+    const said = context(p);
+    return said === undefined
+      ? { type: "input_audio", input_audio: { data: audio(p) } }
+      : { type: "input_text", text: said };
+  });
   const forwarded = {
-    model: body.model,
-    input: { messages: [{ role: "user", content: parts }] },
-    parameters: body.parameters,
+    model: QWEN_AUDIO.model,
+    input: { messages: [{ role: "user", content }] },
+    parameters: { format: "wav", sample_rate: "16000", language_hints: [language] },
   };
-  const res = await qwen("/api/v1/services/aigc/multimodal-generation/generation", gift.key, forwarded);
-  return relayed(c, gift.code.id, res, (answer) => {
+  // 16kHz・16bit の WAV として、音声 1 秒が入力約 11 トークン。出力は長くても数百トークン。倍を見ておく
+  const seconds = (sounds[0]!.length * 0.75) / 32_000;
+  const estimate = 2 * (usdOf(seconds * 11 + MAX_QWEN_CONTEXT, QWEN_AUDIO.input) + usdOf(300, QWEN_AUDIO.output));
+  const path = "/api/v1/services/aigc/multimodal-generation/generation";
+  return relayed(c, gift.code.id, estimate, () => qwen(path, gift.key, forwarded), (answer) => {
+    if (answer.usage === undefined) return undefined;
     const { input, output } = tokensOf(answer.usage);
-    return (input * QWEN_AUDIO.input + output * QWEN_AUDIO.output) / 1e6;
+    return usdOf(input, QWEN_AUDIO.input) + usdOf(output, QWEN_AUDIO.output);
   });
 });
 
@@ -542,30 +578,40 @@ app.post("/openrouter/systemone", async (c) => {
   const gift = await giftKey(c, "openrouter");
   if (gift instanceof Response) return gift;
   const text = await c.req.text();
-  if (text.length > MAX_DECISIONS_BODY) return c.json({ error: "tooLarge" }, 413);
+  if (text.length > MAX_JUDGE_BODY) return c.json({ error: "tooLarge" }, 413);
   const { model, state, questions } = parsed<Record<string, unknown>>(text) ?? {};
-  const asked = questions !== null && typeof questions === "object" ? Object.values(questions) : [];
+  const asked = questions !== null && typeof questions === "object" ? Object.entries(questions) : [];
+  /** 問いを、アプリが送る項目だけにして作り直す。形が違えば undefined */
   const choice = (q: unknown) => {
     const { type, instructions, criteria } = (q ?? {}) as Record<string, unknown>;
-    return (
+    const options = criteria !== null && typeof criteria === "object" ? Object.entries(criteria) : [];
+    const valid =
       type === "choice" &&
       typeof instructions === "string" &&
-      criteria !== null &&
-      typeof criteria === "object" &&
-      Object.values(criteria).every((description) => typeof description === "string")
-    );
+      options.length > 0 &&
+      options.every(([, description]) => typeof description === "string");
+    return valid ? { type, instructions, criteria: Object.fromEntries(options) } : undefined;
   };
+  const choices = asked.map(([name, q]) => [name, choice(q)] as const);
   if (
     model !== BETA_JUDGE ||
     typeof state !== "string" ||
-    asked.length === 0 ||
-    asked.length > MAX_DECISIONS_QUESTIONS ||
-    !asked.every(choice)
+    choices.length === 0 ||
+    choices.length > MAX_DECISIONS_QUESTIONS ||
+    choices.some(([, q]) => q === undefined)
   ) {
     return c.json({ error: "notAllowed" }, 400);
   }
-  const res = await openrouter("/systemone", gift.key, { model, state, questions });
-  return relayed(c, gift.code.id, res, (answer) => openrouterUsd(answer.usage));
+  const forwarded = { model, state, questions: Object.fromEntries(choices) };
+  // 文字数より多いトークンにはならない。出力は数えられない
+  const estimate = usdOf(text.length, OPENROUTER_FALLBACK.input);
+  return relayed(
+    c,
+    gift.code.id,
+    estimate,
+    () => openrouter("/systemone", gift.key, forwarded),
+    (answer) => openrouterUsd(answer.usage),
+  );
 });
 
 /** 翻訳（Hy-MT2）。アプリが送る形だけを通す: user の文字の 1 通 */
@@ -577,6 +623,7 @@ app.post("/openrouter/chat/completions", async (c) => {
   const body = parsed<Record<string, unknown>>(text) ?? {};
   const messages = Array.isArray(body.messages) ? (body.messages as Record<string, unknown>[]) : [];
   const [message] = messages;
+  const number = (value: unknown) => (typeof value === "number" ? value : undefined);
   if (
     body.model !== BETA_TRANSLATOR ||
     messages.length !== 1 ||
@@ -585,15 +632,22 @@ app.post("/openrouter/chat/completions", async (c) => {
   ) {
     return c.json({ error: "notAllowed" }, 400);
   }
-  const asked = typeof body.max_tokens === "number" ? body.max_tokens : MAX_TRANSLATION_TOKENS;
-  const res = await openrouter("/chat/completions", gift.key, {
-    model: body.model,
+  const forwarded = {
+    model: BETA_TRANSLATOR,
     messages: [{ role: "user", content: message.content }],
-    temperature: body.temperature,
-    top_p: body.top_p,
-    max_tokens: Math.min(asked, MAX_TRANSLATION_TOKENS),
-  });
-  return relayed(c, gift.code.id, res, (answer) => openrouterUsd(answer.usage));
+    temperature: number(body.temperature),
+    top_p: number(body.top_p),
+    max_tokens: Math.min(number(body.max_tokens) ?? MAX_TRANSLATION_TOKENS, MAX_TRANSLATION_TOKENS),
+  };
+  const { input, output } = OPENROUTER_FALLBACK;
+  const estimate = usdOf(text.length, input) + usdOf(MAX_TRANSLATION_TOKENS, output);
+  return relayed(
+    c,
+    gift.code.id,
+    estimate,
+    () => openrouter("/chat/completions", gift.key, forwarded),
+    (answer) => openrouterUsd(answer.usage),
+  );
 });
 
 /** Qwen と OpenRouter のほかの口（途中の字幕、ほかのモデル）は中継しない。アプリは「このコードでは使えない」と出す */
@@ -631,13 +685,11 @@ async function giftKey(
   const now = Date.now();
   const error = refusal(code, now);
   if (error) return deny(error);
-  // ベータのコードは開発者のキー（Qwen と OpenRouter）、おすそ分けのコードは預けたキー（OpenAI と xAI）
-  const beta = code.issuerId === BETA_ISSUER;
+  // ベータのコードは開発者のキー（Qwen と OpenRouter）、おすそ分けのコードは預けたキー（OpenAI と xAI）。
+  // ベータの上限（コードごとと全体）は、送る直前に額を先に足して確かめる（`relayed`）
   const key = await relayKey(c, code, provider);
   // その会社のキーがない
   if (!key) return deny("unsupported");
-  // ベータ全体の今日の上限。1 つのコードの上限を越えなくても、全部を足して越えたら止める
-  if (beta && (await betaSpentToday(c.var.db, now)) >= BETA_DAILY_USD) return deny("limit");
   const { success } = await c.env.GIFT_RATE.limit({ key: code.id });
   if (!success) return c.json({ error: "rate" }, 429);
   return { code, key };

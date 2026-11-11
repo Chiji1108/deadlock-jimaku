@@ -66,11 +66,17 @@ export const codeUsage = sqliteTable(
 export const betaGrants = sqliteTable(
   "beta_grants",
   {
-    /** IP アドレスと日付のハッシュ（IP アドレスそのものは保存しない） */
-    place: text().notNull(),
     /** UTC の "2026-11-11" */
     day: text().notNull(),
+    /** IP アドレス（IPv6 は先頭の 64 ビット）と日付のハッシュ（IP アドレスそのものは保存しない）。"*" はその日の合計 */
+    place: text().notNull(),
     count: integer().notNull().default(0),
   },
-  (t) => [primaryKey({ columns: [t.place, t.day] })],
+  (t) => [primaryKey({ columns: [t.day, t.place] })],
 );
+
+/** ベータの全部のコードが、その日（UTC）に使った額。上限を、1 行の読み書きで確かめるために持つ */
+export const betaSpend = sqliteTable("beta_spend", {
+  day: text().primaryKey(),
+  usd: real().notNull().default(0),
+});

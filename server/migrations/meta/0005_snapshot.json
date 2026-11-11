@@ -1,21 +1,21 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "3211ec97-405d-4556-b584-69b80b40026c",
+  "id": "61f613f2-9d17-41fa-b25f-217c1cb0d2f6",
   "prevId": "d093e6cb-8e35-4553-89df-8ae4e599d741",
   "tables": {
     "beta_grants": {
       "name": "beta_grants",
       "columns": {
-        "place": {
-          "name": "place",
+        "day": {
+          "name": "day",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
-        "day": {
-          "name": "day",
+        "place": {
+          "name": "place",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -33,14 +33,39 @@
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {
-        "beta_grants_place_day_pk": {
+        "beta_grants_day_place_pk": {
           "columns": [
-            "place",
-            "day"
+            "day",
+            "place"
           ],
-          "name": "beta_grants_place_day_pk"
+          "name": "beta_grants_day_place_pk"
         }
       },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "beta_spend": {
+      "name": "beta_spend",
+      "columns": {
+        "day": {
+          "name": "day",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "usd": {
+          "name": "usd",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
