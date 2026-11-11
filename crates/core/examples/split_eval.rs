@@ -14,6 +14,7 @@
 //!   出力: experiments/results/split_eval.json（"MODE/MODEL" ごとに足す。同じものは置き換える）
 //!   `claude-` は Anthropic、`qwen` は QwenCloud（シンガポール）、ほかは OpenAI に送る。どれも推論は止める。
 //!   `qwen-mt-` は翻訳専門のモデルで、translate だけ。翻訳先ごとに 1 回ずつ同時に送る。
+//!   translate で `会社/モデル` の形（`tencent/hy-mt2-1.8b` など）は OpenRouter の翻訳専門のモデル。`+terms` を付けると用語を用語の指定で渡す
 //!   `deepl`（既定のモデル）と `deepl-latency`（速さを優先）は DeepL の翻訳 API（`DEEPL_API_KEY`）で、これも translate だけ
 
 use std::collections::BTreeMap;
@@ -42,6 +43,10 @@ const CASES: &str = "experiments/results/entity_llm.json";
 const OUT: &str = "experiments/results/split_eval.json";
 const TARGETS: [(&str, &str); 2] = [("en", "English"), ("ru", "Russian")];
 const TIMEOUT: Duration = Duration::from_secs(8);
+/// 翻訳専門のモデルに添える、分野の説明
+const MT_DOMAIN: &str = "Casual live commentary by a streamer playing the video game Deadlock, like gamers talk. \
+                         Words in ⟦ ⟧ are game terms (names of heroes, items and abilities); \
+                         keep them exactly as they are, with the brackets.";
 const QWEN: &str =
     "https://ap-southeast-1.maas.qwencloudapi.com/compatible-mode/v1/chat/completions";
 
@@ -523,6 +528,48 @@ async fn translate(
             ("ru", ru),
         ])));
     }
+    // `会社/モデル` の形は、OpenRouter の翻訳専門のモデル（Hy-MT2）。`+terms` を付けると、原文はそのままにして
+    // 用語をモデルの用語の指定（話した言葉 → `⟦英語名⟧`）で渡す
+    if model.contains('/') {
+        let (name, by_terms) = match model.strip_suffix("+terms") {
+            Some(name) => (name, true),
+            None => (model, false),
+        };
+        let prompt = |target: &str| {
+            if !by_terms {
+                return format!(
+                    "[Background Information]\n{MT_DOMAIN}\n\nPlease translate the following text into {target}, \
+                     taking the provided background information into consideration.\n\n[Source Text]\n{source}"
+                );
+            }
+            let terms: String = expected_terms(case)
+                .iter()
+                .filter_map(|(spoken, r)| {
+                    Some(format!(
+                        "{spoken} translates to ⟦{}⟧\n",
+                        english(glossary, r)?
+                    ))
+                })
+                .collect();
+            let reference = if terms.is_empty() {
+                String::new()
+            } else {
+                format!("Reference the following translations:\n{terms}\n")
+            };
+            format!(
+                "{reference}Translate the following text into {target}. Note that you must ONLY output the \
+                 translated result without any additional explanation:\n\n{}",
+                case["text"].as_str().unwrap_or_default()
+            )
+        };
+        let asked = TARGETS.map(|(_, target)| client.ask_openrouter_mt(name, prompt(target)));
+        let [en, ru] = asked;
+        let (en, ru) = tokio::try_join!(en, ru)?;
+        return Ok(Outcome::Translations(BTreeMap::from([
+            ("en", en),
+            ("ru", ru),
+        ])));
+    }
     if model.starts_with("qwen-mt-") {
         let asked = TARGETS.map(|(_, name)| client.ask_qwen_mt(model, &source, name));
         let [en, ru] = asked;
@@ -708,9 +755,7 @@ impl Client {
             "translation_options": {
                 "source_lang": "Japanese",
                 "target_lang": target,
-                "domains": "Casual live commentary by a streamer playing the video game Deadlock, like gamers talk. \
-                            Words in ⟦ ⟧ are game terms (names of heroes, items and abilities); \
-                            keep them exactly as they are, with the brackets.",
+                "domains": MT_DOMAIN,
             },
         });
         let res = self.qwen(body).await?;
@@ -719,6 +764,35 @@ impl Client {
         Ok(res["choices"][0]["message"]["content"]
             .as_str()
             .context("no text")?
+            .to_owned())
+    }
+
+    /// OpenRouter の翻訳専門のモデル。user の 1 通だけを送る（system はない）。設定はモデルの説明の勧める値。
+    /// 料金は答えの `usage.cost`
+    async fn ask_openrouter_mt(&self, model: &str, prompt: String) -> anyhow::Result<String> {
+        let body = json!({
+            "model": model,
+            "messages": [{ "role": "user", "content": prompt }],
+            "temperature": 0.7,
+            "top_p": if model.contains("30b") { 1.0 } else { 0.6 },
+            "max_tokens": 512,
+        });
+        let res = self
+            .http
+            .post("https://openrouter.ai/api/v1/chat/completions")
+            .bearer_auth(std::env::var("OPENROUTER_API_KEY").unwrap_or_default())
+            .timeout(TIMEOUT)
+            .json(&body)
+            .send()
+            .await?;
+        let status = res.status();
+        let res: Value = res.json().await?;
+        anyhow::ensure!(status.is_success(), "{status}: {res}");
+        self.spent(res["usage"]["cost"].as_f64().unwrap_or(0.0));
+        Ok(res["choices"][0]["message"]["content"]
+            .as_str()
+            .context("no text")?
+            .trim()
             .to_owned())
     }
 
