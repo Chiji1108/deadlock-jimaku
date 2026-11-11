@@ -2,10 +2,10 @@
 // ここでは、その JWT が本物か（Cloudflare の鍵の署名、この管理画面あてか、期限）を確かめる。ログインの仕組みは持たない
 
 export interface AccessEnv {
-  /** Cloudflare Zero Trust のチームの名前（`https://<名前>.cloudflareaccess.com`）。入れなければ、管理画面は閉じている */
-  ACCESS_TEAM?: string;
+  /** Cloudflare Zero Trust のチームの URL（`https://<名前>.cloudflareaccess.com`）。入れなければ、管理画面は閉じている */
+  TEAM_DOMAIN?: string;
   /** Access のアプリケーションの AUD（管理画面あての JWT だけを通す） */
-  ACCESS_AUD?: string;
+  POLICY_AUD?: string;
 }
 
 interface Jwk extends JsonWebKey {
@@ -24,7 +24,7 @@ async function signingKeys(team: string, now: number, kid: unknown): Promise<Jwk
   const known = fresh?.keys.some((key) => key.kid === kid);
   const age = fresh ? now - fresh.at : Infinity;
   if (fresh && (known ? age < KEYS_TTL_MS : age < KEYS_RETRY_MS)) return fresh.keys;
-  const res = await fetch(`https://${team}.cloudflareaccess.com/cdn-cgi/access/certs`).catch(() => undefined);
+  const res = await fetch(`${team}/cdn-cgi/access/certs`).catch(() => undefined);
   const body = res?.ok ? ((await res.json().catch(() => undefined)) as { keys?: unknown } | undefined) : undefined;
   if (!Array.isArray(body?.keys)) return fresh?.keys ?? [];
   cached = { team, at: now, keys: body.keys as Jwk[] };
@@ -47,7 +47,8 @@ function json(part: string): Record<string, unknown> | undefined {
 
 /** Access を通った人のメールアドレス。通っていなければ undefined（設定がなければ、誰も通さない） */
 export async function accessEmail(request: Request, env: AccessEnv, now = Date.now()): Promise<string | undefined> {
-  const { ACCESS_TEAM: team, ACCESS_AUD: aud } = env;
+  const team = env.TEAM_DOMAIN?.replace(/\/+$/, "");
+  const aud = env.POLICY_AUD;
   const token = request.headers.get("Cf-Access-Jwt-Assertion");
   if (!team || !aud || !token) return undefined;
   const [head, body, signature, ...rest] = token.split(".");
@@ -58,7 +59,7 @@ export async function accessEmail(request: Request, env: AccessEnv, now = Date.n
   const audiences = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
   const valid =
     audiences.includes(aud) &&
-    claims.iss === `https://${team}.cloudflareaccess.com` &&
+    claims.iss === team &&
     typeof claims.exp === "number" &&
     claims.exp * 1000 > now &&
     typeof claims.email === "string";

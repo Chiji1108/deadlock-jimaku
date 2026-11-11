@@ -1,14 +1,14 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { getPlatformProxy } from "wrangler";
 import { accessEmail } from "./access";
-import { admin } from "./admin";
+import { admin, type AdminEnv } from "./admin";
 import { network } from "./beta";
 import { addUsage, codeByValue, day, DEFAULT_DAILY_LIMIT_USD, open, type Db } from "./db";
 import { app, type Env } from "./index";
 import { openai, validKey } from "./openai";
 import { appendSeconds, tokensUsd, wavSeconds } from "./price";
 import { relay } from "./realtime";
-import { normalizeCode } from "./secrets";
+import { encrypt, normalizeCode } from "./secrets";
 import { openrouter, qwen } from "./upstream";
 import { validXaiKey, xai } from "./xai";
 
@@ -74,8 +74,6 @@ beforeEach(async () => {
   vi.mocked(xai).mockReset();
   vi.mocked(accessEmail).mockReset();
   vi.mocked(accessEmail).mockResolvedValue("dev@example.com");
-  env.ACCESS_TEAM = "team";
-  env.ACCESS_AUD = "aud";
   vi.mocked(qwen).mockReset();
   vi.mocked(openrouter).mockReset();
   env.BETA_QWEN_KEY = "sk-beta-qwen";
@@ -1197,10 +1195,23 @@ describe("beta", () => {
 });
 
 describe("admin", () => {
+  /** 管理画面の Worker の設定。キーの暗号化は、API の Worker の口（ここでは同じ鍵で暗号化する関数）に頼む */
+  let adminEnv: AdminEnv;
+  beforeEach(() => {
+    adminEnv = {
+      DB: env.DB,
+      TEAM_DOMAIN: "https://team.cloudflareaccess.com",
+      POLICY_AUD: "aud",
+      VAULT: {
+        seal: (plain) => encrypt(plain, env.SHARE_KEY),
+        fallbacks: async () => ({ qwen: !!env.BETA_QWEN_KEY, openrouter: !!env.BETA_OPENROUTER_KEY }),
+      },
+    };
+  });
   /** 管理の口を呼ぶ。書き換える要求には、ページの JavaScript が付けるヘッダーを付ける */
   async function manage(path: string, method = "GET", body?: unknown, headers: Record<string, string> = { "X-Admin": "1" }) {
     const init = { method, body: body === undefined ? undefined : JSON.stringify(body), headers: method === "GET" ? {} : headers };
-    const res = await admin.request(path, init, env, ctx as never);
+    const res = await admin.request(path, init, adminEnv, ctx as never);
     await Promise.all(pending);
     pending = [];
     return res;
@@ -1221,7 +1232,7 @@ describe("admin", () => {
     vi.mocked(accessEmail).mockResolvedValue("dev@example.com");
     // ほかのサイトからの要求（Access のクッキーは付くが、ページのヘッダーは付けられない）
     expect((await manage("/api/settings", "PUT", { closed: true }, {})).status).toBe(403);
-    env.ACCESS_AUD = undefined;
+    adminEnv.POLICY_AUD = undefined;
     expect((await manage("/api/summary")).status).toBe(503);
   });
 

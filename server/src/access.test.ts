@@ -1,9 +1,9 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { accessEmail } from "./access";
 
-const TEAM = "team";
+const TEAM = "https://team.cloudflareaccess.com";
 const AUD = "admin-aud";
-const env = { ACCESS_TEAM: TEAM, ACCESS_AUD: AUD };
+const env = { TEAM_DOMAIN: TEAM, POLICY_AUD: AUD };
 const NOW = 1_800_000_000_000;
 
 const base64url = (bytes: ArrayBuffer | Uint8Array | string) =>
@@ -20,7 +20,7 @@ async function issuer(kid = "k1") {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: string) => {
-      expect(url).toBe(`https://${TEAM}.cloudflareaccess.com/cdn-cgi/access/certs`);
+      expect(url).toBe(`${TEAM}/cdn-cgi/access/certs`);
       return Response.json({ keys: [jwk] });
     }),
   );
@@ -36,7 +36,7 @@ const request = (token?: string) =>
 
 const claims = {
   aud: [AUD],
-  iss: `https://${TEAM}.cloudflareaccess.com`,
+  iss: TEAM,
   exp: NOW / 1000 + 60,
   email: "dev@example.com",
 };
@@ -67,5 +67,5 @@ it("lets nobody in until the team and the application are configured", async () 
   const sign = await issuer();
   const token = await sign(claims);
   expect(await accessEmail(request(token), {}, NOW)).toBeUndefined();
-  expect(await accessEmail(request(token), { ACCESS_TEAM: TEAM }, NOW)).toBeUndefined();
+  expect(await accessEmail(request(token), { TEAM_DOMAIN: TEAM }, NOW)).toBeUndefined();
 });

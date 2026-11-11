@@ -1,4 +1,4 @@
-// 管理画面（admin.jimaku.deadlock.jp。DESIGN.md 17.3）。ベータの費用とコードを見て、開発者のキーを管理する。
+// 管理画面（別の Worker。DESIGN.md 17.3）。ベータの費用とコードを見て、開発者のキーを管理する。
 // 入口は Cloudflare Access（access.ts）。ここに届く要求は、Access を通った人のものだけを受ける
 
 import { and, desc, eq, sql } from "drizzle-orm";
@@ -12,17 +12,22 @@ import {
   BETA_DAILY_USD,
   BETA_ISSUER,
   betaClosed,
-  type BetaEnv,
 } from "./beta";
 import { day, month, open, type Db } from "./db";
 import { betaGrants, betaKeys, betaSettings, betaSpend, codes, codeUsage } from "./schema";
-import { encrypt, newId } from "./secrets";
+import { newId } from "./secrets";
 
-export interface AdminEnv extends AccessEnv, BetaEnv {
-  /** 手元で画面を確かめるときだけ使う（上の `local`） */
+/** API の Worker の `Vault`（worker.ts）。キーの暗号化を頼む */
+export interface Vault {
+  seal(plain: string): Promise<string>;
+  fallbacks(): Promise<{ qwen: boolean; openrouter: boolean }>;
+}
+
+export interface AdminEnv extends AccessEnv {
+  /** 手元で画面を確かめるときだけ使う（下の `local`） */
   ADMIN_DEV_EMAIL?: string;
   DB: D1Database;
-  SHARE_KEY: string;
+  VAULT: Vault;
 }
 
 type App = { Bindings: AdminEnv; Variables: { db: Db; email: string } };
@@ -62,10 +67,11 @@ function scriptHash(): Promise<string> {
 admin.get("/", (c) => c.html(page));
 
 admin.use("/api/*", async (c, next) => {
-  // 手元で画面を確かめるとき（`wrangler dev --var ADMIN_DEV_EMAIL:…` で admin.localhost を開く）だけ、Access を通さない。
-  // 本番のホストは admin.localhost にならないので、設定を入れても効かない
-  const local = new URL(c.req.url).hostname === "admin.localhost" ? c.env.ADMIN_DEV_EMAIL : undefined;
-  if (!local && (!c.env.ACCESS_TEAM || !c.env.ACCESS_AUD)) return c.json({ error: "notConfigured" }, 503);
+  // 手元で画面を確かめるとき（`wrangler dev -c wrangler.admin.jsonc --var ADMIN_DEV_EMAIL:…`）だけ、Access を通さない。
+  // 本番のホストは localhost にならないので、設定を入れても効かない
+  const host = new URL(c.req.url).hostname;
+  const local = host === "localhost" || host === "127.0.0.1" ? c.env.ADMIN_DEV_EMAIL : undefined;
+  if (!local && (!c.env.TEAM_DOMAIN || !c.env.POLICY_AUD)) return c.json({ error: "notConfigured" }, 503);
   const email = local ?? (await accessEmail(c.req.raw, c.env));
   if (!email) return c.json({ error: "unauthorized" }, 401);
   // Access のクッキーは、ほかのサイトからの要求にも付く。書き換える要求は、このページの JavaScript が付ける
@@ -162,9 +168,7 @@ admin.get("/api/keys", async (c) => {
     })
     .from(betaKeys)
     .orderBy(betaKeys.provider, betaKeys.createdAt);
-  // 秘密の設定（wrangler）に入れたキーがあるか。管理画面のキーが断られたときの最後の頼み
-  const fallback = { qwen: !!c.env.BETA_QWEN_KEY, openrouter: !!c.env.BETA_OPENROUTER_KEY };
-  return c.json({ keys, fallback });
+  return c.json({ keys, fallback: await c.env.VAULT.fallbacks() });
 });
 
 admin.post("/api/keys", async (c) => {
@@ -179,7 +183,7 @@ admin.post("/api/keys", async (c) => {
   await c.var.db.insert(betaKeys).values({
     id,
     provider,
-    encryptedKey: await encrypt(key, c.env.SHARE_KEY),
+    encryptedKey: await c.env.VAULT.seal(key),
     tail: key.slice(-4),
     memo,
     createdAt: Date.now(),

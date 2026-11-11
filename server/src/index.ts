@@ -35,8 +35,6 @@ import {
   type BetaProvider,
   type RelayKey,
 } from "./beta";
-import type { AccessEnv } from "./access";
-import { admin as adminApp } from "./admin";
 import { openai, validKey } from "./openai";
 import {
   audioUsd,
@@ -53,7 +51,7 @@ import { decrypt, encrypt, issuerToken, newCode, newId, normalizeCode, sha256 } 
 import { openrouter, qwen } from "./upstream";
 import { validXaiKey, xai } from "./xai";
 
-export interface Env extends BetaEnv, AccessEnv {
+export interface Env extends BetaEnv {
   DB: D1Database;
   /** キーを暗号化する鍵（32 バイトの base64）。`wrangler secret put SHARE_KEY` */
   SHARE_KEY: string;
@@ -775,10 +773,4 @@ function codeFields(body: CodeFields) {
   };
 }
 
-/** 管理画面のホスト（admin.jimaku.deadlock.jp）は管理の口へ、ほかは API へ */
-export default {
-  fetch(request: Request, env: Env, ctx: ExecutionContext) {
-    const admins = new URL(request.url).hostname.startsWith("admin.");
-    return admins ? adminApp.fetch(request, env, ctx) : app.fetch(request, env, ctx);
-  },
-};
+export default app;

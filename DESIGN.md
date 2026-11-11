@@ -1175,17 +1175,17 @@ Phase 2 の前に、録音した実況音声で Voxtral 3 の精度（`context_b
 - **確かめ方:** Worker のテスト（外への通信は差し替える）と、`BETA_TEST_API=http://127.0.0.1:8799/v1 cargo test -p overlays-core beta_requests -- --ignored`（手元の Worker に、アプリの部品が実際に送る要求を通す。偽のキーなので「外の不調」の 502 が返る。400 なら形が合っていない）
 - 利用者の音声と文字を開発者のキーで送ることになるので、プライバシーポリシーと利用規約に書く（`web/src/pages/privacy.astro`、`terms.astro`）
 
-### 17.3 管理画面（`server/src/admin.ts`、`adminPage.ts`、`access.ts`）
+### 17.3 管理画面（`server/src/admin.ts`、`adminPage.ts`、`access.ts`、`adminWorker.ts`、`wrangler.admin.jsonc`）
 
-ベータを開発者の費用負担で続けるので、費用とコードを見て、止められる所が要る（2026-11）。`admin.jimaku.deadlock.jp` に置く。同じ Worker が、ホストの名前で管理の口と API を分ける。
+ベータを開発者の費用負担で続けるので、費用とコードを見て、止められる所が要る（2026-11）。API とは別の Worker（`deadlock-jimaku-admin`）にする。API は誰でも叩けるので、Worker ごと Access の後ろに置く管理画面とは、同じ Worker にできない（Cloudflare の管理画面の Workers & Pages → Worker → Access で「All traffic」を守る形にすると、その Worker のどのホストも守られる）。API の Worker に管理の口を持たないので、API の側の攻められる所も増えない。データベースは同じものを使う。
 
-- **入口は Cloudflare Access:** ログインの仕組みは自分で書かない（そこが弱点になる）。Access が前に立ち、通した人の JWT を `Cf-Access-Jwt-Assertion` に付けてくる。Worker は、その JWT が Cloudflare の鍵の署名で、この管理画面あて（`ACCESS_AUD`）で、期限内かを確かめる（`access.ts`）。`ACCESS_TEAM` と `ACCESS_AUD` を入れるまで、管理の口は誰も通さない（503）
+- **入口は Cloudflare Access:** ログインの仕組みは自分で書かない（そこが弱点になる）。Access が前に立ち、通した人の JWT を `Cf-Access-Jwt-Assertion` に付けてくる。Worker は、その JWT が Cloudflare の鍵の署名で、この管理画面あて（`ACCESS_AUD`）で、期限内かを確かめる（`access.ts`）。`TEAM_DOMAIN` と `POLICY_AUD`（Access を有効にしたときに Cloudflare が出す名前のまま）を入れるまで、管理の口は誰も通さない（503）
 - **ページ:** 応答の CSP で、ページに書いたスクリプト（そのハッシュ）だけを動かし、枠の中に入れさせず、残させない（`Cache-Control: no-store`）
 - **ほかのサイトからの書き換えを受けない:** Access のクッキーは、ほかのサイトからの要求にも付く。書き換える要求は、ページの JavaScript が付けるヘッダー（`X-Admin`）があるものだけを受ける
 - **見るもの:** 今日と今月の費用（上限との比）、今日出したコードの数、今日使ったコードの数、コードごとの使用量（今日よく使った順に 100）
 - **操作:** コードを止める・戻す、ベータを閉じる・開ける（`beta_settings` の `closed`。閉じると、コードを出さず、中継もしない）、開発者のキーを足す・止める・消す
-- **開発者のキー（`beta_keys`）:** 会社ごとに複数置ける。暗号化して保存し、画面には終わりの 4 文字だけを出す。中継は、有効なキーを「最近断られていない順」に使い、断られたら（401・402・429。403 は本文が断られたときにも返るので入れない）次のキーに回して、断られたことを覚える。キーを読めないとき（暗号化の鍵を替えた、行が壊れた）も同じ（`betaRelayKeys`、`relayed`）。同じ条件のキーは毎回並べ替えて、負荷を分ける。重み付けや、会社をまたいだ振り分けはしない（要るようになってから）。Worker の秘密の設定のキー（`BETA_QWEN_KEY`、`BETA_OPENROUTER_KEY`）は、管理画面のキーがどれも断られたときの最後の頼みとして残す
+- **開発者のキー（`beta_keys`）:** 会社ごとに複数置ける。暗号化は API の Worker に頼む（`worker.ts` の `Vault`。サービスバインディングの口で、外からは呼べない）。暗号化の鍵（`SHARE_KEY`）は API の Worker だけが持ち、復号する口は作らないので、管理画面の Worker はキーを読めない。暗号化して保存し、画面には終わりの 4 文字だけを出す。中継は、有効なキーを「最近断られていない順」に使い、断られたら（401・402・429。403 は本文が断られたときにも返るので入れない）次のキーに回して、断られたことを覚える。キーを読めないとき（暗号化の鍵を替えた、行が壊れた）も同じ（`betaRelayKeys`、`relayed`）。同じ条件のキーは毎回並べ替えて、負荷を分ける。重み付けや、会社をまたいだ振り分けはしない（要るようになってから）。Worker の秘密の設定のキー（`BETA_QWEN_KEY`、`BETA_OPENROUTER_KEY`）は、管理画面のキーがどれも断られたときの最後の頼みとして残す
 - **上限の値**（1 つのコードの 1 日、全体の 1 日、出すコードの数）は、まだ `beta.ts` の定数で、画面からは変えられない
-- **手元で画面を見る:** `wrangler dev --host admin.localhost --var ADMIN_DEV_EMAIL:dev@localhost`。ホストが `admin.localhost` のときだけ Access を通さない（本番のホストはそうならないので、設定を入れても効かない）
-- **Cloudflare の側の設定（1 度だけ）:** Zero Trust の Access で、`admin.jimaku.deadlock.jp` を守るアプリケーション（Self-hosted）を作り、入れる人を自分のメールアドレスにする。そのアプリケーションの AUD とチームの名前を、`wrangler.jsonc` の `vars`（`ACCESS_AUD`、`ACCESS_TEAM`）に入れ、`routes` に `admin.jimaku.deadlock.jp` を足して出す。Access の設定より先にホストを出さない
-
+- **手元で画面を見る:** `wrangler dev -c wrangler.admin.jsonc --var ADMIN_DEV_EMAIL:dev@localhost`。ホストが localhost のときだけ Access を通さない（本番のホストはそうならないので、設定を入れても効かない）。キーを足す操作は、API の Worker も手元で動かしているときだけ通る
+- **Cloudflare の側の設定（1 度だけ）:** Workers & Pages → `deadlock-jimaku-admin` → Access で、この Worker を守り（All traffic）、入れる人を自分のメールアドレスにする。そこに出る `TEAM_DOMAIN` と `POLICY_AUD` を、この Worker の変数に入れる（`wrangler.admin.jsonc` は `keep_vars` なので、出し直しても消えない）。独自のホスト（`admin.jimaku.deadlock.jp`）を使うなら、Worker の Domains & Routes で足す
+- **出し方:** API の Worker を先に（`pnpm deploy`。`Vault` の口が要る）、次に管理画面（`pnpm deploy:admin`）

@@ -2,7 +2,7 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "deadlock-jimaku-api",
-  "main": "src/index.ts",
+  "main": "src/worker.ts",
   "compatibility_date": "2026-10-01",
   "routes": [{ "pattern": "api.jimaku.deadlock.jp", "custom_domain": true }],
   // おすそ分け（キー・コード・使われた額）。表は migrations/。
