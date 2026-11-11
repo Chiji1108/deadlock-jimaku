@@ -148,10 +148,13 @@ pub(super) async fn live(
 }
 
 async fn connect(cfg: &RealtimeConfig, hints: &Hints) -> anyhow::Result<(Sink, Stream)> {
-    let mut request = cfg.access.realtime_url().into_client_request()?;
+    let Transcriber::Api(access) = &cfg.transcriber else {
+        bail!("the realtime API needs a provider");
+    };
+    let mut request = access.realtime_url().into_client_request()?;
     request.headers_mut().insert(
         "Authorization",
-        HeaderValue::from_str(&format!("Bearer {}", cfg.access.token()))?,
+        HeaderValue::from_str(&format!("Bearer {}", access.token()))?,
     );
     let (ws, _) = match tokio_tungstenite::connect_async(request).await {
         Ok(connected) => connected,
@@ -159,7 +162,7 @@ async fn connect(cfg: &RealtimeConfig, hints: &Hints) -> anyhow::Result<(Sink, S
             if let tungstenite::Error::Http(res) = &e {
                 let reason = res.headers().get(share::REFUSAL_HEADER);
                 let reason = reason.and_then(|value| value.to_str().ok());
-                if let Some(refused) = share::refusal(&cfg.access, res.status(), reason) {
+                if let Some(refused) = share::refusal(access, res.status(), reason) {
                     return Err(refused.into());
                 }
             }

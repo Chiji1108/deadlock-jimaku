@@ -3,4 +3,4 @@
 /**
  * 途中の字幕を何で作るか
  */
-export type LiveSource = "chrome" | "gptLiveTranscribe" | "qwenAudioStreaming" | "off";
+export type LiveSource = "chrome" | "gptLiveTranscribe" | "qwenAudioStreaming" | "haasJa" | "off";

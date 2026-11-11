@@ -22,6 +22,7 @@ use crate::audio::{self, History, SAMPLE_RATE};
 use crate::chrome;
 use crate::finish::{self, Finished, Finisher};
 use crate::lang;
+use crate::local::Speech;
 use crate::now_ms;
 use crate::segment::{Close, Event, Segmenter};
 use crate::settings::{Settings, TextSource};
@@ -51,9 +52,13 @@ pub async fn run(
     store: Arc<Store>,
     input: audio::Input,
     accesses: Accesses,
-    transcriber: Transcriber,
+    local: Option<Arc<Speech>>,
 ) -> anyhow::Result<()> {
     let settings = store.settings();
+    // 確定の文字起こしを頼む相手。鍵と PC の中の文字起こしは、始める前に確かめてある
+    let transcriber = settings.engines.transcription.provider();
+    let transcriber =
+        Transcriber::of(transcriber, &accesses, &local).expect("finals without a transcriber");
 
     // 用語ヒントは Realtime のセッション開始時に 1 回しか渡せないので、辞書を少し待つ。
     // 入力は待ち終わってから開く（待っている間の音声を溜めない）
@@ -94,13 +99,14 @@ pub async fn run(
     let (delta_tx, delta_rx) = mpsc::channel(256);
     // オフなら Realtime につながず、確定の字幕だけを出す
     let plan = settings.plan();
-    // 途中の字幕をアプリが作るなら（Chrome でなければ）、その会社につなぐ
+    // 途中の字幕をアプリが作るなら（Chrome でなければ）、その会社か、PC の中の文字起こしにつなぐ
     let live = plan.partial.text.filter(|text| *text != TextSource::Chrome);
-    let live = live.and(settings.engines.live.provider());
-    let realtime = if let Some(access) = live.and_then(|provider| accesses.get(provider)) {
+    let live =
+        live.and_then(|_| Transcriber::of(settings.engines.live.provider(), &accesses, &local));
+    let realtime = if let Some(transcriber) = live {
         let (tx, rx) = mpsc::unbounded_channel();
         let config = RealtimeConfig {
-            access,
+            transcriber,
             model: settings.models_in_use().realtime,
             delay: settings.realtime_delay.clone(),
             meter: store.meter(),
@@ -1107,7 +1113,7 @@ mod tests {
     async fn stops_on_refusal(access: Access, expected: TranscriptionError) {
         let dir = tempfile::tempdir().unwrap();
         let config = RealtimeConfig {
-            access,
+            transcriber: Transcriber::Api(access),
             model: "gpt-live-transcribe".into(),
             delay: "low".into(),
             meter: Arc::new(Meter::new(dir.path().join("usage.json"))),

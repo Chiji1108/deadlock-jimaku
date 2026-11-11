@@ -25,6 +25,7 @@ use crate::share;
 use crate::types::TranscriptionError;
 use crate::usage::{Meter, Tokens, Use};
 
+mod local;
 mod openai;
 mod qwen;
 
@@ -44,7 +45,8 @@ pub struct Hints {
 }
 
 pub struct RealtimeConfig {
-    pub access: Access,
+    /// 途中の字幕を頼む相手
+    pub transcriber: Transcriber,
     pub model: String,
     /// `minimal` / `low` / `medium` / `high` / `xhigh`（低いほど早く、高いほど正確）
     pub delay: String,
@@ -111,9 +113,12 @@ pub async fn realtime(
     input: &mut mpsc::UnboundedReceiver<Input>,
     deltas: &mpsc::Sender<Delta>,
 ) -> anyhow::Result<()> {
-    match cfg.access.provider() {
-        Provider::Qwen => qwen::live(cfg, hints, speaking, input, deltas).await,
-        _ => openai::live(cfg, hints, speaking, input, deltas).await,
+    match &cfg.transcriber {
+        Transcriber::Api(access) if access.provider() == Provider::Qwen => {
+            qwen::live(cfg, access, hints, speaking, input, deltas).await
+        }
+        Transcriber::Api(_) => openai::live(cfg, hints, speaking, input, deltas).await,
+        Transcriber::Local(speech) => local::live(speech, speaking, input, deltas).await,
     }
 }
 
@@ -140,12 +145,27 @@ fn xai_refused(status: StatusCode, body: &str) -> bool {
         || (status == StatusCode::BAD_REQUEST && body.contains("Incorrect API key"))
 }
 
-/// 確定の文字起こしを頼む相手
+/// 文字起こしを頼む相手（途中の字幕と確定で同じ形）
+#[derive(Clone)]
 pub enum Transcriber {
-    /// 会社の API（OpenAI の GPT-Transcribe、xAI の Grok、OpenRouter の MAI-Transcribe 2）
+    /// 会社の API（OpenAI、xAI、Qwen、OpenRouter）
     Api(Access),
-    /// PC の中で動く speech.cpp（Haas-ja）
-    Local(Speech),
+    /// PC の中で動く speech.cpp（Haas-ja）。途中の字幕と確定で、同じ 1 つを使う
+    Local(Arc<Speech>),
+}
+
+impl Transcriber {
+    /// その工程を頼む相手。会社（`provider`）があればその送り先と鍵、なければ PC の中
+    pub fn of(
+        provider: Option<Provider>,
+        accesses: &crate::access::Accesses,
+        local: &Option<Arc<Speech>>,
+    ) -> Option<Self> {
+        match provider {
+            Some(provider) => accesses.get(provider).map(Self::Api),
+            None => local.clone().map(Self::Local),
+        }
+    }
 }
 
 pub struct BatchRequest<'a> {
@@ -267,7 +287,7 @@ mod tests {
         let meter = Meter::new(dir.join("usage.json"));
         let started = std::time::Instant::now();
         let request = BatchRequest {
-            transcriber: &Transcriber::Local(speech),
+            transcriber: &Transcriber::Local(Arc::new(speech)),
             model: crate::local::HAAS_JA,
             hints: &Hints {
                 language: "ja".into(),
@@ -350,6 +370,96 @@ mod tests {
         assert!(batch.usd > 0.0 && !batch.unpriced);
     }
 
+    /// 録音の一部（`spans`。名前、始まりと終わりのミリ秒、そのあと黙る秒数）を、それぞれ 1 つの発話として実時間で流し、
+    /// 途中の文字がどの発話に届くかを出す
+    async fn said_live(
+        cfg: &RealtimeConfig,
+        hints: &Hints,
+        spans: &'static [(&'static str, usize, usize, u64)],
+    ) -> std::collections::BTreeMap<String, String> {
+        let samples: Vec<f32> = hound::WavReader::open(sample("sample01.wav"))
+            .unwrap()
+            .samples::<i16>()
+            .map(|s| f32::from(s.unwrap()) / f32::from(i16::MAX))
+            .collect();
+        let (input_tx, mut input) = mpsc::unbounded_channel();
+        let (deltas_tx, mut deltas) = mpsc::channel(256);
+        let started = std::time::Instant::now();
+        let feed = tokio::spawn(async move {
+            let at = |ms: usize| (ms * SAMPLE_RATE as usize / 1000).min(samples.len());
+            for &(id, start, end, pause) in spans {
+                let part = &samples[at(start)..at(end)];
+                input_tx.send(Input::Open(id.into())).unwrap();
+                for chunk in part.chunks(SAMPLE_RATE as usize / 10) {
+                    input_tx.send(Input::Audio(chunk.to_vec())).unwrap();
+                    tokio::time::sleep(Duration::from_millis(100)).await;
+                }
+                input_tx.send(Input::Close).unwrap();
+                println!("{:5.1}s {id} closed", started.elapsed().as_secs_f32());
+                tokio::time::sleep(Duration::from_secs(pause)).await;
+            }
+        });
+        let mut speaking = Speaking::default();
+        let session = realtime(cfg, hints, &mut speaking, &mut input, &deltas_tx);
+        let mut last = std::collections::BTreeMap::<String, String>::new();
+        let print = async {
+            while let Some(delta) = deltas.recv().await {
+                let text = last.entry(delta.segment.clone()).or_default();
+                if delta.whole {
+                    *text = delta.text;
+                } else {
+                    *text += &delta.text;
+                }
+                println!(
+                    "{:5.1}s {} {text}",
+                    started.elapsed().as_secs_f32(),
+                    delta.segment
+                );
+            }
+        };
+        tokio::select! {
+            ended = session => ended.unwrap(),
+            () = print => {}
+        }
+        feed.await.unwrap();
+        println!("{last:?}");
+        last
+    }
+
+    /// 本物の speech.cpp とモデルで、話している間の文字が発話ごとに届くかを見る:
+    /// `cargo test -p overlays-core haas_ja_writes -- --ignored --nocapture`
+    #[tokio::test]
+    #[ignore = "downloads speech.cpp and the model"]
+    async fn haas_ja_writes_each_utterance_as_it_is_said() {
+        let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
+        let dir = std::env::var("HAAS_JA_TEST_DIR").map_or_else(
+            |_| std::env::temp_dir().join("overlays-speech-test"),
+            std::path::PathBuf::from,
+        );
+        let meter = Arc::new(Meter::new(dir.join("usage-live.json")));
+        let cfg = RealtimeConfig {
+            transcriber: Transcriber::Local(Arc::new(Speech::start(&dir).await.unwrap())),
+            model: crate::local::HAAS_JA.into(),
+            delay: "low".into(),
+            meter: meter.clone(),
+        };
+        let hints = Hints {
+            language: "ja".into(),
+            prompt: "x".into(),
+            keywords: vec!["ヘイズ".into()],
+        };
+        // アプリの区切り（無音 0.75 秒）で分けた 3 つの発話
+        let spans = &[
+            ("a", 1392, 4000, 1),
+            ("b", 5216, 12336, 1),
+            ("c", 13312, 20320, 3),
+        ];
+        let last = said_live(&cfg, &hints, spans).await;
+        assert!(last["a"].contains("デッドロック") && last["c"].contains("バイオレット"));
+        // PC の中なので、料金は数えない
+        assert!(!meter.watch().borrow().session.contains_key(&Use::Realtime));
+    }
+
     /// 本物の QwenCloud に、録音を 2 つの発話として実時間で流し、途中の文字がどの発話に届くかを見る:
     /// `cargo test -p overlays-core qwen_streaming -- --ignored --nocapture`
     #[tokio::test]
@@ -361,7 +471,7 @@ mod tests {
             std::env::temp_dir().join("overlays-qwen-live-test-usage.json"),
         ));
         let cfg = RealtimeConfig {
-            access: Access::key(Provider::Qwen, key),
+            transcriber: Transcriber::Api(Access::key(Provider::Qwen, key)),
             model: "qwen-audio-3.1-asr-flash-streaming".into(),
             delay: "low".into(),
             meter: meter.clone(),
@@ -371,48 +481,9 @@ mod tests {
             prompt: String::new(),
             keywords: Vec::new(),
         };
-        let samples: Vec<f32> = hound::WavReader::open(sample("sample01.wav"))
-            .unwrap()
-            .samples::<i16>()
-            .map(|s| f32::from(s.unwrap()) / f32::from(i16::MAX))
-            .collect();
-        let (input_tx, mut input) = mpsc::unbounded_channel();
-        let (deltas_tx, mut deltas) = mpsc::channel(256);
-        let started = std::time::Instant::now();
-        let feed = tokio::spawn(async move {
-            // 6.5 秒までを 1 つ目、そこから 30 秒黙って（切られないことも見る）、残りを 2 つ目の発話にする
-            let cut = SAMPLE_RATE as usize * 13 / 2;
-            for (id, part, pause) in [("a", &samples[..cut], 30), ("b", &samples[cut..], 4)] {
-                input_tx.send(Input::Open(id.into())).unwrap();
-                for chunk in part.chunks(SAMPLE_RATE as usize / 10) {
-                    input_tx.send(Input::Audio(chunk.to_vec())).unwrap();
-                    tokio::time::sleep(Duration::from_millis(100)).await;
-                }
-                input_tx.send(Input::Close).unwrap();
-                tokio::time::sleep(Duration::from_secs(pause)).await;
-            }
-        });
-        let mut speaking = Speaking::default();
-        let session = realtime(&cfg, &hints, &mut speaking, &mut input, &deltas_tx);
-        let mut last = std::collections::BTreeMap::new();
-        let print = async {
-            while let Some(delta) = deltas.recv().await {
-                println!(
-                    "{:5.1}s {} {}",
-                    started.elapsed().as_secs_f32(),
-                    delta.segment,
-                    delta.text
-                );
-                assert!(delta.whole);
-                last.insert(delta.segment, delta.text);
-            }
-        };
-        tokio::select! {
-            ended = session => ended.unwrap(),
-            () = print => {}
-        }
-        feed.await.unwrap();
-        println!("{last:?}");
+        // 4.3 秒まで（最初の文の終わり）を 1 つ目、30 秒黙って（切られないことも見る）、残りを 2 つ目の発話にする
+        let spans = &[("a", 0, 4300, 30), ("b", 4300, 60_000, 4)];
+        let last = said_live(&cfg, &hints, spans).await;
         assert!(last["a"].contains("デッドロック") && last["b"].contains("バイオレット"));
         let live = meter.watch().borrow().session[&Use::Realtime].clone();
         println!("{live:?}");

@@ -206,6 +206,7 @@ impl Session {
 /// 1 セッション分。入力が尽きたら Ok、切れたら Err で返る（`super::realtime` と同じ決まり）
 pub(super) async fn live(
     cfg: &RealtimeConfig,
+    access: &Access,
     hints: &Hints,
     speaking: &mut Speaking,
     input: &mut mpsc::UnboundedReceiver<Input>,
@@ -213,10 +214,12 @@ pub(super) async fn live(
 ) -> anyhow::Result<()> {
     let task = format!("{:032x}", rand_id());
     let header = |action: &str| json!({ "action": action, "task_id": task, "streaming": "duplex" });
-    let (mut sink, mut stream) =
-        tokio::time::timeout(HANDSHAKE_TIMEOUT, connect(cfg, hints, header("run-task")))
-            .await
-            .context("realtime handshake timed out")??;
+    let (mut sink, mut stream) = tokio::time::timeout(
+        HANDSHAKE_TIMEOUT,
+        connect(cfg, access, hints, header("run-task")),
+    )
+    .await
+    .context("realtime handshake timed out")??;
     tracing::info!("realtime session started");
 
     // 接続している間に溜まった入力は送らない（古い言葉が今の発話に混ざる）。今の発話の続きから送る
@@ -287,7 +290,7 @@ pub(super) async fn live(
                             let _ = deltas.send(delta).await;
                         }
                     }
-                    Some("task-failed") => return Err(failed(cfg, &event["header"])),
+                    Some("task-failed") => return Err(failed(access, &event["header"])),
                     Some("task-finished") => bail!("realtime task finished"),
                     _ => {}
                 }
@@ -307,10 +310,10 @@ fn rand_id() -> u128 {
 }
 
 /// サーバーが断った理由。鍵が使えないなら、張り直しても同じなので字幕を止める
-fn failed(cfg: &RealtimeConfig, header: &Value) -> anyhow::Error {
+fn failed(access: &Access, header: &Value) -> anyhow::Error {
     let code = header["error_code"].as_str().unwrap_or_default();
     if code.contains("InvalidApiKey") || code.contains("Unauthorized") {
-        let provider = cfg.access.provider();
+        let provider = access.provider();
         return TranscriptionError::InvalidKey { provider }.into();
     }
     anyhow::anyhow!("realtime task failed: {header}")
@@ -318,16 +321,17 @@ fn failed(cfg: &RealtimeConfig, header: &Value) -> anyhow::Error {
 
 async fn connect(
     cfg: &RealtimeConfig,
+    access: &Access,
     hints: &Hints,
     run: Value,
 ) -> anyhow::Result<(Sink, Stream)> {
-    let url = root(&cfg.access)
+    let url = root(access)
         .replacen("https://", "wss://", 1)
         .replacen("http://", "ws://", 1);
     let mut request = format!("{url}/api-ws/v1/inference").into_client_request()?;
     request.headers_mut().insert(
         "Authorization",
-        HeaderValue::from_str(&format!("bearer {}", cfg.access.token()))?,
+        HeaderValue::from_str(&format!("bearer {}", access.token()))?,
     );
     let (ws, _) = match tokio_tungstenite::connect_async(request).await {
         Ok(connected) => connected,
@@ -338,8 +342,7 @@ async fn connect(
                 reason.to_str().ok().map(str::to_owned)
             };
             if let tungstenite::Error::Http(res) = &e
-                && let Some(refused) =
-                    share::refusal(&cfg.access, res.status(), reason(res).as_deref())
+                && let Some(refused) = share::refusal(access, res.status(), reason(res).as_deref())
             {
                 return Err(refused.into());
             }
@@ -365,7 +368,7 @@ async fn connect(
         let event: Value = serde_json::from_str(&text)?;
         match event["header"]["event"].as_str() {
             Some("task-started") => return Ok((sink, stream)),
-            Some("task-failed") => return Err(failed(cfg, &event["header"])),
+            Some("task-failed") => return Err(failed(access, &event["header"])),
             _ => {}
         }
     }

@@ -35,6 +35,12 @@ export const ITEMS: { [K in Item]: { label: string; hint: string; options: Optio
         price: "話した 1 分 約 $0.0008",
         note: "Qwen の API キーが要る。GPT-Live-Transcribe の約 20 分の 1 の料金で、精度は同じくらい。用語のヒントは渡せない",
       },
+      {
+        value: "haasJa",
+        label: "Haas-ja（PC の中）",
+        price: "無料",
+        note: "日本語だけ。Chrome を使わず、音声は PC から出ない。話している間、PC の中で何度も認識し直すので、PC の負荷は上がる。初回に約 400 MB をダウンロードする",
+      },
       { value: "off", label: "出さない", price: "無料" },
     ],
   },

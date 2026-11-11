@@ -15,7 +15,6 @@ use crate::local::Speech;
 use crate::secrets::Provider;
 use crate::settings::{Engines, FinalSource, Models, Region, Segmentation, Settings, TextSource};
 use crate::store::Store;
-use crate::stt::Transcriber;
 use crate::types::{LangCode, TranscriptionError};
 use crate::{assets, audio, chrome, rank, secrets, share, subtitles};
 
@@ -272,9 +271,7 @@ fn start_subtitles(
                 return None;
             }
             let accesses = input.accesses;
-            // 確定の文字起こしを頼む会社（鍵は上で確かめた）。会社がなければ PC の中
-            let transcriber = input.engines.transcription.provider();
-            let transcriber = transcriber.map(|p| accesses.get(p).expect("finals without a key"));
+            let uses_local = input.engines.uses_local();
             tracing::info!("transcription started");
             let (input, ended) = match input.source {
                 Source::Mic(device) => (
@@ -289,11 +286,12 @@ fn start_subtitles(
                     return;
                 }
                 let run = async {
-                    let transcriber = match transcriber {
-                        Some(access) => Transcriber::Api(access),
-                        None => Transcriber::Local(local_speech(&store).await?),
+                    // PC の中の文字起こしは、途中の字幕と確定で同じ 1 つを使う
+                    let local = match uses_local {
+                        true => Some(Arc::new(local_speech(&store).await?)),
+                        false => None,
                     };
-                    subtitles::run(store.clone(), input, accesses, transcriber).await
+                    subtitles::run(store.clone(), input, accesses, local).await
                 };
                 supervise(store.clone(), run, ended).await;
             }))

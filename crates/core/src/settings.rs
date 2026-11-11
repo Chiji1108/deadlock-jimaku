@@ -636,6 +636,11 @@ impl Engines {
         self.providers().contains(&provider)
     }
 
+    /// PC の中の文字起こし（speech.cpp）を立てる工程がある
+    pub fn uses_local(&self) -> bool {
+        self.live == LiveSource::HaasJa || self.transcription == FinalSource::HaasJa
+    }
+
     /// 用語の候補を確かめさせる相手（翻訳が LLM なら、LLM が同時に判定するので使わない）
     pub fn judge(&self) -> Option<Model> {
         self.terms
@@ -715,21 +720,24 @@ pub enum LiveSource {
     GptLiveTranscribe,
     /// QwenCloud の Qwen-Audio-3.1-ASR-Flash-Streaming。GPT-Live-Transcribe の約 20 分の 1 の料金（DESIGN.md 3.4）
     QwenAudioStreaming,
+    /// PC の中で動く Haas-ja（speech.cpp）。話している間、同じ発話を何度も認識し直して出す。無料。日本語だけ（DESIGN.md 9.8）
+    HaasJa,
     /// 話し終えてから出す。途中の字幕の料金がかからない
     Off,
 }
 
 impl LiveSource {
-    pub const ALL: [Self; 4] = [
+    pub const ALL: [Self; 5] = [
         Self::Chrome,
         Self::GptLiveTranscribe,
         Self::QwenAudioStreaming,
+        Self::HaasJa,
         Self::Off,
     ];
 
     pub fn provider(self) -> Option<Provider> {
         match self {
-            Self::Chrome | Self::Off => None,
+            Self::Chrome | Self::HaasJa | Self::Off => None,
             Self::GptLiveTranscribe => Some(Provider::OpenAi),
             Self::QwenAudioStreaming => Some(Provider::Qwen),
         }
@@ -1102,10 +1110,14 @@ impl Settings {
                 emphasis: terms,
             },
             // 翻訳だけなら途中の字幕は見えないので、料金をかけない
-            LiveSource::GptLiveTranscribe | LiveSource::QwenAudioStreaming if !translation_only => {
+            // アプリが作る途中の字幕（会社か、PC の中）
+            LiveSource::GptLiveTranscribe | LiveSource::QwenAudioStreaming | LiveSource::HaasJa
+                if !translation_only =>
+            {
                 Phase {
                     text: Some(match engines.live {
                         LiveSource::QwenAudioStreaming => Text::QwenAudioStreaming,
+                        LiveSource::HaasJa => Text::HaasJa,
                         _ => Text::GptLiveTranscribe,
                     }),
                     translation: None,
@@ -1113,9 +1125,10 @@ impl Settings {
                     emphasis: terms,
                 }
             }
-            LiveSource::GptLiveTranscribe | LiveSource::QwenAudioStreaming | LiveSource::Off => {
-                Phase::NONE
-            }
+            LiveSource::GptLiveTranscribe
+            | LiveSource::QwenAudioStreaming
+            | LiveSource::HaasJa
+            | LiveSource::Off => Phase::NONE,
         };
         let finals = Phase {
             text: Some(match engines.transcription {
@@ -1152,8 +1165,12 @@ impl Settings {
         if let Some(model) = self.engines.transcription.model() {
             models.batch = model.into();
         }
-        if self.engines.live == LiveSource::QwenAudioStreaming {
-            models.realtime = "qwen-audio-3.1-asr-flash-streaming".into();
+        match self.engines.live {
+            LiveSource::QwenAudioStreaming => {
+                models.realtime = "qwen-audio-3.1-asr-flash-streaming".into();
+            }
+            LiveSource::HaasJa => models.realtime = crate::local::HAAS_JA.into(),
+            LiveSource::Chrome | LiveSource::GptLiveTranscribe | LiveSource::Off => {}
         }
         if self.engines.translation == TranslationEngine::Gpt6Luna {
             models.translate = "gpt-6-luna".into();
