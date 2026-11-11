@@ -18,6 +18,7 @@ pub mod rank;
 pub mod reading;
 pub mod runtime;
 pub mod secrets;
+pub mod segment;
 pub mod server;
 pub mod settings;
 pub mod share;

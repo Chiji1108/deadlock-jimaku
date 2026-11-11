@@ -265,7 +265,12 @@ deadlock-jimaku/
 │  ├─ core/                   # Tauri に依存しない。単体でヘッドレス起動・テストできる
 │  │  └─ src/
 │  │     ├─ audio.rs          # マイク → 16kHz mono フレーム + リングバッファ
-│  │     ├─ stt.rs            # OpenAI の realtime / batch クライアント
+│  │     ├─ segment.rs        # 発話の区切り（VAD）
+│  │     ├─ stt.rs            # 音声認識の共通の型と、会社への振り分け
+│  │     ├─ stt/              # 途中の字幕を発話に合わせる（openai.rs、qwen.rs）
+│  │     ├─ local.rs          # PC の中の文字起こし（speech.cpp を立てる）
+│  │     ├─ decide.rs         # 用語の候補出しと、判定モデルの確かめ
+│  │     ├─ mt.rs             # 翻訳専門のモデル
 │  │     ├─ enrich.rs         # 翻訳（OpenAI）の呼び出し・出力の検証
 │  │     ├─ subtitles.rs      # パイプライン（Segment の状態遷移）
 │  │     ├─ chrome.rs         # 聞き取りのページを Chrome で開く
@@ -278,11 +283,6 @@ deadlock-jimaku/
 │  │     ├─ store.rs          # 状態ストア + broadcast
 │  │     ├─ server.rs         # axum のルーティング
 │  │     └─ types.rs          # ts-rs で TS に出力する型
-│     └─ src/
-│        ├─ main.rs           # 音声認識・翻訳と、アプリとの標準入出力
-│        ├─ furigana.rs       # 形態素解析とふりがな
-│        ├─ terms.rs          # 用語の判定
-│        └─ models.rs         # モデルのダウンロードと検証
 ├─ app/                       # Tauri シェル（トレイ、keyring、自動更新、core の起動）
 ├─ data/                      # 手で管理する辞書データ（git 管理）
 ├─ notices/                   # 第三者のライセンス表示（13.7）
