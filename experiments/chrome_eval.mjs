@@ -3,6 +3,8 @@
 //
 // usage: node chrome_eval.mjs translate GLOSSARY.json PROFILE_DIR
 //        node chrome_eval.mjs speech data/sample01.wav data/sample01.txt PROFILE_DIR
+//        node chrome_eval.mjs furigana PROFILE_DIR [REPEAT]
+//   furigana:  data/furigana_cases.json の文の、辞書の読みを Gemini Nano（Prompt API）に直させる。文は PC から出ない
 //   translate: results/terms_cases.json の文を、用語を英語名に置き換えて（アプリが Chrome に渡す形）英語とロシア語に訳す
 //   speech:    録音を 3 回聞かせ、確定した文をつなげて文字誤り率を見る。音声は Google に送られる
 import { spawn } from "node:child_process";
@@ -161,6 +163,89 @@ async function speech(wav, refPath, profile) {
   writeFileSync(join(HERE, `results/${name}.chrome.json`), JSON.stringify({ "chrome-web-speech": runs }, null, 2) + "\n");
 }
 
+const LANGUAGES = {
+  expectedInputs: [{ type: "text", languages: ["en", "ja"] }],
+  expectedOutputs: [{ type: "text", languages: ["ja"] }],
+};
+const FURIGANA_SYSTEM =
+  "You check the readings (furigana) of a Japanese subtitle from a video game streamer. " +
+  'The input is JSON: "sentence" is the subtitle, and "words" lists its words that contain kanji, each with the reading a dictionary gave, in hiragana. ' +
+  "The dictionary reads each word without looking at the sentence, so some readings are wrong for this sentence (for example 辛い as つらい when it means spicy, or 一 and 人 as いち and にん when the sentence says ひとり). " +
+  'Answer with JSON {"readings": [...]}: the correct hiragana reading of each word, in the same order and the same number as "words". ' +
+  "Keep the dictionary's reading unless it is wrong in this sentence. A reading covers only the characters of its word.";
+
+/** 辞書（Lindera）の読みを Gemini Nano（Prompt API）に直させて、直せた文と壊した文を数える（DESIGN.md 9.3） */
+async function furigana(profile, repeat = "3") {
+  const cases = JSON.parse(readFileSync(join(HERE, "data/furigana_cases.json"), "utf8"));
+  const { evaluate, close } = await open(profile, []);
+  const availability = await evaluate(
+    `"LanguageModel" in window ? LanguageModel.availability(${JSON.stringify(LANGUAGES)}) : "no LanguageModel"`,
+  );
+  console.log("availability:", availability);
+  if (availability === "unavailable" || availability === "no LanguageModel") return close();
+  // モデルがなければ、ここでダウンロードする（数 GB）
+  const t0 = Date.now();
+  await evaluate(`(async () => {
+    window.progress = 0;
+    window.base = await LanguageModel.create({
+      ...${JSON.stringify(LANGUAGES)},
+      initialPrompts: [{ role: "system", content: ${JSON.stringify(FURIGANA_SYSTEM)} }],
+      monitor(m) { m.addEventListener("downloadprogress", (e) => { window.progress = e.loaded; }); },
+    });
+  })()`);
+  console.log(`ready in ${Math.round((Date.now() - t0) / 1000)} s`);
+  const right = (words, readings) => words.every((w, i) => (w.accept ?? [w.reading]).includes(readings[i]));
+  const runs = [];
+  for (const c of cases) {
+    const words = c.words.filter((w) => w.reading);
+    const schema = {
+      type: "object",
+      required: ["readings"],
+      additionalProperties: false,
+      properties: { readings: { type: "array", minItems: words.length, maxItems: words.length, items: { type: "string" } } },
+    };
+    const input = JSON.stringify({ sentence: c.text, words: words.map(({ text, reading }) => ({ text, reading })) });
+    const dictionary = right(words, words.map((w) => w.reading));
+    for (let i = 0; i < Number(repeat); i++) {
+      // 文ごとに新しい会話にする（前の文を引きずらない）
+      const { ms, answer } = await evaluate(`(async () => {
+        const session = await window.base.clone();
+        const t0 = performance.now();
+        const answer = await session.prompt(${JSON.stringify(input)}, { responseConstraint: ${JSON.stringify(schema)} });
+        const ms = Math.round(performance.now() - t0);
+        session.destroy();
+        return { ms, answer };
+      })()`);
+      let readings = [];
+      try {
+        readings = JSON.parse(answer).readings ?? [];
+      } catch {}
+      // 形が合わない答えは使えない（アプリなら辞書の読みに戻す）
+      const usable = readings.length === words.length && readings.every((r) => /^[ぁ-ゖー]+$/.test(r));
+      const nano = usable ? right(words, readings) : dictionary;
+      const changed = usable ? words.flatMap((w, j) => (readings[j] === w.reading ? [] : [`${w.text}: ${w.reading} → ${readings[j]}`])) : [];
+      runs.push({ text: c.text, ms, usable, dictionary, nano, changed });
+      if (dictionary !== nano || !usable) console.log(!usable ? "unusable" : nano ? "fixed " : "broken", c.text, changed.join(", "), usable ? "" : answer);
+    }
+  }
+  close();
+  const times = runs.map((r) => r.ms).sort((a, b) => a - b);
+  const count = (f) => runs.filter(f).length;
+  const summary = {
+    runs: runs.length,
+    dictionaryRight: count((r) => r.dictionary),
+    nanoRight: count((r) => r.nano),
+    fixed: count((r) => !r.dictionary && r.nano),
+    broken: count((r) => r.dictionary && !r.nano),
+    stillWrong: count((r) => !r.dictionary && !r.nano),
+    unusable: count((r) => !r.usable),
+    medianMs: times[Math.floor(times.length / 2)],
+    p90Ms: times[Math.floor((times.length * 9) / 10)],
+  };
+  writeFileSync(join(HERE, "results/furigana_nano.json"), JSON.stringify({ system: FURIGANA_SYSTEM, summary, runs }, null, 1) + "\n");
+  console.log("gemini-nano", JSON.stringify(summary));
+}
+
 const [mode, ...args] = process.argv.slice(2);
-await (mode === "translate" ? translate(...args) : speech(...args));
+await ({ translate, speech, furigana }[mode])(...args);
 process.exit(0);

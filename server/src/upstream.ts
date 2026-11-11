@@ -16,6 +16,11 @@ export function qwen(path: string, key: string, body: unknown): Promise<Response
   return send(`${QWEN}${path}`, key, body);
 }
 
+/** 途中の字幕の WebSocket を開く。開けたら、応答の `webSocket` に入っている */
+export function qwenLive(key: string): Promise<Response> {
+  return fetch(`${QWEN}/api-ws/v1/inference`, { headers: { Upgrade: "websocket", Authorization: `bearer ${key}` } });
+}
+
 export function openrouter(path: string, key: string, body: unknown): Promise<Response> {
   return send(`${OPENROUTER}${path}`, key, body);
 }

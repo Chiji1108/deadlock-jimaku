@@ -560,7 +560,7 @@ impl Region {
 /// 字幕の工程ごとに、何で作るか。無料（Chrome と PC の中）か有料（OpenAI・xAI）か（DESIGN.md 9.6）。
 /// 今の仕組みで作れない組み合わせは `sanitized` が直す
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
-#[serde(default, rename_all = "camelCase")]
+#[serde(default, rename_all = "camelCase", from = "SavedEngines")]
 #[ts(export)]
 pub struct Engines {
     /// 途中の字幕
@@ -573,6 +573,76 @@ pub struct Engines {
     pub translation: TranslationEngine,
     /// ふりがな
     pub furigana: RubySource,
+}
+
+/// 設定ファイルの中の `Engines`。消した選択肢を、今の選択肢に読み替える
+#[derive(Deserialize)]
+#[serde(default, rename_all = "camelCase")]
+struct SavedEngines {
+    live: LiveSource,
+    transcription: FinalSource,
+    terms: TermsEngine,
+    translation: SavedTranslation,
+    furigana: RubySource,
+}
+
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum SavedTranslation {
+    Engine(TranslationEngine),
+    Removed(RemovedTranslation),
+}
+
+/// 消した翻訳の選択肢
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+enum RemovedTranslation {
+    /// 0.6.0-rc.6 までの「GPT-6 Luna（用語も）」。ベータの用語と翻訳が、精度も速さも料金も上なので消した（DESIGN.md 9.6）
+    Gpt6Luna,
+}
+
+impl Default for SavedEngines {
+    fn default() -> Self {
+        let Engines {
+            live,
+            transcription,
+            terms,
+            translation,
+            furigana,
+        } = Engines::default();
+        Self {
+            live,
+            transcription,
+            terms,
+            translation: SavedTranslation::Engine(translation),
+            furigana,
+        }
+    }
+}
+
+impl From<SavedEngines> for Engines {
+    fn from(saved: SavedEngines) -> Self {
+        let SavedEngines {
+            live,
+            transcription,
+            terms,
+            translation,
+            furigana,
+        } = saved;
+        let (terms, translation) = match translation {
+            SavedTranslation::Engine(translation) => (terms, translation),
+            SavedTranslation::Removed(RemovedTranslation::Gpt6Luna) => {
+                (Self::BETA.terms, Self::BETA.translation)
+            }
+        };
+        Self {
+            live,
+            transcription,
+            terms,
+            translation,
+            furigana,
+        }
+    }
 }
 
 impl Engines {
@@ -603,14 +673,6 @@ impl Engines {
     /// 操作パネルに出すモード（おすすめの組み合わせ）。ほかの組み合わせは「カスタム」（`Settings::custom_engines`）。
     /// `STANDARD` は「最高精度」（OpenAI の鍵が要る）で、ほかは鍵なしで始められる
     pub const MODES: [Self; 4] = [Self::BETA, Self::LOCAL, Self::CHROME, Self::STANDARD];
-    /// ライトのモード。途中の字幕は Chrome、確定は Grok、翻訳と用語は Luna、ふりがなは辞書
-    pub const LIGHT: Self = Self {
-        live: LiveSource::Chrome,
-        transcription: FinalSource::GrokVoiceTranscribe,
-        terms: TermsEngine::Dictionary,
-        translation: TranslationEngine::Gpt6Luna,
-        furigana: RubySource::Lindera,
-    };
     /// 最高精度のモード（0.5 までの「スタンダード」）。途中の字幕は Chrome、確定は OpenAI
     pub const STANDARD: Self = Self {
         live: LiveSource::Chrome,
@@ -871,7 +933,7 @@ impl TermsEngine {
     }
 }
 
-/// 翻訳を何で作るか。LLM（Terra と Luna）は用語も同時に判定する
+/// 翻訳を何で作るか。LLM（Terra）は用語も同時に判定する
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -882,24 +944,21 @@ pub enum TranslationEngine {
     /// OpenRouter の Hy-MT2-30B-A3B。Qwen-MT-Flash の半額で、少し遅い（DESIGN.md 9.7）
     HyMt2,
     Gpt61Terra,
-    /// Terra より安く速いが、用語の判定は弱い（DESIGN.md 9.3）
-    Gpt6Luna,
 }
 
 impl TranslationEngine {
-    pub const ALL: [Self; 5] = [
+    pub const ALL: [Self; 4] = [
         Self::ChromeTranslator,
         Self::QwenMtFlash,
         Self::HyMt2,
         Self::Gpt61Terra,
-        Self::Gpt6Luna,
     ];
 
     pub fn source(self) -> TranslationSource {
         match self {
             Self::ChromeTranslator => TranslationSource::ChromeTranslator,
             Self::QwenMtFlash | Self::HyMt2 => TranslationSource::Mt,
-            Self::Gpt61Terra | Self::Gpt6Luna => TranslationSource::Llm,
+            Self::Gpt61Terra => TranslationSource::Llm,
         }
     }
 
@@ -917,7 +976,7 @@ impl TranslationEngine {
         let (provider, name) = match self {
             Self::QwenMtFlash => (Provider::Qwen, "qwen-mt-flash"),
             Self::HyMt2 => (Provider::OpenRouter, "tencent/hy-mt2-30b-a3b"),
-            Self::ChromeTranslator | Self::Gpt61Terra | Self::Gpt6Luna => return None,
+            Self::ChromeTranslator | Self::Gpt61Terra => return None,
         };
         Some(Model { provider, name })
     }
@@ -1186,9 +1245,6 @@ impl Settings {
             }
             LiveSource::HaasJa => models.realtime = crate::local::HAAS_JA.into(),
             LiveSource::Chrome | LiveSource::GptLiveTranscribe | LiveSource::Off => {}
-        }
-        if self.engines.translation == TranslationEngine::Gpt6Luna {
-            models.translate = "gpt-6-luna".into();
         }
         models
     }
@@ -1750,7 +1806,7 @@ mod tests {
         assert_eq!(llm_text.finals.ruby, Some(R::Lindera));
 
         let llm_words = plan_of(Engines {
-            translation: TranslationEngine::Gpt6Luna,
+            translation: TranslationEngine::Gpt61Terra,
             furigana: R::Llm,
             ..Engines::CHROME
         });
@@ -1762,36 +1818,6 @@ mod tests {
     }
 
     #[test]
-    fn luna_changes_only_the_model_of_translation() {
-        let luna = Settings {
-            engines: Engines {
-                translation: TranslationEngine::Gpt6Luna,
-                ..Engines::STANDARD
-            },
-            ..Default::default()
-        };
-        assert_eq!(
-            luna.plan(),
-            Settings {
-                engines: Engines::STANDARD,
-                ..Default::default()
-            }
-            .plan()
-        );
-        assert_eq!(luna.models_in_use().translate, "gpt-6-luna");
-        assert_eq!(luna.models_in_use().readings, Models::default().readings);
-        assert_eq!(
-            Settings {
-                engines: Engines::STANDARD,
-                ..Default::default()
-            }
-            .models_in_use(),
-            Models::default()
-        );
-        assert!(luna.engines.paid());
-    }
-
-    #[test]
     fn chrome_and_keys_follow_the_engines() {
         assert!(plan_of(Engines::STANDARD).uses_chrome());
         assert!(Engines::STANDARD.paid());
@@ -1799,8 +1825,6 @@ mod tests {
         assert!(!Engines::CHROME.paid());
         assert!(!plan_of(Engines::OPENAI).uses_chrome());
         assert!(Engines::OPENAI.paid());
-        assert!(plan_of(Engines::LIGHT).uses_chrome());
-        assert!(Engines::LIGHT.uses(Provider::OpenAi) && Engines::LIGHT.uses(Provider::Xai));
         let paid_furigana = Engines {
             furigana: RubySource::Llm,
             ..Engines::CHROME
@@ -1889,12 +1913,32 @@ mod tests {
         let engines: Engines = serde_json::from_value(json!({
             "live": "chrome",
             "transcription": "gptTranscribe",
-            "translation": "gpt6Luna",
+            "translation": "gpt61Terra",
             "furigana": "lindera",
         }))
         .unwrap();
         assert_eq!(engines.terms, TermsEngine::Dictionary);
-        assert_eq!(engines.translation, TranslationEngine::Gpt6Luna);
+        assert_eq!(engines.translation, TranslationEngine::Gpt61Terra);
+    }
+
+    /// 消した「GPT-6 Luna（用語も）」は、ベータの用語と翻訳として読む（0.5 のライトの人）。ほかの工程は変えない
+    #[test]
+    fn luna_reads_as_the_terms_and_translation_of_the_beta() {
+        let engines: Engines = serde_json::from_value(json!({
+            "live": "chrome",
+            "transcription": "grokVoiceTranscribe",
+            "translation": "gpt6Luna",
+            "furigana": "lindera",
+        }))
+        .unwrap();
+        assert_eq!(
+            engines,
+            Engines {
+                transcription: FinalSource::GrokVoiceTranscribe,
+                ..Engines::BETA
+            }
+        );
+        assert!(serde_json::from_value::<Engines>(json!({ "translation": "unknown" })).is_err());
     }
 
     /// Grok の確定は xAI だけを使い、確定の文の出どころとモデルだけが変わる

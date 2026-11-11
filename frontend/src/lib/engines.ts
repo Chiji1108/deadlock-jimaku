@@ -145,12 +145,6 @@ export const ITEMS: { [K in Item]: { label: string; hint: string; options: Optio
         price: "100 万トークンで入力 $1・出力 $5",
         note: "訳がいちばん自然で、略称やスキルの呼び方もよく判定する",
       },
-      {
-        value: "gpt6Luna",
-        label: "GPT-6 Luna（用語も）",
-        price: "100 万トークンで入力 $0.1・出力 $0.5",
-        note: "Terra の約 6 分の 1 の料金。「〇〇のウルト」などの判定は Terra より弱い",
-      },
     ],
   },
   furigana: {
@@ -254,8 +248,7 @@ export const MODES: {
 ];
 
 /** 翻訳が GPT なら、用語も GPT が同時に判定する（用語の選択は使わない） */
-export const llmTranslation = (t: Engines) =>
-  t.translation === "gpt61Terra" || t.translation === "gpt6Luna";
+export const llmTranslation = (t: Engines) => t.translation === "gpt61Terra";
 
 /** 実際に使う用語の作り方 */
 const effective = (t: Engines): Engines => (llmTranslation(t) ? { ...t, terms: "dictionary" } : t);

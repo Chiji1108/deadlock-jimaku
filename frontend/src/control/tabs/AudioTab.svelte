@@ -12,8 +12,14 @@
   import LevelMeter from "../parts/LevelMeter.svelte";
   import PauseDialog from "../parts/PauseDialog.svelte";
   import { panel } from "../panel.svelte";
-  import ModePicker from "../parts/ModePicker.svelte";
-  import { anyPaid, chromeFinals, usesChrome } from "../../lib/engines";
+  import {
+    anyPaid,
+    chromeFinals,
+    llmTranslation,
+    modeOf,
+    price,
+    usesChrome,
+  } from "../../lib/engines";
 
   const MAX_TRANSLATE_TO = 4;
   /** 何 ms 黙ったら区切るか */
@@ -25,6 +31,7 @@
 
   const s = $derived(panel.settings!);
   const t = $derived(s.engines);
+  const mode = $derived(modeOf(t));
   /** Chrome のウィンドウが字幕を止めている理由。止まっているか、回線の回復を待っている */
   const chromeProblem = $derived(
     panel.chromeStatus?.state === "failed" ||
@@ -57,13 +64,22 @@
   <Card.Root>
     <Card.Header>
       <Card.Title>モード</Card.Title>
-      <Card.Description>字幕をどこで作るかを選びます</Card.Description>
+      <Card.Description>字幕をどこで作るかです。「モード」のタブで選びます</Card.Description>
     </Card.Header>
     <Card.Content class="flex flex-col gap-3">
-      <ModePicker />
-      <Button variant="outline" size="sm" class="w-fit" onclick={() => (panel.tab = "engines")}>
-        工程ごとに選ぶ
-      </Button>
+      <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
+        <div class="flex flex-col gap-1">
+          <span class="text-sm font-medium">{mode?.label ?? "カスタム"}</span>
+          <span class="text-xs text-muted-foreground">
+            {#if mode}
+              {mode.traits}・<span class="tabular-nums">{price(mode.hourlyUsd)}</span>
+            {:else}
+              工程ごとに選んだ組み合わせ
+            {/if}
+          </span>
+        </div>
+        <Button variant="outline" size="sm" onclick={() => (panel.tab = "engines")}>変える</Button>
+      </div>
       {#if usesChrome(t)}
         {#if s.transcriptionEnabled}
           <div class="flex flex-wrap items-center gap-3">
@@ -219,10 +235,8 @@
       <Field.Field>
         <Field.Label>翻訳先</Field.Label>
         <Field.Description>
-          最大 {MAX_TRANSLATE_TO} つ（{s.translateTo.length} / {MAX_TRANSLATE_TO}）{#if t.translation !== "chromeTranslator"}。1
-            つ増えるごとに、話し続けて 1 時間あたり約 ${t.translation === "gpt6Luna"
-              ? "0.05"
-              : "0.3"}{/if}
+          最大 {MAX_TRANSLATE_TO} つ（{s.translateTo.length} / {MAX_TRANSLATE_TO}）{#if llmTranslation(t)}。1
+            つ増えるごとに、話し続けて 1 時間あたり約 $0.3{/if}
         </Field.Description>
         <ToggleGroup.Root
           type="multiple"

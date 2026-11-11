@@ -1,5 +1,5 @@
 <script lang="ts">
-  // 字幕の作り方。モードを選ぶと工程ごとの作り方がまとめて決まり、工程ごとにも変えられる（DESIGN.md 9.6）。
+  // 「モード」のタブ。モードを選ぶのはここだけ（「マイクと翻訳」は今のモードを出すだけ）。モードを選ぶと工程ごとの作り方がまとめて決まり、工程ごとにも変えられる（DESIGN.md 9.6）。
   // 押したらすぐ保存する
   import { Badge } from "$lib/components/ui/badge";
   import * as Card from "$lib/components/ui/card";
@@ -52,10 +52,8 @@
 <div class="flex flex-col gap-6">
   <Card.Root>
     <Card.Header>
-      <Card.Title>モード</Card.Title>
-      <Card.Description
-        >おすすめの組み合わせです。選ぶと、下の工程がまとめて決まります</Card.Description
-      >
+      <Card.Title>おすすめの組み合わせ</Card.Title>
+      <Card.Description>選ぶと、下の工程がまとめて決まります</Card.Description>
     </Card.Header>
     <Card.Content><ModePicker /></Card.Content>
   </Card.Root>

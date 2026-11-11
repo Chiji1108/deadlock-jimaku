@@ -1,0 +1,1571 @@
+{
+ "system": "You check the readings (furigana) of a Japanese subtitle from a video game streamer. The input is JSON: \"sentence\" is the subtitle, and \"words\" lists its words that contain kanji, each with the reading a dictionary gave, in hiragana. The dictionary reads each word without looking at the sentence, so some readings are wrong for this sentence (for example 辛い as つらい when it means spicy, or 一 and 人 as いち and にん when the sentence says ひとり). Answer with JSON {\"readings\": [...]}: the correct hiragana reading of each word, in the same order and the same number as \"words\". Keep the dictionary's reading unless it is wrong in this sentence. A reading covers only the characters of its word.",
+ "summary": {
+  "runs": 180,
+  "dictionaryRight": 126,
+  "nanoRight": 106,
+  "fixed": 6,
+  "broken": 26,
+  "stillWrong": 48,
+  "unusable": 5,
+  "medianMs": 568,
+  "p90Ms": 772
+ },
+ "runs": [
+  {
+   "text": "さっき行った店より、こっちの方がいいね",
+   "ms": 886,
+   "usable": true,
+   "dictionary": false,
+   "nano": false,
+   "changed": []
+  },
+  {
+   "text": "さっき行った店より、こっちの方がいいね",
+   "ms": 340,
+   "usable": true,
+   "dictionary": false,
+   "nano": false,
+   "changed": []
+  },
+  {
+   "text": "さっき行った店より、こっちの方がいいね",
+   "ms": 342,
+   "usable": true,
+   "dictionary": false,
+   "nano": false,
+   "changed": []
+  },
+  {
+   "text": "今日は辛い試合が続いてるな",
+   "ms": 515,
+   "usable": true,
+   "dictionary": true,
+   "nano": false,
+   "changed": [
+    "辛い: つらい → からい",
+    "続い: つづい → つづく"
+   ]
+  },
+  {
+   "text": "今日は辛い試合が続いてるな",
+   "ms": 595,
+   "usable": true,
+   "dictionary": true,
+   "nano": false,
+   "changed": [
+    "辛い: つらい → からい"
+   ]
+  },
+  {
+   "text": "今日は辛い試合が続いてるな",
+   "ms": 594,
+   "usable": true,
+   "dictionary": true,
+   "nano": false,
+   "changed": [
+    "辛い: つらい → せいかく",
+    "続い: つづい → つづく"
+   ]
+  },
+  {
+   "text": "このカレーめっちゃ辛いんだけど",
+   "ms": 332,
+   "usable": false,
+   "dictionary": false,
+   "nano": false,
+   "changed": []
+  },
+  {
+   "text": "このカレーめっちゃ辛いんだけど",
+   "ms": 328,
+   "usable": true,
+   "dictionary": false,
+   "nano": false,
+   "changed": [
+    "辛い: つらい → かれい"
+   ]
+  },
+  {
+   "text": "このカレーめっちゃ辛いんだけど",
+   "ms": 331,
+   "usable": true,
+   "dictionary": false,
+   "nano": true,
+   "changed": [
+    "辛い: つらい → からい"
+   ]
+  },
+  {
+   "text": "このヒーロー今めっちゃ人気だよね",
+   "ms": 423,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "このヒーロー今めっちゃ人気だよね",
+   "ms": 424,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "このヒーロー今めっちゃ人気だよね",
+   "ms": 424,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "人気のない場所で待ち伏せしよう",
+   "ms": 540,
+   "usable": true,
+   "dictionary": false,
+   "nano": false,
+   "changed": []
+  },
+  {
+   "text": "人気のない場所で待ち伏せしよう",
+   "ms": 484,
+   "usable": true,
+   "dictionary": false,
+   "nano": false,
+   "changed": []
+  },
+  {
+   "text": "人気のない場所で待ち伏せしよう",
+   "ms": 538,
+   "usable": true,
+   "dictionary": false,
+   "nano": false,
+   "changed": []
+  },
+  {
+   "text": "エイムが上手い人には勝てないわ",
+   "ms": 480,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "エイムが上手い人には勝てないわ",
+   "ms": 484,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "エイムが上手い人には勝てないわ",
+   "ms": 483,
+   "usable": true,
+   "dictionary": true,
+   "nano": false,
+   "changed": [
+    "勝て: かて → かんて"
+   ]
+  },
+  {
+   "text": "絵が上手だねって言われた",
+   "ms": 503,
+   "usable": true,
+   "dictionary": true,
+   "nano": false,
+   "changed": [
+    "言わ: いわ → いわれる"
+   ]
+  },
+  {
+   "text": "絵が上手だねって言われた",
+   "ms": 503,
+   "usable": true,
+   "dictionary": true,
+   "nano": false,
+   "changed": [
+    "言わ: いわ → いわれる"
+   ]
+  },
+  {
+   "text": "絵が上手だねって言われた",
+   "ms": 499,
+   "usable": true,
+   "dictionary": true,
+   "nano": false,
+   "changed": [
+    "言わ: いわ → いわれる"
+   ]
+  },
+  {
+   "text": "下手に動くとやられるぞ",
+   "ms": 407,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "下手に動くとやられるぞ",
+   "ms": 408,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "下手に動くとやられるぞ",
+   "ms": 411,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "俺は射撃が下手なんだよな",
+   "ms": 525,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "俺は射撃が下手なんだよな",
+   "ms": 467,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "俺は射撃が下手なんだよな",
+   "ms": 521,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "敵が何人いるか見てくれる？",
+   "ms": 541,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "敵が何人いるか見てくれる？",
+   "ms": 526,
+   "usable": true,
+   "dictionary": true,
+   "nano": false,
+   "changed": [
+    "人: にん → ひとり"
+   ]
+  },
+  {
+   "text": "敵が何人いるか見てくれる？",
+   "ms": 541,
+   "usable": true,
+   "dictionary": true,
+   "nano": false,
+   "changed": [
+    "何: なん → なに"
+   ]
+  },
+  {
+   "text": "何で今そこに行ったの",
+   "ms": 409,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "何で今そこに行ったの",
+   "ms": 470,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "何で今そこに行ったの",
+   "ms": 463,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "一日中ランク回してた",
+   "ms": 583,
+   "usable": true,
+   "dictionary": false,
+   "nano": false,
+   "changed": []
+  },
+  {
+   "text": "一日中ランク回してた",
+   "ms": 578,
+   "usable": true,
+   "dictionary": false,
+   "nano": false,
+   "changed": []
+  },
+  {
+   "text": "一日中ランク回してた",
+   "ms": 582,
+   "usable": true,
+   "dictionary": false,
+   "nano": false,
+   "changed": []
+  },
+  {
+   "text": "来月の一日にアプデが来るらしい",
+   "ms": 484,
+   "usable": true,
+   "dictionary": false,
+   "nano": false,
+   "changed": []
+  },
+  {
+   "text": "来月の一日にアプデが来るらしい",
+   "ms": 489,
+   "usable": true,
+   "dictionary": false,
+   "nano": false,
+   "changed": []
+  },
+  {
+   "text": "来月の一日にアプデが来るらしい",
+   "ms": 559,
+   "usable": true,
+   "dictionary": false,
+   "nano": false,
+   "changed": []
+  },
+  {
+   "text": "今戦闘の最中だから待って",
+   "ms": 583,
+   "usable": true,
+   "dictionary": false,
+   "nano": false,
+   "changed": []
+  },
+  {
+   "text": "今戦闘の最中だから待って",
+   "ms": 580,
+   "usable": true,
+   "dictionary": false,
+   "nano": false,
+   "changed": []
+  },
+  {
+   "text": "今戦闘の最中だから待って",
+   "ms": 485,
+   "usable": true,
+   "dictionary": false,
+   "nano": true,
+   "changed": [
+    "今: こん → いま"
+   ]
+  },
+  {
+   "text": "もうやめたい、止めてくれ",
+   "ms": 317,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "もうやめたい、止めてくれ",
+   "ms": 325,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "もうやめたい、止めてくれ",
+   "ms": 305,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "そこで足を止めるな",
+   "ms": 391,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "そこで足を止めるな",
+   "ms": 433,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "そこで足を止めるな",
+   "ms": 436,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "後ろから来てる、気をつけて",
+   "ms": 466,
+   "usable": true,
+   "dictionary": true,
+   "nano": false,
+   "changed": [
+    "気: き → け"
+   ]
+  },
+  {
+   "text": "後ろから来てる、気をつけて",
+   "ms": 468,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "後ろから来てる、気をつけて",
+   "ms": 412,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "後で動画を見返そう",
+   "ms": 543,
+   "usable": true,
+   "dictionary": true,
+   "nano": false,
+   "changed": [
+    "見返そ: みかえそ → みかえそう"
+   ]
+  },
+  {
+   "text": "後で動画を見返そう",
+   "ms": 526,
+   "usable": false,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "後で動画を見返そう",
+   "ms": 545,
+   "usable": true,
+   "dictionary": true,
+   "nano": false,
+   "changed": [
+    "見返そ: みかえそ → みかえそう"
+   ]
+  },
+  {
+   "text": "その間にタワーを折ろう",
+   "ms": 396,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "その間にタワーを折ろう",
+   "ms": 437,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "その間にタワーを折ろう",
+   "ms": 417,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "間に合った、危なかった",
+   "ms": 478,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "間に合った、危なかった",
+   "ms": 503,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "間に合った、危なかった",
+   "ms": 494,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "この中に敵が隠れてる",
+   "ms": 434,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "この中に敵が隠れてる",
+   "ms": 459,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "この中に敵が隠れてる",
+   "ms": 489,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "今集中してるから話しかけないで",
+   "ms": 569,
+   "usable": true,
+   "dictionary": false,
+   "nano": true,
+   "changed": [
+    "今: こん → いま"
+   ]
+  },
+  {
+   "text": "今集中してるから話しかけないで",
+   "ms": 587,
+   "usable": true,
+   "dictionary": false,
+   "nano": true,
+   "changed": [
+    "今: こん → いま"
+   ]
+  },
+  {
+   "text": "今集中してるから話しかけないで",
+   "ms": 568,
+   "usable": true,
+   "dictionary": false,
+   "nano": true,
+   "changed": [
+    "今: こん → いま"
+   ]
+  },
+  {
+   "text": "世界中の人が見てるんだよ",
+   "ms": 455,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "世界中の人が見てるんだよ",
+   "ms": 500,
+   "usable": true,
+   "dictionary": true,
+   "nano": false,
+   "changed": [
+    "見: み → みている"
+   ]
+  },
+  {
+   "text": "世界中の人が見てるんだよ",
+   "ms": 512,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "一人で三人倒したのは凄い",
+   "ms": 814,
+   "usable": true,
+   "dictionary": false,
+   "nano": false,
+   "changed": [
+    "一: いち → ひとり"
+   ]
+  },
+  {
+   "text": "一人で三人倒したのは凄い",
+   "ms": 863,
+   "usable": true,
+   "dictionary": false,
+   "nano": false,
+   "changed": [
+    "一: いち → ひとり"
+   ]
+  },
+  {
+   "text": "一人で三人倒したのは凄い",
+   "ms": 846,
+   "usable": true,
+   "dictionary": false,
+   "nano": false,
+   "changed": [
+    "一: いち → ひとり"
+   ]
+  },
+  {
+   "text": "二人で裏から回ろう",
+   "ms": 677,
+   "usable": true,
+   "dictionary": false,
+   "nano": false,
+   "changed": []
+  },
+  {
+   "text": "二人で裏から回ろう",
+   "ms": 672,
+   "usable": true,
+   "dictionary": false,
+   "nano": false,
+   "changed": []
+  },
+  {
+   "text": "二人で裏から回ろう",
+   "ms": 687,
+   "usable": true,
+   "dictionary": false,
+   "nano": false,
+   "changed": []
+  },
+  {
+   "text": "このスキルは来週上方修正されるらしい",
+   "ms": 661,
+   "usable": true,
+   "dictionary": false,
+   "nano": false,
+   "changed": []
+  },
+  {
+   "text": "このスキルは来週上方修正されるらしい",
+   "ms": 602,
+   "usable": true,
+   "dictionary": false,
+   "nano": false,
+   "changed": []
+  },
+  {
+   "text": "このスキルは来週上方修正されるらしい",
+   "ms": 663,
+   "usable": true,
+   "dictionary": false,
+   "nano": false,
+   "changed": []
+  },
+  {
+   "text": "下方修正されてから弱くなった",
+   "ms": 667,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "下方修正されてから弱くなった",
+   "ms": 634,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "下方修正されてから弱くなった",
+   "ms": 630,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "弾が切れた、リロードする",
+   "ms": 429,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "弾が切れた、リロードする",
+   "ms": 418,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "弾が切れた、リロードする",
+   "ms": 482,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "金が足りないからまだ買えない",
+   "ms": 529,
+   "usable": true,
+   "dictionary": false,
+   "nano": true,
+   "changed": [
+    "金: きむ → かね"
+   ]
+  },
+  {
+   "text": "金が足りないからまだ買えない",
+   "ms": 565,
+   "usable": true,
+   "dictionary": false,
+   "nano": false,
+   "changed": [
+    "金: きむ → きん",
+    "足り: たり → たらない",
+    "買え: かえ → かえない"
+   ]
+  },
+  {
+   "text": "金が足りないからまだ買えない",
+   "ms": 568,
+   "usable": true,
+   "dictionary": false,
+   "nano": false,
+   "changed": [
+    "金: きむ → きん"
+   ]
+  },
+  {
+   "text": "今日の大会は日本のチームが出るよ",
+   "ms": 582,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": [
+    "日本: にっぽん → にほん"
+   ]
+  },
+  {
+   "text": "今日の大会は日本のチームが出るよ",
+   "ms": 646,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": [
+    "日本: にっぽん → にほん"
+   ]
+  },
+  {
+   "text": "今日の大会は日本のチームが出るよ",
+   "ms": 643,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": [
+    "日本: にっぽん → にほん"
+   ]
+  },
+  {
+   "text": "明日も配信するから来てね",
+   "ms": 549,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "明日も配信するから来てね",
+   "ms": 502,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "明日も配信するから来てね",
+   "ms": 551,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "昨日は全然勝てなかった",
+   "ms": 586,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "昨日は全然勝てなかった",
+   "ms": 579,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "昨日は全然勝てなかった",
+   "ms": 636,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "他の人はどう思う？",
+   "ms": 536,
+   "usable": true,
+   "dictionary": false,
+   "nano": false,
+   "changed": [
+    "他: た → ただ"
+   ]
+  },
+  {
+   "text": "他の人はどう思う？",
+   "ms": 494,
+   "usable": false,
+   "dictionary": false,
+   "nano": false,
+   "changed": []
+  },
+  {
+   "text": "他の人はどう思う？",
+   "ms": 479,
+   "usable": true,
+   "dictionary": false,
+   "nano": false,
+   "changed": []
+  },
+  {
+   "text": "その他にも強いアイテムがある",
+   "ms": 463,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "その他にも強いアイテムがある",
+   "ms": 528,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "その他にも強いアイテムがある",
+   "ms": 527,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "相手の体力が少ない、今だ",
+   "ms": 1097,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "相手の体力が少ない、今だ",
+   "ms": 1232,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "相手の体力が少ない、今だ",
+   "ms": 772,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "角に隠れて敵を待とう",
+   "ms": 605,
+   "usable": true,
+   "dictionary": false,
+   "nano": false,
+   "changed": [
+    "待と: まと → まとう"
+   ]
+  },
+  {
+   "text": "角に隠れて敵を待とう",
+   "ms": 579,
+   "usable": true,
+   "dictionary": false,
+   "nano": false,
+   "changed": [
+    "待と: まと → まつ"
+   ]
+  },
+  {
+   "text": "角に隠れて敵を待とう",
+   "ms": 772,
+   "usable": true,
+   "dictionary": false,
+   "nano": false,
+   "changed": [
+    "待と: まと → まとう"
+   ]
+  },
+  {
+   "text": "この先に敵の拠点がある",
+   "ms": 522,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "この先に敵の拠点がある",
+   "ms": 559,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "この先に敵の拠点がある",
+   "ms": 544,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "先に行ってて、すぐ追いつく",
+   "ms": 522,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "先に行ってて、すぐ追いつく",
+   "ms": 537,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "先に行ってて、すぐ追いつく",
+   "ms": 564,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "敵の攻撃を避けてから撃つ",
+   "ms": 701,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "敵の攻撃を避けてから撃つ",
+   "ms": 711,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "敵の攻撃を避けてから撃つ",
+   "ms": 701,
+   "usable": true,
+   "dictionary": true,
+   "nano": false,
+   "changed": [
+    "避け: さけ → さける"
+   ]
+  },
+  {
+   "text": "あの人は私を避けてる気がする",
+   "ms": 635,
+   "usable": true,
+   "dictionary": true,
+   "nano": false,
+   "changed": [
+    "避け: さけ → さける"
+   ]
+  },
+  {
+   "text": "あの人は私を避けてる気がする",
+   "ms": 619,
+   "usable": true,
+   "dictionary": true,
+   "nano": false,
+   "changed": [
+    "避け: さけ → さける"
+   ]
+  },
+  {
+   "text": "あの人は私を避けてる気がする",
+   "ms": 607,
+   "usable": true,
+   "dictionary": true,
+   "nano": false,
+   "changed": [
+    "避け: さけ → さける"
+   ]
+  },
+  {
+   "text": "味方が生き返るまで耐えよう",
+   "ms": 646,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "味方が生き返るまで耐えよう",
+   "ms": 716,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "味方が生き返るまで耐えよう",
+   "ms": 681,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "このゲームは難しいけど面白い",
+   "ms": 581,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "このゲームは難しいけど面白い",
+   "ms": 582,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "このゲームは難しいけど面白い",
+   "ms": 581,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "大分慣れてきた気がする",
+   "ms": 513,
+   "usable": true,
+   "dictionary": true,
+   "nano": false,
+   "changed": [
+    "大分: だいぶ → だいぶん",
+    "慣れ: なれ → なれる"
+   ]
+  },
+  {
+   "text": "大分慣れてきた気がする",
+   "ms": 601,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "大分慣れてきた気がする",
+   "ms": 586,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "流石にそれは無理でしょ",
+   "ms": 505,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "流石にそれは無理でしょ",
+   "ms": 430,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "流石にそれは無理でしょ",
+   "ms": 458,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "丁度いいタイミングでウルトが溜まった",
+   "ms": 505,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "丁度いいタイミングでウルトが溜まった",
+   "ms": 534,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "丁度いいタイミングでウルトが溜まった",
+   "ms": 2521,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "一旦下がって回復しよう",
+   "ms": 696,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "一旦下がって回復しよう",
+   "ms": 705,
+   "usable": false,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "一旦下がって回復しよう",
+   "ms": 683,
+   "usable": true,
+   "dictionary": true,
+   "nano": false,
+   "changed": [
+    "下がっ: さがっ → さがる"
+   ]
+  },
+  {
+   "text": "敵を一発で倒せる火力がある",
+   "ms": 994,
+   "usable": true,
+   "dictionary": false,
+   "nano": false,
+   "changed": []
+  },
+  {
+   "text": "敵を一発で倒せる火力がある",
+   "ms": 717,
+   "usable": true,
+   "dictionary": false,
+   "nano": false,
+   "changed": []
+  },
+  {
+   "text": "敵を一発で倒せる火力がある",
+   "ms": 852,
+   "usable": true,
+   "dictionary": false,
+   "nano": false,
+   "changed": []
+  },
+  {
+   "text": "序盤は耐えて、終盤で勝負しよう",
+   "ms": 829,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "序盤は耐えて、終盤で勝負しよう",
+   "ms": 804,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "序盤は耐えて、終盤で勝負しよう",
+   "ms": 753,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "床に罠が置いてあるから気をつけて",
+   "ms": 754,
+   "usable": true,
+   "dictionary": true,
+   "nano": false,
+   "changed": [
+    "置い: おい → おいて"
+   ]
+  },
+  {
+   "text": "床に罠が置いてあるから気をつけて",
+   "ms": 852,
+   "usable": true,
+   "dictionary": true,
+   "nano": false,
+   "changed": [
+    "置い: おい → おいて"
+   ]
+  },
+  {
+   "text": "床に罠が置いてあるから気をつけて",
+   "ms": 760,
+   "usable": true,
+   "dictionary": true,
+   "nano": false,
+   "changed": [
+    "置い: おい → おいて"
+   ]
+  },
+  {
+   "text": "上から敵が降ってきた",
+   "ms": 668,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "上から敵が降ってきた",
+   "ms": 751,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "上から敵が降ってきた",
+   "ms": 673,
+   "usable": false,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "三日ぶりに配信します",
+   "ms": 633,
+   "usable": true,
+   "dictionary": false,
+   "nano": false,
+   "changed": []
+  },
+  {
+   "text": "三日ぶりに配信します",
+   "ms": 612,
+   "usable": true,
+   "dictionary": false,
+   "nano": false,
+   "changed": []
+  },
+  {
+   "text": "三日ぶりに配信します",
+   "ms": 631,
+   "usable": true,
+   "dictionary": false,
+   "nano": false,
+   "changed": []
+  },
+  {
+   "text": "最後の一人まで諦めない",
+   "ms": 729,
+   "usable": true,
+   "dictionary": false,
+   "nano": false,
+   "changed": [
+    "人: にん → ひとり"
+   ]
+  },
+  {
+   "text": "最後の一人まで諦めない",
+   "ms": 1014,
+   "usable": true,
+   "dictionary": false,
+   "nano": false,
+   "changed": [
+    "人: にん → ひとり"
+   ]
+  },
+  {
+   "text": "最後の一人まで諦めない",
+   "ms": 757,
+   "usable": true,
+   "dictionary": false,
+   "nano": false,
+   "changed": [
+    "人: にん → ひとり"
+   ]
+  },
+  {
+   "text": "彼の最期はかっこよかった",
+   "ms": 555,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "彼の最期はかっこよかった",
+   "ms": 588,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "彼の最期はかっこよかった",
+   "ms": 622,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "何か食べてからやろうかな",
+   "ms": 553,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "何か食べてからやろうかな",
+   "ms": 692,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "何か食べてからやろうかな",
+   "ms": 471,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "外したら負けるから慎重に",
+   "ms": 638,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "外したら負けるから慎重に",
+   "ms": 646,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "外したら負けるから慎重に",
+   "ms": 661,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "席を外すからちょっと待ってて",
+   "ms": 551,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "席を外すからちょっと待ってて",
+   "ms": 753,
+   "usable": true,
+   "dictionary": true,
+   "nano": false,
+   "changed": [
+    "待っ: まっ → まっと"
+   ]
+  },
+  {
+   "text": "席を外すからちょっと待ってて",
+   "ms": 808,
+   "usable": true,
+   "dictionary": true,
+   "nano": false,
+   "changed": [
+    "待っ: まっ → まってて"
+   ]
+  },
+  {
+   "text": "空いてるレーンに行こう",
+   "ms": 615,
+   "usable": true,
+   "dictionary": true,
+   "nano": false,
+   "changed": [
+    "空い: あい → あいてる",
+    "行こ: いこ → いこう"
+   ]
+  },
+  {
+   "text": "空いてるレーンに行こう",
+   "ms": 644,
+   "usable": true,
+   "dictionary": true,
+   "nano": false,
+   "changed": [
+    "空い: あい → あいてる",
+    "行こ: いこ → いこう"
+   ]
+  },
+  {
+   "text": "空いてるレーンに行こう",
+   "ms": 497,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "お腹空いたから休憩する",
+   "ms": 699,
+   "usable": true,
+   "dictionary": false,
+   "nano": false,
+   "changed": [
+    "空い: あい → すいた"
+   ]
+  },
+  {
+   "text": "お腹空いたから休憩する",
+   "ms": 696,
+   "usable": true,
+   "dictionary": false,
+   "nano": false,
+   "changed": [
+    "空い: あい → すいた"
+   ]
+  },
+  {
+   "text": "お腹空いたから休憩する",
+   "ms": 759,
+   "usable": true,
+   "dictionary": false,
+   "nano": false,
+   "changed": [
+    "空い: あい → すいた"
+   ]
+  },
+  {
+   "text": "今年は大会に出たい",
+   "ms": 634,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "今年は大会に出たい",
+   "ms": 714,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "今年は大会に出たい",
+   "ms": 721,
+   "usable": true,
+   "dictionary": true,
+   "nano": true,
+   "changed": []
+  },
+  {
+   "text": "こっちは四人、向こうは六人だ",
+   "ms": 1053,
+   "usable": true,
+   "dictionary": false,
+   "nano": false,
+   "changed": [
+    "四: よん → し"
+   ]
+  },
+  {
+   "text": "こっちは四人、向こうは六人だ",
+   "ms": 3041,
+   "usable": true,
+   "dictionary": false,
+   "nano": false,
+   "changed": [
+    "四: よん → し"
+   ]
+  },
+  {
+   "text": "こっちは四人、向こうは六人だ",
+   "ms": 1107,
+   "usable": true,
+   "dictionary": false,
+   "nano": false,
+   "changed": [
+    "四: よん → し"
+   ]
+  }
+ ]
+}

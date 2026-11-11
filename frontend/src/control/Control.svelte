@@ -38,7 +38,7 @@
 
   const TABS = [
     { value: "audio", label: "マイクと翻訳", icon: MicIcon, page: AudioTab },
-    { value: "engines", label: "字幕の作り方", icon: WorkflowIcon, page: EnginesTab },
+    { value: "engines", label: "モード", icon: WorkflowIcon, page: EnginesTab },
     {
       value: "display",
       label: "字幕",

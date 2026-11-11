@@ -58,8 +58,7 @@ export const ENGINE_PROVIDERS = {
     "chromeTranslator": null,
     "qwenMtFlash": "qwen",
     "hyMt2": "openrouter",
-    "gpt61Terra": "openai",
-    "gpt6Luna": "openai"
+    "gpt61Terra": "openai"
   },
   "furigana": {
     "lindera": null,

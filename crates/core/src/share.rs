@@ -401,11 +401,12 @@ pub async fn update(api: &str, token: &str, id: &str, body: Value) -> Result<(),
 mod tests {
     use super::*;
 
-    /// 手元の Worker（`wrangler dev`。偽の開発者のキー）に、ベータのコードで、アプリの部品が実際に送る要求を通す。
-    /// 要求の形が Worker の検査を通れば、Worker は外に送り、偽のキーなので「外の不調」（502）が返る（400 なら形が合っていない）:
+    /// Worker に、ベータのコードで、アプリの部品が実際に送る要求を通す。手元の Worker（`wrangler dev`。偽の開発者のキー）なら、
+    /// 要求の形が Worker の検査を通れば外に送り、偽のキーなので「外の不調」（502）が返る（400 なら形が合っていない）。
+    /// 本番（`https://api.jimaku.deadlock.jp/v1`）なら、文字起こしと訳が返る:
     /// `BETA_TEST_API=http://127.0.0.1:8799/v1 cargo test -p overlays-core beta_requests -- --ignored --nocapture`
     #[tokio::test]
-    #[ignore = "needs a local Worker"]
+    #[ignore = "needs a Worker"]
     async fn beta_requests_pass_the_worker() {
         use crate::enrich::Span;
         use crate::settings::Engines;
@@ -421,11 +422,6 @@ mod tests {
         let meter = Arc::new(Meter::new(
             std::env::temp_dir().join("overlays-beta-test.json"),
         ));
-        let passed = |what: &str, e: anyhow::Error| {
-            println!("{what}: {e:#}");
-            // 偽のキーが外で断られ、Worker は「外の不調」（502）として返す
-            assert!(format!("{e:#}").contains("upstream"), "{what}: {e:#}");
-        };
 
         let wav = concat!(
             env!("CARGO_MANIFEST_DIR"),
@@ -443,8 +439,11 @@ mod tests {
             seconds: 21.8,
             meter: &meter,
         };
-        let heard = crate::stt::transcribe(crate::http(), request).await;
-        passed("transcription", heard.unwrap_err());
+        match crate::stt::transcribe(crate::http(), request).await {
+            Ok(text) => println!("transcription: {text}"),
+            // 偽のキーが外で断られ、Worker は「外の不調」（502）として返す
+            Err(e) => assert!(format!("{e:#}").contains("upstream"), "{e:#}"),
+        }
 
         let mt = Engines::BETA.translation.mt().unwrap();
         let translator = crate::mt::Translator::new(
@@ -455,9 +454,9 @@ mod tests {
             meter.clone(),
         );
         let spans = [Span::Text("強い".into())];
-        // 翻訳の失敗は、その文の訳を諦めるだけ（エラーにならない）。Worker が 502 を返したことは、Worker の記録で見る
+        // 翻訳の失敗は、その文の訳を諦めるだけ（エラーにならず、訳が空になる）。Worker が 502 を返したことは、Worker の記録で見る
         let translated = translator.translate(crate::http(), &spans, None).await;
-        assert!(translated.unwrap().is_empty());
+        println!("translation: {:?}", translated.unwrap());
     }
 
     #[test]

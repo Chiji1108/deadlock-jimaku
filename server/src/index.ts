@@ -45,6 +45,7 @@ import {
   wavSeconds,
   type Provider,
 } from "./price";
+import { relayQwenLive } from "./qwenLive";
 import { relay } from "./realtime";
 import { codes, codeUsage, issuerKeys, issuers } from "./schema";
 import { decrypt, encrypt, issuerToken, newCode, newId, normalizeCode, sha256 } from "./secrets";
@@ -595,6 +596,18 @@ app.post("/qwen/api/v1/services/aigc/multimodal-generation/generation", async (c
   });
 });
 
+/** 途中の字幕（Qwen-Audio-3.1-ASR-Flash-Streaming）。WebSocket をつないで中継する（`qwenLive.ts`） */
+app.get("/qwen/api-ws/v1/inference", async (c) => {
+  if (c.req.header("Upgrade") !== "websocket") return c.json({ error: "websocket" }, 426);
+  const gift = await betaGift(c, "qwen");
+  if (gift instanceof Response) return gift;
+  const relayed = await relayQwenLive(c.var.db, gift.code.id, gift.keys, c.executionCtx);
+  if (relayed instanceof Response) return relayed;
+  return relayed.error === "limit"
+    ? c.json(relayed, 403, { "X-Gift-Refusal": "limit" })
+    : c.json(relayed, 502);
+});
+
 /** 用語の判定（Perplexity Decider）。アプリが送る形だけを通す: 文字の state と、文字だけの選択の問い */
 app.post("/openrouter/systemone", async (c) => {
   const gift = await betaGift(c, "openrouter");
@@ -679,7 +692,8 @@ app.all("/openrouter/*", (c) => c.json({ error: "unsupported" }, 403, { "X-Gift-
 // ---- 共通 ----
 
 function bearer(c: Ctx): string | undefined {
-  return c.req.header("Authorization")?.match(/^Bearer (.+)$/)?.[1];
+  // 認証の方式の名前は、大文字と小文字を区別しない（アプリは Qwen の途中の字幕だけ小文字で送る）
+  return c.req.header("Authorization")?.match(/^Bearer (.+)$/i)?.[1];
 }
 
 async function admin(c: Ctx) {

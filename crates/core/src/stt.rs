@@ -462,16 +462,23 @@ mod tests {
 
     /// 本物の QwenCloud に、録音を 2 つの発話として実時間で流し、途中の文字がどの発話に届くかを見る:
     /// `cargo test -p overlays-core qwen_streaming -- --ignored --nocapture`
+    /// `BETA_TEST_API`（開発者のサーバーの根元。`http://127.0.0.1:8799/v1` など）があれば、ベータのコードをもらって中継を通す
     #[tokio::test]
     #[ignore = "calls QwenCloud"]
     async fn qwen_streaming_writes_each_utterance_as_it_is_said() {
         let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
-        let key = std::env::var("QWEN_SOUTH_API_KEY").unwrap();
+        let access = match std::env::var("BETA_TEST_API") {
+            Ok(api) => {
+                let code = crate::share::join_beta(&api).await.unwrap();
+                Access::gift(Provider::Qwen, code, &api)
+            }
+            Err(_) => Access::key(Provider::Qwen, std::env::var("QWEN_SOUTH_API_KEY").unwrap()),
+        };
         let meter = Arc::new(Meter::new(
             std::env::temp_dir().join("overlays-qwen-live-test-usage.json"),
         ));
         let cfg = RealtimeConfig {
-            transcriber: Transcriber::Api(Access::key(Provider::Qwen, key)),
+            transcriber: Transcriber::Api(access),
             model: "qwen-audio-3.1-asr-flash-streaming".into(),
             delay: "low".into(),
             meter: meter.clone(),

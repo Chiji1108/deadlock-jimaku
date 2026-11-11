@@ -9,10 +9,10 @@ import { openai, validKey } from "./openai";
 import { appendSeconds, tokensUsd, wavSeconds } from "./price";
 import { relay } from "./realtime";
 import { encrypt, normalizeCode } from "./secrets";
-import { openrouter, qwen } from "./upstream";
+import { openrouter, qwen, qwenLive } from "./upstream";
 import { validXaiKey, xai } from "./xai";
 
-vi.mock("./upstream", () => ({ openrouter: vi.fn(), qwen: vi.fn() }));
+vi.mock("./upstream", () => ({ openrouter: vi.fn(), qwen: vi.fn(), qwenLive: vi.fn() }));
 vi.mock("./access", () => ({ accessEmail: vi.fn() }));
 vi.mock("./openai", () => ({ openai: vi.fn(), validKey: vi.fn() }));
 vi.mock("./xai", () => ({ xai: vi.fn(), validXaiKey: vi.fn() }));
@@ -75,6 +75,7 @@ beforeEach(async () => {
   vi.mocked(accessEmail).mockReset();
   vi.mocked(accessEmail).mockResolvedValue("dev@example.com");
   vi.mocked(qwen).mockReset();
+  vi.mocked(qwenLive).mockReset();
   vi.mocked(openrouter).mockReset();
   env.BETA_QWEN_KEY = "sk-beta-qwen";
   env.BETA_OPENROUTER_KEY = "sk-beta-openrouter";
@@ -746,24 +747,42 @@ describe("daily limit", () => {
   });
 });
 
-describe("realtime relay", () => {
-  /** Workers の WebSocket の代わり。送ったものと閉じた理由を覚える */
-  class FakeSocket extends EventTarget {
-    readyState = 1;
-    sent: unknown[] = [];
-    closed?: { code: number; reason: string };
-    accept() {}
-    send(data: unknown) {
-      this.sent.push(data);
-    }
-    close(code: number, reason: string) {
-      this.closed = { code, reason };
-      this.readyState = 3;
-    }
-    message(data: unknown) {
-      this.dispatchEvent(new MessageEvent("message", { data }));
-    }
+/** Workers の WebSocket の代わり。送ったものと閉じた理由を覚える */
+class FakeSocket extends EventTarget {
+  readyState = 1;
+  sent: unknown[] = [];
+  closed?: { code: number; reason: string };
+  accept() {}
+  send(data: unknown) {
+    this.sent.push(data);
   }
+  close(code: number, reason: string) {
+    this.closed = { code, reason };
+    this.readyState = 3;
+  }
+  message(data: unknown) {
+    this.dispatchEvent(new MessageEvent("message", { data }));
+  }
+}
+
+/** Workers の WebSocket の仕組みを、`client()`（アプリの側。テストの中で作り直せる）を返す偽物にする */
+function stubSockets(client: () => FakeSocket) {
+  vi.stubGlobal("WebSocket", { OPEN: 1 });
+  vi.stubGlobal("WebSocketPair", function () {
+    return { 0: new FakeSocket(), 1: client() };
+  });
+  // Node の Response は 101 を作れない
+  vi.stubGlobal(
+    "Response",
+    class extends Response {
+      constructor(body: BodyInit | null, init: ResponseInit) {
+        super(body, init?.status === 101 ? {} : init);
+      }
+    },
+  );
+}
+
+describe("realtime relay", () => {
 
   // crates/core/src/stt.rs の connect / append / close（v0.2.13 から変わっていない）
   const sessionUpdate = (input: Record<string, unknown> = {}, session: Record<string, unknown> = {}) =>
@@ -800,19 +819,7 @@ describe("realtime relay", () => {
     client = new FakeSocket();
     upstream = new FakeSocket();
     vi.spyOn(Date, "now").mockReturnValue(NOW);
-    vi.stubGlobal("WebSocket", { OPEN: 1 });
-    vi.stubGlobal("WebSocketPair", function () {
-      return { 0: new FakeSocket(), 1: client };
-    });
-    // Node の Response は 101 を作れない
-    vi.stubGlobal(
-      "Response",
-      class extends Response {
-        constructor(body: BodyInit | null, init: ResponseInit) {
-          super(body, init.status === 101 ? {} : init);
-        }
-      },
-    );
+    stubSockets(() => client);
     vi.mocked(openai).mockResolvedValue({ webSocket: upstream } as unknown as Response);
     const token = await share();
     ({ code } = await createCode(token, { dailyLimitUsd: 0.001 }));
@@ -1123,12 +1130,130 @@ describe("beta", () => {
     expect(await dayUsd(code)).toBeCloseTo(0.002 + (sent.length * 0.074 + 512 * 0.295) / 1e6, 8);
   });
 
-  it("does not relay anything else to Qwen or OpenRouter (live captions, other endpoints)", async () => {
+  it("does not relay anything else to Qwen or OpenRouter", async () => {
     const code = await joined();
-    for (const path of ["/qwen/api-ws/v1/inference", "/qwen/chat/completions", "/openrouter/audio/transcriptions"]) {
-      const res = await call(path, { method: path.includes("api-ws") ? "GET" : "POST", token: code });
+    for (const path of ["/qwen/chat/completions", "/openrouter/audio/transcriptions"]) {
+      const res = await call(path, { method: "POST", token: code });
       expect([res.status, res.headers.get("X-Gift-Refusal")]).toEqual([403, "unsupported"]);
     }
+  });
+
+  describe("live captions", () => {
+    // crates/core/src/stt/qwen.rs の connect / 音声 / finish
+    const header = (action: string) => ({ action, task_id: "0a1b2c", streaming: "duplex" });
+    const run = (payload: Record<string, unknown> = {}) =>
+      JSON.stringify({
+        header: header("run-task"),
+        payload: {
+          task_group: "audio",
+          task: "asr",
+          function: "recognition",
+          model: "qwen-audio-3.1-asr-flash-streaming",
+          parameters: { format: "pcm", sample_rate: 16_000, language_hints: ["ja"] },
+          input: {},
+          ...payload,
+        },
+      });
+    const audio = (seconds: number) => new ArrayBuffer(seconds * 32_000);
+    const result = (input: number, output: number) =>
+      JSON.stringify({ header: { event: "result-generated" }, payload: { usage: { input_tokens: input, output_tokens: output } } });
+    /** 音声 1 秒の見積もりと、先に足す 30 秒分 */
+    const SECOND = (2 * (11 * 0.93 + 3 * 0.7)) / 1e6;
+    let client: FakeSocket;
+    let upstream: FakeSocket;
+    // アプリは、この口だけ認証の方式を小文字で送る
+    const connect = (code: string) =>
+      call("/qwen/api-ws/v1/inference", { headers: { Upgrade: "websocket", Authorization: `bearer ${code}` } });
+    async function settled() {
+      await Promise.allSettled(pending);
+      pending = [];
+    }
+
+    beforeEach(() => {
+      client = new FakeSocket();
+      upstream = new FakeSocket();
+      stubSockets(() => client);
+      vi.mocked(qwenLive).mockResolvedValue({ webSocket: upstream } as unknown as Response);
+    });
+    afterEach(() => vi.unstubAllGlobals());
+
+    it("relays only what the app sends, and counts what Qwen reports", async () => {
+      const code = await joined();
+      await connect(code);
+      expect(vi.mocked(qwenLive).mock.calls).toEqual([["sk-beta-qwen"]]);
+      // 先に 30 秒分を足してある
+      expect(await dayUsd(code)).toBeCloseTo(30 * SECOND, 10);
+      client.message(run({ parameters: { format: "pcm", sample_rate: 16_000, language_hints: ["ja"], vocabulary_id: "x" } }));
+      client.message(audio(1));
+      client.message(JSON.stringify({ header: header("finish-task"), payload: { input: {} } }));
+      expect(upstream.sent).toEqual([
+        run(),
+        audio(1),
+        JSON.stringify({ header: header("finish-task"), payload: { input: {} } }),
+      ]);
+      upstream.message(result(11, 3));
+      expect(client.sent).toEqual([result(11, 3)]);
+      client.dispatchEvent(new CloseEvent("close", { code: 1000 }));
+      await settled();
+      expect(upstream.closed?.code).toBe(1000);
+      expect(await dayUsd(code)).toBeCloseTo((11 * 0.93 + 3 * 0.7) / 1e6, 10);
+    });
+
+    it.each([
+      ["audio before run-task", () => client.message(audio(1)), "run-task comes first"],
+      ["another model", () => client.message(run({ model: "qwen-audio-max" })), "model not allowed"],
+      ["another message", () => client.message(JSON.stringify({ header: { action: "continue-task" } })), "message not allowed"],
+    ])("closes on %s, and counts nothing", async (_, send, reason) => {
+      const code = await joined();
+      await connect(code);
+      send();
+      await settled();
+      expect(client.closed).toEqual({ code: 1008, reason });
+      expect(upstream.sent).toEqual([]);
+      expect(await dayUsd(code)).toBe(0);
+    });
+
+    it("counts by the length of the audio until Qwen reports, and stops at the daily limit", async () => {
+      const code = await joined();
+      const { id } = (await codeByValue(db, code))!;
+      await env.DB.prepare("UPDATE codes SET daily_limit_usd = ? WHERE id = ?").bind(20 * SECOND, id).run();
+      await connect(code);
+      client.message(run());
+      client.message(audio(30));
+      await settled();
+      // 30 秒分を実際の額に直したら上限を越えたので、次の分は足さずに切る
+      expect(client.closed).toEqual({ code: 1008, reason: "limit" });
+      expect(await dayUsd(code)).toBeCloseTo(30 * SECOND, 10);
+      // 張り直しても、つなぐ前に断る
+      const again = await connect(code);
+      expect([again.status, again.headers.get("X-Gift-Refusal")]).toEqual([403, "limit"]);
+      expect(qwenLive).toHaveBeenCalledOnce();
+    });
+
+    it("hides the developer's key trouble, and gives the estimate back", async () => {
+      const code = await joined();
+      await connect(code);
+      client.message(run());
+      upstream.message(JSON.stringify({ header: { event: "task-failed", error_code: "InvalidApiKey", error_message: "secret" } }));
+      await settled();
+      expect(client.sent).toEqual([]);
+      expect(client.closed).toEqual({ code: 1011, reason: "upstream" });
+      expect(await dayUsd(code)).toBe(0);
+
+      vi.mocked(qwenLive).mockResolvedValue(new Response("no", { status: 401 }));
+      const refused = await connect(code);
+      expect([refused.status, await refused.json()]).toEqual([502, { error: "upstream" }]);
+      expect(await dayUsd(code)).toBe(0);
+    });
+
+    it("is not for a shared code, and needs a WebSocket", async () => {
+      const { code } = await createCode(await share());
+      const shared = await connect(code);
+      expect([shared.status, shared.headers.get("X-Gift-Refusal")]).toEqual([403, "unsupported"]);
+      const plain = await call("/qwen/api-ws/v1/inference", { token: await joined() });
+      expect(plain.status).toBe(426);
+      expect(qwenLive).not.toHaveBeenCalled();
+    });
   });
 
   it("does not relay Qwen or OpenRouter for a shared code", async () => {
