@@ -3,8 +3,8 @@
 
 import { and, eq, sql } from "drizzle-orm";
 import { day, month, type Db } from "./db";
-import { betaGrants, betaSpend, codes, codeUsage, issuers } from "./schema";
-import { newCode, newId, normalizeCode, sha256 } from "./secrets";
+import { betaGrants, betaKeys, betaSettings, betaSpend, codes, codeUsage, issuers } from "./schema";
+import { decrypt, newCode, newId, normalizeCode, sha256 } from "./secrets";
 
 /** ベータのコードの持ち主（開発者）。キーは表に置かず、Worker の秘密の設定から読む */
 export const BETA_ISSUER = "beta";
@@ -13,7 +13,7 @@ export const BETA_ISSUER = "beta";
 export type BetaProvider = "qwen" | "openrouter";
 
 export interface BetaEnv {
-  /** 開発者のキー。どちらも入れなければ、ベータは閉じている（`wrangler secret put`） */
+  /** 開発者のキー（管理画面ができる前の入れ方。`wrangler secret put`）。管理画面で足したキーがあれば、そちらを先に使う */
   BETA_QWEN_KEY?: string;
   BETA_OPENROUTER_KEY?: string;
 }
@@ -28,13 +28,54 @@ export const BETA_CODES_PER_IP = 3;
 /** 1 日に出すコードの数 */
 export const BETA_CODES_PER_DAY = 100;
 
-export function betaKey(env: BetaEnv, provider: BetaProvider): string | undefined {
-  return provider === "qwen" ? env.BETA_QWEN_KEY : env.BETA_OPENROUTER_KEY;
+/** 外に送るときに使う開発者のキー。`id` があれば管理画面で足したキー（断られた回数を数える）、なければ秘密の設定のキー */
+export interface RelayKey {
+  id?: string;
+  key: () => Promise<string>;
 }
 
-/** 開発者がキーを入れている会社 */
-export function betaProviders(env: BetaEnv): BetaProvider[] {
-  return (["qwen", "openrouter"] as const).filter((p) => betaKey(env, p));
+/** ベータを閉じている（管理画面で閉じた）。コードを出さず、中継もしない */
+export async function betaClosed(db: Db): Promise<boolean> {
+  const row = await db.select().from(betaSettings).where(eq(betaSettings.name, "closed")).get();
+  return row?.value === "1";
+}
+
+/**
+ * その会社に送るキーを、使う順に並べる（DESIGN.md 17.3）。管理画面で足した有効なキーを、最近断られていないものから。
+ * 同じ条件のキーは毎回並べ替えて、負荷を分ける。最後に、秘密の設定のキー（あれば）
+ */
+export async function betaRelayKeys(db: Db, env: BetaEnv, provider: BetaProvider, secret: string): Promise<RelayKey[]> {
+  const rows = await db
+    .select({ id: betaKeys.id, sealed: betaKeys.encryptedKey, failedAt: betaKeys.failedAt })
+    .from(betaKeys)
+    .where(and(eq(betaKeys.provider, provider), eq(betaKeys.enabled, true)));
+  const shuffled = rows
+    .map((row) => ({ row, order: Math.random() }))
+    .sort((a, b) => (a.row.failedAt ?? 0) - (b.row.failedAt ?? 0) || a.order - b.order);
+  const keys: RelayKey[] = shuffled.map(({ row }) => ({ id: row.id, key: () => decrypt(row.sealed, secret) }));
+  const fallback = provider === "qwen" ? env.BETA_QWEN_KEY : env.BETA_OPENROUTER_KEY;
+  if (fallback) keys.push({ key: async () => fallback });
+  return keys;
+}
+
+/** 開発者のキーがある会社。閉じていれば、どの会社もない */
+export async function betaProviders(db: Db, env: BetaEnv): Promise<BetaProvider[]> {
+  if (await betaClosed(db)) return [];
+  const rows = await db
+    .selectDistinct({ provider: betaKeys.provider })
+    .from(betaKeys)
+    .where(eq(betaKeys.enabled, true));
+  const has = (p: BetaProvider) =>
+    rows.some((r) => r.provider === p) || !!(p === "qwen" ? env.BETA_QWEN_KEY : env.BETA_OPENROUTER_KEY);
+  return (["qwen", "openrouter"] as const).filter(has);
+}
+
+/** キーが外に断られたことを覚える（管理画面に出す。次は、ほかのキーを先に使う） */
+export async function keyFailed(db: Db, id: string, status: number, now: number) {
+  await db
+    .update(betaKeys)
+    .set({ failures: sql`${betaKeys.failures} + 1`, failedAt: now, failedStatus: status })
+    .where(eq(betaKeys.id, id));
 }
 
 /** コードを出した所を数えるための値。IPv6 は先頭の 64 ビット（1 台が持つ範囲）にまとめる */

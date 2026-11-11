@@ -4,9 +4,6 @@
 /** キーを預けられる会社（おすそ分け） */
 export type Provider = "openai" | "xai";
 
-/** 中継する会社。Qwen と OpenRouter は、ベータの間の開発者のキーだけ（beta.ts） */
-export type Relayed = Provider | "qwen" | "openrouter";
-
 /** Qwen-Audio-3.1-ASR-Flash の単価（100 万トークンあたり。アプリの usage.rs と同じ） */
 export const QWEN_AUDIO = { model: "qwen-audio-3.1-asr-flash", input: 0.15, output: 0.47 };
 

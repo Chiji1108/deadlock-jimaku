@@ -23,14 +23,19 @@ import {
 } from "./db";
 import {
   BETA_ISSUER,
-  betaKey,
   betaProviders,
+  betaRelayKeys,
   grantBetaCode,
+  keyFailed,
   network,
   reserveBeta,
   settleBeta,
   type BetaEnv,
+  type BetaProvider,
+  type RelayKey,
 } from "./beta";
+import type { AccessEnv } from "./access";
+import { admin as adminApp } from "./admin";
 import { openai, validKey } from "./openai";
 import {
   audioUsd,
@@ -40,7 +45,6 @@ import {
   tokensUsd,
   wavSeconds,
   type Provider,
-  type Relayed,
 } from "./price";
 import { relay } from "./realtime";
 import { codes, codeUsage, issuerKeys, issuers } from "./schema";
@@ -48,7 +52,7 @@ import { decrypt, encrypt, issuerToken, newCode, newId, normalizeCode, sha256 } 
 import { openrouter, qwen } from "./upstream";
 import { validXaiKey, xai } from "./xai";
 
-export interface Env extends BetaEnv {
+export interface Env extends BetaEnv, AccessEnv {
   DB: D1Database;
   /** キーを暗号化する鍵（32 バイトの base64）。`wrangler secret put SHARE_KEY` */
   SHARE_KEY: string;
@@ -321,7 +325,7 @@ app.get("/gift", async (c) => {
     return c.json({ error: "expired", expiresAt: code.expiresAt }, 403);
   }
   if (overLimit(code, Date.now())) return c.json({ error: "limit" }, 403);
-  const relayed = code.issuerId === BETA_ISSUER ? betaProviders(c.env) : providers(code);
+  const relayed = code.issuerId === BETA_ISSUER ? await betaProviders(c.var.db, c.env) : providers(code);
   return c.json({ expiresAt: code.expiresAt, providers: relayed });
 });
 
@@ -330,7 +334,7 @@ app.get("/gift", async (c) => {
  * 誰でも頼めるので、同じ所に出す数と、1 日に出す数を限る。開発者がキーを入れていなければ閉じている
  */
 app.post("/beta/codes", async (c) => {
-  if (betaProviders(c.env).length === 0) return c.json({ error: "closed" }, 503);
+  if ((await betaProviders(c.var.db, c.env)).length === 0) return c.json({ error: "closed" }, 503);
   const now = Date.now();
   const ip = network(c.req.header("CF-Connecting-IP") ?? "");
   const place = await sha256(`beta:${new Date(now).toISOString().slice(0, 10)}:${ip}:${c.env.SHARE_KEY}`);
@@ -496,17 +500,24 @@ function openrouterUsd(usage: unknown): number | undefined {
  */
 async function relayed(
   c: Ctx,
-  codeId: string,
+  gift: { code: Code; keys: RelayKey[] },
   estimate: number,
-  send: () => Promise<Response>,
+  send: (key: string) => Promise<Response>,
   usd: (answer: Record<string, unknown>) => number | undefined,
 ): Promise<Response> {
   const now = Date.now();
+  const codeId = gift.code.id;
   if (!(await reserveBeta(c.var.db, codeId, estimate, now))) {
     return c.json({ error: "limit" }, 403, { "X-Gift-Refusal": "limit" });
   }
   const settle = (actual: number) => c.executionCtx.waitUntil(settleBeta(c.var.db, codeId, estimate, actual, now));
-  const res = await send().catch(() => undefined);
+  // キーが断られたら（使えない、残高がない、回数の上限）、次のキーに回す
+  let res: Response | undefined;
+  for (const key of gift.keys) {
+    res = await send(await key.key()).catch(() => undefined);
+    if (res?.ok || !res || !KEY_TROUBLE.includes(res.status)) break;
+    if (key.id) c.executionCtx.waitUntil(keyFailed(c.var.db, key.id, res.status, now));
+  }
   if (!res?.ok) {
     settle(0);
     const status = res?.status === 429 ? 429 : 502;
@@ -517,12 +528,15 @@ async function relayed(
   return new Response(answer, { headers: { "Content-Type": "application/json" } });
 }
 
+/** キーのせいで断られたときの番号（ほかのキーなら通るかもしれない） */
+const KEY_TROUBLE = [401, 402, 403, 429];
+
 /** 100 万トークンあたりの単価から、額を出す */
 const usdOf = (tokens: number, perMillion: number) => (tokens * perMillion) / 1e6;
 
 /** 確定の文字起こし（Qwen-Audio-3.1-ASR-Flash）。アプリが送る形だけを通す: 用語の文と、WAV が 1 つ */
 app.post("/qwen/api/v1/services/aigc/multimodal-generation/generation", async (c) => {
-  const gift = await giftKey(c, "qwen");
+  const gift = await betaGift(c, "qwen");
   if (gift instanceof Response) return gift;
   const text = await c.req.text();
   if (text.length > MAX_QWEN_BODY) return c.json({ error: "tooLarge" }, 413);
@@ -566,7 +580,7 @@ app.post("/qwen/api/v1/services/aigc/multimodal-generation/generation", async (c
   const seconds = (sounds[0]!.length * 0.75) / 32_000;
   const estimate = 2 * (usdOf(seconds * 11 + MAX_QWEN_CONTEXT, QWEN_AUDIO.input) + usdOf(300, QWEN_AUDIO.output));
   const path = "/api/v1/services/aigc/multimodal-generation/generation";
-  return relayed(c, gift.code.id, estimate, () => qwen(path, gift.key, forwarded), (answer) => {
+  return relayed(c, gift, estimate, (key) => qwen(path, key, forwarded), (answer) => {
     if (answer.usage === undefined) return undefined;
     const { input, output } = tokensOf(answer.usage);
     return usdOf(input, QWEN_AUDIO.input) + usdOf(output, QWEN_AUDIO.output);
@@ -575,7 +589,7 @@ app.post("/qwen/api/v1/services/aigc/multimodal-generation/generation", async (c
 
 /** 用語の判定（Perplexity Decider）。アプリが送る形だけを通す: 文字の state と、文字だけの選択の問い */
 app.post("/openrouter/systemone", async (c) => {
-  const gift = await giftKey(c, "openrouter");
+  const gift = await betaGift(c, "openrouter");
   if (gift instanceof Response) return gift;
   const text = await c.req.text();
   if (text.length > MAX_JUDGE_BODY) return c.json({ error: "tooLarge" }, 413);
@@ -607,16 +621,16 @@ app.post("/openrouter/systemone", async (c) => {
   const estimate = usdOf(text.length, OPENROUTER_FALLBACK.input);
   return relayed(
     c,
-    gift.code.id,
+    gift,
     estimate,
-    () => openrouter("/systemone", gift.key, forwarded),
+    (key) => openrouter("/systemone", key, forwarded),
     (answer) => openrouterUsd(answer.usage),
   );
 });
 
 /** 翻訳（Hy-MT2）。アプリが送る形だけを通す: user の文字の 1 通 */
 app.post("/openrouter/chat/completions", async (c) => {
-  const gift = await giftKey(c, "openrouter");
+  const gift = await betaGift(c, "openrouter");
   if (gift instanceof Response) return gift;
   const text = await c.req.text();
   if (text.length > MAX_TRANSLATION_BODY) return c.json({ error: "tooLarge" }, 413);
@@ -643,9 +657,9 @@ app.post("/openrouter/chat/completions", async (c) => {
   const estimate = usdOf(text.length, input) + usdOf(MAX_TRANSLATION_TOKENS, output);
   return relayed(
     c,
-    gift.code.id,
+    gift,
     estimate,
-    () => openrouter("/chat/completions", gift.key, forwarded),
+    (key) => openrouter("/chat/completions", key, forwarded),
     (answer) => openrouterUsd(answer.usage),
   );
 });
@@ -671,37 +685,48 @@ async function giftCode(c: Ctx): Promise<Code | null> {
 }
 
 /**
- * 中継に使えるコードと、おすそ分けした人のその会社のキー。使えなければ返す応答。
- * 理由はヘッダーにも載せる（WebSocket のクライアントは、断られたときの本文を読みきれるとは限らない）。
+ * 中継に使えるコード。使えなければ返す応答。理由はヘッダーにも載せる（WebSocket のクライアントは、断られたときの
+ * 本文を読みきれるとは限らない）。`key` はそのコードで送るキーを探す（なければ `unsupported`）。
  * 429 は 403 のあとに見るので、止まる理由を隠さない
  */
-async function giftKey(
-  c: Ctx,
-  provider: Relayed = "openai",
-): Promise<{ code: Code; key: string } | Response> {
+async function gifted<K>(c: Ctx, key: (code: Code) => Promise<K | undefined>): Promise<{ code: Code; key: K } | Response> {
   const code = await giftCode(c);
   if (!code) return c.json({ error: "unknown" }, 401);
   const deny = (error: string) => c.json({ error }, 403, { "X-Gift-Refusal": error });
-  const now = Date.now();
-  const error = refusal(code, now);
+  const error = refusal(code, Date.now());
   if (error) return deny(error);
-  // ベータのコードは開発者のキー（Qwen と OpenRouter）、おすそ分けのコードは預けたキー（OpenAI と xAI）。
-  // ベータの上限（コードごとと全体）は、送る直前に額を先に足して確かめる（`relayed`）
-  const key = await relayKey(c, code, provider);
+  const found = await key(code);
   // その会社のキーがない
-  if (!key) return deny("unsupported");
+  if (found === undefined) return deny("unsupported");
   const { success } = await c.env.GIFT_RATE.limit({ key: code.id });
   if (!success) return c.json({ error: "rate" }, 429);
-  return { code, key };
+  return { code, key: found };
 }
 
-/** そのコードで、その会社に送るキー。なければ undefined */
-async function relayKey(c: Ctx, code: Code, provider: Relayed): Promise<string | undefined> {
-  if (provider === "qwen" || provider === "openrouter") {
-    return code.issuerId === BETA_ISSUER ? betaKey(c.env, provider) : undefined;
-  }
-  const encrypted = code.keys[provider];
-  return encrypted === undefined ? undefined : decrypt(encrypted, c.env.SHARE_KEY);
+/** おすそ分けのコードと、おすそ分けした人が預けたその会社のキー（OpenAI と xAI） */
+function giftKey(c: Ctx, provider: Provider = "openai") {
+  return gifted(c, async (code) => {
+    const encrypted = code.keys[provider];
+    return encrypted === undefined ? undefined : decrypt(encrypted, c.env.SHARE_KEY);
+  });
+}
+
+/**
+ * ベータのコードと、開発者のその会社のキー（Qwen と OpenRouter。使う順）。おすそ分けのコードでは使えない。
+ * ベータの上限（コードごとと全体）は、送る直前に額を先に足して確かめる（`relayed`）
+ */
+async function betaGift(c: Ctx, provider: BetaProvider): Promise<{ code: Code; keys: RelayKey[] } | Response> {
+  const gift = await gifted(c, async (code) => {
+    if (code.issuerId !== BETA_ISSUER || (await betaClosedNow(c))) return undefined;
+    const keys = await betaRelayKeys(c.var.db, c.env, provider, c.env.SHARE_KEY);
+    return keys.length > 0 ? keys : undefined;
+  });
+  return gift instanceof Response ? gift : { code: gift.code, keys: gift.key };
+}
+
+/** ベータを閉じているか */
+async function betaClosedNow(c: Ctx): Promise<boolean> {
+  return (await betaProviders(c.var.db, c.env)).length === 0;
 }
 
 /** JSON の本文。読めなければ undefined（400 にする） */
@@ -745,4 +770,10 @@ function codeFields(body: CodeFields) {
   };
 }
 
-export default app;
+/** 管理画面のホスト（admin.jimaku.deadlock.jp）は管理の口へ、ほかは API へ */
+export default {
+  fetch(request: Request, env: Env, ctx: ExecutionContext) {
+    const admins = new URL(request.url).hostname.startsWith("admin.");
+    return admins ? adminApp.fetch(request, env, ctx) : app.fetch(request, env, ctx);
+  },
+};

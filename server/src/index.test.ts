@@ -1,5 +1,7 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { getPlatformProxy } from "wrangler";
+import { accessEmail } from "./access";
+import { admin } from "./admin";
 import { network } from "./beta";
 import { addUsage, codeByValue, day, DEFAULT_DAILY_LIMIT_USD, open, type Db } from "./db";
 import { app, type Env } from "./index";
@@ -11,6 +13,7 @@ import { openrouter, qwen } from "./upstream";
 import { validXaiKey, xai } from "./xai";
 
 vi.mock("./upstream", () => ({ openrouter: vi.fn(), qwen: vi.fn() }));
+vi.mock("./access", () => ({ accessEmail: vi.fn() }));
 vi.mock("./openai", () => ({ openai: vi.fn(), validKey: vi.fn() }));
 vi.mock("./xai", () => ({ xai: vi.fn(), validXaiKey: vi.fn() }));
 
@@ -62,13 +65,17 @@ beforeAll(async () => {
 afterAll(() => proxy.dispose());
 
 beforeEach(async () => {
-  for (const table of ["code_usage", "codes", "issuer_keys", "issuers", "beta_grants", "beta_spend"]) {
+  for (const table of ["code_usage", "codes", "issuer_keys", "issuers", "beta_grants", "beta_spend", "beta_keys", "beta_settings"]) {
     await env.DB.prepare(`DELETE FROM ${table}`).run();
   }
   vi.mocked(validKey).mockImplementation(async (key) => key.startsWith("sk-"));
   vi.mocked(openai).mockReset();
   vi.mocked(validXaiKey).mockImplementation(async (key) => key.startsWith("xai-"));
   vi.mocked(xai).mockReset();
+  vi.mocked(accessEmail).mockReset();
+  vi.mocked(accessEmail).mockResolvedValue("dev@example.com");
+  env.ACCESS_TEAM = "team";
+  env.ACCESS_AUD = "aud";
   vi.mocked(qwen).mockReset();
   vi.mocked(openrouter).mockReset();
   env.BETA_QWEN_KEY = "sk-beta-qwen";
@@ -1186,6 +1193,105 @@ describe("beta", () => {
     expect(network("2001:0DB8::1")).toBe("2001:db8:0:0");
     expect(network("2001:db8:0:1::")).toBe(network("2001:db8:0:1:ffff::1"));
     expect(network("")).toBe("");
+  });
+});
+
+describe("admin", () => {
+  /** 管理の口を呼ぶ。書き換える要求には、ページの JavaScript が付けるヘッダーを付ける */
+  async function manage(path: string, method = "GET", body?: unknown, headers: Record<string, string> = { "X-Admin": "1" }) {
+    const init = { method, body: body === undefined ? undefined : JSON.stringify(body), headers: method === "GET" ? {} : headers };
+    const res = await admin.request(path, init, env, ctx as never);
+    await Promise.all(pending);
+    pending = [];
+    return res;
+  }
+  const join = (ip = "203.0.113.1") => call("/beta/codes", { method: "POST", headers: { "CF-Connecting-IP": ip } });
+  const joined = async (ip?: string) => ((await (await join(ip)).json()) as { code: string }).code;
+  const translation = {
+    model: "tencent/hy-mt2-30b-a3b",
+    messages: [{ role: "user", content: "強い" }],
+  };
+  const translate = (code: string) => call("/openrouter/chat/completions", { method: "POST", token: code, ...json(translation) });
+  const answered = () => Response.json({ choices: [{ message: { content: "strong" } }], usage: { cost: 0.01 } });
+
+  it("lets in only who passed Access, and takes changes only from its own page", async () => {
+    expect((await manage("/")).status).toBe(200);
+    vi.mocked(accessEmail).mockResolvedValue(undefined);
+    expect((await manage("/api/summary")).status).toBe(401);
+    vi.mocked(accessEmail).mockResolvedValue("dev@example.com");
+    // ほかのサイトからの要求（Access のクッキーは付くが、ページのヘッダーは付けられない）
+    expect((await manage("/api/settings", "PUT", { closed: true }, {})).status).toBe(403);
+    env.ACCESS_AUD = undefined;
+    expect((await manage("/api/summary")).status).toBe(503);
+  });
+
+  it("shows what the beta spent and stops a code", async () => {
+    env.BETA_QWEN_KEY = undefined;
+    const code = await joined();
+    vi.mocked(openrouter).mockImplementation(async () => answered());
+    expect((await translate(code)).status).toBe(200);
+    const summary = (await (await manage("/api/summary")).json()) as Record<string, any>;
+    expect(summary).toMatchObject({
+      email: "dev@example.com",
+      closed: false,
+      today: { codes: 1, limitUsd: 5 },
+      codes: { total: 1, activeToday: 1 },
+    });
+    expect(summary.today.usd).toBeCloseTo(0.01);
+    expect(summary.month.usd).toBeCloseTo(0.01);
+    const { codes: listed } = (await (await manage("/api/codes")).json()) as { codes: { id: string; todayUsd: number }[] };
+    expect(listed[0]!.todayUsd).toBeCloseTo(0.01);
+    expect((await manage(`/api/codes/${listed[0]!.id}`, "PATCH", { revoked: true })).status).toBe(204);
+    const stopped = await translate(code);
+    expect([stopped.status, stopped.headers.get("X-Gift-Refusal")]).toEqual([403, "revoked"]);
+  });
+
+  it("keeps several keys, never shows them, and moves on to the next when one is refused", async () => {
+    env.BETA_OPENROUTER_KEY = undefined;
+    const add = (key: string, memo = "") => manage("/api/keys", "POST", { provider: "openrouter", key, memo });
+    expect((await add("sk-or-first", "main")).status).toBe(200);
+    expect((await add("sk-or-second")).status).toBe(200);
+    expect((await add("")).status).toBe(400);
+    expect((await manage("/api/keys", "POST", { provider: "openai", key: "sk-x" })).status).toBe(400);
+    const list = async () => ((await (await manage("/api/keys")).json()) as { keys: Record<string, any>[] }).keys;
+    const keys = await list();
+    expect(keys.map((k) => [k.tail, k.memo, k.enabled])).toEqual([
+      ["irst", "main", true],
+      ["cond", "", true],
+    ]);
+    expect(JSON.stringify(keys)).not.toContain("sk-or-");
+
+    // 1 つ目に当たったキーが回数の上限で断られたら、もう 1 つで通す。断られたキーは覚える
+    const code = await joined();
+    vi.mocked(openrouter).mockImplementation(async (_path, key) =>
+      key === "sk-or-first" ? new Response("slow down", { status: 429 }) : answered(),
+    );
+    for (let i = 0; i < 6; i++) expect((await translate(code)).status).toBe(200);
+    const [first, second] = await list();
+    expect(first!.failures).toBeGreaterThan(0);
+    expect([first!.failedStatus, second!.failures]).toEqual([429, 0]);
+    // 断られたキーは後回しにするので、次からは通るキーを先に使う
+    vi.mocked(openrouter).mockClear();
+    await translate(code);
+    expect(vi.mocked(openrouter).mock.calls.map((call) => call[1])).toEqual(["sk-or-second"]);
+
+    // 止めたキーは使わない。どれも使えなければ、その会社は中継しない
+    expect((await manage(`/api/keys/${second!.id}`, "PATCH", { enabled: false })).status).toBe(204);
+    expect((await translate(code)).status).toBe(429);
+    expect((await manage(`/api/keys/${first!.id}`, "DELETE")).status).toBe(204);
+    const none = await translate(code);
+    expect([none.status, none.headers.get("X-Gift-Refusal")]).toEqual([403, "unsupported"]);
+  });
+
+  it("closes the beta: no new codes, no relay, and opens it again", async () => {
+    const code = await joined();
+    vi.mocked(openrouter).mockImplementation(async () => answered());
+    expect((await manage("/api/settings", "PUT", { closed: true })).status).toBe(204);
+    expect((await join("203.0.113.5")).status).toBe(503);
+    const closed = await translate(code);
+    expect([closed.status, closed.headers.get("X-Gift-Refusal")]).toEqual([403, "unsupported"]);
+    expect((await manage("/api/settings", "PUT", { closed: false })).status).toBe(204);
+    expect((await translate(code)).status).toBe(200);
   });
 });
 
