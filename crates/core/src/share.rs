@@ -455,8 +455,9 @@ mod tests {
             meter.clone(),
         );
         let spans = [Span::Text("強い".into())];
+        // 翻訳の失敗は、その文の訳を諦めるだけ（エラーにならない）。Worker が 502 を返したことは、Worker の記録で見る
         let translated = translator.translate(crate::http(), &spans, None).await;
-        passed("translation", translated.unwrap_err());
+        assert!(translated.unwrap().is_empty());
     }
 
     #[test]
