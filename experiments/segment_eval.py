@@ -154,7 +154,7 @@ async def main() -> None:
     for name, run in runs.items():
         try:
             report[name] = await run()
-        except Exception as e:
+        except (RuntimeError, OSError, websockets.WebSocketException) as e:
             report[name] = {"error": str(e)[:300]}
         segments = report[name].get("segments", [])
         print(f"## {name}: {report[name].get('error') or len(segments)}")
