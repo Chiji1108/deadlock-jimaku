@@ -9,6 +9,7 @@
   import {
     ITEMS,
     PROVIDER_NAMES,
+    YEN_PER_USD,
     chromeFinals,
     llmTranslation,
     paidLive,
@@ -65,7 +66,7 @@
       <Card.Header>
         <Card.Title>{spec.label}</Card.Title>
         <Card.Description
-          >{spec.hint}{#if note(item)}。{note(item)}{/if}</Card.Description
+          >{spec.hint}{#if note(item)}。{note(item)}{/if}。{spec.scale}</Card.Description
         >
       </Card.Header>
       <Card.Content>
@@ -91,8 +92,13 @@
                   class:border-foreground={t[item] === o.value}
                 ></span>
                 <span class="font-medium">{o.label}</span>
-                <span class="text-xs text-muted-foreground tabular-nums">{o.price}</span>
                 {#if needs}<Badge variant="outline">{needs}</Badge>{/if}
+              </span>
+              <!-- どの選択肢も、正確さ・速さ・料金の順に並べる（測っていないものは出さない） -->
+              <span class="flex flex-wrap gap-x-3 pl-5 text-xs tabular-nums">
+                {#if o.accuracy}<span>正確さ {o.accuracy}</span>{/if}
+                {#if o.speed}<span>速さ {o.speed}</span>{/if}
+                <span>{o.price}</span>
               </span>
               {#if o.note}<span class="pl-5 text-xs text-muted-foreground">{o.note}</span>{/if}
             </button>
@@ -102,6 +108,7 @@
     </Card.Root>
   {/each}
   <p class="text-sm text-muted-foreground">
-    切り替えると、字幕は始め直します。使った分の目安は「料金」タブに工程ごとに出ます
+    料金は、話し続けた 1 時間の目安です（1 ドル {YEN_PER_USD} 円で計算）。正確さと速さは開発者が測った値で、話し方や
+    PC で変わります。切り替えると、字幕は始め直します。使った分の目安は「料金」タブに工程ごとに出ます
   </p>
 </div>

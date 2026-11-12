@@ -1,6 +1,7 @@
 //! ふりがなを、辞書・判定モデルに候補から選ばせる形・LLM に直させる形で比べる（DESIGN.md 6.4）。
 //!
-//! usage: OPENROUTER_API_KEY=… OPENAI_API_KEY=… cargo run -p overlays-core --example furigana_eval -- CASES.json REPEAT
+//! usage: OPENROUTER_API_KEY=… OPENAI_API_KEY=… cargo run -p overlays-core --example furigana_eval -- CASES.json REPEAT [HOW]
+//!   HOW は choose（既定。判定モデルに候補から選ばせる）か、直させるモデルの名前（gpt-6.1-terra、gpt-6-luna）
 //!   CASES.json は `experiments/data/furigana_cases.json`（語ごとの正しい読みがある）か、`text` のある文の配列
 //!   （正しい読みがないので、GPT-6.1 Terra に直させた読みを基準にして、違うところを出す）
 
@@ -54,6 +55,7 @@ async fn main() -> anyhow::Result<()> {
     let cases: Vec<Value> =
         serde_json::from_str(&std::fs::read_to_string(args.next().expect("CASES.json"))?)?;
     let repeat: usize = args.next().expect("REPEAT").parse()?;
+    let how = args.next().unwrap_or_else(|| "choose".into());
     let env = |name: &str| std::env::var(name).unwrap_or_else(|_| panic!("{name}"));
     let openrouter = Access::key(Provider::OpenRouter, env("OPENROUTER_API_KEY"));
     let openai = Access::key(Provider::OpenAi, env("OPENAI_API_KEY"));
@@ -64,13 +66,15 @@ async fn main() -> anyhow::Result<()> {
         model: JUDGE,
         meter: &meter,
     };
-    let terra = Model {
+    let model = |model| Model {
         deadlock: true,
         access: &openai,
-        model: "gpt-6.1-terra",
+        model,
         reasoning_effort: Some("none"),
         meter: &meter,
     };
+    let terra = model("gpt-6.1-terra");
+    let fixer = model(&how);
     let dictionary = Furigana::shared().expect("dictionary");
     let http = overlays_core::http();
     let mut counts: BTreeMap<&str, usize> = BTreeMap::new();
@@ -102,7 +106,11 @@ async fn main() -> anyhow::Result<()> {
         for _ in 0..repeat {
             let started = std::time::Instant::now();
             // 聞けなかったら、アプリと同じく辞書の読みのまま
-            let chosen = match furigana::choose(http, &judge, dictionary, text, &[]).await {
+            let answer = match how.as_str() {
+                "choose" => furigana::choose(http, &judge, dictionary, text, &[]).await,
+                _ => furigana::ask(http, &fixer, dictionary, text, &[]).await,
+            };
+            let chosen = match answer {
                 Ok(segments) => reading(&segments),
                 Err(e) => {
                     *counts.entry("failed").or_default() += 1;
@@ -110,7 +118,8 @@ async fn main() -> anyhow::Result<()> {
                     own.clone()
                 }
             };
-            if !alternatives.is_empty() {
+            // 選ばせる形は、読みが分かれる語がなければ聞かない
+            if how != "choose" || !alternatives.is_empty() {
                 times.push(started.elapsed().as_millis());
             }
             let outcome = match (gold.contains(&own), gold.contains(&chosen)) {

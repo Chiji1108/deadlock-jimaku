@@ -10,36 +10,51 @@ type Item = keyof Engines;
 export type Option<K extends Item = Item> = {
   value: Engines[K];
   label: string;
-  /** 料金（`crates/core/src/usage.rs` の単価と同じ）。無料なら「無料」。
+  /** 正確さ。工程の `scale` の物差しで測った値（DESIGN.md 3 章、6.4、9.7）。測っていなければ省く */
+  accuracy?: string;
+  /** 確定の字幕が出るまでに、この工程がかける時間。測っていなければ省く */
+  speed?: string;
+  /** 話し続けた 1 時間の料金の目安（1 ドル 150 円）。無料なら「無料」。
    * 使う会社は `ENGINE_PROVIDERS`（core が決める）にあるので、ここには書かない */
   price: string;
-  /** ほかの選択肢との違い（測った結果。DESIGN.md 9.3） */
+  /** 選ぶ前に知っておくこと */
   note?: string;
 };
 
-/** 工程と、その作り方。無料のものを先に置く */
-export const ITEMS: { [K in Item]: { label: string; hint: string; options: Option<K>[] } } = {
+/** 工程と、その作り方。無料のものを先に置く。どの選択肢も、正確さ・速さ・料金を同じ物差しで並べる */
+export const ITEMS: {
+  [K in Item]: { label: string; hint: string; scale: string; options: Option<K>[] };
+} = {
   live: {
     label: "途中の字幕",
     hint: "話している間に出す字幕",
+    scale: "正確さは、正しく書けた文字の割合です（録音 2 本）",
     options: [
-      { value: "chrome", label: "Chrome", price: "無料" },
+      {
+        value: "chrome",
+        label: "Chrome",
+        accuracy: "93〜96%",
+        price: "無料",
+        note: "音声は Google に送られる",
+      },
       {
         value: "gptLiveTranscribe",
         label: "GPT-Live-Transcribe",
-        price: "話した 1 分 $0.017",
+        accuracy: "95〜96%",
+        price: "1 時間 約 150 円",
       },
       {
         value: "qwenAudioStreaming",
         label: "Qwen-Audio-3.1-ASR-Flash-Streaming",
-        price: "話した 1 分 約 $0.0008",
-        note: "Chrome を使わない。GPT-Live-Transcribe の約 20 分の 1 の料金で、精度は同じくらい。用語のヒントは渡せない",
+        accuracy: "95〜98%",
+        price: "1 時間 約 7 円",
+        note: "Chrome を使わない。用語のヒントは渡せない",
       },
       {
         value: "haasJa",
         label: "Haas-ja（PC の中）",
         price: "無料",
-        note: "日本語だけ。Chrome を使わず、音声は PC から出ない。話している間、PC の中で何度も認識し直すので、PC の負荷は上がる。初回に約 400 MB をダウンロードする",
+        note: "日本語だけ。Chrome を使わず、音声は PC から出ない。話している間、PC の中で何度も認識し直すので、PC の負荷は上がる。初回に約 400 MB をダウンロードする。途中の字幕としての正確さは測っていない",
       },
       { value: "off", label: "出さない", price: "無料" },
     ],
@@ -47,139 +62,188 @@ export const ITEMS: { [K in Item]: { label: string; hint: string; options: Optio
   transcription: {
     label: "確定の文字起こし",
     hint: "話し終えたあとに置き換える字幕",
+    scale:
+      "正確さは、正しく書けた文字の割合です（録音 2 本）。速さは、話し終えてから文字が届くまで",
     options: [
-      { value: "chrome", label: "Chrome", price: "無料" },
+      {
+        value: "chrome",
+        label: "Chrome",
+        accuracy: "93〜96%",
+        price: "無料",
+        note: "発話の区切りも Chrome が決める。音声は Google に送られる",
+      },
       {
         value: "gptTranscribe",
         label: "GPT-Transcribe",
-        price: "話した 1 分 $0.0045",
+        accuracy: "96〜99%",
+        speed: "1.6〜2.3 秒",
+        price: "1 時間 約 40 円",
       },
       {
         value: "grokVoiceTranscribe",
         label: "Grok Voice Transcribe",
-        price: "話した 1 分 $0.0017",
-        note: "GPT-Transcribe の約 3 分の 1 の料金で、精度は同じか少し下",
+        accuracy: "94〜98%",
+        speed: "0.6〜1.0 秒",
+        price: "1 時間 約 15 円",
       },
       {
         value: "qwenAudio",
         label: "Qwen-Audio-3.1-ASR-Flash",
-        price: "話した 1 分 約 $0.0002",
-        note: "Grok の約 7 分の 1 の料金で、精度は同じくらい。Grok より 1 秒ほど遅い",
+        accuracy: "95〜98%",
+        speed: "1.3〜3.1 秒",
+        price: "1 時間 約 2 円",
       },
       {
         value: "maiTranscribe2",
         label: "MAI-Transcribe 2",
-        price: "話した 1 分 $0.0017",
-        note: "精度も料金も Grok と同じくらい。用語のヒントは渡せない",
+        accuracy: "94〜97%",
+        speed: "0.8〜1.5 秒",
+        price: "1 時間 約 15 円",
+        note: "用語のヒントは渡せない",
       },
       {
         value: "haasJa",
         label: "Haas-ja（PC の中）",
+        accuracy: "95〜97%",
+        speed: "GPU で約 0.1 秒、CPU だけなら 1〜1.5 秒",
         price: "無料",
-        note: "日本語だけ。音声は PC から出ない。用語を教えられないので、カタカナの用語は Grok や Qwen より間違えやすい。初回に約 400 MB をダウンロードする。Intel の Mac では動かない",
+        note: "日本語だけ。音声は PC から出ない。用語を教えられないので、カタカナの用語は間違えやすい。初回に約 400 MB をダウンロードする。Intel の Mac では動かない",
       },
     ],
   },
   terms: {
     label: "用語",
     hint: "ヒーロー・スキル・アイテムの判定。翻訳を GPT にしたときは、翻訳と同時に判定するので選びません",
+    scale: "正確さは、63 文のテストで、用語を正しく判定できた割合です",
     options: [
       {
         value: "dictionary",
         label: "辞書の一致（PC の中）",
+        accuracy: "43%",
+        speed: "すぐ",
         price: "無料",
-        note: "正式な名前だけ",
+        note: "正式な名前だけ。略称や「〇〇のウルト」は判定しない",
       },
       {
         value: "geminiNano",
         label: "Gemini Nano（Chrome の中で確かめる）",
+        accuracy: "71%",
+        speed: "1 問 約 0.4 秒",
         price: "無料",
-        note: "略称や「〇〇のウルト」も判定する。文字を PC から出さない。会社の判定モデルほどは当たらない。初回に Chrome が約 4 GB をダウンロードし、GPU を使う。使えない PC では辞書の一致になる",
+        note: "文字を PC から出さない。初回に Chrome が約 4 GB をダウンロードし、GPU を使う。使えない PC では辞書の一致になる",
       },
       {
         value: "decisions",
         label: "GPT-6 Luna（確かめるだけ）",
-        price: "100 万トークンで入力 $0.1",
-        note: "略称・聞き違い・「〇〇のウルト」も判定する。PC の中で出した候補を確かめるだけなので、速くて安い",
+        accuracy: "92%",
+        speed: "約 0.25 秒",
+        price: "1 時間 約 4 円",
       },
       {
         value: "jev",
         label: "Jev（確かめるだけ）",
-        price: "GPT-6 Luna の約 6 割",
-        note: "いちばん速い。精度は GPT-6 Luna と同じくらい",
+        accuracy: "91%",
+        speed: "約 0.2 秒",
+        price: "1 時間 約 2 円",
       },
       {
         value: "drexMax",
         label: "Drex Max（確かめるだけ）",
-        price: "GPT-6 Luna の約半分",
-        note: "いちばんよく当たった。GPT-6 Luna より 0.2 秒ほど遅い",
+        accuracy: "96%",
+        speed: "約 0.4 秒",
+        price: "1 時間 約 2 円",
       },
       {
         value: "decision1",
         label: "Microsoft Decision 1（確かめるだけ）",
-        price: "GPT-6 Luna の約 3 割",
-        note: "GPT-6 Luna より少しよく当たり、0.2 秒ほど遅い",
+        accuracy: "95%",
+        speed: "約 0.5 秒",
+        price: "1 時間 約 1 円",
       },
       {
         value: "pplxDecider",
         label: "Perplexity Decider（確かめるだけ）",
-        price: "GPT-6 Luna の約 6 分の 1",
-        note: "いちばん安い。GPT-6 Luna より少しよく当たり、0.2 秒ほど遅い",
+        accuracy: "94%",
+        speed: "約 0.5 秒",
+        price: "1 時間 1 円未満",
       },
     ],
   },
   translation: {
     label: "翻訳",
     hint: "訳文。GPT は用語も同時に判定します（訳文の名前を用語から作るので、1 回で聞きます）",
+    scale:
+      "正確さは、63 文のテストで、用語の英語名が訳文に正しく残った割合です（英語 / ロシア語）。料金は 1 言語あたり",
     options: [
-      { value: "chromeTranslator", label: "Chrome の翻訳", price: "無料" },
+      {
+        value: "chromeTranslator",
+        label: "Chrome の翻訳",
+        accuracy: "94% / 30%",
+        speed: "すぐ",
+        price: "無料",
+        note: "ロシア語では、用語の名前まで訳してしまう。ゲームの言い回しは苦手",
+      },
       {
         value: "qwenMtFlash",
         label: "Qwen-MT-Flash",
-        price: "100 万トークンで入力 $0.16・出力 $0.49",
-        note: "翻訳専門のモデル。速くて安い",
+        accuracy: "93% / 90%",
+        speed: "約 0.25 秒",
+        price: "1 時間 約 3 円",
       },
       {
         value: "hyMt2",
         label: "Hy-MT2",
-        price: "100 万トークンで入力 $0.074・出力 $0.295",
-        note: "翻訳専門のモデル。Qwen-MT-Flash の約半分の料金で、0.5 秒ほど遅い",
+        accuracy: "99% / 85%",
+        speed: "約 0.8 秒",
+        price: "1 時間 約 1 円",
       },
       {
         value: "gpt61Terra",
         label: "GPT-6.1 Terra（用語も）",
-        price: "100 万トークンで入力 $1・出力 $5",
-        note: "訳がいちばん自然で、略称やスキルの呼び方もよく判定する",
+        accuracy: "99% / 99%",
+        speed: "約 2.5 秒",
+        price: "1 時間 約 45 円",
+        note: "訳がいちばん自然。用語も同時に判定する（用語の正確さは 98%）",
       },
     ],
   },
   furigana: {
     label: "ふりがな",
     hint: "日本語の漢字の読み",
+    scale:
+      "正確さは、読み分けの難しい 60 文のテストで、正しく読めた割合です（ふだんの文は、辞書だけでもほぼ読めます）",
     options: [
       {
         value: "dictionary",
         label: "辞書（PC の中）",
+        accuracy: "85%",
+        speed: "すぐ",
         price: "無料",
-        note: "話し言葉向けの辞書で読む。文の意味で読みが変わる語（辛い、人気）は間違えることがある",
+        note: "文の意味で読みが変わる語（辛い、人気）は間違えることがある",
       },
       {
         value: "decider",
         label: "辞書 + Perplexity Decider",
-        price: "ほぼ無料（1 時間で 1 セント未満）",
-        note: "読みが分かれる語を、辞書の候補から選ぶ。速い。まれに、合っていた読みを替えてしまう",
+        accuracy: "95%",
+        speed: "約 0.5 秒",
+        price: "1 時間 1 円未満",
+        note: "読みが分かれる語を、辞書の候補から選ぶ。まれに、合っていた読みを替えてしまう",
       },
       {
         value: "llm",
         label: "辞書 + GPT-6.1 Terra",
-        price: "100 万トークンで入力 $1・出力 $5",
-        note: "辞書の読みを、文に合わせて直す。いちばん正確",
+        accuracy: "100%",
+        speed: "約 1.5 秒",
+        price: "1 時間 約 35 円",
+        note: "辞書の読みを、文に合わせて直す",
       },
       {
         value: "luna",
         label: "辞書 + GPT-6 Luna",
-        price: "Terra の約 7 分の 1",
-        note: "辞書の読みを、文に合わせて直す。Terra より少し直し残す",
+        accuracy: "99%",
+        speed: "約 1.2 秒",
+        price: "1 時間 約 4 円",
+        note: "辞書の読みを、文に合わせて直す",
       },
     ],
   },
