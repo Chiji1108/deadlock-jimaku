@@ -318,6 +318,10 @@ pub enum TranscriptionError {
     GiftUnknown,
     /// おすそ分けした人が、その会社のキーを預けていない（xAI。DESIGN.md 17.1）
     GiftUnsupported { provider: crate::secrets::Provider },
+    /// ベータのコードの今日（UTC）の上限に達した（コードごとか、ベータ全体。DESIGN.md 17.2）
+    BetaLimit,
+    /// ベータのコードが使えない（止められた、なくなった）
+    BetaRefused,
     /// API キーを断られた
     InvalidKey { provider: crate::secrets::Provider },
     /// マイクの入力が途切れた

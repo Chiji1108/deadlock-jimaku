@@ -9,7 +9,7 @@ use serde_json::{Value, json};
 use ts_rs::TS;
 
 use crate::access::Access;
-use crate::secrets::Provider;
+use crate::secrets::{Provider, Relay};
 use crate::types::TranscriptionError;
 
 const TIMEOUT: Duration = Duration::from_secs(10);
@@ -93,7 +93,7 @@ pub fn refusal(
     status: StatusCode,
     reason: Option<&str>,
 ) -> Option<TranscriptionError> {
-    match (status, reason) {
+    let refused = match (status, reason) {
         (StatusCode::UNAUTHORIZED, _) if access.is_gift() => Some(TranscriptionError::GiftUnknown),
         (StatusCode::UNAUTHORIZED, _) => Some(TranscriptionError::InvalidKey {
             provider: access.provider(),
@@ -109,6 +109,21 @@ pub fn refusal(
             provider: access.provider(),
         }),
         _ => None,
+    };
+    refused.map(|e| for_code(e, access.provider()))
+}
+
+/// その会社を中継するのがベータのコードなら、ベータの理由にする。ギフトコードの理由は、おすそ分けした人に
+/// 確かめるよう案内するので、開発者が出したコードには合わない
+pub fn for_code(refused: TranscriptionError, provider: Provider) -> TranscriptionError {
+    use TranscriptionError as E;
+    if provider.info().relay != Some(Relay::Beta) {
+        return refused;
+    }
+    match refused {
+        E::GiftLimit => E::BetaLimit,
+        E::GiftRevoked | E::GiftUnknown | E::GiftExpired { .. } => E::BetaRefused,
+        other => other,
     }
 }
 
@@ -457,6 +472,26 @@ mod tests {
         // 翻訳の失敗は、その文の訳を諦めるだけ（エラーにならず、訳が空になる）。Worker が 502 を返したことは、Worker の記録で見る
         let translated = translator.translate(crate::http(), &spans, None).await;
         println!("translation: {:?}", translated.unwrap());
+    }
+
+    #[test]
+    fn a_refused_beta_code_gets_its_own_reason() {
+        use TranscriptionError as E;
+        let beta = Access::gift(Provider::Qwen, "code".into(), "http://worker");
+        let refused = |reason| refusal(&beta, StatusCode::FORBIDDEN, Some(reason));
+        assert_eq!(refused("limit"), Some(E::BetaLimit));
+        assert_eq!(refused("revoked"), Some(E::BetaRefused));
+        assert_eq!(
+            refusal(&beta, StatusCode::UNAUTHORIZED, None),
+            Some(E::BetaRefused)
+        );
+        // 中継しない口は、今までどおり
+        let unsupported = E::GiftUnsupported {
+            provider: Provider::Qwen,
+        };
+        assert_eq!(refused(UNSUPPORTED), Some(unsupported));
+        // 人からもらったギフトコードの理由は変えない
+        assert_eq!(for_code(E::GiftLimit, Provider::OpenAi), E::GiftLimit);
     }
 
     #[test]
