@@ -1,20 +1,19 @@
 //! PC の中で動く文字起こし（Haas-ja）。speech.cpp（MIT）を別のプロセスで立て、OpenAI と同じ形の口で頼む（DESIGN.md 9.8）。
 //!
-//! speech.cpp は初めて使うときに GitHub のリリースから取り、SHA-256 を確かめてからデータフォルダに置く。
+//! speech.cpp は初めて使うときに GitHub のリリースから取り、SHA-256 を確かめてからデータフォルダに置く（`download.rs`）。
 //! モデル（Apache 2.0、約 0.35 GB）は、speech.cpp が初めての起動で Hugging Face から取る（版は speech.cpp が決めている）。
 //! 音声はこの PC から出ない。プロセスは字幕を止めると終わる
 
-use std::io::Cursor;
 use std::net::{Ipv4Addr, TcpListener};
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
-use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Mutex, OnceLock};
 use std::time::Duration;
 
-use anyhow::{Context, bail, ensure};
-use sha2::{Digest, Sha256};
+use anyhow::{Context, bail};
 use tokio::process::{Child, Command};
+
+use crate::download::{self, Package};
 
 /// speech.cpp でのモデルの名前（料金の表と設定の `models.batch` にも使う）
 pub const HAAS_JA: &str = "haas-ja-v1.0";
@@ -52,9 +51,6 @@ const EXECUTABLE: &str = if cfg!(windows) {
 
 /// 初めての起動は、モデルのダウンロード（約 0.35 GB）を待つ。遅い回線でも待てる長さにする
 const READY_TIMEOUT: Duration = Duration::from_secs(30 * 60);
-
-/// speech.cpp のダウンロード（Windows は 30 MB）。ふだんの API の待ち時間（60 秒）では足りない回線がある
-const DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(10 * 60);
 
 /// 動いている speech.cpp のプロセス。同時に動くのは 1 つ（字幕の処理は 1 つしか動かない）。
 /// `Speech` を落とすか、アプリを終わるとき（`stop`。タスクは落とされずに終わるので、ここから止める）に終わらせる
@@ -149,41 +145,14 @@ impl Speech {
 async fn installed(dir: &Path) -> anyhow::Result<PathBuf> {
     let (target, sha256) =
         RELEASE.context("speech.cpp has no build for this computer (Haas-ja cannot run here)")?;
-    let folder = dir.join(VERSION);
-    let executable = folder.join(EXECUTABLE);
-    if tokio::fs::try_exists(&executable).await? {
-        return Ok(executable);
-    }
     let url = format!(
         "https://github.com/nyosegawa/speech.cpp/releases/download/v{VERSION}/speech-{VERSION}-{target}.zip"
     );
-    tracing::info!("downloading {url}");
-    let res = crate::http().get(&url).timeout(DOWNLOAD_TIMEOUT);
-    let res = res.send().await?.error_for_status()?;
-    let archive = res.bytes().await?;
-    let digest: String = Sha256::digest(&archive)
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect();
-    ensure!(digest == sha256, "speech.cpp download has a wrong checksum");
-    // 途中で止まっても半端なフォルダを使わないよう、別の名前に広げてから置き換える。広げている間に字幕を
-    // 始め直されても（広げる処理は止められない）ぶつからないよう、名前は毎回変える
-    static UNPACKED: AtomicU32 = AtomicU32::new(0);
-    let count = UNPACKED.fetch_add(1, Ordering::Relaxed);
-    let from = dir.join(format!("{VERSION}.{}-{count}.tmp", std::process::id()));
-    let to = folder;
-    let installed = executable.clone();
-    tokio::task::spawn_blocking(move || -> anyhow::Result<()> {
-        std::fs::create_dir_all(&from)?;
-        zip::ZipArchive::new(Cursor::new(archive))?.extract(&from)?;
-        let renamed = std::fs::rename(&from, &to);
-        // 先に置いた処理があれば、それを使う
-        if renamed.is_err() && installed.exists() {
-            let _ = std::fs::remove_dir_all(&from);
-            return Ok(());
-        }
-        Ok(renamed?)
-    })
-    .await??;
-    Ok(executable)
+    let package = Package {
+        url: &url,
+        sha256,
+        folder: VERSION,
+        file: EXECUTABLE,
+    };
+    download::installed(dir, &package).await
 }

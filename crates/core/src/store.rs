@@ -177,9 +177,15 @@ impl Store {
             .send(ServerMsg::TranscriptionStatus { error, preparing });
     }
 
-    /// PC の中の文字起こしを準備している（初回は speech.cpp とモデルのダウンロードを待つ）。
+    /// 初回のダウンロード（PC の中の文字起こし）を待っている間、操作パネルに出す。
+    /// 返したものを捨てると（待っている処理ごと捨てられても）、表示を戻す
+    pub fn preparing(self: &Arc<Self>) -> Preparing {
+        self.set_preparing(true);
+        Preparing(self.clone())
+    }
+
     /// 準備の間は Chrome を閉じ、終わったら開く
-    pub fn set_preparing(self: &Arc<Self>, preparing: bool) {
+    fn set_preparing(self: &Arc<Self>, preparing: bool) {
         self.preparing.store(preparing, Ordering::Relaxed);
         self.sync_chrome();
         let error = self.transcription_error();
@@ -525,6 +531,15 @@ fn display(settings: &Settings) -> ServerMsg {
                 .to_owned(),
             anchor: settings.item_cards.anchor,
         },
+    }
+}
+
+/// 初回のダウンロードを待っている間の印（`Store::preparing`）
+pub struct Preparing(Arc<Store>);
+
+impl Drop for Preparing {
+    fn drop(&mut self) {
+        self.0.set_preparing(false);
     }
 }
 

@@ -652,7 +652,7 @@ impl Engines {
         transcription: FinalSource::Chrome,
         terms: TermsEngine::Dictionary,
         translation: TranslationEngine::ChromeTranslator,
-        furigana: RubySource::Lindera,
+        furigana: RubySource::Dictionary,
     };
     /// ベータのモード。ベータの間は無料（開発者のサーバーが、開発者のキーで中継する。DESIGN.md 17.2）。
     /// いちばん安い組み合わせ: 途中の字幕は Chrome、確定は Qwen、用語は Perplexity Decider、翻訳は Hy-MT2、
@@ -997,8 +997,9 @@ pub enum TranslationSource {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub enum RubySource {
-    /// 辞書（PC の中）
-    Lindera,
+    /// 辞書（PC の中）。0.6.0-rc.8 までは、そのころの辞書の名前の `lindera` で保存していた
+    #[serde(alias = "lindera")]
+    Dictionary,
     /// 辞書の読みを、GPT-6.1 Terra（`models.readings`）に文に合わせて直させる
     Llm,
     /// 同じことを GPT-6 Luna にさせる。Terra の約 7 分の 1 の料金で、直せる読みは少し減る（DESIGN.md 6.4）
@@ -1009,7 +1010,7 @@ pub enum RubySource {
 }
 
 impl RubySource {
-    pub const ALL: [Self; 4] = [Self::Lindera, Self::Decider, Self::Luna, Self::Llm];
+    pub const ALL: [Self; 4] = [Self::Dictionary, Self::Decider, Self::Luna, Self::Llm];
 
     /// 辞書の読みを LLM に直させる
     pub fn llm(self) -> bool {
@@ -1198,13 +1199,13 @@ impl Settings {
         // 翻訳だけなら見えないので、作らない。形態素解析の辞書は日本語だけ
         let ruby = self.subtitle_display.furigana && !translation_only;
         let ja = self.mic_language == "ja";
-        let lindera = (ruby && ja).then_some(Ruby::Lindera);
+        let dictionary = (ruby && ja).then_some(Ruby::Dictionary);
         let terms = (self.deadlock_mode && ja).then_some(Emphasis::Terms);
         let partial = match engines.live {
             LiveSource::Chrome => Phase {
                 text: Some(Text::Chrome),
                 translation: translates.then_some(Translation::ChromeTranslator),
-                ruby: lindera,
+                ruby: dictionary,
                 emphasis: terms,
             },
             // 翻訳だけなら途中の字幕は見えないので、料金をかけない
@@ -1219,7 +1220,7 @@ impl Settings {
                         _ => Text::GptLiveTranscribe,
                     }),
                     translation: None,
-                    ruby: lindera,
+                    ruby: dictionary,
                     emphasis: terms,
                 }
             }
@@ -1239,9 +1240,9 @@ impl Settings {
             }),
             translation: translates.then_some(engines.translation.source()),
             ruby: match engines.furigana {
-                Ruby::Lindera => lindera,
+                Ruby::Dictionary => dictionary,
                 // 直すもとの辞書の読みは日本語だけ
-                Ruby::Llm | Ruby::Luna | Ruby::Decider => lindera.map(|_| engines.furigana),
+                Ruby::Llm | Ruby::Luna | Ruby::Decider => dictionary.map(|_| engines.furigana),
             },
             emphasis: match (engines.translation.source(), engines.terms) {
                 (Translation::Llm, _) => self.deadlock_mode.then_some(Emphasis::Llm),
@@ -1806,9 +1807,14 @@ mod tests {
             ruby: Some(ruby),
             emphasis: Some(emphasis),
         };
-        let chrome = phase(T::Chrome, Some(Tr::ChromeTranslator), R::Lindera, E::Terms);
+        let chrome = phase(
+            T::Chrome,
+            Some(Tr::ChromeTranslator),
+            R::Dictionary,
+            E::Terms,
+        );
         let llm = phase(T::GptTranscribe, Some(Tr::Llm), R::Llm, E::Llm);
-        let live = phase(T::GptLiveTranscribe, None, R::Lindera, E::Terms);
+        let live = phase(T::GptLiveTranscribe, None, R::Dictionary, E::Terms);
 
         let recommended = plan_of(Engines::STANDARD);
         assert_eq!((recommended.partial, recommended.finals), (chrome, llm));
@@ -1831,7 +1837,7 @@ mod tests {
         assert_eq!(llm_text.finals.text, Some(T::GptTranscribe));
         assert_eq!(llm_text.finals.translation, Some(Tr::ChromeTranslator));
         assert_eq!(llm_text.finals.emphasis, Some(E::Terms));
-        assert_eq!(llm_text.finals.ruby, Some(R::Lindera));
+        assert_eq!(llm_text.finals.ruby, Some(R::Dictionary));
 
         let llm_words = plan_of(Engines {
             translation: TranslationEngine::Gpt61Terra,
@@ -1874,7 +1880,7 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(luna.plan().finals.ruby, Some(RubySource::Luna));
-        assert_eq!(luna.plan().partial.ruby, Some(RubySource::Lindera));
+        assert_eq!(luna.plan().partial.ruby, Some(RubySource::Dictionary));
         assert_eq!(luna.models_in_use().readings, "gpt-6-luna");
         assert_eq!(luna.models.readings, Models::default().readings);
         assert!(luna.engines.uses(Provider::OpenAi));
@@ -2004,7 +2010,7 @@ mod tests {
             engines,
             Engines {
                 transcription: FinalSource::GrokVoiceTranscribe,
-                furigana: RubySource::Lindera,
+                furigana: RubySource::Dictionary,
                 ..Engines::BETA
             }
         );

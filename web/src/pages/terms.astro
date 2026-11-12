@@ -1,7 +1,6 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import lindera from "../../../notices/lindera.txt?raw";
-import mecabIpadic from "../../../notices/mecab-ipadic.txt?raw";
+import unidic from "../../../notices/unidic.txt?raw";
 import { DISCORD } from "../site";
 
 const UPDATED = "2026 年 11 月 11 日";
@@ -48,14 +47,10 @@ const UPDATED = "2026 年 11 月 11 日";
     </ul>
 
     <h2>使っているソフトウェア</h2>
-    <p>ふりがなと辞書の一致に、形態素解析の Lindera（MIT License）と辞書の mecab-ipadic（Nara Institute of Science and Technology の著作物。辞書の項目の多くは ICOT Free Software に由来します）を使います。mecab-ipadic は本アプリに組み込まれています。それぞれのライセンスの全文は次のとおりです。</p>
+    <p>ふりがなと辞書の一致に、形態素解析の vibrato（Apache License 2.0）と、辞書の「現代話し言葉 UniDic」（国立国語研究所の著作物。修正 BSD ライセンス）を使います。辞書は、vibrato 用に組み立て直したものをアプリに入れています。</p>
     <details class="mt-4">
-      <summary class="cursor-pointer">mecab-ipadic のライセンス</summary>
-      <pre class="mt-2 overflow-x-auto text-xs whitespace-pre-wrap">{mecabIpadic}</pre>
-    </details>
-    <details class="mt-4">
-      <summary class="cursor-pointer">Lindera のライセンス</summary>
-      <pre class="mt-2 overflow-x-auto text-xs whitespace-pre-wrap">{lindera}</pre>
+      <summary class="cursor-pointer">現代話し言葉 UniDic のライセンス</summary>
+      <pre class="mt-2 overflow-x-auto text-xs whitespace-pre-wrap">{unidic}</pre>
     </details>
 
     <h2>変更</h2>

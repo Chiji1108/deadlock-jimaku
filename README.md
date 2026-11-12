@@ -36,14 +36,14 @@ macOS 版は Apple の署名と公証を済ませています。Windows 版は�
 |---|---|---|---|
 | 途中の字幕 | Chrome | GPT-Live-Transcribe | Chrome |
 | 途中の翻訳 | Chrome Translator | なし | Chrome Translator |
-| 途中のふりがな | Lindera | Lindera | Lindera |
+| 途中のふりがな | 辞書 | 辞書 | 辞書 |
 | 途中の強調 | 辞書の一致 | 辞書の一致 | 辞書の一致 |
 | 確定の字幕 | GPT-Transcribe | GPT-Transcribe | Chrome |
 | 確定の翻訳 | GPT-6.1 Terra | GPT-6.1 Terra | Chrome Translator |
-| 確定のふりがな | GPT-6.1 Terra | GPT-6.1 Terra | Lindera |
+| 確定のふりがな | 辞書 + GPT-6.1 Terra | 辞書 + GPT-6.1 Terra | 辞書 |
 | 確定の強調 | GPT-6.1 Terra | GPT-6.1 Terra | 辞書の一致 |
 
-翻訳先がない、翻訳だけを見せる、ふりがなやデッドロックモードを切る、話す言語が日本語でない（Lindera と辞書の一致は日本語だけ）ときは、その項目が「なし」になります。
+翻訳先がない、翻訳だけを見せる、ふりがなやデッドロックモードを切る、話す言語が日本語でない（読みの辞書と用語の一致は日本語だけ）ときは、その項目が「なし」になります。
 
 確定の文字起こしが Grok Voice Transcribe のとき（工程ごとに選んだとき）は xAI の API キーが要ります。
 
@@ -90,7 +90,7 @@ flowchart LR
 ```
 
 - 操作パネルは Tauri のウィンドウでも OBS のドックでも同じ画面で、`/api` と `/ws` だけを使います。
-- OpenAI のモード以外では、アプリが専用のプロファイルの Chrome を起動します。音声認識と翻訳は Chrome が行い、ふりがなと辞書の一致は中核の中で Lindera + IPADIC が行います。
+- OpenAI のモード以外では、アプリが専用のプロファイルの Chrome を起動します。音声認識と翻訳は Chrome が行い、ふりがなと辞書の一致は中核の中で行います（vibrato と話し言葉の UniDic）。
 - 自分の API キーがあれば OpenAI（確定の文字起こしを Grok にしたら xAI）へ直接送ります。なければギフトコードで Worker を通します。Worker は会社ごとに同じパスで中継するので、下の図の OpenAI はどちらの経路でも同じです。ギフトコードは、おすそ分けした人がキーを預けた会社（OpenAI、xAI、または両方）に使えます。
 
 ### 声と文字の流れ

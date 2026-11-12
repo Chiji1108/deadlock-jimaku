@@ -2,8 +2,7 @@
   import { Button } from "$lib/components/ui/button";
   import * as Dialog from "$lib/components/ui/dialog";
   import fonts from "../../../../notices/fonts.txt?raw";
-  import lindera from "../../../../notices/lindera.txt?raw";
-  import mecabIpadic from "../../../../notices/mecab-ipadic.txt?raw";
+  import unidic from "../../../../notices/unidic.txt?raw";
   import { panel } from "../panel.svelte";
 
   // アプリの情報。左下の版から開く（毎日見るものではないので、サイドバーの項目にしない）
@@ -18,10 +17,9 @@
       label: "ライセンス",
     },
   ];
-  // ふりがなと辞書の一致に使い、アプリに組み込んでいるもの。利用規約（web）と同じ文を出す
+  // ふりがなと辞書の一致に使い、アプリに組み込んでいる辞書。利用規約（web）と同じ文を出す
   const NOTICES = [
-    { name: "mecab-ipadic", text: mecabIpadic },
-    { name: "Lindera", text: lindera },
+    { name: "現代話し言葉 UniDic", text: unidic },
     // アプリには含まず、選んだ人だけがダウンロードする
     { name: "Google Fonts のフォント", text: fonts },
   ];

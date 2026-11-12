@@ -311,15 +311,7 @@ async fn local_speech(store: &Arc<Store>) -> anyhow::Result<Speech> {
         store.settings().mic_language == "ja",
         "Haas-ja only transcribes Japanese"
     );
-    // 待っている間に字幕を止められても（この処理ごと捨てられる）、表示を戻す
-    struct Preparing<'a>(&'a Arc<Store>);
-    impl Drop for Preparing<'_> {
-        fn drop(&mut self) {
-            self.0.set_preparing(false);
-        }
-    }
-    store.set_preparing(true);
-    let _preparing = Preparing(store);
+    let _preparing = store.preparing();
     Speech::start(&store.data_dir().join("speech")).await
 }
 

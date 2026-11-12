@@ -61,7 +61,7 @@ export const ENGINE_PROVIDERS = {
     "gpt61Terra": "openai"
   },
   "furigana": {
-    "lindera": null,
+    "dictionary": null,
     "decider": "openrouter",
     "luna": "openai",
     "llm": "openai"

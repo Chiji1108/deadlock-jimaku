@@ -5,6 +5,7 @@ pub mod audio;
 pub mod chrome;
 pub mod decide;
 pub mod demo;
+pub mod download;
 pub mod enrich;
 pub mod finish;
 pub mod fonts;

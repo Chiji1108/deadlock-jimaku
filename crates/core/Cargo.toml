@@ -30,7 +30,9 @@ rust-embed = "8.13.0"
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = { version = "1.0.154", features = ["preserve_order"] }
 sha2 = "0.11.1"
-lindera = { version = "6.2.0", features = ["embed-ipadic"] }
+# 読みの辞書（`dictionary/`）を読む。学習の機能（`train`）は、辞書を組み立てる例だけが使う
+vibrato = { version = "0.5.3", default-features = false }
+flate2 = "1"
 jiter = "0.18.0"
 rustls = { version = "0.23.46", default-features = false, features = ["aws_lc_rs"] }
 tokio = { version = "1.54.1", features = ["rt-multi-thread", "macros", "sync", "time", "net", "fs", "process"] }
@@ -44,4 +46,6 @@ percent-encoding = "2.3.2"
 zip = { version = "9.3.0", default-features = false, features = ["deflate"] }
 
 [dev-dependencies]
+# 辞書を組み立てる例（`examples/build_dictionary.rs`）が、MeCab の重みから小さい辞書を作るのに使う
+vibrato = { version = "0.5.3", features = ["train"] }
 tempfile = "3.27.0"

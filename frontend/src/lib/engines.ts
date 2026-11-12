@@ -152,10 +152,10 @@ export const ITEMS: { [K in Item]: { label: string; hint: string; options: Optio
     hint: "日本語の漢字の読み",
     options: [
       {
-        value: "lindera",
+        value: "dictionary",
         label: "辞書（PC の中）",
         price: "無料",
-        note: "文で読みが変わる語（辛い、一人、人気）は間違えることがある",
+        note: "話し言葉向けの辞書で読む。文の意味で読みが変わる語（辛い、人気）は間違えることがある",
       },
       {
         value: "decider",
@@ -185,7 +185,7 @@ export const CHROME: Engines = {
   transcription: "chrome",
   terms: "dictionary",
   translation: "chromeTranslator",
-  furigana: "lindera",
+  furigana: "dictionary",
 };
 /** ベータの間は無料の組み合わせ（開発者のサーバーが中継する。DESIGN.md 17.2） */
 export const BETA: Engines = {

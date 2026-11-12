@@ -3,4 +3,4 @@
 /**
  * ふりがなの出どころ
  */
-export type RubySource = "lindera" | "llm" | "luna" | "decider";
+export type RubySource = "dictionary" | "llm" | "luna" | "decider";
