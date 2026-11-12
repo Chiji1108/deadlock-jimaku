@@ -43,7 +43,7 @@ const CONTEXT_LINES: usize = 3;
 /// 用語ヒントの上限。辞書が増えても送りすぎない
 const MAX_KEYWORDS: usize = 500;
 /// 音声認識に渡す録音の説明
-const PROMPT: &str = "Live commentary by a streamer playing the video game Deadlock (Valve).";
+pub const PROMPT: &str = "Live commentary by a streamer playing the video game Deadlock (Valve).";
 /// デッドロックモードを切ったとき（雑談の配信など）
 const PLAIN_PROMPT: &str = "Live commentary by a streamer.";
 

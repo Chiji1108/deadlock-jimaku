@@ -11,3 +11,5 @@ node_modules/
 
 # wrangler dev の手元だけの秘密（SHARE_KEY など）
 .dev.vars
+# 文字起こしの測定のために作った合成音声
+/experiments/data/tts/

@@ -2,7 +2,7 @@
 // アプリと同じく、別のプロファイルで Chrome を開いて CDP で動かす。認識には、録音を偽のマイクとして聞かせる。
 //
 // usage: node chrome_eval.mjs translate GLOSSARY.json PROFILE_DIR
-//        node chrome_eval.mjs speech data/sample01.wav data/sample01.txt PROFILE_DIR
+//        node chrome_eval.mjs speech data/sample01.wav data/sample01.txt PROFILE_DIR [REPEAT]
 //        node chrome_eval.mjs furigana PROFILE_DIR [REPEAT]
 //        node chrome_eval.mjs choose PROFILE_DIR QUESTIONS.json CASES.json [REPEAT]
 //        node chrome_eval.mjs decider PROFILE_DIR
@@ -122,11 +122,11 @@ function cer(ref, hyp) {
   return prev[b.length] / Math.max(a.length, 1);
 }
 
-async function speech(wav, refPath, profile) {
+async function speech(wav, refPath, profile, repeat = "3") {
   const ref = readFileSync(refPath, "utf8").trim();
   const seconds = (readFileSync(wav).length - 44) / 32000;
   const runs = [];
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < Number(repeat); i++) {
     const { evaluate, close } = await open(profile, [
       // 音声のプロセスがサンドボックスの中だと、録音のファイルを読めず無音になる（macOS）
       "--disable-features=AudioServiceSandbox,AudioServiceOutOfProcess",
