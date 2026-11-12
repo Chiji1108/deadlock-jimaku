@@ -372,6 +372,10 @@ export const PROVIDER_NAMES = Object.fromEntries(PROVIDERS.map((p) => [p.id, p.n
  * beta はベータのコード（開発者のキー）。中継がなければ null */
 export const relayOf = (p: Provider) => PROVIDERS.find((info) => info.id === p)?.relay ?? null;
 
+/** 足りない鍵を入れに行くボタンの文。ギフトコードで足りる会社があれば、そう添える */
+export const enterKeys = (list: Provider[]) =>
+  list.some((p) => relayOf(p) === "gift") ? "キーかギフトコードを入れる" : "API キーを入れる";
+
 /** 要る鍵の名前。ギフトコードで足りる会社があれば、そう添える */
 export const keyNames = (list: Provider[]) =>
   `${list.map((p) => PROVIDER_NAMES[p]).join(" と ")} の API キー${list.some((p) => relayOf(p) === "gift") ? "かギフトコード" : ""}`;
