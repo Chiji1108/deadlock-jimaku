@@ -6,6 +6,8 @@
   "main": "src/adminWorker.ts",
   "compatibility_date": "2026-10-01",
   "workers_dev": true,
+  // 覚えやすいアドレス。Access の守る対象にも、このドメインを足しておく（足すまでは、Worker が 401 で断る）
+  "routes": [{ "pattern": "admin.jimaku.deadlock.jp", "custom_domain": true }],
   "preview_urls": false,
   // Access を有効にしたときに出る TEAM_DOMAIN と POLICY_AUD は、Cloudflare の管理画面でこの Worker の変数に入れる。
   // 出し直しても消さない。入れるまで、管理の口は誰も通さない
