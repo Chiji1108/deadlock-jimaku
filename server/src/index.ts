@@ -484,7 +484,7 @@ app.get("/openai/realtime", async (c) => {
   return relay(c.var.db, gift.code, gift.key, c.executionCtx);
 });
 
-// ---- ベータの間だけの中継（開発者のキー。DESIGN.md 17.2） ----
+// ---- ベータ期間中だけの中継（開発者のキー。DESIGN.md 17.2） ----
 
 /** OpenRouter の応答の料金。答えに入っていなければ undefined（見積もりで数える） */
 function openrouterUsd(usage: unknown): number | undefined {

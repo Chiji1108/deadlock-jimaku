@@ -5,4 +5,8 @@ export type KeyStatus = { openai: KeyState, xai: KeyState, qwen: KeyState, openr
 /**
  * ギフトコード。コードそのものは返さない
  */
-gift: KeyState, };
+gift: KeyState, 
+/**
+ * ベータのコード
+ */
+beta: KeyState, };

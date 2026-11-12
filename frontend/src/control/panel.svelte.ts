@@ -14,15 +14,7 @@ import type { MicError } from "../generated/MicError";
 import type { TranscriptionError } from "../generated/TranscriptionError";
 import type { UsageView } from "../generated/UsageView";
 import { api } from "../lib/api";
-import {
-  CHROME,
-  PROVIDER_NAMES,
-  chromeFinals,
-  giftable,
-  keyNames,
-  providers,
-  relayOf,
-} from "../lib/engines";
+import { CHROME, PROVIDER_NAMES, chromeFinals, keyNames, providers, relayOf } from "../lib/engines";
 import { addFontFaces, fontWeights } from "../lib/overlay-fonts";
 import type { MergePatch } from "../lib/text-style";
 import type { FontEntry } from "../generated/FontEntry";
@@ -116,15 +108,20 @@ class Panel {
   /** 選んだ作り方に要るのに、自分のキーもギフトコードもない会社。ギフトコードが xAI を中継するかは、
    * 字幕を始めるときに中核が確かめる（中継しなければ `giftUnsupported` で止まる） */
   get missingKeys(): Provider[] {
-    const gift = this.view?.keys.gift.state === "saved";
-    return this.withoutKey.filter((p) => !gift || !giftable(p));
+    return this.withoutKey.filter((p) => !this.hasCode(p));
   }
 
-  /** ギフトコードで使う（おすそ分けしてくれた人に請求される）会社。コードが中継する会社が分かれば、それだけ */
+  /** その会社を中継するコード（ギフトコードかベータのコード）を持っている */
+  private hasCode(p: Provider) {
+    const relay = relayOf(p);
+    return relay !== null && this.view?.keys[relay].state === "saved";
+  }
+
+  /** コードで使う（おすそ分けしてくれた人か、開発者に請求される）会社。ギフトコードが中継する会社が分かれば、それだけ */
   get giftPaid(): Provider[] {
-    if (this.view?.keys.gift.state !== "saved") return [];
     const relayed = this.gift?.state === "active" ? this.gift.providers : undefined;
-    return this.withoutKey.filter((p) => giftable(p) && (!relayed || relayed.includes(p)));
+    const unrelayed = (p: Provider) => relayOf(p) === "gift" && relayed && !relayed.includes(p);
+    return this.withoutKey.filter((p) => this.hasCode(p) && !unrelayed(p));
   }
 
   /** 字幕を始められる鍵がそろっている。有料の工程がなければ鍵は要らない */
@@ -347,7 +344,7 @@ class Panel {
   /** モードを選ぶ。ベータのコードが要るなら、変える前に同意を聞く（DESIGN.md 17.2） */
   chooseMode = async (engines: Engines) => {
     const needsCode =
-      this.view?.keys.gift.state !== "saved" &&
+      this.view?.keys.beta.state !== "saved" &&
       this.keyless(engines).some((p) => relayOf(p) === "beta");
     if (needsCode) this.betaOffer = engines;
     else await this.update({ engines });
@@ -360,7 +357,6 @@ class Panel {
     const joined = await this.run(async () => {
       const joined = await api.joinBeta();
       if ("error" in joined) throw new Error(betaRefusalText(joined));
-      this.gift = joined;
     });
     if (!joined) return false;
     this.betaOffer = undefined;
@@ -442,7 +438,7 @@ export function transcriptionErrorText(e: TranscriptionError): string {
       return "ギフトコードが見つかりません。おすそ分けしてくれた人に確かめてください";
     case "giftUnsupported":
       return relayOf(e.provider) === "beta"
-        ? `持っているコードでは ${PROVIDER_NAMES[e.provider]} の この工程を使えません。「おすすめ」のモードにするか、自分の API キーを入れてください（人からもらったギフトコードがあると、ベータのコードはもらえません）`
+        ? `ベータのコードでは ${PROVIDER_NAMES[e.provider]} の この工程を使えません。「おすすめ」のモードにするか、自分の API キーを入れてください`
         : `このギフトコードでは ${PROVIDER_NAMES[e.provider]} を使えません。おすそ分けしてくれた人に ${PROVIDER_NAMES[e.provider]} のキーも預けてもらうか、自分の API キーを入れてください`;
     case "invalidKey":
       return `${PROVIDER_NAMES[e.provider]} の API キーが使えません。キーを確かめてください`;

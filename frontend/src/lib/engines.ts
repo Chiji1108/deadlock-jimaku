@@ -193,7 +193,7 @@ export const CHROME: Engines = {
   translation: "chromeTranslator",
   furigana: "dictionary",
 };
-/** ベータの間は無料の組み合わせ（開発者のサーバーが中継する。DESIGN.md 17.2） */
+/** ベータ期間中は無料の組み合わせ（開発者のサーバーが中継する。DESIGN.md 17.2） */
 export const BETA: Engines = {
   live: "chrome",
   transcription: "qwenAudio",
@@ -240,9 +240,9 @@ export const MODES: {
     label: "おすすめ",
     traits: "高精度・キー不要",
     hourlyUsd: 0,
-    hint: "ベータの間は無料です。途中の字幕は Chrome、確定の字幕・用語・翻訳・ふりがなの読み分けは、開発者のサーバーを通して作ります（1 日の上限があります）",
+    hint: "ベータ期間中は無料です。途中の字幕は Chrome、確定の字幕・用語・翻訳・ふりがなの読み分けは、開発者のサーバーを通して作ります（1 日の上限があります）",
     engines: BETA,
-    badge: "ベータの間は無料",
+    badge: "ベータ期間中は無料",
   },
   {
     name: "chrome",
@@ -307,9 +307,6 @@ export const PROVIDER_NAMES = Object.fromEntries(PROVIDERS.map((p) => [p.id, p.n
 /** その会社を中継するコードの種類。gift は人からもらったギフトコード（おすそ分けした人がその会社のキーを預けていれば）、
  * beta はベータのコード（開発者のキー）。中継がなければ null */
 export const relayOf = (p: Provider) => PROVIDERS.find((info) => info.id === p)?.relay ?? null;
-
-/** コード（ギフトコードかベータのコード）で使える会社。どちらも同じ所に保存する */
-export const giftable = (p: Provider) => relayOf(p) !== null;
 
 /** 要る鍵の名前。ギフトコードで足りる会社があれば、そう添える */
 export const keyNames = (list: Provider[]) =>

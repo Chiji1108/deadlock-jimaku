@@ -1,4 +1,4 @@
-// QwenCloud と OpenRouter への通信（テストではこのモジュールを差し替える）。ベータの間、開発者のキーで中継する（DESIGN.md 17.2）
+// QwenCloud と OpenRouter への通信（テストではこのモジュールを差し替える）。ベータ期間中、開発者のキーで中継する（DESIGN.md 17.2）
 
 /** QwenCloud のシンガポールの口 */
 const QWEN = "https://ap-southeast-1.maas.qwencloudapi.com";

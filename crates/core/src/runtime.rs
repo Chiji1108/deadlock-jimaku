@@ -3,6 +3,7 @@
 //! 設定や API キーが変わったら、**入力が変わった処理だけ**を張り直す（ランクの ID を変えても
 //! 字幕は止めない）。字幕を止めたときは、確定していない字幕を画面から消す。
 
+use std::collections::BTreeMap;
 use std::panic::AssertUnwindSafe;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -315,34 +316,34 @@ async fn local_speech(store: &Arc<Store>) -> anyhow::Result<Speech> {
     Speech::start(&store.data_dir().join("speech")).await
 }
 
-/// ギフトコードを使うなら、`check` の API の根元で、使えるか・使う会社を中継するかを確かめる。
-/// 断られたら理由を出して false
+/// コード（ギフトコードとベータのコード）を使うなら、`check` の API の根元で、使えるか・使う会社を中継するかを
+/// コードごとに確かめる。断られたら理由を出して false
 async fn gift_accepted(
     store: &Store,
     accesses: impl Iterator<Item = &Access>,
     check: Option<&str>,
 ) -> bool {
-    let gifts: Vec<&Access> = accesses.filter(|a| a.is_gift()).collect();
-    let (Some(gift), Some(api)) = (gifts.first(), check) else {
+    let Some(api) = check else {
         return true;
     };
-    let checked = share::check_gift(api, gift.token())
-        .await
-        .and_then(
-            |providers| match gifts.iter().find(|a| !providers.contains(&a.provider())) {
-                Some(a) => Err(TranscriptionError::GiftUnsupported {
-                    provider: a.provider(),
-                }),
+    let mut codes: BTreeMap<&str, Vec<Provider>> = BTreeMap::new();
+    for access in accesses.filter(|a| a.is_gift()) {
+        let used = codes.entry(access.token()).or_default();
+        used.push(access.provider());
+    }
+    for (code, used) in codes {
+        let checked = share::check_gift(api, code).await.and_then(|relayed| {
+            match used.into_iter().find(|p| !relayed.contains(p)) {
+                Some(provider) => Err(TranscriptionError::GiftUnsupported { provider }),
                 None => Ok(()),
-            },
-        );
-    match checked {
-        Ok(()) => true,
-        Err(e) => {
+            }
+        });
+        if let Err(e) = checked {
             store.set_transcription_error(Some(e));
-            false
+            return false;
         }
     }
+    true
 }
 
 /// 止まったら理由を出す（開始・停止を押し直すと始め直す）。想定外のエラー（panic）でも
@@ -614,6 +615,30 @@ mod tests {
 
         app.update(grok(&app, "both")).await;
         app.settle(2).await;
+        assert_eq!(app.error(), None);
+        assert!(app.slot.is_running());
+    }
+
+    /// ギフトコードとベータのコードは別に持つので、使うコードをどれも確かめる
+    #[tokio::test]
+    async fn every_code_in_use_is_checked() {
+        let mut app = App::new().await;
+        let with = |app: &App, other: &str| {
+            let SubtitlesInput::Audio(mut input) = app.audio(Some("good"), "ja") else {
+                unreachable!()
+            };
+            input.engines.transcription = FinalSource::GrokVoiceTranscribe;
+            let xai = Access::gift(Provider::Xai, other.into(), &app.api);
+            input.accesses = Accesses::new(input.accesses.iter().cloned().chain([xai]));
+            SubtitlesInput::Audio(input)
+        };
+        app.update(with(&app, "revoked")).await;
+        app.settle(2).await;
+        assert_eq!(app.error(), Some(TranscriptionError::GiftRevoked));
+        assert!(!app.slot.is_running());
+
+        app.update(with(&app, "both")).await;
+        app.settle(4).await;
         assert_eq!(app.error(), None);
         assert!(app.slot.is_running());
     }
