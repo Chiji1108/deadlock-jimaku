@@ -5,13 +5,13 @@
 //! 翻訳は Chrome のページがするので、用語を英語の名前に置き換えた文（`Translatable`）も作る。
 //! 形態素解析の辞書は日本語だけなので、ほかの言語の文はそのまま返す
 
-use std::sync::{Arc, OnceLock};
+use std::sync::Arc;
 
 use tokio::sync::watch;
 
 use crate::assets::Loaded;
 use crate::reading::{Furigana, Morpheme, annotate};
-use crate::settings::{EmphasisSource, Phase, RubySource, Settings};
+use crate::settings::{Phase, Settings};
 use crate::store::Store;
 use crate::terms::{Found, Term, Terms, ruby};
 use crate::types::{Entity, Glossary, LiveState, LiveStatus, TermName, Token, Translatable};
@@ -27,9 +27,12 @@ pub struct Annotator {
 
 impl Annotator {
     pub(crate) async fn new(store: Arc<Store>, settings: &Settings) -> Self {
-        // 辞書の読み込みは最初の 1 回だけ時間がかかる
+        // 辞書を広げるのは最初の 1 回だけ時間がかかる
         let furigana = if settings.mic_language == "ja" {
-            tokio::task::spawn_blocking(furigana).await.ok().flatten()
+            tokio::task::spawn_blocking(Furigana::shared)
+                .await
+                .ok()
+                .flatten()
         } else {
             None
         };
@@ -60,8 +63,9 @@ impl Annotator {
             let table = table.as_ref().map(|l| table_of(&l.glossary, self.furigana));
             self.terms = Terms::new(table.unwrap_or_default());
         }
-        let with_terms = phase.emphasis == Some(EmphasisSource::Terms);
-        let with_ruby = phase.ruby == Some(RubySource::Lindera);
+        let with_terms = phase.local_terms();
+        // ふりがなを LLM や判定モデルに直させるときも、まず辞書の読みを付ける（直らなかった語と、聞けなかった文に残る）
+        let with_ruby = phase.ruby.is_some();
         let furigana = self.furigana.filter(|_| with_ruby || with_terms);
         let terms = with_terms.then_some(&self.terms);
         annotated(furigana, terms, with_ruby, text)
@@ -72,18 +76,6 @@ impl Drop for Annotator {
     fn drop(&mut self) {
         self.store.set_live_status(None);
     }
-}
-
-/// 埋め込みの辞書なので、読めなければ文をそのまま使う
-fn furigana() -> Option<&'static Furigana> {
-    static FURIGANA: OnceLock<Option<Furigana>> = OnceLock::new();
-    FURIGANA
-        .get_or_init(|| {
-            Furigana::new()
-                .inspect_err(|e| tracing::warn!("furigana: {e:#}"))
-                .ok()
-        })
-        .as_ref()
 }
 
 fn annotated(
@@ -152,8 +144,8 @@ fn with_english_names(text: &str, found: &[Found]) -> String {
     replaced
 }
 
-/// 日本語と英語の公式名がある、すべての用語。読みは LLM のもの、なければ IPADIC が名前を読んだもの。
-/// IPADIC が読み誤った名前は読みでは見つからないだけで、書き方の一致は効く
+/// 日本語と英語の公式名がある、すべての用語。読みは LLM のもの、なければ辞書が名前を読んだもの。
+/// 辞書が読み誤った名前は読みでは見つからないだけで、書き方の一致は効く
 fn table_of(glossary: &Glossary, furigana: Option<&Furigana>) -> Vec<Term> {
     let mut terms: Vec<Term> = glossary
         .entities
@@ -187,6 +179,57 @@ fn reading(entity: &Entity) -> Option<String> {
 mod tests {
     use super::*;
     use crate::types::{EntityKind, RubySegment};
+
+    /// アプリの保存した辞書で、用語のテストの文（`experiments/results/terms_cases.json`）に PC の中の一致を当てて、
+    /// 正解と比べる。読みの辞書を替えたときに、前と比べる:
+    /// `cargo test -p overlays-core local_terms_on_the_cases -- --ignored --nocapture`
+    #[tokio::test]
+    #[ignore = "reads the app's glossary"]
+    async fn local_terms_on_the_cases() {
+        let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
+        let languages = ["ja".to_owned(), "en".to_owned()];
+        let loaded = crate::assets::load(&crate::default_data_dir().join("assets"), &languages)
+            .await
+            .unwrap();
+        let furigana = Furigana::shared().unwrap();
+        let terms = Terms::new(table_of(&loaded.glossary, Some(furigana)));
+        let cases = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../experiments/results/terms_cases.json"
+        );
+        let cases: Vec<serde_json::Value> =
+            serde_json::from_slice(&std::fs::read(cases).unwrap()).unwrap();
+        let mut right = 0;
+        for case in &cases {
+            let text = case["text"].as_str().unwrap();
+            let segments = case["llm"][0]["answer"]["segments"].as_array().unwrap();
+            let gold: Vec<(String, String)> = segments
+                .iter()
+                .filter_map(|s| {
+                    Some((
+                        s["text"].as_str()?.to_owned(),
+                        s["ref"].as_str()?.to_owned(),
+                    ))
+                })
+                .collect();
+            let (tokens, _) = annotated(Some(furigana), Some(&terms), false, text);
+            let found: Vec<(String, String)> = tokens
+                .iter()
+                .filter_map(|token| match token {
+                    Token::Entity {
+                        reference, spoken, ..
+                    } => Some((spoken.clone().unwrap_or_default(), reference.clone())),
+                    Token::Text { .. } => None,
+                })
+                .collect();
+            if found == gold {
+                right += 1;
+            } else {
+                println!("{text}\n  found {found:?}\n  gold  {gold:?}");
+            }
+        }
+        println!("local terms: {right}/{} sentences", cases.len());
+    }
 
     fn magazine(ruby: Option<Vec<RubySegment>>) -> Glossary {
         let entity = Entity {
@@ -261,12 +304,12 @@ mod tests {
 
     #[test]
     fn without_a_cached_reading_the_dictionary_reads_the_name() {
-        let furigana = Furigana::new().unwrap();
+        let furigana = Furigana::shared().unwrap();
         let mut glossary = magazine(None);
         let entity = glossary.entities.values_mut().next().unwrap();
         entity.names.insert("ja".into(), "呪いの遺物".into());
         assert_eq!(
-            table_of(&glossary, Some(&furigana))[0].reading,
+            table_of(&glossary, Some(furigana))[0].reading,
             "のろいのいぶつ"
         );
     }
@@ -274,13 +317,9 @@ mod tests {
     #[test]
     fn the_translator_receives_the_english_name_and_the_source_keeps_what_was_said() {
         let terms = Terms::new(vec![term()]);
-        let furigana = Furigana::new().unwrap();
-        let (tokens, translate) = annotated(
-            Some(&furigana),
-            Some(&terms),
-            true,
-            "基礎拡張マガジンを取る",
-        );
+        let furigana = Furigana::shared().unwrap();
+        let (tokens, translate) =
+            annotated(Some(furigana), Some(&terms), true, "基礎拡張マガジンを取る");
         assert_eq!(translate.text, "Extended Magazineを取る");
         assert_eq!(translate.terms[0].reference, "item:1");
         assert!(matches!(
@@ -307,10 +346,10 @@ mod tests {
 
     #[test]
     fn without_ruby_the_terms_still_work() {
-        let furigana = Furigana::new().unwrap();
+        let furigana = Furigana::shared().unwrap();
         let terms = Terms::new(vec![term()]);
         let (tokens, _) = annotated(
-            Some(&furigana),
+            Some(furigana),
             Some(&terms),
             false,
             "基礎拡張マガジンを取る",
@@ -339,6 +378,7 @@ mod tests {
             glossary: Arc::new(magazine(None)),
             requested: Vec::new(),
             root: std::path::PathBuf::new(),
+            aliases: Default::default(),
         });
         let (_, translate) = annotator.annotate("基礎拡張マガジンを取る", &phase);
         assert_eq!(translate.terms.len(), 1);
@@ -356,14 +396,14 @@ mod tests {
     #[ignore = "測定"]
     fn annotation_speed() {
         let started = std::time::Instant::now();
-        let furigana = Furigana::new().unwrap();
+        let furigana = Furigana::shared().unwrap();
         println!("dictionary {:?}", started.elapsed());
         let terms = Terms::new(vec![term()]);
         let sentence =
             "基礎拡張マガジンを買ってからヘイズの後ろに回って、そのままウルトで倒しにいきます";
         let started = std::time::Instant::now();
         for _ in 0..1000 {
-            std::hint::black_box(annotated(Some(&furigana), Some(&terms), true, sentence));
+            std::hint::black_box(annotated(Some(furigana), Some(&terms), true, sentence));
         }
         println!("per sentence {:?}", started.elapsed() / 1000);
     }

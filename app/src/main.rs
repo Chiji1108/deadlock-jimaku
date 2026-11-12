@@ -7,7 +7,7 @@ mod tray;
 use std::net::{Ipv4Addr, SocketAddr};
 use std::time::Duration;
 
-use overlays_core::{DEFAULT_PORT, runtime, server, settings, store::Store};
+use overlays_core::{port, runtime, server, settings, store::Store};
 use tauri::webview::NewWindowResponse;
 use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
@@ -35,7 +35,10 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             // 設定は操作パネルから変えて保存する。API キーは OS の資格情報ストア
-            let data_dir = app.path().app_data_dir()?;
+            let data_dir = match overlays_core::data_dir_override() {
+                Some(dir) => dir,
+                None => app.path().app_data_dir()?,
+            };
             let settings = settings::load(&data_dir.join(settings::FILE));
             let store = Store::new(settings, data_dir);
             let idle = store.clone();
@@ -49,7 +52,7 @@ fn main() {
             // ウィンドウを開く前に bind して、ポートが使えないことを起動時に検出する
             let listener = tauri::async_runtime::block_on(TcpListener::bind(SocketAddr::from((
                 Ipv4Addr::LOCALHOST,
-                DEFAULT_PORT,
+                port(),
             ))))?;
             tauri::async_runtime::spawn(async move {
                 if let Err(e) = server::serve(listener, store).await {
@@ -98,8 +101,12 @@ fn main() {
             tauri::RunEvent::ExitRequested {
                 api, code: None, ..
             } => api.prevent_exit(),
-            // 終了しても Chrome を残さない（残ると、次の起動で同じプロファイルを開けない）
-            tauri::RunEvent::Exit => _app.state::<std::sync::Arc<Store>>().close_chrome(),
+            // 終了しても Chrome を残さない（残ると、次の起動で同じプロファイルを開けない）。
+            // PC の中の文字起こしのプロセスも残さない
+            tauri::RunEvent::Exit => {
+                _app.state::<std::sync::Arc<Store>>().close_chrome();
+                overlays_core::local::stop();
+            }
             // Mac は Dock のアイコンを押したときに、閉じたウィンドウを開き直す
             #[cfg(target_os = "macos")]
             tauri::RunEvent::Reopen { .. } => show_window(_app),
@@ -193,7 +200,7 @@ fn control_url() -> Result<WebviewUrl, url::ParseError> {
         Ok(WebviewUrl::App("control.html".into()))
     } else {
         Ok(WebviewUrl::External(
-            format!("http://127.0.0.1:{DEFAULT_PORT}/").parse()?,
+            format!("http://127.0.0.1:{}/", port()).parse()?,
         ))
     }
 }

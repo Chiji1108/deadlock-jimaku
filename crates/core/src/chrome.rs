@@ -9,7 +9,7 @@
 //! 字幕の経路が音声の処理と共有するのは、読みと用語（`Annotator`）、確定の仕上げ（`Finisher`）、
 //! 発話の形とオーバーレイへの出力だけ
 
-use std::collections::{HashMap, VecDeque};
+use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -25,15 +25,15 @@ use tokio::task::JoinHandle;
 use tokio::time::MissedTickBehavior;
 use tokio_tungstenite::tungstenite::Message;
 
-use crate::DEFAULT_PORT;
-use crate::access::Access;
+use crate::access::Accesses;
 use crate::annotate::Annotator;
+use crate::decide::Asked;
 use crate::finish::{self, Finished, Finisher};
 use crate::settings::Settings;
 use crate::store::{ChromeEvent, Store};
 use crate::subtitles;
 use crate::types::{
-    ChromeCommand, ChromeTask, Heard, LangCode, LiveState, LiveStatus, Segment, Stage,
+    ChromeCommand, ChromeTask, Decided, Heard, LangCode, LiveState, LiveStatus, Segment, Stage,
     TranscriptionError, Translatable, Translated, Translations,
 };
 
@@ -57,6 +57,8 @@ const REMOVE_ATTEMPTS: u32 = 25;
 const CHECK_INTERVAL: Duration = Duration::from_secs(1);
 /// 確定の文の訳を待つ長さ。ページが固まっても、字幕を仕上げずに残さない
 const FINAL_TRANSLATION_TIMEOUT: Duration = Duration::from_secs(10);
+/// Gemini Nano が用語の候補を確かめるのを待つ長さ。1 問 0.4 秒ほどで、問いは文に 1〜3 個（DESIGN.md 9.7）
+const DECIDE_TIMEOUT: Duration = Duration::from_secs(5);
 /// ページが落ちたときに操作パネルに出す案内
 pub(crate) const CRASHED: &str = "Chrome のページが落ちました。「Chrome を開き直す」で戻せます";
 
@@ -153,7 +155,7 @@ pub(crate) fn remove_profile(data_dir: &Path) -> io::Result<()> {
 }
 
 fn page_url() -> String {
-    format!("http://127.0.0.1:{DEFAULT_PORT}/chrome")
+    format!("http://127.0.0.1:{}/chrome", crate::port())
 }
 
 fn arguments(profile: &Path) -> Vec<String> {
@@ -396,6 +398,37 @@ pub(crate) fn ask_final_translation(
     ask_translation(store, id, translate, true).then_some(events)
 }
 
+/// ページに、確定の文の用語の候補を確かめてもらう（Gemini Nano）。答えは、問いの名前 → 選んだ選択肢。
+/// ページが開いていない、Gemini Nano を使えない、答えがそろわないなら None（PC の中で付けた用語のままにする）
+pub(crate) async fn decide(
+    store: &Store,
+    asked: &Asked,
+    id: &str,
+) -> Option<BTreeMap<String, String>> {
+    let mut events = store.subscribe_chrome();
+    let task = asked.for_chrome(id.to_owned());
+    let questions = task.questions.len();
+    if !store.send_chrome_command(ChromeCommand::Decide(task)) {
+        return None;
+    }
+    let wait = async {
+        loop {
+            match events.recv().await {
+                Ok(ChromeEvent::Decided(Decided { id: done, choices })) if done == id => {
+                    // 答えのない問いがあれば使わない（その候補が用語でないことになり、辞書の一致まで消える）
+                    return Some(choices).filter(|c| c.len() == questions);
+                }
+                Ok(ChromeEvent::Closed) | Err(_) => return None,
+                Ok(_) => {}
+            }
+        }
+    };
+    tokio::time::timeout(DECIDE_TIMEOUT, wait)
+        .await
+        .ok()
+        .flatten()
+}
+
 /// 頼んだ確定の文の訳を待つ。ページが閉じられるか、答えが来なければ訳なし
 pub(crate) async fn final_translation(
     mut events: broadcast::Receiver<ChromeEvent>,
@@ -424,11 +457,11 @@ pub(crate) async fn final_translation(
 }
 
 /// ページが認識した文を字幕にする。止めるまで続く（ページが閉じられても、開き直せば続きが出る）。
-/// `access` は確定の仕上げに LLM を使う工程があるときだけ
-pub async fn run(store: Arc<Store>, access: Option<Access>) -> anyhow::Result<()> {
+/// `accesses` は確定の仕上げ（用語、翻訳、ふりがな）に使う会社の送り先と鍵
+pub async fn run(store: Arc<Store>, accesses: Accesses) -> anyhow::Result<()> {
     let settings = store.settings();
     let annotator = Annotator::new(store.clone(), &settings).await;
-    let finisher = Arc::new(Finisher::new(store.clone(), &settings, access));
+    let finisher = Arc::new(Finisher::new(store.clone(), &settings, &accesses));
     let mut events = store.subscribe_chrome();
     let (done_tx, mut done_rx) = tokio::sync::mpsc::channel(64);
     let mut subtitles = Subtitles::new(store, &settings, annotator, finisher, done_tx);
@@ -488,6 +521,8 @@ impl Subtitles {
         match event {
             ChromeEvent::Heard(heard) => self.on_heard(heard),
             ChromeEvent::Translated(translated) => self.on_translated(translated),
+            // 用語の答えは、頼んだ処理（`decide`）が受け取る
+            ChromeEvent::Decided(_) => {}
             ChromeEvent::Closed => self.on_closed(),
         }
     }
@@ -760,7 +795,11 @@ mod tests {
         let store = Store::new(Ok(settings.clone()), std::path::PathBuf::new());
         let messages = store.subscribe();
         let annotator = Annotator::new(store.clone(), &settings).await;
-        let finisher = Arc::new(Finisher::new(store.clone(), &settings, None));
+        let finisher = Arc::new(Finisher::new(
+            store.clone(),
+            &settings,
+            &Accesses::default(),
+        ));
         let (done_tx, done) = tokio::sync::mpsc::channel(8);
         let subs = Subtitles::new(store, &settings, annotator, finisher, done_tx);
         (subs, messages, done)

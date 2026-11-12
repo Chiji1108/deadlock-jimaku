@@ -3,7 +3,7 @@
 use std::collections::VecDeque;
 use std::io;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -12,10 +12,10 @@ use tokio::sync::{broadcast, watch};
 use crate::assets::Loaded;
 use crate::chrome::{self, Browser};
 use crate::fonts::Library;
-use crate::settings::{self, Settings, SettingsPatch, SubtitleDisplay};
+use crate::settings::{self, FinalSource, Settings, SettingsPatch, SubtitleDisplay};
 use crate::types::{
-    ChromeCommand, Heard, ItemCardsView, LiveState, LiveStatus, RankState, Segment, ServerMsg,
-    Stage, TranscriptionError, Translated,
+    ChromeCommand, Decided, Heard, ItemCardsView, LiveState, LiveStatus, RankState, Segment,
+    ServerMsg, Stage, TranscriptionError, Translated,
 };
 use crate::usage::Meter;
 
@@ -27,6 +27,7 @@ const KEEP_SEGMENTS: usize = 50;
 pub enum ChromeEvent {
     Heard(Heard),
     Translated(Translated),
+    Decided(Decided),
     /// ページが閉じられた
     Closed,
 }
@@ -57,6 +58,8 @@ pub struct Store {
     unsaved: Mutex<Option<String>>,
     /// 字幕を始められなかった理由（操作パネルに出す）
     transcription_error: Mutex<Option<TranscriptionError>>,
+    /// PC の中の文字起こしを準備している
+    preparing: AtomicBool,
     segments: Mutex<VecDeque<Segment>>,
     glossary: watch::Sender<Option<Loaded>>,
     /// 新しい版の辞書を作り直すよう頼んだ回数。変わると `runtime` が辞書の処理を張り直す
@@ -95,6 +98,7 @@ impl Store {
             data_dir,
             unsaved: Mutex::new(unsaved),
             transcription_error: Mutex::new(None),
+            preparing: AtomicBool::new(false),
             segments: Mutex::new(VecDeque::new()),
             glossary: watch::Sender::new(None),
             glossary_refreshes: AtomicU64::new(0),
@@ -168,7 +172,27 @@ impl Store {
         if !self.chrome_needed() {
             self.close_chrome();
         }
-        let _ = self.tx.send(ServerMsg::TranscriptionStatus { error });
+        let preparing = self.preparing.load(Ordering::Relaxed);
+        let _ = self
+            .tx
+            .send(ServerMsg::TranscriptionStatus { error, preparing });
+    }
+
+    /// 初回のダウンロード（PC の中の文字起こし）を待っている間、操作パネルに出す。
+    /// 返したものを捨てると（待っている処理ごと捨てられても）、表示を戻す
+    pub fn preparing(self: &Arc<Self>) -> Preparing {
+        self.set_preparing(true);
+        Preparing(self.clone())
+    }
+
+    /// 準備の間は Chrome を閉じ、終わったら開く
+    fn set_preparing(self: &Arc<Self>, preparing: bool) {
+        self.preparing.store(preparing, Ordering::Relaxed);
+        self.sync_chrome();
+        let error = self.transcription_error();
+        let _ = self
+            .tx
+            .send(ServerMsg::TranscriptionStatus { error, preparing });
     }
 
     pub fn transcription_error(&self) -> Option<TranscriptionError> {
@@ -227,6 +251,7 @@ impl Store {
         }
         msgs.push(ServerMsg::TranscriptionStatus {
             error: self.transcription_error(),
+            preparing: self.preparing.load(Ordering::Relaxed),
         });
         msgs.push(ServerMsg::LiveStatus {
             status: self.live_status.lock().unwrap().clone(),
@@ -339,13 +364,17 @@ impl Store {
         self.change_chrome_tab(|tab| tab.window = problem);
     }
 
-    /// Chrome を開いておくか。確定の字幕に鍵が要るのに字幕が止まっている（鍵がないときも）なら、
-    /// 音声だけを Google に送らない
+    /// Chrome を開いておくか。字幕にならない音声を Google に送らない: 鍵の要る工程があるか、確定をアプリが作る
+    /// （Chrome だけでは字幕にならない）のに字幕が止まっているとき（鍵がないときも）と、PC の中の文字起こしを
+    /// 準備している間は開かない
     fn chrome_needed(&self) -> bool {
         let settings = self.settings();
         let plan = settings.plan();
-        let stalled = settings.engines.paid() && self.transcription_error().is_some();
-        settings.transcription_enabled && plan.uses_chrome() && !stalled
+        let engines = settings.engines;
+        let stalled = (engines.paid() || engines.transcription != FinalSource::Chrome)
+            && self.transcription_error().is_some();
+        let preparing = self.preparing.load(Ordering::Relaxed);
+        settings.transcription_enabled && plan.uses_chrome() && !stalled && !preparing
     }
 
     /// 字幕を始めるなら Chrome を起動し、止めるなら閉じる（DESIGN.md 9.6）。
@@ -506,6 +535,15 @@ fn display(settings: &Settings) -> ServerMsg {
     }
 }
 
+/// 初回のダウンロードを待っている間の印（`Store::preparing`）
+pub struct Preparing(Arc<Store>);
+
+impl Drop for Preparing {
+    fn drop(&mut self) {
+        self.0.set_preparing(false);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -575,6 +613,21 @@ mod tests {
             detail: "panic".into(),
         }));
         assert!(store.browser.lock().unwrap().is_some());
+    }
+
+    /// PC の中の文字起こしは無料でも、確定をアプリが作る。止まったら Chrome だけでは字幕にならないので閉じる
+    #[tokio::test]
+    async fn an_error_closes_chrome_when_the_app_makes_the_finals() {
+        let local = Engines {
+            transcription: FinalSource::HaasJa,
+            ..Engines::CHROME
+        };
+        let (_dir, store) = chrome_store(local);
+        *store.browser.lock().unwrap() = Some(Browser::exited());
+        store.set_transcription_error(Some(TranscriptionError::Failed {
+            detail: "no build".into(),
+        }));
+        assert!(store.browser.lock().unwrap().is_none());
     }
 
     /// 閉じられたままなら、起動されて `Browser` が入れ替わることもない

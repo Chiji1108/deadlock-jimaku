@@ -4,24 +4,26 @@
   import * as Card from "$lib/components/ui/card";
   import * as Field from "$lib/components/ui/field";
   import { Input } from "$lib/components/ui/input";
+  import { PROVIDERS } from "../../generated/catalog";
   import type { Provider } from "../../generated/Provider";
   import OpenAiKeyGuide from "../parts/OpenAiKeyGuide.svelte";
   import { giftStatusText, giftValid, panel } from "../panel.svelte";
 
-  const providers: { provider: Provider; name: string; use: string }[] = [
-    {
-      provider: "openai",
-      name: "OpenAI",
-      use: "ライト・スタンダード・OpenAI のモードの文字起こし・翻訳・ふりがなに使います。作り方は上にあります",
-    },
-    {
-      provider: "xai",
-      name: "xAI",
-      use: "ライトのモードの確定の文字起こし（Grok Voice Transcribe）に使います。xAI の API コンソール（console.x.ai）で作れます。ギフトコードでも、おすそ分けした人が xAI のキーを預けていれば使えます",
-    },
-  ];
+  /** 会社ごとの、鍵の使い道と作り方 */
+  const USES: Record<Provider, string> = {
+    openai:
+      "工程に OpenAI のモデル（GPT-Transcribe、GPT-6.1 Terra など）を選んだときに、文字起こし・翻訳・ふりがなに使います。作り方は上にあります",
+    xai: "確定の文字起こしを Grok Voice Transcribe にしたときに使います。xAI の API コンソール（console.x.ai）で作れます。ギフトコードでも、おすそ分けした人が xAI のキーを預けていれば使えます",
+    qwen: "翻訳を Qwen-MT-Flash にするときに使います。QwenCloud のシンガポール（国際）の API キーです（ほかの地域のキーは使えません）。ベータのモードでは、キーがなくても使えます",
+    openrouter:
+      "いろいろな会社のモデルを 1 つのキーで使えます（用語の Drex Max・Microsoft Decision 1・Perplexity Decider、翻訳の Hy-MT2、確定の文字起こしの MAI-Transcribe 2）。openrouter.ai で作れます。ベータのモードでは、キーがなくても使えます",
+    typesafe: "用語を Jev で確かめるときに使います。ギフトコードでは使えません",
+  };
+  const providers = PROVIDERS.map((p) => ({ provider: p.id, name: p.name, use: USES[p.id] }));
 
-  let inputs = $state<Record<Provider, string>>({ openai: "", xai: "" });
+  let inputs = $state(
+    Object.fromEntries(PROVIDERS.map((p) => [p.id, ""])) as Record<Provider, string>,
+  );
 
   async function save(provider: Provider, key: string) {
     // 失敗したら貼り直さずにやり直せるよう、入力は残す

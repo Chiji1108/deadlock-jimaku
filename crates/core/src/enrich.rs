@@ -23,6 +23,7 @@ use crate::access::Access;
 use crate::furigana;
 use crate::lang;
 use crate::llm;
+use crate::reading::Furigana;
 use crate::settings::Models;
 use crate::types::{EntityKind, Glossary, LangCode, RubySegment, Token, Translations};
 use crate::usage::{Meter, Use};
@@ -70,16 +71,20 @@ impl Enricher {
         }
     }
 
-    /// 文全体の読み。日本語で漢字を含む文だけ聞く。答えが通らなければ None。
+    /// 文全体の読み（辞書の読みを、文に合わせて直したもの）。日本語で漢字を含む文だけ聞く。
     /// `context` は直前の確定字幕（古い順）
     pub async fn furigana(
         &self,
         text: &str,
         context: &[String],
     ) -> anyhow::Result<Option<Vec<RubySegment>>> {
+        // 読みの辞書は、日本語で漢字を含む文のときだけ取る（日本語でなければ、広げない）
         if self.source_lang != "ja" || !text.chars().any(furigana::is_kanji) {
             return Ok(None);
         }
+        let Some(dictionary) = Furigana::shared() else {
+            return Ok(None);
+        };
         let model = furigana::Model {
             deadlock: self.deadlock_mode,
             access: &self.access,
@@ -87,7 +92,8 @@ impl Enricher {
             reasoning_effort: self.reasoning_effort.as_deref(),
             meter: &self.meter,
         };
-        furigana::ask(&self.http, &model, text, context).await
+        let asked = furigana::ask(&self.http, &model, dictionary, text, context);
+        asked.await.map(Some)
     }
 
     /// 原文の用語の区切りと訳文。辞書も翻訳先もなければ聞くことがなく、None。
@@ -439,7 +445,11 @@ pub(crate) fn source_tokens(spans: &[Span], ruby: &[RubySegment]) -> Vec<Token> 
 }
 
 /// `text`（原文の `offset` 文字目から）を、中に収まるふりがなの部分と、読みのない部分に分ける
-fn cover(text: &str, offset: usize, placed: &[(usize, usize, &RubySegment)]) -> Vec<RubySegment> {
+pub(crate) fn cover(
+    text: &str,
+    offset: usize,
+    placed: &[(usize, usize, &RubySegment)],
+) -> Vec<RubySegment> {
     let chars: Vec<char> = text.chars().collect();
     let end = offset + chars.len();
     let mut out: Vec<RubySegment> = Vec::new();
@@ -470,7 +480,7 @@ fn cover(text: &str, offset: usize, placed: &[(usize, usize, &RubySegment)]) -> 
 }
 
 /// 原文の区切り。用語なら参照
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Span {
     Text(String),
     Entity { reference: String, spoken: String },

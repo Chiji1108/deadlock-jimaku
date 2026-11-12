@@ -11,6 +11,7 @@ use serde_json::Value;
 use ts_rs::TS;
 
 use crate::lang;
+use crate::secrets::Provider;
 use crate::types::LangCode;
 
 /// `{データディレクトリ}` の中の設定ファイル
@@ -66,6 +67,10 @@ pub struct Settings {
     pub tray_notice_seen: bool,
     /// 無料で使っている人への「おすすめにする」の提案を閉じた
     pub hybrid_hint_closed: bool,
+    /// 最後に自分で組んだ工程の組み合わせ（モードにないもの）。操作パネルの「カスタム」
+    #[ts(optional)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub custom_engines: Option<Engines>,
     // 以下の詳細項目は操作パネルで変えない（`ADVANCED`）
     pub models: Models,
     /// リアルタイムの音声認識の遅れ（`minimal` / `low` / `medium` / `high` / `xhigh`。
@@ -555,17 +560,89 @@ impl Region {
 /// 字幕の工程ごとに、何で作るか。無料（Chrome と PC の中）か有料（OpenAI・xAI）か（DESIGN.md 9.6）。
 /// 今の仕組みで作れない組み合わせは `sanitized` が直す
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
-#[serde(default, rename_all = "camelCase")]
+#[serde(default, rename_all = "camelCase", from = "SavedEngines")]
 #[ts(export)]
 pub struct Engines {
     /// 途中の字幕
     pub live: LiveSource,
     /// 確定の文字起こし
     pub transcription: FinalSource,
-    /// 翻訳と用語。訳文の名前を用語から作るので、同じもので作る（DESIGN.md 9.1）
+    /// 用語の判定。翻訳を LLM にしたら、LLM が翻訳と同時に判定するので使わない（DESIGN.md 9.7）
+    pub terms: TermsEngine,
+    /// 翻訳。LLM なら用語も同時に判定する（訳文の名前を用語から作る。DESIGN.md 9.1）
     pub translation: TranslationEngine,
     /// ふりがな
     pub furigana: RubySource,
+}
+
+/// 設定ファイルの中の `Engines`。消した選択肢を、今の選択肢に読み替える
+#[derive(Deserialize)]
+#[serde(default, rename_all = "camelCase")]
+struct SavedEngines {
+    live: LiveSource,
+    transcription: FinalSource,
+    terms: TermsEngine,
+    translation: SavedTranslation,
+    furigana: RubySource,
+}
+
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum SavedTranslation {
+    Engine(TranslationEngine),
+    Removed(RemovedTranslation),
+}
+
+/// 消した翻訳の選択肢
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+enum RemovedTranslation {
+    /// 0.6.0-rc.6 までの「GPT-6 Luna（用語も）」。ベータの用語と翻訳が、精度も速さも料金も上なので消した（DESIGN.md 9.6）
+    Gpt6Luna,
+}
+
+impl Default for SavedEngines {
+    fn default() -> Self {
+        let Engines {
+            live,
+            transcription,
+            terms,
+            translation,
+            furigana,
+        } = Engines::default();
+        Self {
+            live,
+            transcription,
+            terms,
+            translation: SavedTranslation::Engine(translation),
+            furigana,
+        }
+    }
+}
+
+impl From<SavedEngines> for Engines {
+    fn from(saved: SavedEngines) -> Self {
+        let SavedEngines {
+            live,
+            transcription,
+            terms,
+            translation,
+            furigana,
+        } = saved;
+        let (terms, translation) = match translation {
+            SavedTranslation::Engine(translation) => (terms, translation),
+            SavedTranslation::Removed(RemovedTranslation::Gpt6Luna) => {
+                (Self::BETA.terms, Self::BETA.translation)
+            }
+        };
+        Self {
+            live,
+            transcription,
+            terms,
+            translation,
+            furigana,
+        }
+    }
 }
 
 impl Engines {
@@ -573,20 +650,35 @@ impl Engines {
     pub const CHROME: Self = Self {
         live: LiveSource::Chrome,
         transcription: FinalSource::Chrome,
+        terms: TermsEngine::Dictionary,
         translation: TranslationEngine::ChromeTranslator,
-        furigana: RubySource::Lindera,
+        furigana: RubySource::Dictionary,
     };
-    /// ライトのモード。途中の字幕は Chrome、確定は Grok、翻訳と用語は Luna、ふりがなは辞書
-    pub const LIGHT: Self = Self {
+    /// ベータのモード。ベータの間は無料（開発者のサーバーが、開発者のキーで中継する。DESIGN.md 17.2）。
+    /// いちばん安い組み合わせ: 途中の字幕は Chrome、確定は Qwen、用語は Perplexity Decider、翻訳は Hy-MT2、
+    /// ふりがなは辞書の候補から Perplexity Decider が選ぶ
+    pub const BETA: Self = Self {
         live: LiveSource::Chrome,
-        transcription: FinalSource::GrokVoiceTranscribe,
-        translation: TranslationEngine::Gpt6Luna,
-        furigana: RubySource::Lindera,
+        transcription: FinalSource::QwenAudio,
+        terms: TermsEngine::PplxDecider,
+        translation: TranslationEngine::HyMt2,
+        furigana: RubySource::Decider,
     };
-    /// スタンダードのモード（おすすめ）。途中の字幕は Chrome、確定は OpenAI
+    /// ローカルのモード。途中の字幕も確定も PC の中の Haas-ja で作り、音声は PC から出ない（日本語だけ。DESIGN.md 9.8）。
+    /// 用語と翻訳は、ベータのモードと同じ（ベータの間は無料）
+    pub const LOCAL: Self = Self {
+        live: LiveSource::HaasJa,
+        transcription: FinalSource::HaasJa,
+        ..Self::BETA
+    };
+    /// 操作パネルに出すモード（おすすめの組み合わせ）。ほかの組み合わせは「カスタム」（`Settings::custom_engines`）。
+    /// `STANDARD` は「最高精度」（OpenAI の鍵が要る）で、ほかは鍵なしで始められる
+    pub const MODES: [Self; 4] = [Self::BETA, Self::LOCAL, Self::CHROME, Self::STANDARD];
+    /// 最高精度のモード（0.5 までの「スタンダード」）。途中の字幕は Chrome、確定は OpenAI
     pub const STANDARD: Self = Self {
         live: LiveSource::Chrome,
         transcription: FinalSource::GptTranscribe,
+        terms: TermsEngine::Dictionary,
         translation: TranslationEngine::Gpt61Terra,
         furigana: RubySource::Llm,
     };
@@ -599,20 +691,43 @@ impl Engines {
     /// 有料の工程があり、鍵が要る。表示の設定（翻訳先、ふりがな）では変わらないので、
     /// 表示を切り替えても字幕の処理を始め直さない
     pub fn paid(&self) -> bool {
-        self.uses_openai() || self.uses_xai()
+        !self.providers().is_empty()
     }
 
-    /// OpenAI を使う工程があり、API キーかギフトコードが要る
-    pub fn uses_openai(&self) -> bool {
-        self.live == LiveSource::GptLiveTranscribe
-            || self.transcription == FinalSource::GptTranscribe
-            || self.translation != TranslationEngine::ChromeTranslator
-            || self.furigana == RubySource::Llm
+    /// 工程が使う会社（鍵が要る）。`Provider::ALL` の順。どの選択肢がどの会社を使うかは、工程ごとの `provider`
+    pub fn providers(&self) -> Vec<Provider> {
+        let used = [
+            self.live.provider(),
+            self.transcription.provider(),
+            self.judge().map(|judge| judge.provider),
+            self.translation.provider(),
+            self.furigana.provider(),
+        ];
+        let all = Provider::ALL.into_iter();
+        all.filter(|provider| used.contains(&Some(*provider)))
+            .collect()
     }
 
-    /// xAI を使う工程があり、xAI の API キーが要る（ギフトコードは OpenAI だけ）
-    pub fn uses_xai(&self) -> bool {
-        self.transcription == FinalSource::GrokVoiceTranscribe
+    /// その会社を使う工程があり、鍵が要る
+    pub fn uses(&self, provider: Provider) -> bool {
+        self.providers().contains(&provider)
+    }
+
+    /// PC の中の文字起こし（speech.cpp）を立てる工程がある
+    pub fn uses_local(&self) -> bool {
+        self.live == LiveSource::HaasJa || self.transcription == FinalSource::HaasJa
+    }
+
+    /// 用語の候補を確かめさせる相手（翻訳が LLM なら、LLM が同時に判定するので使わない）
+    pub fn judge(&self) -> Option<Model> {
+        self.terms
+            .judge()
+            .filter(|_| self.translation.source() != TranslationSource::Llm)
+    }
+
+    /// 用語を判定モデルで確かめる
+    pub fn decides_terms(&self) -> bool {
+        self.judge().is_some()
     }
 
     /// 確定の文を Chrome が作るなら、発話の区切りも Chrome が決めるので、途中の字幕も Chrome。
@@ -626,8 +741,49 @@ impl Engines {
         {
             self.translation = TranslationEngine::Gpt61Terra;
         }
+        // Gemini Nano は Chrome のページの中にある
+        if self.live != LiveSource::Chrome && self.terms == TermsEngine::GeminiNano {
+            self.terms = TermsEngine::Dictionary;
+        }
         self
     }
+}
+
+/// 画面と LP が使う一覧（`frontend/src/generated/catalog.ts`）。会社の名前とギフトコードで使えるか、
+/// 工程の選択肢ごとの会社。同じことを TypeScript に手で書かない（`cargo test` が書き出す）
+pub fn catalog() -> String {
+    fn step<T: Serialize + Copy>(all: &[T], provider: impl Fn(T) -> Option<Provider>) -> Value {
+        let options = all.iter().map(|option| {
+            let name = serde_json::to_value(option).expect("a name");
+            let name = name.as_str().expect("a name").to_owned();
+            (name, serde_json::json!(provider(*option)))
+        });
+        Value::Object(options.collect())
+    }
+    let providers: Vec<Value> = Provider::ALL
+        .into_iter()
+        .map(|provider| {
+            let info = provider.info();
+            serde_json::json!({ "id": info.id, "name": info.name, "relay": info.relay })
+        })
+        .collect();
+    let engines = serde_json::json!({
+        "live": step(&LiveSource::ALL, LiveSource::provider),
+        "transcription": step(&FinalSource::ALL, FinalSource::provider),
+        "terms": step(&TermsEngine::ALL, |terms| terms.judge().map(|judge| judge.provider)),
+        "translation": step(&TranslationEngine::ALL, TranslationEngine::provider),
+        "furigana": step(&RubySource::ALL, RubySource::provider),
+    });
+    let json = |value: &Value| serde_json::to_string_pretty(value).expect("JSON");
+    format!(
+        "// crates/core/src/settings.rs の `catalog` が作る（`cargo test`）。手で書き換えない\n\n\
+         /** 会社。鍵が要る順 */\n\
+         export const PROVIDERS = {} as const;\n\n\
+         /** 工程の選択肢ごとの、使う会社（無料なら null） */\n\
+         export const ENGINE_PROVIDERS = {} as const;\n",
+        json(&Value::Array(providers)),
+        json(&engines),
+    )
 }
 
 impl Default for Engines {
@@ -643,8 +799,30 @@ impl Default for Engines {
 pub enum LiveSource {
     Chrome,
     GptLiveTranscribe,
+    /// QwenCloud の Qwen-Audio-3.1-ASR-Flash-Streaming。GPT-Live-Transcribe の約 20 分の 1 の料金（DESIGN.md 3.4）
+    QwenAudioStreaming,
+    /// PC の中で動く Haas-ja（speech.cpp）。話している間、同じ発話を何度も認識し直して出す。無料。日本語だけ（DESIGN.md 9.8）
+    HaasJa,
     /// 話し終えてから出す。途中の字幕の料金がかからない
     Off,
+}
+
+impl LiveSource {
+    pub const ALL: [Self; 5] = [
+        Self::Chrome,
+        Self::GptLiveTranscribe,
+        Self::QwenAudioStreaming,
+        Self::HaasJa,
+        Self::Off,
+    ];
+
+    pub fn provider(self) -> Option<Provider> {
+        match self {
+            Self::Chrome | Self::HaasJa | Self::Off => None,
+            Self::GptLiveTranscribe => Some(Provider::OpenAi),
+            Self::QwenAudioStreaming => Some(Provider::Qwen),
+        }
+    }
 }
 
 /// 確定の文字起こしを何で作るか
@@ -656,6 +834,52 @@ pub enum FinalSource {
     GptTranscribe,
     /// GPT-Transcribe より安い。精度は同じか少し下（DESIGN.md 3）
     GrokVoiceTranscribe,
+    /// QwenCloud の Qwen-Audio-3.1-ASR-Flash。Grok の約 7 分の 1 の料金で、少し遅い（DESIGN.md 3.4）
+    QwenAudio,
+    /// OpenRouter の MAI-Transcribe 2。Grok と同じくらい（DESIGN.md 9.7）
+    MaiTranscribe2,
+    /// PC の中で動く Haas-ja（speech.cpp）。無料。日本語だけ（DESIGN.md 9.8）
+    HaasJa,
+}
+
+impl FinalSource {
+    pub const ALL: [Self; 6] = [
+        Self::Chrome,
+        Self::GptTranscribe,
+        Self::GrokVoiceTranscribe,
+        Self::QwenAudio,
+        Self::MaiTranscribe2,
+        Self::HaasJa,
+    ];
+
+    /// 文字起こしを頼む会社（Chrome と PC の中なら None）
+    pub fn provider(self) -> Option<Provider> {
+        match self {
+            Self::Chrome | Self::HaasJa => None,
+            Self::GptTranscribe => Some(Provider::OpenAi),
+            Self::GrokVoiceTranscribe => Some(Provider::Xai),
+            Self::QwenAudio => Some(Provider::Qwen),
+            Self::MaiTranscribe2 => Some(Provider::OpenRouter),
+        }
+    }
+
+    /// 文字起こしのモデル。GPT-Transcribe は詳細設定の `models.batch`
+    fn model(self) -> Option<&'static str> {
+        match self {
+            Self::Chrome | Self::GptTranscribe => None,
+            Self::GrokVoiceTranscribe => Some("grok-voice-transcribe-2.0"),
+            Self::QwenAudio => Some("qwen-audio-3.1-asr-flash"),
+            Self::MaiTranscribe2 => Some("microsoft/mai-transcribe-2"),
+            Self::HaasJa => Some(crate::local::HAAS_JA),
+        }
+    }
+}
+
+/// 会社と、その会社でのモデルの名前
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Model {
+    pub provider: Provider,
+    pub name: &'static str,
 }
 
 /// 字幕の文字の出どころ
@@ -665,25 +889,105 @@ pub enum TextSource {
     GptLiveTranscribe,
     GptTranscribe,
     GrokVoiceTranscribe,
+    QwenAudio,
+    QwenAudioStreaming,
+    MaiTranscribe2,
+    HaasJa,
 }
 
-/// 翻訳と用語を何で作るか。Chrome の翻訳なら、用語は辞書の一致で判定する
+/// 用語を何で判定するか（翻訳が LLM でないとき）
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum TermsEngine {
+    /// 辞書の名前との一致（PC の中）
+    Dictionary,
+    /// PC の中で候補を出し（名前、別名、似た名前、「ウルト」と番号）、OpenAI の Decisions API に確かめさせる
+    Decisions,
+    /// 同じ候補を、ほかの判定モデルに確かめさせる（DESIGN.md 9.7 の実測）。TypeSafe AI の Jev はいちばん速い
+    Jev,
+    /// OpenRouter の Nace Drex Max。いちばんよく当たった
+    DrexMax,
+    /// OpenRouter の Microsoft Decision 1
+    Decision1,
+    /// OpenRouter の Perplexity Decider V1.2。いちばん安い
+    PplxDecider,
+    /// 同じ候補を、Chrome の中の Gemini Nano に確かめさせる。無料で、文字を PC から出さない。
+    /// 会社の判定モデルほどは当たらない（DESIGN.md 9.7）。途中の字幕が Chrome のときだけ使える
+    GeminiNano,
+}
+
+impl TermsEngine {
+    pub const ALL: [Self; 7] = [
+        Self::Dictionary,
+        Self::GeminiNano,
+        Self::Decisions,
+        Self::Jev,
+        Self::DrexMax,
+        Self::Decision1,
+        Self::PplxDecider,
+    ];
+
+    /// 候補を確かめさせるモデル（辞書の一致なら None）
+    pub fn judge(self) -> Option<Model> {
+        let (provider, name) = match self {
+            Self::Dictionary | Self::GeminiNano => return None,
+            Self::Decisions => (Provider::OpenAi, "gpt-6-luna"),
+            Self::Jev => (Provider::TypeSafe, "jev-latest"),
+            Self::DrexMax => (Provider::OpenRouter, "nace-ai/drex-max"),
+            Self::Decision1 => (Provider::OpenRouter, "microsoft/microsoft-decision-1"),
+            Self::PplxDecider => (Provider::OpenRouter, "perplexity/pplx-decider-v1.2"),
+        };
+        Some(Model { provider, name })
+    }
+}
+
+/// 翻訳を何で作るか。LLM（Terra）は用語も同時に判定する
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub enum TranslationEngine {
     ChromeTranslator,
+    /// 翻訳専門のモデル。速くて安い（DESIGN.md 9.7）
+    QwenMtFlash,
+    /// OpenRouter の Hy-MT2-30B-A3B。Qwen-MT-Flash の半額で、少し遅い（DESIGN.md 9.7）
+    HyMt2,
     Gpt61Terra,
-    /// Terra より安く速いが、用語の判定は弱い（DESIGN.md 9.3）
-    Gpt6Luna,
 }
 
 impl TranslationEngine {
+    pub const ALL: [Self; 4] = [
+        Self::ChromeTranslator,
+        Self::QwenMtFlash,
+        Self::HyMt2,
+        Self::Gpt61Terra,
+    ];
+
     pub fn source(self) -> TranslationSource {
         match self {
             Self::ChromeTranslator => TranslationSource::ChromeTranslator,
-            Self::Gpt61Terra | Self::Gpt6Luna => TranslationSource::Llm,
+            Self::QwenMtFlash | Self::HyMt2 => TranslationSource::Mt,
+            Self::Gpt61Terra => TranslationSource::Llm,
         }
+    }
+
+    /// 翻訳を頼む会社（LLM は OpenAI）
+    pub fn provider(self) -> Option<Provider> {
+        match self.source() {
+            TranslationSource::ChromeTranslator => None,
+            TranslationSource::Mt => self.mt().map(|mt| mt.provider),
+            TranslationSource::Llm => Some(Provider::OpenAi),
+        }
+    }
+
+    /// 翻訳専門のモデル
+    pub fn mt(self) -> Option<Model> {
+        let (provider, name) = match self {
+            Self::QwenMtFlash => (Provider::Qwen, "qwen-mt-flash"),
+            Self::HyMt2 => (Provider::OpenRouter, "tencent/hy-mt2-30b-a3b"),
+            Self::ChromeTranslator | Self::Gpt61Terra => return None,
+        };
+        Some(Model { provider, name })
     }
 }
 
@@ -691,6 +995,8 @@ impl TranslationEngine {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TranslationSource {
     ChromeTranslator,
+    /// 翻訳専門のモデル（Qwen-MT-Flash、Hy-MT2）
+    Mt,
     Llm,
 }
 
@@ -699,14 +1005,51 @@ pub enum TranslationSource {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub enum RubySource {
-    Lindera,
+    /// 辞書（PC の中）。0.6.0-rc.8 までは、そのころの辞書の名前の `lindera` で保存していた
+    #[serde(alias = "lindera")]
+    Dictionary,
+    /// 辞書の読みを、GPT-6.1 Terra（`models.readings`）に文に合わせて直させる
     Llm,
+    /// 同じことを GPT-6 Luna にさせる。Terra の約 7 分の 1 の料金で、直せる読みは少し減る（DESIGN.md 6.4）
+    Luna,
+    /// 読みが分かれるところを、辞書の候補から判定モデル（OpenRouter の Perplexity Decider）に選ばせる。
+    /// 速くて安く、ベータの中継で使える。直せる読みは Luna より少し減る（DESIGN.md 6.4）
+    Decider,
+}
+
+impl RubySource {
+    pub const ALL: [Self; 4] = [Self::Dictionary, Self::Decider, Self::Luna, Self::Llm];
+
+    /// 辞書の読みを LLM に直させる
+    pub fn llm(self) -> bool {
+        matches!(self, Self::Llm | Self::Luna)
+    }
+
+    /// 辞書の候補から選ばせる判定モデル
+    pub fn judge(self) -> Option<Model> {
+        (self == Self::Decider).then_some(Model {
+            provider: Provider::OpenRouter,
+            name: "perplexity/pplx-decider-v1.2",
+        })
+    }
+
+    pub fn provider(self) -> Option<Provider> {
+        match self.judge() {
+            Some(judge) => Some(judge.provider),
+            None => self.llm().then_some(Provider::OpenAi),
+        }
+    }
 }
 
 /// 用語の強調の出どころ
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum EmphasisSource {
+    /// 辞書の名前との一致
     Terms,
+    /// 候補を Decisions API で確かめる。確かめられなければ辞書の一致を使う
+    Decisions,
+    /// 候補を Chrome の中の Gemini Nano で確かめる。確かめられなければ辞書の一致を使う
+    Chrome,
     Llm,
 }
 
@@ -739,7 +1082,15 @@ impl Phase {
 
     /// PC の中で読みか用語を付けるか
     pub fn marks(&self) -> bool {
-        self.ruby == Some(RubySource::Lindera) || self.emphasis == Some(EmphasisSource::Terms)
+        self.ruby.is_some() || self.local_terms()
+    }
+
+    /// PC の中で辞書の一致を付けるか（Decisions で確かめるときも、確かめられなかったときのために付ける）
+    pub fn local_terms(&self) -> bool {
+        matches!(
+            self.emphasis,
+            Some(EmphasisSource::Terms | EmphasisSource::Decisions | EmphasisSource::Chrome)
+        )
     }
 }
 
@@ -788,6 +1139,7 @@ impl Default for Settings {
             obs_seen: false,
             onboarding_closed: false,
             hybrid_hint_closed: false,
+            custom_engines: None,
             tray_notice_seen: false,
             rank_region: None,
             rank_style: RankStyle::default(),
@@ -857,38 +1209,57 @@ impl Settings {
         // 翻訳だけなら見えないので、作らない。形態素解析の辞書は日本語だけ
         let ruby = self.subtitle_display.furigana && !translation_only;
         let ja = self.mic_language == "ja";
-        let lindera = (ruby && ja).then_some(Ruby::Lindera);
+        let dictionary = (ruby && ja).then_some(Ruby::Dictionary);
         let terms = (self.deadlock_mode && ja).then_some(Emphasis::Terms);
         let partial = match engines.live {
             LiveSource::Chrome => Phase {
                 text: Some(Text::Chrome),
                 translation: translates.then_some(Translation::ChromeTranslator),
-                ruby: lindera,
+                ruby: dictionary,
                 emphasis: terms,
             },
             // 翻訳だけなら途中の字幕は見えないので、料金をかけない
-            LiveSource::GptLiveTranscribe if !translation_only => Phase {
-                text: Some(Text::GptLiveTranscribe),
-                translation: None,
-                ruby: lindera,
-                emphasis: terms,
-            },
-            LiveSource::GptLiveTranscribe | LiveSource::Off => Phase::NONE,
+            // アプリが作る途中の字幕（会社か、PC の中）
+            LiveSource::GptLiveTranscribe | LiveSource::QwenAudioStreaming | LiveSource::HaasJa
+                if !translation_only =>
+            {
+                Phase {
+                    text: Some(match engines.live {
+                        LiveSource::QwenAudioStreaming => Text::QwenAudioStreaming,
+                        LiveSource::HaasJa => Text::HaasJa,
+                        _ => Text::GptLiveTranscribe,
+                    }),
+                    translation: None,
+                    ruby: dictionary,
+                    emphasis: terms,
+                }
+            }
+            LiveSource::GptLiveTranscribe
+            | LiveSource::QwenAudioStreaming
+            | LiveSource::HaasJa
+            | LiveSource::Off => Phase::NONE,
         };
         let finals = Phase {
             text: Some(match engines.transcription {
                 FinalSource::Chrome => Text::Chrome,
                 FinalSource::GptTranscribe => Text::GptTranscribe,
                 FinalSource::GrokVoiceTranscribe => Text::GrokVoiceTranscribe,
+                FinalSource::QwenAudio => Text::QwenAudio,
+                FinalSource::MaiTranscribe2 => Text::MaiTranscribe2,
+                FinalSource::HaasJa => Text::HaasJa,
             }),
             translation: translates.then_some(engines.translation.source()),
             ruby: match engines.furigana {
-                Ruby::Lindera => lindera,
-                Ruby::Llm => ruby.then_some(Ruby::Llm),
+                Ruby::Dictionary => dictionary,
+                // 直すもとの辞書の読みは日本語だけ
+                Ruby::Llm | Ruby::Luna | Ruby::Decider => dictionary.map(|_| engines.furigana),
             },
-            emphasis: match engines.translation.source() {
-                Translation::ChromeTranslator => terms,
-                Translation::Llm => self.deadlock_mode.then_some(Emphasis::Llm),
+            emphasis: match (engines.translation.source(), engines.terms) {
+                (Translation::Llm, _) => self.deadlock_mode.then_some(Emphasis::Llm),
+                (_, TermsEngine::Dictionary) => terms,
+                // 候補の出し方（かなの似た名前）は日本語だけ
+                (_, TermsEngine::GeminiNano) => terms.map(|_| Emphasis::Chrome),
+                (_, _) => terms.map(|_| Emphasis::Decisions),
             },
         };
         Plan {
@@ -902,11 +1273,18 @@ impl Settings {
     /// 詳細設定の `models.batch` と `models.translate` のまま）
     pub fn models_in_use(&self) -> Models {
         let mut models = self.models.clone();
-        if self.engines.transcription == FinalSource::GrokVoiceTranscribe {
-            models.batch = "grok-voice-transcribe-2.0".into();
+        if let Some(model) = self.engines.transcription.model() {
+            models.batch = model.into();
         }
-        if self.engines.translation == TranslationEngine::Gpt6Luna {
-            models.translate = "gpt-6-luna".into();
+        match self.engines.live {
+            LiveSource::QwenAudioStreaming => {
+                models.realtime = "qwen-audio-3.1-asr-flash-streaming".into();
+            }
+            LiveSource::HaasJa => models.realtime = crate::local::HAAS_JA.into(),
+            LiveSource::Chrome | LiveSource::GptLiveTranscribe | LiveSource::Off => {}
+        }
+        if self.engines.furigana == RubySource::Luna {
+            models.readings = "gpt-6-luna".into();
         }
         models
     }
@@ -1020,6 +1398,10 @@ impl Settings {
         }
         if let Some(engines) = patch.engines {
             next.engines = engines.sanitized();
+            // 自分で組んだ組み合わせは覚えておく（モードを試したあとに戻れる）
+            if !Engines::MODES.contains(&next.engines) {
+                next.custom_engines = Some(next.engines);
+            }
         }
         if let Some(content) = patch.rank_content {
             next.rank_content = content;
@@ -1266,6 +1648,40 @@ mod tests {
     }
 
     #[test]
+    fn a_combination_of_my_own_is_remembered_while_i_try_a_mode() {
+        let engines = |engines| SettingsPatch {
+            engines: Some(engines),
+            ..SettingsPatch::default()
+        };
+        let mine = Engines {
+            terms: TermsEngine::Jev,
+            ..Engines::BETA
+        };
+        // モードを選んでも、カスタムにはならない
+        let beta = Settings::default().apply(engines(Engines::BETA)).unwrap();
+        assert_eq!(beta.custom_engines, None);
+        // 自分で組んだ組み合わせは、モードを試したあとも残る（保存しても）
+        let custom = beta.apply(engines(mine)).unwrap();
+        let tried = custom.apply(engines(Engines::LOCAL)).unwrap();
+        assert_eq!(
+            (tried.engines, tried.custom_engines),
+            (Engines::LOCAL, Some(mine))
+        );
+        let saved = serde_json::to_string(&tried).unwrap();
+        let loaded: Settings = serde_json::from_str(&saved).unwrap();
+        assert_eq!(loaded.custom_engines, Some(mine));
+        // 最高精度のほかは、鍵なしで始められる組み合わせ（ベータのコードか、PC の中か、Chrome）
+        assert_eq!(Engines::STANDARD.providers(), [Provider::OpenAi]);
+        for mode in Engines::MODES
+            .into_iter()
+            .filter(|mode| *mode != Engines::STANDARD)
+        {
+            let needs_own_key = |p: &Provider| p.info().relay != Some(crate::secrets::Relay::Beta);
+            assert!(!mode.providers().iter().any(needs_own_key), "{mode:?}");
+        }
+    }
+
+    #[test]
     fn patch_validates_languages_and_account() {
         let s = Settings::default();
         let bad = |patch| s.apply(patch).is_err();
@@ -1402,9 +1818,14 @@ mod tests {
             ruby: Some(ruby),
             emphasis: Some(emphasis),
         };
-        let chrome = phase(T::Chrome, Some(Tr::ChromeTranslator), R::Lindera, E::Terms);
+        let chrome = phase(
+            T::Chrome,
+            Some(Tr::ChromeTranslator),
+            R::Dictionary,
+            E::Terms,
+        );
         let llm = phase(T::GptTranscribe, Some(Tr::Llm), R::Llm, E::Llm);
-        let live = phase(T::GptLiveTranscribe, None, R::Lindera, E::Terms);
+        let live = phase(T::GptLiveTranscribe, None, R::Dictionary, E::Terms);
 
         let recommended = plan_of(Engines::STANDARD);
         assert_eq!((recommended.partial, recommended.finals), (chrome, llm));
@@ -1427,10 +1848,10 @@ mod tests {
         assert_eq!(llm_text.finals.text, Some(T::GptTranscribe));
         assert_eq!(llm_text.finals.translation, Some(Tr::ChromeTranslator));
         assert_eq!(llm_text.finals.emphasis, Some(E::Terms));
-        assert_eq!(llm_text.finals.ruby, Some(R::Lindera));
+        assert_eq!(llm_text.finals.ruby, Some(R::Dictionary));
 
         let llm_words = plan_of(Engines {
-            translation: TranslationEngine::Gpt6Luna,
+            translation: TranslationEngine::Gpt61Terra,
             furigana: R::Llm,
             ..Engines::CHROME
         });
@@ -1441,34 +1862,45 @@ mod tests {
         assert_eq!(llm_words.partial, plan_of(Engines::CHROME).partial);
     }
 
+    /// ふりがなを判定モデルに選ばせるなら、OpenRouter を使う（ベータの中継で足りる）。OpenAI は要らない
     #[test]
-    fn luna_changes_only_the_model_of_translation() {
-        let luna = Settings {
+    fn decider_furigana_uses_openrouter_and_starts_from_the_dictionary() {
+        let chosen = Settings {
             engines: Engines {
-                translation: TranslationEngine::Gpt6Luna,
-                ..Engines::STANDARD
+                furigana: RubySource::Decider,
+                ..Engines::CHROME
             },
             ..Default::default()
         };
-        assert_eq!(
-            luna.plan(),
-            Settings {
-                engines: Engines::STANDARD,
-                ..Default::default()
-            }
-            .plan()
-        );
-        assert_eq!(luna.models_in_use().translate, "gpt-6-luna");
-        assert_eq!(luna.models_in_use().readings, Models::default().readings);
-        assert_eq!(
-            Settings {
-                engines: Engines::STANDARD,
-                ..Default::default()
-            }
-            .models_in_use(),
-            Models::default()
-        );
-        assert!(luna.engines.paid());
+        assert_eq!(chosen.plan().finals.ruby, Some(RubySource::Decider));
+        // 確定の文にも、まず辞書の読みを付ける
+        assert!(chosen.plan().finals.marks());
+        assert_eq!(chosen.engines.providers(), [Provider::OpenRouter]);
+        assert_eq!(Engines::BETA.furigana, RubySource::Decider);
+        assert!(!Engines::BETA.uses(Provider::OpenAi));
+    }
+
+    /// ふりがなを GPT-6 Luna にすると、読みを直すモデルだけが変わる（辞書の名前の読みは `models.readings` のまま）
+    #[test]
+    fn luna_furigana_changes_only_the_model_of_readings() {
+        let luna = Settings {
+            engines: Engines {
+                furigana: RubySource::Luna,
+                ..Engines::CHROME
+            },
+            ..Default::default()
+        };
+        assert_eq!(luna.plan().finals.ruby, Some(RubySource::Luna));
+        assert_eq!(luna.plan().partial.ruby, Some(RubySource::Dictionary));
+        assert_eq!(luna.models_in_use().readings, "gpt-6-luna");
+        assert_eq!(luna.models.readings, Models::default().readings);
+        assert!(luna.engines.uses(Provider::OpenAi));
+        // 直すもとの辞書の読みは日本語だけ
+        let english = Settings {
+            mic_language: "en".into(),
+            ..luna
+        };
+        assert_eq!(english.plan().finals.ruby, None);
     }
 
     #[test]
@@ -1479,25 +1911,212 @@ mod tests {
         assert!(!Engines::CHROME.paid());
         assert!(!plan_of(Engines::OPENAI).uses_chrome());
         assert!(Engines::OPENAI.paid());
-        assert!(plan_of(Engines::LIGHT).uses_chrome());
-        assert!(Engines::LIGHT.uses_openai() && Engines::LIGHT.uses_xai());
         let paid_furigana = Engines {
             furigana: RubySource::Llm,
             ..Engines::CHROME
         };
         assert!(plan_of(paid_furigana).uses_chrome());
         assert!(paid_furigana.paid());
-        assert!(paid_furigana.uses_openai() && !paid_furigana.uses_xai());
+        assert!(paid_furigana.uses(Provider::OpenAi) && !paid_furigana.uses(Provider::Xai));
+    }
+
+    /// 用語と翻訳を分けた作り方（DESIGN.md 9.7）。翻訳が LLM なら、用語の選択は使わない
+    #[test]
+    fn terms_and_translation_are_chosen_apart_unless_the_llm_does_both() {
+        use EmphasisSource as E;
+        use TranslationSource as Tr;
+        let split = Engines {
+            terms: TermsEngine::Decisions,
+            translation: TranslationEngine::QwenMtFlash,
+            ..Engines::CHROME
+        };
+        assert_eq!(split.sanitized(), split);
+        assert!(
+            split.decides_terms() && split.uses(Provider::OpenAi) && split.uses(Provider::Qwen)
+        );
+        assert!(!split.uses(Provider::Xai));
+        let finals = plan_of(split).finals;
+        assert_eq!(
+            (finals.emphasis, finals.translation),
+            (Some(E::Decisions), Some(Tr::Mt))
+        );
+        // 確かめられなかったときのために、PC の中の一致も付ける
+        assert!(finals.marks() && finals.local_terms());
+        // 途中の字幕は今までどおり
+        assert_eq!(plan_of(split).partial, plan_of(Engines::CHROME).partial);
+
+        // 用語だけ Decisions、翻訳は Chrome
+        let decided = Engines {
+            terms: TermsEngine::Decisions,
+            ..Engines::CHROME
+        };
+        assert!(decided.uses(Provider::OpenAi) && !decided.uses(Provider::Qwen));
+        let finals = plan_of(decided).finals;
+        assert_eq!(
+            (finals.emphasis, finals.translation),
+            (Some(E::Decisions), Some(Tr::ChromeTranslator))
+        );
+
+        // 翻訳だけ Qwen、用語は辞書の一致（OpenAI は使わない）
+        let translated = Engines {
+            translation: TranslationEngine::QwenMtFlash,
+            ..Engines::CHROME
+        };
+        assert!(
+            translated.paid()
+                && translated.uses(Provider::Qwen)
+                && !translated.uses(Provider::OpenAi)
+        );
+        assert_eq!(plan_of(translated).finals.emphasis, Some(E::Terms));
+
+        // LLM が翻訳と同時に判定する
+        let llm = Engines {
+            terms: TermsEngine::Decisions,
+            ..Engines::STANDARD
+        };
+        assert!(!llm.decides_terms());
+        assert_eq!(plan_of(llm), plan_of(Engines::STANDARD));
+    }
+
+    /// Gemini Nano は Chrome のページの中にあるので、途中の字幕が Chrome のときだけ使える。鍵は要らない
+    #[test]
+    fn gemini_nano_judges_terms_only_with_the_chrome_page() {
+        let nano = Engines {
+            terms: TermsEngine::GeminiNano,
+            ..Engines::CHROME
+        };
+        assert_eq!(nano.sanitized(), nano);
+        assert_eq!(plan_of(nano).finals.emphasis, Some(EmphasisSource::Chrome));
+        // 途中の字幕は、今までどおり辞書の一致
+        assert_eq!(plan_of(nano).partial.emphasis, Some(EmphasisSource::Terms));
+        assert!(plan_of(nano).finals.local_terms());
+        assert!(nano.providers().is_empty());
+        let without_chrome = Engines {
+            terms: TermsEngine::GeminiNano,
+            ..Engines::LOCAL
+        };
+        assert_eq!(without_chrome.sanitized().terms, TermsEngine::Dictionary);
+    }
+
+    /// 候補の出し方は日本語だけなので、ほかの言語では Decisions に聞かない
+    #[test]
+    fn decisions_are_asked_only_for_japanese() {
+        let settings = Settings {
+            engines: Engines {
+                terms: TermsEngine::Decisions,
+                ..Engines::CHROME
+            },
+            mic_language: "en".into(),
+            translate_to: vec!["ja".into()],
+            ..Default::default()
+        };
+        assert_eq!(settings.plan().finals.emphasis, None);
+    }
+
+    /// 0.5 までの設定ファイルには用語の選択がない。辞書の一致として読む
+    #[test]
+    fn engines_without_terms_read_as_the_dictionary() {
+        let engines: Engines = serde_json::from_value(json!({
+            "live": "chrome",
+            "transcription": "gptTranscribe",
+            "translation": "gpt61Terra",
+            "furigana": "lindera",
+        }))
+        .unwrap();
+        assert_eq!(engines.terms, TermsEngine::Dictionary);
+        assert_eq!(engines.translation, TranslationEngine::Gpt61Terra);
+    }
+
+    /// 消した「GPT-6 Luna（用語も）」は、ベータの用語と翻訳として読む（0.5 のライトの人）。ほかの工程は変えない
+    #[test]
+    fn luna_reads_as_the_terms_and_translation_of_the_beta() {
+        let engines: Engines = serde_json::from_value(json!({
+            "live": "chrome",
+            "transcription": "grokVoiceTranscribe",
+            "translation": "gpt6Luna",
+            "furigana": "lindera",
+        }))
+        .unwrap();
+        assert_eq!(
+            engines,
+            Engines {
+                transcription: FinalSource::GrokVoiceTranscribe,
+                furigana: RubySource::Dictionary,
+                ..Engines::BETA
+            }
+        );
+        assert!(serde_json::from_value::<Engines>(json!({ "translation": "unknown" })).is_err());
     }
 
     /// Grok の確定は xAI だけを使い、確定の文の出どころとモデルだけが変わる
+    /// 画面と LP の一覧を書き出す（ts-rs の型と同じく、テストで作る）。中身が同じなら触らない
+    #[test]
+    fn export_catalog() {
+        let path = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../frontend/src/generated/catalog.ts"
+        );
+        let catalog = catalog();
+        if std::fs::read_to_string(path).ok().as_deref() != Some(&catalog) {
+            std::fs::write(path, &catalog).unwrap();
+        }
+        // 選択肢を足したら `ALL` にも足す（足し忘れると、画面の一覧に会社が出ない）
+        assert!(catalog.contains("\"haasJa\": null") && catalog.contains("\"jev\": \"typesafe\""));
+    }
+
+    #[test]
+    fn each_step_asks_for_the_key_of_its_company() {
+        // 用語は Jev、翻訳は Hy-MT2、確定は MAI-Transcribe 2（OpenAI は使わない）
+        let mixed = Engines {
+            transcription: FinalSource::MaiTranscribe2,
+            terms: TermsEngine::Jev,
+            translation: TranslationEngine::HyMt2,
+            ..Engines::CHROME
+        };
+        assert_eq!(
+            mixed.providers(),
+            [Provider::OpenRouter, Provider::TypeSafe]
+        );
+        assert_eq!(mixed.judge().unwrap().name, "jev-latest");
+        assert_eq!(
+            mixed.translation.mt().unwrap().name,
+            "tencent/hy-mt2-30b-a3b"
+        );
+        let settings = Settings {
+            engines: mixed,
+            ..Settings::default()
+        };
+        assert_eq!(settings.models_in_use().batch, "microsoft/mai-transcribe-2");
+        // 翻訳が LLM なら、判定モデルは使わない（その会社の鍵も要らない）
+        let llm = Engines {
+            terms: TermsEngine::DrexMax,
+            ..Engines::STANDARD
+        };
+        assert_eq!(llm.providers(), [Provider::OpenAi]);
+        // PC の中の文字起こしは鍵が要らない
+        let local = Engines {
+            transcription: FinalSource::HaasJa,
+            ..Engines::CHROME
+        };
+        assert!(!local.paid());
+        assert_eq!(
+            Settings {
+                engines: local,
+                ..Settings::default()
+            }
+            .models_in_use()
+            .batch,
+            crate::local::HAAS_JA
+        );
+    }
+
     #[test]
     fn grok_uses_xai_for_the_finals() {
         let grok = Engines {
             transcription: FinalSource::GrokVoiceTranscribe,
             ..Engines::CHROME
         };
-        assert!(grok.paid() && grok.uses_xai() && !grok.uses_openai());
+        assert!(grok.paid() && grok.uses(Provider::Xai) && !grok.uses(Provider::OpenAi));
         assert_eq!(grok.sanitized(), grok);
         let settings = Settings {
             engines: grok,

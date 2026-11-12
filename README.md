@@ -6,7 +6,7 @@ Deadlock の配信者向けの OBS オーバーレイ（非公式）。
 - **ランク**: ランクのアイコン・名前・ポイントのゲージ
 - **アイテム説明**: 字幕でアイテム名が出たら、その説明をゲーム内と同じカードで出す
 
-字幕の作り方は 4 つのモードから選べます。まず無料の Chrome のモード（既定）で、キーなしで始められます。API キーかギフトコードを入れると、おすすめのスタンダードに切り替えられます。安いライト（確定の字幕は xAI の Grok、翻訳は OpenAI の GPT-6 Luna）と、OpenAI のモードも API キーかギフトコードで使います。「詳しく選ぶ」から、工程（途中の字幕・確定の文字起こし・翻訳と用語・ふりがな）ごとに作り方を変えることもできます。OpenAI のモード以外は Google Chrome が必要で、字幕を始めると小さな Chrome のウィンドウが開きます。設定はアプリの操作パネルから行います。
+字幕の作り方は 4 つのモードから選べます。まず無料の Chrome のモード（既定）で、キーなしで始められます。ベータ（ベータの間は無料）とローカル（音声を PC から出さない）もキーなしで使えます。最高精度は OpenAI の API キーかギフトコードで使います。「モード」のタブで、工程（途中の字幕・確定の文字起こし・用語・翻訳・ふりがな）ごとに作り方を変えることもできます。途中の字幕を Chrome で作るモード（ローカル以外）は Google Chrome が必要で、字幕を始めると小さな Chrome のウィンドウが開きます。設定はアプリの操作パネルから行います。
 
 サイトは [jimaku.deadlock.jp](https://jimaku.deadlock.jp)。設計は [DESIGN.md](DESIGN.md) を見てください。
 
@@ -30,22 +30,26 @@ macOS 版は Apple の署名と公証を済ませています。Windows 版は�
 
 開発する人のための地図です。理由は [DESIGN.md](DESIGN.md) を見てください（モードは 9.6、おすそ分けは 17.1、LP は 17 章）。
 
-字幕を何で作るかは、工程ごとの選択（設定の `engines`。モードを選ぶとまとめて決まる）と設定から `Settings::plan` が決めます（`crates/core/src/settings.rs`。この表は 4 つのモードの値で、テストに同じ値があります）。工程を 1 つ変えると、確定の欄はその工程の行だけが変わります。
+字幕を何で作るかは、工程ごとの選択（設定の `engines`。モードを選ぶとまとめて決まる）と設定から `Settings::plan` が決めます（`crates/core/src/settings.rs`。操作パネルのモードはベータ・ローカル・Chrome・最高精度（表の「スタンダード」）で、ほかの組み合わせは「モード」のタブで工程ごとに選びます。この表は、鍵の要る組み合わせを含む 3 つの組み合わせ（`Engines::STANDARD` など）の値で、テストに同じ値があります）。工程を 1 つ変えると、確定の欄はその工程の行だけが変わります。
 
-| | スタンダード | ライト | OpenAI | Chrome |
-|---|---|---|---|---|
-| 途中の字幕 | Chrome | Chrome | GPT-Live-Transcribe | Chrome |
-| 途中の翻訳 | Chrome Translator | Chrome Translator | なし | Chrome Translator |
-| 途中のふりがな | Lindera | Lindera | Lindera | Lindera |
-| 途中の強調 | 辞書の一致 | 辞書の一致 | 辞書の一致 | 辞書の一致 |
-| 確定の字幕 | GPT-Transcribe | Grok Voice Transcribe | GPT-Transcribe | Chrome |
-| 確定の翻訳 | GPT-6.1 Terra | GPT-6 Luna | GPT-6.1 Terra | Chrome Translator |
-| 確定のふりがな | GPT-6.1 Terra | Lindera | GPT-6.1 Terra | Lindera |
-| 確定の強調 | GPT-6.1 Terra | GPT-6 Luna | GPT-6.1 Terra | 辞書の一致 |
+| | スタンダード | OpenAI | Chrome |
+|---|---|---|---|
+| 途中の字幕 | Chrome | GPT-Live-Transcribe | Chrome |
+| 途中の翻訳 | Chrome Translator | なし | Chrome Translator |
+| 途中のふりがな | 辞書 | 辞書 | 辞書 |
+| 途中の強調 | 辞書の一致 | 辞書の一致 | 辞書の一致 |
+| 確定の字幕 | GPT-Transcribe | GPT-Transcribe | Chrome |
+| 確定の翻訳 | GPT-6.1 Terra | GPT-6.1 Terra | Chrome Translator |
+| 確定のふりがな | 辞書 + GPT-6.1 Terra | 辞書 + GPT-6.1 Terra | 辞書 |
+| 確定の強調 | GPT-6.1 Terra | GPT-6.1 Terra | 辞書の一致 |
 
-翻訳先がない、翻訳だけを見せる、ふりがなやデッドロックモードを切る、話す言語が日本語でない（Lindera と辞書の一致は日本語だけ）ときは、その項目が「なし」になります。
+翻訳先がない、翻訳だけを見せる、ふりがなやデッドロックモードを切る、話す言語が日本語でない（読みの辞書と用語の一致は日本語だけ）ときは、その項目が「なし」になります。
 
-確定の文字起こしが Grok Voice Transcribe のとき（ライトか、詳しく選んだとき）は xAI の API キーが要ります。作れない組み合わせは `Engines::sanitized` が直します。確定の文字起こしが Chrome なら途中の字幕も Chrome（発話の区切りを Chrome が決める）、Chrome の翻訳は途中の字幕が Chrome のときだけです。翻訳と用語は 1 つの工程です（訳文の名前を用語から作るので）。確定の文には、どちらの経路でも `finish.rs` が工程ごとに用語・ふりがな・翻訳を付け、1 つの字幕にまとめます。
+確定の文字起こしが Grok Voice Transcribe のとき（工程ごとに選んだとき）は xAI の API キーが要ります。
+
+ベータのモード（表にはありません）は、ベータの間、API キーなしで無料で使えます。途中の字幕は Chrome、確定の字幕は Qwen-Audio-3.1-ASR-Flash、用語は Perplexity Decider、翻訳は Hy-MT2、ふりがなは辞書の候補から Perplexity Decider が選び、開発者のサーバーが開発者のキーで中継します（`server/src/beta.ts`。DESIGN.md 17.2）。
+
+用語と翻訳は、表の 4 つのモードでは 1 回の問い合わせ（GPT）か、辞書の一致と Chrome の翻訳です。詳しく選ぶと、2 つを別々に作れます（DESIGN.md 9.7）。用語は、PC の中で出した候補を判定モデルに確かめさせます（`decide.rs`。OpenAI の Decisions API、TypeSafe AI の Jev、OpenRouter の Drex Max・Microsoft Decision 1・Perplexity Decider）。翻訳は、用語を英語名に置き換えた文を Chrome か翻訳専門のモデル（`mt.rs`。Qwen-MT-Flash か OpenRouter の Hy-MT2）に渡します。途中の字幕と確定の文字起こしは、Qwen-Audio-3.1-ASR-Flash も選べます（`stt/qwen.rs`。DESIGN.md 3.4）。確定の文字起こしは、OpenRouter の MAI-Transcribe 2 と、PC の中で動く Haas-ja（`local.rs`。speech.cpp を初回にダウンロードします。DESIGN.md 9.8）も選べます。OpenAI と xAI のほかは、その会社の自分の API キーが要ります（ギフトコードでは使えません）。作れない組み合わせは `Engines::sanitized` が直します。確定の文字起こしが Chrome なら途中の字幕も Chrome（発話の区切りを Chrome が決める）、Chrome の翻訳は途中の字幕が Chrome のときだけです。翻訳を GPT にしたときは、用語も同じ問い合わせで判定します（訳文の名前を用語から作るので）。確定の文には、どちらの経路でも `finish.rs` が工程ごとに用語・ふりがな・翻訳を付け、1 つの字幕にまとめます。
 
 ```mermaid
 flowchart LR
@@ -61,6 +65,8 @@ flowchart LR
   worker["Cloudflare Worker（server/）<br/>おすそ分け"]
   openai["OpenAI"]
   xai["xAI"]
+  qwen["Qwen"]
+  others["OpenRouter<br/>TypeSafe AI"]
   google["Google の音声認識"]
   deadlockapi["deadlock-api"]
   releases["GitHub Releases"]
@@ -76,18 +82,20 @@ flowchart LR
   worker -- "おすそ分けした人のキー" --> xai
   core -- "自分の API キー" --> openai
   core -- "自分の API キー" --> xai
+  core -- "自分の API キー" --> qwen
+  core -- "自分の API キー" --> others
   core -- "ランク、辞書" --> deadlockapi
   shell -- "新しい版を確認" --> releases
   lp -- "ダウンロードのリンク" --> releases
 ```
 
 - 操作パネルは Tauri のウィンドウでも OBS のドックでも同じ画面で、`/api` と `/ws` だけを使います。
-- OpenAI のモード以外では、アプリが専用のプロファイルの Chrome を起動します。音声認識と翻訳は Chrome が行い、ふりがなと辞書の一致は中核の中で Lindera + IPADIC が行います。
+- OpenAI のモード以外では、アプリが専用のプロファイルの Chrome を起動します。音声認識と翻訳は Chrome が行い、ふりがなと辞書の一致は中核の中で行います（vibrato と話し言葉の UniDic）。
 - 自分の API キーがあれば OpenAI（確定の文字起こしを Grok にしたら xAI）へ直接送ります。なければギフトコードで Worker を通します。Worker は会社ごとに同じパスで中継するので、下の図の OpenAI はどちらの経路でも同じです。ギフトコードは、おすそ分けした人がキーを預けた会社（OpenAI、xAI、または両方）に使えます。
 
 ### 声と文字の流れ
 
-図はモードごとの処理の順です（確定の文字起こしが OpenAI か xAI なら上の 2 つ、Chrome なら 3 つ目の経路）。ライトはスタンダードの図と同じ流れで、確定の字幕を xAI の `/stt`、用語と翻訳を GPT-6 Luna で作り、ふりがなは中核の Lindera のままです。黄色は PC の外です。OpenAI とのやりとりは、すべて中核が行います。字幕は `/ws` でオーバーレイと操作パネルに届きます。
+図はモードごとの処理の順です（確定の文字起こしが OpenAI か xAI なら上の 2 つ、Chrome なら 3 つ目の経路）。黄色は PC の外です。OpenAI とのやりとりは、すべて中核が行います。字幕は `/ws` でオーバーレイと操作パネルに届きます。
 
 **`standard`（スタンダード）。** 途中の字幕は Chrome で作ります。発話が終わると、アプリのマイクの声と文字を OpenAI に送ります。Chrome にも同じマイクを渡します（渡せない環境では Chrome の既定のマイクを使い、操作パネルに出します）。
 
@@ -160,6 +168,15 @@ mise run dev
 ```
 
 整形・リント・型チェック・テストは `mise run check` でまとめて実行します。
+
+使っているアプリを動かしたまま、別の場所で起動して試せます。`DEADLOCK_JIMAKU_DATA_DIR`（設定と辞書を置くフォルダ）と `DEADLOCK_JIMAKU_PORT`（ポート）を付けます。フォルダを替えると、API キーも別の名前で持つので、使っているアプリのキーは読みません。
+
+```bash
+pnpm --dir frontend build
+DEADLOCK_JIMAKU_DATA_DIR=/tmp/jimaku-dev DEADLOCK_JIMAKU_PORT=4599 cargo run -p overlays-core --bin overlays-headless
+```
+
+操作パネルは `http://127.0.0.1:4599/` で開きます。
 
 報告や提案に AI を使うときは、[AI の利用について](AI_POLICY.md)を読んでください。
 

@@ -151,6 +151,49 @@ pub async fn gift_status(api: &str, code: &str) -> GiftStatus {
     }
 }
 
+/// ベータのコードをもらえなかった理由
+#[derive(Clone, Debug, PartialEq, Serialize, TS)]
+#[serde(tag = "error", rename_all = "camelCase")]
+#[ts(export)]
+pub enum BetaRefusal {
+    /// ベータの提供が終わった（開発者がキーを入れていない）
+    Closed,
+    /// 同じ所から、今日はもう何度ももらっている
+    TooMany,
+    /// 今日出す分が終わった
+    Full,
+    /// サーバーにつながらない
+    Unreachable { detail: String },
+}
+
+/// ベータのコードを 1 つもらう（DESIGN.md 17.2）。ベータのモードを初めて選んだときに頼む
+pub async fn join_beta(api: &str) -> Result<String, BetaRefusal> {
+    let unreachable = |detail: String| BetaRefusal::Unreachable { detail };
+    let res = crate::http()
+        .post(format!("{api}/beta/codes"))
+        .timeout(TIMEOUT)
+        .send()
+        .await
+        .map_err(|e| unreachable(format!("{e:#}")))?;
+    #[derive(Deserialize)]
+    struct Answer {
+        code: Option<String>,
+        error: Option<String>,
+    }
+    let status = res.status();
+    let answer: Answer = res
+        .json()
+        .await
+        .map_err(|e| unreachable(format!("{status}: {e:#}")))?;
+    match (answer.code, answer.error.as_deref()) {
+        (Some(code), _) if status.is_success() => Ok(code),
+        (_, Some("closed")) => Err(BetaRefusal::Closed),
+        (_, Some("tooMany")) => Err(BetaRefusal::TooMany),
+        (_, Some("full")) => Err(BetaRefusal::Full),
+        _ => Err(unreachable(status.to_string())),
+    }
+}
+
 /// 動いていない字幕を始めるときに、ギフトコードがまだ使えるか確かめる。使えれば中継する会社
 pub async fn check_gift(api: &str, code: &str) -> Result<Vec<Provider>, TranscriptionError> {
     match gift_status(api, code).await {
@@ -357,6 +400,64 @@ pub async fn update(api: &str, token: &str, id: &str, body: Value) -> Result<(),
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Worker に、ベータのコードで、アプリの部品が実際に送る要求を通す。手元の Worker（`wrangler dev`。偽の開発者のキー）なら、
+    /// 要求の形が Worker の検査を通れば外に送り、偽のキーなので「外の不調」（502）が返る（400 なら形が合っていない）。
+    /// 本番（`https://api.jimaku.deadlock.jp/v1`）なら、文字起こしと訳が返る:
+    /// `BETA_TEST_API=http://127.0.0.1:8799/v1 cargo test -p overlays-core beta_requests -- --ignored --nocapture`
+    #[tokio::test]
+    #[ignore = "needs a Worker"]
+    async fn beta_requests_pass_the_worker() {
+        use crate::enrich::Span;
+        use crate::settings::Engines;
+        use crate::stt::{BatchRequest, Hints, Transcriber};
+        use crate::usage::Meter;
+        use std::sync::Arc;
+
+        let api = std::env::var("BETA_TEST_API").unwrap();
+        let code = join_beta(&api).await.unwrap();
+        let providers = check_gift(&api, &code).await.unwrap();
+        assert_eq!(providers, [Provider::Qwen, Provider::OpenRouter]);
+        let gift = |provider| Access::gift(provider, code.clone(), &api);
+        let meter = Arc::new(Meter::new(
+            std::env::temp_dir().join("overlays-beta-test.json"),
+        ));
+
+        let wav = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../experiments/data/sample01.wav"
+        );
+        let request = BatchRequest {
+            transcriber: &Transcriber::Api(gift(Provider::Qwen)),
+            model: "qwen-audio-3.1-asr-flash",
+            hints: &Hints {
+                language: "ja".into(),
+                prompt: String::new(),
+                keywords: vec!["ヘイズ".into()],
+            },
+            wav: std::fs::read(wav).unwrap(),
+            seconds: 21.8,
+            meter: &meter,
+        };
+        match crate::stt::transcribe(crate::http(), request).await {
+            Ok(text) => println!("transcription: {text}"),
+            // 偽のキーが外で断られ、Worker は「外の不調」（502）として返す
+            Err(e) => assert!(format!("{e:#}").contains("upstream"), "{e:#}"),
+        }
+
+        let mt = Engines::BETA.translation.mt().unwrap();
+        let translator = crate::mt::Translator::new(
+            gift(mt.provider),
+            mt.name,
+            "ja".into(),
+            vec!["en".into()],
+            meter.clone(),
+        );
+        let spans = [Span::Text("強い".into())];
+        // 翻訳の失敗は、その文の訳を諦めるだけ（エラーにならず、訳が空になる）。Worker が 502 を返したことは、Worker の記録で見る
+        let translated = translator.translate(crate::http(), &spans, None).await;
+        println!("translation: {:?}", translated.unwrap());
+    }
 
     #[test]
     fn a_gift_at_its_daily_limit_stays_valid() {

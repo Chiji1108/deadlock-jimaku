@@ -34,7 +34,7 @@
   <Card.Header>
     <Card.Title>料金（概算）</Card.Title>
     <Card.Description>
-      送った音声の長さと使ったトークン数に、OpenAI と xAI の単価を掛けた目安です。正確な金額は
+      送った音声の長さと使ったトークン数に、それぞれの会社の単価を掛けた目安です。正確な金額は
       <a class="underline" href="https://platform.openai.com/usage" target="_blank" rel="noreferrer"
         >OpenAI</a
       >
@@ -74,7 +74,7 @@
     </div>
     {#if giftPaid}
       <p class="mt-4 text-xs text-muted-foreground">
-        ギフトコードで使っているので、{giftPaid} の料金はおすそ分けしてくれた人に請求されます
+        コードで使っているので、{giftPaid} の料金はあなたには請求されません（ギフトコードなら、おすそ分けしてくれた人に請求されます。ベータのコードなら、ベータの間は無料です）
       </p>
     {/if}
     {#if unpriced}

@@ -24,6 +24,7 @@
   import TextStyleFields from "../parts/TextStyleFields.svelte";
   import { SUBTITLE_SIZE } from "../../lib/overlay-size";
   import { overlayUrl, panel } from "../panel.svelte";
+  import { paidLive } from "../../lib/engines";
   import { translationOnly } from "../../lib/subtitle-lines";
 
   const ALIGNS: { value: Align; label: string; icon: typeof AlignStartIcon }[] = [
@@ -221,7 +222,7 @@
               {#if noTargets}
                 翻訳先がないときは、話した言葉を出します
               {:else}
-                オフにすると翻訳だけを出します。{#if s.engines.live === "gptLiveTranscribe" || s.engines.furigana === "llm"}途中の字幕とふりがなの料金がかかりません。{/if}字幕は翻訳が終わってから出ます。切り替えると、字幕は始め直します
+                オフにすると翻訳だけを出します。{#if paidLive(s.engines) || s.engines.furigana === "llm"}途中の字幕とふりがなの料金がかかりません。{/if}字幕は翻訳が終わってから出ます。切り替えると、字幕は始め直します
               {/if}
             </Field.Description>
           </Field.Content>

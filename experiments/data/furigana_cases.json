@@ -1,0 +1,2262 @@
+[
+ {
+  "text": "さっき行った店より、こっちの方がいいね",
+  "words": [
+   {
+    "text": "さっき",
+    "reading": null
+   },
+   {
+    "text": "行っ",
+    "reading": "おこなっ",
+    "accept": [
+     "いっ"
+    ]
+   },
+   {
+    "text": "た",
+    "reading": null
+   },
+   {
+    "text": "店",
+    "reading": "みせ"
+   },
+   {
+    "text": "より",
+    "reading": null
+   },
+   {
+    "text": "、",
+    "reading": null
+   },
+   {
+    "text": "こっち",
+    "reading": null
+   },
+   {
+    "text": "の",
+    "reading": null
+   },
+   {
+    "text": "方",
+    "reading": "ほう"
+   },
+   {
+    "text": "が",
+    "reading": null
+   },
+   {
+    "text": "いい",
+    "reading": null
+   },
+   {
+    "text": "ね",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "今日は辛い試合が続いてるな",
+  "words": [
+   {
+    "text": "今日",
+    "reading": "きょう"
+   },
+   {
+    "text": "は",
+    "reading": null
+   },
+   {
+    "text": "辛い",
+    "reading": "つらい"
+   },
+   {
+    "text": "試合",
+    "reading": "しあい"
+   },
+   {
+    "text": "が",
+    "reading": null
+   },
+   {
+    "text": "続い",
+    "reading": "つづい"
+   },
+   {
+    "text": "てる",
+    "reading": null
+   },
+   {
+    "text": "な",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "このカレーめっちゃ辛いんだけど",
+  "words": [
+   {
+    "text": "この",
+    "reading": null
+   },
+   {
+    "text": "カレー",
+    "reading": null
+   },
+   {
+    "text": "めっちゃ",
+    "reading": null
+   },
+   {
+    "text": "辛い",
+    "reading": "つらい",
+    "accept": [
+     "からい"
+    ]
+   },
+   {
+    "text": "ん",
+    "reading": null
+   },
+   {
+    "text": "だ",
+    "reading": null
+   },
+   {
+    "text": "けど",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "このヒーロー今めっちゃ人気だよね",
+  "words": [
+   {
+    "text": "この",
+    "reading": null
+   },
+   {
+    "text": "ヒーロー",
+    "reading": null
+   },
+   {
+    "text": "今",
+    "reading": "いま"
+   },
+   {
+    "text": "めっちゃ",
+    "reading": null
+   },
+   {
+    "text": "人気",
+    "reading": "にんき"
+   },
+   {
+    "text": "だ",
+    "reading": null
+   },
+   {
+    "text": "よ",
+    "reading": null
+   },
+   {
+    "text": "ね",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "人気のない場所で待ち伏せしよう",
+  "words": [
+   {
+    "text": "人気",
+    "reading": "にんき",
+    "accept": [
+     "ひとけ"
+    ]
+   },
+   {
+    "text": "の",
+    "reading": null
+   },
+   {
+    "text": "ない",
+    "reading": null
+   },
+   {
+    "text": "場所",
+    "reading": "ばしょ"
+   },
+   {
+    "text": "で",
+    "reading": null
+   },
+   {
+    "text": "待ち伏せ",
+    "reading": "まちぶせ"
+   },
+   {
+    "text": "しよ",
+    "reading": null
+   },
+   {
+    "text": "う",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "エイムが上手い人には勝てないわ",
+  "words": [
+   {
+    "text": "エイム",
+    "reading": null
+   },
+   {
+    "text": "が",
+    "reading": null
+   },
+   {
+    "text": "上手い",
+    "reading": "うまい"
+   },
+   {
+    "text": "人",
+    "reading": "ひと"
+   },
+   {
+    "text": "に",
+    "reading": null
+   },
+   {
+    "text": "は",
+    "reading": null
+   },
+   {
+    "text": "勝て",
+    "reading": "かて"
+   },
+   {
+    "text": "ない",
+    "reading": null
+   },
+   {
+    "text": "わ",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "絵が上手だねって言われた",
+  "words": [
+   {
+    "text": "絵",
+    "reading": "え"
+   },
+   {
+    "text": "が",
+    "reading": null
+   },
+   {
+    "text": "上手",
+    "reading": "じょうず"
+   },
+   {
+    "text": "だ",
+    "reading": null
+   },
+   {
+    "text": "ね",
+    "reading": null
+   },
+   {
+    "text": "って",
+    "reading": null
+   },
+   {
+    "text": "言わ",
+    "reading": "いわ"
+   },
+   {
+    "text": "れ",
+    "reading": null
+   },
+   {
+    "text": "た",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "下手に動くとやられるぞ",
+  "words": [
+   {
+    "text": "下手",
+    "reading": "へた"
+   },
+   {
+    "text": "に",
+    "reading": null
+   },
+   {
+    "text": "動く",
+    "reading": "うごく"
+   },
+   {
+    "text": "と",
+    "reading": null
+   },
+   {
+    "text": "やられる",
+    "reading": null
+   },
+   {
+    "text": "ぞ",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "俺は射撃が下手なんだよな",
+  "words": [
+   {
+    "text": "俺",
+    "reading": "おれ"
+   },
+   {
+    "text": "は",
+    "reading": null
+   },
+   {
+    "text": "射撃",
+    "reading": "しゃげき"
+   },
+   {
+    "text": "が",
+    "reading": null
+   },
+   {
+    "text": "下手",
+    "reading": "へた"
+   },
+   {
+    "text": "な",
+    "reading": null
+   },
+   {
+    "text": "ん",
+    "reading": null
+   },
+   {
+    "text": "だ",
+    "reading": null
+   },
+   {
+    "text": "よ",
+    "reading": null
+   },
+   {
+    "text": "な",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "敵が何人いるか見てくれる？",
+  "words": [
+   {
+    "text": "敵",
+    "reading": "てき"
+   },
+   {
+    "text": "が",
+    "reading": null
+   },
+   {
+    "text": "何",
+    "reading": "なん"
+   },
+   {
+    "text": "人",
+    "reading": "にん"
+   },
+   {
+    "text": "いるか",
+    "reading": null
+   },
+   {
+    "text": "見",
+    "reading": "み"
+   },
+   {
+    "text": "て",
+    "reading": null
+   },
+   {
+    "text": "くれる",
+    "reading": null
+   },
+   {
+    "text": "？",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "何で今そこに行ったの",
+  "words": [
+   {
+    "text": "何で",
+    "reading": "なんで"
+   },
+   {
+    "text": "今",
+    "reading": "いま"
+   },
+   {
+    "text": "そこ",
+    "reading": null
+   },
+   {
+    "text": "に",
+    "reading": null
+   },
+   {
+    "text": "行っ",
+    "reading": "いっ"
+   },
+   {
+    "text": "た",
+    "reading": null
+   },
+   {
+    "text": "の",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "一日中ランク回してた",
+  "words": [
+   {
+    "text": "一",
+    "reading": "いち"
+   },
+   {
+    "text": "日",
+    "reading": "にち"
+   },
+   {
+    "text": "中",
+    "reading": "ちゅう",
+    "accept": [
+     "じゅう"
+    ]
+   },
+   {
+    "text": "ランク",
+    "reading": null
+   },
+   {
+    "text": "回し",
+    "reading": "まわし"
+   },
+   {
+    "text": "て",
+    "reading": null
+   },
+   {
+    "text": "た",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "来月の一日にアプデが来るらしい",
+  "words": [
+   {
+    "text": "来月",
+    "reading": "らいげつ"
+   },
+   {
+    "text": "の",
+    "reading": null
+   },
+   {
+    "text": "一",
+    "reading": "いち",
+    "accept": [
+     "つい"
+    ]
+   },
+   {
+    "text": "日",
+    "reading": "にち",
+    "accept": [
+     "たち"
+    ]
+   },
+   {
+    "text": "に",
+    "reading": null
+   },
+   {
+    "text": "アプデ",
+    "reading": null
+   },
+   {
+    "text": "が",
+    "reading": null
+   },
+   {
+    "text": "来る",
+    "reading": "くる"
+   },
+   {
+    "text": "らしい",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "今戦闘の最中だから待って",
+  "words": [
+   {
+    "text": "今",
+    "reading": "こん",
+    "accept": [
+     "いま"
+    ]
+   },
+   {
+    "text": "戦闘",
+    "reading": "せんとう"
+   },
+   {
+    "text": "の",
+    "reading": null
+   },
+   {
+    "text": "最中",
+    "reading": "さいちゅう"
+   },
+   {
+    "text": "だ",
+    "reading": null
+   },
+   {
+    "text": "から",
+    "reading": null
+   },
+   {
+    "text": "待っ",
+    "reading": "まっ"
+   },
+   {
+    "text": "て",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "もうやめたい、止めてくれ",
+  "words": [
+   {
+    "text": "もう",
+    "reading": null
+   },
+   {
+    "text": "やめ",
+    "reading": null
+   },
+   {
+    "text": "たい",
+    "reading": null
+   },
+   {
+    "text": "、",
+    "reading": null
+   },
+   {
+    "text": "止め",
+    "reading": "とめ",
+    "accept": [
+     "とめ",
+     "やめ"
+    ]
+   },
+   {
+    "text": "て",
+    "reading": null
+   },
+   {
+    "text": "くれ",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "そこで足を止めるな",
+  "words": [
+   {
+    "text": "そこで",
+    "reading": null
+   },
+   {
+    "text": "足",
+    "reading": "あし"
+   },
+   {
+    "text": "を",
+    "reading": null
+   },
+   {
+    "text": "止める",
+    "reading": "とめる"
+   },
+   {
+    "text": "な",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "後ろから来てる、気をつけて",
+  "words": [
+   {
+    "text": "後ろ",
+    "reading": "うしろ"
+   },
+   {
+    "text": "から",
+    "reading": null
+   },
+   {
+    "text": "来",
+    "reading": "き"
+   },
+   {
+    "text": "てる",
+    "reading": null
+   },
+   {
+    "text": "、",
+    "reading": null
+   },
+   {
+    "text": "気",
+    "reading": "き"
+   },
+   {
+    "text": "を",
+    "reading": null
+   },
+   {
+    "text": "つけ",
+    "reading": null
+   },
+   {
+    "text": "て",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "後で動画を見返そう",
+  "words": [
+   {
+    "text": "後で",
+    "reading": "あとで"
+   },
+   {
+    "text": "動画",
+    "reading": "どうが"
+   },
+   {
+    "text": "を",
+    "reading": null
+   },
+   {
+    "text": "見返そ",
+    "reading": "みかえそ"
+   },
+   {
+    "text": "う",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "その間にタワーを折ろう",
+  "words": [
+   {
+    "text": "その間",
+    "reading": "そのかん",
+    "accept": [
+     "そのかん",
+     "そのあいだ"
+    ]
+   },
+   {
+    "text": "に",
+    "reading": null
+   },
+   {
+    "text": "タワー",
+    "reading": null
+   },
+   {
+    "text": "を",
+    "reading": null
+   },
+   {
+    "text": "折ろ",
+    "reading": "おろ"
+   },
+   {
+    "text": "う",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "間に合った、危なかった",
+  "words": [
+   {
+    "text": "間に合っ",
+    "reading": "まにあっ"
+   },
+   {
+    "text": "た",
+    "reading": null
+   },
+   {
+    "text": "、",
+    "reading": null
+   },
+   {
+    "text": "危なかっ",
+    "reading": "あぶなかっ"
+   },
+   {
+    "text": "た",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "この中に敵が隠れてる",
+  "words": [
+   {
+    "text": "この",
+    "reading": null
+   },
+   {
+    "text": "中",
+    "reading": "なか"
+   },
+   {
+    "text": "に",
+    "reading": null
+   },
+   {
+    "text": "敵",
+    "reading": "てき"
+   },
+   {
+    "text": "が",
+    "reading": null
+   },
+   {
+    "text": "隠れ",
+    "reading": "かくれ"
+   },
+   {
+    "text": "てる",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "今集中してるから話しかけないで",
+  "words": [
+   {
+    "text": "今",
+    "reading": "こん",
+    "accept": [
+     "いま"
+    ]
+   },
+   {
+    "text": "集中",
+    "reading": "しゅうちゅう"
+   },
+   {
+    "text": "し",
+    "reading": null
+   },
+   {
+    "text": "てる",
+    "reading": null
+   },
+   {
+    "text": "から",
+    "reading": null
+   },
+   {
+    "text": "話しかけ",
+    "reading": "はなしかけ"
+   },
+   {
+    "text": "ない",
+    "reading": null
+   },
+   {
+    "text": "で",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "世界中の人が見てるんだよ",
+  "words": [
+   {
+    "text": "世界中",
+    "reading": "せかいじゅう"
+   },
+   {
+    "text": "の",
+    "reading": null
+   },
+   {
+    "text": "人",
+    "reading": "ひと"
+   },
+   {
+    "text": "が",
+    "reading": null
+   },
+   {
+    "text": "見",
+    "reading": "み"
+   },
+   {
+    "text": "てる",
+    "reading": null
+   },
+   {
+    "text": "ん",
+    "reading": null
+   },
+   {
+    "text": "だ",
+    "reading": null
+   },
+   {
+    "text": "よ",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "一人で三人倒したのは凄い",
+  "words": [
+   {
+    "text": "一",
+    "reading": "いち",
+    "accept": [
+     "ひと"
+    ]
+   },
+   {
+    "text": "人",
+    "reading": "にん",
+    "accept": [
+     "り"
+    ]
+   },
+   {
+    "text": "で",
+    "reading": null
+   },
+   {
+    "text": "三",
+    "reading": "さん"
+   },
+   {
+    "text": "人",
+    "reading": "にん"
+   },
+   {
+    "text": "倒し",
+    "reading": "たおし"
+   },
+   {
+    "text": "た",
+    "reading": null
+   },
+   {
+    "text": "の",
+    "reading": null
+   },
+   {
+    "text": "は",
+    "reading": null
+   },
+   {
+    "text": "凄い",
+    "reading": "すごい"
+   }
+  ]
+ },
+ {
+  "text": "二人で裏から回ろう",
+  "words": [
+   {
+    "text": "二",
+    "reading": "に",
+    "accept": [
+     "ふた"
+    ]
+   },
+   {
+    "text": "人",
+    "reading": "にん",
+    "accept": [
+     "り"
+    ]
+   },
+   {
+    "text": "で",
+    "reading": null
+   },
+   {
+    "text": "裏",
+    "reading": "うら"
+   },
+   {
+    "text": "から",
+    "reading": null
+   },
+   {
+    "text": "回ろ",
+    "reading": "まわろ"
+   },
+   {
+    "text": "う",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "このスキルは来週上方修正されるらしい",
+  "words": [
+   {
+    "text": "この",
+    "reading": null
+   },
+   {
+    "text": "スキル",
+    "reading": null
+   },
+   {
+    "text": "は",
+    "reading": null
+   },
+   {
+    "text": "来週",
+    "reading": "らいしゅう"
+   },
+   {
+    "text": "上方",
+    "reading": "かみがた",
+    "accept": [
+     "じょうほう"
+    ]
+   },
+   {
+    "text": "修正",
+    "reading": "しゅうせい"
+   },
+   {
+    "text": "さ",
+    "reading": null
+   },
+   {
+    "text": "れる",
+    "reading": null
+   },
+   {
+    "text": "らしい",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "下方修正されてから弱くなった",
+  "words": [
+   {
+    "text": "下方",
+    "reading": "かほう"
+   },
+   {
+    "text": "修正",
+    "reading": "しゅうせい"
+   },
+   {
+    "text": "さ",
+    "reading": null
+   },
+   {
+    "text": "れ",
+    "reading": null
+   },
+   {
+    "text": "て",
+    "reading": null
+   },
+   {
+    "text": "から",
+    "reading": null
+   },
+   {
+    "text": "弱く",
+    "reading": "よわく"
+   },
+   {
+    "text": "なっ",
+    "reading": null
+   },
+   {
+    "text": "た",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "弾が切れた、リロードする",
+  "words": [
+   {
+    "text": "弾",
+    "reading": "たま"
+   },
+   {
+    "text": "が",
+    "reading": null
+   },
+   {
+    "text": "切れ",
+    "reading": "きれ"
+   },
+   {
+    "text": "た",
+    "reading": null
+   },
+   {
+    "text": "、",
+    "reading": null
+   },
+   {
+    "text": "リロード",
+    "reading": null
+   },
+   {
+    "text": "する",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "金が足りないからまだ買えない",
+  "words": [
+   {
+    "text": "金",
+    "reading": "きむ",
+    "accept": [
+     "かね"
+    ]
+   },
+   {
+    "text": "が",
+    "reading": null
+   },
+   {
+    "text": "足り",
+    "reading": "たり"
+   },
+   {
+    "text": "ない",
+    "reading": null
+   },
+   {
+    "text": "から",
+    "reading": null
+   },
+   {
+    "text": "まだ",
+    "reading": null
+   },
+   {
+    "text": "買え",
+    "reading": "かえ"
+   },
+   {
+    "text": "ない",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "今日の大会は日本のチームが出るよ",
+  "words": [
+   {
+    "text": "今日",
+    "reading": "きょう"
+   },
+   {
+    "text": "の",
+    "reading": null
+   },
+   {
+    "text": "大会",
+    "reading": "たいかい"
+   },
+   {
+    "text": "は",
+    "reading": null
+   },
+   {
+    "text": "日本",
+    "reading": "にっぽん",
+    "accept": [
+     "にっぽん",
+     "にほん"
+    ]
+   },
+   {
+    "text": "の",
+    "reading": null
+   },
+   {
+    "text": "チーム",
+    "reading": null
+   },
+   {
+    "text": "が",
+    "reading": null
+   },
+   {
+    "text": "出る",
+    "reading": "でる"
+   },
+   {
+    "text": "よ",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "明日も配信するから来てね",
+  "words": [
+   {
+    "text": "明日",
+    "reading": "あした",
+    "accept": [
+     "あした",
+     "あす"
+    ]
+   },
+   {
+    "text": "も",
+    "reading": null
+   },
+   {
+    "text": "配信",
+    "reading": "はいしん"
+   },
+   {
+    "text": "する",
+    "reading": null
+   },
+   {
+    "text": "から",
+    "reading": null
+   },
+   {
+    "text": "来",
+    "reading": "き"
+   },
+   {
+    "text": "て",
+    "reading": null
+   },
+   {
+    "text": "ね",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "昨日は全然勝てなかった",
+  "words": [
+   {
+    "text": "昨日",
+    "reading": "きのう"
+   },
+   {
+    "text": "は",
+    "reading": null
+   },
+   {
+    "text": "全然",
+    "reading": "ぜんぜん"
+   },
+   {
+    "text": "勝て",
+    "reading": "かて"
+   },
+   {
+    "text": "なかっ",
+    "reading": null
+   },
+   {
+    "text": "た",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "他の人はどう思う？",
+  "words": [
+   {
+    "text": "他",
+    "reading": "た",
+    "accept": [
+     "ほか"
+    ]
+   },
+   {
+    "text": "の",
+    "reading": null
+   },
+   {
+    "text": "人",
+    "reading": "ひと"
+   },
+   {
+    "text": "は",
+    "reading": null
+   },
+   {
+    "text": "どう",
+    "reading": null
+   },
+   {
+    "text": "思う",
+    "reading": "おもう"
+   },
+   {
+    "text": "？",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "その他にも強いアイテムがある",
+  "words": [
+   {
+    "text": "その他",
+    "reading": "そのた",
+    "accept": [
+     "そのた",
+     "そのほか"
+    ]
+   },
+   {
+    "text": "に",
+    "reading": null
+   },
+   {
+    "text": "も",
+    "reading": null
+   },
+   {
+    "text": "強い",
+    "reading": "つよい"
+   },
+   {
+    "text": "アイテム",
+    "reading": null
+   },
+   {
+    "text": "が",
+    "reading": null
+   },
+   {
+    "text": "ある",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "相手の体力が少ない、今だ",
+  "words": [
+   {
+    "text": "相手",
+    "reading": "あいて"
+   },
+   {
+    "text": "の",
+    "reading": null
+   },
+   {
+    "text": "体力",
+    "reading": "たいりょく"
+   },
+   {
+    "text": "が",
+    "reading": null
+   },
+   {
+    "text": "少ない",
+    "reading": "すくない"
+   },
+   {
+    "text": "、",
+    "reading": null
+   },
+   {
+    "text": "今",
+    "reading": "いま"
+   },
+   {
+    "text": "だ",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "角に隠れて敵を待とう",
+  "words": [
+   {
+    "text": "角",
+    "reading": "かく",
+    "accept": [
+     "かど"
+    ]
+   },
+   {
+    "text": "に",
+    "reading": null
+   },
+   {
+    "text": "隠れ",
+    "reading": "かくれ"
+   },
+   {
+    "text": "て",
+    "reading": null
+   },
+   {
+    "text": "敵",
+    "reading": "てき"
+   },
+   {
+    "text": "を",
+    "reading": null
+   },
+   {
+    "text": "待と",
+    "reading": "まと"
+   },
+   {
+    "text": "う",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "この先に敵の拠点がある",
+  "words": [
+   {
+    "text": "この",
+    "reading": null
+   },
+   {
+    "text": "先",
+    "reading": "さき"
+   },
+   {
+    "text": "に",
+    "reading": null
+   },
+   {
+    "text": "敵",
+    "reading": "てき"
+   },
+   {
+    "text": "の",
+    "reading": null
+   },
+   {
+    "text": "拠点",
+    "reading": "きょてん"
+   },
+   {
+    "text": "が",
+    "reading": null
+   },
+   {
+    "text": "ある",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "先に行ってて、すぐ追いつく",
+  "words": [
+   {
+    "text": "先",
+    "reading": "さき"
+   },
+   {
+    "text": "に",
+    "reading": null
+   },
+   {
+    "text": "行っ",
+    "reading": "いっ"
+   },
+   {
+    "text": "て",
+    "reading": null
+   },
+   {
+    "text": "て",
+    "reading": null
+   },
+   {
+    "text": "、",
+    "reading": null
+   },
+   {
+    "text": "すぐ",
+    "reading": null
+   },
+   {
+    "text": "追いつく",
+    "reading": "おいつく"
+   }
+  ]
+ },
+ {
+  "text": "敵の攻撃を避けてから撃つ",
+  "words": [
+   {
+    "text": "敵",
+    "reading": "てき"
+   },
+   {
+    "text": "の",
+    "reading": null
+   },
+   {
+    "text": "攻撃",
+    "reading": "こうげき"
+   },
+   {
+    "text": "を",
+    "reading": null
+   },
+   {
+    "text": "避け",
+    "reading": "さけ",
+    "accept": [
+     "さけ",
+     "よけ"
+    ]
+   },
+   {
+    "text": "て",
+    "reading": null
+   },
+   {
+    "text": "から",
+    "reading": null
+   },
+   {
+    "text": "撃つ",
+    "reading": "うつ"
+   }
+  ]
+ },
+ {
+  "text": "あの人は私を避けてる気がする",
+  "words": [
+   {
+    "text": "あの",
+    "reading": null
+   },
+   {
+    "text": "人",
+    "reading": "ひと"
+   },
+   {
+    "text": "は",
+    "reading": null
+   },
+   {
+    "text": "私",
+    "reading": "わたし"
+   },
+   {
+    "text": "を",
+    "reading": null
+   },
+   {
+    "text": "避け",
+    "reading": "さけ"
+   },
+   {
+    "text": "てる",
+    "reading": null
+   },
+   {
+    "text": "気",
+    "reading": "き"
+   },
+   {
+    "text": "が",
+    "reading": null
+   },
+   {
+    "text": "する",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "味方が生き返るまで耐えよう",
+  "words": [
+   {
+    "text": "味方",
+    "reading": "みかた"
+   },
+   {
+    "text": "が",
+    "reading": null
+   },
+   {
+    "text": "生き返る",
+    "reading": "いきかえる"
+   },
+   {
+    "text": "まで",
+    "reading": null
+   },
+   {
+    "text": "耐えよ",
+    "reading": "たえよ"
+   },
+   {
+    "text": "う",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "このゲームは難しいけど面白い",
+  "words": [
+   {
+    "text": "この",
+    "reading": null
+   },
+   {
+    "text": "ゲーム",
+    "reading": null
+   },
+   {
+    "text": "は",
+    "reading": null
+   },
+   {
+    "text": "難しい",
+    "reading": "むずかしい"
+   },
+   {
+    "text": "けど",
+    "reading": null
+   },
+   {
+    "text": "面白い",
+    "reading": "おもしろい"
+   }
+  ]
+ },
+ {
+  "text": "大分慣れてきた気がする",
+  "words": [
+   {
+    "text": "大分",
+    "reading": "だいぶ"
+   },
+   {
+    "text": "慣れ",
+    "reading": "なれ"
+   },
+   {
+    "text": "て",
+    "reading": null
+   },
+   {
+    "text": "き",
+    "reading": null
+   },
+   {
+    "text": "た",
+    "reading": null
+   },
+   {
+    "text": "気",
+    "reading": "き"
+   },
+   {
+    "text": "が",
+    "reading": null
+   },
+   {
+    "text": "する",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "流石にそれは無理でしょ",
+  "words": [
+   {
+    "text": "流石",
+    "reading": "さすが"
+   },
+   {
+    "text": "に",
+    "reading": null
+   },
+   {
+    "text": "それ",
+    "reading": null
+   },
+   {
+    "text": "は",
+    "reading": null
+   },
+   {
+    "text": "無理",
+    "reading": "むり"
+   },
+   {
+    "text": "でしょ",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "丁度いいタイミングでウルトが溜まった",
+  "words": [
+   {
+    "text": "丁度",
+    "reading": "ちょうど"
+   },
+   {
+    "text": "いい",
+    "reading": null
+   },
+   {
+    "text": "タイミング",
+    "reading": null
+   },
+   {
+    "text": "で",
+    "reading": null
+   },
+   {
+    "text": "ウルト",
+    "reading": null
+   },
+   {
+    "text": "が",
+    "reading": null
+   },
+   {
+    "text": "溜まっ",
+    "reading": "たまっ"
+   },
+   {
+    "text": "た",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "一旦下がって回復しよう",
+  "words": [
+   {
+    "text": "一旦",
+    "reading": "いったん"
+   },
+   {
+    "text": "下がっ",
+    "reading": "さがっ"
+   },
+   {
+    "text": "て",
+    "reading": null
+   },
+   {
+    "text": "回復",
+    "reading": "かいふく"
+   },
+   {
+    "text": "しよ",
+    "reading": null
+   },
+   {
+    "text": "う",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "敵を一発で倒せる火力がある",
+  "words": [
+   {
+    "text": "敵",
+    "reading": "てき"
+   },
+   {
+    "text": "を",
+    "reading": null
+   },
+   {
+    "text": "一",
+    "reading": "いち",
+    "accept": [
+     "いっ"
+    ]
+   },
+   {
+    "text": "発",
+    "reading": "はつ",
+    "accept": [
+     "ぱつ"
+    ]
+   },
+   {
+    "text": "で",
+    "reading": null
+   },
+   {
+    "text": "倒せる",
+    "reading": "たおせる"
+   },
+   {
+    "text": "火力",
+    "reading": "かりょく"
+   },
+   {
+    "text": "が",
+    "reading": null
+   },
+   {
+    "text": "ある",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "序盤は耐えて、終盤で勝負しよう",
+  "words": [
+   {
+    "text": "序盤",
+    "reading": "じょばん"
+   },
+   {
+    "text": "は",
+    "reading": null
+   },
+   {
+    "text": "耐え",
+    "reading": "たえ"
+   },
+   {
+    "text": "て",
+    "reading": null
+   },
+   {
+    "text": "、",
+    "reading": null
+   },
+   {
+    "text": "終盤",
+    "reading": "しゅうばん"
+   },
+   {
+    "text": "で",
+    "reading": null
+   },
+   {
+    "text": "勝負",
+    "reading": "しょうぶ"
+   },
+   {
+    "text": "しよ",
+    "reading": null
+   },
+   {
+    "text": "う",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "床に罠が置いてあるから気をつけて",
+  "words": [
+   {
+    "text": "床",
+    "reading": "ゆか"
+   },
+   {
+    "text": "に",
+    "reading": null
+   },
+   {
+    "text": "罠",
+    "reading": "わな"
+   },
+   {
+    "text": "が",
+    "reading": null
+   },
+   {
+    "text": "置い",
+    "reading": "おい"
+   },
+   {
+    "text": "て",
+    "reading": null
+   },
+   {
+    "text": "ある",
+    "reading": null
+   },
+   {
+    "text": "から",
+    "reading": null
+   },
+   {
+    "text": "気",
+    "reading": "き"
+   },
+   {
+    "text": "を",
+    "reading": null
+   },
+   {
+    "text": "つけ",
+    "reading": null
+   },
+   {
+    "text": "て",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "上から敵が降ってきた",
+  "words": [
+   {
+    "text": "上",
+    "reading": "うえ"
+   },
+   {
+    "text": "から",
+    "reading": null
+   },
+   {
+    "text": "敵",
+    "reading": "てき"
+   },
+   {
+    "text": "が",
+    "reading": null
+   },
+   {
+    "text": "降っ",
+    "reading": "ふっ"
+   },
+   {
+    "text": "て",
+    "reading": null
+   },
+   {
+    "text": "き",
+    "reading": null
+   },
+   {
+    "text": "た",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "三日ぶりに配信します",
+  "words": [
+   {
+    "text": "三",
+    "reading": "さん",
+    "accept": [
+     "みっ"
+    ]
+   },
+   {
+    "text": "日",
+    "reading": "にち",
+    "accept": [
+     "か"
+    ]
+   },
+   {
+    "text": "ぶり",
+    "reading": null
+   },
+   {
+    "text": "に",
+    "reading": null
+   },
+   {
+    "text": "配信",
+    "reading": "はいしん"
+   },
+   {
+    "text": "し",
+    "reading": null
+   },
+   {
+    "text": "ます",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "最後の一人まで諦めない",
+  "words": [
+   {
+    "text": "最後",
+    "reading": "さいご"
+   },
+   {
+    "text": "の",
+    "reading": null
+   },
+   {
+    "text": "一",
+    "reading": "いち",
+    "accept": [
+     "ひと"
+    ]
+   },
+   {
+    "text": "人",
+    "reading": "にん",
+    "accept": [
+     "り"
+    ]
+   },
+   {
+    "text": "まで",
+    "reading": null
+   },
+   {
+    "text": "諦め",
+    "reading": "あきらめ"
+   },
+   {
+    "text": "ない",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "彼の最期はかっこよかった",
+  "words": [
+   {
+    "text": "彼",
+    "reading": "かれ"
+   },
+   {
+    "text": "の",
+    "reading": null
+   },
+   {
+    "text": "最期",
+    "reading": "さいご"
+   },
+   {
+    "text": "は",
+    "reading": null
+   },
+   {
+    "text": "かっこよかっ",
+    "reading": null
+   },
+   {
+    "text": "た",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "何か食べてからやろうかな",
+  "words": [
+   {
+    "text": "何",
+    "reading": "なに"
+   },
+   {
+    "text": "か",
+    "reading": null
+   },
+   {
+    "text": "食べ",
+    "reading": "たべ"
+   },
+   {
+    "text": "て",
+    "reading": null
+   },
+   {
+    "text": "から",
+    "reading": null
+   },
+   {
+    "text": "やろ",
+    "reading": null
+   },
+   {
+    "text": "う",
+    "reading": null
+   },
+   {
+    "text": "か",
+    "reading": null
+   },
+   {
+    "text": "な",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "外したら負けるから慎重に",
+  "words": [
+   {
+    "text": "外し",
+    "reading": "はずし"
+   },
+   {
+    "text": "たら",
+    "reading": null
+   },
+   {
+    "text": "負ける",
+    "reading": "まける"
+   },
+   {
+    "text": "から",
+    "reading": null
+   },
+   {
+    "text": "慎重",
+    "reading": "しんちょう"
+   },
+   {
+    "text": "に",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "席を外すからちょっと待ってて",
+  "words": [
+   {
+    "text": "席",
+    "reading": "せき"
+   },
+   {
+    "text": "を",
+    "reading": null
+   },
+   {
+    "text": "外す",
+    "reading": "はずす"
+   },
+   {
+    "text": "から",
+    "reading": null
+   },
+   {
+    "text": "ちょっと",
+    "reading": null
+   },
+   {
+    "text": "待っ",
+    "reading": "まっ"
+   },
+   {
+    "text": "て",
+    "reading": null
+   },
+   {
+    "text": "て",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "空いてるレーンに行こう",
+  "words": [
+   {
+    "text": "空い",
+    "reading": "あい"
+   },
+   {
+    "text": "てる",
+    "reading": null
+   },
+   {
+    "text": "レーン",
+    "reading": null
+   },
+   {
+    "text": "に",
+    "reading": null
+   },
+   {
+    "text": "行こ",
+    "reading": "いこ"
+   },
+   {
+    "text": "う",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "お腹空いたから休憩する",
+  "words": [
+   {
+    "text": "お腹",
+    "reading": "おなか"
+   },
+   {
+    "text": "空い",
+    "reading": "あい",
+    "accept": [
+     "すい"
+    ]
+   },
+   {
+    "text": "た",
+    "reading": null
+   },
+   {
+    "text": "から",
+    "reading": null
+   },
+   {
+    "text": "休憩",
+    "reading": "きゅうけい"
+   },
+   {
+    "text": "する",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "今年は大会に出たい",
+  "words": [
+   {
+    "text": "今年",
+    "reading": "ことし"
+   },
+   {
+    "text": "は",
+    "reading": null
+   },
+   {
+    "text": "大会",
+    "reading": "たいかい"
+   },
+   {
+    "text": "に",
+    "reading": null
+   },
+   {
+    "text": "出",
+    "reading": "で"
+   },
+   {
+    "text": "たい",
+    "reading": null
+   }
+  ]
+ },
+ {
+  "text": "こっちは四人、向こうは六人だ",
+  "words": [
+   {
+    "text": "こっち",
+    "reading": null
+   },
+   {
+    "text": "は",
+    "reading": null
+   },
+   {
+    "text": "四",
+    "reading": "よん",
+    "accept": [
+     "よ"
+    ]
+   },
+   {
+    "text": "人",
+    "reading": "にん"
+   },
+   {
+    "text": "、",
+    "reading": null
+   },
+   {
+    "text": "向こう",
+    "reading": "むこう"
+   },
+   {
+    "text": "は",
+    "reading": null
+   },
+   {
+    "text": "六",
+    "reading": "ろく"
+   },
+   {
+    "text": "人",
+    "reading": "にん"
+   },
+   {
+    "text": "だ",
+    "reading": null
+   }
+  ]
+ }
+]

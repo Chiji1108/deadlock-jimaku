@@ -39,6 +39,7 @@ pub fn router(store: Arc<Store>) -> Router {
         .route("/settings", get(get_settings).patch(patch_settings))
         .route("/keys/{provider}", put(put_key))
         .route("/gift", get(get_gift).put(put_gift).delete(delete_gift))
+        .route("/beta", post(join_beta))
         .route(
             "/share",
             get(get_share).post(enable_share).delete(disable_share),
@@ -207,6 +208,27 @@ async fn put_gift(State(store): State<Arc<Store>>, Json(body): Json<GiftBody>) -
     Json(status).into_response()
 }
 
+/// ベータのコードをもらって保存する（DESIGN.md 17.2）。もうコード（人からもらったものも）を持っていれば、もらわない
+async fn join_beta(State(store): State<Arc<Store>>) -> Response {
+    // 続けて押されても、もらうのは 1 つ（持っているかを見てから保存するまでを、1 つずつ通す）
+    static JOINING: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+    let _joining = JOINING.lock().await;
+    let api = store.settings().api_base;
+    if let Some(code) = blocking(secrets::gift).await {
+        return Json(share::gift_status(&api, &code).await).into_response();
+    }
+    let code = match share::join_beta(&api).await {
+        Ok(code) => code,
+        Err(refused) => return (StatusCode::BAD_REQUEST, Json(refused)).into_response(),
+    };
+    let saved = code.clone();
+    if let Err(e) = blocking(move || secrets::set_gift(&saved)).await {
+        return (StatusCode::INTERNAL_SERVER_ERROR, format!("{e:#}")).into_response();
+    }
+    store.restart();
+    Json(share::gift_status(&api, &code).await).into_response()
+}
+
 async fn delete_gift(State(store): State<Arc<Store>>) -> Response {
     if let Err(e) = blocking(|| secrets::set_gift("")).await {
         return (StatusCode::INTERNAL_SERVER_ERROR, format!("{e:#}")).into_response();
@@ -294,10 +316,12 @@ async fn enable_share(State(store): State<Arc<Store>>) -> Response {
     }
 }
 
-/// この PC のキーを OpenAI、xAI の順に試し、預けてあるキーの人の合言葉を返す。どれも預けていなければ None。
+/// この PC のキーを、預けられる会社（OpenAI、xAI）の順に試し、預けてあるキーの人の合言葉を返す。どれも預けていなければ None。
 /// 使えないキー（期限切れなど）は飛ばして次を試す
 async fn join_any(api: &str) -> Result<Option<String>, Refused> {
-    for provider in [Provider::OpenAi, Provider::Xai] {
+    let relayed = Provider::ALL.into_iter();
+    let relayed = relayed.filter(|p| p.info().relay == Some(secrets::Relay::Gift));
+    for provider in relayed {
         let Some(key) = blocking(move || secrets::key(provider)).await else {
             continue;
         };
@@ -494,6 +518,9 @@ async fn chrome_session(mut socket: WebSocket, store: Arc<Store>) {
                     }
                     Ok(ChromeMsg::Translated(translated)) => {
                         store.send_chrome_event(ChromeEvent::Translated(translated));
+                    }
+                    Ok(ChromeMsg::Decided(decided)) => {
+                        store.send_chrome_event(ChromeEvent::Decided(decided));
                     }
                     Ok(ChromeMsg::Status { status }) => store.set_chrome_status(id, status),
                     Err(e) => tracing::warn!("invalid chrome message: {e}"),

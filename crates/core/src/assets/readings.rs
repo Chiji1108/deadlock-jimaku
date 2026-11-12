@@ -1,7 +1,7 @@
 //! 辞書の漢字名の読み（DESIGN.md 8.2）。
 //!
 //! 辞書には読みを保存せず、読み込むたびに LLM の読み（名前ごとのキャッシュ）を重ねる。なければ読みなしで、
-//! 用語の判定は Lindera + IPADIC が名前を読んだ結果を使う。
+//! 用語の判定は、読みの辞書（`reading.rs`）が名前を読んだ結果を使う。
 //! キャッシュにない名前は辞書を配信した後に問い合わせ、届いたら配信し直す。
 //! 答えが検証に通らなかった名前はキャッシュせず、次の起動で問い直す（答えは揺れるので、たいてい次は通る）。
 //! 辞書の保存と切り離しているので、キーが無効でも辞書は保存され、キーを後から設定しても次の起動で効く。
@@ -12,6 +12,8 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use serde::Deserialize;
+use serde::Serialize;
+use serde::de::DeserializeOwned;
 use serde_json::json;
 
 use crate::access::Access;
@@ -35,10 +37,10 @@ pub type Cache = BTreeMap<String, Vec<RubySegment>>;
 
 /// ファイルがなければ空。壊れていたら脇に退けて空から始める。
 /// 読めない（権限など）、退けられないときは Err（黙って上書きしない）
-pub async fn load_cache(path: &Path) -> anyhow::Result<Cache> {
+pub async fn load_cache<T: DeserializeOwned + Default>(path: &Path) -> anyhow::Result<T> {
     let bytes = match tokio::fs::read(path).await {
         Ok(bytes) => bytes,
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Cache::new()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(T::default()),
         Err(e) => return Err(e.into()),
     };
     match serde_json::from_slice(&bytes) {
@@ -46,16 +48,13 @@ pub async fn load_cache(path: &Path) -> anyhow::Result<Cache> {
         Err(e) => {
             let aside = path.with_extension("json.broken");
             tokio::fs::rename(path, &aside).await?;
-            tracing::warn!(
-                "readings cache is broken ({e}); moved to {}",
-                aside.display()
-            );
-            Ok(Cache::new())
+            tracing::warn!("cache is broken ({e}); moved to {}", aside.display());
+            Ok(T::default())
         }
     }
 }
 
-pub async fn save_cache(path: &Path, cache: &Cache) -> anyhow::Result<()> {
+pub async fn save_cache<T: Serialize>(path: &Path, cache: &T) -> anyhow::Result<()> {
     crate::write_atomic(path, &serde_json::to_vec_pretty(cache)?).await
 }
 
@@ -214,7 +213,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("cache.json");
         tokio::fs::write(&path, b"{ broken").await.unwrap();
-        assert!(load_cache(&path).await.unwrap().is_empty());
+        assert!(load_cache::<Cache>(&path).await.unwrap().is_empty());
         assert!(dir.path().join("cache.json.broken").exists());
     }
 }

@@ -8,6 +8,7 @@
   import SquareIcon from "@lucide/svelte/icons/square";
   import TrophyIcon from "@lucide/svelte/icons/trophy";
   import WalletIcon from "@lucide/svelte/icons/wallet";
+  import WorkflowIcon from "@lucide/svelte/icons/workflow";
   import { ModeWatcher } from "mode-watcher";
   import { onMount } from "svelte";
   import { MediaQuery } from "svelte/reactivity";
@@ -21,6 +22,7 @@
   import { total, unpriced, usd } from "./usage";
   import AudioTab from "./tabs/AudioTab.svelte";
   import DisplayTab from "./tabs/DisplayTab.svelte";
+  import EnginesTab from "./tabs/EnginesTab.svelte";
   import ItemsTab from "./tabs/ItemsTab.svelte";
   import KeysTab from "./tabs/KeysTab.svelte";
   import RankTab from "./tabs/RankTab.svelte";
@@ -31,12 +33,12 @@
   onMount(() => panel.start());
 
   const s = $derived(panel.settings);
-  let tab = $state("audio");
   /** 中身の欄（広い画面ではここだけがスクロールする） */
   let content = $state<HTMLElement>();
 
   const TABS = [
     { value: "audio", label: "マイクと翻訳", icon: MicIcon, page: AudioTab },
+    { value: "engines", label: "モード", icon: WorkflowIcon, page: EnginesTab },
     {
       value: "display",
       label: "字幕",
@@ -52,7 +54,7 @@
       label: "API キー",
       icon: KeyRoundIcon,
       page: KeysTab,
-      heading: "有料のモード",
+      heading: "キーと料金",
     },
     { value: "share", label: "おすそ分け", icon: GiftIcon, page: ShareTab },
     { value: "usage", label: "料金", icon: WalletIcon, page: UsageTab },
@@ -60,12 +62,14 @@
   // デスクトップのウィンドウでは左のサイドバー。OBS のドックのように狭いときは上に並べる
   const wide = new MediaQuery("min-width: 768px");
   /** オーバーレイのタブはプレビューと設定を 2 列に並べるので広く取る。ほかは読みやすい幅に留める */
-  const pageWidth = $derived(TABS.find((t) => t.value === tab)?.wide ? "max-w-6xl" : "max-w-3xl");
+  const pageWidth = $derived(
+    TABS.find((t) => t.value === panel.tab)?.wide ? "max-w-6xl" : "max-w-3xl",
+  );
 
   // タブを変えたら（サイドバーからでも、料金や注意のリンクからでも）先頭から見せる。
   // おすそ分けで使われた額はサーバーにあるので、それを出すタブを開いたら取り直す
   $effect(() => {
-    if (tab === "share" || tab === "usage") void panel.refreshShare();
+    if (panel.tab === "share" || panel.tab === "usage") void panel.refreshShare();
     content?.scrollTo({ top: 0 });
     window.scrollTo({ top: 0 });
   });
@@ -88,6 +92,11 @@
   const status = $derived.by(() => {
     if (!s?.transcriptionEnabled) return { label: "停止中", dot: "bg-muted-foreground/50" };
     if (panel.transcriptionError) return { label: "止まっています", dot: "bg-destructive" };
+    if (panel.preparing)
+      return {
+        label: "音声認識のモデルを準備しています（初回はダウンロードに数分かかります）…",
+        dot: "bg-sky-500 animate-pulse",
+      };
     if (panel.silent) return { label: "音が届いていません", dot: "bg-amber-500" };
     if (chromeFinals(s.engines)) return chromeStatus();
     if (panel.level === undefined)
@@ -116,7 +125,10 @@
         {#if s && anyPaid(s.engines)}
           <p class="h-4 text-xs text-muted-foreground tabular-nums">
             {#if panel.server === "open" && panel.usage}
-              <button class="hover:text-foreground hover:underline" onclick={() => (tab = "usage")}>
+              <button
+                class="hover:text-foreground hover:underline"
+                onclick={() => (panel.tab = "usage")}
+              >
                 起動してからの料金 {usd(total(panel.usage.session))}{unpriced(panel.usage.session)
                   ? " ＋α"
                   : ""}
@@ -132,7 +144,7 @@
           </Button>
         {:else if panel.needsKey}
           <div class="flex flex-wrap gap-2">
-            <Button variant="outline" onclick={() => (tab = "keys")}
+            <Button variant="outline" onclick={() => (panel.tab = "keys")}
               >キーかギフトコードを入れる</Button
             >
             <Button onclick={panel.startWithChrome}>無料の Chrome モードで始める</Button>
@@ -148,7 +160,7 @@
 
   {#if s}
     <Tabs.Root
-      bind:value={tab}
+      bind:value={panel.tab}
       orientation={wide.current ? "vertical" : "horizontal"}
       class="min-h-0 flex-1 gap-0"
     >
@@ -196,13 +208,15 @@
               </Alert.Description>
             </Alert.Root>
           {/if}
-          <Onboarding open={(value) => (tab = value)} />
+          <Onboarding open={(value) => (panel.tab = value)} />
           {#if panel.needsKey && s.onboardingClosed}
             <Alert.Root>
               <KeyRoundIcon />
               <Alert.Title>この作り方には {keyNames(panel.missingKeys)}が要ります</Alert.Title>
               <Alert.Description class="flex flex-wrap gap-2 pt-1">
-                <Button size="sm" onclick={() => (tab = "keys")}>キーかギフトコードを入れる</Button>
+                <Button size="sm" onclick={() => (panel.tab = "keys")}
+                  >キーかギフトコードを入れる</Button
+                >
                 <Button
                   size="sm"
                   variant="outline"

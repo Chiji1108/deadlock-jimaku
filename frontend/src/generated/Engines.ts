@@ -2,6 +2,7 @@
 import type { FinalSource } from "./FinalSource";
 import type { LiveSource } from "./LiveSource";
 import type { RubySource } from "./RubySource";
+import type { TermsEngine } from "./TermsEngine";
 import type { TranslationEngine } from "./TranslationEngine";
 
 /**
@@ -18,7 +19,11 @@ live: LiveSource,
  */
 transcription: FinalSource, 
 /**
- * 翻訳と用語。訳文の名前を用語から作るので、同じもので作る（DESIGN.md 9.1）
+ * 用語の判定。翻訳を LLM にしたら、LLM が翻訳と同時に判定するので使わない（DESIGN.md 9.7）
+ */
+terms: TermsEngine, 
+/**
+ * 翻訳。LLM なら用語も同時に判定する（訳文の名前を用語から作る。DESIGN.md 9.1）
  */
 translation: TranslationEngine, 
 /**

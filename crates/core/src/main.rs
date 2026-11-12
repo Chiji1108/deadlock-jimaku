@@ -10,9 +10,7 @@
 use std::net::{Ipv4Addr, SocketAddr};
 
 use anyhow::Context;
-use overlays_core::{
-    DEFAULT_PORT, default_data_dir, demo, runtime, server, settings, store::Store,
-};
+use overlays_core::{default_data_dir, demo, port, runtime, server, settings, store::Store};
 use tokio::net::TcpListener;
 
 #[tokio::main]
@@ -29,7 +27,8 @@ async fn main() -> anyhow::Result<()> {
             "--input-file" => input_file = Some(args.next().context("--input-file needs a path")?),
             _ => anyhow::bail!(
                 "unknown argument {arg:?}. usage: overlays-headless [--demo] [--input-file PATH]\n\
-                 settings (mic, languages, rank account) are in the control panel: http://127.0.0.1:{DEFAULT_PORT}/"
+                 settings (mic, languages, rank account) are in the control panel: http://127.0.0.1:{}/",
+                port()
             ),
         }
     }
@@ -52,7 +51,7 @@ async fn main() -> anyhow::Result<()> {
         });
     }
 
-    let listener = TcpListener::bind(SocketAddr::from((Ipv4Addr::LOCALHOST, DEFAULT_PORT))).await?;
+    let listener = TcpListener::bind(SocketAddr::from((Ipv4Addr::LOCALHOST, port()))).await?;
     tracing::info!("listening on http://{}", listener.local_addr()?);
     Ok(server::serve(listener, store).await?)
 }

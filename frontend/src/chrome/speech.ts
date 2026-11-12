@@ -1,6 +1,6 @@
 // Chrome の音声認識と翻訳（Web Speech API と Translator API）。音声は Google に送られ、翻訳は端末の中で動く
 
-type Availability = "unavailable" | "downloadable" | "downloading" | "available";
+export type Availability = "unavailable" | "downloadable" | "downloading" | "available";
 
 interface Alternative {
   transcript: string;

@@ -61,3 +61,52 @@ export const codeUsage = sqliteTable(
   },
   (t) => [primaryKey({ columns: [t.codeId, t.month] })],
 );
+
+/** ベータのコードを出した数（DESIGN.md 17.2）。同じ所に出しすぎないために数える。古い日の行は使わない */
+export const betaGrants = sqliteTable(
+  "beta_grants",
+  {
+    /** UTC の "2026-11-11" */
+    day: text().notNull(),
+    /** IP アドレス（IPv6 は先頭の 64 ビット）と日付のハッシュ（IP アドレスそのものは保存しない）。"*" はその日の合計 */
+    place: text().notNull(),
+    count: integer().notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.day, t.place] })],
+);
+
+/** ベータの全部のコードが、その日（UTC）に使った額。上限を、1 行の読み書きで確かめるために持つ */
+export const betaSpend = sqliteTable("beta_spend", {
+  day: text().primaryKey(),
+  usd: real().notNull().default(0),
+});
+
+/**
+ * ベータで使う開発者のキー（DESIGN.md 17.3）。会社ごとに複数置ける（回数の上限に当たったら、次のキーに回す）。
+ * 管理画面から足す。キーそのものは保存しない（暗号化）
+ */
+export const betaKeys = sqliteTable(
+  "beta_keys",
+  {
+    id: text().primaryKey(),
+    provider: text({ enum: ["qwen", "openrouter"] }).notNull(),
+    /** base64(iv || AES-GCM の暗号文) */
+    encryptedKey: text().notNull(),
+    /** 見分けるための、キーの終わりの 4 文字 */
+    tail: text().notNull(),
+    memo: text().notNull().default(""),
+    enabled: integer({ mode: "boolean" }).notNull().default(true),
+    /** 外に断られた回数と、最後に断られたとき（ミリ秒）とその理由（HTTP の番号） */
+    failures: integer().notNull().default(0),
+    failedAt: integer(),
+    failedStatus: integer(),
+    createdAt: integer().notNull(),
+  },
+  (t) => [index("beta_keys_provider").on(t.provider)],
+);
+
+/** ベータの設定（管理画面から変える）。`closed` が "1" なら、コードを出さず、中継もしない */
+export const betaSettings = sqliteTable("beta_settings", {
+  name: text().primaryKey(),
+  value: text().notNull(),
+});

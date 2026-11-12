@@ -58,9 +58,11 @@ impl Terms {
         let mut i = 0;
         while i < morphemes.len() {
             let longest = morphemes.len().min(i + MAX_MORPHEMES);
-            let hit = (i + 1..=longest)
-                .rev()
-                .find_map(|end| Some((end, self.lookup(text, &morphemes[i..end])?)));
+            let hit = (i + 1..=longest).rev().find_map(|end| {
+                let run = &morphemes[i..end];
+                let whole = whole(text, run[0].start, run[run.len() - 1].end);
+                Some((end, self.lookup(text, run).filter(|_| whole)?))
+            });
             let Some((end, term)) = hit else {
                 i += 1;
                 continue;
@@ -85,6 +87,17 @@ impl Terms {
             self.by_reading.get(&reading).copied()
         })
     }
+}
+
+/// `start..end` が、カタカナの語の途中で切れていない。辞書は知らないカタカナの語を知っている語に割ることが
+/// あるので（「レムソン」を「レム」「ソン」）、カタカナが続く途中では用語にしない
+fn whole(text: &str, start: usize, end: usize) -> bool {
+    let katakana = |c: char| matches!(c, 'ァ'..='ヴ' | 'ー');
+    let joins =
+        |a: Option<char>, b: Option<char>| a.is_some_and(katakana) && b.is_some_and(katakana);
+    let (before, word, after) = (&text[..start], &text[start..end], &text[end..]);
+    !joins(before.chars().next_back(), word.chars().next())
+        && !joins(word.chars().next_back(), after.chars().next())
 }
 
 /// 話した言葉のふりがな。用語の読みがかなで、話した言葉に当てはまるときだけ
@@ -134,7 +147,7 @@ mod tests {
 
     /// 見つけた用語の（話した言葉、参照）
     fn find(sentence: &str) -> Vec<(String, String)> {
-        let furigana = Furigana::new().unwrap();
+        let furigana = Furigana::shared().unwrap();
         let terms = table();
         terms
             .find(sentence, &furigana.morphemes(sentence))
@@ -207,7 +220,7 @@ mod tests {
 
     #[test]
     fn no_terms_finds_nothing() {
-        let furigana = Furigana::new().unwrap();
+        let furigana = Furigana::shared().unwrap();
         let sentence = "ヘイズのカース";
         let terms = Terms::new(Vec::new());
         assert!(

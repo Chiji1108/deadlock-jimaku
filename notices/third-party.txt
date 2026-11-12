@@ -66,13 +66,15 @@ torph 0.1.3  MIT [1]
 tw-animate-css 1.4.0  MIT [1]
   Copyright (c) 2025 Wombosvideo
 
-=== Rust の crate（431 件）===
+=== Rust の crate（422 件）===
 
 adler2 2.0.1  0BSD OR MIT OR Apache-2.0 [45][21][1]
   Copyright (C) Jonas Schievink <jonasschievink@gmail.com>
 aes 0.9.4  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2018-2024 The RustCrypto Project Developers
   Copyright (c) 2018 Artyom Pavlov
+ahash 0.7.8  MIT OR Apache-2.0 [2][1]
+  Copyright (c) 2016 Amanieu d'Antras
 aho-corasick 1.1.5  Unlicense OR MIT [6][1][5]
   Copyright (c) 2015 Andrew Gallant
 alloc-no-stdlib 3.0.0  BSD-3-Clause [9]
@@ -145,6 +147,8 @@ base64 0.22.1  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2015 Alice Maz
 base64 0.23.1  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2025 Alice Maz, Marshall Pierce
+bincode 2.0.1  MIT [1]
+  Copyright (c) 2014 Ty Overby
 bitflags 1.3.2  MIT/Apache-2.0 [2][1]
   Copyright (c) 2014 The Rust Project Developers
 bitflags 2.13.2  MIT OR Apache-2.0 [2][1]
@@ -165,8 +169,8 @@ brotli 9.1.1  BSD-3-Clause AND MIT [9][1]
   Copyright (c) 2009, 2010, 2013-2016 by the Brotli Authors.
 brotli-decompressor 6.2.0  BSD-3-Clause/MIT [9]
   Copyright (c) 2016 Dropbox, Inc.
-bytecheck 0.8.3  MIT [1]
-  Copyright 2023 David Koloski
+bumpalo 3.20.3  MIT OR Apache-2.0 [2][1]
+  Copyright (c) 2019 Nick Fitzgerald
 byteorder 1.5.0  Unlicense OR MIT [6][1][5]
   Copyright (c) 2015 Andrew Gallant
 bytes 1.12.1  MIT [1]
@@ -224,34 +228,25 @@ cpufeatures 0.2.17  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2020-2025 The RustCrypto Project Developers
 cpufeatures 0.3.1  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2020-2026 The RustCrypto Project Developers
-crawdad 0.4.1  MIT OR Apache-2.0 [2][1]
+crawdad 0.3.0  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2022 legalforce-research
 crc32fast 1.5.4  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2018 Sam Rijs, Alex Crichton and contributors
 crossbeam-channel 0.5.17  MIT OR Apache-2.0 [2][1][38]
   Copyright (c) 2019 The Crossbeam Project Developers
   Copyright (c) 2009 The Go Authors. All rights reserved.
-crossbeam-deque 0.8.8  MIT OR Apache-2.0 [2][1]
-  Copyright (c) 2019 The Crossbeam Project Developers
-crossbeam-epoch 0.9.21  MIT OR Apache-2.0 [2][1]
-  Copyright (c) 2019 The Crossbeam Project Developers
 crossbeam-utils 0.8.23  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2019 The Crossbeam Project Developers
 crypto-common 0.1.7  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2021 RustCrypto Developers
 crypto-common 0.2.2  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2021-2026 RustCrypto Developers
-csv 1.4.0  Unlicense/MIT [6][1][5]
-  Copyright (c) 2015 Andrew Gallant
 csv-core 0.1.13  Unlicense/MIT [6][1][5]
   Copyright (c) 2015 Andrew Gallant
 ctor 1.0.13  Apache-2.0 OR MIT [2][1]
   Author: Matt Mastracci <matthew@mastracci.com>
 ctutils 0.4.7  Apache-2.0 OR MIT [2][1]
   Copyright (c) 2025-2026 The RustCrypto Project Developers
-daachorse 5.1.0  MIT OR Apache-2.0 [2][1]
-  Author: Koichi Akabe <vbkaisetsu@gmail.com>
-  Author: Shunsuke Kanda <shnsk.knd@gmail.com>
 dasp_sample 0.11.0  MIT OR Apache-2.0
   Author: mitchmindtree <mitchell.nordine@gmail.com>
 data-encoding 2.11.1  MIT [1]
@@ -292,14 +287,10 @@ dunce 1.0.5  CC0-1.0 OR MIT-0 OR Apache-2.0 [32]
   Author: Kornel <kornel@geekhood.net>
 earshot 1.2.2  MIT OR Apache-2.0
   Author: Carson M <carson@pyke.io>
-either 1.19.0  MIT OR Apache-2.0 [2][1]
-  Copyright (c) 2015
 embed_plist 1.2.2  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2020 Nikolai Vazquez
 encoding_rs 0.8.44  (Apache-2.0 OR MIT) AND BSD-3-Clause [33][2][10][19]
   Copyright © WHATWG (Apple, Google, Mozilla, Microsoft).
-encoding_rs_io 0.1.8  MIT OR Apache-2.0 [57][2][1]
-  Copyright (c) 2015 Andrew Gallant
 endi 1.1.1  MIT [1]
   Author: Zeeshan Ali Khan <zeenix@gmail.com>
 enumflags2 0.7.12  MIT OR Apache-2.0 [24][1]
@@ -332,7 +323,7 @@ foldhash 0.2.0  Zlib [7]
   Copyright (c) 2024 Orson Peters
 fontconfig-parser 0.5.8  MIT [1]
   Copyright (c) 2021 Riey
-fontdb 0.24.0  MIT [1][60]
+fontdb 0.24.0  MIT [1][59]
   Copyright (c) 2020 Yevhenii Reizner
 foreign-types 0.5.0  MIT/Apache-2.0 [2][1]
   Copyright (c) 2017 The foreign-types Developers
@@ -409,6 +400,8 @@ gtk-sys 0.18.2  MIT [1]
   Author: The gtk-rs Project Developers
 h2 0.4.20  MIT [1]
   Copyright (c) 2017 h2 authors
+hashbrown 0.12.3  MIT OR Apache-2.0 [2][1]
+  Copyright (c) 2016 Amanieu d'Antras
 hashbrown 0.17.1  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2016 Amanieu d'Antras
 heck 0.5.0  MIT OR Apache-2.0 [2][1]
@@ -513,9 +506,6 @@ libc 0.2.191  MIT OR Apache-2.0 [2][1]
 libdbus-sys 0.2.7  Apache-2.0/MIT [2][1]
   Copyright 2014-2018 David Henningsson <diwic@ubuntu.com> and other contributors
   Copyright (c) 2014-2018 David Henningsson <diwic@ubuntu.com> and other contributors
-lindera 6.2.0  MIT
-lindera-dictionary 6.2.0  MIT
-lindera-ipadic 6.2.0  MIT
 linux-raw-sys 0.12.1  Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT [50][2][14][1]
   Author: Dan Gohman <dev@sunfishcode.online>
 litemap 0.8.3  Unicode-3.0 [3]
@@ -561,8 +551,8 @@ mio 1.2.4  MIT [1]
   Copyright (c) 2014 Carl Lerche and other MIO contributors
 muda 0.20.0  Apache-2.0 OR MIT [2][1]
   Copyright (c) 2022-2022 Tauri Programme within The Commons Conservancy
-munge 0.4.7  MIT [1]
-  Copyright 2024 David Koloski
+nix 0.31.3  MIT [1]
+  Copyright (c) 2015 Carl Lerche + nix-rust Authors
 nu-ansi-term 0.50.3  MIT [1]
   Copyright (c) 2014 Benjamin Sago
   Copyright (c) 2021-2022 The Nushell Project Developers
@@ -651,16 +641,12 @@ primal-check 0.3.4  MIT OR Apache-2.0 [2][1]
 proc-macro2 1.0.107  MIT OR Apache-2.0 [2][1]
   Author: David Tolnay <dtolnay@gmail.com>
   Author: Alex Crichton <alex@alexcrichton.com>
-ptr_meta 0.3.2  MIT [1]
-  Copyright 2021 David Koloski
 quick-xml 0.42.0  MIT [1]
   Copyright (c) 2016 Johann Tuffe
 quote 1.0.47  MIT OR Apache-2.0 [2][1]
   Author: David Tolnay <dtolnay@gmail.com>
 radium 0.7.0  MIT [1]
   Copyright (c) 2019 kneecaw (Nika Layzell)
-rancor 0.1.3  MIT [1]
-  Copyright 2023 David Koloski
 rand 0.10.3  MIT OR Apache-2.0 [8][2][1]
   Copyright 2018 Developers of the Rand project
   Copyright (c) 2014 The Rust Project Developers
@@ -678,21 +664,15 @@ rand_core 0.9.5  MIT OR Apache-2.0 [8][15][1]
 raw-window-handle 0.6.2  MIT OR Apache-2.0 OR Zlib [2][1][7]
   Copyright (c) 2019 Osspial
   Copyright (c) 2020 Osspial
-rayon 1.12.0  MIT OR Apache-2.0 [2][1]
-  Copyright (c) 2010 The Rust Project Developers
-rayon-core 1.13.0  MIT OR Apache-2.0 [2][1]
-  Copyright (c) 2010 The Rust Project Developers
 realfft 3.5.1  MIT [1]
   Copyright (c) 2020 Henrik Enquist and RealFFT contributors
 regex 1.13.1  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2014 The Rust Project Developers
 regex-automata 0.4.18  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2014 The Rust Project Developers
-regex-syntax 0.8.11  MIT OR Apache-2.0 [2][1][58]
+regex-syntax 0.8.11  MIT OR Apache-2.0 [2][1][57]
   Copyright (c) 2014 The Rust Project Developers
   Copyright © 1991-2018 Unicode, Inc. All rights reserved.
-rend 0.5.4  MIT [1]
-  Copyright 2021 David Koloski
 reqwest 0.13.5  MIT OR Apache-2.0 [2][1]
   Copyright 2016 Sean McArthur
   Copyright (c) 2016-2026 Sean McArthur
@@ -704,8 +684,6 @@ ring 0.17.14  Apache-2.0 AND ISC [47][22][43][2][41][53]
   Copyright 2015 The Chromium Authors. All rights reserved.
   Copyright 2015-2025 Brian Smith.
   Copyright 2015-2020 the fiat-crypto authors (see the AUTHORS file)
-rkyv 0.8.18  MIT [1]
-  Copyright 2021 David Koloski
 roxmltree 0.20.0  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2018 Yevhenii Reizner
 rubato 5.0.1  MIT OR Apache-2.0 [2][1][56]
@@ -808,8 +786,6 @@ stable_deref_trait 1.2.1  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2017 Robert Grosse
 strength_reduce 0.2.4  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2015 The RustFFT Developers
-strum 0.28.0  MIT [1]
-  Copyright (c) 2019 Peter Glotfelty
 subtle 2.6.1  BSD-3-Clause [19]
   Copyright (c) 2016-2017 Isis Agora Lovecruft, Henry de Valence. All rights reserved.
   Copyright (c) 2016-2024 Isis Agora Lovecruft. All rights reserved.
@@ -927,12 +903,15 @@ typenum 1.20.1  MIT OR Apache-2.0 [39][2][1]
   Copyright (c) 2014 Paho Lurie-Gregg
 unicase 2.10.0  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2014-2026 Sean McArthur
-unicode-ident 1.0.27  (MIT OR Apache-2.0) AND Unicode-3.0 [2][1][59]
+unicode-ident 1.0.27  (MIT OR Apache-2.0) AND Unicode-3.0 [2][1][58]
   Copyright © 1991-2023 Unicode, Inc.
 unicode-segmentation 1.13.3  MIT OR Apache-2.0 [12][2][1]
   Copyright (c) 2015 The Rust Project Developers
 untrusted 0.9.0  ISC [44]
   Copyright 2015-2016 Brian Smith.
+unty 0.0.4  MIT OR Apache-2.0 [2][1]
+  Copyright 2023 Bincode
+  Copyright (c) 2023 Bincode
 url 2.5.8  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2013-2025 The rust-url developers
 urlpattern 0.6.0  MIT [1]
@@ -944,6 +923,9 @@ utf_types 1.0.0  Apache-2.0 OR MIT [29][2][10]
 uuid 1.29.0  Apache-2.0 OR MIT [2][1]
   Copyright (c) 2014 The Rust Project Developers
   Copyright (c) 2018 Ashley Mannix, Christopher Armstrong, Dylan DPC, Hunar Roop Kahlon
+vibrato 0.5.3  MIT OR Apache-2.0
+  Author: Shunsuke Kanda <shnsk.knd@gmail.com>
+  Author: Koichi Akabe <vbkaisetsu@gmail.com>
 walkdir 2.5.0  Unlicense/MIT [6][1][5]
   Copyright (c) 2015 Andrew Gallant
 want 0.3.2  MIT [1]
@@ -1035,8 +1017,12 @@ zerovec 0.11.9  Unicode-3.0 [3]
   Copyright © 2020-2024 Unicode, Inc.
 zip 9.3.0  MIT [1]
   Copyright (c) 2014 Mathijs van de Nes
+zlib-rs 0.6.8  Zlib [7]
+  (C) 2024 Trifecta Tech Foundation
 zmij 1.0.23  MIT [1]
   Author: David Tolnay <dtolnay@gmail.com>
+zopfli 0.8.4  Apache-2.0 [2]
+  Copyright 2011 Google Inc.
 zvariant 5.15.1  MIT [1]
   Copyright (c) 2024 Zeeshan Ali Khan & zbus contributors
 zvariant_utils 4.2.0  MIT [1]
@@ -1112,7 +1098,7 @@ Ubuntu 22.04 のパッケージから取った共有ライブラリを、動的�
   そのほか（MIT、BSD、Apache-2.0 など）: ICU、HarfBuzz、libxml2、libxslt、SQLite、libpng、
     libjpeg-turbo、libwebp、libtiff、Wayland、X11 の各ライブラリ、CUPS など
 
-=== パッケージにライセンスファイルがないもの（26 件）===
+=== パッケージにライセンスファイルがないもの（24 件）===
 
 ライセンスはパッケージのメタデータの記載です。
 
@@ -1123,9 +1109,6 @@ dasp_sample 0.11.0  MIT OR Apache-2.0
 dispatch2 0.3.1  Zlib OR Apache-2.0 OR MIT
 dlopen2 0.8.2  MIT
 earshot 1.2.2  MIT OR Apache-2.0
-lindera 6.2.0  MIT
-lindera-dictionary 6.2.0  MIT
-lindera-ipadic 6.2.0  MIT
 objc2 0.6.5  MIT
 objc2-app-kit 0.3.2  Zlib OR Apache-2.0 OR MIT
 objc2-audio-toolbox 0.3.2  Zlib OR Apache-2.0 OR MIT
@@ -1140,91 +1123,9 @@ objc2-osa-kit 0.3.2  Zlib OR Apache-2.0 OR MIT
 objc2-quartz-core 0.3.2  Zlib OR Apache-2.0 OR MIT
 objc2-web-kit 0.3.2  Zlib OR Apache-2.0 OR MIT
 ts-rs 12.0.1  MIT
+vibrato 0.5.3  MIT OR Apache-2.0
 webview2-com 0.39.1  MIT
 webview2-com-sys 0.39.1  MIT
-
-=== NOTICE ===
-
---- lindera-ipadic 6.2.0
-
-===========================================================================
-Lindera Morphological Analyzer
-===========================================================================
-
-This software includes a binary and/or source version of data from
-
-  mecab-ipadic-2.7.0-20070801
-
-which can be obtained from
-
-  http://jaist.dl.sourceforge.net/project/mecab/mecab-ipadic/2.7.0-20070801/mecab-ipadic-2.7.0-20070801.tar.gz
-
-===========================================================================
-mecab-ipadic-2.7.0-20070801 Notice
-===========================================================================
-
-Nara Institute of Science and Technology (NAIST),
-the copyright holders, disclaims all warranties with regard to this
-software, including all implied warranties of merchantability and
-fitness, in no event shall NAIST be liable for
-any special, indirect or consequential damages or any damages
-whatsoever resulting from loss of use, data or profits, whether in an
-action of contract, negligence or other tortuous action, arising out
-of or in connection with the use or performance of this software.
-
-A large portion of the dictionary entries
-originate from ICOT Free Software.  The following conditions for ICOT
-Free Software applies to the current dictionary as well.
-
-Each User may also freely distribute the Program, whether in its
-original form or modified, to any third party or parties, PROVIDED
-that the provisions of Section 3 ("NO WARRANTY") will ALWAYS appear
-on, or be attached to, the Program, which is distributed substantially
-in the same form as set out herein and that such intended
-distribution, if actually made, will neither violate or otherwise
-contravene any of the laws and regulations of the countries having
-jurisdiction over the User or the intended distribution itself.
-
-NO WARRANTY
-
-The program was produced on an experimental basis in the course of the
-research and development conducted during the project and is provided
-to users as so produced on an experimental basis.  Accordingly, the
-program is provided without any warranty whatsoever, whether express,
-implied, statutory or otherwise.  The term "warranty" used herein
-includes, but is not limited to, any warranty of the quality,
-performance, merchantability and fitness for a particular purpose of
-the program and the nonexistence of any infringement or violation of
-any right of any third party.
-
-Each user of the program will agree and understand, and be deemed to
-have agreed and understood, that there is no warranty whatsoever for
-the program and, accordingly, the entire risk arising from or
-otherwise connected with the program is assumed by the user.
-
-Therefore, neither ICOT, the copyright holder, or any other
-organization that participated in or was otherwise related to the
-development of the program and their respective officials, directors,
-officers and other employees shall be held liable for any and all
-damages, including, without limitation, general, special, incidental
-and consequential damages, arising out of or otherwise in connection
-with the use or inability to use the program or any product, material
-or result produced or otherwise obtained by using the program,
-regardless of whether they have been advised of, or otherwise had
-knowledge of, the possibility of such damages at any time during the
-project or thereafter.  Each user will be deemed to have agreed to the
-foregoing by his or her commencement of use of the program.  The term
-"use" as used herein includes, but is not limited to, the use,
-modification, copying and distribution of the program and the
-production of secondary products from the program.
-
-In the case where the program, whether in its original form or
-modified, was distributed or delivered to or received by a user from
-any person, organization or entity other than ICOT, unless it makes or
-grants independently of ICOT any specific warranty to the user in
-writing, such person, organization or entity, will also be exempted
-from and not be held liable to the user for any such damages as noted
-above as far as the program is concerned.
 
 === ライセンス本文 ===
 
@@ -5744,17 +5645,6 @@ You may choose either license, at your option.
 
 --- [57]
 
-This project is licensed under either of
-
- * Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or
-   http://www.apache.org/licenses/LICENSE-2.0)
- * MIT license ([LICENSE-MIT](LICENSE-MIT) or
-   http://opensource.org/licenses/MIT)
-
-at your option.
-
---- [58]
-
 UNICODE, INC. LICENSE AGREEMENT - DATA FILES AND SOFTWARE
 
 Unicode Data Files include all data files under the directories
@@ -5813,7 +5703,7 @@ shall not be used in advertising or otherwise to promote the sale,
 use or other dealings in these Data Files or Software without prior
 written authorization of the copyright holder.
 
---- [59]
+--- [58]
 
 UNICODE LICENSE V3
 
@@ -5855,7 +5745,7 @@ not be used in advertising or otherwise to promote the sale, use or other
 dealings in these Data Files or Software without prior written
 authorization of the copyright holder.
 
---- [60]
+--- [59]
 
 We, the copyright holders of this work, hereby release it into the
 public domain. This applies worldwide.

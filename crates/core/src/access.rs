@@ -1,6 +1,8 @@
 //! API の送り先と鍵（DESIGN.md 17.1）。自分のキーがあればその会社へ直接、なければギフトコードで
 //! 開発者のサーバー（おすそ分け）を通す。サーバーは会社ごとに同じパスで中継するので、使う側は送り先を替えるだけ
 
+use std::collections::BTreeMap;
+
 use crate::secrets::Provider;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -15,10 +17,7 @@ pub struct Access {
 
 impl Access {
     pub fn key(provider: Provider, key: String) -> Self {
-        let base = match provider {
-            Provider::OpenAi => "https://api.openai.com/v1",
-            Provider::Xai => "https://api.x.ai/v1",
-        };
+        let base = provider.info().base;
         Self {
             provider,
             base: base.to_owned(),
@@ -28,14 +27,11 @@ impl Access {
     }
 
     /// `api` は開発者のサーバーの根元（設定の `apiBase`）。会社ごとに `/openai`、`/xai` の下で中継する
+    /// （中継のない会社には `Keys::access` がギフトコードを使わない）
     pub fn gift(provider: Provider, code: String, api: &str) -> Self {
-        let path = match provider {
-            Provider::OpenAi => "openai",
-            Provider::Xai => "xai",
-        };
         Self {
             provider,
-            base: format!("{}/{path}", api.trim_end_matches('/')),
+            base: format!("{}/{}", api.trim_end_matches('/'), provider.info().id),
             token: code,
             gift: true,
         }
@@ -64,6 +60,24 @@ impl Access {
 
     pub fn is_gift(&self) -> bool {
         self.gift
+    }
+}
+
+/// 工程が使う会社の送り先と鍵（会社ごとに 1 つ）
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Accesses(BTreeMap<Provider, Access>);
+
+impl Accesses {
+    pub fn new(accesses: impl IntoIterator<Item = Access>) -> Self {
+        Self(accesses.into_iter().map(|a| (a.provider, a)).collect())
+    }
+
+    pub fn get(&self, provider: Provider) -> Option<Access> {
+        self.0.get(&provider).cloned()
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = &Access> {
+        self.0.values()
     }
 }
 

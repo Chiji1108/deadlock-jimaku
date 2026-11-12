@@ -11,20 +11,13 @@
   import DeadlockModeDialog from "../parts/DeadlockModeDialog.svelte";
   import LevelMeter from "../parts/LevelMeter.svelte";
   import PauseDialog from "../parts/PauseDialog.svelte";
-  import { Badge } from "$lib/components/ui/badge";
   import { panel } from "../panel.svelte";
-  import EnginesDialog from "../parts/EnginesDialog.svelte";
   import {
-    STANDARD,
-    MODES,
-    monthly,
-    price,
     anyPaid,
     chromeFinals,
+    llmTranslation,
     modeOf,
-    keyNames,
-    paidItems,
-    providers,
+    price,
     usesChrome,
   } from "../../lib/engines";
 
@@ -39,7 +32,6 @@
   const s = $derived(panel.settings!);
   const t = $derived(s.engines);
   const mode = $derived(modeOf(t));
-  const paid = $derived(paidItems(t));
   /** Chrome のウィンドウが字幕を止めている理由。止まっているか、回線の回復を待っている */
   const chromeProblem = $derived(
     panel.chromeStatus?.state === "failed" ||
@@ -48,8 +40,11 @@
       ? panel.chromeStatus.detail
       : undefined,
   );
-  /** 有料の工程がある字幕が止まったら Chrome を閉じる（字幕にならない音声を Google に送らない） */
-  const chromeClosed = $derived(anyPaid(t) && !!panel.transcriptionError);
+  /** 鍵の要る工程があるか、確定をアプリが作る字幕が止まったら Chrome を閉じる（字幕にならない音声を Google に
+   * 送らない）。PC の中の文字起こしを準備している間も閉じる。core の `chrome_needed` と同じ決まり */
+  const chromeClosed = $derived(
+    ((anyPaid(t) || !chromeFinals(t)) && !!panel.transcriptionError) || panel.preparing,
+  );
   /** Chrome のウィンドウの今の状態 */
   const chromeNote = $derived.by(() => {
     if (chromeClosed) return "字幕が止まっているので閉じています";
@@ -69,57 +64,22 @@
   <Card.Root>
     <Card.Header>
       <Card.Title>モード</Card.Title>
-      <Card.Description>字幕をどこで作るかを選びます</Card.Description>
+      <Card.Description>字幕をどこで作るかです。「モード」のタブで選びます</Card.Description>
     </Card.Header>
     <Card.Content class="flex flex-col gap-3">
-      <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-4" role="radiogroup" aria-label="モード">
-        {#each MODES as m (m.name)}
-          <button
-            type="button"
-            role="radio"
-            aria-checked={mode?.name === m.name}
-            class="flex flex-col gap-1 rounded-lg border p-3 text-left transition-colors hover:bg-muted aria-checked:border-foreground aria-checked:bg-muted"
-            onclick={() => panel.update({ engines: m.engines })}
-          >
-            <span class="flex items-center gap-2 text-sm font-medium">
-              {m.label}
-              {#if m.recommended}<Badge variant="secondary">おすすめ</Badge>{/if}
-            </span>
-            <span class="text-xs text-muted-foreground">{m.traits}</span>
-            <span class="text-xs text-muted-foreground tabular-nums">{price(m.hourlyUsd)}</span>
-            {#if m.hourlyUsd}
-              <span class="text-xs text-muted-foreground tabular-nums">{monthly(m.hourlyUsd)}</span>
+      <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
+        <div class="flex flex-col gap-1">
+          <span class="text-sm font-medium">{mode?.label ?? "カスタム"}</span>
+          <span class="text-xs text-muted-foreground">
+            {#if mode}
+              {mode.traits}・<span class="tabular-nums">{price(mode.hourlyUsd)}</span>
+            {:else}
+              工程ごとに選んだ組み合わせ
             {/if}
-          </button>
-        {/each}
-      </div>
-      <p class="text-sm text-muted-foreground">
-        {#if mode}
-          {mode.hint}
-        {:else if paid.length}
-          詳しく選んだ作り方です。有料の工程: {paid.join("、")}
-        {:else}
-          詳しく選んだ作り方です。すべて無料です
-        {/if}{#if paid.length}。{keyNames(providers(t))}が要ります{/if}
-      </p>
-      <EnginesDialog />
-      {#if mode?.name === "chrome" && panel.standardReady && !s.hybridHintClosed}
-        <div class="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3">
-          <p class="text-sm">スタンダードにすると、確定の字幕が高い精度になります</p>
-          <div class="flex gap-1">
-            <Button variant="outline" size="sm" onclick={() => panel.update({ engines: STANDARD })}>
-              スタンダードにする
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onclick={() => panel.update({ hybridHintClosed: true })}
-            >
-              閉じる
-            </Button>
-          </div>
+          </span>
         </div>
-      {/if}
+        <Button variant="outline" size="sm" onclick={() => (panel.tab = "engines")}>変える</Button>
+      </div>
       {#if usesChrome(t)}
         {#if s.transcriptionEnabled}
           <div class="flex flex-wrap items-center gap-3">
@@ -275,10 +235,8 @@
       <Field.Field>
         <Field.Label>翻訳先</Field.Label>
         <Field.Description>
-          最大 {MAX_TRANSLATE_TO} つ（{s.translateTo.length} / {MAX_TRANSLATE_TO}）{#if t.translation !== "chromeTranslator"}。1
-            つ増えるごとに、話し続けて 1 時間あたり約 ${t.translation === "gpt6Luna"
-              ? "0.05"
-              : "0.3"}{/if}
+          最大 {MAX_TRANSLATE_TO} つ（{s.translateTo.length} / {MAX_TRANSLATE_TO}）{#if llmTranslation(t)}。1
+            つ増えるごとに、話し続けて 1 時間あたり約 $0.3{/if}
         </Field.Description>
         <ToggleGroup.Root
           type="multiple"

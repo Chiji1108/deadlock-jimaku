@@ -29,6 +29,20 @@ test("別の単語の一部は名前にしない", () => {
   ]);
 });
 
+test("大文字と小文字が変わっていても名前にする", () => {
+  const skin = { ref: "item:3", en: "Metal Skin" };
+  expect(markNames("out of METAL SKIN.", [skin])).toEqual([
+    { t: "text", text: "out of " },
+    { t: "entity", ref: "item:3" },
+    { t: "text", text: "." },
+  ]);
+  const krill = { ref: "hero:2", en: "Mo & Krill" };
+  expect(markNames("mo & krill (ult)", [krill])).toEqual([
+    { t: "entity", ref: "hero:2" },
+    { t: "text", text: " (ult)" },
+  ]);
+});
+
 test("同じ位置からは長い名前を取る", () => {
   const short = { ref: "item:2", en: "Extended" };
   expect(markNames("Extended Magazine", [short, magazine])).toEqual([

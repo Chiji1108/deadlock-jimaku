@@ -4,7 +4,7 @@ import { panel, type FontTarget } from "./panel.svelte";
 import { addFontFaces, fontWeights } from "../lib/overlay-fonts";
 import type { FontEntry } from "../generated/FontEntry";
 import type { SettingsView } from "../generated/SettingsView";
-import { CHROME } from "../lib/engines";
+import { BETA, CHROME } from "../lib/engines";
 
 vi.mock("../lib/overlay-fonts", () => ({ addFontFaces: vi.fn(), fontWeights: vi.fn() }));
 vi.mock("../lib/ws", () => ({ connect: vi.fn(() => () => {}) }));
@@ -252,6 +252,41 @@ test("ギフトコードで払ってもらうのは、自分のキーがない�
     keys: { openai: { state: "saved" }, gift: { state: "saved" }, xai: { state: "missing" } },
   } as unknown as SettingsView;
   expect(fresh.giftPaid).toEqual(["xai"]);
+});
+
+test("中継のない会社（TypeSafe AI）は、コードがあっても自分のキーが要る", () => {
+  const fresh = freshPanel();
+  const keys = (typesafe: string) => ({
+    openai: { state: "missing" },
+    gift: { state: "saved" },
+    xai: { state: "missing" },
+    qwen: { state: "missing" },
+    openrouter: { state: "missing" },
+    typesafe: { state: typesafe },
+  });
+  // 用語は Jev（中継なし）、翻訳は Qwen（ベータのコードで中継する。中継するかは、始めるときに中核が確かめる）
+  const engines = { ...CHROME, terms: "jev", translation: "qwenMtFlash" };
+  fresh.view = { settings: { engines }, keys: keys("missing") } as unknown as SettingsView;
+  expect(fresh.missingKeys).toEqual(["typesafe"]);
+  expect(fresh.giftPaid).toEqual(["qwen"]);
+  fresh.view = { settings: { engines }, keys: keys("saved") } as unknown as SettingsView;
+  expect(fresh.missingKeys).toEqual([]);
+});
+
+test("ベータのモードは、コードがあれば鍵が要らない", () => {
+  const fresh = freshPanel();
+  const keys = (gift: string) => ({
+    openai: { state: "missing" },
+    gift: { state: gift },
+    xai: { state: "missing" },
+    qwen: { state: "missing" },
+    openrouter: { state: "missing" },
+    typesafe: { state: "missing" },
+  });
+  fresh.view = { settings: { engines: BETA }, keys: keys("missing") } as unknown as SettingsView;
+  expect(fresh.missingKeys).toEqual(["qwen", "openrouter"]);
+  fresh.view = { settings: { engines: BETA }, keys: keys("saved") } as unknown as SettingsView;
+  expect(fresh.missingKeys).toEqual([]);
 });
 
 test("設定が届く前はキーの案内を出さない", () => {

@@ -1,0 +1,23 @@
+// 管理画面（DESIGN.md 17.3）。API とは別の Worker にして、Worker ごと Cloudflare Access の後ろに置く。
+// Access は、Cloudflare の管理画面の Workers & Pages → この Worker → Access で「All traffic」を守る
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "deadlock-jimaku-admin",
+  "main": "src/adminWorker.ts",
+  "compatibility_date": "2026-10-01",
+  "workers_dev": true,
+  "preview_urls": false,
+  // Access を有効にしたときに出る TEAM_DOMAIN と POLICY_AUD は、Cloudflare の管理画面でこの Worker の変数に入れる。
+  // 出し直しても消さない。入れるまで、管理の口は誰も通さない
+  "keep_vars": true,
+  // API の Worker と同じデータベース（表は API の側の migrations/ で作る）
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "deadlock-jimaku",
+      "database_id": "946da22e-8b7f-4caa-93e2-f4a0bf37508c"
+    }
+  ],
+  // キーの暗号化は API の Worker に頼む（暗号化の鍵を、こちらには置かない）
+  "services": [{ "binding": "VAULT", "service": "deadlock-jimaku-api", "entrypoint": "Vault" }]
+}

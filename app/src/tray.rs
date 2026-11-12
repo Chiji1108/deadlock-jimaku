@@ -122,11 +122,10 @@ fn toggle_subtitles(app: AppHandle, store: Arc<Store>) {
     tauri::async_runtime::spawn_blocking(move || {
         let settings = store.settings();
         let start = !settings.transcription_enabled;
-        if start
-            && settings.engines.paid()
-            && secrets::openai().is_none()
-            && secrets::gift().is_none()
-        {
+        // 字幕の処理が始めるときに確かめるのと同じ決まり（工程が使う会社ごとに、自分のキーかギフトコード）
+        let keys = secrets::load();
+        let mut needed = settings.engines.providers().into_iter();
+        if start && needed.any(|p| keys.access(p, &settings.api_base).is_none()) {
             show_window(&app);
             return;
         }

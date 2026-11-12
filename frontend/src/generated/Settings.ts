@@ -83,7 +83,11 @@ trayNoticeSeen: boolean,
 /**
  * 無料で使っている人への「おすすめにする」の提案を閉じた
  */
-hybridHintClosed: boolean, models: Models, 
+hybridHintClosed: boolean, 
+/**
+ * 最後に自分で組んだ工程の組み合わせ（モードにないもの）。操作パネルの「カスタム」
+ */
+customEngines?: Engines, models: Models, 
 /**
  * リアルタイムの音声認識の遅れ（`minimal` / `low` / `medium` / `high` / `xhigh`。
  * 低いほど早く字幕が出て、高いほど正確）

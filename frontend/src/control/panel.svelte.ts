@@ -2,6 +2,8 @@
 import { toast } from "svelte-sonner";
 import { SvelteMap, SvelteSet } from "svelte/reactivity";
 import type { LiveStatus } from "../generated/LiveStatus";
+import type { BetaRefusal } from "../generated/BetaRefusal";
+import type { Engines } from "../generated/Engines";
 import type { GiftStatus } from "../generated/GiftStatus";
 import type { Provider } from "../generated/Provider";
 import type { ServerMsg } from "../generated/ServerMsg";
@@ -12,7 +14,15 @@ import type { MicError } from "../generated/MicError";
 import type { TranscriptionError } from "../generated/TranscriptionError";
 import type { UsageView } from "../generated/UsageView";
 import { api } from "../lib/api";
-import { CHROME, PROVIDER_NAMES, chromeFinals, keyNames, providers } from "../lib/engines";
+import {
+  CHROME,
+  PROVIDER_NAMES,
+  chromeFinals,
+  giftable,
+  keyNames,
+  providers,
+  relayOf,
+} from "../lib/engines";
 import { addFontFaces, fontWeights } from "../lib/overlay-fonts";
 import type { MergePatch } from "../lib/text-style";
 import type { FontEntry } from "../generated/FontEntry";
@@ -53,7 +63,11 @@ class Panel {
   private samplesRead: Promise<void> | undefined;
   server = $state<Status>("connecting");
   /** 字幕を始められなかった・止まった理由 */
+  /** 開いているタブ（ほかのタブへの案内から切り替える） */
+  tab = $state("audio");
   transcriptionError = $state<TranscriptionError | undefined>();
+  /** PC の中の文字起こしを準備している（初回はダウンロードを待つ） */
+  preparing = $state(false);
   /** 直近の入力レベル（dBFS）。字幕を動かしている間だけ届く */
   level = $state<number | undefined>();
   /** OpenAI の使用量と概算の料金 */
@@ -96,14 +110,15 @@ class Panel {
   /** 選んだ作り方に要るのに、自分のキーもギフトコードもない会社。ギフトコードが xAI を中継するかは、
    * 字幕を始めるときに中核が確かめる（中継しなければ `giftUnsupported` で止まる） */
   get missingKeys(): Provider[] {
-    return this.view?.keys.gift.state === "saved" ? [] : this.withoutKey;
+    const gift = this.view?.keys.gift.state === "saved";
+    return this.withoutKey.filter((p) => !gift || !giftable(p));
   }
 
   /** ギフトコードで使う（おすそ分けしてくれた人に請求される）会社。コードが中継する会社が分かれば、それだけ */
   get giftPaid(): Provider[] {
     if (this.view?.keys.gift.state !== "saved") return [];
     const relayed = this.gift?.state === "active" ? this.gift.providers : undefined;
-    return this.withoutKey.filter((p) => !relayed || relayed.includes(p));
+    return this.withoutKey.filter((p) => giftable(p) && (!relayed || relayed.includes(p)));
   }
 
   /** 字幕を始められる鍵がそろっている。有料の工程がなければ鍵は要らない */
@@ -114,14 +129,6 @@ class Panel {
   /** 選んだモードに要る鍵がない。キーの案内を出し、字幕を始めさせない */
   get needsKey() {
     return this.missingKeys.length > 0;
-  }
-
-  /** スタンダードで使える鍵（自分の OpenAI のキーか、OpenAI に使える期限内のギフトコード）がある。
-   * 今日の上限に達したコードは、中継する会社が分からないが、日が変われば使えるので含める */
-  get standardReady() {
-    if (this.view?.keys.openai.state === "saved") return true;
-    const gift = this.gift;
-    return gift?.state === "active" ? gift.providers.includes("openai") : gift?.state === "limit";
   }
 
   /** 字幕を始める操作をしていて、止まった理由もない */
@@ -170,6 +177,7 @@ class Panel {
   private onMessage(msg: ServerMsg) {
     if (msg.type === "transcription.status") {
       this.transcriptionError = msg.error ?? undefined;
+      this.preparing = msg.preparing;
     } else if (msg.type === "chrome.status") {
       this.chromeStatus = msg.status ?? undefined;
     } else if (msg.type === "usage") {
@@ -330,6 +338,20 @@ class Panel {
     this.gift = await api.gift().catch(() => undefined);
   };
 
+  /** モードを選ぶ。ベータのモードは、コードがなければ自動でもらう（DESIGN.md 17.2） */
+  chooseMode = async (engines: Engines) => {
+    await this.update({ engines });
+    const beta = providers(engines).some((p) => relayOf(p) === "beta");
+    if (!beta || this.missingKeys.length === 0 || this.view?.keys.gift.state === "saved") return;
+    await this.run(async () => {
+      const joined = await api.joinBeta();
+      if ("error" in joined) throw new Error(betaRefusalText(joined));
+      this.gift = joined;
+      this.view = await api.settings();
+      toast.success("ベータを使えるようにしました");
+    });
+  };
+
   /** 有効なコードなら保存する。保存できたら true */
   setGift = (code: string) =>
     this.run(async () => {
@@ -404,7 +426,9 @@ export function transcriptionErrorText(e: TranscriptionError): string {
     case "giftUnknown":
       return "ギフトコードが見つかりません。おすそ分けしてくれた人に確かめてください";
     case "giftUnsupported":
-      return `このギフトコードでは ${PROVIDER_NAMES[e.provider]} を使えません。おすそ分けしてくれた人に ${PROVIDER_NAMES[e.provider]} のキーも預けてもらうか、自分の API キーを入れてください`;
+      return relayOf(e.provider) === "beta"
+        ? `持っているコードでは ${PROVIDER_NAMES[e.provider]} の この工程を使えません。ベータのモードにするか、自分の API キーを入れてください（人からもらったギフトコードがあると、ベータのコードはもらえません）`
+        : `このギフトコードでは ${PROVIDER_NAMES[e.provider]} を使えません。おすそ分けしてくれた人に ${PROVIDER_NAMES[e.provider]} のキーも預けてもらうか、自分の API キーを入れてください`;
     case "invalidKey":
       return `${PROVIDER_NAMES[e.provider]} の API キーが使えません。キーを確かめてください`;
     case "inputEnded":
@@ -439,6 +463,22 @@ function micErrorText(e: MicError): string {
 const unknown = (e: never) => `止まりました（${JSON.stringify(e)}）`;
 
 /** 有効なコードか。今日の上限は日が変われば戻るので、今は使えなくても有効 */
+/** ベータのコードをもらえなかった理由を文にする */
+export function betaRefusalText(e: BetaRefusal): string {
+  switch (e.error) {
+    case "closed":
+      return "ベータの無料の提供は終わりました。ほかのモードを選んでください";
+    case "tooMany":
+      return "今日はもう、ベータのコードを何度も受け取っています。明日また試してください";
+    case "full":
+      return "今日のベータの受け付けは終わりました。明日また試してください";
+    case "unreachable":
+      return `ベータのサーバーにつながりません（${e.detail}）`;
+    default:
+      return unknown(e);
+  }
+}
+
 export const giftValid = (s: GiftStatus | undefined) =>
   s?.state === "active" || s?.state === "limit";
 

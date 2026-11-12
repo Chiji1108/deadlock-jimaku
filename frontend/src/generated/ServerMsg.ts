@@ -11,4 +11,8 @@ import type { SubtitleStyle } from "./SubtitleStyle";
 import type { TranscriptionError } from "./TranscriptionError";
 import type { UsageView } from "./UsageView";
 
-export type ServerMsg = { "type": "snapshot", segments: Array<Segment>, } | { "type": "segment.upsert", segment: Segment, } | { "type": "glossary.updated", clientVersion: number, } | { "type": "rank.update", rank: RankState | null, } | { "type": "transcription.status", error: TranscriptionError | null, } | { "type": "display", subtitles: SubtitleDisplay, subtitleStyle: SubtitleStyle, rankLanguage: string, rankContent: RankContent, rankAnchor: Anchor, rankStyle: RankStyle, itemCards: ItemCardsView, } | { "type": "audio.level", db: number, } | { "type": "usage", usage: UsageView, } | { "type": "live.status", status: LiveStatus | null, } | { "type": "chrome.status", status: LiveStatus | null, } | { "type": "settings.changed" };
+export type ServerMsg = { "type": "snapshot", segments: Array<Segment>, } | { "type": "segment.upsert", segment: Segment, } | { "type": "glossary.updated", clientVersion: number, } | { "type": "rank.update", rank: RankState | null, } | { "type": "transcription.status", error: TranscriptionError | null, 
+/**
+ * PC の中の文字起こしを準備している（初回はダウンロードを待つ）
+ */
+preparing: boolean, } | { "type": "display", subtitles: SubtitleDisplay, subtitleStyle: SubtitleStyle, rankLanguage: string, rankContent: RankContent, rankAnchor: Anchor, rankStyle: RankStyle, itemCards: ItemCardsView, } | { "type": "audio.level", db: number, } | { "type": "usage", usage: UsageView, } | { "type": "live.status", status: LiveStatus | null, } | { "type": "chrome.status", status: LiveStatus | null, } | { "type": "settings.changed" };
