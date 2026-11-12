@@ -89,11 +89,6 @@ class Panel {
     return this.view?.settings;
   }
 
-  /** OpenAI の API キーもギフトコードも保存されていない（読めないだけのときは含めない） */
-  get keyMissing() {
-    return this.view?.keys.openai.state === "missing" && this.view.keys.gift.state === "missing";
-  }
-
   /** その作り方に要る会社のうち、自分のキーがないもの */
   private keyless(engines: Engines): Provider[] {
     const view = this.view;

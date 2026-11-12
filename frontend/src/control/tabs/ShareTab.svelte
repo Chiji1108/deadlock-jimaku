@@ -16,7 +16,7 @@
   import { dateTime, panel } from "../panel.svelte";
   import { usd } from "../usage";
 
-  /** 預けられる会社と、ギフトコードの人が使えるもの・料金 */
+  /** 預けられる会社と、ギフトコードの人が使えるもの・料金（預ける前の確認に出す） */
   const PROVIDERS: { provider: Provider; uses: string; price: string }[] = [
     {
       provider: "openai",
@@ -124,7 +124,6 @@
               <span class="font-medium">{PROVIDER_NAMES[p.provider]}</span>
               {#if on}<Badge variant="secondary">預けています</Badge>{/if}
             </div>
-            <p class="text-sm text-muted-foreground">ギフトコードの人が使えるもの: {p.uses}</p>
             {#if on}
               <Button
                 variant="outline"
