@@ -71,6 +71,11 @@ pub struct Settings {
     #[ts(optional)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub custom_engines: Option<Engines>,
+    /// 更新の内容（`CHANGELOG.md`）を最後に見た版（`0.6.0`。プレリリースの印は付けない）。
+    /// None は、この項目ができる前（0.5 まで）から使っている人で、今の版の内容を見せる
+    #[ts(optional)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub notes_seen: Option<String>,
     // 以下の詳細項目は操作パネルで変えない（`ADVANCED`）
     pub models: Models,
     /// リアルタイムの音声認識の遅れ（`minimal` / `low` / `medium` / `high` / `xhigh`。
@@ -1133,6 +1138,7 @@ impl Default for Settings {
             onboarding_closed: false,
             hybrid_hint_closed: false,
             custom_engines: None,
+            notes_seen: None,
             tray_notice_seen: false,
             rank_region: None,
             rank_style: RankStyle::default(),
@@ -1406,6 +1412,7 @@ impl Settings {
         next.onboarding_closed = patch.onboarding_closed.unwrap_or(next.onboarding_closed);
         next.hybrid_hint_closed = patch.hybrid_hint_closed.unwrap_or(next.hybrid_hint_closed);
         next.tray_notice_seen = patch.tray_notice_seen.unwrap_or(next.tray_notice_seen);
+        next.notes_seen = patch.notes_seen.or(next.notes_seen);
         if let Some(region) = patch.rank_region {
             next.rank_region = match region.as_str() {
                 "" => None,
@@ -1483,6 +1490,8 @@ pub struct SettingsPatch {
     pub hybrid_hint_closed: Option<bool>,
     #[ts(optional)]
     pub tray_notice_seen: Option<bool>,
+    #[ts(optional)]
+    pub notes_seen: Option<String>,
     /// 地域（`Region`）。空文字列なら順位を調べない
     #[ts(optional)]
     pub rank_region: Option<String>,
@@ -1549,12 +1558,22 @@ fn from_modes(json: &mut Value) {
     );
 }
 
+/// 今の版の、プレリリースの印を除いたもの（`0.6.0-rc.11` なら `0.6.0`）。更新の内容は、この版ごとに書く
+fn release() -> &'static str {
+    let version = env!("CARGO_PKG_VERSION");
+    version
+        .split_once('-')
+        .map_or(version, |(release, _)| release)
+}
+
 pub fn load(path: &Path) -> std::io::Result<Settings> {
     let bytes = match std::fs::read(path) {
         Ok(bytes) => bytes,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            // 新しく入れた人には、更新の内容を見せない（はじめかたがある）
             return Ok(Settings {
                 rank_language: Some("en".into()),
+                notes_seen: Some(release().to_owned()),
                 ..Settings::default()
             });
         }
@@ -1690,6 +1709,28 @@ mod tests {
             translate_to: Some(["en", "ru", "ko", "de", "fr"].map(String::from).to_vec()),
             ..SettingsPatch::default()
         }));
+    }
+
+    #[test]
+    fn release_notes_are_for_people_who_updated() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("settings.json");
+        // 新しく入れた人は、今の版まで見たことにする
+        let fresh = load(&path).unwrap();
+        assert_eq!(fresh.notes_seen.as_deref(), Some(release()));
+        assert!(!release().contains('-'));
+        // この項目ができる前から使っている人は、まだ見ていない
+        std::fs::write(&path, "{}").unwrap();
+        let updated = load(&path).unwrap();
+        assert_eq!(updated.notes_seen, None);
+        // 見たら覚える。ほかの変更では消えない
+        let seen = SettingsPatch {
+            notes_seen: Some("0.6.0".into()),
+            ..Default::default()
+        };
+        let seen = updated.apply(seen).unwrap();
+        let later = seen.apply(SettingsPatch::default()).unwrap();
+        assert_eq!(later.notes_seen.as_deref(), Some("0.6.0"));
     }
 
     #[test]

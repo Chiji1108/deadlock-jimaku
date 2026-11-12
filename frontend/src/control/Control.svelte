@@ -18,6 +18,7 @@
   import * as Tabs from "$lib/components/ui/tabs";
   import AboutDialog from "./parts/AboutDialog.svelte";
   import Onboarding from "./parts/Onboarding.svelte";
+  import WhatsNew from "./parts/WhatsNew.svelte";
   import { panel, transcriptionErrorText } from "./panel.svelte";
   import { total, unpriced, usd } from "./usage";
   import AudioTab from "./tabs/AudioTab.svelte";
@@ -159,6 +160,7 @@
   </header>
 
   {#if s}
+    <WhatsNew />
     <Tabs.Root
       bind:value={panel.tab}
       orientation={wide.current ? "vertical" : "horizontal"}
