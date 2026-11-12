@@ -34,12 +34,9 @@
   <Card.Header>
     <Card.Title>料金（概算）</Card.Title>
     <Card.Description>
-      送った音声の長さと使ったトークン数に、それぞれの会社の単価を掛けた目安です。正確な金額は
-      <a class="underline" href="https://platform.openai.com/usage" target="_blank" rel="noreferrer"
-        >OpenAI</a
-      >
-      と <a class="underline" href="https://console.x.ai" target="_blank" rel="noreferrer">xAI</a> の使用量のページで確かめてください。今月は
-      UTC の月で数えます。応答が届かなかった分（タイムアウトなど）は数えられないので、少なめに出ることがあります
+      送った音声の長さと使ったトークン数に、それぞれの会社の単価を掛けた目安です。正確な金額は、キーを作った会社の使用量のページで確かめてください。今月は
+      UTC
+      の月で数えます。応答が届かなかった分（タイムアウトなど）は数えられないので、少なめに出ることがあります
     </Card.Description>
   </Card.Header>
   <Card.Content>

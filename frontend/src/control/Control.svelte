@@ -29,7 +29,7 @@
   import RankTab from "./tabs/RankTab.svelte";
   import ShareTab from "./tabs/ShareTab.svelte";
   import UsageTab from "./tabs/UsageTab.svelte";
-  import { CHROME, anyPaid, chromeFinals, keyNames } from "../lib/engines";
+  import { CHROME, anyPaid, chromeFinals, enterKeys, keyNames } from "../lib/engines";
 
   onMount(() => panel.start());
 
@@ -146,7 +146,7 @@
         {:else if panel.needsKey}
           <div class="flex flex-wrap gap-2">
             <Button variant="outline" onclick={() => (panel.tab = "keys")}
-              >キーかギフトコードを入れる</Button
+              >{enterKeys(panel.missingKeys)}</Button
             >
             <Button onclick={panel.startWithChrome}>無料の Chrome モードで始める</Button>
           </div>
@@ -217,7 +217,7 @@
               <Alert.Title>この作り方には {keyNames(panel.missingKeys)}が要ります</Alert.Title>
               <Alert.Description class="flex flex-wrap gap-2 pt-1">
                 <Button size="sm" onclick={() => (panel.tab = "keys")}
-                  >キーかギフトコードを入れる</Button
+                  >{enterKeys(panel.missingKeys)}</Button
                 >
                 <Button
                   size="sm"
