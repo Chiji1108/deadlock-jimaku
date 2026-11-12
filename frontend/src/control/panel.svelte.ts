@@ -348,7 +348,7 @@ class Panel {
       if ("error" in joined) throw new Error(betaRefusalText(joined));
       this.gift = joined;
       this.view = await api.settings();
-      toast.success("ベータを使えるようにしました");
+      toast.success("「おすすめ」のモードを使えるようにしました");
     });
   };
 
@@ -427,7 +427,7 @@ export function transcriptionErrorText(e: TranscriptionError): string {
       return "ギフトコードが見つかりません。おすそ分けしてくれた人に確かめてください";
     case "giftUnsupported":
       return relayOf(e.provider) === "beta"
-        ? `持っているコードでは ${PROVIDER_NAMES[e.provider]} の この工程を使えません。ベータのモードにするか、自分の API キーを入れてください（人からもらったギフトコードがあると、ベータのコードはもらえません）`
+        ? `持っているコードでは ${PROVIDER_NAMES[e.provider]} の この工程を使えません。「おすすめ」のモードにするか、自分の API キーを入れてください（人からもらったギフトコードがあると、ベータのコードはもらえません）`
         : `このギフトコードでは ${PROVIDER_NAMES[e.provider]} を使えません。おすそ分けしてくれた人に ${PROVIDER_NAMES[e.provider]} のキーも預けてもらうか、自分の API キーを入れてください`;
     case "invalidKey":
       return `${PROVIDER_NAMES[e.provider]} の API キーが使えません。キーを確かめてください`;

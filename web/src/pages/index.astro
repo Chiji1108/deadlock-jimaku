@@ -135,10 +135,9 @@ const faqs = [
 
 /** モードの一覧はアプリと同じもの（engines.ts）を出し、LP では「必要なもの」だけを足す */
 const needs: Record<string, string> = {
+  beta: "Google Chrome（字幕を始めると小さなウィンドウが開く）",
   chrome: "Google Chrome（字幕を始めると小さなウィンドウが開く）",
-  light: "OpenAI と xAI の API キーかギフトコード、Google Chrome",
-  standard: "API キーかギフトコード、Google Chrome",
-  openai: "API キーかギフトコード",
+  best: "OpenAI の API キーかギフトコード、Google Chrome",
 };
 
 const line = LINES[0]!;
@@ -316,7 +315,7 @@ const official = [
 
   <section id="modes" class="mx-auto mt-28 max-w-6xl px-4 sm:mt-40">
     <h2 class="display reveal text-[clamp(2.1rem,5.4vw,4.25rem)]">
-      4 つの<span class="band">モード</span>から選べる。
+      3 つの<span class="band">モード</span>から選べる。
     </h2>
     <ul class="mt-10 grid gap-8 md:grid-cols-3">
       {
@@ -324,7 +323,7 @@ const official = [
           <li class="reveal border-t-2 border-ink pt-4">
             <h3 class="flex items-center gap-2 text-xl font-bold">
               {e.label}
-              {e.recommended && <span class="bg-ink px-2 py-0.5 text-xs text-paper">おすすめ</span>}
+              {e.badge && <span class="bg-ink px-2 py-0.5 text-xs text-paper">{e.badge}</span>}
             </h3>
             <p class="mt-2 text-sm font-bold">{e.traits}</p>
             <p class="display mt-3 text-3xl">{price(e.hourlyUsd)}</p>
