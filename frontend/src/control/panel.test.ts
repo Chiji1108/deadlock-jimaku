@@ -292,3 +292,49 @@ test("ベータのモードは、コードがあれば鍵が要らない", () =>
 test("設定が届く前はキーの案内を出さない", () => {
   expect(freshPanel().needsKey).toBe(false);
 });
+
+const betaKeys = (gift: string) => ({
+  openai: { state: "missing" },
+  gift: { state: gift },
+  xai: { state: "missing" },
+  qwen: { state: "missing" },
+  openrouter: { state: "missing" },
+  typesafe: { state: "missing" },
+});
+
+test("ベータのコードが要るモードは、同意してからコードをもらって変える", async () => {
+  const fresh = freshPanel();
+  fresh.view = { settings: { engines: CHROME }, keys: betaKeys("missing") } as never;
+  const update = vi.spyOn(fresh, "update").mockResolvedValue(true);
+  const join = vi.spyOn(api, "joinBeta").mockResolvedValue({ state: "active" } as never);
+  await fresh.chooseMode(BETA);
+  expect(fresh.betaOffer).toEqual(BETA);
+  expect(join).not.toHaveBeenCalled();
+  expect(update).not.toHaveBeenCalled();
+  expect(await fresh.acceptBeta()).toBe(true);
+  expect(join).toHaveBeenCalledTimes(1);
+  expect(update).toHaveBeenCalledWith({ engines: BETA });
+  expect(fresh.betaOffer).toBeUndefined();
+});
+
+test("ベータのコードをもらえなければ、モードを変えない", async () => {
+  const fresh = freshPanel();
+  fresh.view = { settings: { engines: CHROME }, keys: betaKeys("missing") } as never;
+  const update = vi.spyOn(fresh, "update").mockResolvedValue(true);
+  vi.spyOn(api, "joinBeta").mockResolvedValue({ error: "closed" } as never);
+  await fresh.chooseMode(BETA);
+  expect(await fresh.acceptBeta()).toBe(false);
+  expect(update).not.toHaveBeenCalled();
+  expect(fresh.betaOffer).toEqual(BETA);
+});
+
+test("コードがあるか、ベータのコードが要らないモードは、聞かずに変える", async () => {
+  const fresh = freshPanel();
+  const update = vi.spyOn(fresh, "update").mockResolvedValue(true);
+  fresh.view = { settings: { engines: CHROME }, keys: betaKeys("saved") } as never;
+  await fresh.chooseMode(BETA);
+  fresh.view = { settings: { engines: BETA }, keys: betaKeys("missing") } as never;
+  await fresh.chooseMode(CHROME);
+  expect(update.mock.calls).toEqual([[{ engines: BETA }], [{ engines: CHROME }]]);
+  expect(fresh.betaOffer).toBeUndefined();
+});

@@ -76,6 +76,8 @@ class Panel {
   subtitled = $state(false);
   /** もらったギフトコードの状態（保存していれば開いたときに確かめる） */
   gift = $state<GiftStatus | undefined>();
+  /** ベータのコードをもらえば使える作り方。選んだ人の同意を待っている（DESIGN.md 17.2） */
+  betaOffer = $state<Engines>();
   /** おすそ分け。起動したとき・キーを変えたとき・おすそ分けか料金のタブを開いたときに取り直す */
   share = $state<ShareView | undefined>();
   /** おすそ分けの状態を取れなかった理由 */
@@ -100,11 +102,15 @@ class Panel {
     return this.view?.keys.openai.state === "missing" && this.view.keys.gift.state === "missing";
   }
 
+  /** その作り方に要る会社のうち、自分のキーがないもの */
+  private keyless(engines: Engines): Provider[] {
+    const view = this.view;
+    return view ? providers(engines).filter((p) => view.keys[p].state !== "saved") : [];
+  }
+
   /** 選んだ作り方に要る会社のうち、自分のキーがないもの */
   private get withoutKey(): Provider[] {
-    const view = this.view;
-    if (!view) return [];
-    return providers(view.settings.engines).filter((p) => view.keys[p].state !== "saved");
+    return this.view ? this.keyless(this.view.settings.engines) : [];
   }
 
   /** 選んだ作り方に要るのに、自分のキーもギフトコードもない会社。ギフトコードが xAI を中継するかは、
@@ -338,18 +344,27 @@ class Panel {
     this.gift = await api.gift().catch(() => undefined);
   };
 
-  /** モードを選ぶ。ベータのモードは、コードがなければ自動でもらう（DESIGN.md 17.2） */
+  /** モードを選ぶ。ベータのコードが要るなら、変える前に同意を聞く（DESIGN.md 17.2） */
   chooseMode = async (engines: Engines) => {
-    await this.update({ engines });
-    const beta = providers(engines).some((p) => relayOf(p) === "beta");
-    if (!beta || this.missingKeys.length === 0 || this.view?.keys.gift.state === "saved") return;
-    await this.run(async () => {
+    const needsCode =
+      this.view?.keys.gift.state !== "saved" &&
+      this.keyless(engines).some((p) => relayOf(p) === "beta");
+    if (needsCode) this.betaOffer = engines;
+    else await this.update({ engines });
+  };
+
+  /** 同意したので、ベータのコードをもらって、待たせていた作り方にする。できたら true */
+  acceptBeta = async () => {
+    const engines = this.betaOffer;
+    if (!engines) return true;
+    const joined = await this.run(async () => {
       const joined = await api.joinBeta();
       if ("error" in joined) throw new Error(betaRefusalText(joined));
       this.gift = joined;
-      this.view = await api.settings();
-      toast.success("「おすすめ」のモードを使えるようにしました");
     });
+    if (!joined) return false;
+    this.betaOffer = undefined;
+    return this.update({ engines });
   };
 
   /** 有効なコードなら保存する。保存できたら true */

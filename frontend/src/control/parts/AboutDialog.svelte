@@ -3,10 +3,11 @@
   import * as Dialog from "$lib/components/ui/dialog";
   import fonts from "../../../../notices/fonts.txt?raw";
   import unidic from "../../../../notices/unidic.txt?raw";
+  import { SITE } from "../../lib/site";
   import { panel } from "../panel.svelte";
+  import CreditCopy from "./CreditCopy.svelte";
 
   // アプリの情報。左下の版から開く（毎日見るものではないので、サイドバーの項目にしない）
-  const SITE = "https://jimaku.deadlock.jp";
   const LINKS = [
     { href: `${SITE}/#faq`, label: "使い方・よくある質問" },
     { href: "https://discord.gg/QdVFzMBBD2", label: "Discord（不具合の報告・要望）" },
@@ -47,6 +48,10 @@
         </li>
       {/each}
     </ul>
+    <div class="flex flex-col gap-1 text-sm">
+      <p class="text-muted-foreground">配信の概要欄などに載せてもらえると、うれしいです</p>
+      <CreditCopy />
+    </div>
     <div class="flex flex-col gap-1 text-xs">
       {#each NOTICES as notice (notice.name)}
         <details>
