@@ -169,6 +169,15 @@ mise run dev
 
 整形・リント・型チェック・テストは `mise run check` でまとめて実行します。
 
+使っているアプリを動かしたまま、別の場所で起動して試せます。`DEADLOCK_JIMAKU_DATA_DIR`（設定と辞書を置くフォルダ）と `DEADLOCK_JIMAKU_PORT`（ポート）を付けます。フォルダを替えると、API キーも別の名前で持つので、使っているアプリのキーは読みません。
+
+```bash
+pnpm --dir frontend build
+DEADLOCK_JIMAKU_DATA_DIR=/tmp/jimaku-dev DEADLOCK_JIMAKU_PORT=4599 cargo run -p overlays-core --bin overlays-headless
+```
+
+操作パネルは `http://127.0.0.1:4599/` で開きます。
+
 報告や提案に AI を使うときは、[AI の利用について](AI_POLICY.md)を読んでください。
 
 ## ライセンス

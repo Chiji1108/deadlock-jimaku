@@ -7,7 +7,6 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::IDENTIFIER;
 use std::collections::BTreeMap;
 
 use crate::access::{Access, Accesses};
@@ -185,7 +184,7 @@ fn get(slot: Slot) -> Result<Option<String>, keyring::Error> {
 }
 
 fn get_account(account: &str) -> Result<Option<String>, keyring::Error> {
-    let entry = keyring::Entry::new(IDENTIFIER, account)?;
+    let entry = keyring::Entry::new(&crate::keyring_service(), account)?;
     match entry.get_password() {
         Ok(value) => Ok(Some(value).filter(|v| !v.trim().is_empty())),
         Err(keyring::Error::NoEntry) => Ok(None),
@@ -199,7 +198,7 @@ fn put(slot: Slot, value: &str) -> anyhow::Result<()> {
 }
 
 fn put_account(account: &str, value: &str) -> anyhow::Result<()> {
-    let entry = keyring::Entry::new(IDENTIFIER, account)?;
+    let entry = keyring::Entry::new(&crate::keyring_service(), account)?;
     let value = value.trim();
     if value.is_empty() {
         match entry.delete_credential() {

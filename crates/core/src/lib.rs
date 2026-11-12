@@ -40,10 +40,37 @@ pub const DEFAULT_PORT: u16 = 4510;
 /// app/tauri.conf.json の identifier と揃える（Tauri の app_data_dir と同じ場所になる）
 pub const IDENTIFIER: &str = "jp.deadlock.jimaku";
 
+/// 開発のときに、使っているアプリとぶつからないよう、別の場所で起動する（README の「開発」）。
+/// `DEADLOCK_JIMAKU_DATA_DIR` を付けると、設定と辞書をそのフォルダに置き、API キーも別の名前で持つ
+/// （使っているアプリのキーを読まない）。ポートは `DEADLOCK_JIMAKU_PORT` で替える
+const DATA_DIR_ENV: &str = "DEADLOCK_JIMAKU_DATA_DIR";
+const PORT_ENV: &str = "DEADLOCK_JIMAKU_PORT";
+
+/// 操作パネルとオーバーレイを配るポート
+pub fn port() -> u16 {
+    let port = std::env::var(PORT_ENV).ok().and_then(|p| p.parse().ok());
+    port.unwrap_or(DEFAULT_PORT)
+}
+
+/// 開発のときに指定した、データの置き場所
+pub fn data_dir_override() -> Option<PathBuf> {
+    std::env::var_os(DATA_DIR_ENV).map(Into::into)
+}
+
 pub fn default_data_dir() -> PathBuf {
-    dirs::data_dir()
-        .unwrap_or_else(|| PathBuf::from("."))
-        .join(IDENTIFIER)
+    data_dir_override().unwrap_or_else(|| {
+        dirs::data_dir()
+            .unwrap_or_else(|| PathBuf::from("."))
+            .join(IDENTIFIER)
+    })
+}
+
+/// API キーを OS に預けるときの名前。別の場所で起動したときは、使っているアプリのものと分ける
+pub fn keyring_service() -> String {
+    match data_dir_override() {
+        Some(_) => format!("{IDENTIFIER}.dev"),
+        None => IDENTIFIER.to_owned(),
+    }
 }
 
 /// 外部 API（OpenAI・deadlock-api）に使う HTTP クライアント。接続と TLS を使い回す。

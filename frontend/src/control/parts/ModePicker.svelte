@@ -15,7 +15,11 @@
 </script>
 
 <div class="flex flex-col gap-3">
-  <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-5" role="radiogroup" aria-label="モード">
+  <div
+    class="grid grid-cols-[repeat(auto-fit,minmax(9.5rem,1fr))] gap-2"
+    role="radiogroup"
+    aria-label="モード"
+  >
     {#each MODES as m (m.name)}
       <button
         type="button"

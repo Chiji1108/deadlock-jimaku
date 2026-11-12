@@ -25,7 +25,6 @@ use tokio::task::JoinHandle;
 use tokio::time::MissedTickBehavior;
 use tokio_tungstenite::tungstenite::Message;
 
-use crate::DEFAULT_PORT;
 use crate::access::Accesses;
 use crate::annotate::Annotator;
 use crate::decide::Asked;
@@ -156,7 +155,7 @@ pub(crate) fn remove_profile(data_dir: &Path) -> io::Result<()> {
 }
 
 fn page_url() -> String {
-    format!("http://127.0.0.1:{DEFAULT_PORT}/chrome")
+    format!("http://127.0.0.1:{}/chrome", crate::port())
 }
 
 fn arguments(profile: &Path) -> Vec<String> {
