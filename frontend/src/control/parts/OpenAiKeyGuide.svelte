@@ -45,7 +45,7 @@
     <Card.Content class="mt-5 flex flex-col gap-5">
       <p class="text-sm text-muted-foreground">
         工程に OpenAI のモデル（確定の字幕の GPT-Transcribe、翻訳の GPT-6.1 Terra
-        など）を選ぶと、OpenAI の API キーが必要です。ベータ・ローカル・Chrome
+        など）を選ぶと、OpenAI の API キーが必要です。ベータ・Chrome
         のモードなら要りません。料金は使った分だけで、話していない間はかかりません。使った分の目安は「料金」タブに出ます
       </p>
       <ol class="flex flex-col gap-4">

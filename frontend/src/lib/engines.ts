@@ -201,8 +201,6 @@ export const BETA: Engines = {
   translation: "hyMt2",
   furigana: "decider",
 };
-/** ローカルの組み合わせ。途中の字幕も確定も PC の中（Haas-ja）。用語と翻訳はベータと同じ */
-export const LOCAL: Engines = { ...BETA, live: "haasJa", transcription: "haasJa" };
 
 /** 最高精度の組み合わせ（0.5 までの「スタンダード」）。確定の文字起こし・翻訳と用語・ふりがなを GPT で作る */
 export const BEST: Engines = {
@@ -244,14 +242,6 @@ export const MODES: {
     hint: "ベータの間は無料です。途中の字幕は Chrome、確定の字幕・用語・翻訳・ふりがなの読み分けは、開発者のサーバーを通して作ります（1 日の上限があります）",
     engines: BETA,
     recommended: true,
-  },
-  {
-    name: "local",
-    label: "ローカル",
-    traits: "音声を送らない・キー不要",
-    hourlyUsd: 0,
-    hint: "途中の字幕も確定の字幕も、PC の中で作ります（日本語だけ。初回に約 400 MB をダウンロードします）。音声は PC から出ません。用語と翻訳は、ベータの間は無料で、開発者のサーバーを通して作ります。PC の負荷が上がるので、性能に余裕のない PC には向きません。カタカナの用語は、ベータより間違えやすいです",
-    engines: LOCAL,
   },
   {
     name: "chrome",

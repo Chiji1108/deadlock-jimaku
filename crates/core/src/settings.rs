@@ -664,16 +664,9 @@ impl Engines {
         translation: TranslationEngine::HyMt2,
         furigana: RubySource::Decider,
     };
-    /// ローカルのモード。途中の字幕も確定も PC の中の Haas-ja で作り、音声は PC から出ない（日本語だけ。DESIGN.md 9.8）。
-    /// 用語と翻訳は、ベータのモードと同じ（ベータの間は無料）
-    pub const LOCAL: Self = Self {
-        live: LiveSource::HaasJa,
-        transcription: FinalSource::HaasJa,
-        ..Self::BETA
-    };
     /// 操作パネルに出すモード（おすすめの組み合わせ）。ほかの組み合わせは「カスタム」（`Settings::custom_engines`）。
     /// `STANDARD` は「最高精度」（OpenAI の鍵が要る）で、ほかは鍵なしで始められる
-    pub const MODES: [Self; 4] = [Self::BETA, Self::LOCAL, Self::CHROME, Self::STANDARD];
+    pub const MODES: [Self; 3] = [Self::BETA, Self::CHROME, Self::STANDARD];
     /// 最高精度のモード（0.5 までの「スタンダード」）。途中の字幕は Chrome、確定は OpenAI
     pub const STANDARD: Self = Self {
         live: LiveSource::Chrome,
@@ -1662,15 +1655,15 @@ mod tests {
         assert_eq!(beta.custom_engines, None);
         // 自分で組んだ組み合わせは、モードを試したあとも残る（保存しても）
         let custom = beta.apply(engines(mine)).unwrap();
-        let tried = custom.apply(engines(Engines::LOCAL)).unwrap();
+        let tried = custom.apply(engines(Engines::CHROME)).unwrap();
         assert_eq!(
             (tried.engines, tried.custom_engines),
-            (Engines::LOCAL, Some(mine))
+            (Engines::CHROME, Some(mine))
         );
         let saved = serde_json::to_string(&tried).unwrap();
         let loaded: Settings = serde_json::from_str(&saved).unwrap();
         assert_eq!(loaded.custom_engines, Some(mine));
-        // 最高精度のほかは、鍵なしで始められる組み合わせ（ベータのコードか、PC の中か、Chrome）
+        // 最高精度のほかは、鍵なしで始められる組み合わせ（ベータのコードか、Chrome）
         assert_eq!(Engines::STANDARD.providers(), [Provider::OpenAi]);
         for mode in Engines::MODES
             .into_iter()
@@ -1993,7 +1986,9 @@ mod tests {
         assert!(nano.providers().is_empty());
         let without_chrome = Engines {
             terms: TermsEngine::GeminiNano,
-            ..Engines::LOCAL
+            live: LiveSource::HaasJa,
+            transcription: FinalSource::HaasJa,
+            ..Engines::BETA
         };
         assert_eq!(without_chrome.sanitized().terms, TermsEngine::Dictionary);
     }
