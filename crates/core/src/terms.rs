@@ -42,7 +42,7 @@ impl Terms {
             by_text.entry(term.text.clone()).or_insert(i);
             let reading = to_hiragana(&term.reading);
             if reading.chars().count() >= MIN_READING && reading.chars().all(is_kana) {
-                by_reading.entry(reading).or_insert(i);
+                by_reading.entry(fold(&reading)).or_insert(i);
             }
         }
         Self {
@@ -84,10 +84,38 @@ impl Terms {
                 .iter()
                 .map(|m| m.reading.as_deref())
                 .collect::<Option<String>>()?;
-            self.by_reading.get(&reading).copied()
+            self.by_reading.get(&fold(&reading)).copied()
         })
     }
 }
+
+/// 読みを比べる前に、同じ音の書き方の揺れをそろえる（ひらがなの読みに使う）。文字起こしは、公式名と同じ音を
+/// 別の字で書く（DESIGN.md 3 章の合成音声の測定）: 「ヴィスカス」を「ビスカス」、「ホリデイ」を「ホリデー」、
+/// 「レディガイスト」を「レディーガイスト」。ヴの行はバの行に、長音符は落とし、エの段のあとの「い」も落とす
+fn fold(reading: &str) -> String {
+    let mut folded = String::with_capacity(reading.len());
+    let mut chars = reading.chars().peekable();
+    while let Some(c) = chars.next() {
+        match c {
+            'ゔ' => folded.push(match chars.next_if(|next| "ぁぃぇぉ".contains(*next)) {
+                Some('ぁ') => 'ば',
+                Some('ぃ') => 'び',
+                Some('ぇ') => 'べ',
+                Some('ぉ') => 'ぼ',
+                _ => 'ぶ',
+            }),
+            'ー' => {}
+            'い' if folded.ends_with(E_ROW) => {}
+            _ => folded.push(c),
+        }
+    }
+    folded
+}
+
+/// エの段のかな（あとの「い」は、長音として書かれることがある）
+const E_ROW: [char; 15] = [
+    'え', 'け', 'せ', 'て', 'ね', 'へ', 'め', 'れ', 'げ', 'ぜ', 'で', 'べ', 'ぺ', 'ぇ', 'ゑ',
+];
 
 /// `start..end` が、カタカナの語の途中で切れていない。辞書は知らないカタカナの語を知っている語に割ることが
 /// あるので（「レムソン」を「レム」「ソン」）、カタカナが続く途中では用語にしない
@@ -142,6 +170,10 @@ mod tests {
             term("item:3", "カースブレイカー", "カースブレイカー", "Breaker"),
             term("ability:1", "カース", "カース", "Curse"),
             term("hero:8", "レム", "レム", "Lemur"),
+            term("hero:35", "ヴィスカス", "ヴィスカス", "Viscous"),
+            term("hero:14", "ホリデイ", "ホリデイ", "Holliday"),
+            term("hero:4", "レディガイスト", "レディガイスト", "Lady Geist"),
+            term("hero:3", "ヴィンディクタ", "ヴィンディクタ", "Vindicta"),
         ])
     }
 
@@ -186,6 +218,26 @@ mod tests {
             find("きそかくちょうまがじんを取る"),
             found("きそかくちょうまがじん", "item:1")
         );
+    }
+
+    #[test]
+    fn the_same_sound_in_another_spelling_matches() {
+        assert_eq!(find("ビスカスのパンチ痛い"), found("ビスカス", "hero:35"));
+        assert_eq!(find("ホリデーが飛んできた"), found("ホリデー", "hero:14"));
+        assert_eq!(
+            find("レディーガイストが近い"),
+            found("レディーガイスト", "hero:4")
+        );
+        assert_eq!(
+            find("ビンディクタが飛んでる"),
+            found("ビンディクタ", "hero:3")
+        );
+        // そろえるのは音が同じ書き方だけ。違う音は別の言葉のまま
+        assert_eq!(find("ビスカが痛い"), Vec::new());
+        assert_eq!(fold("ゔぁいぱー"), "ばいぱ");
+        assert_eq!(fold("ぺいじ"), fold("ぺーじ"));
+        assert_eq!(fold("けいさん"), "けさん");
+        assert_eq!(fold("あいす"), "あいす");
     }
 
     #[test]
