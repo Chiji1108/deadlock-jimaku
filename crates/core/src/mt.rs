@@ -415,7 +415,7 @@ mod tests {
             .unwrap_err();
         assert_eq!(
             refused.downcast::<TranscriptionError>().unwrap(),
-            TranscriptionError::GiftUnknown
+            TranscriptionError::BetaRefused
         );
         let failed = translator(Provider::OpenAi)
             .translate(&http, &spans, None)

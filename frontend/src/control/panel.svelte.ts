@@ -418,7 +418,7 @@ class Panel {
 
 export const panel = new Panel();
 
-/** ギフトコードの 1 日の上限は UTC の日で区切る */
+/** コード（ギフトコードとベータのコード）の 1 日の上限は UTC の日で区切る */
 export const LIMIT_RESET = "日本時間の朝 9 時（UTC の 0 時）にまた使えます";
 
 /** 字幕が止まった理由を文にする（サーバーは種類と中身だけを返す） */
@@ -436,6 +436,10 @@ export function transcriptionErrorText(e: TranscriptionError): string {
       return `ギフトコードの今日の上限に達しました。${LIMIT_RESET}`;
     case "giftUnknown":
       return "ギフトコードが見つかりません。おすそ分けしてくれた人に確かめてください";
+    case "betaLimit":
+      return `ベータ期間中の無料の提供の、今日の上限に達しました。${LIMIT_RESET}。ほかのモードなら、今すぐ使えます`;
+    case "betaRefused":
+      return "ベータのコードが使えなくなっています（無料の提供が止まっているか、終わっています）。ほかのモードを選ぶか、自分の API キーを入れてください";
     case "giftUnsupported":
       return relayOf(e.provider) === "beta"
         ? `ベータのコードでは ${PROVIDER_NAMES[e.provider]} の この工程を使えません。「おすすめ」のモードにするか、自分の API キーを入れてください`

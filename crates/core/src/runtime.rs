@@ -333,13 +333,14 @@ async fn gift_accepted(
     }
     for (code, used) in codes {
         let checked = share::check_gift(api, code).await.and_then(|relayed| {
-            match used.into_iter().find(|p| !relayed.contains(p)) {
-                Some(provider) => Err(TranscriptionError::GiftUnsupported { provider }),
+            match used.iter().find(|p| !relayed.contains(p)) {
+                Some(&provider) => Err(TranscriptionError::GiftUnsupported { provider }),
                 None => Ok(()),
             }
         });
         if let Err(e) = checked {
-            store.set_transcription_error(Some(e));
+            // 1 つのコードが中継する会社は、どれも同じ種類
+            store.set_transcription_error(Some(share::for_code(e, used[0])));
             return false;
         }
     }
