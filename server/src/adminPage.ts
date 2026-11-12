@@ -29,6 +29,11 @@ async function load() {
   $("toggle").hidden = false;
   $("toggle").textContent = s.closed ? "開ける" : "閉じる";
   $("toggle").onclick = () => act(() => api("/settings", "PUT", { closed: !s.closed }));
+  // 打っている途中の欄は書き換えない（1 分ごとに読み直すため）
+  for (const [id, value] of [["dailyUsd", s.today.limitUsd], ["codeDailyUsd", s.limits.codeDailyUsd]]) {
+    $(id).max = s.limits.maxUsd;
+    if (document.activeElement !== $(id)) $(id).value = value;
+  }
   const bar = (v, max) => '<div class="bar"><i style="width:' + Math.min(100, (v / max) * 100) + '%"></i></div>';
   $("stats").innerHTML = [
     ["今日の費用", usd(s.today.usd), "上限 " + usd(s.today.limitUsd) + bar(s.today.usd, s.today.limitUsd)],
@@ -56,6 +61,10 @@ document.addEventListener("click", (e) => {
   if (d.key) act(() => api("/keys/" + d.key, "PATCH", { enabled: d.enabled === "true" }));
   if (d.remove && confirm("このキーを消しますか？")) act(() => api("/keys/" + d.remove, "DELETE"));
   if (d.code) act(() => api("/codes/" + d.code, "PATCH", { revoked: d.revoked === "true" }));
+});
+$("limits").addEventListener("submit", (e) => {
+  e.preventDefault();
+  act(() => api("/settings", "PUT", { dailyUsd: Number($("dailyUsd").value), codeDailyUsd: Number($("codeDailyUsd").value) }));
 });
 $("add").addEventListener("submit", (e) => {
   e.preventDefault();
@@ -117,6 +126,12 @@ export const page = /* html */ `<!doctype html>
   <section class="card">
     <h2>ベータ <span class="tag" id="state"></span> <button id="toggle" hidden></button></h2>
     <div class="stats" id="stats"></div>
+    <form id="limits">
+      <label>全体の 1 日の上限（ドル） <input id="dailyUsd" type="number" min="0.01" step="0.01" required></label>
+      <label>1 つのコードの 1 日の上限（ドル） <input id="codeDailyUsd" type="number" min="0.01" step="0.01" required></label>
+      <button>上限を変える</button>
+    </form>
+    <p class="muted">上限に届くと、その日は中継を断ります（アプリは Chrome の作り方で字幕を続けます）。1 つのコードの上限は、出してあるコードにも当てます。</p>
   </section>
 
   <section class="card">

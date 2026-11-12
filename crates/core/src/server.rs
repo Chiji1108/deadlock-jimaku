@@ -105,7 +105,9 @@ async fn get_settings(State(store): State<Arc<Store>>) -> Json<SettingsView> {
         .expect("blocking task");
     Json(SettingsView {
         version: env!("CARGO_PKG_VERSION"),
-        settings: store.settings(),
+        settings: store.saved(),
+        running: store.settings().engines,
+        fallback: store.fallback(),
         keys,
         unsaved: store.unsaved(),
     })

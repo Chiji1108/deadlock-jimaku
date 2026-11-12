@@ -357,7 +357,9 @@
 
   /** 設定に合わせて始める・止める */
   async function apply() {
-    const s = (await api.settings()).settings;
+    // ベータのコードで断られている間は、core が Chrome の作り方で続けている（`running`）
+    const view = await api.settings();
+    const s = { ...view.settings, engines: view.running };
     settings = s;
     if (!wanted(s)) {
       halt();

@@ -12,7 +12,9 @@ use tokio::sync::{broadcast, watch};
 use crate::assets::Loaded;
 use crate::chrome::{self, Browser};
 use crate::fonts::Library;
-use crate::settings::{self, FinalSource, Settings, SettingsPatch, SubtitleDisplay};
+use crate::settings::{
+    self, Engines, FinalSource, LiveSource, Settings, SettingsPatch, SubtitleDisplay,
+};
 use crate::types::{
     ChromeCommand, Decided, Heard, ItemCardsView, LiveState, LiveStatus, RankState, Segment,
     ServerMsg, Stage, TranscriptionError, Translated,
@@ -58,6 +60,8 @@ pub struct Store {
     unsaved: Mutex<Option<String>>,
     /// 字幕を始められなかった理由（操作パネルに出す）
     transcription_error: Mutex<Option<TranscriptionError>>,
+    /// ベータのコードで断られて、Chrome の作り方で続けている理由（DESIGN.md 17.2）。保存はしない
+    fallback: Mutex<Option<TranscriptionError>>,
     /// PC の中の文字起こしを準備している
     preparing: AtomicBool,
     segments: Mutex<VecDeque<Segment>>,
@@ -98,6 +102,7 @@ impl Store {
             data_dir,
             unsaved: Mutex::new(unsaved),
             transcription_error: Mutex::new(None),
+            fallback: Mutex::new(None),
             preparing: AtomicBool::new(false),
             segments: Mutex::new(VecDeque::new()),
             glossary: watch::Sender::new(None),
@@ -116,8 +121,40 @@ impl Store {
         })
     }
 
+    /// 今の字幕の作り方。ベータのコードで断られている間は、工程だけ Chrome のモードにしたもの
     pub fn settings(&self) -> Settings {
+        let mut settings = self.saved();
+        if self.fallback().is_some() {
+            settings.engines = Engines::CHROME;
+        }
+        settings
+    }
+
+    /// 保存してある設定（利用者が選んだもの）
+    pub fn saved(&self) -> Settings {
         self.settings.borrow().clone()
+    }
+
+    pub fn fallback(&self) -> Option<TranscriptionError> {
+        self.fallback.lock().unwrap().clone()
+    }
+
+    /// ベータのコードで断られたら、字幕を止めずに Chrome の作り方で続ける。配信の途中で字幕が消えるのが
+    /// いちばん困るため。続けるなら true。途中の字幕を Chrome で作っていないときは続けない（開いていない
+    /// Chrome を開いて、選んでいない送り先に音声を送ることになる）
+    pub fn fall_back(&self, refused: &TranscriptionError) -> bool {
+        let beta = matches!(
+            refused,
+            TranscriptionError::BetaLimit | TranscriptionError::BetaRefused
+        );
+        if !beta || self.saved().engines.live != LiveSource::Chrome {
+            return false;
+        }
+        tracing::info!("beta refused ({refused:?}); continuing with Chrome");
+        *self.fallback.lock().unwrap() = Some(refused.clone());
+        let _ = self.tx.send(ServerMsg::SettingsChanged);
+        self.restart();
+        true
     }
 
     pub fn watch_settings(&self) -> watch::Receiver<Settings> {
@@ -135,10 +172,14 @@ impl Store {
     /// 操作パネルからの変更を当てて保存する。読めない値なら何も変えずにエラー
     pub fn update_settings(&self, patch: SettingsPatch) -> Result<Settings, String> {
         let unsaved = self.unsaved.lock().unwrap();
-        let current = self.settings();
+        let current = self.saved();
         let next = current.apply(patch)?;
         if next == current {
             return Ok(next);
+        }
+        // 字幕を止めるか、作り方を選び直したら、次は選んだ作り方で始める（まだ断られるなら、また Chrome で続ける）
+        if next.engines != current.engines || !next.transcription_enabled {
+            *self.fallback.lock().unwrap() = None;
         }
         if unsaved.is_none() {
             settings::save(&self.data_dir.join(settings::FILE), &next)
@@ -549,8 +590,55 @@ mod tests {
     use super::*;
     use serde_json::json;
 
-    use crate::settings::Engines;
     use crate::types::Stage;
+
+    #[test]
+    fn a_refused_beta_code_continues_with_chrome_until_stopped() {
+        let dir = tempfile::tempdir().unwrap();
+        let settings = Settings {
+            engines: Engines::BETA,
+            transcription_enabled: true,
+            ..Settings::default()
+        };
+        let store = Store::new(Ok(settings), dir.path().to_owned());
+        // ギフトコードの理由や、ほかのエラーでは続けない
+        assert!(!store.fall_back(&TranscriptionError::GiftLimit));
+        assert_eq!(store.settings().engines, Engines::BETA);
+        assert!(store.fall_back(&TranscriptionError::BetaLimit));
+        // 字幕は Chrome の作り方で続け、選んだモードは変えない（保存もしない）
+        assert_eq!(store.settings().engines, Engines::CHROME);
+        assert_eq!(store.saved().engines, Engines::BETA);
+        assert_eq!(store.fallback(), Some(TranscriptionError::BetaLimit));
+        // 関係のない設定を変えても続ける
+        let patch = |patch| store.update_settings(patch).unwrap();
+        patch(SettingsPatch {
+            deadlock_mode: Some(false),
+            ..Default::default()
+        });
+        assert_eq!(store.settings().engines, Engines::CHROME);
+        assert_eq!(store.saved().engines, Engines::BETA);
+        // 字幕を止めたら、次は選んだモードで始める
+        patch(SettingsPatch {
+            transcription_enabled: Some(false),
+            ..Default::default()
+        });
+        assert_eq!(store.fallback(), None);
+        assert_eq!(store.settings().engines, Engines::BETA);
+    }
+
+    #[test]
+    fn a_refused_beta_code_stops_when_chrome_is_not_in_use() {
+        let settings = Settings {
+            engines: Engines {
+                live: LiveSource::QwenAudioStreaming,
+                ..Engines::BETA
+            },
+            ..Settings::default()
+        };
+        let store = Store::new(Ok(settings), PathBuf::new());
+        assert!(!store.fall_back(&TranscriptionError::BetaLimit));
+        assert_eq!(store.fallback(), None);
+    }
 
     fn seg(id: &str, text: &str) -> Segment {
         Segment {

@@ -1473,6 +1473,34 @@ describe("admin", () => {
     expect((await manage("/api/summary")).headers.get("Cache-Control")).toBe("no-store");
   });
 
+  it("sets the daily limits: the whole beta and each code, old codes included", async () => {
+    const code = await joined();
+    vi.mocked(openrouter).mockImplementation(async () => answered());
+    const limits = async () => {
+      const summary = (await (await manage("/api/summary")).json()) as Record<string, any>;
+      return [summary.today.limitUsd, summary.limits.codeDailyUsd];
+    };
+    expect(await limits()).toEqual([5, 0.5]);
+    // 読めない値は断り、何も変えない
+    for (const body of [{ dailyUsd: 0 }, { dailyUsd: -1 }, { dailyUsd: "9" }, { dailyUsd: 1001 }, { dailyUsd: 9, other: 1 }, {}]) {
+      expect((await manage("/api/settings", "PUT", body)).status).toBe(400);
+    }
+    expect(await limits()).toEqual([5, 0.5]);
+    expect((await translate(code)).status).toBe(200);
+    // 1 つのコードの上限を、使った額より下げる。出してあるコードも断る
+    expect((await manage("/api/settings", "PUT", { codeDailyUsd: 0.005 })).status).toBe(204);
+    expect(await limits()).toEqual([5, 0.005]);
+    const mine = await translate(code);
+    expect([mine.status, mine.headers.get("X-Gift-Refusal")]).toEqual([403, "limit"]);
+    // 戻すと通る。全体の上限を下げると、また断る
+    expect((await manage("/api/settings", "PUT", { codeDailyUsd: 0.5, dailyUsd: 0.005 })).status).toBe(204);
+    expect(await limits()).toEqual([0.005, 0.5]);
+    const all = await translate(code);
+    expect([all.status, all.headers.get("X-Gift-Refusal")]).toEqual([403, "limit"]);
+    expect((await manage("/api/settings", "PUT", { dailyUsd: 5 })).status).toBe(204);
+    expect((await translate(code)).status).toBe(200);
+  });
+
   it("closes the beta: no new codes, no relay, and opens it again", async () => {
     const code = await joined();
     vi.mocked(openrouter).mockImplementation(async () => answered());
