@@ -1218,4 +1218,5 @@ Phase 2 の前に、録音した実況音声で Voxtral 3 の精度（`context_b
 - **上限の値**（1 つのコードの 1 日、全体の 1 日、出すコードの数）は、まだ `beta.ts` の定数で、画面からは変えられない
 - **手元で画面を見る:** `wrangler dev -c wrangler.admin.jsonc --var ADMIN_DEV_EMAIL:dev@localhost`。ホストが localhost のときだけ Access を通さない（本番のホストはそうならないので、設定を入れても効かない）。キーを足す操作は、API の Worker も手元で動かしているときだけ通る
 - **Cloudflare の側の設定（1 度だけ）:** Workers & Pages → `deadlock-jimaku-admin` → Access で、この Worker を守り（All traffic）、入れる人を自分のメールアドレスにする。そこに出る `TEAM_DOMAIN` と `POLICY_AUD` を、この Worker の変数に入れる（`wrangler.admin.jsonc` は `keep_vars` なので、出し直しても消えない）。独自のホスト（`admin.jimaku.deadlock.jp`）を使うなら、Worker の Domains & Routes で足す
+- **アドレス:** `https://admin.jimaku.deadlock.jp`（`wrangler.admin.jsonc` の独自のドメイン）と、`https://deadlock-jimaku-admin.chiji.workers.dev`。Access のアプリケーションには、両方のホスト名を入れる（同じアプリケーションに足す。別に作ると `POLICY_AUD` が合わず、Worker が 401 で断る）
 - **出し方:** API の Worker を先に（`pnpm deploy`。`Vault` の口が要る）、次に管理画面（`pnpm deploy:admin`）
