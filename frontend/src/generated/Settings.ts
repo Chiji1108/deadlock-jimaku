@@ -87,7 +87,12 @@ hybridHintClosed: boolean,
 /**
  * 最後に自分で組んだ工程の組み合わせ（モードにないもの）。操作パネルの「カスタム」
  */
-customEngines?: Engines, models: Models, 
+customEngines?: Engines, 
+/**
+ * 更新の内容（`CHANGELOG.md`）を最後に見た版（`0.6.0`。プレリリースの印は付けない）。
+ * None は、この項目ができる前（0.5 まで）から使っている人で、今の版の内容を見せる
+ */
+notesSeen?: string, models: Models, 
 /**
  * リアルタイムの音声認識の遅れ（`minimal` / `low` / `medium` / `high` / `xhigh`。
  * 低いほど早く字幕が出て、高いほど正確）

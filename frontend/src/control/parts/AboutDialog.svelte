@@ -5,7 +5,9 @@
   import unidic from "../../../../notices/unidic.txt?raw";
   import { SITE } from "../../lib/site";
   import { panel } from "../panel.svelte";
+  import { RELEASES } from "../../lib/changelog";
   import CreditCopy from "./CreditCopy.svelte";
+  import ReleaseNotes from "./ReleaseNotes.svelte";
 
   // アプリの情報。左下の版から開く（毎日見るものではないので、サイドバーの項目にしない）
   const LINKS = [
@@ -53,6 +55,10 @@
       <CreditCopy />
     </div>
     <div class="flex flex-col gap-1 text-xs">
+      <details>
+        <summary class="cursor-pointer">更新の内容</summary>
+        <div class="mt-2 max-h-64 overflow-y-auto"><ReleaseNotes releases={RELEASES} /></div>
+      </details>
       {#each NOTICES as notice (notice.name)}
         <details>
           <summary class="cursor-pointer">{notice.name} のライセンス</summary>
