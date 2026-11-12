@@ -399,21 +399,24 @@ pub(crate) fn ask_final_translation(
 }
 
 /// ページに、確定の文の用語の候補を確かめてもらう（Gemini Nano）。答えは、問いの名前 → 選んだ選択肢。
-/// ページが開いていない、Gemini Nano を使えない、答えが来ないなら None（PC の中で付けた用語のままにする）
+/// ページが開いていない、Gemini Nano を使えない、答えがそろわないなら None（PC の中で付けた用語のままにする）
 pub(crate) async fn decide(
     store: &Store,
     asked: &Asked,
     id: &str,
 ) -> Option<BTreeMap<String, String>> {
     let mut events = store.subscribe_chrome();
-    if !store.send_chrome_command(ChromeCommand::Decide(asked.for_chrome(id.to_owned()))) {
+    let task = asked.for_chrome(id.to_owned());
+    let questions = task.questions.len();
+    if !store.send_chrome_command(ChromeCommand::Decide(task)) {
         return None;
     }
     let wait = async {
         loop {
             match events.recv().await {
                 Ok(ChromeEvent::Decided(Decided { id: done, choices })) if done == id => {
-                    return Some(choices).filter(|c| !c.is_empty());
+                    // 答えのない問いがあれば使わない（その候補が用語でないことになり、辞書の一致まで消える）
+                    return Some(choices).filter(|c| c.len() == questions);
                 }
                 Ok(ChromeEvent::Closed) | Err(_) => return None,
                 Ok(_) => {}

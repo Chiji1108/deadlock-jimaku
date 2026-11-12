@@ -105,6 +105,9 @@
   let judge: Judge | undefined;
   /** Gemini Nano を使えない、または用意できなかった */
   let judgeTrouble: string | undefined;
+  /** Gemini Nano の用意に続けて失敗した回数。`JUDGE_ATTEMPTS` 回で諦める */
+  let judgeFailures = 0;
+  const JUDGE_ATTEMPTS = 3;
   /** 今の `translation` の言語。マイクだけ変えるなら作り直さない */
   let translatorLanguages = "";
 
@@ -248,6 +251,41 @@
     const started = runs;
     // 始めたあとに届いた変更は、ここの値と比べて分かる
     const running = key(s);
+    // 用語を Gemini Nano に確かめさせるなら、用意する（初回は約 4 GB のダウンロード）。翻訳のモデルより先に作る
+    // （ダウンロードにはクリックが要り、その権利は数秒で切れる）。ダウンロードに失敗したら、次のクリックでやり直す。
+    // 何度か失敗したら諦めて、用語は辞書の一致のままで字幕を続ける
+    const nano = s.engines.terms === "geminiNano" && s.deadlockMode;
+    judgeTrouble = undefined;
+    if (!nano) {
+      judge?.destroy();
+      judge = undefined;
+      judgeFailures = 0;
+    } else if (!judge) {
+      const progress = (loaded: number) =>
+        show({
+          state: "preparing",
+          detail: `Gemini Nano をダウンロードしています（${Math.round(loaded * 100)}%）`,
+        });
+      const state = await judgeAvailability();
+      if (state !== "unavailable" && judgeFailures < JUDGE_ATTEMPTS) {
+        try {
+          judge = await prepareJudge(progress);
+          judgeFailures = 0;
+        } catch {
+          judgeFailures++;
+          // ダウンロードの途中の失敗は、次のクリックでやり直す（使える状態で失敗したなら、やり直しても同じ）
+          if (state !== "available" && judgeFailures < JUDGE_ATTEMPTS) {
+            throw new Error("Gemini Nano を用意できませんでした");
+          }
+        }
+      }
+      if (!judge) {
+        judgeTrouble =
+          state === "unavailable"
+            ? "この PC の Chrome では Gemini Nano を使えないので、用語は辞書の一致で付けます"
+            : "Gemini Nano を用意できなかったので、用語は辞書の一致で付けます";
+      }
+    }
     const languages = JSON.stringify([s.micLanguage, targets]);
     if (languages !== translatorLanguages) {
       const translators = await prepare(s.micLanguage, targets, (loaded) =>
@@ -258,27 +296,6 @@
       );
       translation = new Translation(translators, reply);
       translatorLanguages = languages;
-    }
-    // 用語を Gemini Nano に確かめさせるなら、用意する（初回は約 4 GB のダウンロード）。
-    // 用意できなければ、用語は辞書の一致のままで字幕を続ける
-    const nano = s.engines.terms === "geminiNano" && s.deadlockMode;
-    judgeTrouble = undefined;
-    if (!nano) {
-      judge?.destroy();
-      judge = undefined;
-    } else if (!judge) {
-      const progress = (loaded: number) =>
-        show({
-          state: "preparing",
-          detail: `Gemini Nano をダウンロードしています（${Math.round(loaded * 100)}%）`,
-        });
-      const usable = (await judgeAvailability()) !== "unavailable";
-      judge = usable ? await prepareJudge(progress).catch(() => undefined) : undefined;
-      if (!judge) {
-        judgeTrouble = usable
-          ? "Gemini Nano を用意できなかったので、用語は辞書の一致で付けます"
-          : "この PC の Chrome では Gemini Nano を使えないので、用語は辞書の一致で付けます";
-      }
     }
     const missing = s.translateTo.filter((target) => !targets.includes(target));
     notice = missing.length
@@ -354,7 +371,7 @@
     const { state, targets } = await availability(s.micLanguage, s.translateTo);
     // Gemini Nano のダウンロードにもクリックが要る
     const nano =
-      s.engines.terms === "geminiNano" && s.deadlockMode && !judge
+      s.engines.terms === "geminiNano" && s.deadlockMode && !judge && judgeFailures < JUDGE_ATTEMPTS
         ? await judgeAvailability()
         : "available";
     if (started !== runs) return;

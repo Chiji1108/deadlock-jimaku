@@ -78,8 +78,11 @@ impl Enricher {
         text: &str,
         context: &[String],
     ) -> anyhow::Result<Option<Vec<RubySegment>>> {
-        let dictionary = Furigana::shared().filter(|_| self.source_lang == "ja");
-        let Some(dictionary) = dictionary.filter(|_| text.chars().any(furigana::is_kanji)) else {
+        // 読みの辞書は、日本語で漢字を含む文のときだけ取る（日本語でなければ、広げない）
+        if self.source_lang != "ja" || !text.chars().any(furigana::is_kanji) {
+            return Ok(None);
+        }
+        let Some(dictionary) = Furigana::shared() else {
             return Ok(None);
         };
         let model = furigana::Model {
@@ -442,7 +445,11 @@ pub(crate) fn source_tokens(spans: &[Span], ruby: &[RubySegment]) -> Vec<Token> 
 }
 
 /// `text`（原文の `offset` 文字目から）を、中に収まるふりがなの部分と、読みのない部分に分ける
-fn cover(text: &str, offset: usize, placed: &[(usize, usize, &RubySegment)]) -> Vec<RubySegment> {
+pub(crate) fn cover(
+    text: &str,
+    offset: usize,
+    placed: &[(usize, usize, &RubySegment)],
+) -> Vec<RubySegment> {
     let chars: Vec<char> = text.chars().collect();
     let end = offset + chars.len();
     let mut out: Vec<RubySegment> = Vec::new();

@@ -37,7 +37,7 @@ pub struct Furigana {
 }
 
 impl Furigana {
-    /// アプリで 1 つだけ開く辞書。初めてのときに広げる（0.3 秒ほど）。アプリに入っている辞書なので、
+    /// アプリで 1 つだけ開く辞書。初めてのときに広げる（0.7 秒ほど）。アプリに入っている辞書なので、
     /// 読めなければ None（文をそのまま使う）
     pub fn shared() -> Option<&'static Self> {
         static FURIGANA: OnceLock<Option<Furigana>> = OnceLock::new();

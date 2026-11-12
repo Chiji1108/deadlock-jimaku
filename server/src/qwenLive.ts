@@ -3,8 +3,8 @@
 // `run-task` は作り直して送る（モデルやパラメータを足させない）。
 // 料金は、音声 30 秒分ごとに見積もりを先に足し（上限に届いていたら切る）、Qwen が知らせる使用量で実際の額に直す
 
-import { keyFailed, reserveBeta, settleBeta, type RelayKey } from "./beta";
-import type { Db } from "./db";
+import { betaClosed, keyFailed, reserveBeta, settleBeta, type RelayKey } from "./beta";
+import { codeById, refusal, type Db } from "./db";
 import { QWEN_LIVE } from "./price";
 import { qwenLive } from "./upstream";
 
@@ -95,11 +95,25 @@ export async function relayQwenLive(db: Db, codeId: string, keys: RelayKey[], ct
     writing = writing.then(settle);
     ctx.waitUntil(writing);
   };
-  /** 次の 30 秒分を先に足す。上限に届いていたら切る（張り直しても、つなぐ前に断る） */
+  /** 足し直している間に届いた音声では、もう 1 度足し直さない */
+  let renewing = false;
+  /**
+   * 次の 30 秒分を先に足す。上限に届いていたら切る（張り直しても、つなぐ前に断る）。
+   * つないだあとに止められたコードと、閉じたベータも、ここで切る（ほかの中継は要求ごとに確かめる）
+   */
   const renew = () => {
+    if (renewing) return;
+    renewing = true;
     writing = writing.then(async () => {
       await settle();
+      renewing = false;
       if (closed) return;
+      // 上限は、下で足すときに確かめる
+      const code = await codeById(db, codeId);
+      const refused = code ? refusal(code, Date.now()) : "revoked";
+      if ((refused && refused !== "limit") || (await betaClosed(db))) {
+        return shut(1008, "gift code is no longer usable");
+      }
       if (await reserveBeta(db, codeId, WINDOW_USD, Date.now())) reserved = WINDOW_USD;
       else shut(1008, "limit");
     });

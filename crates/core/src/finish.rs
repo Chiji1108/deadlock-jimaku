@@ -13,7 +13,7 @@ use tokio::sync::{broadcast, mpsc};
 use crate::access::{Access, Accesses};
 use crate::chrome;
 use crate::decide::{Asker, Decider};
-use crate::enrich::{Enricher, Span, source_tokens};
+use crate::enrich::{Enricher, Span, cover, source_tokens};
 use crate::furigana;
 use crate::mt::Translator;
 use crate::reading::Furigana;
@@ -184,11 +184,15 @@ impl Finisher {
         let local = spans_of(&tokens);
         let (ruby, words) = tokio::join!(
             async {
-                let asked = match (phase.ruby, llm, &self.chooser, Furigana::shared()) {
-                    (Some(source), Some(e), _, _) if source.llm() => {
-                        e.furigana(&text, &context).await
-                    }
-                    (Some(RubySource::Decider), _, Some(chooser), Some(dictionary)) => {
+                // 読みの辞書は、判定モデルに選ばせるときだけ取る（日本語でなければ、広げない）
+                let chooser = self.chooser.as_ref().zip(
+                    (phase.ruby == Some(RubySource::Decider))
+                        .then(Furigana::shared)
+                        .flatten(),
+                );
+                let asked = match (phase.ruby, llm, chooser) {
+                    (Some(source), Some(e), _) if source.llm() => e.furigana(&text, &context).await,
+                    (_, _, Some((chooser, dictionary))) => {
                         let meter = self.store.meter();
                         let judge = furigana::Judge {
                             deadlock: chooser.deadlock,
@@ -266,7 +270,10 @@ impl Finisher {
             },
         );
         // LLM に聞かなかったものと、答えが通らなかったものは、PC の中で付けたものを使う
-        let ruby = ruby?.unwrap_or_else(|| ruby_of(&tokens));
+        let ruby = match ruby? {
+            Some(sentence) => with_term_readings(&sentence, &tokens),
+            None => ruby_of(&tokens),
+        };
         let (spans, translations) = words?.unwrap_or_else(|| (local, Translations::new()));
         Ok(Enriched {
             source: source_tokens(&spans, &ruby),
@@ -333,6 +340,34 @@ fn spans_of(tokens: &[Token]) -> Vec<Span> {
         }
     }
     spans
+}
+
+/// 判定モデルや LLM が直した文のふりがなのうち、PC の中で見つけた用語のところは、用語の読みに戻す。
+/// 用語の読みは、ゲームの辞書の名前の読み（確かめてある）。文を読みの辞書で読むと、固有の名前を読み誤る
+fn with_term_readings(sentence: &[RubySegment], tokens: &[Token]) -> Vec<RubySegment> {
+    let mut placed = Vec::new();
+    let mut pos = 0;
+    for seg in sentence {
+        let len = seg.text.chars().count();
+        placed.push((pos, pos + len, seg));
+        pos += len;
+    }
+    let mut start = 0;
+    let mut out = Vec::new();
+    for token in tokens {
+        let text = match token {
+            Token::Text { text, .. } => text.as_str(),
+            Token::Entity { spoken, .. } => spoken.as_deref().unwrap_or_default(),
+        };
+        match token {
+            Token::Entity {
+                ruby: Some(ruby), ..
+            } => out.extend(ruby.iter().cloned()),
+            _ => out.extend(cover(text, start, &placed)),
+        }
+        start += text.chars().count();
+    }
+    out
 }
 
 /// 文全体のふりがな（つなげると原文になる）
@@ -432,6 +467,38 @@ mod tests {
         let tokens = source_tokens(&spans_of(&local()), &llm);
         assert!(
             matches!(&tokens[0], Token::Entity { ruby: Some(r), .. } if r[0] == seg("拡張", Some("かくちょう")))
+        );
+    }
+
+    /// 判定モデルや LLM が直した文の読みでも、用語のところは、PC の中で付けた用語の読みのまま
+    #[test]
+    fn term_readings_survive_a_corrected_sentence() {
+        // 文を読みの辞書で読むと「かくばり」になる名前（用語の読みは「かくちょう」）
+        let sentence = [
+            seg("拡張", Some("かくばり")),
+            seg("マガジンは", None),
+            seg("辛", Some("から")),
+            seg("い", None),
+        ];
+        let tokens = [
+            Token::Entity {
+                reference: "item:1".into(),
+                spoken: Some("拡張マガジン".into()),
+                ruby: Some(vec![seg("拡張", Some("かくちょう")), seg("マガジン", None)]),
+            },
+            text("は", None),
+            text("辛", Some("つら")),
+            text("い", None),
+        ];
+        assert_eq!(
+            with_term_readings(&sentence, &tokens),
+            [
+                seg("拡張", Some("かくちょう")),
+                seg("マガジン", None),
+                seg("は", None),
+                seg("辛", Some("から")),
+                seg("い", None),
+            ]
         );
     }
 

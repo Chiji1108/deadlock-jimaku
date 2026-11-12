@@ -1230,6 +1230,20 @@ describe("beta", () => {
       expect(qwenLive).toHaveBeenCalledOnce();
     });
 
+    it("stops a code that was revoked while it was connected", async () => {
+      const code = await joined();
+      const { id } = (await codeByValue(db, code))!;
+      await connect(code);
+      client.message(run());
+      await env.DB.prepare("UPDATE codes SET revoked = 1 WHERE id = ?").bind(id).run();
+      // 次の分を足すときに、止められたことが分かる
+      client.message(audio(30));
+      await settled();
+      expect(client.closed).toEqual({ code: 1008, reason: "gift code is no longer usable" });
+      const again = await connect(code);
+      expect([again.status, again.headers.get("X-Gift-Refusal")]).toEqual([403, "revoked"]);
+    });
+
     it("hides the developer's key trouble, and gives the estimate back", async () => {
       const code = await joined();
       await connect(code);

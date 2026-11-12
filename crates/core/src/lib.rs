@@ -48,8 +48,13 @@ const PORT_ENV: &str = "DEADLOCK_JIMAKU_PORT";
 
 /// 操作パネルとオーバーレイを配るポート
 pub fn port() -> u16 {
-    let port = std::env::var(PORT_ENV).ok().and_then(|p| p.parse().ok());
-    port.unwrap_or(DEFAULT_PORT)
+    match std::env::var(PORT_ENV) {
+        // 読めない値を既定のポートに戻すと、使っているアプリとぶつかる
+        Ok(port) => port
+            .parse()
+            .unwrap_or_else(|_| panic!("{PORT_ENV} must be a port number, got {port:?}")),
+        Err(_) => DEFAULT_PORT,
+    }
 }
 
 /// 開発のときに指定した、データの置き場所

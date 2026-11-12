@@ -23,7 +23,7 @@ const TIMEOUT: Duration = Duration::from_secs(8);
 const RULES: &str = "\"sentence\" is a Japanese subtitle, \"context\" holds the previous subtitles (oldest first), given only to help you decide readings, \
 and \"words\" lists the words of the sentence that contain kanji, each with the reading a dictionary gave, in hiragana (null when the dictionary does not know the word). \
 The dictionary reads each word without looking at the sentence, so some readings are wrong for this sentence \
-(for example 辛い as つらい when it means spicy, or 一 and 人 as いち and にん when the sentence says ひとり). \
+(for example 辛い as つらい when it means spicy, or 人気 as にんき when the sentence means ひとけ). \
 Answer with JSON {\"readings\": [...]}: the correct hiragana reading of each word, in the same order and the same number as \"words\". \
 Keep the dictionary's reading unless it is wrong in this sentence. A reading covers only the characters of its word.";
 

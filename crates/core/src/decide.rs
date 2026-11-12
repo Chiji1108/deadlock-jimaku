@@ -672,6 +672,24 @@ mod tests {
             }));
         });
         let choices = chrome::decide(&store, &asked, "1").await.unwrap();
+        // 答えのない問いがあれば使わない（辞書の一致まで消さない）
+        let both = Asker::new("ja".into())
+            .ask("", "拡マガとヘイズ", &[], &loaded())
+            .unwrap();
+        let mut page = store.subscribe_chrome_commands();
+        let answering = store.clone();
+        tokio::spawn(async move {
+            let Ok(ChromeCommand::Decide(task)) = page.recv().await else {
+                panic!("a question")
+            };
+            assert_eq!(task.questions.len(), 2);
+            let first = &task.questions[0];
+            answering.send_chrome_event(ChromeEvent::Decided(Decided {
+                id: task.id,
+                choices: [(first.name.clone(), first.choices[0].value.clone())].into(),
+            }));
+        });
+        assert_eq!(chrome::decide(&store, &both, "2").await, None);
         let spans = asked.spans(|name| choices.get(name).cloned());
         assert_eq!(
             spans[0],
