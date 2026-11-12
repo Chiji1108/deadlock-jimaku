@@ -654,7 +654,7 @@ impl Engines {
         translation: TranslationEngine::ChromeTranslator,
         furigana: RubySource::Dictionary,
     };
-    /// ベータのモード。ベータの間は無料（開発者のサーバーが、開発者のキーで中継する。DESIGN.md 17.2）。
+    /// ベータのモード。ベータ期間中は無料（開発者のサーバーが、開発者のキーで中継する。DESIGN.md 17.2）。
     /// いちばん安い組み合わせ: 途中の字幕は Chrome、確定は Qwen、用語は Perplexity Decider、翻訳は Hy-MT2、
     /// ふりがなは辞書の候補から Perplexity Decider が選ぶ
     pub const BETA: Self = Self {

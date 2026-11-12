@@ -208,13 +208,14 @@ async fn put_gift(State(store): State<Arc<Store>>, Json(body): Json<GiftBody>) -
     Json(status).into_response()
 }
 
-/// ベータのコードをもらって保存する（DESIGN.md 17.2）。もうコード（人からもらったものも）を持っていれば、もらわない
+/// ベータのコードをもらって保存する（DESIGN.md 17.2）。もう持っていれば、もらわない。
+/// 人からもらったギフトコードとは別に持つ
 async fn join_beta(State(store): State<Arc<Store>>) -> Response {
     // 続けて押されても、もらうのは 1 つ（持っているかを見てから保存するまでを、1 つずつ通す）
     static JOINING: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
     let _joining = JOINING.lock().await;
     let api = store.settings().api_base;
-    if let Some(code) = blocking(secrets::gift).await {
+    if let Some(code) = blocking(secrets::beta).await {
         return Json(share::gift_status(&api, &code).await).into_response();
     }
     let code = match share::join_beta(&api).await {
@@ -222,7 +223,7 @@ async fn join_beta(State(store): State<Arc<Store>>) -> Response {
         Err(refused) => return (StatusCode::BAD_REQUEST, Json(refused)).into_response(),
     };
     let saved = code.clone();
-    if let Err(e) = blocking(move || secrets::set_gift(&saved)).await {
+    if let Err(e) = blocking(move || secrets::set_beta(&saved)).await {
         return (StatusCode::INTERNAL_SERVER_ERROR, format!("{e:#}")).into_response();
     }
     store.restart();

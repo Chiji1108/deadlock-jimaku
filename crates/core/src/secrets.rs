@@ -45,13 +45,13 @@ pub struct ProviderInfo {
     pub relay: Option<Relay>,
 }
 
-/// 開発者のサーバーが中継するコードの種類。アプリはどちらも同じ所（ギフトコード）に保存する
+/// 開発者のサーバーが中継するコードの種類。アプリは別々に保存するので、両方を持てる
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Relay {
     /// 人からもらったギフトコード（おすそ分けした人のキー。DESIGN.md 17.1）
     Gift,
-    /// ベータのコード（開発者のキー。ベータの間は無料。DESIGN.md 17.2）
+    /// ベータのコード（開発者のキー。ベータ期間中は無料。DESIGN.md 17.2）
     Beta,
 }
 
@@ -109,6 +109,8 @@ enum Slot {
     Key(Provider),
     /// 人からもらったギフトコード（DESIGN.md 17.1）
     Gift,
+    /// ベータのコード（DESIGN.md 17.2）
+    Beta,
     /// おすそ分けを管理する合言葉（サーバーが発行）
     ShareToken,
     /// 自分が作ったおすそ分けのコード（1 つずつ。サーバーはハッシュしか持たないので、こちらで覚える）
@@ -120,6 +122,7 @@ impl Slot {
         match self {
             Self::Key(provider) => provider.info().id,
             Self::Gift => "gift",
+            Self::Beta => "beta",
             Self::ShareToken => "share-token",
             Self::ShareCode => "share-code",
         }
@@ -148,6 +151,8 @@ pub struct KeyStatus {
     pub typesafe: KeyState,
     /// ギフトコード。コードそのものは返さない
     pub gift: KeyState,
+    /// ベータのコード
+    pub beta: KeyState,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -155,20 +160,22 @@ pub struct Keys {
     /// 自分のキー
     pub own: BTreeMap<Provider, String>,
     pub gift: Option<String>,
+    pub beta: Option<String>,
 }
 
 impl Keys {
-    /// 自分のキーがあればその会社へ直接、なければギフトコードで開発者のサーバーを通す（`api` はその根元）。
-    /// ギフトコードでその会社を使えるか（おすそ分けした人がその会社のキーを預けているか）は、字幕を始めるときに確かめる。
-    /// 中継のない会社は、ギフトコードでは足りない（鍵がないとして始めない）
+    /// 自分のキーがあればその会社へ直接、なければその会社を中継するコード（ギフトコードかベータのコード）で
+    /// 開発者のサーバーを通す（`api` はその根元）。ギフトコードでその会社を使えるか（おすそ分けした人がその会社の
+    /// キーを預けているか）は、字幕を始めるときに確かめる。中継のない会社は、コードでは足りない（鍵がないとして始めない）
     pub fn access(&self, provider: Provider, api: &str) -> Option<Access> {
-        match (self.own.get(&provider), &self.gift) {
-            (Some(key), _) => Some(Access::key(provider, key.clone())),
-            (None, Some(code)) if provider.info().relay.is_some() => {
-                Some(Access::gift(provider, code.clone(), api))
-            }
-            _ => None,
+        if let Some(key) = self.own.get(&provider) {
+            return Some(Access::key(provider, key.clone()));
         }
+        let code = match provider.info().relay? {
+            Relay::Gift => &self.gift,
+            Relay::Beta => &self.beta,
+        };
+        Some(Access::gift(provider, code.clone()?, api))
     }
 
     /// 工程が使う会社の送り先と鍵。使わない会社には何も送らない
@@ -234,6 +241,7 @@ pub fn load() -> Keys {
             .filter_map(|provider| Some((provider, get_or_warn(Slot::Key(provider))?)))
             .collect(),
         gift: get_or_warn(Slot::Gift),
+        beta: get_or_warn(Slot::Beta),
     }
 }
 
@@ -246,6 +254,7 @@ pub fn status() -> KeyStatus {
         openrouter: key(Provider::OpenRouter),
         typesafe: key(Provider::TypeSafe),
         gift: state(Slot::Gift),
+        beta: state(Slot::Beta),
     }
 }
 
@@ -274,6 +283,15 @@ pub fn gift() -> Option<String> {
 /// 空文字列なら消す
 pub fn set_gift(code: &str) -> anyhow::Result<()> {
     put(Slot::Gift, code)
+}
+
+pub fn beta() -> Option<String> {
+    get_or_warn(Slot::Beta)
+}
+
+/// 空文字列なら消す
+pub fn set_beta(code: &str) -> anyhow::Result<()> {
+    put(Slot::Beta, code)
 }
 
 pub fn share_token() -> Option<String> {
@@ -308,11 +326,19 @@ mod tests {
         let keys = Keys {
             own: BTreeMap::from([(Provider::Xai, "xai".to_owned())]),
             gift: Some("K7M2".into()),
+            beta: None,
         };
         let api = "http://worker/v1";
         assert!(keys.access(Provider::OpenAi, api).unwrap().is_gift());
         assert!(!keys.access(Provider::Xai, api).unwrap().is_gift());
-        assert!(keys.access(Provider::Qwen, api).unwrap().is_gift());
+        // 人からもらったギフトコードは、ベータの会社には使わない。ベータのコードは別に持つ
+        assert_eq!(keys.access(Provider::Qwen, api), None);
+        let keys = Keys {
+            beta: Some("B3TA".into()),
+            ..keys
+        };
+        assert_eq!(keys.access(Provider::Qwen, api).unwrap().token(), "B3TA");
+        assert_eq!(keys.access(Provider::OpenAi, api).unwrap().token(), "K7M2");
         assert_eq!(keys.access(Provider::TypeSafe, api), None);
         // 設定や画面とやりとりする名前は、表の名前と同じ
         for provider in Provider::ALL {

@@ -13,7 +13,7 @@
   onconfirm={panel.acceptBeta}
 >
   <ul class="flex list-disc flex-col gap-2 pl-5">
-    <li>ベータの間は、API の料金を開発者が負担するので、無料で使えます。</li>
+    <li>ベータ期間中は、API の料金を開発者が負担するので、無料で使えます。</li>
     <li>
       1 日に使える量には上限があります。提供は、予告なく止まったり終わったりすることがあります。
     </li>

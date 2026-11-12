@@ -258,7 +258,8 @@ test("中継のない会社（TypeSafe AI）は、コードがあっても自分
   const fresh = freshPanel();
   const keys = (typesafe: string) => ({
     openai: { state: "missing" },
-    gift: { state: "saved" },
+    gift: { state: "missing" },
+    beta: { state: "saved" },
     xai: { state: "missing" },
     qwen: { state: "missing" },
     openrouter: { state: "missing" },
@@ -273,29 +274,36 @@ test("中継のない会社（TypeSafe AI）は、コードがあっても自分
   expect(fresh.missingKeys).toEqual([]);
 });
 
-test("ベータのモードは、コードがあれば鍵が要らない", () => {
+test("ベータのモードは、ベータのコードがあれば鍵が要らない（人からもらったギフトコードでは足りない）", () => {
   const fresh = freshPanel();
-  const keys = (gift: string) => ({
+  const keys = (gift: string, beta: string) => ({
     openai: { state: "missing" },
     gift: { state: gift },
+    beta: { state: beta },
     xai: { state: "missing" },
     qwen: { state: "missing" },
     openrouter: { state: "missing" },
     typesafe: { state: "missing" },
   });
-  fresh.view = { settings: { engines: BETA }, keys: keys("missing") } as unknown as SettingsView;
+  const view = (gift: string, beta: string) =>
+    ({ settings: { engines: BETA }, keys: keys(gift, beta) }) as unknown as SettingsView;
+  fresh.view = view("missing", "missing");
   expect(fresh.missingKeys).toEqual(["qwen", "openrouter"]);
-  fresh.view = { settings: { engines: BETA }, keys: keys("saved") } as unknown as SettingsView;
+  fresh.view = view("saved", "missing");
+  expect(fresh.missingKeys).toEqual(["qwen", "openrouter"]);
+  fresh.view = view("saved", "saved");
   expect(fresh.missingKeys).toEqual([]);
+  expect(fresh.giftPaid).toEqual(["qwen", "openrouter"]);
 });
 
 test("設定が届く前はキーの案内を出さない", () => {
   expect(freshPanel().needsKey).toBe(false);
 });
 
-const betaKeys = (gift: string) => ({
+const betaKeys = (beta: string) => ({
   openai: { state: "missing" },
-  gift: { state: gift },
+  gift: { state: "missing" },
+  beta: { state: beta },
   xai: { state: "missing" },
   qwen: { state: "missing" },
   openrouter: { state: "missing" },
@@ -317,6 +325,15 @@ test("ベータのコードが要るモードは、同意してからコード�
   expect(fresh.betaOffer).toBeUndefined();
 });
 
+test("人からもらったギフトコードを持っていても、ベータのコードは別にもらう", async () => {
+  const fresh = freshPanel();
+  const keys = { ...betaKeys("missing"), gift: { state: "saved" } };
+  fresh.view = { settings: { engines: CHROME }, keys } as never;
+  vi.spyOn(fresh, "update").mockResolvedValue(true);
+  await fresh.chooseMode(BETA);
+  expect(fresh.betaOffer).toEqual(BETA);
+});
+
 test("ベータのコードをもらえなければ、モードを変えない", async () => {
   const fresh = freshPanel();
   fresh.view = { settings: { engines: CHROME }, keys: betaKeys("missing") } as never;
@@ -328,7 +345,7 @@ test("ベータのコードをもらえなければ、モードを変えない",
   expect(fresh.betaOffer).toEqual(BETA);
 });
 
-test("コードがあるか、ベータのコードが要らないモードは、聞かずに変える", async () => {
+test("ベータのコードがあるか、要らないモードは、聞かずに変える", async () => {
   const fresh = freshPanel();
   const update = vi.spyOn(fresh, "update").mockResolvedValue(true);
   fresh.view = { settings: { engines: CHROME }, keys: betaKeys("saved") } as never;
