@@ -74247,21 +74247,21 @@
   "translate/qwen-mt-flash": {
     "summary": {
       "runs": 189,
-      "ok": 168,
-      "failed": 10,
+      "ok": 176,
+      "failed": 0,
       "medianMs": 246,
-      "p90Ms": 297,
-      "usd": 0.01130117
+      "p90Ms": 343,
+      "usd": 0.011790439999999998
     },
     "runs": [
       {
         "text": "インファーナスのナパームが痛すぎる。",
-        "ms": 1238,
+        "ms": 802,
         "ok": true,
         "source": "⟦Infernus⟧の⟦Napalm⟧が痛すぎる。",
         "translations": {
-          "en": "⟦Infernus⟧'s ⟦Napalm⟧ is hurting way too much.",
-          "ru": "⟦Infernus⟧ с ⟦Napalm⟧ просто убийственно болит."
+          "en": "⟦Infernus⟧' ⟦Napalm⟧ is hurting way too much.",
+          "ru": "⟦Infernus⟧ с ⟦Napalm⟧ просто убийственно болезнен."
         },
         "problems": {
           "en": [],
@@ -74270,96 +74270,68 @@
       },
       {
         "text": "インファーナスのナパームが痛すぎる。",
-        "ms": 244,
-        "ok": true,
-        "source": "⟦Infernus⟧の⟦Napalm⟧が痛すぎる。",
-        "translations": {
-          "en": "⟦Infernus⟧'s ⟦Napalm⟧ is hurting way too much.",
-          "ru": "⟦Infernus⟧ с ⟦Napalm⟧ просто убийственно болит."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "インファーナスのナパームが痛すぎる。",
-        "ms": 270,
-        "ok": true,
-        "source": "⟦Infernus⟧の⟦Napalm⟧が痛すぎる。",
-        "translations": {
-          "en": "⟦Infernus⟧'s ⟦Napalm⟧ is hurting way too much.",
-          "ru": "⟦Infernus⟧ с ⟦Napalm⟧ просто убийственно болит."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "ケルビンのアイスパスで逃げられた。",
-        "ms": 321,
-        "ok": true,
-        "source": "⟦Kelvin⟧の⟦Ice Path⟧で逃げられた。",
-        "translations": {
-          "en": "I got escaped by ⟦Kelvin⟧ on the ⟦Ice Path⟧.",
-          "ru": "Меня сбежали на ⟦Kelvin⟧ с его ⟦Ice Path⟧."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "ケルビンのアイスパスで逃げられた。",
-        "ms": 252,
-        "ok": true,
-        "source": "⟦Kelvin⟧の⟦Ice Path⟧で逃げられた。",
-        "translations": {
-          "en": "I got escaped by ⟦Kelvin⟧ on the ⟦Ice Path⟧.",
-          "ru": "Меня утащили по ⟦Kelvin⟧ на ⟦Ice Path⟧."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "ケルビンのアイスパスで逃げられた。",
-        "ms": 273,
-        "ok": true,
-        "source": "⟦Kelvin⟧の⟦Ice Path⟧で逃げられた。",
-        "translations": {
-          "en": "I got escaped by ⟦Kelvin⟧ on the ⟦Ice Path⟧.",
-          "ru": "Меня утащили по ⟦Kelvin⟧ на ⟦Ice Path⟧."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "ダイナモのシンギュラリティに全員捕まった。",
-        "ms": 249,
-        "ok": true,
-        "source": "⟦Dynamo⟧の⟦Singularity⟧に全員捕まった。",
-        "translations": {
-          "en": "Everyone got caught by ⟦Dynamo⟧'s ⟦Singularity⟧.",
-          "ru": "Все попали под действие ⟦Dynamo⟧ — ⟦Singularity⟧."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "ダイナモのシンギュラリティに全員捕まった。",
         "ms": 256,
         "ok": true,
-        "source": "⟦Dynamo⟧の⟦Singularity⟧に全員捕まった。",
+        "source": "⟦Infernus⟧の⟦Napalm⟧が痛すぎる。",
         "translations": {
-          "en": "Everyone got caught by ⟦Dynamo⟧'s ⟦Singularity⟧.",
-          "ru": "Все попали под действие ⟦Dynamo⟧ — ⟦Singularity⟧."
+          "en": "⟦Infernus⟧'s ⟦Napalm⟧ is hurting way too much.",
+          "ru": "⟦Infernus⟧ с ⟦Napalm⟧ просто убийственно болезненный."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "インファーナスのナパームが痛すぎる。",
+        "ms": 252,
+        "ok": true,
+        "source": "⟦Infernus⟧の⟦Napalm⟧が痛すぎる。",
+        "translations": {
+          "en": "⟦Infernus⟧'s ⟦Napalm⟧ is hurting way too much.",
+          "ru": "⟦Infernus⟧ с ⟦Napalm⟧ просто убийственно болезнен."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ケルビンのアイスパスで逃げられた。",
+        "ms": 255,
+        "ok": true,
+        "source": "⟦Kelvin⟧の⟦Ice Path⟧で逃げられた。",
+        "translations": {
+          "en": "I got escaped by ⟦Kelvin⟧ on the ⟦Ice Path⟧.",
+          "ru": "Меня унесли по ⟦Kelvin⟧ на ⟦Ice Path⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ケルビンのアイスパスで逃げられた。",
+        "ms": 304,
+        "ok": true,
+        "source": "⟦Kelvin⟧の⟦Ice Path⟧で逃げられた。",
+        "translations": {
+          "en": "I got escaped by ⟦Kelvin⟧ on the ⟦Ice Path⟧.",
+          "ru": "Меня унесли по ⟦Kelvin⟧ на ⟦Ice Path⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ケルビンのアイスパスで逃げられた。",
+        "ms": 355,
+        "ok": true,
+        "source": "⟦Kelvin⟧の⟦Ice Path⟧で逃げられた。",
+        "translations": {
+          "en": "I got escaped by ⟦Kelvin⟧ on the ⟦Ice Path⟧.",
+          "ru": "Меня унесли по ⟦Kelvin⟧ на ⟦Ice Path⟧."
         },
         "problems": {
           "en": [],
@@ -74368,7 +74340,35 @@
       },
       {
         "text": "ダイナモのシンギュラリティに全員捕まった。",
-        "ms": 252,
+        "ms": 240,
+        "ok": true,
+        "source": "⟦Dynamo⟧の⟦Singularity⟧に全員捕まった。",
+        "translations": {
+          "en": "Everyone got caught by ⟦Dynamo⟧'s ⟦Singularity⟧.",
+          "ru": "Все попали под ⟦Dynamo⟧ с ⟦Singularity⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ダイナモのシンギュラリティに全員捕まった。",
+        "ms": 254,
+        "ok": true,
+        "source": "⟦Dynamo⟧の⟦Singularity⟧に全員捕まった。",
+        "translations": {
+          "en": "Everyone got caught by ⟦Dynamo⟧'s ⟦Singularity⟧.",
+          "ru": "Все попали под ⟦Dynamo⟧ с ⟦Singularity⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ダイナモのシンギュラリティに全員捕まった。",
+        "ms": 577,
         "ok": true,
         "source": "⟦Dynamo⟧の⟦Singularity⟧に全員捕まった。",
         "translations": {
@@ -74382,7 +74382,7 @@
       },
       {
         "text": "ノックダウン買ってヴィンディクタ落とそう。",
-        "ms": 251,
+        "ms": 252,
         "ok": true,
         "source": "⟦Knockdown⟧買って⟦Vindicta⟧落とそう。",
         "translations": {
@@ -74396,7 +74396,7 @@
       },
       {
         "text": "ノックダウン買ってヴィンディクタ落とそう。",
-        "ms": 250,
+        "ms": 267,
         "ok": true,
         "source": "⟦Knockdown⟧買って⟦Vindicta⟧落とそう。",
         "translations": {
@@ -74410,7 +74410,7 @@
       },
       {
         "text": "ノックダウン買ってヴィンディクタ落とそう。",
-        "ms": 248,
+        "ms": 428,
         "ok": true,
         "source": "⟦Knockdown⟧買って⟦Vindicta⟧落とそう。",
         "translations": {
@@ -74424,7 +74424,7 @@
       },
       {
         "text": "メタルスキン切らされたのがきつい。",
-        "ms": 272,
+        "ms": 233,
         "ok": true,
         "source": "⟦Metal Skin⟧切らされたのがきつい。",
         "translations": {
@@ -74438,7 +74438,21 @@
       },
       {
         "text": "メタルスキン切らされたのがきつい。",
-        "ms": 240,
+        "ms": 391,
+        "ok": true,
+        "source": "⟦Metal Skin⟧切らされたのがきつい。",
+        "translations": {
+          "en": "Getting hit with a full ⟦Metal Skin⟧ is brutal.",
+          "ru": "Тяжело, когда ⟦Metal Skin⟧ закончился."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "メタルスキン切らされたのがきつい。",
+        "ms": 225,
         "ok": true,
         "source": "⟦Metal Skin⟧切らされたのがきつい。",
         "translations": {
@@ -74451,22 +74465,8 @@
         }
       },
       {
-        "text": "メタルスキン切らされたのがきつい。",
-        "ms": 236,
-        "ok": true,
-        "source": "⟦Metal Skin⟧切らされたのがきつい。",
-        "translations": {
-          "en": "Getting hit with a full ⟦Metal Skin⟧ combo really stings.",
-          "ru": "Тяжело, когда кончается ⟦Metal Skin⟧."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
         "text": "ワープストーンで壁抜けた。",
-        "ms": 237,
+        "ms": 248,
         "ok": true,
         "source": "⟦Warp Stone⟧で壁抜けた。",
         "translations": {
@@ -74480,7 +74480,7 @@
       },
       {
         "text": "ワープストーンで壁抜けた。",
-        "ms": 233,
+        "ms": 242,
         "ok": true,
         "source": "⟦Warp Stone⟧で壁抜けた。",
         "translations": {
@@ -74494,26 +74494,12 @@
       },
       {
         "text": "ワープストーンで壁抜けた。",
-        "ms": 246,
+        "ms": 243,
         "ok": true,
         "source": "⟦Warp Stone⟧で壁抜けた。",
         "translations": {
           "en": "I warped through the wall with ⟦Warp Stone⟧.",
-          "ru": "С помощью ⟦Warp Stone⟧ прошёл сквозь стену."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "アンストッパブル間に合った。",
-        "ms": 230,
-        "ok": true,
-        "source": "⟦Unstoppable⟧間に合った。",
-        "translations": {
-          "en": "⟦Unstoppable⟧ made it in time.",
-          "ru": "⟦Unstoppable⟧ успел."
+          "ru": "С помощью ⟦Warp Stone⟧ проскочил сквозь стену."
         },
         "problems": {
           "en": [],
@@ -74536,7 +74522,21 @@
       },
       {
         "text": "アンストッパブル間に合った。",
-        "ms": 712,
+        "ms": 205,
+        "ok": true,
+        "source": "⟦Unstoppable⟧間に合った。",
+        "translations": {
+          "en": "⟦Unstoppable⟧ made it in time.",
+          "ru": "⟦Unstoppable⟧ успел."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "アンストッパブル間に合った。",
+        "ms": 234,
         "ok": true,
         "source": "⟦Unstoppable⟧間に合った。",
         "translations": {
@@ -74550,7 +74550,7 @@
       },
       {
         "text": "不屈の心は序盤に買っておきたい。",
-        "ms": 231,
+        "ms": 240,
         "ok": true,
         "source": "⟦Grit⟧は序盤に買っておきたい。",
         "translations": {
@@ -74564,11 +74564,11 @@
       },
       {
         "text": "不屈の心は序盤に買っておきたい。",
-        "ms": 222,
+        "ms": 248,
         "ok": true,
         "source": "⟦Grit⟧は序盤に買っておきたい。",
         "translations": {
-          "en": "You’ll want to pick up ⟦Grit⟧ early on.",
+          "en": "You’ll want to buy ⟦Grit⟧ early on.",
           "ru": "⟦Grit⟧ стоит купить в начале игры."
         },
         "problems": {
@@ -74578,7 +74578,7 @@
       },
       {
         "text": "不屈の心は序盤に買っておきたい。",
-        "ms": 222,
+        "ms": 244,
         "ok": true,
         "source": "⟦Grit⟧は序盤に買っておきたい。",
         "translations": {
@@ -74592,7 +74592,7 @@
       },
       {
         "text": "ビバップのスティッキーボム二個付けられた。",
-        "ms": 295,
+        "ms": 260,
         "ok": false,
         "source": "⟦Bebop⟧の⟦Sticky Bomb⟧二個付けられた。",
         "translations": {
@@ -74609,7 +74609,24 @@
       },
       {
         "text": "ビバップのスティッキーボム二個付けられた。",
-        "ms": 243,
+        "ms": 275,
+        "ok": false,
+        "source": "⟦Bebop⟧の⟦Sticky Bomb⟧二個付けられた。",
+        "translations": {
+          "en": "Two ⟦Sticky Bombs⟧ from ⟦Bebop⟧ were attached.",
+          "ru": "У ⟦Bebop⟧ два наложенных ⟦Sticky Bomb⟧."
+        },
+        "problems": {
+          "en": [
+            "unknown: Sticky Bombs",
+            "missing: Sticky Bomb"
+          ],
+          "ru": []
+        }
+      },
+      {
+        "text": "ビバップのスティッキーボム二個付けられた。",
+        "ms": 256,
         "ok": false,
         "source": "⟦Bebop⟧の⟦Sticky Bomb⟧二個付けられた。",
         "translations": {
@@ -74624,25 +74641,8 @@
         }
       },
       {
-        "text": "ビバップのスティッキーボム二個付けられた。",
-        "ms": 239,
-        "ok": false,
-        "source": "⟦Bebop⟧の⟦Sticky Bomb⟧二個付けられた。",
-        "translations": {
-          "en": "Two ⟦Sticky Bombs⟧ from ⟦Bebop⟧ were attached.",
-          "ru": "У ⟦Bebop⟧ два наложенных ⟦Sticky Bomb⟧."
-        },
-        "problems": {
-          "en": [
-            "unknown: Sticky Bombs",
-            "missing: Sticky Bomb"
-          ],
-          "ru": []
-        }
-      },
-      {
         "text": "トキシックバレットとヒールベインで回復止めよう。",
-        "ms": 271,
+        "ms": 290,
         "ok": true,
         "source": "⟦Toxic Bullets⟧と⟦Healbane⟧で回復止めよう。",
         "translations": {
@@ -74656,7 +74656,7 @@
       },
       {
         "text": "トキシックバレットとヒールベインで回復止めよう。",
-        "ms": 277,
+        "ms": 367,
         "ok": true,
         "source": "⟦Toxic Bullets⟧と⟦Healbane⟧で回復止めよう。",
         "translations": {
@@ -74670,7 +74670,7 @@
       },
       {
         "text": "トキシックバレットとヒールベインで回復止めよう。",
-        "ms": 267,
+        "ms": 296,
         "ok": true,
         "source": "⟦Toxic Bullets⟧と⟦Healbane⟧で回復止めよう。",
         "translations": {
@@ -74684,7 +74684,21 @@
       },
       {
         "text": "スピリットシールドかバレットレジリエンスどっちがいいかな。",
-        "ms": 261,
+        "ms": 432,
+        "ok": true,
+        "source": "⟦Spirit Shielding⟧か⟦Bullet Resilience⟧どっちがいいかな。",
+        "translations": {
+          "en": "Should I go with ⟦Spirit Shielding⟧ or ⟦Bullet Resilience⟧?",
+          "ru": "Вот что лучше: ⟦Spirit Shielding⟧ или ⟦Bullet Resilience⟧?"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "スピリットシールドかバレットレジリエンスどっちがいいかな。",
+        "ms": 275,
         "ok": true,
         "source": "⟦Spirit Shielding⟧か⟦Bullet Resilience⟧どっちがいいかな。",
         "translations": {
@@ -74698,17 +74712,12 @@
       },
       {
         "text": "スピリットシールドかバレットレジリエンスどっちがいいかな。",
-        "ms": 0,
-        "error": "429 Too Many Requests: {\"error\":{\"message\":\"Requests rate limit exceeded, please try again later. For details, see: https://www.alibabacloud.com/help/en/model-studio/error-code#rate-limit\",\"id\":\"b2c889e0-ded3-9b97-ba40-c3f7e4dd6e7e\",\"type\":\"limit_requests\",\"code\":\"limit_requests\"}}"
-      },
-      {
-        "text": "スピリットシールドかバレットレジリエンスどっちがいいかな。",
-        "ms": 0,
+        "ms": 245,
         "ok": true,
         "source": "⟦Spirit Shielding⟧か⟦Bullet Resilience⟧どっちがいいかな。",
         "translations": {
           "en": "Should I go with ⟦Spirit Shielding⟧ or ⟦Bullet Resilience⟧?",
-          "ru": "Вот вопрос: что лучше — ⟦Spirit Shielding⟧ или ⟦Bullet Resilience⟧?"
+          "ru": "Вот что лучше: ⟦Spirit Shielding⟧ или ⟦Bullet Resilience⟧?"
         },
         "problems": {
           "en": [],
@@ -74717,7 +74726,7 @@
       },
       {
         "text": "ミラージュ強いな今のパッチ。",
-        "ms": 249,
+        "ms": 253,
         "ok": false,
         "source": "⟦Mirage⟧強いな今のパッチ。",
         "translations": {
@@ -74734,7 +74743,7 @@
       },
       {
         "text": "ミラージュ強いな今のパッチ。",
-        "ms": 258,
+        "ms": 268,
         "ok": false,
         "source": "⟦Mirage⟧強いな今のパッチ。",
         "translations": {
@@ -74751,7 +74760,7 @@
       },
       {
         "text": "ミラージュ強いな今のパッチ。",
-        "ms": 241,
+        "ms": 265,
         "ok": false,
         "source": "⟦Mirage⟧強いな今のパッチ。",
         "translations": {
@@ -74768,7 +74777,21 @@
       },
       {
         "text": "インファーナスのウルトでスタン入った。",
-        "ms": 267,
+        "ms": 281,
+        "ok": true,
+        "source": "⟦Infernus⟧の⟦Concussive Combustion⟧でスタン入った。",
+        "translations": {
+          "en": "I got stunned by ⟦Infernus⟧’s ⟦Concussive Combustion⟧.",
+          "ru": "Стан получил благодаря ⟦Infernus⟧ с умением ⟦Concussive Combustion⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "インファーナスのウルトでスタン入った。",
+        "ms": 296,
         "ok": true,
         "source": "⟦Infernus⟧の⟦Concussive Combustion⟧でスタン入った。",
         "translations": {
@@ -74782,26 +74805,12 @@
       },
       {
         "text": "インファーナスのウルトでスタン入った。",
-        "ms": 268,
+        "ms": 341,
         "ok": true,
         "source": "⟦Infernus⟧の⟦Concussive Combustion⟧でスタン入った。",
         "translations": {
           "en": "I got stunned by ⟦Infernus⟧’s ⟦Concussive Combustion⟧.",
-          "ru": "Стан получил благодаря ⟦Infernus⟧ с умением ⟦Concussive Combustion⟧."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "インファーナスのウルトでスタン入った。",
-        "ms": 271,
-        "ok": true,
-        "source": "⟦Infernus⟧の⟦Concussive Combustion⟧でスタン入った。",
-        "translations": {
-          "en": "I got stunned by ⟦Infernus⟧’s ⟦Concussive Combustion⟧.",
-          "ru": "Стан получил благодаря ⟦Infernus⟧ с умением ⟦Concussive Combustion⟧."
+          "ru": "На ⟦Infernus⟧ сработала стойка благодаря его ⟦Concussive Combustion⟧."
         },
         "problems": {
           "en": [],
@@ -74810,7 +74819,35 @@
       },
       {
         "text": "ラッシュの2番で屋根に上がって。",
-        "ms": 265,
+        "ms": 288,
+        "ok": true,
+        "source": "⟦Lash⟧の⟦Grapple⟧で屋根に上がって。",
+        "translations": {
+          "en": "Use ⟦Lash⟧'s ⟦Grapple⟧ to climb up to the roof.",
+          "ru": "Воспользуйся ⟦Lash⟧ с ⟦Grapple⟧, чтобы забраться на крышу."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ラッシュの2番で屋根に上がって。",
+        "ms": 302,
+        "ok": true,
+        "source": "⟦Lash⟧の⟦Grapple⟧で屋根に上がって。",
+        "translations": {
+          "en": "Use ⟦Lash⟧'s ⟦Grapple⟧ to get up onto the roof.",
+          "ru": "Воспользуйся ⟦Lash⟧ с ⟦Grapple⟧, чтобы подняться на крышу."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ラッシュの2番で屋根に上がって。",
+        "ms": 267,
         "ok": true,
         "source": "⟦Lash⟧の⟦Grapple⟧で屋根に上がって。",
         "translations": {
@@ -74823,27 +74860,13 @@
         }
       },
       {
-        "text": "ラッシュの2番で屋根に上がって。",
-        "ms": 279,
+        "text": "ミナのウルトでサイレンス食らった。",
+        "ms": 274,
         "ok": true,
-        "source": "⟦Lash⟧の⟦Grapple⟧で屋根に上がって。",
+        "source": "⟦Mina⟧の⟦Nox Nostra⟧でサイレンス食らった。",
         "translations": {
-          "en": "Use ⟦Lash⟧'s ⟦Grapple⟧ to climb up onto the roof.",
-          "ru": "Воспользуйся ⟦Lash⟧ с ⟦Grapple⟧, чтобы забраться на крышу."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "ラッシュの2番で屋根に上がって。",
-        "ms": 271,
-        "ok": true,
-        "source": "⟦Lash⟧の⟦Grapple⟧で屋根に上がって。",
-        "translations": {
-          "en": "Use ⟦Lash⟧'s ⟦Grapple⟧ to climb up onto the roof.",
-          "ru": "Воспользуйся ⟦Lash⟧ с ⟦Grapple⟧, чтобы забраться на крышу."
+          "en": "I got silenced by ⟦Mina⟧'s ⟦Nox Nostra⟧.",
+          "ru": "Получил сайд на ⟦Mina⟧ с её ⟦Nox Nostra⟧."
         },
         "problems": {
           "en": [],
@@ -74852,7 +74875,7 @@
       },
       {
         "text": "ミナのウルトでサイレンス食らった。",
-        "ms": 253,
+        "ms": 258,
         "ok": false,
         "source": "⟦Mina⟧の⟦Nox Nostra⟧でサイレンス食らった。",
         "translations": {
@@ -74871,45 +74894,12 @@
       },
       {
         "text": "ミナのウルトでサイレンス食らった。",
-        "ms": 287,
+        "ms": 268,
         "ok": true,
         "source": "⟦Mina⟧の⟦Nox Nostra⟧でサイレンス食らった。",
         "translations": {
           "en": "I got silenced by ⟦Mina⟧'s ⟦Nox Nostra⟧.",
-          "ru": "Получил стильт на ⟦Mina⟧ с помощью её ⟦Nox Nostra⟧."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "ミナのウルトでサイレンス食らった。",
-        "ms": 251,
-        "ok": false,
-        "source": "⟦Mina⟧の⟦Nox Nostra⟧でサイレンス食らった。",
-        "translations": {
-          "en": "I got silenced by ⟦Mina⟧'s ⟦Nox Nostra⟧.",
-          "ru": "⟦Мина⟧ получила сайдж от ⟦Нокс Ностра⟧."
-        },
-        "problems": {
-          "en": [],
-          "ru": [
-            "unknown: Мина",
-            "unknown: Нокс Ностра",
-            "missing: Mina",
-            "missing: Nox Nostra"
-          ]
-        }
-      },
-      {
-        "text": "そのあとウルトで焼かれた。",
-        "ms": 234,
-        "ok": true,
-        "source": "そのあと⟦Hyper Beam⟧で焼かれた。",
-        "translations": {
-          "en": "After that, they got burned by ⟦Hyper Beam⟧.",
-          "ru": "После этого его сожгли ⟦Hyper Beam⟧."
+          "ru": "Получил стильт на ⟦Mina⟧ с её ⟦Nox Nostra⟧."
         },
         "problems": {
           "en": [],
@@ -74918,326 +74908,352 @@
       },
       {
         "text": "そのあとウルトで焼かれた。",
-        "ms": 230,
-        "ok": true,
-        "source": "そのあと⟦Hyper Beam⟧で焼かれた。",
-        "translations": {
-          "en": "After that, they got burned by ⟦Hyper Beam⟧.",
-          "ru": "После этого его сожгли ⟦Hyper Beam⟧."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "そのあとウルトで焼かれた。",
-        "ms": 225,
-        "ok": true,
-        "source": "そのあと⟦Hyper Beam⟧で焼かれた。",
-        "translations": {
-          "en": "After that, they got burned by ⟦Hyper Beam⟧.",
-          "ru": "После этого его сожгли ⟦Hyper Beam⟧."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "ヤマトの１番溜めてから当てて。",
-        "ms": 297,
-        "ok": true,
-        "source": "⟦Yamato⟧の⟦Power Slash⟧溜めてから当てて。",
-        "translations": {
-          "en": "Charge up ⟦Yamato⟧'s ⟦Power Slash⟧ and then hit them.",
-          "ru": "Заряди ⟦Yamato⟧ с помощью ⟦Power Slash⟧ и потом используй."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "ヤマトの１番溜めてから当てて。",
-        "ms": 260,
-        "ok": true,
-        "source": "⟦Yamato⟧の⟦Power Slash⟧溜めてから当てて。",
-        "translations": {
-          "en": "Charge up ⟦Yamato⟧'s ⟦Power Slash⟧ and then hit them.",
-          "ru": "Заряди ⟦Yamato⟧ с помощью ⟦Power Slash⟧ и потом используй."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "ヤマトの１番溜めてから当てて。",
-        "ms": 641,
-        "ok": true,
-        "source": "⟦Yamato⟧の⟦Power Slash⟧溜めてから当てて。",
-        "translations": {
-          "en": "Charge up ⟦Yamato⟧'s ⟦Power Slash⟧ and then hit them.",
-          "ru": "Заряди ⟦Yamato⟧ с помощью ⟦Power Slash⟧ и потом используй."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "ダイナモウルト来るから散って。",
-        "ms": 254,
-        "ok": true,
-        "source": "⟦Dynamo⟧⟦Singularity⟧来るから散って。",
-        "translations": {
-          "en": "⟦Dynamo⟧ and ⟦Singularity⟧ are coming, so scatter.",
-          "ru": "⟦Dynamo⟧ и ⟦Singularity⟧ уже идут, разбегайтесь."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "ダイナモウルト来るから散って。",
-        "ms": 349,
-        "ok": true,
-        "source": "⟦Dynamo⟧⟦Singularity⟧来るから散って。",
-        "translations": {
-          "en": "⟦Dynamo⟧ and ⟦Singularity⟧ are coming, so scatter.",
-          "ru": "⟦Dynamo⟧ и ⟦Singularity⟧ уже идут, разбегайтесь."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "ダイナモウルト来るから散って。",
-        "ms": 265,
-        "ok": true,
-        "source": "⟦Dynamo⟧⟦Singularity⟧来るから散って。",
-        "translations": {
-          "en": "⟦Dynamo⟧ and ⟦Singularity⟧ are coming, so scatter.",
-          "ru": "⟦Dynamo⟧ и ⟦Singularity⟧ уже идут, разбегайтесь."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "アイビーの３番で耐えた。",
-        "ms": 246,
-        "ok": true,
-        "source": "⟦Ivy⟧の⟦Stone Form⟧で耐えた。",
-        "translations": {
-          "en": "I survived with ⟦Ivy⟧'s ⟦Stone Form⟧.",
-          "ru": "Выжил благодаря ⟦Ivy⟧ в ⟦Stone Form⟧."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "アイビーの３番で耐えた。",
-        "ms": 260,
-        "ok": true,
-        "source": "⟦Ivy⟧の⟦Stone Form⟧で耐えた。",
-        "translations": {
-          "en": "I survived with ⟦Ivy⟧'s ⟦Stone Form⟧.",
-          "ru": "Выжил благодаря ⟦Ivy⟧ в ⟦Stone Form⟧."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "アイビーの３番で耐えた。",
-        "ms": 558,
-        "ok": true,
-        "source": "⟦Ivy⟧の⟦Stone Form⟧で耐えた。",
-        "translations": {
-          "en": "I survived with ⟦Ivy⟧'s ⟦Stone Form⟧.",
-          "ru": "Выжил благодаря ⟦Ivy⟧ в ⟦Stone Form⟧."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "ラッシュのウルトで全員叩きつけられた。",
-        "ms": 257,
-        "ok": true,
-        "source": "⟦Lash⟧の⟦Death Slam⟧で全員叩きつけられた。",
-        "translations": {
-          "en": "Everyone got knocked down by ⟦Lash⟧'s ⟦Death Slam⟧.",
-          "ru": "Все получили удар от ⟦Lash⟧ с его ⟦Death Slam⟧."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "ラッシュのウルトで全員叩きつけられた。",
-        "ms": 247,
-        "ok": true,
-        "source": "⟦Lash⟧の⟦Death Slam⟧で全員叩きつけられた。",
-        "translations": {
-          "en": "Everyone got knocked down by ⟦Lash⟧'s ⟦Death Slam⟧.",
-          "ru": "Все получили удар от ⟦Lash⟧ с его ⟦Death Slam⟧."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "ラッシュのウルトで全員叩きつけられた。",
-        "ms": 250,
-        "ok": true,
-        "source": "⟦Lash⟧の⟦Death Slam⟧で全員叩きつけられた。",
-        "translations": {
-          "en": "Everyone got knocked down by ⟦Lash⟧'s ⟦Death Slam⟧.",
-          "ru": "Все получили удар от ⟦Lash⟧ с его ⟦Death Slam⟧."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "シルバーにウルト当てられた。",
-        "ms": 469,
-        "ok": true,
-        "source": "⟦Silver⟧に⟦Lycan Curse⟧当てられた。",
-        "translations": {
-          "en": "⟦Silver⟧ got hit with ⟦Lycan Curse⟧.",
-          "ru": "⟦Silver⟧ получил удар ⟦Lycan Curse⟧."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "シルバーにウルト当てられた。",
-        "ms": 236,
-        "ok": true,
-        "source": "⟦Silver⟧に⟦Lycan Curse⟧当てられた。",
-        "translations": {
-          "en": "⟦Silver⟧ got hit with ⟦Lycan Curse⟧.",
-          "ru": "⟦Silver⟧ получил удар ⟦Lycan Curse⟧."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "シルバーにウルト当てられた。",
-        "ms": 147,
-        "error": "429 Too Many Requests: {\"error\":{\"message\":\"Requests rate limit exceeded, please try again later. For details, see: https://www.alibabacloud.com/help/en/model-studio/error-code#rate-limit\",\"id\":\"6dba364f-1e9c-91bf-b1b0-085d4ae4eee6\",\"type\":\"limit_requests\",\"code\":\"limit_requests\"}}"
-      },
-      {
-        "text": "3番のクールダウン長いな。",
-        "ms": 0,
-        "error": "429 Too Many Requests: {\"error\":{\"message\":\"Requests rate limit exceeded, please try again later. For details, see: https://www.alibabacloud.com/help/en/model-studio/error-code#rate-limit\",\"id\":\"71ad38d9-0a48-9eef-be13-55495c601d10\",\"type\":\"limit_requests\",\"code\":\"limit_requests\"}}"
-      },
-      {
-        "text": "3番のクールダウン長いな。",
-        "ms": 0,
-        "ok": true,
-        "source": "3番のクールダウン長いな。",
-        "translations": {
-          "en": "3's cooldown is long.",
-          "ru": "У 3‑го кулдаун такой долгий."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "3番のクールダウン長いな。",
-        "ms": 221,
-        "ok": true,
-        "source": "3番のクールダウン長いな。",
-        "translations": {
-          "en": "3's cooldown is long.",
-          "ru": "У 3‑го кулдаун такой долгий."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "ウルトあと10秒。",
-        "ms": 233,
-        "ok": true,
-        "source": "ウルトあと10秒。",
-        "translations": {
-          "en": "Ult's 10 seconds away.",
-          "ru": "Ультимейт ещё 10 секунд."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "ウルトあと10秒。",
-        "ms": 246,
-        "ok": true,
-        "source": "ウルトあと10秒。",
-        "translations": {
-          "en": "Ult's 10 seconds away.",
-          "ru": "Ультимейт ещё 10 секунд."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "ウルトあと10秒。",
-        "ms": 1148,
-        "ok": true,
-        "source": "ウルトあと10秒。",
-        "translations": {
-          "en": "Ult's 10 seconds away.",
-          "ru": "Ультимейт ещё 10 секунд."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "エコーシャードでウルト二回撃てる。",
-        "ms": 302,
-        "ok": true,
-        "source": "⟦Echo Shard⟧でウルト二回撃てる。",
-        "translations": {
-          "en": "With ⟦Echo Shard⟧, you can fire your ult twice.",
-          "ru": "С ⟦Echo Shard⟧ можно дважды использовать ульту."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "エコーシャードでウルト二回撃てる。",
         "ms": 231,
         "ok": true,
+        "source": "そのあと⟦Hyper Beam⟧で焼かれた。",
+        "translations": {
+          "en": "After that, they got burned by ⟦Hyper Beam⟧.",
+          "ru": "После этого его сожгли ⟦Hyper Beam⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "そのあとウルトで焼かれた。",
+        "ms": 353,
+        "ok": true,
+        "source": "そのあと⟦Hyper Beam⟧で焼かれた。",
+        "translations": {
+          "en": "After that, they got burned by ⟦Hyper Beam⟧.",
+          "ru": "После этого его сожгли ⟦Hyper Beam⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "そのあとウルトで焼かれた。",
+        "ms": 292,
+        "ok": true,
+        "source": "そのあと⟦Hyper Beam⟧で焼かれた。",
+        "translations": {
+          "en": "After that, they got burned by ⟦Hyper Beam⟧.",
+          "ru": "После этого его сожгли ⟦Hyper Beam⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ヤマトの１番溜めてから当てて。",
+        "ms": 271,
+        "ok": true,
+        "source": "⟦Yamato⟧の⟦Power Slash⟧溜めてから当てて。",
+        "translations": {
+          "en": "Charge up ⟦Yamato⟧'s ⟦Power Slash⟧ and then hit them.",
+          "ru": "Заряди ⟦Yamato⟧ с помощью ⟦Power Slash⟧ и потом используй."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ヤマトの１番溜めてから当てて。",
+        "ms": 0,
+        "ok": true,
+        "source": "⟦Yamato⟧の⟦Power Slash⟧溜めてから当てて。",
+        "translations": {
+          "en": "Charge up ⟦Yamato⟧'s ⟦Power Slash⟧ and then hit them.",
+          "ru": "Заряди ⟦Yamato⟧ с помощью ⟦Power Slash⟧ и потом используй."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ヤマトの１番溜めてから当てて。",
+        "ms": 271,
+        "ok": true,
+        "source": "⟦Yamato⟧の⟦Power Slash⟧溜めてから当てて。",
+        "translations": {
+          "en": "Charge up ⟦Yamato⟧'s ⟦Power Slash⟧ and then hit them.",
+          "ru": "Заряди ⟦Yamato⟧ с умением ⟦Power Slash⟧ и потом используй."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ダイナモウルト来るから散って。",
+        "ms": 293,
+        "ok": true,
+        "source": "⟦Dynamo⟧⟦Singularity⟧来るから散って。",
+        "translations": {
+          "en": "⟦Dynamo⟧ and ⟦Singularity⟧ are coming, so scatter.",
+          "ru": "⟦Dynamo⟧ и ⟦Singularity⟧ уже идут, разбегайтесь."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ダイナモウルト来るから散って。",
+        "ms": 258,
+        "ok": true,
+        "source": "⟦Dynamo⟧⟦Singularity⟧来るから散って。",
+        "translations": {
+          "en": "⟦Dynamo⟧ and ⟦Singularity⟧ are coming, so scatter.",
+          "ru": "⟦Dynamo⟧ и ⟦Singularity⟧ уже идут, разбегайтесь."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ダイナモウルト来るから散って。",
+        "ms": 276,
+        "ok": false,
+        "source": "⟦Dynamo⟧⟦Singularity⟧来るから散って。",
+        "translations": {
+          "en": "⟦Dynamo⟧ and ⟦Singularity⟧ are coming, so scatter.",
+          "ru": "⟦Динамо⟧⟦Сингулярность⟧ идёт, разбегайтесь."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Динамо",
+            "unknown: Сингулярность",
+            "missing: Dynamo",
+            "missing: Singularity"
+          ]
+        }
+      },
+      {
+        "text": "アイビーの３番で耐えた。",
+        "ms": 239,
+        "ok": true,
+        "source": "⟦Ivy⟧の⟦Stone Form⟧で耐えた。",
+        "translations": {
+          "en": "I survived with ⟦Ivy⟧'s ⟦Stone Form⟧.",
+          "ru": "Выстоял благодаря ⟦Ivy⟧ в ⟦Stone Form⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "アイビーの３番で耐えた。",
+        "ms": 242,
+        "ok": true,
+        "source": "⟦Ivy⟧の⟦Stone Form⟧で耐えた。",
+        "translations": {
+          "en": "I survived with ⟦Ivy⟧'s ⟦Stone Form⟧.",
+          "ru": "Выстоял благодаря ⟦Ivy⟧ в ⟦Stone Form⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "アイビーの３番で耐えた。",
+        "ms": 242,
+        "ok": true,
+        "source": "⟦Ivy⟧の⟦Stone Form⟧で耐えた。",
+        "translations": {
+          "en": "I survived with ⟦Ivy⟧'s ⟦Stone Form⟧.",
+          "ru": "Выжил благодаря ⟦Ivy⟧ в ⟦Stone Form⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ラッシュのウルトで全員叩きつけられた。",
+        "ms": 252,
+        "ok": true,
+        "source": "⟦Lash⟧の⟦Death Slam⟧で全員叩きつけられた。",
+        "translations": {
+          "en": "Everyone got knocked down by ⟦Lash⟧'s ⟦Death Slam⟧.",
+          "ru": "Все получили удар от ⟦Lash⟧ с её ⟦Death Slam⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ラッシュのウルトで全員叩きつけられた。",
+        "ms": 237,
+        "ok": true,
+        "source": "⟦Lash⟧の⟦Death Slam⟧で全員叩きつけられた。",
+        "translations": {
+          "en": "Everyone got knocked down by ⟦Lash⟧'s ⟦Death Slam⟧.",
+          "ru": "Все получили удар от ⟦Lash⟧ с его ⟦Death Slam⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ラッシュのウルトで全員叩きつけられた。",
+        "ms": 265,
+        "ok": true,
+        "source": "⟦Lash⟧の⟦Death Slam⟧で全員叩きつけられた。",
+        "translations": {
+          "en": "Everyone got knocked down by ⟦Lash⟧'s ⟦Death Slam⟧.",
+          "ru": "Все получили удар от ⟦Lash⟧ с её ⟦Death Slam⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "シルバーにウルト当てられた。",
+        "ms": 236,
+        "ok": true,
+        "source": "⟦Silver⟧に⟦Lycan Curse⟧当てられた。",
+        "translations": {
+          "en": "⟦Silver⟧ got hit with ⟦Lycan Curse⟧.",
+          "ru": "⟦Silver⟧ получил удар ⟦Lycan Curse⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "シルバーにウルト当てられた。",
+        "ms": 343,
+        "ok": true,
+        "source": "⟦Silver⟧に⟦Lycan Curse⟧当てられた。",
+        "translations": {
+          "en": "⟦Silver⟧ got hit with ⟦Lycan Curse⟧.",
+          "ru": "⟦Silver⟧ получил удар ⟦Lycan Curse⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "シルバーにウルト当てられた。",
+        "ms": 228,
+        "ok": false,
+        "source": "⟦Silver⟧に⟦Lycan Curse⟧当てられた。",
+        "translations": {
+          "en": "⟦Silver⟧ got hit with ⟦Lycan Curse⟧.",
+          "ru": "⟦Сильвер⟧ получил удар ⟦Lycan Curse⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Сильвер",
+            "missing: Silver"
+          ]
+        }
+      },
+      {
+        "text": "3番のクールダウン長いな。",
+        "ms": 248,
+        "ok": true,
+        "source": "3番のクールダウン長いな。",
+        "translations": {
+          "en": "3's cooldown is long.",
+          "ru": "У умения 3‑го героя долгая перезарядка."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "3番のクールダウン長いな。",
+        "ms": 390,
+        "ok": true,
+        "source": "3番のクールダウン長いな。",
+        "translations": {
+          "en": "3's cooldown is long.",
+          "ru": "У 3‑го кулдаун такой долгий."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "3番のクールダウン長いな。",
+        "ms": 213,
+        "ok": true,
+        "source": "3番のクールダウン長いな。",
+        "translations": {
+          "en": "3's cooldown is long.",
+          "ru": "У 3‑го кулдаун такой долгий."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ウルトあと10秒。",
+        "ms": 804,
+        "ok": true,
+        "source": "ウルトあと10秒。",
+        "translations": {
+          "en": "Ult's 10 seconds away.",
+          "ru": "Ультимейт ещё 10 секунд."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ウルトあと10秒。",
+        "ms": 221,
+        "ok": true,
+        "source": "ウルトあと10秒。",
+        "translations": {
+          "en": "Ult's 10 seconds away.",
+          "ru": "Ультимейт ещё 10 секунд."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ウルトあと10秒。",
+        "ms": 206,
+        "ok": true,
+        "source": "ウルトあと10秒。",
+        "translations": {
+          "en": "Ult's 10 seconds away.",
+          "ru": "Ультимейт ещё 10 секунд."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "エコーシャードでウルト二回撃てる。",
+        "ms": 241,
+        "ok": true,
         "source": "⟦Echo Shard⟧でウルト二回撃てる。",
         "translations": {
           "en": "With ⟦Echo Shard⟧, you can fire your ult twice.",
@@ -75250,7 +75266,7 @@
       },
       {
         "text": "エコーシャードでウルト二回撃てる。",
-        "ms": 236,
+        "ms": 242,
         "ok": true,
         "source": "⟦Echo Shard⟧でウルト二回撃てる。",
         "translations": {
@@ -75263,27 +75279,13 @@
         }
       },
       {
-        "text": "リフレッシャー持ってるからウルト二連発くるよ。",
-        "ms": 261,
+        "text": "エコーシャードでウルト二回撃てる。",
+        "ms": 221,
         "ok": true,
-        "source": "⟦Refresher⟧持ってるからウルト二連発くるよ。",
+        "source": "⟦Echo Shard⟧でウルト二回撃てる。",
         "translations": {
-          "en": "I’ve got a ⟦Refresher⟧, so we’re gonna get two ultimates in a row.",
-          "ru": "У меня есть ⟦Refresher⟧, так что будет двойной ульт."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "リフレッシャー持ってるからウルト二連発くるよ。",
-        "ms": 454,
-        "ok": true,
-        "source": "⟦Refresher⟧持ってるからウルト二連発くるよ。",
-        "translations": {
-          "en": "I’ve got a ⟦Refresher⟧, so we’re gonna get two ultimates in a row.",
-          "ru": "У меня есть ⟦Refresher⟧, так что будет двойной ульт."
+          "en": "With ⟦Echo Shard⟧, you can fire your ult twice.",
+          "ru": "С ⟦Echo Shard⟧ можно дважды использовать ульту."
         },
         "problems": {
           "en": [],
@@ -75305,36 +75307,64 @@
         }
       },
       {
-        "text": "エイブラムスのチャージで壁に当てられた。",
-        "ms": 236,
-        "ok": true,
-        "source": "⟦Abrams⟧の⟦Shoulder Charge⟧で壁に当てられた。",
-        "translations": {
-          "en": "⟦Abrams⟧ got hit into the wall with a ⟦Shoulder Charge⟧.",
-          "ru": "⟦Abrams⟧ задел стену своим ⟦Shoulder Charge⟧."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "エイブラムスのチャージで壁に当てられた。",
-        "ms": 254,
-        "ok": true,
-        "source": "⟦Abrams⟧の⟦Shoulder Charge⟧で壁に当てられた。",
-        "translations": {
-          "en": "⟦Abrams⟧ got hit into the wall with a ⟦Shoulder Charge⟧.",
-          "ru": "⟦Abrams⟧ задел стену своим ⟦Shoulder Charge⟧."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "エイブラムスのチャージで壁に当てられた。",
+        "text": "リフレッシャー持ってるからウルト二連発くるよ。",
         "ms": 269,
+        "ok": true,
+        "source": "⟦Refresher⟧持ってるからウルト二連発くるよ。",
+        "translations": {
+          "en": "I’ve got a ⟦Refresher⟧, so we’re gonna get two ultimates in a row.",
+          "ru": "У меня есть ⟦Refresher⟧, так что будет двойной ульт."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "リフレッシャー持ってるからウルト二連発くるよ。",
+        "ms": 264,
+        "ok": true,
+        "source": "⟦Refresher⟧持ってるからウルト二連発くるよ。",
+        "translations": {
+          "en": "I’ve got a ⟦Refresher⟧, so we’re gonna get two ultimates in a row.",
+          "ru": "У меня есть ⟦Refresher⟧, так что будет двойной ульт."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "エイブラムスのチャージで壁に当てられた。",
+        "ms": 248,
+        "ok": true,
+        "source": "⟦Abrams⟧の⟦Shoulder Charge⟧で壁に当てられた。",
+        "translations": {
+          "en": "⟦Abrams⟧ got hit into the wall with a ⟦Shoulder Charge⟧.",
+          "ru": "⟦Abrams⟧ задел стену своим ⟦Shoulder Charge⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "エイブラムスのチャージで壁に当てられた。",
+        "ms": 262,
+        "ok": true,
+        "source": "⟦Abrams⟧の⟦Shoulder Charge⟧で壁に当てられた。",
+        "translations": {
+          "en": "⟦Abrams⟧ got hit into the wall with a ⟦Shoulder Charge⟧.",
+          "ru": "⟦Abrams⟧ задел стену своим ⟦Shoulder Charge⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "エイブラムスのチャージで壁に当てられた。",
+        "ms": 323,
         "ok": true,
         "source": "⟦Abrams⟧の⟦Shoulder Charge⟧で壁に当てられた。",
         "translations": {
@@ -75348,7 +75378,7 @@
       },
       {
         "text": "ケルビンのビームで足遅くされた。",
-        "ms": 253,
+        "ms": 227,
         "ok": false,
         "source": "⟦Kelvin⟧の⟦Arctic Beam⟧で足遅くされた。",
         "translations": {
@@ -75365,24 +75395,7 @@
       },
       {
         "text": "ケルビンのビームで足遅くされた。",
-        "ms": 299,
-        "ok": false,
-        "source": "⟦Kelvin⟧の⟦Arctic Beam⟧で足遅くされた。",
-        "translations": {
-          "en": "I got slowed by ⟦Kelvin⟧'s ⟦Arctic Beam⟧.",
-          "ru": "⟦Кельвин⟧ замедлил меня своим ⟦Arctic Beam⟧."
-        },
-        "problems": {
-          "en": [],
-          "ru": [
-            "unknown: Кельвин",
-            "missing: Kelvin"
-          ]
-        }
-      },
-      {
-        "text": "ケルビンのビームで足遅くされた。",
-        "ms": 235,
+        "ms": 0,
         "ok": false,
         "source": "⟦Kelvin⟧の⟦Arctic Beam⟧で足遅くされた。",
         "translations": {
@@ -75398,97 +75411,30 @@
         }
       },
       {
-        "text": "ビバップのフックに気をつけて。",
-        "ms": 264,
-        "ok": true,
-        "source": "⟦Bebop⟧の⟦Grapple Arm⟧に気をつけて。",
+        "text": "ケルビンのビームで足遅くされた。",
+        "ms": 398,
+        "ok": false,
+        "source": "⟦Kelvin⟧の⟦Arctic Beam⟧で足遅くされた。",
         "translations": {
-          "en": "Watch out for ⟦Bebop⟧'s ⟦Grapple Arm⟧.",
-          "ru": "Берегись ⟦Bebop⟧ с его ⟦Grapple Arm⟧."
+          "en": "I got slowed by ⟦Kelvin⟧'s ⟦Arctic Beam⟧.",
+          "ru": "⟦Кельвин⟧ замедлил меня своим ⟦Arctic Beam⟧."
         },
         "problems": {
           "en": [],
-          "ru": []
+          "ru": [
+            "unknown: Кельвин",
+            "missing: Kelvin"
+          ]
         }
       },
       {
         "text": "ビバップのフックに気をつけて。",
-        "ms": 262,
-        "ok": true,
-        "source": "⟦Bebop⟧の⟦Grapple Arm⟧に気をつけて。",
-        "translations": {
-          "en": "Watch out for ⟦Bebop⟧'s ⟦Grapple Arm⟧.",
-          "ru": "Берегись ⟦Bebop⟧ с его ⟦Grapple Arm⟧."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "ビバップのフックに気をつけて。",
-        "ms": 258,
-        "ok": true,
-        "source": "⟦Bebop⟧の⟦Grapple Arm⟧に気をつけて。",
-        "translations": {
-          "en": "Watch out for ⟦Bebop⟧'s ⟦Grapple Arm⟧.",
-          "ru": "Берегись ⟦Bebop⟧ с его ⟦Grapple Arm⟧."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "インファ強すぎない？",
-        "ms": 231,
-        "ok": true,
-        "source": "⟦Infernus⟧強すぎない？",
-        "translations": {
-          "en": "Isn’t ⟦Infernus⟧ too strong?",
-          "ru": "⟦Infernus⟧ не слишком силён?"
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "インファ強すぎない？",
-        "ms": 215,
-        "ok": true,
-        "source": "⟦Infernus⟧強すぎない？",
-        "translations": {
-          "en": "Isn’t ⟦Infernus⟧ too strong?",
-          "ru": "⟦Infernus⟧ не слишком сильный?"
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "インファ強すぎない？",
-        "ms": 217,
-        "ok": true,
-        "source": "⟦Infernus⟧強すぎない？",
-        "translations": {
-          "en": "Isn’t ⟦Infernus⟧ too strong?",
-          "ru": "⟦Infernus⟧ не слишком сильный?"
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "ガイストのウルトで体力入れ替えられた。",
         "ms": 261,
         "ok": true,
-        "source": "⟦Lady Geist⟧の⟦Soul Exchange⟧で体力入れ替えられた。",
+        "source": "⟦Bebop⟧の⟦Grapple Arm⟧に気をつけて。",
         "translations": {
-          "en": "⟦Lady Geist⟧ had her HP swapped using ⟦Soul Exchange⟧.",
-          "ru": "У ⟦Lady Geist⟧ с помощью ⟦Soul Exchange⟧ поменяли здоровье."
+          "en": "Watch out for ⟦Bebop⟧'s ⟦Grapple Arm⟧.",
+          "ru": "Берегись ⟦Bebop⟧ с его ⟦Grapple Arm⟧."
         },
         "problems": {
           "en": [],
@@ -75496,13 +75442,13 @@
         }
       },
       {
-        "text": "ガイストのウルトで体力入れ替えられた。",
-        "ms": 248,
+        "text": "ビバップのフックに気をつけて。",
+        "ms": 242,
         "ok": true,
-        "source": "⟦Lady Geist⟧の⟦Soul Exchange⟧で体力入れ替えられた。",
+        "source": "⟦Bebop⟧の⟦Grapple Arm⟧に気をつけて。",
         "translations": {
-          "en": "⟦Lady Geist⟧ had her HP swapped using ⟦Soul Exchange⟧.",
-          "ru": "У ⟦Lady Geist⟧ с помощью ⟦Soul Exchange⟧ поменяли здоровье."
+          "en": "Watch out for ⟦Bebop⟧'s ⟦Grapple Arm⟧.",
+          "ru": "Берегись ⟦Bebop⟧ с его ⟦Grapple Arm⟧."
         },
         "problems": {
           "en": [],
@@ -75510,9 +75456,65 @@
         }
       },
       {
-        "text": "ガイストのウルトで体力入れ替えられた。",
+        "text": "ビバップのフックに気をつけて。",
         "ms": 254,
         "ok": true,
+        "source": "⟦Bebop⟧の⟦Grapple Arm⟧に気をつけて。",
+        "translations": {
+          "en": "Watch out for ⟦Bebop⟧'s ⟦Grapple Arm⟧.",
+          "ru": "Берегись ⟦Bebop⟧ с его ⟦Grapple Arm⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "インファ強すぎない？",
+        "ms": 223,
+        "ok": true,
+        "source": "⟦Infernus⟧強すぎない？",
+        "translations": {
+          "en": "Isn’t ⟦Infernus⟧ too strong?",
+          "ru": "⟦Infernus⟧ не слишком сильный?"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "インファ強すぎない？",
+        "ms": 214,
+        "ok": true,
+        "source": "⟦Infernus⟧強すぎない？",
+        "translations": {
+          "en": "Isn’t ⟦Infernus⟧ too strong?",
+          "ru": "⟦Infernus⟧ не слишком сильный?"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "インファ強すぎない？",
+        "ms": 506,
+        "ok": true,
+        "source": "⟦Infernus⟧強すぎない？",
+        "translations": {
+          "en": "Isn’t ⟦Infernus⟧ too strong?",
+          "ru": "⟦Infernus⟧ не слишком сильный?"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ガイストのウルトで体力入れ替えられた。",
+        "ms": 274,
+        "ok": true,
         "source": "⟦Lady Geist⟧の⟦Soul Exchange⟧で体力入れ替えられた。",
         "translations": {
           "en": "⟦Lady Geist⟧ had her HP swapped using ⟦Soul Exchange⟧.",
@@ -75524,13 +75526,27 @@
         }
       },
       {
-        "text": "タロンに遠くから抜かれた。",
-        "ms": 236,
+        "text": "ガイストのウルトで体力入れ替えられた。",
+        "ms": 244,
         "ok": true,
-        "source": "⟦Grey Talon⟧に遠くから抜かれた。",
+        "source": "⟦Lady Geist⟧の⟦Soul Exchange⟧で体力入れ替えられた。",
         "translations": {
-          "en": "I got passed from far away by ⟦Grey Talon⟧.",
-          "ru": "Меня обогнали издалека ⟦Grey Talon⟧."
+          "en": "⟦Lady Geist⟧ had her HP swapped using ⟦Soul Exchange⟧.",
+          "ru": "У ⟦Lady Geist⟧ переключили здоровье с помощью ⟦Soul Exchange⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ガイストのウルトで体力入れ替えられた。",
+        "ms": 249,
+        "ok": true,
+        "source": "⟦Lady Geist⟧の⟦Soul Exchange⟧で体力入れ替えられた。",
+        "translations": {
+          "en": "⟦Lady Geist⟧ had her HP swapped using ⟦Soul Exchange⟧.",
+          "ru": "У ⟦Lady Geist⟧ с помощью ⟦Soul Exchange⟧ поменяли здоровье."
         },
         "problems": {
           "en": [],
@@ -75553,7 +75569,21 @@
       },
       {
         "text": "タロンに遠くから抜かれた。",
-        "ms": 219,
+        "ms": 246,
+        "ok": true,
+        "source": "⟦Grey Talon⟧に遠くから抜かれた。",
+        "translations": {
+          "en": "I got passed from far away by ⟦Grey Talon⟧.",
+          "ru": "Меня обогнали издалека ⟦Grey Talon⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "タロンに遠くから抜かれた。",
+        "ms": 262,
         "ok": true,
         "source": "⟦Grey Talon⟧に遠くから抜かれた。",
         "translations": {
@@ -75567,7 +75597,37 @@
       },
       {
         "text": "モークリのウルトに捕まった。",
-        "ms": 244,
+        "ms": 240,
+        "ok": true,
+        "source": "⟦Mo & Krill⟧の⟦Combo⟧に捕まった。",
+        "translations": {
+          "en": "Got caught in ⟦Mo & Krill⟧’s ⟦Combo⟧.",
+          "ru": "Попался в ⟦Combo⟧ ⟦Mo & Krill⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "モークリのウルトに捕まった。",
+        "ms": 242,
+        "ok": false,
+        "source": "⟦Mo & Krill⟧の⟦Combo⟧に捕まった。",
+        "translations": {
+          "en": "Got caught in ⟦Mo & Krill⟧’s ⟦Combo⟧.",
+          "ru": "Попался в комбо ⟦Mo & Krill⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "missing: Combo"
+          ]
+        }
+      },
+      {
+        "text": "モークリのウルトに捕まった。",
+        "ms": 237,
         "ok": true,
         "source": "⟦Mo & Krill⟧の⟦Combo⟧に捕まった。",
         "translations": {
@@ -75580,18 +75640,8 @@
         }
       },
       {
-        "text": "モークリのウルトに捕まった。",
-        "ms": 0,
-        "error": "429 Too Many Requests: {\"error\":{\"message\":\"Requests rate limit exceeded, please try again later. For details, see: https://www.alibabacloud.com/help/en/model-studio/error-code#rate-limit\",\"id\":\"659bef13-393d-9b83-82e5-f0b50281c2ab\",\"type\":\"limit_requests\",\"code\":\"limit_requests\"}}"
-      },
-      {
-        "text": "モークリのウルトに捕まった。",
-        "ms": 0,
-        "error": "429 Too Many Requests: {\"error\":{\"message\":\"Requests rate limit exceeded, please try again later. For details, see: https://www.alibabacloud.com/help/en/model-studio/error-code#rate-limit\",\"id\":\"b5661a75-1bda-91e8-8b2b-4147de517db9\",\"type\":\"limit_requests\",\"code\":\"limit_requests\"}}"
-      },
-      {
         "text": "ヴィンにずっと撃たれてる。",
-        "ms": 0,
+        "ms": 246,
         "ok": true,
         "source": "⟦Vindicta⟧にずっと撃たれてる。",
         "translations": {
@@ -75605,7 +75655,7 @@
       },
       {
         "text": "ヴィンにずっと撃たれてる。",
-        "ms": 247,
+        "ms": 258,
         "ok": true,
         "source": "⟦Vindicta⟧にずっと撃たれてる。",
         "translations": {
@@ -75619,7 +75669,7 @@
       },
       {
         "text": "ヴィンにずっと撃たれてる。",
-        "ms": 250,
+        "ms": 299,
         "ok": true,
         "source": "⟦Vindicta⟧にずっと撃たれてる。",
         "translations": {
@@ -75633,7 +75683,7 @@
       },
       {
         "text": "ヴィンディのウルトで落とされた。",
-        "ms": 269,
+        "ms": 273,
         "ok": true,
         "source": "⟦Vindicta⟧の⟦Assassinate⟧で落とされた。",
         "translations": {
@@ -75661,7 +75711,7 @@
       },
       {
         "text": "ヴィンディのウルトで落とされた。",
-        "ms": 249,
+        "ms": 252,
         "ok": true,
         "source": "⟦Vindicta⟧の⟦Assassinate⟧で落とされた。",
         "translations": {
@@ -75675,7 +75725,7 @@
       },
       {
         "text": "メタスキ押すの遅れた。",
-        "ms": 227,
+        "ms": 208,
         "ok": true,
         "source": "⟦Metal Skin⟧押すの遅れた。",
         "translations": {
@@ -75689,7 +75739,7 @@
       },
       {
         "text": "メタスキ押すの遅れた。",
-        "ms": 228,
+        "ms": 224,
         "ok": true,
         "source": "⟦Metal Skin⟧押すの遅れた。",
         "translations": {
@@ -75703,22 +75753,22 @@
       },
       {
         "text": "メタスキ押すの遅れた。",
-        "ms": 239,
-        "ok": true,
-        "source": "⟦Metal Skin⟧押すの遅れた。",
-        "translations": {
-          "en": "I was late pressing ⟦Metal Skin⟧.",
-          "ru": "Опоздал с нажатием ⟦Metal Skin⟧."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "アンストッパ買っとけばよかった。",
         "ms": 240,
         "ok": true,
+        "source": "⟦Metal Skin⟧押すの遅れた。",
+        "translations": {
+          "en": "I was late pressing ⟦Metal Skin⟧.",
+          "ru": "Опоздал с нажатием ⟦Metal Skin⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "アンストッパ買っとけばよかった。",
+        "ms": 249,
+        "ok": true,
         "source": "⟦Unstoppable⟧買っとけばよかった。",
         "translations": {
           "en": "I should’ve bought ⟦Unstoppable⟧.",
@@ -75731,7 +75781,7 @@
       },
       {
         "text": "アンストッパ買っとけばよかった。",
-        "ms": 239,
+        "ms": 224,
         "ok": true,
         "source": "⟦Unstoppable⟧買っとけばよかった。",
         "translations": {
@@ -75745,7 +75795,7 @@
       },
       {
         "text": "アンストッパ買っとけばよかった。",
-        "ms": 245,
+        "ms": 234,
         "ok": true,
         "source": "⟦Unstoppable⟧買っとけばよかった。",
         "translations": {
@@ -75759,11 +75809,11 @@
       },
       {
         "text": "インフェルノスのアフターバーンが痛い。",
-        "ms": 274,
+        "ms": 330,
         "ok": true,
         "source": "⟦Infernus⟧の⟦Afterburn⟧が痛い。",
         "translations": {
-          "en": "⟦Infernus⟧' ⟦Afterburn⟧ is brutal.",
+          "en": "⟦Infernus⟧' ⟦Afterburn⟧ is hurting.",
           "ru": "⟦Infernus⟧ с ⟦Afterburn⟧ наносит серьёзный урон."
         },
         "problems": {
@@ -75773,25 +75823,11 @@
       },
       {
         "text": "インフェルノスのアフターバーンが痛い。",
-        "ms": 257,
+        "ms": 0,
         "ok": true,
         "source": "⟦Infernus⟧の⟦Afterburn⟧が痛い。",
         "translations": {
-          "en": "⟦Infernus⟧' ⟦Afterburn⟧ is brutal.",
-          "ru": "⟦Infernus⟧ с ⟦Afterburn⟧ наносит серьёзный урон."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "インフェルノスのアフターバーンが痛い。",
-        "ms": 253,
-        "ok": true,
-        "source": "⟦Infernus⟧の⟦Afterburn⟧が痛い。",
-        "translations": {
-          "en": "⟦Infernus⟧' ⟦Afterburn⟧ is brutal.",
+          "en": "⟦Infernus⟧' ⟦Afterburn⟧ is hurting.",
           "ru": "⟦Infernus⟧ с его ⟦Afterburn⟧ — просто убийца."
         },
         "problems": {
@@ -75800,8 +75836,36 @@
         }
       },
       {
+        "text": "インフェルノスのアフターバーンが痛い。",
+        "ms": 265,
+        "ok": true,
+        "source": "⟦Infernus⟧の⟦Afterburn⟧が痛い。",
+        "translations": {
+          "en": "⟦Infernus⟧' ⟦Afterburn⟧ is brutal.",
+          "ru": "⟦Infernus⟧ с ⟦Afterburn⟧ наносит серьёзный урон."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
         "text": "ビーバップのボムに気をつけて。",
-        "ms": 261,
+        "ms": 512,
+        "ok": true,
+        "source": "⟦Bebop⟧の⟦Sticky Bomb⟧に気をつけて。",
+        "translations": {
+          "en": "Watch out for ⟦Bebop⟧'s ⟦Sticky Bomb⟧.",
+          "ru": "Осторожно с ⟦Bebop⟧ и его ⟦Sticky Bomb⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ビーバップのボムに気をつけて。",
+        "ms": 254,
         "ok": true,
         "source": "⟦Bebop⟧の⟦Sticky Bomb⟧に気をつけて。",
         "translations": {
@@ -75815,26 +75879,12 @@
       },
       {
         "text": "ビーバップのボムに気をつけて。",
-        "ms": 258,
+        "ms": 611,
         "ok": true,
         "source": "⟦Bebop⟧の⟦Sticky Bomb⟧に気をつけて。",
         "translations": {
           "en": "Watch out for ⟦Bebop⟧'s ⟦Sticky Bomb⟧.",
-          "ru": "Берегись ⟦Bebop⟧ с его ⟦Sticky Bomb⟧."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "ビーバップのボムに気をつけて。",
-        "ms": 285,
-        "ok": true,
-        "source": "⟦Bebop⟧の⟦Sticky Bomb⟧に気をつけて。",
-        "translations": {
-          "en": "Watch out for ⟦Bebop⟧'s ⟦Sticky Bomb⟧.",
-          "ru": "Берегись ⟦Bebop⟧ с его ⟦Sticky Bomb⟧."
+          "ru": "Осторожно с ⟦Bebop⟧ и его ⟦Sticky Bomb⟧."
         },
         "problems": {
           "en": [],
@@ -75843,12 +75893,12 @@
       },
       {
         "text": "ワーデンのウルト止めて。",
-        "ms": 242,
+        "ms": 223,
         "ok": true,
         "source": "⟦Warden⟧の⟦Last Stand⟧止めて。",
         "translations": {
           "en": "Stop ⟦Warden⟧'s ⟦Last Stand⟧.",
-          "ru": "Останови ⟦Warden⟧ с ⟦Last Stand⟧."
+          "ru": "Останови ⟦Warden⟧ с его ⟦Last Stand⟧."
         },
         "problems": {
           "en": [],
@@ -75857,12 +75907,12 @@
       },
       {
         "text": "ワーデンのウルト止めて。",
-        "ms": 252,
+        "ms": 233,
         "ok": true,
         "source": "⟦Warden⟧の⟦Last Stand⟧止めて。",
         "translations": {
           "en": "Stop ⟦Warden⟧'s ⟦Last Stand⟧.",
-          "ru": "Останови ⟦Warden⟧ с ⟦Last Stand⟧."
+          "ru": "Останови ⟦Warden⟧ с его ⟦Last Stand⟧."
         },
         "problems": {
           "en": [],
@@ -75871,26 +75921,12 @@
       },
       {
         "text": "ワーデンのウルト止めて。",
-        "ms": 446,
+        "ms": 232,
         "ok": true,
         "source": "⟦Warden⟧の⟦Last Stand⟧止めて。",
         "translations": {
           "en": "Stop ⟦Warden⟧'s ⟦Last Stand⟧.",
-          "ru": "Останови ⟦Warden⟧ с ⟦Last Stand⟧."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "ビンディクタのウルトで狙われてる。",
-        "ms": 259,
-        "ok": true,
-        "source": "⟦Vindicta⟧の⟦Assassinate⟧で狙われてる。",
-        "translations": {
-          "en": "I'm being targeted by ⟦Vindicta⟧'s ⟦Assassinate⟧.",
-          "ru": "На него нацелился ⟦Vindicta⟧ с умением ⟦Assassinate⟧."
+          "ru": "Останови ⟦Warden⟧ с его ⟦Last Stand⟧."
         },
         "problems": {
           "en": [],
@@ -75913,7 +75949,21 @@
       },
       {
         "text": "ビンディクタのウルトで狙われてる。",
-        "ms": 286,
+        "ms": 273,
+        "ok": true,
+        "source": "⟦Vindicta⟧の⟦Assassinate⟧で狙われてる。",
+        "translations": {
+          "en": "I'm being targeted by ⟦Vindicta⟧'s ⟦Assassinate⟧.",
+          "ru": "На него нацелился ⟦Vindicta⟧ с умением ⟦Assassinate⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ビンディクタのウルトで狙われてる。",
+        "ms": 269,
         "ok": true,
         "source": "⟦Vindicta⟧の⟦Assassinate⟧で狙われてる。",
         "translations": {
@@ -75927,21 +75977,7 @@
       },
       {
         "text": "ワープストンで逃げた。",
-        "ms": 216,
-        "ok": true,
-        "source": "⟦Warp Stone⟧で逃げた。",
-        "translations": {
-          "en": "I escaped with ⟦Warp Stone⟧.",
-          "ru": "Убежал с помощью ⟦Warp Stone⟧."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "ワープストンで逃げた。",
-        "ms": 233,
+        "ms": 232,
         "ok": true,
         "source": "⟦Warp Stone⟧で逃げた。",
         "translations": {
@@ -75955,7 +75991,7 @@
       },
       {
         "text": "ワープストンで逃げた。",
-        "ms": 225,
+        "ms": 217,
         "ok": true,
         "source": "⟦Warp Stone⟧で逃げた。",
         "translations": {
@@ -75968,23 +76004,23 @@
         }
       },
       {
-        "text": "メタルスキーン使った。",
-        "ms": 268,
-        "ok": true,
-        "source": "⟦Metal Skin⟧使った。",
-        "translations": {
-          "en": "Used ⟦Metal Skin⟧.",
-          "ru": "Использовал ⟦Metal Skin⟧."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "メタルスキーン使った。",
+        "text": "ワープストンで逃げた。",
         "ms": 230,
         "ok": true,
+        "source": "⟦Warp Stone⟧で逃げた。",
+        "translations": {
+          "en": "I escaped with a ⟦Warp Stone⟧.",
+          "ru": "Убежал с помощью ⟦Warp Stone⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "メタルスキーン使った。",
+        "ms": 229,
+        "ok": true,
         "source": "⟦Metal Skin⟧使った。",
         "translations": {
           "en": "Used ⟦Metal Skin⟧.",
@@ -75997,12 +76033,26 @@
       },
       {
         "text": "メタルスキーン使った。",
-        "ms": 222,
+        "ms": 586,
         "ok": true,
         "source": "⟦Metal Skin⟧使った。",
         "translations": {
           "en": "Used ⟦Metal Skin⟧.",
-          "ru": "Применил ⟦Metal Skin⟧."
+          "ru": "Использовал ⟦Metal Skin⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "メタルスキーン使った。",
+        "ms": 234,
+        "ok": true,
+        "source": "⟦Metal Skin⟧使った。",
+        "translations": {
+          "en": "Used ⟦Metal Skin⟧.",
+          "ru": "Использовал ⟦Metal Skin⟧."
         },
         "problems": {
           "en": [],
@@ -76011,7 +76061,21 @@
       },
       {
         "text": "セブンのパワーサージで火力上がってる。",
-        "ms": 307,
+        "ms": 241,
+        "ok": true,
+        "source": "⟦Seven⟧の⟦Power Surge⟧で火力上がってる。",
+        "translations": {
+          "en": "⟦Seven⟧’s ⟦Power Surge⟧ is boosting their damage output.",
+          "ru": "У ⟦Seven⟧ повышена огневая мощь благодаря ⟦Power Surge⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "セブンのパワーサージで火力上がってる。",
+        "ms": 266,
         "ok": true,
         "source": "⟦Seven⟧の⟦Power Surge⟧で火力上がってる。",
         "translations": {
@@ -76025,17 +76089,21 @@
       },
       {
         "text": "セブンのパワーサージで火力上がってる。",
-        "ms": 176,
-        "error": "429 Too Many Requests: {\"error\":{\"message\":\"Requests rate limit exceeded, please try again later. For details, see: https://www.alibabacloud.com/help/en/model-studio/error-code#rate-limit\",\"id\":\"e870bd96-fecd-93cf-a08e-86b6dffa6028\",\"type\":\"limit_requests\",\"code\":\"limit_requests\"}}"
-      },
-      {
-        "text": "セブンのパワーサージで火力上がってる。",
-        "ms": 0,
-        "error": "429 Too Many Requests: {\"error\":{\"message\":\"Requests rate limit exceeded, please try again later. For details, see: https://www.alibabacloud.com/help/en/model-studio/error-code#rate-limit\",\"id\":\"9fb00f56-dbbf-9baf-8425-5989c58a6070\",\"type\":\"limit_requests\",\"code\":\"limit_requests\"}}"
+        "ms": 246,
+        "ok": true,
+        "source": "⟦Seven⟧の⟦Power Surge⟧で火力上がってる。",
+        "translations": {
+          "en": "⟦Seven⟧’s ⟦Power Surge⟧ is boosting their damage output.",
+          "ru": "У ⟦Seven⟧ повышена огневая мощь благодаря ⟦Power Surge⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
       },
       {
         "text": "パワーサージ買ったら移動速くなった。",
-        "ms": 0,
+        "ms": 234,
         "ok": true,
         "source": "⟦Surge of Power⟧買ったら移動速くなった。",
         "translations": {
@@ -76049,7 +76117,7 @@
       },
       {
         "text": "パワーサージ買ったら移動速くなった。",
-        "ms": 255,
+        "ms": 262,
         "ok": true,
         "source": "⟦Surge of Power⟧買ったら移動速くなった。",
         "translations": {
@@ -76063,7 +76131,7 @@
       },
       {
         "text": "パワーサージ買ったら移動速くなった。",
-        "ms": 263,
+        "ms": 489,
         "ok": true,
         "source": "⟦Surge of Power⟧買ったら移動速くなった。",
         "translations": {
@@ -76077,7 +76145,7 @@
       },
       {
         "text": "ガイストのライフドレインで吸われた。",
-        "ms": 257,
+        "ms": 265,
         "ok": true,
         "source": "⟦Lady Geist⟧の⟦Life Drain⟧で吸われた。",
         "translations": {
@@ -76091,11 +76159,11 @@
       },
       {
         "text": "ガイストのライフドレインで吸われた。",
-        "ms": 239,
+        "ms": 292,
         "ok": true,
         "source": "⟦Lady Geist⟧の⟦Life Drain⟧で吸われた。",
         "translations": {
-          "en": "I got drained by ⟦Lady Geist⟧'s ⟦Life Drain⟧.",
+          "en": "I got drained by ⟦Lady Geist⟧’s ⟦Life Drain⟧.",
           "ru": "Меня забрал ⟦Lady Geist⟧ с помощью ⟦Life Drain⟧."
         },
         "problems": {
@@ -76119,7 +76187,7 @@
       },
       {
         "text": "ライフドレイン買って耐久上げる。",
-        "ms": 249,
+        "ms": 239,
         "ok": true,
         "source": "⟦Leech⟧買って耐久上げる。",
         "translations": {
@@ -76133,7 +76201,7 @@
       },
       {
         "text": "ライフドレイン買って耐久上げる。",
-        "ms": 244,
+        "ms": 250,
         "ok": true,
         "source": "⟦Leech⟧買って耐久上げる。",
         "translations": {
@@ -76147,7 +76215,7 @@
       },
       {
         "text": "ライフドレイン買って耐久上げる。",
-        "ms": 252,
+        "ms": 223,
         "ok": true,
         "source": "⟦Leech⟧買って耐久上げる。",
         "translations": {
@@ -76161,7 +76229,7 @@
       },
       {
         "text": "今シルバー帯だからね。",
-        "ms": 241,
+        "ms": 243,
         "ok": true,
         "source": "今シルバー帯だからね。",
         "translations": {
@@ -76175,7 +76243,7 @@
       },
       {
         "text": "今シルバー帯だからね。",
-        "ms": 606,
+        "ms": 0,
         "ok": true,
         "source": "今シルバー帯だからね。",
         "translations": {
@@ -76189,7 +76257,7 @@
       },
       {
         "text": "今シルバー帯だからね。",
-        "ms": 238,
+        "ms": 229,
         "ok": true,
         "source": "今シルバー帯だからね。",
         "translations": {
@@ -76203,21 +76271,7 @@
       },
       {
         "text": "ヤマトの荷物まだ届かないんだよね。",
-        "ms": 234,
-        "ok": true,
-        "source": "ヤマトの荷物まだ届かないんだよね。",
-        "translations": {
-          "en": "Yamato's cargo still hasn't arrived, has it?",
-          "ru": "Груз от Ямато всё ещё не прибыл, да?"
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "ヤマトの荷物まだ届かないんだよね。",
-        "ms": 235,
+        "ms": 270,
         "ok": true,
         "source": "ヤマトの荷物まだ届かないんだよね。",
         "translations": {
@@ -76231,7 +76285,21 @@
       },
       {
         "text": "ヤマトの荷物まだ届かないんだよね。",
-        "ms": 247,
+        "ms": 223,
+        "ok": true,
+        "source": "ヤマトの荷物まだ届かないんだよね。",
+        "translations": {
+          "en": "Yamato's cargo still hasn't arrived, has it?",
+          "ru": "Груз от Ямато всё ещё не прибыл, да?"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ヤマトの荷物まだ届かないんだよね。",
+        "ms": 234,
         "ok": true,
         "source": "ヤマトの荷物まだ届かないんだよね。",
         "translations": {
@@ -76245,7 +76313,35 @@
       },
       {
         "text": "アポロチョコ食べながらやってます。",
-        "ms": 247,
+        "ms": 243,
+        "ok": true,
+        "source": "アポロチョコ食べながらやってます。",
+        "translations": {
+          "en": "I'm playing while munching on Apollo chocolates.",
+          "ru": "Сижу и играю, жуя шоколад «Аполло»."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "アポロチョコ食べながらやってます。",
+        "ms": 317,
+        "ok": true,
+        "source": "アポロチョコ食べながらやってます。",
+        "translations": {
+          "en": "I'm playing while munching on Apollo chocolates.",
+          "ru": "Сижу и играю, жуя Аполло-шоколад."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "アポロチョコ食べながらやってます。",
+        "ms": 261,
         "ok": true,
         "source": "アポロチョコ食べながらやってます。",
         "translations": {
@@ -76258,40 +76354,12 @@
         }
       },
       {
-        "text": "アポロチョコ食べながらやってます。",
-        "ms": 252,
-        "ok": true,
-        "source": "アポロチョコ食べながらやってます。",
-        "translations": {
-          "en": "I'm playing while eating Apollo chocolate.",
-          "ru": "Сижу и играю, жуя Аполло-шоколад."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "アポロチョコ食べながらやってます。",
-        "ms": 243,
-        "ok": true,
-        "source": "アポロチョコ食べながらやってます。",
-        "translations": {
-          "en": "I'm playing while eating Apollo chocolate.",
-          "ru": "Сижу и играю, жуя Аполло-шоколад."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
         "text": "それストーカーみたいで怖いな。",
-        "ms": 330,
+        "ms": 237,
         "ok": true,
         "source": "それストーカーみたいで怖いな。",
         "translations": {
-          "en": "That's kind of scary, like a stalker.",
+          "en": "That's kind of scary—it feels like stalking.",
           "ru": "Это же как стalker — жутковато."
         },
         "problems": {
@@ -76301,12 +76369,12 @@
       },
       {
         "text": "それストーカーみたいで怖いな。",
-        "ms": 287,
+        "ms": 229,
         "ok": true,
         "source": "それストーカーみたいで怖いな。",
         "translations": {
-          "en": "That's kind of scary, like a stalker.",
-          "ru": "Это как-то жутковато, прямо как в стиле сталкера."
+          "en": "That's kind of scary—it feels like stalking.",
+          "ru": "Это же как стalker — жутковато."
         },
         "problems": {
           "en": [],
@@ -76315,12 +76383,12 @@
       },
       {
         "text": "それストーカーみたいで怖いな。",
-        "ms": 251,
+        "ms": 236,
         "ok": true,
         "source": "それストーカーみたいで怖いな。",
         "translations": {
-          "en": "That's kind of scary, like a stalker.",
-          "ru": "Это как-то жутковато, прямо как в стиле сталкера."
+          "en": "That's kind of scary—it feels like stalking.",
+          "ru": "Это же как стalker — жутковато."
         },
         "problems": {
           "en": [],
@@ -76329,11 +76397,11 @@
       },
       {
         "text": "昨日ボクシングでノックダウン見た。",
-        "ms": 228,
+        "ms": 231,
         "ok": true,
         "source": "昨日ボクシングでノックダウン見た。",
         "translations": {
-          "en": "I saw a knockout in boxing yesterday.",
+          "en": "I saw a knockdown in boxing yesterday.",
           "ru": "Вчера видел нокаут в боксе."
         },
         "problems": {
@@ -76343,11 +76411,11 @@
       },
       {
         "text": "昨日ボクシングでノックダウン見た。",
-        "ms": 224,
+        "ms": 239,
         "ok": true,
         "source": "昨日ボクシングでノックダウン見た。",
         "translations": {
-          "en": "I saw a knockout in boxing yesterday.",
+          "en": "I saw a knockdown in boxing yesterday.",
           "ru": "Вчера видел нокаут в боксе."
         },
         "problems": {
@@ -76357,7 +76425,7 @@
       },
       {
         "text": "昨日ボクシングでノックダウン見た。",
-        "ms": 234,
+        "ms": 247,
         "ok": true,
         "source": "昨日ボクシングでノックダウン見た。",
         "translations": {
@@ -76371,7 +76439,7 @@
       },
       {
         "text": "レム睡眠が足りてない。",
-        "ms": 222,
+        "ms": 231,
         "ok": true,
         "source": "レム睡眠が足りてない。",
         "translations": {
@@ -76385,7 +76453,7 @@
       },
       {
         "text": "レム睡眠が足りてない。",
-        "ms": 220,
+        "ms": 251,
         "ok": true,
         "source": "レム睡眠が足りてない。",
         "translations": {
@@ -76399,7 +76467,7 @@
       },
       {
         "text": "レム睡眠が足りてない。",
-        "ms": 240,
+        "ms": 231,
         "ok": true,
         "source": "レム睡眠が足りてない。",
         "translations": {
@@ -76413,12 +76481,12 @@
       },
       {
         "text": "ビリーって友達が見に来てる。",
-        "ms": 221,
+        "ms": 232,
         "ok": true,
         "source": "ビリーって友達が見に来てる。",
         "translations": {
           "en": "Billy's got some friends over to watch.",
-          "ru": "Билли, сюда друг пришёл посмотреть."
+          "ru": "Билли, сюда пришли друзья посмотреть."
         },
         "problems": {
           "en": [],
@@ -76427,12 +76495,12 @@
       },
       {
         "text": "ビリーって友達が見に来てる。",
-        "ms": 224,
+        "ms": 219,
         "ok": true,
         "source": "ビリーって友達が見に来てる。",
         "translations": {
           "en": "Billy's got some friends over to watch.",
-          "ru": "Билли, сюда друг пришёл посмотреть."
+          "ru": "Билли, сюда пришли друзья посмотреть."
         },
         "problems": {
           "en": [],
@@ -76441,12 +76509,12 @@
       },
       {
         "text": "ビリーって友達が見に来てる。",
-        "ms": 233,
+        "ms": 237,
         "ok": true,
         "source": "ビリーって友達が見に来てる。",
         "translations": {
           "en": "Billy's got some friends over to watch.",
-          "ru": "Билли, сюда друг пришёл посмотреть."
+          "ru": "Билли, сюда пришли друзья посмотреть."
         },
         "problems": {
           "en": [],
@@ -76455,17 +76523,35 @@
       },
       {
         "text": "アイビーリーグ出身らしいよ。",
-        "ms": 0,
-        "error": "429 Too Many Requests: {\"error\":{\"message\":\"Requests rate limit exceeded, please try again later. For details, see: https://www.alibabacloud.com/help/en/model-studio/error-code#rate-limit\",\"id\":\"76281169-6635-9c07-9d6b-9c0f7b99f5ad\",\"type\":\"limit_requests\",\"code\":\"limit_requests\"}}"
+        "ms": 215,
+        "ok": true,
+        "source": "アイビーリーグ出身らしいよ。",
+        "translations": {
+          "en": "Apparently, they’re an Ivy League grad.",
+          "ru": "Говорят, он из Лиги плюща."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
       },
       {
         "text": "アイビーリーグ出身らしいよ。",
-        "ms": 0,
-        "error": "429 Too Many Requests: {\"error\":{\"message\":\"Requests rate limit exceeded, please try again later. For details, see: https://www.alibabacloud.com/help/en/model-studio/error-code#rate-limit\",\"id\":\"feffd3d5-32e3-9f99-acfd-9a8be3bc0a69\",\"type\":\"limit_requests\",\"code\":\"limit_requests\"}}"
+        "ms": 219,
+        "ok": true,
+        "source": "アイビーリーグ出身らしいよ。",
+        "translations": {
+          "en": "Apparently, they’re an Ivy League grad.",
+          "ru": "Говорят, он из Лиги плюща."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
       },
       {
         "text": "アイビーリーグ出身らしいよ。",
-        "ms": 0,
+        "ms": 219,
         "ok": true,
         "source": "アイビーリーグ出身らしいよ。",
         "translations": {
@@ -76479,264 +76565,250 @@
       },
       {
         "text": "ポケットWi-Fiの調子が悪い。",
-        "ms": 238,
-        "ok": true,
-        "source": "ポケットWi-Fiの調子が悪い。",
-        "translations": {
-          "en": "My pocket Wi-Fi isn't working well.",
-          "ru": "У моего портативного Wi-Fi что-то не так."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "ポケットWi-Fiの調子が悪い。",
-        "ms": 231,
-        "ok": true,
-        "source": "ポケットWi-Fiの調子が悪い。",
-        "translations": {
-          "en": "My pocket Wi-Fi isn't working well.",
-          "ru": "У моего портативного Wi-Fi что-то не так."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "ポケットWi-Fiの調子が悪い。",
-        "ms": 223,
-        "ok": true,
-        "source": "ポケットWi-Fiの調子が悪い。",
-        "translations": {
-          "en": "My pocket Wi-Fi isn't working well.",
-          "ru": "У моего портативного Wi-Fi что-то не так."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "セブンでいいか。",
-        "ms": 193,
-        "ok": true,
-        "source": "セブンでいいか。",
-        "translations": {
-          "en": "Seven it is.",
-          "ru": "Семёрка подойдёт?"
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "セブンでいいか。",
-        "ms": 694,
-        "ok": true,
-        "source": "セブンでいいか。",
-        "translations": {
-          "en": "Seven it is.",
-          "ru": "Семёрка подойдёт?"
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "セブンでいいか。",
-        "ms": 294,
-        "ok": true,
-        "source": "セブンでいいか。",
-        "translations": {
-          "en": "Seven it is.",
-          "ru": "Семёрка подойдёт?"
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "今日はセブンで行くか。",
-        "ms": 446,
-        "ok": true,
-        "source": "今日は⟦Seven⟧で行くか。",
-        "translations": {
-          "en": "Shall we go with ⟦Seven⟧ today?",
-          "ru": "Сегодня пойдём с ⟦Seven⟧?"
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "今日はセブンで行くか。",
-        "ms": 231,
-        "ok": true,
-        "source": "今日は⟦Seven⟧で行くか。",
-        "translations": {
-          "en": "Shall we go with ⟦Seven⟧ today?",
-          "ru": "Сегодня пойдём с ⟦Seven⟧?"
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "今日はセブンで行くか。",
-        "ms": 214,
-        "ok": true,
-        "source": "今日は⟦Seven⟧で行くか。",
-        "translations": {
-          "en": "Shall we go with ⟦Seven⟧ today?",
-          "ru": "Сегодня пойдём с ⟦Seven⟧?"
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "コメントありがとうございます。",
-        "ms": 209,
-        "ok": true,
-        "source": "コメントありがとうございます。",
-        "translations": {
-          "en": "Thanks for the comment.",
-          "ru": "Спасибо за комментарий."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "コメントありがとうございます。",
-        "ms": 207,
-        "ok": true,
-        "source": "コメントありがとうございます。",
-        "translations": {
-          "en": "Thanks for the comment.",
-          "ru": "Спасибо за комментарий."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "コメントありがとうございます。",
-        "ms": 215,
-        "ok": true,
-        "source": "コメントありがとうございます。",
-        "translations": {
-          "en": "Thanks for the comment.",
-          "ru": "Спасибо за комментарий."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "今日は3時間くらいやる予定です。",
-        "ms": 290,
-        "ok": true,
-        "source": "今日は3時間くらいやる予定です。",
-        "translations": {
-          "en": "I’m planning to play for about three hours today.",
-          "ru": "Сегодня планирую поиграть около трёх часов."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "今日は3時間くらいやる予定です。",
-        "ms": 231,
-        "ok": true,
-        "source": "今日は3時間くらいやる予定です。",
-        "translations": {
-          "en": "I’m planning to play for about three hours today.",
-          "ru": "Сегодня планирую поиграть около трёх часов."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "今日は3時間くらいやる予定です。",
-        "ms": 247,
-        "ok": true,
-        "source": "今日は3時間くらいやる予定です。",
-        "translations": {
-          "en": "I’m planning to play for about three hours today.",
-          "ru": "Сегодня планирую поиграть около трёх часов."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "ちょっと水飲むね。",
-        "ms": 222,
-        "ok": true,
-        "source": "ちょっと水飲むね。",
-        "translations": {
-          "en": "I'm gonna grab a quick drink.",
-          "ru": "Сейчас попью воды."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "ちょっと水飲むね。",
-        "ms": 292,
-        "ok": true,
-        "source": "ちょっと水飲むね。",
-        "translations": {
-          "en": "I'm gonna grab a quick drink.",
-          "ru": "Сейчас попью воды."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "ちょっと水飲むね。",
-        "ms": 212,
-        "ok": true,
-        "source": "ちょっと水飲むね。",
-        "translations": {
-          "en": "I'm gonna grab a quick drink.",
-          "ru": "Сейчас попью воды."
-        },
-        "problems": {
-          "en": [],
-          "ru": []
-        }
-      },
-      {
-        "text": "1番レーンが押されてる。",
         "ms": 216,
         "ok": true,
-        "source": "1番レーンが押されてる。",
+        "source": "ポケットWi-Fiの調子が悪い。",
         "translations": {
-          "en": "Top lane is being pushed.",
-          "ru": "Первая линия давит."
+          "en": "My pocket Wi-Fi isn't working well.",
+          "ru": "У портативного Wi-Fi плохой сигнал."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ポケットWi-Fiの調子が悪い。",
+        "ms": 260,
+        "ok": true,
+        "source": "ポケットWi-Fiの調子が悪い。",
+        "translations": {
+          "en": "My pocket Wi-Fi isn't working well.",
+          "ru": "У моего портативного Wi-Fi что-то не так."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ポケットWi-Fiの調子が悪い。",
+        "ms": 318,
+        "ok": true,
+        "source": "ポケットWi-Fiの調子が悪い。",
+        "translations": {
+          "en": "My pocket Wi-Fi isn't working well.",
+          "ru": "У моего портативного Wi-Fi что-то не так."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "セブンでいいか。",
+        "ms": 240,
+        "ok": true,
+        "source": "セブンでいいか。",
+        "translations": {
+          "en": "Seven it is.",
+          "ru": "Семёрка подойдёт?"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "セブンでいいか。",
+        "ms": 359,
+        "ok": true,
+        "source": "セブンでいいか。",
+        "translations": {
+          "en": "Seven it is.",
+          "ru": "Семёрка подойдёт?"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "セブンでいいか。",
+        "ms": 243,
+        "ok": true,
+        "source": "セブンでいいか。",
+        "translations": {
+          "en": "Seven it is, then.",
+          "ru": "Семёрка подойдёт?"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "今日はセブンで行くか。",
+        "ms": 212,
+        "ok": true,
+        "source": "今日は⟦Seven⟧で行くか。",
+        "translations": {
+          "en": "Shall we go with ⟦Seven⟧ today?",
+          "ru": "Сегодня пойдём с ⟦Seven⟧?"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "今日はセブンで行くか。",
+        "ms": 0,
+        "ok": true,
+        "source": "今日は⟦Seven⟧で行くか。",
+        "translations": {
+          "en": "Shall we go with ⟦Seven⟧ today?",
+          "ru": "Сегодня пойдём с ⟦Seven⟧?"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "今日はセブンで行くか。",
+        "ms": 218,
+        "ok": true,
+        "source": "今日は⟦Seven⟧で行くか。",
+        "translations": {
+          "en": "Shall we go with ⟦Seven⟧ today?",
+          "ru": "Сегодня пойдём с ⟦Seven⟧?"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "コメントありがとうございます。",
+        "ms": 233,
+        "ok": true,
+        "source": "コメントありがとうございます。",
+        "translations": {
+          "en": "Thanks for the comment.",
+          "ru": "Спасибо за комментарий."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "コメントありがとうございます。",
+        "ms": 474,
+        "ok": true,
+        "source": "コメントありがとうございます。",
+        "translations": {
+          "en": "Thanks for the comment.",
+          "ru": "Спасибо за комментарий."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "コメントありがとうございます。",
+        "ms": 227,
+        "ok": true,
+        "source": "コメントありがとうございます。",
+        "translations": {
+          "en": "Thanks for the comment.",
+          "ru": "Спасибо за комментарий."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "今日は3時間くらいやる予定です。",
+        "ms": 238,
+        "ok": true,
+        "source": "今日は3時間くらいやる予定です。",
+        "translations": {
+          "en": "I’m planning to play for about three hours today.",
+          "ru": "Сегодня планирую поиграть около трёх часов."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "今日は3時間くらいやる予定です。",
+        "ms": 241,
+        "ok": true,
+        "source": "今日は3時間くらいやる予定です。",
+        "translations": {
+          "en": "I’m planning to play for about three hours today.",
+          "ru": "Сегодня планирую поиграть около трёх часов."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "今日は3時間くらいやる予定です。",
+        "ms": 236,
+        "ok": true,
+        "source": "今日は3時間くらいやる予定です。",
+        "translations": {
+          "en": "I’m planning to play for about three hours today.",
+          "ru": "Сегодня планирую поиграть около трёх часов."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ちょっと水飲むね。",
+        "ms": 210,
+        "ok": true,
+        "source": "ちょっと水飲むね。",
+        "translations": {
+          "en": "I'm gonna grab a quick drink.",
+          "ru": "Сейчас попью воды."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ちょっと水飲むね。",
+        "ms": 217,
+        "ok": true,
+        "source": "ちょっと水飲むね。",
+        "translations": {
+          "en": "I'm gonna grab a quick drink of water.",
+          "ru": "Сейчас попью воды."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ちょっと水飲むね。",
+        "ms": 205,
+        "ok": true,
+        "source": "ちょっと水飲むね。",
+        "translations": {
+          "en": "I'm gonna grab a quick drink of water.",
+          "ru": "Сейчас попью воды."
         },
         "problems": {
           "en": [],
@@ -76745,7 +76817,7 @@
       },
       {
         "text": "1番レーンが押されてる。",
-        "ms": 806,
+        "ms": 186,
         "ok": true,
         "source": "1番レーンが押されてる。",
         "translations": {
@@ -76759,11 +76831,25 @@
       },
       {
         "text": "1番レーンが押されてる。",
-        "ms": 204,
+        "ms": 219,
         "ok": true,
         "source": "1番レーンが押されてる。",
         "translations": {
           "en": "Top lane is being pushed.",
+          "ru": "Первая линия давит."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "1番レーンが押されてる。",
+        "ms": 220,
+        "ok": true,
+        "source": "1番レーンが押されてる。",
+        "translations": {
+          "en": "Top lane is getting pushed.",
           "ru": "Первая линия давит."
         },
         "problems": {
@@ -76773,7 +76859,7 @@
       },
       {
         "text": "ミッドボス取りに行こう。",
-        "ms": 231,
+        "ms": 250,
         "ok": true,
         "source": "ミッドボス取りに行こう。",
         "translations": {
@@ -76787,7 +76873,7 @@
       },
       {
         "text": "ミッドボス取りに行こう。",
-        "ms": 275,
+        "ms": 245,
         "ok": true,
         "source": "ミッドボス取りに行こう。",
         "translations": {
@@ -76801,7 +76887,7 @@
       },
       {
         "text": "ミッドボス取りに行こう。",
-        "ms": 217,
+        "ms": 220,
         "ok": true,
         "source": "ミッドボス取りに行こう。",
         "translations": {
@@ -76815,7 +76901,7 @@
       },
       {
         "text": "ソウル差が5000ある。",
-        "ms": 225,
+        "ms": 258,
         "ok": true,
         "source": "ソウル差が5000ある。",
         "translations": {
@@ -76829,7 +76915,7 @@
       },
       {
         "text": "ソウル差が5000ある。",
-        "ms": 228,
+        "ms": 248,
         "ok": true,
         "source": "ソウル差が5000ある。",
         "translations": {
@@ -76843,8 +76929,17 @@
       },
       {
         "text": "ソウル差が5000ある。",
-        "ms": 153,
-        "error": "429 Too Many Requests: {\"error\":{\"message\":\"Requests rate limit exceeded, please try again later. For details, see: https://www.alibabacloud.com/help/en/model-studio/error-code#rate-limit\",\"id\":\"5b1ae2cc-059e-96d4-a210-5baf7eeba8e0\",\"type\":\"limit_requests\",\"code\":\"limit_requests\"}}"
+        "ms": 320,
+        "ok": true,
+        "source": "ソウル差が5000ある。",
+        "translations": {
+          "en": "There's a 5000 soul difference.",
+          "ru": "Разница в силах души — 5000."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
       }
     ]
   },
@@ -80201,6 +80296,2929 @@
         "translations": {
           "en": "The gap in strength is 5,000.",
           "ru": "Разница в очках составляет 5000."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      }
+    ]
+  },
+  "translate/qwen-mt-plus": {
+    "summary": {
+      "runs": 189,
+      "ok": 127,
+      "failed": 0,
+      "medianMs": 306,
+      "p90Ms": 372,
+      "usd": 0.18122379999999988
+    },
+    "runs": [
+      {
+        "text": "インファーナスのナパームが痛すぎる。",
+        "ms": 558,
+        "ok": false,
+        "source": "⟦Infernus⟧の⟦Napalm⟧が痛すぎる。",
+        "translations": {
+          "en": "⟦Infernus⟧'s ⟦Napalm⟧ hurts way too much.",
+          "ru": "⟦Инфернус⟧ с его ⟦Напалмом⟧ наносит слишком много урона."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Инфернус",
+            "unknown: Напалмом",
+            "missing: Infernus",
+            "missing: Napalm"
+          ]
+        }
+      },
+      {
+        "text": "インファーナスのナパームが痛すぎる。",
+        "ms": 350,
+        "ok": false,
+        "source": "⟦Infernus⟧の⟦Napalm⟧が痛すぎる。",
+        "translations": {
+          "en": "⟦Infernus⟧'s ⟦Napalm⟧ hurts way too much.",
+          "ru": "⟦Инфернус⟧ с его ⟦Напалмом⟧ наносит слишком много урона."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Инфернус",
+            "unknown: Напалмом",
+            "missing: Infernus",
+            "missing: Napalm"
+          ]
+        }
+      },
+      {
+        "text": "インファーナスのナパームが痛すぎる。",
+        "ms": 312,
+        "ok": false,
+        "source": "⟦Infernus⟧の⟦Napalm⟧が痛すぎる。",
+        "translations": {
+          "en": "⟦Infernus⟧'s ⟦Napalm⟧ hurts way too much.",
+          "ru": "⟦Инфернус⟧ с его ⟦Напалмом⟧ наносит слишком много урона."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Инфернус",
+            "unknown: Напалмом",
+            "missing: Infernus",
+            "missing: Napalm"
+          ]
+        }
+      },
+      {
+        "text": "ケルビンのアイスパスで逃げられた。",
+        "ms": 276,
+        "ok": false,
+        "source": "⟦Kelvin⟧の⟦Ice Path⟧で逃げられた。",
+        "translations": {
+          "en": "⟦Kelvin⟧ got away with his ⟦Ice Path⟧.",
+          "ru": "⟦Келвин⟧ ускользнул по ⟦Ледяному пути⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Келвин",
+            "unknown: Ледяному пути",
+            "missing: Kelvin",
+            "missing: Ice Path"
+          ]
+        }
+      },
+      {
+        "text": "ケルビンのアイスパスで逃げられた。",
+        "ms": 287,
+        "ok": false,
+        "source": "⟦Kelvin⟧の⟦Ice Path⟧で逃げられた。",
+        "translations": {
+          "en": "⟦Kelvin⟧ got away with his ⟦Ice Path⟧.",
+          "ru": "⟦Келвин⟧ ускользнул по ⟦Ледяному пути⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Келвин",
+            "unknown: Ледяному пути",
+            "missing: Kelvin",
+            "missing: Ice Path"
+          ]
+        }
+      },
+      {
+        "text": "ケルビンのアイスパスで逃げられた。",
+        "ms": 290,
+        "ok": false,
+        "source": "⟦Kelvin⟧の⟦Ice Path⟧で逃げられた。",
+        "translations": {
+          "en": "⟦Kelvin⟧ got away with his ⟦Ice Path⟧.",
+          "ru": "⟦Келвин⟧ ускользнул по ⟦Ледяному пути⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Келвин",
+            "unknown: Ледяному пути",
+            "missing: Kelvin",
+            "missing: Ice Path"
+          ]
+        }
+      },
+      {
+        "text": "ダイナモのシンギュラリティに全員捕まった。",
+        "ms": 323,
+        "ok": false,
+        "source": "⟦Dynamo⟧の⟦Singularity⟧に全員捕まった。",
+        "translations": {
+          "en": "Everyone got caught by ⟦Dynamo⟧’s ⟦Singularity⟧.",
+          "ru": "Все попали в ⟦Сингулярность⟧ ⟦Динамо⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Сингулярность",
+            "unknown: Динамо",
+            "missing: Dynamo",
+            "missing: Singularity"
+          ]
+        }
+      },
+      {
+        "text": "ダイナモのシンギュラリティに全員捕まった。",
+        "ms": 286,
+        "ok": false,
+        "source": "⟦Dynamo⟧の⟦Singularity⟧に全員捕まった。",
+        "translations": {
+          "en": "Everyone got caught by ⟦Dynamo⟧’s ⟦Singularity⟧.",
+          "ru": "Все попали в ⟦Сингулярность⟧ ⟦Динамо⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Сингулярность",
+            "unknown: Динамо",
+            "missing: Dynamo",
+            "missing: Singularity"
+          ]
+        }
+      },
+      {
+        "text": "ダイナモのシンギュラリティに全員捕まった。",
+        "ms": 339,
+        "ok": false,
+        "source": "⟦Dynamo⟧の⟦Singularity⟧に全員捕まった。",
+        "translations": {
+          "en": "Everyone got caught by ⟦Dynamo⟧’s ⟦Singularity⟧.",
+          "ru": "Все попали в ⟦Сингулярность⟧ ⟦Динамо⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Сингулярность",
+            "unknown: Динамо",
+            "missing: Dynamo",
+            "missing: Singularity"
+          ]
+        }
+      },
+      {
+        "text": "ノックダウン買ってヴィンディクタ落とそう。",
+        "ms": 303,
+        "ok": true,
+        "source": "⟦Knockdown⟧買って⟦Vindicta⟧落とそう。",
+        "translations": {
+          "en": "Buy the ⟦Knockdown⟧ and take down ⟦Vindicta⟧.",
+          "ru": "Куплю ⟦Knockdown⟧ и сниму ⟦Vindicta⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ノックダウン買ってヴィンディクタ落とそう。",
+        "ms": 366,
+        "ok": true,
+        "source": "⟦Knockdown⟧買って⟦Vindicta⟧落とそう。",
+        "translations": {
+          "en": "Buy the ⟦Knockdown⟧ and take down ⟦Vindicta⟧.",
+          "ru": "Куплю ⟦Knockdown⟧, чтобы сбить ⟦Vindicta⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ノックダウン買ってヴィンディクタ落とそう。",
+        "ms": 719,
+        "ok": true,
+        "source": "⟦Knockdown⟧買って⟦Vindicta⟧落とそう。",
+        "translations": {
+          "en": "Buy the ⟦Knockdown⟧ and take down ⟦Vindicta⟧.",
+          "ru": "Куплю ⟦Knockdown⟧, чтобы сбить ⟦Vindicta⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "メタルスキン切らされたのがきつい。",
+        "ms": 270,
+        "ok": true,
+        "source": "⟦Metal Skin⟧切らされたのがきつい。",
+        "translations": {
+          "en": "It’s tough that ⟦Metal Skin⟧ is down.",
+          "ru": "Сильно накладно, что у меня закончилась ⟦Metal Skin⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "メタルスキン切らされたのがきつい。",
+        "ms": 291,
+        "ok": true,
+        "source": "⟦Metal Skin⟧切らされたのがきつい。",
+        "translations": {
+          "en": "It’s tough that ⟦Metal Skin⟧ is down.",
+          "ru": "Сильно неприятно, что у меня закончилась ⟦Metal Skin⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "メタルスキン切らされたのがきつい。",
+        "ms": 287,
+        "ok": true,
+        "source": "⟦Metal Skin⟧切らされたのがきつい。",
+        "translations": {
+          "en": "It’s tough that ⟦Metal Skin⟧ is down.",
+          "ru": "Сильно накладно, что у меня закончилась ⟦Metal Skin⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ワープストーンで壁抜けた。",
+        "ms": 307,
+        "ok": true,
+        "source": "⟦Warp Stone⟧で壁抜けた。",
+        "translations": {
+          "en": "I wall-hacked with the ⟦Warp Stone⟧.",
+          "ru": "Сквозь стену прошёл с помощью ⟦Warp Stone⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ワープストーンで壁抜けた。",
+        "ms": 299,
+        "ok": true,
+        "source": "⟦Warp Stone⟧で壁抜けた。",
+        "translations": {
+          "en": "I wall-hacked with the ⟦Warp Stone⟧.",
+          "ru": "Сквозь стену прошёл с помощью ⟦Warp Stone⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ワープストーンで壁抜けた。",
+        "ms": 276,
+        "ok": true,
+        "source": "⟦Warp Stone⟧で壁抜けた。",
+        "translations": {
+          "en": "I wall-hacked with the ⟦Warp Stone⟧.",
+          "ru": "Сквозь стену прошёл с помощью ⟦Warp Stone⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "アンストッパブル間に合った。",
+        "ms": 263,
+        "ok": true,
+        "source": "⟦Unstoppable⟧間に合った。",
+        "translations": {
+          "en": "⟦Unstoppable⟧ made it in time.",
+          "ru": "⟦Unstoppable⟧ успел."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "アンストッパブル間に合った。",
+        "ms": 244,
+        "ok": true,
+        "source": "⟦Unstoppable⟧間に合った。",
+        "translations": {
+          "en": "⟦Unstoppable⟧ made it in time.",
+          "ru": "⟦Unstoppable⟧ успел."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "アンストッパブル間に合った。",
+        "ms": 234,
+        "ok": true,
+        "source": "⟦Unstoppable⟧間に合った。",
+        "translations": {
+          "en": "⟦Unstoppable⟧ made it in time.",
+          "ru": "⟦Unstoppable⟧ успел."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "不屈の心は序盤に買っておきたい。",
+        "ms": 285,
+        "ok": true,
+        "source": "⟦Grit⟧は序盤に買っておきたい。",
+        "translations": {
+          "en": "You’ll want to buy ⟦Grit⟧ early on.",
+          "ru": "⟦Grit⟧ стоит купить в самом начале."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "不屈の心は序盤に買っておきたい。",
+        "ms": 270,
+        "ok": true,
+        "source": "⟦Grit⟧は序盤に買っておきたい。",
+        "translations": {
+          "en": "You’ll want to buy ⟦Grit⟧ early on.",
+          "ru": "⟦Grit⟧ стоит купить в начале игры."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "不屈の心は序盤に買っておきたい。",
+        "ms": 265,
+        "ok": true,
+        "source": "⟦Grit⟧は序盤に買っておきたい。",
+        "translations": {
+          "en": "You’ll want to buy ⟦Grit⟧ early on.",
+          "ru": "⟦Grit⟧ стоит купить в начале игры."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ビバップのスティッキーボム二個付けられた。",
+        "ms": 847,
+        "ok": false,
+        "source": "⟦Bebop⟧の⟦Sticky Bomb⟧二個付けられた。",
+        "translations": {
+          "en": "Two ⟦Sticky Bombs⟧ from ⟦Bebop⟧ were attached.",
+          "ru": "⟦Бибоп⟧ получил два заряда ⟦Липкой бомбы⟧."
+        },
+        "problems": {
+          "en": [
+            "unknown: Sticky Bombs",
+            "missing: Sticky Bomb"
+          ],
+          "ru": [
+            "unknown: Бибоп",
+            "unknown: Липкой бомбы",
+            "missing: Bebop",
+            "missing: Sticky Bomb"
+          ]
+        }
+      },
+      {
+        "text": "ビバップのスティッキーボム二個付けられた。",
+        "ms": 444,
+        "ok": false,
+        "source": "⟦Bebop⟧の⟦Sticky Bomb⟧二個付けられた。",
+        "translations": {
+          "en": "Two ⟦Sticky Bombs⟧ from ⟦Bebop⟧ were attached.",
+          "ru": "⟦Бибоп⟧ наклеил две ⟦Липкие бомбы⟧."
+        },
+        "problems": {
+          "en": [
+            "unknown: Sticky Bombs",
+            "missing: Sticky Bomb"
+          ],
+          "ru": [
+            "unknown: Бибоп",
+            "unknown: Липкие бомбы",
+            "missing: Bebop",
+            "missing: Sticky Bomb"
+          ]
+        }
+      },
+      {
+        "text": "ビバップのスティッキーボム二個付けられた。",
+        "ms": 333,
+        "ok": false,
+        "source": "⟦Bebop⟧の⟦Sticky Bomb⟧二個付けられた。",
+        "translations": {
+          "en": "Two ⟦Sticky Bombs⟧ from ⟦Bebop⟧ were attached.",
+          "ru": "⟦Бибоп⟧ получил два заряда ⟦Липкой бомбы⟧."
+        },
+        "problems": {
+          "en": [
+            "unknown: Sticky Bombs",
+            "missing: Sticky Bomb"
+          ],
+          "ru": [
+            "unknown: Бибоп",
+            "unknown: Липкой бомбы",
+            "missing: Bebop",
+            "missing: Sticky Bomb"
+          ]
+        }
+      },
+      {
+        "text": "トキシックバレットとヒールベインで回復止めよう。",
+        "ms": 391,
+        "ok": false,
+        "source": "⟦Toxic Bullets⟧と⟦Healbane⟧で回復止めよう。",
+        "translations": {
+          "en": "Let’s stop their heals with ⟦Toxic Bullets⟧ and ⟦Healbane⟧.",
+          "ru": "Давай остановим восстановление с помощью ⟦Токсичных Пуль⟧ и ⟦Хилбейна⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Токсичных Пуль",
+            "unknown: Хилбейна",
+            "missing: Toxic Bullets",
+            "missing: Healbane"
+          ]
+        }
+      },
+      {
+        "text": "トキシックバレットとヒールベインで回復止めよう。",
+        "ms": 346,
+        "ok": false,
+        "source": "⟦Toxic Bullets⟧と⟦Healbane⟧で回復止めよう。",
+        "translations": {
+          "en": "Let’s stop their heals with ⟦Toxic Bullets⟧ and ⟦Healbane⟧.",
+          "ru": "Давай остановим восстановление с помощью ⟦Токсичных Пуль⟧ и ⟦Хилбейна⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Токсичных Пуль",
+            "unknown: Хилбейна",
+            "missing: Toxic Bullets",
+            "missing: Healbane"
+          ]
+        }
+      },
+      {
+        "text": "トキシックバレットとヒールベインで回復止めよう。",
+        "ms": 416,
+        "ok": false,
+        "source": "⟦Toxic Bullets⟧と⟦Healbane⟧で回復止めよう。",
+        "translations": {
+          "en": "Let’s stop their heals with ⟦Toxic Bullets⟧ and ⟦Healbane⟧.",
+          "ru": "Давай остановим восстановление с помощью ⟦Токсичных Пуль⟧ и ⟦Хилбейна⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Токсичных Пуль",
+            "unknown: Хилбейна",
+            "missing: Toxic Bullets",
+            "missing: Healbane"
+          ]
+        }
+      },
+      {
+        "text": "スピリットシールドかバレットレジリエンスどっちがいいかな。",
+        "ms": 314,
+        "ok": false,
+        "source": "⟦Spirit Shielding⟧か⟦Bullet Resilience⟧どっちがいいかな。",
+        "translations": {
+          "en": "Which one should I take, ⟦Spirit Shielding⟧ or ⟦Bullet Resilience⟧?",
+          "ru": "⟦Духовный щит⟧ или ⟦Устойчивость к пулям⟧ — что лучше выбрать?"
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Духовный щит",
+            "unknown: Устойчивость к пулям",
+            "missing: Spirit Shielding",
+            "missing: Bullet Resilience"
+          ]
+        }
+      },
+      {
+        "text": "スピリットシールドかバレットレジリエンスどっちがいいかな。",
+        "ms": 362,
+        "ok": false,
+        "source": "⟦Spirit Shielding⟧か⟦Bullet Resilience⟧どっちがいいかな。",
+        "translations": {
+          "en": "Which one should I take, ⟦Spirit Shielding⟧ or ⟦Bullet Resilience⟧?",
+          "ru": "⟦Духовный щит⟧ или ⟦Броня от пуль⟧ — что лучше выбрать?"
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Духовный щит",
+            "unknown: Броня от пуль",
+            "missing: Spirit Shielding",
+            "missing: Bullet Resilience"
+          ]
+        }
+      },
+      {
+        "text": "スピリットシールドかバレットレジリエンスどっちがいいかな。",
+        "ms": 343,
+        "ok": false,
+        "source": "⟦Spirit Shielding⟧か⟦Bullet Resilience⟧どっちがいいかな。",
+        "translations": {
+          "en": "Which one should I take, ⟦Spirit Shielding⟧ or ⟦Bullet Resilience⟧?",
+          "ru": "⟦Духовный щит⟧ или ⟦Броня от пуль⟧ — что лучше выбрать?"
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Духовный щит",
+            "unknown: Броня от пуль",
+            "missing: Spirit Shielding",
+            "missing: Bullet Resilience"
+          ]
+        }
+      },
+      {
+        "text": "ミラージュ強いな今のパッチ。",
+        "ms": 289,
+        "ok": false,
+        "source": "⟦Mirage⟧強いな今のパッチ。",
+        "translations": {
+          "en": "⟦Mirage⟧ is really strong in this patch.",
+          "ru": "⟦Мираж⟧ в нынешнем патче реально сильный."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Мираж",
+            "missing: Mirage"
+          ]
+        }
+      },
+      {
+        "text": "ミラージュ強いな今のパッチ。",
+        "ms": 290,
+        "ok": false,
+        "source": "⟦Mirage⟧強いな今のパッチ。",
+        "translations": {
+          "en": "⟦Mirage⟧ is really strong in this patch.",
+          "ru": "⟦Мираж⟧ в нынешнем патче реально сильный."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Мираж",
+            "missing: Mirage"
+          ]
+        }
+      },
+      {
+        "text": "ミラージュ強いな今のパッチ。",
+        "ms": 342,
+        "ok": false,
+        "source": "⟦Mirage⟧強いな今のパッチ。",
+        "translations": {
+          "en": "⟦Mirage⟧ is really strong in this patch.",
+          "ru": "⟦Мираж⟧ в нынешнем патче реально сильный."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Мираж",
+            "missing: Mirage"
+          ]
+        }
+      },
+      {
+        "text": "インファーナスのウルトでスタン入った。",
+        "ms": 359,
+        "ok": false,
+        "source": "⟦Infernus⟧の⟦Concussive Combustion⟧でスタン入った。",
+        "translations": {
+          "en": "Infernus’s Concussive Combustion got a stun.",
+          "ru": "Застаннился от ⟦Concussive Combustion⟧ ⟦Infernus⟧."
+        },
+        "problems": {
+          "en": [
+            "missing: Infernus",
+            "missing: Concussive Combustion"
+          ],
+          "ru": []
+        }
+      },
+      {
+        "text": "インファーナスのウルトでスタン入った。",
+        "ms": 343,
+        "ok": false,
+        "source": "⟦Infernus⟧の⟦Concussive Combustion⟧でスタン入った。",
+        "translations": {
+          "en": "Infernus’s Concussive Combustion got a stun.",
+          "ru": "Застаннился от ⟦Concussive Combustion⟧ ⟦Infernus⟧."
+        },
+        "problems": {
+          "en": [
+            "missing: Infernus",
+            "missing: Concussive Combustion"
+          ],
+          "ru": []
+        }
+      },
+      {
+        "text": "インファーナスのウルトでスタン入った。",
+        "ms": 341,
+        "ok": false,
+        "source": "⟦Infernus⟧の⟦Concussive Combustion⟧でスタン入った。",
+        "translations": {
+          "en": "Infernus’s Concussive Combustion got a stun.",
+          "ru": "Застаннился от ⟦Concussive Combustion⟧ ⟦Infernus⟧."
+        },
+        "problems": {
+          "en": [
+            "missing: Infernus",
+            "missing: Concussive Combustion"
+          ],
+          "ru": []
+        }
+      },
+      {
+        "text": "ラッシュの2番で屋根に上がって。",
+        "ms": 382,
+        "ok": true,
+        "source": "⟦Lash⟧の⟦Grapple⟧で屋根に上がって。",
+        "translations": {
+          "en": "Climb onto the roof with ⟦Lash⟧’s ⟦Grapple⟧.",
+          "ru": "Заберись на крышу с помощью ⟦Lash⟧ и его ⟦Grapple⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ラッシュの2番で屋根に上がって。",
+        "ms": 362,
+        "ok": true,
+        "source": "⟦Lash⟧の⟦Grapple⟧で屋根に上がって。",
+        "translations": {
+          "en": "Use ⟦Lash⟧’s ⟦Grapple⟧ to get up on the roof.",
+          "ru": "Заберись на крышу с помощью ⟦Lash⟧ и его ⟦Grapple⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ラッシュの2番で屋根に上がって。",
+        "ms": 373,
+        "ok": true,
+        "source": "⟦Lash⟧の⟦Grapple⟧で屋根に上がって。",
+        "translations": {
+          "en": "Climb onto the roof with ⟦Lash⟧’s ⟦Grapple⟧.",
+          "ru": "Заберись на крышу с помощью ⟦Lash⟧ и его ⟦Grapple⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ミナのウルトでサイレンス食らった。",
+        "ms": 314,
+        "ok": false,
+        "source": "⟦Mina⟧の⟦Nox Nostra⟧でサイレンス食らった。",
+        "translations": {
+          "en": "I got silenced by ⟦Mina⟧’s ⟦Nox Nostra⟧.",
+          "ru": "Мина на ⟦Nox Nostra⟧ меня зашила в сайдл."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "missing: Mina"
+          ]
+        }
+      },
+      {
+        "text": "ミナのウルトでサイレンス食らった。",
+        "ms": 339,
+        "ok": false,
+        "source": "⟦Mina⟧の⟦Nox Nostra⟧でサイレンス食らった。",
+        "translations": {
+          "en": "I got silenced by ⟦Mina⟧’s ⟦Nox Nostra⟧.",
+          "ru": "Мина на Nox Nostra меня зашила в саунд‑блюре."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "missing: Mina",
+            "missing: Nox Nostra"
+          ]
+        }
+      },
+      {
+        "text": "ミナのウルトでサイレンス食らった。",
+        "ms": 284,
+        "ok": false,
+        "source": "⟦Mina⟧の⟦Nox Nostra⟧でサイレンス食らった。",
+        "translations": {
+          "en": "I got silenced by ⟦Mina⟧’s ⟦Nox Nostra⟧.",
+          "ru": "Мина на ⟦Nox Nostra⟧ меня зашила в сайдл."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "missing: Mina"
+          ]
+        }
+      },
+      {
+        "text": "そのあとウルトで焼かれた。",
+        "ms": 291,
+        "ok": true,
+        "source": "そのあと⟦Hyper Beam⟧で焼かれた。",
+        "translations": {
+          "en": "Then he got burned by ⟦Hyper Beam⟧.",
+          "ru": "Потом его сожгли ⟦Hyper Beam⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "そのあとウルトで焼かれた。",
+        "ms": 287,
+        "ok": true,
+        "source": "そのあと⟦Hyper Beam⟧で焼かれた。",
+        "translations": {
+          "en": "After that, I got burned by ⟦Hyper Beam⟧.",
+          "ru": "Потом его сожгли ⟦Hyper Beam⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "そのあとウルトで焼かれた。",
+        "ms": 311,
+        "ok": true,
+        "source": "そのあと⟦Hyper Beam⟧で焼かれた。",
+        "translations": {
+          "en": "Then he got burned by ⟦Hyper Beam⟧.",
+          "ru": "Потом его сожгли ⟦Hyper Beam⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ヤマトの１番溜めてから当てて。",
+        "ms": 354,
+        "ok": true,
+        "source": "⟦Yamato⟧の⟦Power Slash⟧溜めてから当てて。",
+        "translations": {
+          "en": "Charge up ⟦Yamato⟧’s ⟦Power Slash⟧ and then use it.",
+          "ru": "Заряди ⟦Power Slash⟧ у ⟦Yamato⟧ и потом используй."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ヤマトの１番溜めてから当てて。",
+        "ms": 331,
+        "ok": true,
+        "source": "⟦Yamato⟧の⟦Power Slash⟧溜めてから当てて。",
+        "translations": {
+          "en": "Charge up ⟦Yamato⟧’s ⟦Power Slash⟧ and then use it.",
+          "ru": "Заряди ⟦Power Slash⟧ у ⟦Yamato⟧ и потом используй."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ヤマトの１番溜めてから当てて。",
+        "ms": 430,
+        "ok": true,
+        "source": "⟦Yamato⟧の⟦Power Slash⟧溜めてから当てて。",
+        "translations": {
+          "en": "Charge up ⟦Yamato⟧’s ⟦Power Slash⟧ and then use it.",
+          "ru": "Заряди ⟦Power Slash⟧ у ⟦Yamato⟧ и потом используй."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ダイナモウルト来るから散って。",
+        "ms": 335,
+        "ok": false,
+        "source": "⟦Dynamo⟧⟦Singularity⟧来るから散って。",
+        "translations": {
+          "en": "⟦Dynamo⟧⟦Singularity⟧ is coming, so scatter!",
+          "ru": "⟦Динамо⟧ ⟦Сингулярность⟧ идёт, рассредоточьтесь."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Динамо",
+            "unknown: Сингулярность",
+            "missing: Dynamo",
+            "missing: Singularity"
+          ]
+        }
+      },
+      {
+        "text": "ダイナモウルト来るから散って。",
+        "ms": 341,
+        "ok": false,
+        "source": "⟦Dynamo⟧⟦Singularity⟧来るから散って。",
+        "translations": {
+          "en": "⟦Dynamo⟧⟦Singularity⟧ is coming, so scatter!",
+          "ru": "⟦Динамо⟧ ⟦Сингулярность⟧ идёт, рассредоточьтесь."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Динамо",
+            "unknown: Сингулярность",
+            "missing: Dynamo",
+            "missing: Singularity"
+          ]
+        }
+      },
+      {
+        "text": "ダイナモウルト来るから散って。",
+        "ms": 378,
+        "ok": false,
+        "source": "⟦Dynamo⟧⟦Singularity⟧来るから散って。",
+        "translations": {
+          "en": "⟦Dynamo⟧⟦Singularity⟧ is coming, so scatter!",
+          "ru": "⟦Динамо⟧ ⟦Сингулярность⟧ идёт, рассредоточьтесь."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Динамо",
+            "unknown: Сингулярность",
+            "missing: Dynamo",
+            "missing: Singularity"
+          ]
+        }
+      },
+      {
+        "text": "アイビーの３番で耐えた。",
+        "ms": 282,
+        "ok": false,
+        "source": "⟦Ivy⟧の⟦Stone Form⟧で耐えた。",
+        "translations": {
+          "en": "I survived with ⟦Ivy⟧’s ⟦Stone Form⟧.",
+          "ru": "Выдержал с помощью ⟦Каменной формы⟧ ⟦Айви⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Каменной формы",
+            "unknown: Айви",
+            "missing: Ivy",
+            "missing: Stone Form"
+          ]
+        }
+      },
+      {
+        "text": "アイビーの３番で耐えた。",
+        "ms": 300,
+        "ok": false,
+        "source": "⟦Ivy⟧の⟦Stone Form⟧で耐えた。",
+        "translations": {
+          "en": "I survived with ⟦Ivy⟧’s ⟦Stone Form⟧.",
+          "ru": "Выдержал с помощью ⟦Каменной формы⟧ ⟦Айви⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Каменной формы",
+            "unknown: Айви",
+            "missing: Ivy",
+            "missing: Stone Form"
+          ]
+        }
+      },
+      {
+        "text": "アイビーの３番で耐えた。",
+        "ms": 346,
+        "ok": false,
+        "source": "⟦Ivy⟧の⟦Stone Form⟧で耐えた。",
+        "translations": {
+          "en": "I survived with ⟦Ivy⟧’s ⟦Stone Form⟧.",
+          "ru": "Выдержал с помощью ⟦Каменной формы⟧ ⟦Айви⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Каменной формы",
+            "unknown: Айви",
+            "missing: Ivy",
+            "missing: Stone Form"
+          ]
+        }
+      },
+      {
+        "text": "ラッシュのウルトで全員叩きつけられた。",
+        "ms": 316,
+        "ok": false,
+        "source": "⟦Lash⟧の⟦Death Slam⟧で全員叩きつけられた。",
+        "translations": {
+          "en": "Everyone got smashed by ⟦Lash⟧’s ⟦Death Slam⟧.",
+          "ru": "⟦Лэш⟧ всех припечатал своим ⟦Death Slam⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Лэш",
+            "missing: Lash"
+          ]
+        }
+      },
+      {
+        "text": "ラッシュのウルトで全員叩きつけられた。",
+        "ms": 319,
+        "ok": false,
+        "source": "⟦Lash⟧の⟦Death Slam⟧で全員叩きつけられた。",
+        "translations": {
+          "en": "Everyone got smashed by ⟦Lash⟧’s ⟦Death Slam⟧.",
+          "ru": "⟦Лэш⟧ всех припечатал своим ⟦Death Slam⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Лэш",
+            "missing: Lash"
+          ]
+        }
+      },
+      {
+        "text": "ラッシュのウルトで全員叩きつけられた。",
+        "ms": 306,
+        "ok": false,
+        "source": "⟦Lash⟧の⟦Death Slam⟧で全員叩きつけられた。",
+        "translations": {
+          "en": "Everyone got knocked down by ⟦Lash⟧’s ⟦Death Slam⟧.",
+          "ru": "⟦Лэш⟧ всех припечатал своим ⟦Death Slam⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Лэш",
+            "missing: Lash"
+          ]
+        }
+      },
+      {
+        "text": "シルバーにウルト当てられた。",
+        "ms": 344,
+        "ok": false,
+        "source": "⟦Silver⟧に⟦Lycan Curse⟧当てられた。",
+        "translations": {
+          "en": "⟦Silver⟧ got hit with ⟦Lycan Curse⟧.",
+          "ru": "⟦Силверу⟧ наложили ⟦Проклятие Ликана⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Силверу",
+            "unknown: Проклятие Ликана",
+            "missing: Silver",
+            "missing: Lycan Curse"
+          ]
+        }
+      },
+      {
+        "text": "シルバーにウルト当てられた。",
+        "ms": 305,
+        "ok": false,
+        "source": "⟦Silver⟧に⟦Lycan Curse⟧当てられた。",
+        "translations": {
+          "en": "⟦Silver⟧ got hit with ⟦Lycan Curse⟧.",
+          "ru": "⟦Силверу⟧ наложили ⟦Проклятие Ликана⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Силверу",
+            "unknown: Проклятие Ликана",
+            "missing: Silver",
+            "missing: Lycan Curse"
+          ]
+        }
+      },
+      {
+        "text": "シルバーにウルト当てられた。",
+        "ms": 320,
+        "ok": false,
+        "source": "⟦Silver⟧に⟦Lycan Curse⟧当てられた。",
+        "translations": {
+          "en": "⟦Silver⟧ got hit with ⟦Lycan Curse⟧.",
+          "ru": "⟦Силверу⟧ наложили ⟦Проклятие Ликана⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Силверу",
+            "unknown: Проклятие Ликана",
+            "missing: Silver",
+            "missing: Lycan Curse"
+          ]
+        }
+      },
+      {
+        "text": "3番のクールダウン長いな。",
+        "ms": 281,
+        "ok": true,
+        "source": "3番のクールダウン長いな。",
+        "translations": {
+          "en": "Lane 3’s cooldown is long.",
+          "ru": "У третьей способности долгий кулдаун."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "3番のクールダウン長いな。",
+        "ms": 273,
+        "ok": true,
+        "source": "3番のクールダウン長いな。",
+        "translations": {
+          "en": "Lane 3’s cooldown is long.",
+          "ru": "У третьей способности долгий кулдаун."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "3番のクールダウン長いな。",
+        "ms": 265,
+        "ok": true,
+        "source": "3番のクールダウン長いな。",
+        "translations": {
+          "en": "Lane 3’s cooldown is long.",
+          "ru": "У третьей способности долгий кулдаун."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ウルトあと10秒。",
+        "ms": 250,
+        "ok": true,
+        "source": "ウルトあと10秒。",
+        "translations": {
+          "en": "Ultimate in 10 seconds.",
+          "ru": "Ульт осталось 10 секунд."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ウルトあと10秒。",
+        "ms": 263,
+        "ok": true,
+        "source": "ウルトあと10秒。",
+        "translations": {
+          "en": "Ultimate in 10 seconds.",
+          "ru": "Ульт осталось 10 секунд."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ウルトあと10秒。",
+        "ms": 296,
+        "ok": true,
+        "source": "ウルトあと10秒。",
+        "translations": {
+          "en": "Ultimate in 10 seconds.",
+          "ru": "Ульт осталось 10 секунд."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "エコーシャードでウルト二回撃てる。",
+        "ms": 298,
+        "ok": true,
+        "source": "⟦Echo Shard⟧でウルト二回撃てる。",
+        "translations": {
+          "en": "With the ⟦Echo Shard⟧, you can cast your ultimate twice.",
+          "ru": "С помощью ⟦Echo Shard⟧ можно дважды активировать ульту."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "エコーシャードでウルト二回撃てる。",
+        "ms": 320,
+        "ok": true,
+        "source": "⟦Echo Shard⟧でウルト二回撃てる。",
+        "translations": {
+          "en": "With the ⟦Echo Shard⟧, you can cast your ultimate twice.",
+          "ru": "С помощью ⟦Echo Shard⟧ можно дважды активировать ульту."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "エコーシャードでウルト二回撃てる。",
+        "ms": 341,
+        "ok": true,
+        "source": "⟦Echo Shard⟧でウルト二回撃てる。",
+        "translations": {
+          "en": "With the ⟦Echo Shard⟧, you can cast your ultimate twice.",
+          "ru": "С помощью ⟦Echo Shard⟧ можно дважды активировать ульту."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "リフレッシャー持ってるからウルト二連発くるよ。",
+        "ms": 340,
+        "ok": true,
+        "source": "⟦Refresher⟧持ってるからウルト二連発くるよ。",
+        "translations": {
+          "en": "Since they’ve got ⟦Refresher⟧, their ultimate’s gonna come out twice.",
+          "ru": "У него в руках ⟦Refresher⟧, так что он дважды активирует свой ульт."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "リフレッシャー持ってるからウルト二連発くるよ。",
+        "ms": 329,
+        "ok": true,
+        "source": "⟦Refresher⟧持ってるからウルト二連発くるよ。",
+        "translations": {
+          "en": "Since he’s got ⟦Refresher⟧, his ultimate is going to come out twice.",
+          "ru": "У него ⟦Refresher⟧, так что ульты пойдут дважды."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "リフレッシャー持ってるからウルト二連発くるよ。",
+        "ms": 316,
+        "ok": true,
+        "source": "⟦Refresher⟧持ってるからウルト二連発くるよ。",
+        "translations": {
+          "en": "Since they’ve got ⟦Refresher⟧, their ultimate’s gonna come out twice.",
+          "ru": "У него в руках ⟦Refresher⟧, так что он дважды активирует свой ульт."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "エイブラムスのチャージで壁に当てられた。",
+        "ms": 334,
+        "ok": true,
+        "source": "⟦Abrams⟧の⟦Shoulder Charge⟧で壁に当てられた。",
+        "translations": {
+          "en": "I got hit into a wall by ⟦Abrams⟧’s ⟦Shoulder Charge⟧.",
+          "ru": "Меня прижали к стене с помощью ⟦Shoulder Charge⟧ от ⟦Abrams⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "エイブラムスのチャージで壁に当てられた。",
+        "ms": 339,
+        "ok": true,
+        "source": "⟦Abrams⟧の⟦Shoulder Charge⟧で壁に当てられた。",
+        "translations": {
+          "en": "I got hit into a wall by ⟦Abrams⟧’s ⟦Shoulder Charge⟧.",
+          "ru": "Меня прижали к стене с помощью ⟦Shoulder Charge⟧ от ⟦Abrams⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "エイブラムスのチャージで壁に当てられた。",
+        "ms": 357,
+        "ok": true,
+        "source": "⟦Abrams⟧の⟦Shoulder Charge⟧で壁に当てられた。",
+        "translations": {
+          "en": "I got hit into a wall by ⟦Abrams⟧’s ⟦Shoulder Charge⟧.",
+          "ru": "Меня прижали к стене с помощью ⟦Shoulder Charge⟧ от ⟦Abrams⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ケルビンのビームで足遅くされた。",
+        "ms": 364,
+        "ok": false,
+        "source": "⟦Kelvin⟧の⟦Arctic Beam⟧で足遅くされた。",
+        "translations": {
+          "en": "I got slowed down by ⟦Kelvin⟧’s ⟦Arctic Beam⟧.",
+          "ru": "⟦Келвин⟧ замедлил меня своим ⟦Арктическим лучом⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Келвин",
+            "unknown: Арктическим лучом",
+            "missing: Kelvin",
+            "missing: Arctic Beam"
+          ]
+        }
+      },
+      {
+        "text": "ケルビンのビームで足遅くされた。",
+        "ms": 354,
+        "ok": false,
+        "source": "⟦Kelvin⟧の⟦Arctic Beam⟧で足遅くされた。",
+        "translations": {
+          "en": "I got slowed down by ⟦Kelvin⟧’s ⟦Arctic Beam⟧.",
+          "ru": "⟦Келвин⟧ замедлил меня своим ⟦Арктическим лучом⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Келвин",
+            "unknown: Арктическим лучом",
+            "missing: Kelvin",
+            "missing: Arctic Beam"
+          ]
+        }
+      },
+      {
+        "text": "ケルビンのビームで足遅くされた。",
+        "ms": 382,
+        "ok": false,
+        "source": "⟦Kelvin⟧の⟦Arctic Beam⟧で足遅くされた。",
+        "translations": {
+          "en": "I got slowed down by ⟦Kelvin⟧’s ⟦Arctic Beam⟧.",
+          "ru": "⟦Келвин⟧ замедлил меня своим ⟦Арктическим лучом⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Келвин",
+            "unknown: Арктическим лучом",
+            "missing: Kelvin",
+            "missing: Arctic Beam"
+          ]
+        }
+      },
+      {
+        "text": "ビバップのフックに気をつけて。",
+        "ms": 328,
+        "ok": true,
+        "source": "⟦Bebop⟧の⟦Grapple Arm⟧に気をつけて。",
+        "translations": {
+          "en": "Watch out for ⟦Bebop⟧’s ⟦Grapple Arm⟧.",
+          "ru": "Осторожно с ⟦Bebop⟧ и его ⟦Grapple Arm⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ビバップのフックに気をつけて。",
+        "ms": 303,
+        "ok": true,
+        "source": "⟦Bebop⟧の⟦Grapple Arm⟧に気をつけて。",
+        "translations": {
+          "en": "Watch out for ⟦Bebop⟧’s ⟦Grapple Arm⟧.",
+          "ru": "Осторожно с ⟦Bebop⟧ и его ⟦Grapple Arm⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ビバップのフックに気をつけて。",
+        "ms": 305,
+        "ok": true,
+        "source": "⟦Bebop⟧の⟦Grapple Arm⟧に気をつけて。",
+        "translations": {
+          "en": "Watch out for ⟦Bebop⟧’s ⟦Grapple Arm⟧.",
+          "ru": "Остерегайтесь ⟦Bebop⟧ и его ⟦Grapple Arm⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "インファ強すぎない？",
+        "ms": 292,
+        "ok": false,
+        "source": "⟦Infernus⟧強すぎない？",
+        "translations": {
+          "en": "Isn’t ⟦Infernus⟧ way too strong?",
+          "ru": "⟦Инфернус⟧ не слишком сильный?"
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Инфернус",
+            "missing: Infernus"
+          ]
+        }
+      },
+      {
+        "text": "インファ強すぎない？",
+        "ms": 288,
+        "ok": false,
+        "source": "⟦Infernus⟧強すぎない？",
+        "translations": {
+          "en": "Isn’t ⟦Infernus⟧ way too strong?",
+          "ru": "⟦Инфернус⟧ не слишком сильный?"
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Инфернус",
+            "missing: Infernus"
+          ]
+        }
+      },
+      {
+        "text": "インファ強すぎない？",
+        "ms": 313,
+        "ok": false,
+        "source": "⟦Infernus⟧強すぎない？",
+        "translations": {
+          "en": "Isn’t ⟦Infernus⟧ way too strong?",
+          "ru": "⟦Инфернус⟧ не слишком сильный?"
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Инфернус",
+            "missing: Infernus"
+          ]
+        }
+      },
+      {
+        "text": "ガイストのウルトで体力入れ替えられた。",
+        "ms": 369,
+        "ok": false,
+        "source": "⟦Lady Geist⟧の⟦Soul Exchange⟧で体力入れ替えられた。",
+        "translations": {
+          "en": "⟦Lady Geist⟧ swapped health with her using ⟦Soul Exchange⟧.",
+          "ru": "⟦Леди Гейст⟧ с помощью ⟦Обмена душами⟧ поменялась здоровьем."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Леди Гейст",
+            "unknown: Обмена душами",
+            "missing: Lady Geist",
+            "missing: Soul Exchange"
+          ]
+        }
+      },
+      {
+        "text": "ガイストのウルトで体力入れ替えられた。",
+        "ms": 361,
+        "ok": false,
+        "source": "⟦Lady Geist⟧の⟦Soul Exchange⟧で体力入れ替えられた。",
+        "translations": {
+          "en": "⟦Lady Geist⟧ swapped health with her using ⟦Soul Exchange⟧.",
+          "ru": "⟦Леди Гейст⟧ с помощью ⟦Обмена душами⟧ поменяла здоровье."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Леди Гейст",
+            "unknown: Обмена душами",
+            "missing: Lady Geist",
+            "missing: Soul Exchange"
+          ]
+        }
+      },
+      {
+        "text": "ガイストのウルトで体力入れ替えられた。",
+        "ms": 751,
+        "ok": false,
+        "source": "⟦Lady Geist⟧の⟦Soul Exchange⟧で体力入れ替えられた。",
+        "translations": {
+          "en": "⟦Lady Geist⟧ swapped health with her using ⟦Soul Exchange⟧.",
+          "ru": "⟦Леди Гейст⟧ с помощью ⟦Обмена душами⟧ поменяла здоровье."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Леди Гейст",
+            "unknown: Обмена душами",
+            "missing: Lady Geist",
+            "missing: Soul Exchange"
+          ]
+        }
+      },
+      {
+        "text": "タロンに遠くから抜かれた。",
+        "ms": 326,
+        "ok": false,
+        "source": "⟦Grey Talon⟧に遠くから抜かれた。",
+        "translations": {
+          "en": "I got sniped from far away by ⟦Grey Talon⟧.",
+          "ru": "Меня издалека прошил ⟦Серый Коготь⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Серый Коготь",
+            "missing: Grey Talon"
+          ]
+        }
+      },
+      {
+        "text": "タロンに遠くから抜かれた。",
+        "ms": 322,
+        "ok": false,
+        "source": "⟦Grey Talon⟧に遠くから抜かれた。",
+        "translations": {
+          "en": "I got sniped from far away by ⟦Grey Talon⟧.",
+          "ru": "Меня издалека прошил ⟦Серый Коготь⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Серый Коготь",
+            "missing: Grey Talon"
+          ]
+        }
+      },
+      {
+        "text": "タロンに遠くから抜かれた。",
+        "ms": 311,
+        "ok": true,
+        "source": "⟦Grey Talon⟧に遠くから抜かれた。",
+        "translations": {
+          "en": "I got sniped from far away by ⟦Grey Talon⟧.",
+          "ru": "Меня издалека прошил ⟦Grey Talon⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "モークリのウルトに捕まった。",
+        "ms": 345,
+        "ok": false,
+        "source": "⟦Mo & Krill⟧の⟦Combo⟧に捕まった。",
+        "translations": {
+          "en": "I got caught in the ⟦Mo & Krill⟧ ⟦Combo⟧.",
+          "ru": "Попал в ⟦комбо⟧ ⟦Мо и Крилла⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: комбо",
+            "unknown: Мо и Крилла",
+            "missing: Mo & Krill",
+            "missing: Combo"
+          ]
+        }
+      },
+      {
+        "text": "モークリのウルトに捕まった。",
+        "ms": 326,
+        "ok": false,
+        "source": "⟦Mo & Krill⟧の⟦Combo⟧に捕まった。",
+        "translations": {
+          "en": "I got caught in the ⟦Mo & Krill⟧ ⟦Combo⟧.",
+          "ru": "Попал в ⟦комбо⟧ ⟦Мо и Крилла⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: комбо",
+            "unknown: Мо и Крилла",
+            "missing: Mo & Krill",
+            "missing: Combo"
+          ]
+        }
+      },
+      {
+        "text": "モークリのウルトに捕まった。",
+        "ms": 317,
+        "ok": false,
+        "source": "⟦Mo & Krill⟧の⟦Combo⟧に捕まった。",
+        "translations": {
+          "en": "I got caught in the ⟦Mo & Krill⟧ ⟦Combo⟧.",
+          "ru": "Попал в ⟦комбо⟧ ⟦Мо и Крилла⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: комбо",
+            "unknown: Мо и Крилла",
+            "missing: Mo & Krill",
+            "missing: Combo"
+          ]
+        }
+      },
+      {
+        "text": "ヴィンにずっと撃たれてる。",
+        "ms": 312,
+        "ok": true,
+        "source": "⟦Vindicta⟧にずっと撃たれてる。",
+        "translations": {
+          "en": "I’ve been getting shot at by ⟦Vindicta⟧ the whole time.",
+          "ru": "Меня всё время стреляет ⟦Vindicta⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ヴィンにずっと撃たれてる。",
+        "ms": 320,
+        "ok": true,
+        "source": "⟦Vindicta⟧にずっと撃たれてる。",
+        "translations": {
+          "en": "I keep getting shot by ⟦Vindicta⟧.",
+          "ru": "Меня всё время стреляет ⟦Vindicta⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ヴィンにずっと撃たれてる。",
+        "ms": 333,
+        "ok": true,
+        "source": "⟦Vindicta⟧にずっと撃たれてる。",
+        "translations": {
+          "en": "I’ve been getting shot at by ⟦Vindicta⟧ the whole time.",
+          "ru": "Меня всё время стреляет ⟦Vindicta⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ヴィンディのウルトで落とされた。",
+        "ms": 319,
+        "ok": true,
+        "source": "⟦Vindicta⟧の⟦Assassinate⟧で落とされた。",
+        "translations": {
+          "en": "I was taken down by ⟦Vindicta⟧’s ⟦Assassinate⟧.",
+          "ru": "Был сбит ⟦Vindicta⟧ с помощью ⟦Assassinate⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ヴィンディのウルトで落とされた。",
+        "ms": 751,
+        "ok": true,
+        "source": "⟦Vindicta⟧の⟦Assassinate⟧で落とされた。",
+        "translations": {
+          "en": "I was taken down by ⟦Vindicta⟧’s ⟦Assassinate⟧.",
+          "ru": "Был сбит ⟦Vindicta⟧ с помощью ⟦Assassinate⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ヴィンディのウルトで落とされた。",
+        "ms": 355,
+        "ok": true,
+        "source": "⟦Vindicta⟧の⟦Assassinate⟧で落とされた。",
+        "translations": {
+          "en": "I was taken down by ⟦Vindicta⟧’s ⟦Assassinate⟧.",
+          "ru": "Был сбит ⟦Vindicta⟧ с помощью ⟦Assassinate⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "メタスキ押すの遅れた。",
+        "ms": 283,
+        "ok": true,
+        "source": "⟦Metal Skin⟧押すの遅れた。",
+        "translations": {
+          "en": "I was late pressing ⟦Metal Skin⟧.",
+          "ru": "Задержал нажатие на ⟦Metal Skin⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "メタスキ押すの遅れた。",
+        "ms": 287,
+        "ok": true,
+        "source": "⟦Metal Skin⟧押すの遅れた。",
+        "translations": {
+          "en": "I was late pressing ⟦Metal Skin⟧.",
+          "ru": "Задержал нажатие на ⟦Metal Skin⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "メタスキ押すの遅れた。",
+        "ms": 272,
+        "ok": true,
+        "source": "⟦Metal Skin⟧押すの遅れた。",
+        "translations": {
+          "en": "I was late pressing ⟦Metal Skin⟧.",
+          "ru": "Задержал нажатие на ⟦Metal Skin⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "アンストッパ買っとけばよかった。",
+        "ms": 294,
+        "ok": true,
+        "source": "⟦Unstoppable⟧買っとけばよかった。",
+        "translations": {
+          "en": "I should’ve bought ⟦Unstoppable⟧.",
+          "ru": "Надо было купить ⟦Unstoppable⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "アンストッパ買っとけばよかった。",
+        "ms": 271,
+        "ok": true,
+        "source": "⟦Unstoppable⟧買っとけばよかった。",
+        "translations": {
+          "en": "I should’ve bought ⟦Unstoppable⟧.",
+          "ru": "Надо было купить ⟦Unstoppable⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "アンストッパ買っとけばよかった。",
+        "ms": 270,
+        "ok": true,
+        "source": "⟦Unstoppable⟧買っとけばよかった。",
+        "translations": {
+          "en": "I should’ve bought ⟦Unstoppable⟧.",
+          "ru": "Надо было купить ⟦Unstoppable⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "インフェルノスのアフターバーンが痛い。",
+        "ms": 307,
+        "ok": false,
+        "source": "⟦Infernus⟧の⟦Afterburn⟧が痛い。",
+        "translations": {
+          "en": "Infernus’s Afterburn really hurts.",
+          "ru": "⟦Infernus⟧ с его ⟦Afterburn⟧ очень больно бьёт."
+        },
+        "problems": {
+          "en": [
+            "missing: Infernus",
+            "missing: Afterburn"
+          ],
+          "ru": []
+        }
+      },
+      {
+        "text": "インフェルノスのアフターバーンが痛い。",
+        "ms": 291,
+        "ok": false,
+        "source": "⟦Infernus⟧の⟦Afterburn⟧が痛い。",
+        "translations": {
+          "en": "Infernus’s Afterburn really hurts.",
+          "ru": "⟦Infernus⟧ с его ⟦Afterburn⟧ очень больно бьёт."
+        },
+        "problems": {
+          "en": [
+            "missing: Infernus",
+            "missing: Afterburn"
+          ],
+          "ru": []
+        }
+      },
+      {
+        "text": "インフェルノスのアフターバーンが痛い。",
+        "ms": 316,
+        "ok": false,
+        "source": "⟦Infernus⟧の⟦Afterburn⟧が痛い。",
+        "translations": {
+          "en": "Infernus’s Afterburn really hurts.",
+          "ru": "⟦Infernus⟧ с его ⟦Afterburn⟧ очень больно бьёт."
+        },
+        "problems": {
+          "en": [
+            "missing: Infernus",
+            "missing: Afterburn"
+          ],
+          "ru": []
+        }
+      },
+      {
+        "text": "ビーバップのボムに気をつけて。",
+        "ms": 395,
+        "ok": true,
+        "source": "⟦Bebop⟧の⟦Sticky Bomb⟧に気をつけて。",
+        "translations": {
+          "en": "Watch out for ⟦Bebop⟧’s ⟦Sticky Bomb⟧.",
+          "ru": "Осторожно с ⟦Bebop⟧‑овской ⟦Sticky Bomb⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ビーバップのボムに気をつけて。",
+        "ms": 340,
+        "ok": true,
+        "source": "⟦Bebop⟧の⟦Sticky Bomb⟧に気をつけて。",
+        "translations": {
+          "en": "Watch out for ⟦Bebop⟧’s ⟦Sticky Bomb⟧.",
+          "ru": "Осторожно с ⟦Bebop⟧‑овской ⟦Sticky Bomb⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ビーバップのボムに気をつけて。",
+        "ms": 325,
+        "ok": true,
+        "source": "⟦Bebop⟧の⟦Sticky Bomb⟧に気をつけて。",
+        "translations": {
+          "en": "Watch out for ⟦Bebop⟧’s ⟦Sticky Bomb⟧.",
+          "ru": "Осторожно с ⟦Bebop⟧‑овской ⟦Sticky Bomb⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ワーデンのウルト止めて。",
+        "ms": 399,
+        "ok": true,
+        "source": "⟦Warden⟧の⟦Last Stand⟧止めて。",
+        "translations": {
+          "en": "Stop the ⟦Warden⟧’s ⟦Last Stand⟧.",
+          "ru": "Останови ⟦Last Stand⟧ у ⟦Warden⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ワーデンのウルト止めて。",
+        "ms": 298,
+        "ok": true,
+        "source": "⟦Warden⟧の⟦Last Stand⟧止めて。",
+        "translations": {
+          "en": "Stop the ⟦Warden⟧’s ⟦Last Stand⟧.",
+          "ru": "Останови ⟦Last Stand⟧ у ⟦Warden⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ワーデンのウルト止めて。",
+        "ms": 383,
+        "ok": true,
+        "source": "⟦Warden⟧の⟦Last Stand⟧止めて。",
+        "translations": {
+          "en": "Stop the ⟦Warden⟧’s ⟦Last Stand⟧.",
+          "ru": "Останови ⟦Last Stand⟧ у ⟦Warden⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ビンディクタのウルトで狙われてる。",
+        "ms": 336,
+        "ok": true,
+        "source": "⟦Vindicta⟧の⟦Assassinate⟧で狙われてる。",
+        "translations": {
+          "en": "I’m being targeted by ⟦Vindicta⟧’s ⟦Assassinate⟧.",
+          "ru": "Меня целят ⟦Vindicta⟧ с ⟦Assassinate⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ビンディクタのウルトで狙われてる。",
+        "ms": 312,
+        "ok": true,
+        "source": "⟦Vindicta⟧の⟦Assassinate⟧で狙われてる。",
+        "translations": {
+          "en": "I’m being targeted by ⟦Vindicta⟧’s ⟦Assassinate⟧.",
+          "ru": "Меня целят ⟦Vindicta⟧ своим ⟦Assassinate⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ビンディクタのウルトで狙われてる。",
+        "ms": 333,
+        "ok": true,
+        "source": "⟦Vindicta⟧の⟦Assassinate⟧で狙われてる。",
+        "translations": {
+          "en": "I’m being targeted by ⟦Vindicta⟧’s ⟦Assassinate⟧.",
+          "ru": "Меня целят ⟦Vindicta⟧ своим ⟦Assassinate⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ワープストンで逃げた。",
+        "ms": 293,
+        "ok": false,
+        "source": "⟦Warp Stone⟧で逃げた。",
+        "translations": {
+          "en": "They escaped with the ⟦Warp Stone⟧.",
+          "ru": "Сбежал с помощью ⟦Камня Телепортации⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Камня Телепортации",
+            "missing: Warp Stone"
+          ]
+        }
+      },
+      {
+        "text": "ワープストンで逃げた。",
+        "ms": 301,
+        "ok": false,
+        "source": "⟦Warp Stone⟧で逃げた。",
+        "translations": {
+          "en": "They escaped with the ⟦Warp Stone⟧.",
+          "ru": "Сбежал с помощью ⟦Камня телепортации⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Камня телепортации",
+            "missing: Warp Stone"
+          ]
+        }
+      },
+      {
+        "text": "ワープストンで逃げた。",
+        "ms": 315,
+        "ok": false,
+        "source": "⟦Warp Stone⟧で逃げた。",
+        "translations": {
+          "en": "He/She escaped with the ⟦Warp Stone⟧.",
+          "ru": "Сбежал с помощью ⟦Камня Телепортации⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Камня Телепортации",
+            "missing: Warp Stone"
+          ]
+        }
+      },
+      {
+        "text": "メタルスキーン使った。",
+        "ms": 261,
+        "ok": true,
+        "source": "⟦Metal Skin⟧使った。",
+        "translations": {
+          "en": "I used ⟦Metal Skin⟧.",
+          "ru": "Применил ⟦Metal Skin⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "メタルスキーン使った。",
+        "ms": 232,
+        "ok": true,
+        "source": "⟦Metal Skin⟧使った。",
+        "translations": {
+          "en": "I used ⟦Metal Skin⟧.",
+          "ru": "Применил ⟦Metal Skin⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "メタルスキーン使った。",
+        "ms": 280,
+        "ok": true,
+        "source": "⟦Metal Skin⟧使った。",
+        "translations": {
+          "en": "I used ⟦Metal Skin⟧.",
+          "ru": "Применил ⟦Metal Skin⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "セブンのパワーサージで火力上がってる。",
+        "ms": 303,
+        "ok": true,
+        "source": "⟦Seven⟧の⟦Power Surge⟧で火力上がってる。",
+        "translations": {
+          "en": "⟦Seven⟧’s ⟦Power Surge⟧ is boosting his damage.",
+          "ru": "У ⟦Seven⟧ повысилась огневая мощь благодаря ⟦Power Surge⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "セブンのパワーサージで火力上がってる。",
+        "ms": 311,
+        "ok": true,
+        "source": "⟦Seven⟧の⟦Power Surge⟧で火力上がってる。",
+        "translations": {
+          "en": "⟦Seven⟧’s ⟦Power Surge⟧ is boosting his damage.",
+          "ru": "У ⟦Seven⟧ повысилась огневая мощь благодаря ⟦Power Surge⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "セブンのパワーサージで火力上がってる。",
+        "ms": 323,
+        "ok": true,
+        "source": "⟦Seven⟧の⟦Power Surge⟧で火力上がってる。",
+        "translations": {
+          "en": "⟦Seven⟧’s ⟦Power Surge⟧ is boosting his damage.",
+          "ru": "У ⟦Seven⟧ повысилась огневая мощь благодаря ⟦Power Surge⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "パワーサージ買ったら移動速くなった。",
+        "ms": 308,
+        "ok": true,
+        "source": "⟦Surge of Power⟧買ったら移動速くなった。",
+        "translations": {
+          "en": "I bought ⟦Surge of Power⟧, and my movement speed increased.",
+          "ru": "Купил ⟦Surge of Power⟧ — скорость передвижения увеличилась."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "パワーサージ買ったら移動速くなった。",
+        "ms": 300,
+        "ok": true,
+        "source": "⟦Surge of Power⟧買ったら移動速くなった。",
+        "translations": {
+          "en": "I bought ⟦Surge of Power⟧, and my movement speed increased.",
+          "ru": "Купил ⟦Surge of Power⟧ — скорость передвижения увеличилась."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "パワーサージ買ったら移動速くなった。",
+        "ms": 333,
+        "ok": true,
+        "source": "⟦Surge of Power⟧買ったら移動速くなった。",
+        "translations": {
+          "en": "I bought ⟦Surge of Power⟧, and my movement speed increased.",
+          "ru": "Купил ⟦Surge of Power⟧ — скорость передвижения увеличилась."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ガイストのライフドレインで吸われた。",
+        "ms": 329,
+        "ok": false,
+        "source": "⟦Lady Geist⟧の⟦Life Drain⟧で吸われた。",
+        "translations": {
+          "en": "I got drained by ⟦Lady Geist⟧’s ⟦Life Drain⟧.",
+          "ru": "Меня высосала ⟦Леди Гейст⟧ своим ⟦Life Drain⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Леди Гейст",
+            "missing: Lady Geist"
+          ]
+        }
+      },
+      {
+        "text": "ガイストのライフドレインで吸われた。",
+        "ms": 298,
+        "ok": false,
+        "source": "⟦Lady Geist⟧の⟦Life Drain⟧で吸われた。",
+        "translations": {
+          "en": "I got drained by ⟦Lady Geist⟧’s ⟦Life Drain⟧.",
+          "ru": "Меня высосала ⟦Леди Гейст⟧ своим ⟦Life Drain⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Леди Гейст",
+            "missing: Lady Geist"
+          ]
+        }
+      },
+      {
+        "text": "ガイストのライフドレインで吸われた。",
+        "ms": 306,
+        "ok": false,
+        "source": "⟦Lady Geist⟧の⟦Life Drain⟧で吸われた。",
+        "translations": {
+          "en": "I got drained by ⟦Lady Geist⟧’s ⟦Life Drain⟧.",
+          "ru": "Меня высосала ⟦Леди Гейст⟧ своим ⟦Life Drain⟧."
+        },
+        "problems": {
+          "en": [],
+          "ru": [
+            "unknown: Леди Гейст",
+            "missing: Lady Geist"
+          ]
+        }
+      },
+      {
+        "text": "ライフドレイン買って耐久上げる。",
+        "ms": 306,
+        "ok": true,
+        "source": "⟦Leech⟧買って耐久上げる。",
+        "translations": {
+          "en": "Buy ⟦Leech⟧ to boost my durability.",
+          "ru": "Куплю ⟦Leech⟧, чтобы повысить выносливость."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ライフドレイン買って耐久上げる。",
+        "ms": 289,
+        "ok": true,
+        "source": "⟦Leech⟧買って耐久上げる。",
+        "translations": {
+          "en": "Buy ⟦Leech⟧ to boost my durability.",
+          "ru": "Куплю ⟦Leech⟧, чтобы повысить выносливость."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ライフドレイン買って耐久上げる。",
+        "ms": 372,
+        "ok": true,
+        "source": "⟦Leech⟧買って耐久上げる。",
+        "translations": {
+          "en": "Buy ⟦Leech⟧ to boost my durability.",
+          "ru": "Куплю ⟦Leech⟧, чтобы повысить выносливость."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "今シルバー帯だからね。",
+        "ms": 271,
+        "ok": true,
+        "source": "今シルバー帯だからね。",
+        "translations": {
+          "en": "Right now I’m in Silver, you know.",
+          "ru": "Сейчас ведь серебряный ранг."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "今シルバー帯だからね。",
+        "ms": 273,
+        "ok": true,
+        "source": "今シルバー帯だからね。",
+        "translations": {
+          "en": "Right now I’m in Silver, you know.",
+          "ru": "Сейчас ведь серебряный ранг."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "今シルバー帯だからね。",
+        "ms": 258,
+        "ok": true,
+        "source": "今シルバー帯だからね。",
+        "translations": {
+          "en": "Right now I’m in Silver, you know.",
+          "ru": "Сейчас ведь серебряный ранг."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ヤマトの荷物まだ届かないんだよね。",
+        "ms": 269,
+        "ok": true,
+        "source": "ヤマトの荷物まだ届かないんだよね。",
+        "translations": {
+          "en": "Yamato’s loot still hasn’t arrived, huh.",
+          "ru": "Груз от Ямата всё ещё не пришёл, да."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ヤマトの荷物まだ届かないんだよね。",
+        "ms": 326,
+        "ok": true,
+        "source": "ヤマトの荷物まだ届かないんだよね。",
+        "translations": {
+          "en": "Yamato’s loot still hasn’t arrived, huh.",
+          "ru": "Груз от Ямата всё ещё не пришёл, да."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ヤマトの荷物まだ届かないんだよね。",
+        "ms": 276,
+        "ok": true,
+        "source": "ヤマトの荷物まだ届かないんだよね。",
+        "translations": {
+          "en": "Yamato’s loot still hasn’t arrived, huh.",
+          "ru": "Груз от Ямата всё ещё не пришёл, да."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "アポロチョコ食べながらやってます。",
+        "ms": 274,
+        "ok": true,
+        "source": "アポロチョコ食べながらやってます。",
+        "translations": {
+          "en": "I’m playing while eating an Apollo chocolate bar.",
+          "ru": "Я играю, перекусывая Аполло Чоко."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "アポロチョコ食べながらやってます。",
+        "ms": 264,
+        "ok": true,
+        "source": "アポロチョコ食べながらやってます。",
+        "translations": {
+          "en": "I’m playing while eating an Apollo chocolate bar.",
+          "ru": "Я играю, перекусывая Аполло Чоко."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "アポロチョコ食べながらやってます。",
+        "ms": 273,
+        "ok": true,
+        "source": "アポロチョコ食べながらやってます。",
+        "translations": {
+          "en": "I’m playing while eating an Apollo chocolate bar.",
+          "ru": "Я играю, перекусывая Аполло Чоко."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "それストーカーみたいで怖いな。",
+        "ms": 324,
+        "ok": true,
+        "source": "それストーカーみたいで怖いな。",
+        "translations": {
+          "en": "That’s kind of scary, like a stalker.",
+          "ru": "Это как-то жутковато, прямо как у сталкера."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "それストーカーみたいで怖いな。",
+        "ms": 295,
+        "ok": true,
+        "source": "それストーカーみたいで怖いな。",
+        "translations": {
+          "en": "That’s kind of scary, like a stalker.",
+          "ru": "Это как-то жутковато, прямо как у сталкера."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "それストーカーみたいで怖いな。",
+        "ms": 313,
+        "ok": true,
+        "source": "それストーカーみたいで怖いな。",
+        "translations": {
+          "en": "That’s kind of scary, like a stalker.",
+          "ru": "Это как-то жутковато, прямо как у сталкера."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "昨日ボクシングでノックダウン見た。",
+        "ms": 349,
+        "ok": true,
+        "source": "昨日ボクシングでノックダウン見た。",
+        "translations": {
+          "en": "I saw a knockdown in boxing yesterday.",
+          "ru": "Вчера в боксе видел нокдаун."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "昨日ボクシングでノックダウン見た。",
+        "ms": 253,
+        "ok": true,
+        "source": "昨日ボクシングでノックダウン見た。",
+        "translations": {
+          "en": "I saw a knockdown in boxing yesterday.",
+          "ru": "Вчера в боксе видел нокдаун."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "昨日ボクシングでノックダウン見た。",
+        "ms": 254,
+        "ok": true,
+        "source": "昨日ボクシングでノックダウン見た。",
+        "translations": {
+          "en": "I saw a knockdown in boxing yesterday.",
+          "ru": "Вчера в боксе видел нокдаун."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "レム睡眠が足りてない。",
+        "ms": 315,
+        "ok": true,
+        "source": "レム睡眠が足りてない。",
+        "translations": {
+          "en": "I’m not getting enough REM sleep.",
+          "ru": "Не хватает фазы быстрого сна."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "レム睡眠が足りてない。",
+        "ms": 300,
+        "ok": true,
+        "source": "レム睡眠が足りてない。",
+        "translations": {
+          "en": "I’m not getting enough REM sleep.",
+          "ru": "Не хватает фазы быстрого сна."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "レム睡眠が足りてない。",
+        "ms": 294,
+        "ok": true,
+        "source": "レム睡眠が足りてない。",
+        "translations": {
+          "en": "I’m not getting enough REM sleep.",
+          "ru": "Не хватает фазы быстрого сна."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ビリーって友達が見に来てる。",
+        "ms": 241,
+        "ok": true,
+        "source": "ビリーって友達が見に来てる。",
+        "translations": {
+          "en": "Billy’s friend is here watching.",
+          "ru": "К Билли пришли друзья посмотреть."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ビリーって友達が見に来てる。",
+        "ms": 241,
+        "ok": true,
+        "source": "ビリーって友達が見に来てる。",
+        "translations": {
+          "en": "Billy’s friend is here watching.",
+          "ru": "К Билли пришли друзья посмотреть."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ビリーって友達が見に来てる。",
+        "ms": 272,
+        "ok": true,
+        "source": "ビリーって友達が見に来てる。",
+        "translations": {
+          "en": "Billy’s friend is here watching.",
+          "ru": "К Билли пришли друзья посмотреть."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "アイビーリーグ出身らしいよ。",
+        "ms": 287,
+        "ok": true,
+        "source": "アイビーリーグ出身らしいよ。",
+        "translations": {
+          "en": "Looks like he’s from the Ivy League.",
+          "ru": "Кажется, он выпускник Лиги плюща."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "アイビーリーグ出身らしいよ。",
+        "ms": 290,
+        "ok": true,
+        "source": "アイビーリーグ出身らしいよ。",
+        "translations": {
+          "en": "Looks like he’s from the Ivy League.",
+          "ru": "Кажется, он выпускник Лиги плюща."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "アイビーリーグ出身らしいよ。",
+        "ms": 273,
+        "ok": true,
+        "source": "アイビーリーグ出身らしいよ。",
+        "translations": {
+          "en": "Looks like he’s from the Ivy League.",
+          "ru": "Кажется, он выпускник Лиги плюща."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ポケットWi-Fiの調子が悪い。",
+        "ms": 267,
+        "ok": true,
+        "source": "ポケットWi-Fiの調子が悪い。",
+        "translations": {
+          "en": "My pocket Wi-Fi is acting up.",
+          "ru": "Покет-вай‑фай плохо работает."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ポケットWi-Fiの調子が悪い。",
+        "ms": 328,
+        "ok": true,
+        "source": "ポケットWi-Fiの調子が悪い。",
+        "translations": {
+          "en": "My pocket Wi-Fi is acting up.",
+          "ru": "Покет-вай‑фай работает плохо."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ポケットWi-Fiの調子が悪い。",
+        "ms": 300,
+        "ok": true,
+        "source": "ポケットWi-Fiの調子が悪い。",
+        "translations": {
+          "en": "My pocket Wi-Fi is acting up.",
+          "ru": "Покет-вай‑фай плохо работает."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "セブンでいいか。",
+        "ms": 380,
+        "ok": true,
+        "source": "セブンでいいか。",
+        "translations": {
+          "en": "Is Seven okay?",
+          "ru": "Семёркой будет нормально?"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "セブンでいいか。",
+        "ms": 243,
+        "ok": true,
+        "source": "セブンでいいか。",
+        "translations": {
+          "en": "Is Seven okay?",
+          "ru": "Семёркой будет нормально?"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "セブンでいいか。",
+        "ms": 263,
+        "ok": true,
+        "source": "セブンでいいか。",
+        "translations": {
+          "en": "Is Seven okay?",
+          "ru": "Семёркой будет нормально?"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "今日はセブンで行くか。",
+        "ms": 246,
+        "ok": true,
+        "source": "今日は⟦Seven⟧で行くか。",
+        "translations": {
+          "en": "Shall we go with ⟦Seven⟧ today?",
+          "ru": "Сегодня сыграем за ⟦Seven⟧?"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "今日はセブンで行くか。",
+        "ms": 242,
+        "ok": true,
+        "source": "今日は⟦Seven⟧で行くか。",
+        "translations": {
+          "en": "Shall we go with ⟦Seven⟧ today?",
+          "ru": "Сегодня сыграем за ⟦Seven⟧?"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "今日はセブンで行くか。",
+        "ms": 280,
+        "ok": true,
+        "source": "今日は⟦Seven⟧で行くか。",
+        "translations": {
+          "en": "Shall we go with ⟦Seven⟧ today?",
+          "ru": "Сегодня сыграем за ⟦Seven⟧?"
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "コメントありがとうございます。",
+        "ms": 260,
+        "ok": true,
+        "source": "コメントありがとうございます。",
+        "translations": {
+          "en": "Thanks for the comment.",
+          "ru": "Спасибо за комментарий."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "コメントありがとうございます。",
+        "ms": 235,
+        "ok": true,
+        "source": "コメントありがとうございます。",
+        "translations": {
+          "en": "Thanks for the comment.",
+          "ru": "Спасибо за комментарий."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "コメントありがとうございます。",
+        "ms": 231,
+        "ok": true,
+        "source": "コメントありがとうございます。",
+        "translations": {
+          "en": "Thanks for the comment.",
+          "ru": "Спасибо за комментарий."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "今日は3時間くらいやる予定です。",
+        "ms": 248,
+        "ok": true,
+        "source": "今日は3時間くらいやる予定です。",
+        "translations": {
+          "en": "I plan to play for about three hours today.",
+          "ru": "Сегодня планирую поиграть часа три."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "今日は3時間くらいやる予定です。",
+        "ms": 249,
+        "ok": true,
+        "source": "今日は3時間くらいやる予定です。",
+        "translations": {
+          "en": "I plan to play for about three hours today.",
+          "ru": "Сегодня планирую поиграть часа три."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "今日は3時間くらいやる予定です。",
+        "ms": 263,
+        "ok": true,
+        "source": "今日は3時間くらいやる予定です。",
+        "translations": {
+          "en": "I plan to play for about three hours today.",
+          "ru": "Сегодня планирую поиграть часа три."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ちょっと水飲むね。",
+        "ms": 341,
+        "ok": true,
+        "source": "ちょっと水飲むね。",
+        "translations": {
+          "en": "Gonna grab a quick drink of water.",
+          "ru": "Чуть водички попью."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ちょっと水飲むね。",
+        "ms": 248,
+        "ok": true,
+        "source": "ちょっと水飲むね。",
+        "translations": {
+          "en": "Gonna grab a quick drink of water.",
+          "ru": "Чуть водички попью."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ちょっと水飲むね。",
+        "ms": 257,
+        "ok": true,
+        "source": "ちょっと水飲むね。",
+        "translations": {
+          "en": "Gonna grab a quick drink of water.",
+          "ru": "Чуть водички попью."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "1番レーンが押されてる。",
+        "ms": 241,
+        "ok": true,
+        "source": "1番レーンが押されてる。",
+        "translations": {
+          "en": "Lane 1 is getting pushed.",
+          "ru": "Первая линия давят."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "1番レーンが押されてる。",
+        "ms": 243,
+        "ok": true,
+        "source": "1番レーンが押されてる。",
+        "translations": {
+          "en": "Lane 1 is getting pushed.",
+          "ru": "Первая линия давят."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "1番レーンが押されてる。",
+        "ms": 266,
+        "ok": true,
+        "source": "1番レーンが押されてる。",
+        "translations": {
+          "en": "Lane 1 is getting pushed.",
+          "ru": "Первая линия давят."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ミッドボス取りに行こう。",
+        "ms": 287,
+        "ok": true,
+        "source": "ミッドボス取りに行こう。",
+        "translations": {
+          "en": "Let’s go take the mid boss.",
+          "ru": "Пойдём забирать мид-босса."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ミッドボス取りに行こう。",
+        "ms": 280,
+        "ok": true,
+        "source": "ミッドボス取りに行こう。",
+        "translations": {
+          "en": "Let’s go take the mid boss.",
+          "ru": "Пойдём забирать мид-босса."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ミッドボス取りに行こう。",
+        "ms": 287,
+        "ok": true,
+        "source": "ミッドボス取りに行こう。",
+        "translations": {
+          "en": "Let’s go take the mid boss.",
+          "ru": "Пойдём забирать мид-босса."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ソウル差が5000ある。",
+        "ms": 567,
+        "ok": true,
+        "source": "ソウル差が5000ある。",
+        "translations": {
+          "en": "There’s a 5,000 gold difference.",
+          "ru": "Разница в очках души — 5000."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ソウル差が5000ある。",
+        "ms": 295,
+        "ok": true,
+        "source": "ソウル差が5000ある。",
+        "translations": {
+          "en": "There’s a 5,000 gold difference.",
+          "ru": "Разница в очках души — 5000."
+        },
+        "problems": {
+          "en": [],
+          "ru": []
+        }
+      },
+      {
+        "text": "ソウル差が5000ある。",
+        "ms": 289,
+        "ok": true,
+        "source": "ソウル差が5000ある。",
+        "translations": {
+          "en": "There’s a 5,000 gold difference.",
+          "ru": "Разница в очках души — 5000."
         },
         "problems": {
           "en": [],
