@@ -21,6 +21,12 @@
       <Dialog.Description>v{version} で変わったこと</Dialog.Description>
     </Dialog.Header>
     <ReleaseNotes {releases} />
+    <a
+      class="text-sm underline"
+      href={`https://github.com/Chiji1108/deadlock-jimaku/releases/tag/v${version}`}
+      target="_blank"
+      rel="noreferrer">詳しくはこちら</a
+    >
     <Dialog.Footer>
       <Dialog.Close>
         {#snippet child({ props })}
