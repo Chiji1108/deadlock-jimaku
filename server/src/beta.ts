@@ -1,7 +1,7 @@
 // ベータ期間中の無料の提供（DESIGN.md 17.2）。開発者のキーで、いちばん安い組み合わせ（Qwen と OpenRouter）を中継する。
 // 使う人はアプリが自動でもらうコードで見分ける。コードはおすそ分けのコードと同じ表に置き、同じ決まり（1 日の上限、止める）で動く
 
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { day, month, type Db } from "./db";
 import { betaGrants, betaKeys, betaSettings, betaSpend, codes, codeUsage, issuers } from "./schema";
 import { decrypt, newCode, newId, normalizeCode, sha256 } from "./secrets";
@@ -18,11 +18,13 @@ export interface BetaEnv {
   BETA_OPENROUTER_KEY?: string;
 }
 
-/** 1 つのコード（1 台）の 1 日の上限（ドル）。いちばん安い組み合わせで約 14 時間分。ふつうの配信では届かない */
+/** 1 つのコード（1 台）の 1 日の上限（ドル）の既定。いちばん安い組み合わせで約 14 時間分。ふつうの配信では届かない */
 export const BETA_CODE_DAILY_USD = 0.5;
-/** ベータ全体の 1 日の上限（ドル）。届いたら、その日はどのコードも中継しない（悪用されても、ここで止まる）。
+/** ベータ全体の 1 日の上限（ドル）の既定。届いたら、その日はどのコードも中継しない（悪用されても、ここで止まる）。
  * 最後の 1 回は上限を少し越える（届く前の要求は通す）ので、越える幅は 1 回の見積もりまで */
 export const BETA_DAILY_USD = 5;
+/** 管理画面から入れられる上限のいちばん大きい値（ドル）。桁を打ち間違えても、ここで止まる */
+export const BETA_LIMIT_MAX_USD = 1000;
 /** 同じ所（IP アドレス）に 1 日に出すコードの数 */
 export const BETA_CODES_PER_IP = 3;
 /** 1 日に出すコードの数 */
@@ -38,6 +40,19 @@ export interface RelayKey {
 export async function betaClosed(db: Db): Promise<boolean> {
   const row = await db.select().from(betaSettings).where(eq(betaSettings.name, "closed")).get();
   return row?.value === "1";
+}
+
+/** 1 日の上限（ドル）。管理画面で変えていなければ、既定の値（DESIGN.md 17.3） */
+export async function betaLimits(db: Db): Promise<{ dailyUsd: number; codeDailyUsd: number }> {
+  const rows = await db
+    .select()
+    .from(betaSettings)
+    .where(inArray(betaSettings.name, ["dailyUsd", "codeDailyUsd"]));
+  const saved = (name: string, standard: number) => {
+    const value = Number(rows.find((row) => row.name === name)?.value);
+    return value > 0 ? value : standard;
+  };
+  return { dailyUsd: saved("dailyUsd", BETA_DAILY_USD), codeDailyUsd: saved("codeDailyUsd", BETA_CODE_DAILY_USD) };
 }
 
 /**
@@ -112,6 +127,7 @@ export async function grantBetaCode(db: Db, place: string, now: number): Promise
   if ((await counted(place)).count > BETA_CODES_PER_IP) return { error: "tooMany" };
   if ((await counted(ALL_PLACES)).count > BETA_CODES_PER_DAY) return { error: "full" };
   const code = newCode();
+  const { codeDailyUsd } = await betaLimits(db);
   await db.batch([
     // 持ち主の行は、初めてのコードを出すときに作る（合言葉は使えない値。管理の口には入れない）
     db
@@ -123,7 +139,7 @@ export async function grantBetaCode(db: Db, place: string, now: number): Promise
       codeHash: await sha256(normalizeCode(code)),
       issuerId: BETA_ISSUER,
       memo: "beta",
-      dailyLimitUsd: BETA_CODE_DAILY_USD,
+      dailyLimitUsd: codeDailyUsd,
       createdAt: now,
     }),
   ]);
@@ -148,13 +164,14 @@ export async function reserveBeta(db: Db, codeId: string, estimate: number, now:
     .returning({ id: codes.id })
     .get();
   if (!mine) return false;
+  const { dailyUsd } = await betaLimits(db);
   const all = await db
     .insert(betaSpend)
     .values({ day: today, usd: estimate })
     .onConflictDoUpdate({
       target: betaSpend.day,
       set: { usd: sql`${betaSpend.usd} + ${estimate}` },
-      setWhere: sql`${betaSpend.usd} < ${BETA_DAILY_USD}`,
+      setWhere: sql`${betaSpend.usd} < ${dailyUsd}`,
     })
     .returning({ usd: betaSpend.usd })
     .get();

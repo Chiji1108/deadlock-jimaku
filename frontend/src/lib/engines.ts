@@ -304,7 +304,7 @@ export const MODES: {
     label: "おすすめ",
     traits: "高精度・キー不要",
     hourlyUsd: 0,
-    hint: "途中の字幕は Chrome、確定の字幕・用語・翻訳・ふりがなの読み分けは、開発者のサーバーを通して作ります（1 日の上限があります）",
+    hint: "途中の字幕は Chrome、確定の字幕・用語・翻訳・ふりがなの読み分けは、デドロ字幕のサーバーを通して作ります。1 日の上限に届いても、字幕は Chrome の作り方で続きます",
     engines: BETA,
     badge: "ベータ期間中は無料",
   },
@@ -313,7 +313,7 @@ export const MODES: {
     label: "Chrome",
     traits: "サーバーを使わない・キー不要",
     hourlyUsd: 0,
-    hint: "多くの字幕ソフトと同じく、Chrome の音声認識と翻訳だけを使います。開発者のサーバーは使いません",
+    hint: "多くの字幕ソフトと同じく、Chrome の音声認識と翻訳だけを使います。デドロ字幕のサーバーは使いません",
     engines: CHROME,
   },
   {

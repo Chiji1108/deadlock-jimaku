@@ -139,7 +139,7 @@ class Panel {
     return (
       this.running &&
       !!this.settings &&
-      !chromeFinals(this.settings.engines) &&
+      !chromeFinals(this.view!.running) &&
       this.level !== undefined &&
       this.now - this.heardAt > SILENT_MS
     );
@@ -487,6 +487,15 @@ export function betaRefusalText(e: BetaRefusal): string {
     default:
       return unknown(e);
   }
+}
+
+/** ベータのコードで断られて、Chrome の作り方で続けていることを知らせる文 */
+export function fallbackText(e: TranscriptionError): string {
+  const reason =
+    e.code === "betaLimit"
+      ? `今日の無料の分を使い切りました。${LIMIT_RESET}`
+      : "ベータ期間中の無料の提供が止まっています";
+  return `${reason}。字幕は止めずに、Chrome の作り方で続けています。字幕を始め直すと、選んだモードに戻ります`;
 }
 
 export const giftValid = (s: GiftStatus | undefined) =>

@@ -6,12 +6,12 @@ import { Hono } from "hono";
 import { accessEmail, type AccessEnv } from "./access";
 import { page, script } from "./adminPage";
 import {
-  BETA_CODE_DAILY_USD,
   BETA_CODES_PER_DAY,
   BETA_CODES_PER_IP,
-  BETA_DAILY_USD,
   BETA_ISSUER,
+  BETA_LIMIT_MAX_USD,
   betaClosed,
+  betaLimits,
 } from "./beta";
 import { day, month, open, type Db } from "./db";
 import { betaGrants, betaKeys, betaSettings, betaSpend, codes, codeUsage } from "./schema";
@@ -87,7 +87,7 @@ admin.get("/api/summary", async (c) => {
   const db = c.var.db;
   const now = Date.now();
   const today = day(now);
-  const [spend, monthUsd, total, active, granted, closed] = await Promise.all([
+  const [spend, monthUsd, total, active, granted, closed, limits] = await Promise.all([
     db.select({ usd: betaSpend.usd }).from(betaSpend).where(eq(betaSpend.day, today)).get(),
     db
       .select({ usd: sql<number>`COALESCE(SUM(${codeUsage.usd}), 0)` })
@@ -107,14 +107,15 @@ admin.get("/api/summary", async (c) => {
       .where(and(eq(betaGrants.day, today), eq(betaGrants.place, "*")))
       .get(),
     betaClosed(db),
+    betaLimits(db),
   ]);
   return c.json({
     email: c.var.email,
     closed,
-    today: { usd: spend?.usd ?? 0, limitUsd: BETA_DAILY_USD, codes: granted?.n ?? 0, codesLimit: BETA_CODES_PER_DAY },
+    today: { usd: spend?.usd ?? 0, limitUsd: limits.dailyUsd, codes: granted?.n ?? 0, codesLimit: BETA_CODES_PER_DAY },
     month: { usd: monthUsd?.usd ?? 0 },
     codes: { total: total?.n ?? 0, activeToday: active?.n ?? 0 },
-    limits: { codeDailyUsd: BETA_CODE_DAILY_USD, codesPerPlace: BETA_CODES_PER_IP },
+    limits: { codeDailyUsd: limits.codeDailyUsd, codesPerPlace: BETA_CODES_PER_IP, maxUsd: BETA_LIMIT_MAX_USD },
   });
 });
 
@@ -210,14 +211,35 @@ admin.delete("/api/keys/:id", async (c) => {
   return c.body(null, 204);
 });
 
-/** ベータを閉じる・開ける。閉じると、コードを出さず、中継もしない（出したコードは残る） */
+/**
+ * ベータの設定を変える。送った項目だけを変える。`closed` は、閉じるとコードを出さず、中継もしない（出したコードは残る）。
+ * `dailyUsd` はベータ全体の 1 日の上限、`codeDailyUsd` は 1 つのコードの 1 日の上限（出してあるコードにも当てる）
+ */
 admin.put("/api/settings", async (c) => {
-  const body = await c.req.json<{ closed?: unknown }>().catch(() => ({}) as { closed?: unknown });
-  if (typeof body.closed !== "boolean") return c.json({ error: "invalid" }, 400);
-  const value = body.closed ? "1" : "0";
-  await c.var.db
-    .insert(betaSettings)
-    .values({ name: "closed", value })
-    .onConflictDoUpdate({ target: betaSettings.name, set: { value } });
+  type Body = { closed?: unknown; dailyUsd?: unknown; codeDailyUsd?: unknown };
+  const body = await c.req.json<Body>().catch(() => ({}) as Body);
+  const usd = (value: unknown) =>
+    typeof value === "number" && value > 0 && value <= BETA_LIMIT_MAX_USD ? String(value) : undefined;
+  const values = {
+    closed: typeof body.closed === "boolean" ? (body.closed ? "1" : "0") : undefined,
+    dailyUsd: usd(body.dailyUsd),
+    codeDailyUsd: usd(body.codeDailyUsd),
+  };
+  const sent = Object.entries(body).filter(([, value]) => value !== undefined);
+  const known = Object.entries(values).filter(([, value]) => value !== undefined) as [string, string][];
+  if (known.length === 0 || known.length !== sent.length) return c.json({ error: "invalid" }, 400);
+  const db = c.var.db;
+  for (const [name, value] of known) {
+    await db
+      .insert(betaSettings)
+      .values({ name, value })
+      .onConflictDoUpdate({ target: betaSettings.name, set: { value } });
+  }
+  if (values.codeDailyUsd) {
+    await db
+      .update(codes)
+      .set({ dailyLimitUsd: Number(values.codeDailyUsd) })
+      .where(eq(codes.issuerId, BETA_ISSUER));
+  }
   return c.body(null, 204);
 });

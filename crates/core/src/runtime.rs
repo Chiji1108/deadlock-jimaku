@@ -136,7 +136,8 @@ pub async fn run(store: Arc<Store>, options: Options) {
     let mut subtitles_slot = Slot::new();
     let mut rank_account = None;
     loop {
-        let settings: Settings = settings_rx.borrow_and_update().clone();
+        settings_rx.borrow_and_update();
+        let settings: Settings = store.settings();
         let keys = tokio::task::spawn_blocking(secrets::load)
             .await
             .unwrap_or_default();
@@ -340,7 +341,10 @@ async fn gift_accepted(
         });
         if let Err(e) = checked {
             // 1 つのコードが中継する会社は、どれも同じ種類
-            store.set_transcription_error(Some(share::for_code(e, used[0])));
+            let refused = share::for_code(e, used[0]);
+            if !store.fall_back(&refused) {
+                store.set_transcription_error(Some(refused));
+            }
             return false;
         }
     }
@@ -370,6 +374,10 @@ async fn supervise(
         }
     };
     tracing::info!("transcription ended: {error:?}");
+    // ベータのコードで断られたら、止めずに Chrome の作り方で続ける
+    if error.as_ref().is_some_and(|e| store.fall_back(e)) {
+        return;
+    }
     store.set_transcription_error(error);
 }
 

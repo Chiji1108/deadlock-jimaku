@@ -19,7 +19,7 @@
   import AboutDialog from "./parts/AboutDialog.svelte";
   import Onboarding from "./parts/Onboarding.svelte";
   import WhatsNew from "./parts/WhatsNew.svelte";
-  import { panel, transcriptionErrorText } from "./panel.svelte";
+  import { fallbackText, panel, transcriptionErrorText } from "./panel.svelte";
   import { total, unpriced, usd } from "./usage";
   import AudioTab from "./tabs/AudioTab.svelte";
   import DisplayTab from "./tabs/DisplayTab.svelte";
@@ -99,7 +99,7 @@
         dot: "bg-sky-500 animate-pulse",
       };
     if (panel.silent) return { label: "音が届いていません", dot: "bg-amber-500" };
-    if (chromeFinals(s.engines)) return chromeStatus();
+    if (chromeFinals(panel.view!.running)) return chromeStatus();
     if (panel.level === undefined)
       return { label: "準備しています…", dot: "bg-sky-500 animate-pulse" };
     return { label: "字幕を出しています", dot: "bg-emerald-500 animate-pulse" };
@@ -201,6 +201,13 @@
       </div>
       <main bind:this={content} class="min-w-0 flex-1 group-data-vertical/tabs:overflow-y-auto">
         <div class="mx-auto flex {pageWidth} flex-col gap-4 px-4 py-6">
+          {#if panel.view?.fallback}
+            <Alert.Root>
+              <CircleAlertIcon />
+              <Alert.Title>Chrome の作り方で続けています</Alert.Title>
+              <Alert.Description>{fallbackText(panel.view.fallback)}</Alert.Description>
+            </Alert.Root>
+          {/if}
           {#if panel.view?.unsaved}
             <Alert.Root variant="destructive">
               <CircleAlertIcon />
