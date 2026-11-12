@@ -91,6 +91,12 @@ export const ITEMS: { [K in Item]: { label: string; hint: string; options: Optio
         note: "正式な名前だけ",
       },
       {
+        value: "geminiNano",
+        label: "Gemini Nano（Chrome の中で確かめる）",
+        price: "無料",
+        note: "略称や「〇〇のウルト」も判定する。文字を PC から出さない。会社の判定モデルほどは当たらない。初回に Chrome が約 4 GB をダウンロードし、GPU を使う。使えない PC では辞書の一致になる",
+      },
+      {
         value: "decisions",
         label: "GPT-6 Luna（確かめるだけ）",
         price: "100 万トークンで入力 $0.1",
@@ -324,7 +330,8 @@ export function unavailable<K extends Item>(t: Engines, item: K, value: Engines[
   if (item === "live")
     return (chromeFinals(t) || t.translation === "chromeTranslator") && value !== "chrome";
   if (item === "translation") return !usesChrome(t) && value === "chromeTranslator";
-  if (item === "terms") return llmTranslation(t);
+  // Gemini Nano は Chrome のページの中にある
+  if (item === "terms") return llmTranslation(t) || (value === "geminiNano" && !usesChrome(t));
   return false;
 }
 

@@ -369,7 +369,7 @@ impl Pipeline {
                     }
                 }
             }
-            ChromeEvent::Translated(_) | ChromeEvent::Closed => {}
+            ChromeEvent::Translated(_) | ChromeEvent::Decided(_) | ChromeEvent::Closed => {}
         }
     }
 

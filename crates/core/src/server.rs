@@ -519,6 +519,9 @@ async fn chrome_session(mut socket: WebSocket, store: Arc<Store>) {
                     Ok(ChromeMsg::Translated(translated)) => {
                         store.send_chrome_event(ChromeEvent::Translated(translated));
                     }
+                    Ok(ChromeMsg::Decided(decided)) => {
+                        store.send_chrome_event(ChromeEvent::Decided(decided));
+                    }
                     Ok(ChromeMsg::Status { status }) => store.set_chrome_status(id, status),
                     Err(e) => tracing::warn!("invalid chrome message: {e}"),
                 }

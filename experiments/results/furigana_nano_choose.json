@@ -1,0 +1,2246 @@
+{
+ "furigana_cases.json": {
+  "system": "You decide how a word is read aloud in a Japanese subtitle from a streamer playing the video game Deadlock. The input is JSON: \"sentence\" is the subtitle, \"word\" is the part in question (with the kana that follow it), and \"readings\" are the possible readings in hiragana, each under a number. Answer with JSON {\"reading\": ...}: the number of the one reading that fits the meaning of this sentence.",
+  "summary": {
+   "runs": 180,
+   "kept": 145,
+   "fixed": 12,
+   "broken": 8,
+   "stillWrong": 15,
+   "asked": 174,
+   "medianMs": 273,
+   "p90Ms": 293
+  },
+  "runs": [
+   {
+    "text": "さっき行った店より、こっちの方がいいね",
+    "outcome": "kept",
+    "dictionary": "さっきいったみせより、こっちのほうがいいね",
+    "chosen": "さっきいったみせより、こっちのほうがいいね"
+   },
+   {
+    "text": "さっき行った店より、こっちの方がいいね",
+    "outcome": "kept",
+    "dictionary": "さっきいったみせより、こっちのほうがいいね",
+    "chosen": "さっきいったみせより、こっちのほうがいいね"
+   },
+   {
+    "text": "さっき行った店より、こっちの方がいいね",
+    "outcome": "kept",
+    "dictionary": "さっきいったみせより、こっちのほうがいいね",
+    "chosen": "さっきいったみせより、こっちのほうがいいね"
+   },
+   {
+    "text": "今日は辛い試合が続いてるな",
+    "outcome": "fixed",
+    "dictionary": "きょうはからいしあいがつづいてるな",
+    "chosen": "きょうはつらいしあいがつづいてるな"
+   },
+   {
+    "text": "今日は辛い試合が続いてるな",
+    "outcome": "fixed",
+    "dictionary": "きょうはからいしあいがつづいてるな",
+    "chosen": "きょうはつらいしあいがつづいてるな"
+   },
+   {
+    "text": "今日は辛い試合が続いてるな",
+    "outcome": "fixed",
+    "dictionary": "きょうはからいしあいがつづいてるな",
+    "chosen": "きょうはつらいしあいがつづいてるな"
+   },
+   {
+    "text": "このカレーめっちゃ辛いんだけど",
+    "outcome": "kept",
+    "dictionary": "このかれーめっちゃからいんだけど",
+    "chosen": "このかれーめっちゃからいんだけど"
+   },
+   {
+    "text": "このカレーめっちゃ辛いんだけど",
+    "outcome": "kept",
+    "dictionary": "このかれーめっちゃからいんだけど",
+    "chosen": "このかれーめっちゃからいんだけど"
+   },
+   {
+    "text": "このカレーめっちゃ辛いんだけど",
+    "outcome": "kept",
+    "dictionary": "このかれーめっちゃからいんだけど",
+    "chosen": "このかれーめっちゃからいんだけど"
+   },
+   {
+    "text": "このヒーロー今めっちゃ人気だよね",
+    "outcome": "kept",
+    "dictionary": "このひーろーいまめっちゃにんきだよね",
+    "chosen": "このひーろーいまめっちゃにんきだよね"
+   },
+   {
+    "text": "このヒーロー今めっちゃ人気だよね",
+    "outcome": "kept",
+    "dictionary": "このひーろーいまめっちゃにんきだよね",
+    "chosen": "このひーろーいまめっちゃにんきだよね"
+   },
+   {
+    "text": "このヒーロー今めっちゃ人気だよね",
+    "outcome": "kept",
+    "dictionary": "このひーろーいまめっちゃにんきだよね",
+    "chosen": "このひーろーいまめっちゃにんきだよね"
+   },
+   {
+    "text": "人気のない場所で待ち伏せしよう",
+    "outcome": "fixed",
+    "dictionary": "にんきのないばしょでまちぶせしよう",
+    "chosen": "ひとけのないばしょでまちぶせしよう"
+   },
+   {
+    "text": "人気のない場所で待ち伏せしよう",
+    "outcome": "still wrong",
+    "dictionary": "にんきのないばしょでまちぶせしよう",
+    "chosen": "にんきのないばしょでまちぶせしよう"
+   },
+   {
+    "text": "人気のない場所で待ち伏せしよう",
+    "outcome": "still wrong",
+    "dictionary": "にんきのないばしょでまちぶせしよう",
+    "chosen": "にんきのないばしょでまちぶせしよう"
+   },
+   {
+    "text": "エイムが上手い人には勝てないわ",
+    "outcome": "kept",
+    "dictionary": "えいむがうまいひとにはかてないわ",
+    "chosen": "えいむがうまいひとにはかてないわ"
+   },
+   {
+    "text": "エイムが上手い人には勝てないわ",
+    "outcome": "kept",
+    "dictionary": "えいむがうまいひとにはかてないわ",
+    "chosen": "えいむがうまいひとにはかてないわ"
+   },
+   {
+    "text": "エイムが上手い人には勝てないわ",
+    "outcome": "kept",
+    "dictionary": "えいむがうまいひとにはかてないわ",
+    "chosen": "えいむがうまいひとにはかてないわ"
+   },
+   {
+    "text": "絵が上手だねって言われた",
+    "outcome": "kept",
+    "dictionary": "えがじょうずだねっていわれた",
+    "chosen": "えがじょうずだねっていわれた"
+   },
+   {
+    "text": "絵が上手だねって言われた",
+    "outcome": "kept",
+    "dictionary": "えがじょうずだねっていわれた",
+    "chosen": "えがじょうずだねっていわれた"
+   },
+   {
+    "text": "絵が上手だねって言われた",
+    "outcome": "kept",
+    "dictionary": "えがじょうずだねっていわれた",
+    "chosen": "えがじょうずだねっていわれた"
+   },
+   {
+    "text": "下手に動くとやられるぞ",
+    "outcome": "kept",
+    "dictionary": "へたにうごくとやられるぞ",
+    "chosen": "へたにうごくとやられるぞ"
+   },
+   {
+    "text": "下手に動くとやられるぞ",
+    "outcome": "kept",
+    "dictionary": "へたにうごくとやられるぞ",
+    "chosen": "へたにうごくとやられるぞ"
+   },
+   {
+    "text": "下手に動くとやられるぞ",
+    "outcome": "kept",
+    "dictionary": "へたにうごくとやられるぞ",
+    "chosen": "へたにうごくとやられるぞ"
+   },
+   {
+    "text": "俺は射撃が下手なんだよな",
+    "outcome": "kept",
+    "dictionary": "おれはしゃげきがへたなんだよな",
+    "chosen": "おれはしゃげきがへたなんだよな"
+   },
+   {
+    "text": "俺は射撃が下手なんだよな",
+    "outcome": "kept",
+    "dictionary": "おれはしゃげきがへたなんだよな",
+    "chosen": "おれはしゃげきがへたなんだよな"
+   },
+   {
+    "text": "俺は射撃が下手なんだよな",
+    "outcome": "kept",
+    "dictionary": "おれはしゃげきがへたなんだよな",
+    "chosen": "おれはしゃげきがへたなんだよな"
+   },
+   {
+    "text": "敵が何人いるか見てくれる？",
+    "outcome": "kept",
+    "dictionary": "てきがなんにんいるかみてくれる？",
+    "chosen": "てきがなんにんいるかみてくれる？"
+   },
+   {
+    "text": "敵が何人いるか見てくれる？",
+    "outcome": "kept",
+    "dictionary": "てきがなんにんいるかみてくれる？",
+    "chosen": "てきがなんにんいるかみてくれる？"
+   },
+   {
+    "text": "敵が何人いるか見てくれる？",
+    "outcome": "kept",
+    "dictionary": "てきがなんにんいるかみてくれる？",
+    "chosen": "てきがなんにんいるかみてくれる？"
+   },
+   {
+    "text": "何で今そこに行ったの",
+    "outcome": "fixed",
+    "dictionary": "なにでいまそこにいったの",
+    "chosen": "なんでいまそこにいったの"
+   },
+   {
+    "text": "何で今そこに行ったの",
+    "outcome": "fixed",
+    "dictionary": "なにでいまそこにいったの",
+    "chosen": "なんでいまそこにいったの"
+   },
+   {
+    "text": "何で今そこに行ったの",
+    "outcome": "fixed",
+    "dictionary": "なにでいまそこにいったの",
+    "chosen": "なんでいまそこにいったの"
+   },
+   {
+    "text": "一日中ランク回してた",
+    "outcome": "still wrong",
+    "dictionary": "いっにちちゅうらんくまわしてた",
+    "chosen": "いっにちちゅうらんくまわしてた"
+   },
+   {
+    "text": "一日中ランク回してた",
+    "outcome": "still wrong",
+    "dictionary": "いっにちちゅうらんくまわしてた",
+    "chosen": "いっにちちゅうらんくまわしてた"
+   },
+   {
+    "text": "一日中ランク回してた",
+    "outcome": "still wrong",
+    "dictionary": "いっにちちゅうらんくまわしてた",
+    "chosen": "いっにちちゅうらんくまわしてた"
+   },
+   {
+    "text": "来月の一日にアプデが来るらしい",
+    "outcome": "kept",
+    "dictionary": "らいげつのついたちにあぷでがくるらしい",
+    "chosen": "らいげつのついたちにあぷでがくるらしい"
+   },
+   {
+    "text": "来月の一日にアプデが来るらしい",
+    "outcome": "kept",
+    "dictionary": "らいげつのついたちにあぷでがくるらしい",
+    "chosen": "らいげつのついたちにあぷでがくるらしい"
+   },
+   {
+    "text": "来月の一日にアプデが来るらしい",
+    "outcome": "kept",
+    "dictionary": "らいげつのついたちにあぷでがくるらしい",
+    "chosen": "らいげつのついたちにあぷでがくるらしい"
+   },
+   {
+    "text": "今戦闘の最中だから待って",
+    "outcome": "kept",
+    "dictionary": "いませんとうのさいちゅうだからまって",
+    "chosen": "いませんとうのさいちゅうだからまって"
+   },
+   {
+    "text": "今戦闘の最中だから待って",
+    "outcome": "kept",
+    "dictionary": "いませんとうのさいちゅうだからまって",
+    "chosen": "いませんとうのさいちゅうだからまって"
+   },
+   {
+    "text": "今戦闘の最中だから待って",
+    "outcome": "kept",
+    "dictionary": "いませんとうのさいちゅうだからまって",
+    "chosen": "いませんとうのさいちゅうだからまって"
+   },
+   {
+    "text": "もうやめたい、止めてくれ",
+    "outcome": "kept",
+    "dictionary": "もうやめたい、とめてくれ",
+    "chosen": "もうやめたい、やめてくれ"
+   },
+   {
+    "text": "もうやめたい、止めてくれ",
+    "outcome": "kept",
+    "dictionary": "もうやめたい、とめてくれ",
+    "chosen": "もうやめたい、やめてくれ"
+   },
+   {
+    "text": "もうやめたい、止めてくれ",
+    "outcome": "kept",
+    "dictionary": "もうやめたい、とめてくれ",
+    "chosen": "もうやめたい、やめてくれ"
+   },
+   {
+    "text": "そこで足を止めるな",
+    "outcome": "kept",
+    "dictionary": "そこであしをとめるな",
+    "chosen": "そこであしをとめるな"
+   },
+   {
+    "text": "そこで足を止めるな",
+    "outcome": "kept",
+    "dictionary": "そこであしをとめるな",
+    "chosen": "そこであしをとめるな"
+   },
+   {
+    "text": "そこで足を止めるな",
+    "outcome": "kept",
+    "dictionary": "そこであしをとめるな",
+    "chosen": "そこであしをとめるな"
+   },
+   {
+    "text": "後ろから来てる、気をつけて",
+    "outcome": "kept",
+    "dictionary": "うしろからきてる、きをつけて",
+    "chosen": "うしろからきてる、きをつけて"
+   },
+   {
+    "text": "後ろから来てる、気をつけて",
+    "outcome": "kept",
+    "dictionary": "うしろからきてる、きをつけて",
+    "chosen": "うしろからきてる、きをつけて"
+   },
+   {
+    "text": "後ろから来てる、気をつけて",
+    "outcome": "kept",
+    "dictionary": "うしろからきてる、きをつけて",
+    "chosen": "うしろからきてる、きをつけて"
+   },
+   {
+    "text": "後で動画を見返そう",
+    "outcome": "kept",
+    "dictionary": "あとでどうがをみかえそう",
+    "chosen": "あとでどうがをみかえそう"
+   },
+   {
+    "text": "後で動画を見返そう",
+    "outcome": "kept",
+    "dictionary": "あとでどうがをみかえそう",
+    "chosen": "あとでどうがをみかえそう"
+   },
+   {
+    "text": "後で動画を見返そう",
+    "outcome": "kept",
+    "dictionary": "あとでどうがをみかえそう",
+    "chosen": "あとでどうがをみかえそう"
+   },
+   {
+    "text": "その間にタワーを折ろう",
+    "outcome": "kept",
+    "dictionary": "そのあいだにたわーをおろう",
+    "chosen": "そのあいだにたわーをおろう"
+   },
+   {
+    "text": "その間にタワーを折ろう",
+    "outcome": "kept",
+    "dictionary": "そのあいだにたわーをおろう",
+    "chosen": "そのあいだにたわーをおろう"
+   },
+   {
+    "text": "その間にタワーを折ろう",
+    "outcome": "kept",
+    "dictionary": "そのあいだにたわーをおろう",
+    "chosen": "そのあいだにたわーをおろう"
+   },
+   {
+    "text": "間に合った、危なかった",
+    "outcome": "kept",
+    "dictionary": "まにあった、あぶなかった",
+    "chosen": "まにあった、あぶなかった"
+   },
+   {
+    "text": "間に合った、危なかった",
+    "outcome": "kept",
+    "dictionary": "まにあった、あぶなかった",
+    "chosen": "まにあった、あぶなかった"
+   },
+   {
+    "text": "間に合った、危なかった",
+    "outcome": "kept",
+    "dictionary": "まにあった、あぶなかった",
+    "chosen": "まにあった、あぶなかった"
+   },
+   {
+    "text": "この中に敵が隠れてる",
+    "outcome": "kept",
+    "dictionary": "このなかにてきがかくれてる",
+    "chosen": "このなかにてきがかくれてる"
+   },
+   {
+    "text": "この中に敵が隠れてる",
+    "outcome": "kept",
+    "dictionary": "このなかにてきがかくれてる",
+    "chosen": "このなかにてきがかくれてる"
+   },
+   {
+    "text": "この中に敵が隠れてる",
+    "outcome": "kept",
+    "dictionary": "このなかにてきがかくれてる",
+    "chosen": "このなかにてきがかくれてる"
+   },
+   {
+    "text": "今集中してるから話しかけないで",
+    "outcome": "kept",
+    "dictionary": "いましゅうちゅうしてるからはなしかけないで",
+    "chosen": "いましゅうちゅうしてるからはなしかけないで"
+   },
+   {
+    "text": "今集中してるから話しかけないで",
+    "outcome": "kept",
+    "dictionary": "いましゅうちゅうしてるからはなしかけないで",
+    "chosen": "いましゅうちゅうしてるからはなしかけないで"
+   },
+   {
+    "text": "今集中してるから話しかけないで",
+    "outcome": "kept",
+    "dictionary": "いましゅうちゅうしてるからはなしかけないで",
+    "chosen": "いましゅうちゅうしてるからはなしかけないで"
+   },
+   {
+    "text": "世界中の人が見てるんだよ",
+    "outcome": "still wrong",
+    "dictionary": "せかいちゅうのひとがみてるんだよ",
+    "chosen": "せかいなかのじんがみてるんだよ"
+   },
+   {
+    "text": "世界中の人が見てるんだよ",
+    "outcome": "still wrong",
+    "dictionary": "せかいちゅうのひとがみてるんだよ",
+    "chosen": "せかいなかのじんがみてるんだよ"
+   },
+   {
+    "text": "世界中の人が見てるんだよ",
+    "outcome": "still wrong",
+    "dictionary": "せかいちゅうのひとがみてるんだよ",
+    "chosen": "せかいなかのじんがみてるんだよ"
+   },
+   {
+    "text": "一人で三人倒したのは凄い",
+    "outcome": "kept",
+    "dictionary": "ひとりでさんにんたおしたのはすごい",
+    "chosen": "ひとりでさんにんたおしたのはすごい"
+   },
+   {
+    "text": "一人で三人倒したのは凄い",
+    "outcome": "kept",
+    "dictionary": "ひとりでさんにんたおしたのはすごい",
+    "chosen": "ひとりでさんにんたおしたのはすごい"
+   },
+   {
+    "text": "一人で三人倒したのは凄い",
+    "outcome": "kept",
+    "dictionary": "ひとりでさんにんたおしたのはすごい",
+    "chosen": "ひとりでさんにんたおしたのはすごい"
+   },
+   {
+    "text": "二人で裏から回ろう",
+    "outcome": "kept",
+    "dictionary": "ふたりでうらからまわろう",
+    "chosen": "ふたりでうらからまわろう"
+   },
+   {
+    "text": "二人で裏から回ろう",
+    "outcome": "kept",
+    "dictionary": "ふたりでうらからまわろう",
+    "chosen": "ふたりでうらからまわろう"
+   },
+   {
+    "text": "二人で裏から回ろう",
+    "outcome": "kept",
+    "dictionary": "ふたりでうらからまわろう",
+    "chosen": "ふたりでうらからまわろう"
+   },
+   {
+    "text": "このスキルは来週上方修正されるらしい",
+    "outcome": "broken",
+    "dictionary": "このすきるはらいしゅうじょうほうしゅうせいされるらしい",
+    "chosen": "このすきるはらいしゅうかみがたしゅうせいされるらしい"
+   },
+   {
+    "text": "このスキルは来週上方修正されるらしい",
+    "outcome": "broken",
+    "dictionary": "このすきるはらいしゅうじょうほうしゅうせいされるらしい",
+    "chosen": "このすきるはらいしゅうかみがたしゅうせいされるらしい"
+   },
+   {
+    "text": "このスキルは来週上方修正されるらしい",
+    "outcome": "broken",
+    "dictionary": "このすきるはらいしゅうじょうほうしゅうせいされるらしい",
+    "chosen": "このすきるはらいしゅうかみがたしゅうせいされるらしい"
+   },
+   {
+    "text": "下方修正されてから弱くなった",
+    "outcome": "kept",
+    "dictionary": "かほうしゅうせいされてからよわくなった",
+    "chosen": "かほうしゅうせいされてからよわくなった"
+   },
+   {
+    "text": "下方修正されてから弱くなった",
+    "outcome": "kept",
+    "dictionary": "かほうしゅうせいされてからよわくなった",
+    "chosen": "かほうしゅうせいされてからよわくなった"
+   },
+   {
+    "text": "下方修正されてから弱くなった",
+    "outcome": "kept",
+    "dictionary": "かほうしゅうせいされてからよわくなった",
+    "chosen": "かほうしゅうせいされてからよわくなった"
+   },
+   {
+    "text": "弾が切れた、リロードする",
+    "outcome": "still wrong",
+    "dictionary": "だんがきれた、りろーどする",
+    "chosen": "だんがきれた、りろーどする"
+   },
+   {
+    "text": "弾が切れた、リロードする",
+    "outcome": "still wrong",
+    "dictionary": "だんがきれた、りろーどする",
+    "chosen": "だんがきれた、りろーどする"
+   },
+   {
+    "text": "弾が切れた、リロードする",
+    "outcome": "still wrong",
+    "dictionary": "だんがきれた、りろーどする",
+    "chosen": "だんがきれた、りろーどする"
+   },
+   {
+    "text": "金が足りないからまだ買えない",
+    "outcome": "broken",
+    "dictionary": "かねがたりないからまだかえない",
+    "chosen": "きんがたりないからまだかえない"
+   },
+   {
+    "text": "金が足りないからまだ買えない",
+    "outcome": "kept",
+    "dictionary": "かねがたりないからまだかえない",
+    "chosen": "かねがたりないからまだかえない"
+   },
+   {
+    "text": "金が足りないからまだ買えない",
+    "outcome": "broken",
+    "dictionary": "かねがたりないからまだかえない",
+    "chosen": "きんがたりないからまだかえない"
+   },
+   {
+    "text": "今日の大会は日本のチームが出るよ",
+    "outcome": "kept",
+    "dictionary": "きょうのたいかいはにほんのちーむがでるよ",
+    "chosen": "きょうのたいかいはにほんのちーむがでるよ"
+   },
+   {
+    "text": "今日の大会は日本のチームが出るよ",
+    "outcome": "kept",
+    "dictionary": "きょうのたいかいはにほんのちーむがでるよ",
+    "chosen": "きょうのたいかいはにほんのちーむがでるよ"
+   },
+   {
+    "text": "今日の大会は日本のチームが出るよ",
+    "outcome": "kept",
+    "dictionary": "きょうのたいかいはにほんのちーむがでるよ",
+    "chosen": "きょうのたいかいはにほんのちーむがでるよ"
+   },
+   {
+    "text": "明日も配信するから来てね",
+    "outcome": "kept",
+    "dictionary": "あすもはいしんするからきてね",
+    "chosen": "あしたもはいしんするからきてね"
+   },
+   {
+    "text": "明日も配信するから来てね",
+    "outcome": "kept",
+    "dictionary": "あすもはいしんするからきてね",
+    "chosen": "あしたもはいしんするからきてね"
+   },
+   {
+    "text": "明日も配信するから来てね",
+    "outcome": "kept",
+    "dictionary": "あすもはいしんするからきてね",
+    "chosen": "あしたもはいしんするからきてね"
+   },
+   {
+    "text": "昨日は全然勝てなかった",
+    "outcome": "kept",
+    "dictionary": "きのうはぜんぜんかてなかった",
+    "chosen": "きのうはぜんぜんかてなかった"
+   },
+   {
+    "text": "昨日は全然勝てなかった",
+    "outcome": "kept",
+    "dictionary": "きのうはぜんぜんかてなかった",
+    "chosen": "きのうはぜんぜんかてなかった"
+   },
+   {
+    "text": "昨日は全然勝てなかった",
+    "outcome": "kept",
+    "dictionary": "きのうはぜんぜんかてなかった",
+    "chosen": "きのうはぜんぜんかてなかった"
+   },
+   {
+    "text": "他の人はどう思う？",
+    "outcome": "still wrong",
+    "dictionary": "たのひとはどうおもう？",
+    "chosen": "ほかのじんはどうおもう？"
+   },
+   {
+    "text": "他の人はどう思う？",
+    "outcome": "fixed",
+    "dictionary": "たのひとはどうおもう？",
+    "chosen": "ほかのひとはどうおもう？"
+   },
+   {
+    "text": "他の人はどう思う？",
+    "outcome": "fixed",
+    "dictionary": "たのひとはどうおもう？",
+    "chosen": "ほかのひとはどうおもう？"
+   },
+   {
+    "text": "その他にも強いアイテムがある",
+    "outcome": "kept",
+    "dictionary": "そのほかにもつよいあいてむがある",
+    "chosen": "そのほかにもつよいあいてむがある"
+   },
+   {
+    "text": "その他にも強いアイテムがある",
+    "outcome": "kept",
+    "dictionary": "そのほかにもつよいあいてむがある",
+    "chosen": "そのほかにもつよいあいてむがある"
+   },
+   {
+    "text": "その他にも強いアイテムがある",
+    "outcome": "kept",
+    "dictionary": "そのほかにもつよいあいてむがある",
+    "chosen": "そのほかにもつよいあいてむがある"
+   },
+   {
+    "text": "相手の体力が少ない、今だ",
+    "outcome": "kept",
+    "dictionary": "あいてのたいりょくがすくない、いまだ",
+    "chosen": "あいてのたいりょくがすくない、いまだ"
+   },
+   {
+    "text": "相手の体力が少ない、今だ",
+    "outcome": "kept",
+    "dictionary": "あいてのたいりょくがすくない、いまだ",
+    "chosen": "あいてのたいりょくがすくない、いまだ"
+   },
+   {
+    "text": "相手の体力が少ない、今だ",
+    "outcome": "kept",
+    "dictionary": "あいてのたいりょくがすくない、いまだ",
+    "chosen": "あいてのたいりょくがすくない、いまだ"
+   },
+   {
+    "text": "角に隠れて敵を待とう",
+    "outcome": "fixed",
+    "dictionary": "かくにかくれててきをまとう",
+    "chosen": "かどにかくれててきをまとう"
+   },
+   {
+    "text": "角に隠れて敵を待とう",
+    "outcome": "fixed",
+    "dictionary": "かくにかくれててきをまとう",
+    "chosen": "かどにかくれててきをまとう"
+   },
+   {
+    "text": "角に隠れて敵を待とう",
+    "outcome": "fixed",
+    "dictionary": "かくにかくれててきをまとう",
+    "chosen": "かどにかくれててきをまとう"
+   },
+   {
+    "text": "この先に敵の拠点がある",
+    "outcome": "kept",
+    "dictionary": "このさきにてきのきょてんがある",
+    "chosen": "このさきにてきのきょてんがある"
+   },
+   {
+    "text": "この先に敵の拠点がある",
+    "outcome": "kept",
+    "dictionary": "このさきにてきのきょてんがある",
+    "chosen": "このさきにてきのきょてんがある"
+   },
+   {
+    "text": "この先に敵の拠点がある",
+    "outcome": "kept",
+    "dictionary": "このさきにてきのきょてんがある",
+    "chosen": "このさきにてきのきょてんがある"
+   },
+   {
+    "text": "先に行ってて、すぐ追いつく",
+    "outcome": "kept",
+    "dictionary": "さきにいってて、すぐおいつく",
+    "chosen": "さきにいってて、すぐおいつく"
+   },
+   {
+    "text": "先に行ってて、すぐ追いつく",
+    "outcome": "kept",
+    "dictionary": "さきにいってて、すぐおいつく",
+    "chosen": "さきにいってて、すぐおいつく"
+   },
+   {
+    "text": "先に行ってて、すぐ追いつく",
+    "outcome": "kept",
+    "dictionary": "さきにいってて、すぐおいつく",
+    "chosen": "さきにいってて、すぐおいつく"
+   },
+   {
+    "text": "敵の攻撃を避けてから撃つ",
+    "outcome": "kept",
+    "dictionary": "てきのこうげきをさけてからうつ",
+    "chosen": "てきのこうげきをさけてからうつ"
+   },
+   {
+    "text": "敵の攻撃を避けてから撃つ",
+    "outcome": "kept",
+    "dictionary": "てきのこうげきをさけてからうつ",
+    "chosen": "てきのこうげきをさけてからうつ"
+   },
+   {
+    "text": "敵の攻撃を避けてから撃つ",
+    "outcome": "kept",
+    "dictionary": "てきのこうげきをさけてからうつ",
+    "chosen": "てきのこうげきをさけてからうつ"
+   },
+   {
+    "text": "あの人は私を避けてる気がする",
+    "outcome": "kept",
+    "dictionary": "あのひとはわたしをさけてるきがする",
+    "chosen": "あのひとはわたしをさけてるきがする"
+   },
+   {
+    "text": "あの人は私を避けてる気がする",
+    "outcome": "kept",
+    "dictionary": "あのひとはわたしをさけてるきがする",
+    "chosen": "あのひとはわたしをさけてるきがする"
+   },
+   {
+    "text": "あの人は私を避けてる気がする",
+    "outcome": "kept",
+    "dictionary": "あのひとはわたしをさけてるきがする",
+    "chosen": "あのひとはわたしをさけてるきがする"
+   },
+   {
+    "text": "味方が生き返るまで耐えよう",
+    "outcome": "kept",
+    "dictionary": "みかたがいきかえるまでたえよう",
+    "chosen": "みかたがいきかえるまでたえよう"
+   },
+   {
+    "text": "味方が生き返るまで耐えよう",
+    "outcome": "kept",
+    "dictionary": "みかたがいきかえるまでたえよう",
+    "chosen": "みかたがいきかえるまでたえよう"
+   },
+   {
+    "text": "味方が生き返るまで耐えよう",
+    "outcome": "kept",
+    "dictionary": "みかたがいきかえるまでたえよう",
+    "chosen": "みかたがいきかえるまでたえよう"
+   },
+   {
+    "text": "このゲームは難しいけど面白い",
+    "outcome": "kept",
+    "dictionary": "このげーむはむずかしいけどおもしろい",
+    "chosen": "このげーむはむずかしいけどおもしろい"
+   },
+   {
+    "text": "このゲームは難しいけど面白い",
+    "outcome": "kept",
+    "dictionary": "このげーむはむずかしいけどおもしろい",
+    "chosen": "このげーむはむずかしいけどおもしろい"
+   },
+   {
+    "text": "このゲームは難しいけど面白い",
+    "outcome": "kept",
+    "dictionary": "このげーむはむずかしいけどおもしろい",
+    "chosen": "このげーむはむずかしいけどおもしろい"
+   },
+   {
+    "text": "大分慣れてきた気がする",
+    "outcome": "kept",
+    "dictionary": "だいぶなれてきたきがする",
+    "chosen": "だいぶなれてきたきがする"
+   },
+   {
+    "text": "大分慣れてきた気がする",
+    "outcome": "kept",
+    "dictionary": "だいぶなれてきたきがする",
+    "chosen": "だいぶなれてきたきがする"
+   },
+   {
+    "text": "大分慣れてきた気がする",
+    "outcome": "kept",
+    "dictionary": "だいぶなれてきたきがする",
+    "chosen": "だいぶなれてきたきがする"
+   },
+   {
+    "text": "流石にそれは無理でしょ",
+    "outcome": "kept",
+    "dictionary": "さすがにそれはむりでしょ",
+    "chosen": "さすがにそれはむりでしょ"
+   },
+   {
+    "text": "流石にそれは無理でしょ",
+    "outcome": "kept",
+    "dictionary": "さすがにそれはむりでしょ",
+    "chosen": "さすがにそれはむりでしょ"
+   },
+   {
+    "text": "流石にそれは無理でしょ",
+    "outcome": "kept",
+    "dictionary": "さすがにそれはむりでしょ",
+    "chosen": "さすがにそれはむりでしょ"
+   },
+   {
+    "text": "丁度いいタイミングでウルトが溜まった",
+    "outcome": "kept",
+    "dictionary": "ちょうどいいたいみんぐでうるとがたまった",
+    "chosen": "ちょうどいいたいみんぐでうるとがたまった"
+   },
+   {
+    "text": "丁度いいタイミングでウルトが溜まった",
+    "outcome": "kept",
+    "dictionary": "ちょうどいいたいみんぐでうるとがたまった",
+    "chosen": "ちょうどいいたいみんぐでうるとがたまった"
+   },
+   {
+    "text": "丁度いいタイミングでウルトが溜まった",
+    "outcome": "kept",
+    "dictionary": "ちょうどいいたいみんぐでうるとがたまった",
+    "chosen": "ちょうどいいたいみんぐでうるとがたまった"
+   },
+   {
+    "text": "一旦下がって回復しよう",
+    "outcome": "kept",
+    "dictionary": "いったんさがってかいふくしよう",
+    "chosen": "いったんさがってかいふくしよう"
+   },
+   {
+    "text": "一旦下がって回復しよう",
+    "outcome": "kept",
+    "dictionary": "いったんさがってかいふくしよう",
+    "chosen": "いったんさがってかいふくしよう"
+   },
+   {
+    "text": "一旦下がって回復しよう",
+    "outcome": "kept",
+    "dictionary": "いったんさがってかいふくしよう",
+    "chosen": "いったんさがってかいふくしよう"
+   },
+   {
+    "text": "敵を一発で倒せる火力がある",
+    "outcome": "kept",
+    "dictionary": "てきをいっぱつでたおせるかりょくがある",
+    "chosen": "てきをいっぱつでたおせるかりょくがある"
+   },
+   {
+    "text": "敵を一発で倒せる火力がある",
+    "outcome": "kept",
+    "dictionary": "てきをいっぱつでたおせるかりょくがある",
+    "chosen": "てきをいっぱつでたおせるかりょくがある"
+   },
+   {
+    "text": "敵を一発で倒せる火力がある",
+    "outcome": "kept",
+    "dictionary": "てきをいっぱつでたおせるかりょくがある",
+    "chosen": "てきをいっぱつでたおせるかりょくがある"
+   },
+   {
+    "text": "序盤は耐えて、終盤で勝負しよう",
+    "outcome": "kept",
+    "dictionary": "じょばんはたえて、しゅうばんでしょうぶしよう",
+    "chosen": "じょばんはたえて、しゅうばんでしょうぶしよう"
+   },
+   {
+    "text": "序盤は耐えて、終盤で勝負しよう",
+    "outcome": "kept",
+    "dictionary": "じょばんはたえて、しゅうばんでしょうぶしよう",
+    "chosen": "じょばんはたえて、しゅうばんでしょうぶしよう"
+   },
+   {
+    "text": "序盤は耐えて、終盤で勝負しよう",
+    "outcome": "kept",
+    "dictionary": "じょばんはたえて、しゅうばんでしょうぶしよう",
+    "chosen": "じょばんはたえて、しゅうばんでしょうぶしよう"
+   },
+   {
+    "text": "床に罠が置いてあるから気をつけて",
+    "outcome": "kept",
+    "dictionary": "ゆかにわながおいてあるからきをつけて",
+    "chosen": "ゆかにわながおいてあるからきをつけて"
+   },
+   {
+    "text": "床に罠が置いてあるから気をつけて",
+    "outcome": "kept",
+    "dictionary": "ゆかにわながおいてあるからきをつけて",
+    "chosen": "ゆかにわながおいてあるからきをつけて"
+   },
+   {
+    "text": "床に罠が置いてあるから気をつけて",
+    "outcome": "kept",
+    "dictionary": "ゆかにわながおいてあるからきをつけて",
+    "chosen": "ゆかにわながおいてあるからきをつけて"
+   },
+   {
+    "text": "上から敵が降ってきた",
+    "outcome": "broken",
+    "dictionary": "うえからてきがふってきた",
+    "chosen": "じょうからてきがふってきた"
+   },
+   {
+    "text": "上から敵が降ってきた",
+    "outcome": "broken",
+    "dictionary": "うえからてきがふってきた",
+    "chosen": "じょうからてきがふってきた"
+   },
+   {
+    "text": "上から敵が降ってきた",
+    "outcome": "broken",
+    "dictionary": "うえからてきがふってきた",
+    "chosen": "じょうからてきがふってきた"
+   },
+   {
+    "text": "三日ぶりに配信します",
+    "outcome": "kept",
+    "dictionary": "みっかぶりにはいしんします",
+    "chosen": "みっかぶりにはいしんします"
+   },
+   {
+    "text": "三日ぶりに配信します",
+    "outcome": "kept",
+    "dictionary": "みっかぶりにはいしんします",
+    "chosen": "みっかぶりにはいしんします"
+   },
+   {
+    "text": "三日ぶりに配信します",
+    "outcome": "kept",
+    "dictionary": "みっかぶりにはいしんします",
+    "chosen": "みっかぶりにはいしんします"
+   },
+   {
+    "text": "最後の一人まで諦めない",
+    "outcome": "kept",
+    "dictionary": "さいごのひとりまであきらめない",
+    "chosen": "さいごのひとりまであきらめない"
+   },
+   {
+    "text": "最後の一人まで諦めない",
+    "outcome": "kept",
+    "dictionary": "さいごのひとりまであきらめない",
+    "chosen": "さいごのひとりまであきらめない"
+   },
+   {
+    "text": "最後の一人まで諦めない",
+    "outcome": "kept",
+    "dictionary": "さいごのひとりまであきらめない",
+    "chosen": "さいごのひとりまであきらめない"
+   },
+   {
+    "text": "彼の最期はかっこよかった",
+    "outcome": "kept",
+    "dictionary": "かれのさいごはかっこよかった",
+    "chosen": "かれのさいごはかっこよかった"
+   },
+   {
+    "text": "彼の最期はかっこよかった",
+    "outcome": "kept",
+    "dictionary": "かれのさいごはかっこよかった",
+    "chosen": "かれのさいごはかっこよかった"
+   },
+   {
+    "text": "彼の最期はかっこよかった",
+    "outcome": "kept",
+    "dictionary": "かれのさいごはかっこよかった",
+    "chosen": "かれのさいごはかっこよかった"
+   },
+   {
+    "text": "何か食べてからやろうかな",
+    "outcome": "kept",
+    "dictionary": "なにかたべてからやろうかな",
+    "chosen": "なにかたべてからやろうかな"
+   },
+   {
+    "text": "何か食べてからやろうかな",
+    "outcome": "kept",
+    "dictionary": "なにかたべてからやろうかな",
+    "chosen": "なにかたべてからやろうかな"
+   },
+   {
+    "text": "何か食べてからやろうかな",
+    "outcome": "kept",
+    "dictionary": "なにかたべてからやろうかな",
+    "chosen": "なにかたべてからやろうかな"
+   },
+   {
+    "text": "外したら負けるから慎重に",
+    "outcome": "kept",
+    "dictionary": "はずしたらまけるからしんちょうに",
+    "chosen": "はずしたらまけるからしんちょうに"
+   },
+   {
+    "text": "外したら負けるから慎重に",
+    "outcome": "kept",
+    "dictionary": "はずしたらまけるからしんちょうに",
+    "chosen": "はずしたらまけるからしんちょうに"
+   },
+   {
+    "text": "外したら負けるから慎重に",
+    "outcome": "kept",
+    "dictionary": "はずしたらまけるからしんちょうに",
+    "chosen": "はずしたらまけるからしんちょうに"
+   },
+   {
+    "text": "席を外すからちょっと待ってて",
+    "outcome": "kept",
+    "dictionary": "せきをはずすからちょっとまってて",
+    "chosen": "せきをはずすからちょっとまってて"
+   },
+   {
+    "text": "席を外すからちょっと待ってて",
+    "outcome": "kept",
+    "dictionary": "せきをはずすからちょっとまってて",
+    "chosen": "せきをはずすからちょっとまってて"
+   },
+   {
+    "text": "席を外すからちょっと待ってて",
+    "outcome": "kept",
+    "dictionary": "せきをはずすからちょっとまってて",
+    "chosen": "せきをはずすからちょっとまってて"
+   },
+   {
+    "text": "空いてるレーンに行こう",
+    "outcome": "kept",
+    "dictionary": "あいてるれーんにいこう",
+    "chosen": "あいてるれーんにいこう"
+   },
+   {
+    "text": "空いてるレーンに行こう",
+    "outcome": "kept",
+    "dictionary": "あいてるれーんにいこう",
+    "chosen": "あいてるれーんにいこう"
+   },
+   {
+    "text": "空いてるレーンに行こう",
+    "outcome": "kept",
+    "dictionary": "あいてるれーんにいこう",
+    "chosen": "あいてるれーんにいこう"
+   },
+   {
+    "text": "お腹空いたから休憩する",
+    "outcome": "still wrong",
+    "dictionary": "おなかあいたからきゅうけいする",
+    "chosen": "おなかあいたからきゅうけいする"
+   },
+   {
+    "text": "お腹空いたから休憩する",
+    "outcome": "still wrong",
+    "dictionary": "おなかあいたからきゅうけいする",
+    "chosen": "おなかあいたからきゅうけいする"
+   },
+   {
+    "text": "お腹空いたから休憩する",
+    "outcome": "still wrong",
+    "dictionary": "おなかあいたからきゅうけいする",
+    "chosen": "おなかあいたからきゅうけいする"
+   },
+   {
+    "text": "今年は大会に出たい",
+    "outcome": "kept",
+    "dictionary": "ことしはたいかいにでたい",
+    "chosen": "ことしはたいかいにでたい"
+   },
+   {
+    "text": "今年は大会に出たい",
+    "outcome": "kept",
+    "dictionary": "ことしはたいかいにでたい",
+    "chosen": "ことしはたいかいにでたい"
+   },
+   {
+    "text": "今年は大会に出たい",
+    "outcome": "kept",
+    "dictionary": "ことしはたいかいにでたい",
+    "chosen": "ことしはたいかいにでたい"
+   },
+   {
+    "text": "こっちは四人、向こうは六人だ",
+    "outcome": "kept",
+    "dictionary": "こっちはよにん、むこうはろくにんだ",
+    "chosen": "こっちはよにん、むこうはろくにんだ"
+   },
+   {
+    "text": "こっちは四人、向こうは六人だ",
+    "outcome": "kept",
+    "dictionary": "こっちはよにん、むこうはろくにんだ",
+    "chosen": "こっちはよにん、むこうはろくにんだ"
+   },
+   {
+    "text": "こっちは四人、向こうは六人だ",
+    "outcome": "kept",
+    "dictionary": "こっちはよにん、むこうはろくにんだ",
+    "chosen": "こっちはよにん、むこうはろくにんだ"
+   }
+  ]
+ },
+ "terms_cases.json": {
+  "system": "You decide how a word is read aloud in a Japanese subtitle from a streamer playing the video game Deadlock. The input is JSON: \"sentence\" is the subtitle, \"word\" is the part in question (with the kana that follow it), and \"readings\" are the possible readings in hiragana, each under a number. Answer with JSON {\"reading\": ...}: the number of the one reading that fits the meaning of this sentence.",
+  "summary": {
+   "runs": 189,
+   "kept": 189,
+   "fixed": 0,
+   "broken": 0,
+   "stillWrong": 0,
+   "asked": 60,
+   "medianMs": 276,
+   "p90Ms": 292
+  },
+  "runs": [
+   {
+    "text": "インファーナスのナパームが痛すぎる。",
+    "outcome": "kept",
+    "dictionary": "いんふぁーなすのなぱーむがいたすぎる。",
+    "chosen": "いんふぁーなすのなぱーむがいたすぎる。"
+   },
+   {
+    "text": "インファーナスのナパームが痛すぎる。",
+    "outcome": "kept",
+    "dictionary": "いんふぁーなすのなぱーむがいたすぎる。",
+    "chosen": "いんふぁーなすのなぱーむがいたすぎる。"
+   },
+   {
+    "text": "インファーナスのナパームが痛すぎる。",
+    "outcome": "kept",
+    "dictionary": "いんふぁーなすのなぱーむがいたすぎる。",
+    "chosen": "いんふぁーなすのなぱーむがいたすぎる。"
+   },
+   {
+    "text": "ケルビンのアイスパスで逃げられた。",
+    "outcome": "kept",
+    "dictionary": "けるびんのあいすぱすでにげられた。",
+    "chosen": "けるびんのあいすぱすでにげられた。"
+   },
+   {
+    "text": "ケルビンのアイスパスで逃げられた。",
+    "outcome": "kept",
+    "dictionary": "けるびんのあいすぱすでにげられた。",
+    "chosen": "けるびんのあいすぱすでにげられた。"
+   },
+   {
+    "text": "ケルビンのアイスパスで逃げられた。",
+    "outcome": "kept",
+    "dictionary": "けるびんのあいすぱすでにげられた。",
+    "chosen": "けるびんのあいすぱすでにげられた。"
+   },
+   {
+    "text": "ダイナモのシンギュラリティに全員捕まった。",
+    "outcome": "kept",
+    "dictionary": "だいなものしんぎゅらりてぃにぜんいんつかまった。",
+    "chosen": "だいなものしんぎゅらりてぃにぜんいんつかまった。"
+   },
+   {
+    "text": "ダイナモのシンギュラリティに全員捕まった。",
+    "outcome": "kept",
+    "dictionary": "だいなものしんぎゅらりてぃにぜんいんつかまった。",
+    "chosen": "だいなものしんぎゅらりてぃにぜんいんつかまった。"
+   },
+   {
+    "text": "ダイナモのシンギュラリティに全員捕まった。",
+    "outcome": "kept",
+    "dictionary": "だいなものしんぎゅらりてぃにぜんいんつかまった。",
+    "chosen": "だいなものしんぎゅらりてぃにぜんいんつかまった。"
+   },
+   {
+    "text": "ノックダウン買ってヴィンディクタ落とそう。",
+    "outcome": "kept",
+    "dictionary": "のっくだうんかってゔぃんでぃくたおとそう。",
+    "chosen": "のっくだうんかってゔぃんでぃくたおとそう。"
+   },
+   {
+    "text": "ノックダウン買ってヴィンディクタ落とそう。",
+    "outcome": "kept",
+    "dictionary": "のっくだうんかってゔぃんでぃくたおとそう。",
+    "chosen": "のっくだうんかってゔぃんでぃくたおとそう。"
+   },
+   {
+    "text": "ノックダウン買ってヴィンディクタ落とそう。",
+    "outcome": "kept",
+    "dictionary": "のっくだうんかってゔぃんでぃくたおとそう。",
+    "chosen": "のっくだうんかってゔぃんでぃくたおとそう。"
+   },
+   {
+    "text": "メタルスキン切らされたのがきつい。",
+    "outcome": "kept",
+    "dictionary": "めたるすきんきらされたのがきつい。",
+    "chosen": "めたるすきんきらされたのがきつい。"
+   },
+   {
+    "text": "メタルスキン切らされたのがきつい。",
+    "outcome": "kept",
+    "dictionary": "めたるすきんきらされたのがきつい。",
+    "chosen": "めたるすきんきらされたのがきつい。"
+   },
+   {
+    "text": "メタルスキン切らされたのがきつい。",
+    "outcome": "kept",
+    "dictionary": "めたるすきんきらされたのがきつい。",
+    "chosen": "めたるすきんきらされたのがきつい。"
+   },
+   {
+    "text": "ワープストーンで壁抜けた。",
+    "outcome": "kept",
+    "dictionary": "わーぷすとーんでかべぬけた。",
+    "chosen": "わーぷすとーんでかべぬけた。"
+   },
+   {
+    "text": "ワープストーンで壁抜けた。",
+    "outcome": "kept",
+    "dictionary": "わーぷすとーんでかべぬけた。",
+    "chosen": "わーぷすとーんでかべぬけた。"
+   },
+   {
+    "text": "ワープストーンで壁抜けた。",
+    "outcome": "kept",
+    "dictionary": "わーぷすとーんでかべぬけた。",
+    "chosen": "わーぷすとーんでかべぬけた。"
+   },
+   {
+    "text": "アンストッパブル間に合った。",
+    "outcome": "kept",
+    "dictionary": "あんすとっぱぶるまにあった。",
+    "chosen": "あんすとっぱぶるまにあった。"
+   },
+   {
+    "text": "アンストッパブル間に合った。",
+    "outcome": "kept",
+    "dictionary": "あんすとっぱぶるまにあった。",
+    "chosen": "あんすとっぱぶるまにあった。"
+   },
+   {
+    "text": "アンストッパブル間に合った。",
+    "outcome": "kept",
+    "dictionary": "あんすとっぱぶるまにあった。",
+    "chosen": "あんすとっぱぶるまにあった。"
+   },
+   {
+    "text": "不屈の心は序盤に買っておきたい。",
+    "outcome": "kept",
+    "dictionary": "ふくつのこころはじょばんにかっておきたい。",
+    "chosen": "ふくつのこころはじょばんにかっておきたい。"
+   },
+   {
+    "text": "不屈の心は序盤に買っておきたい。",
+    "outcome": "kept",
+    "dictionary": "ふくつのこころはじょばんにかっておきたい。",
+    "chosen": "ふくつのこころはじょばんにかっておきたい。"
+   },
+   {
+    "text": "不屈の心は序盤に買っておきたい。",
+    "outcome": "kept",
+    "dictionary": "ふくつのこころはじょばんにかっておきたい。",
+    "chosen": "ふくつのこころはじょばんにかっておきたい。"
+   },
+   {
+    "text": "ビバップのスティッキーボム二個付けられた。",
+    "outcome": "kept",
+    "dictionary": "びばっぷのすてぃっきーぼむにこつけられた。",
+    "chosen": "びばっぷのすてぃっきーぼむにこつけられた。"
+   },
+   {
+    "text": "ビバップのスティッキーボム二個付けられた。",
+    "outcome": "kept",
+    "dictionary": "びばっぷのすてぃっきーぼむにこつけられた。",
+    "chosen": "びばっぷのすてぃっきーぼむにこつけられた。"
+   },
+   {
+    "text": "ビバップのスティッキーボム二個付けられた。",
+    "outcome": "kept",
+    "dictionary": "びばっぷのすてぃっきーぼむにこつけられた。",
+    "chosen": "びばっぷのすてぃっきーぼむにこつけられた。"
+   },
+   {
+    "text": "トキシックバレットとヒールベインで回復止めよう。",
+    "outcome": "kept",
+    "dictionary": "ときしっくばれっととひーるべいんでかいふくとめよう。",
+    "chosen": "ときしっくばれっととひーるべいんでかいふくとめよう。"
+   },
+   {
+    "text": "トキシックバレットとヒールベインで回復止めよう。",
+    "outcome": "kept",
+    "dictionary": "ときしっくばれっととひーるべいんでかいふくとめよう。",
+    "chosen": "ときしっくばれっととひーるべいんでかいふくとめよう。"
+   },
+   {
+    "text": "トキシックバレットとヒールベインで回復止めよう。",
+    "outcome": "kept",
+    "dictionary": "ときしっくばれっととひーるべいんでかいふくとめよう。",
+    "chosen": "ときしっくばれっととひーるべいんでかいふくとめよう。"
+   },
+   {
+    "text": "スピリットシールドかバレットレジリエンスどっちがいいかな。",
+    "outcome": "kept",
+    "dictionary": "すぴりっとしーるどかばれっとれじりえんすどっちがいいかな。",
+    "chosen": "すぴりっとしーるどかばれっとれじりえんすどっちがいいかな。"
+   },
+   {
+    "text": "スピリットシールドかバレットレジリエンスどっちがいいかな。",
+    "outcome": "kept",
+    "dictionary": "すぴりっとしーるどかばれっとれじりえんすどっちがいいかな。",
+    "chosen": "すぴりっとしーるどかばれっとれじりえんすどっちがいいかな。"
+   },
+   {
+    "text": "スピリットシールドかバレットレジリエンスどっちがいいかな。",
+    "outcome": "kept",
+    "dictionary": "すぴりっとしーるどかばれっとれじりえんすどっちがいいかな。",
+    "chosen": "すぴりっとしーるどかばれっとれじりえんすどっちがいいかな。"
+   },
+   {
+    "text": "ミラージュ強いな今のパッチ。",
+    "outcome": "kept",
+    "dictionary": "みらーじゅつよいないまのぱっち。",
+    "chosen": "みらーじゅつよいないまのぱっち。"
+   },
+   {
+    "text": "ミラージュ強いな今のパッチ。",
+    "outcome": "kept",
+    "dictionary": "みらーじゅつよいないまのぱっち。",
+    "chosen": "みらーじゅつよいないまのぱっち。"
+   },
+   {
+    "text": "ミラージュ強いな今のパッチ。",
+    "outcome": "kept",
+    "dictionary": "みらーじゅつよいないまのぱっち。",
+    "chosen": "みらーじゅつよいないまのぱっち。"
+   },
+   {
+    "text": "インファーナスのウルトでスタン入った。",
+    "outcome": "kept",
+    "dictionary": "いんふぁーなすのうるとですたんはいった。",
+    "chosen": "いんふぁーなすのうるとですたんはいった。"
+   },
+   {
+    "text": "インファーナスのウルトでスタン入った。",
+    "outcome": "kept",
+    "dictionary": "いんふぁーなすのうるとですたんはいった。",
+    "chosen": "いんふぁーなすのうるとですたんはいった。"
+   },
+   {
+    "text": "インファーナスのウルトでスタン入った。",
+    "outcome": "kept",
+    "dictionary": "いんふぁーなすのうるとですたんはいった。",
+    "chosen": "いんふぁーなすのうるとですたんはいった。"
+   },
+   {
+    "text": "ラッシュの2番で屋根に上がって。",
+    "outcome": "kept",
+    "dictionary": "らっしゅの2ばんでやねにあがって。",
+    "chosen": "らっしゅの2ばんでやねにあがって。"
+   },
+   {
+    "text": "ラッシュの2番で屋根に上がって。",
+    "outcome": "kept",
+    "dictionary": "らっしゅの2ばんでやねにあがって。",
+    "chosen": "らっしゅの2ばんでやねにあがって。"
+   },
+   {
+    "text": "ラッシュの2番で屋根に上がって。",
+    "outcome": "kept",
+    "dictionary": "らっしゅの2ばんでやねにあがって。",
+    "chosen": "らっしゅの2ばんでやねにあがって。"
+   },
+   {
+    "text": "ミナのウルトでサイレンス食らった。",
+    "outcome": "kept",
+    "dictionary": "みなのうるとでさいれんすくらった。",
+    "chosen": "みなのうるとでさいれんすくらった。"
+   },
+   {
+    "text": "ミナのウルトでサイレンス食らった。",
+    "outcome": "kept",
+    "dictionary": "みなのうるとでさいれんすくらった。",
+    "chosen": "みなのうるとでさいれんすくらった。"
+   },
+   {
+    "text": "ミナのウルトでサイレンス食らった。",
+    "outcome": "kept",
+    "dictionary": "みなのうるとでさいれんすくらった。",
+    "chosen": "みなのうるとでさいれんすくらった。"
+   },
+   {
+    "text": "そのあとウルトで焼かれた。",
+    "outcome": "kept",
+    "dictionary": "そのあとうるとでやかれた。",
+    "chosen": "そのあとうるとでやかれた。"
+   },
+   {
+    "text": "そのあとウルトで焼かれた。",
+    "outcome": "kept",
+    "dictionary": "そのあとうるとでやかれた。",
+    "chosen": "そのあとうるとでやかれた。"
+   },
+   {
+    "text": "そのあとウルトで焼かれた。",
+    "outcome": "kept",
+    "dictionary": "そのあとうるとでやかれた。",
+    "chosen": "そのあとうるとでやかれた。"
+   },
+   {
+    "text": "ヤマトの１番溜めてから当てて。",
+    "outcome": "kept",
+    "dictionary": "やまとのいちばんためてからあてて。",
+    "chosen": "やまとのいちばんためてからあてて。"
+   },
+   {
+    "text": "ヤマトの１番溜めてから当てて。",
+    "outcome": "kept",
+    "dictionary": "やまとのいちばんためてからあてて。",
+    "chosen": "やまとのいちばんためてからあてて。"
+   },
+   {
+    "text": "ヤマトの１番溜めてから当てて。",
+    "outcome": "kept",
+    "dictionary": "やまとのいちばんためてからあてて。",
+    "chosen": "やまとのいちばんためてからあてて。"
+   },
+   {
+    "text": "ダイナモウルト来るから散って。",
+    "outcome": "kept",
+    "dictionary": "だいなもうるとくるからちって。",
+    "chosen": "だいなもうるとくるからちって。"
+   },
+   {
+    "text": "ダイナモウルト来るから散って。",
+    "outcome": "kept",
+    "dictionary": "だいなもうるとくるからちって。",
+    "chosen": "だいなもうるとくるからちって。"
+   },
+   {
+    "text": "ダイナモウルト来るから散って。",
+    "outcome": "kept",
+    "dictionary": "だいなもうるとくるからちって。",
+    "chosen": "だいなもうるとくるからちって。"
+   },
+   {
+    "text": "アイビーの３番で耐えた。",
+    "outcome": "kept",
+    "dictionary": "あいびーの３ばんでたえた。",
+    "chosen": "あいびーの３ばんでたえた。"
+   },
+   {
+    "text": "アイビーの３番で耐えた。",
+    "outcome": "kept",
+    "dictionary": "あいびーの３ばんでたえた。",
+    "chosen": "あいびーの３ばんでたえた。"
+   },
+   {
+    "text": "アイビーの３番で耐えた。",
+    "outcome": "kept",
+    "dictionary": "あいびーの３ばんでたえた。",
+    "chosen": "あいびーの３ばんでたえた。"
+   },
+   {
+    "text": "ラッシュのウルトで全員叩きつけられた。",
+    "outcome": "kept",
+    "dictionary": "らっしゅのうるとでぜんいんたたきつけられた。",
+    "chosen": "らっしゅのうるとでぜんいんたたきつけられた。"
+   },
+   {
+    "text": "ラッシュのウルトで全員叩きつけられた。",
+    "outcome": "kept",
+    "dictionary": "らっしゅのうるとでぜんいんたたきつけられた。",
+    "chosen": "らっしゅのうるとでぜんいんたたきつけられた。"
+   },
+   {
+    "text": "ラッシュのウルトで全員叩きつけられた。",
+    "outcome": "kept",
+    "dictionary": "らっしゅのうるとでぜんいんたたきつけられた。",
+    "chosen": "らっしゅのうるとでぜんいんたたきつけられた。"
+   },
+   {
+    "text": "シルバーにウルト当てられた。",
+    "outcome": "kept",
+    "dictionary": "しるばーにうるとあてられた。",
+    "chosen": "しるばーにうるとあてられた。"
+   },
+   {
+    "text": "シルバーにウルト当てられた。",
+    "outcome": "kept",
+    "dictionary": "しるばーにうるとあてられた。",
+    "chosen": "しるばーにうるとあてられた。"
+   },
+   {
+    "text": "シルバーにウルト当てられた。",
+    "outcome": "kept",
+    "dictionary": "しるばーにうるとあてられた。",
+    "chosen": "しるばーにうるとあてられた。"
+   },
+   {
+    "text": "3番のクールダウン長いな。",
+    "outcome": "kept",
+    "dictionary": "3ばんのくーるだうんながいな。",
+    "chosen": "3ばんのくーるだうんながいな。"
+   },
+   {
+    "text": "3番のクールダウン長いな。",
+    "outcome": "kept",
+    "dictionary": "3ばんのくーるだうんながいな。",
+    "chosen": "3ばんのくーるだうんながいな。"
+   },
+   {
+    "text": "3番のクールダウン長いな。",
+    "outcome": "kept",
+    "dictionary": "3ばんのくーるだうんながいな。",
+    "chosen": "3ばんのくーるだうんながいな。"
+   },
+   {
+    "text": "ウルトあと10秒。",
+    "outcome": "kept",
+    "dictionary": "うるとあと10びょう。",
+    "chosen": "うるとあと10びょう。"
+   },
+   {
+    "text": "ウルトあと10秒。",
+    "outcome": "kept",
+    "dictionary": "うるとあと10びょう。",
+    "chosen": "うるとあと10びょう。"
+   },
+   {
+    "text": "ウルトあと10秒。",
+    "outcome": "kept",
+    "dictionary": "うるとあと10びょう。",
+    "chosen": "うるとあと10びょう。"
+   },
+   {
+    "text": "エコーシャードでウルト二回撃てる。",
+    "outcome": "kept",
+    "dictionary": "えこーしゃーどでうるとにかいうてる。",
+    "chosen": "えこーしゃーどでうるとにかいうてる。"
+   },
+   {
+    "text": "エコーシャードでウルト二回撃てる。",
+    "outcome": "kept",
+    "dictionary": "えこーしゃーどでうるとにかいうてる。",
+    "chosen": "えこーしゃーどでうるとにかいうてる。"
+   },
+   {
+    "text": "エコーシャードでウルト二回撃てる。",
+    "outcome": "kept",
+    "dictionary": "えこーしゃーどでうるとにかいうてる。",
+    "chosen": "えこーしゃーどでうるとにかいうてる。"
+   },
+   {
+    "text": "リフレッシャー持ってるからウルト二連発くるよ。",
+    "outcome": "kept",
+    "dictionary": "りふれっしゃーもってるからうるとにれんぱつくるよ。",
+    "chosen": "りふれっしゃーもってるからうるとにれんぱつくるよ。"
+   },
+   {
+    "text": "リフレッシャー持ってるからウルト二連発くるよ。",
+    "outcome": "kept",
+    "dictionary": "りふれっしゃーもってるからうるとにれんぱつくるよ。",
+    "chosen": "りふれっしゃーもってるからうるとにれんぱつくるよ。"
+   },
+   {
+    "text": "リフレッシャー持ってるからウルト二連発くるよ。",
+    "outcome": "kept",
+    "dictionary": "りふれっしゃーもってるからうるとにれんぱつくるよ。",
+    "chosen": "りふれっしゃーもってるからうるとにれんぱつくるよ。"
+   },
+   {
+    "text": "エイブラムスのチャージで壁に当てられた。",
+    "outcome": "kept",
+    "dictionary": "えいぶらむすのちゃーじでかべにあてられた。",
+    "chosen": "えいぶらむすのちゃーじでかべにあてられた。"
+   },
+   {
+    "text": "エイブラムスのチャージで壁に当てられた。",
+    "outcome": "kept",
+    "dictionary": "えいぶらむすのちゃーじでかべにあてられた。",
+    "chosen": "えいぶらむすのちゃーじでかべにあてられた。"
+   },
+   {
+    "text": "エイブラムスのチャージで壁に当てられた。",
+    "outcome": "kept",
+    "dictionary": "えいぶらむすのちゃーじでかべにあてられた。",
+    "chosen": "えいぶらむすのちゃーじでかべにあてられた。"
+   },
+   {
+    "text": "ケルビンのビームで足遅くされた。",
+    "outcome": "kept",
+    "dictionary": "けるびんのびーむであしおそくされた。",
+    "chosen": "けるびんのびーむであしおそくされた。"
+   },
+   {
+    "text": "ケルビンのビームで足遅くされた。",
+    "outcome": "kept",
+    "dictionary": "けるびんのびーむであしおそくされた。",
+    "chosen": "けるびんのびーむであしおそくされた。"
+   },
+   {
+    "text": "ケルビンのビームで足遅くされた。",
+    "outcome": "kept",
+    "dictionary": "けるびんのびーむであしおそくされた。",
+    "chosen": "けるびんのびーむであしおそくされた。"
+   },
+   {
+    "text": "ビバップのフックに気をつけて。",
+    "outcome": "kept",
+    "dictionary": "びばっぷのふっくにきをつけて。",
+    "chosen": "びばっぷのふっくにきをつけて。"
+   },
+   {
+    "text": "ビバップのフックに気をつけて。",
+    "outcome": "kept",
+    "dictionary": "びばっぷのふっくにきをつけて。",
+    "chosen": "びばっぷのふっくにきをつけて。"
+   },
+   {
+    "text": "ビバップのフックに気をつけて。",
+    "outcome": "kept",
+    "dictionary": "びばっぷのふっくにきをつけて。",
+    "chosen": "びばっぷのふっくにきをつけて。"
+   },
+   {
+    "text": "インファ強すぎない？",
+    "outcome": "kept",
+    "dictionary": "いんふぁつよすぎない？",
+    "chosen": "いんふぁつよすぎない？"
+   },
+   {
+    "text": "インファ強すぎない？",
+    "outcome": "kept",
+    "dictionary": "いんふぁつよすぎない？",
+    "chosen": "いんふぁつよすぎない？"
+   },
+   {
+    "text": "インファ強すぎない？",
+    "outcome": "kept",
+    "dictionary": "いんふぁつよすぎない？",
+    "chosen": "いんふぁつよすぎない？"
+   },
+   {
+    "text": "ガイストのウルトで体力入れ替えられた。",
+    "outcome": "kept",
+    "dictionary": "がいすとのうるとでたいりょくいれかえられた。",
+    "chosen": "がいすとのうるとでたいりょくいれかえられた。"
+   },
+   {
+    "text": "ガイストのウルトで体力入れ替えられた。",
+    "outcome": "kept",
+    "dictionary": "がいすとのうるとでたいりょくいれかえられた。",
+    "chosen": "がいすとのうるとでたいりょくいれかえられた。"
+   },
+   {
+    "text": "ガイストのウルトで体力入れ替えられた。",
+    "outcome": "kept",
+    "dictionary": "がいすとのうるとでたいりょくいれかえられた。",
+    "chosen": "がいすとのうるとでたいりょくいれかえられた。"
+   },
+   {
+    "text": "タロンに遠くから抜かれた。",
+    "outcome": "kept",
+    "dictionary": "たろんにとおくからぬかれた。",
+    "chosen": "たろんにとおくからぬかれた。"
+   },
+   {
+    "text": "タロンに遠くから抜かれた。",
+    "outcome": "kept",
+    "dictionary": "たろんにとおくからぬかれた。",
+    "chosen": "たろんにとおくからぬかれた。"
+   },
+   {
+    "text": "タロンに遠くから抜かれた。",
+    "outcome": "kept",
+    "dictionary": "たろんにとおくからぬかれた。",
+    "chosen": "たろんにとおくからぬかれた。"
+   },
+   {
+    "text": "モークリのウルトに捕まった。",
+    "outcome": "kept",
+    "dictionary": "もーくりのうるとにつかまった。",
+    "chosen": "もーくりのうるとにつかまった。"
+   },
+   {
+    "text": "モークリのウルトに捕まった。",
+    "outcome": "kept",
+    "dictionary": "もーくりのうるとにつかまった。",
+    "chosen": "もーくりのうるとにつかまった。"
+   },
+   {
+    "text": "モークリのウルトに捕まった。",
+    "outcome": "kept",
+    "dictionary": "もーくりのうるとにつかまった。",
+    "chosen": "もーくりのうるとにつかまった。"
+   },
+   {
+    "text": "ヴィンにずっと撃たれてる。",
+    "outcome": "kept",
+    "dictionary": "ゔぃんにずっとうたれてる。",
+    "chosen": "ゔぃんにずっとうたれてる。"
+   },
+   {
+    "text": "ヴィンにずっと撃たれてる。",
+    "outcome": "kept",
+    "dictionary": "ゔぃんにずっとうたれてる。",
+    "chosen": "ゔぃんにずっとうたれてる。"
+   },
+   {
+    "text": "ヴィンにずっと撃たれてる。",
+    "outcome": "kept",
+    "dictionary": "ゔぃんにずっとうたれてる。",
+    "chosen": "ゔぃんにずっとうたれてる。"
+   },
+   {
+    "text": "ヴィンディのウルトで落とされた。",
+    "outcome": "kept",
+    "dictionary": "ゔぃんでぃのうるとでおとされた。",
+    "chosen": "ゔぃんでぃのうるとでおとされた。"
+   },
+   {
+    "text": "ヴィンディのウルトで落とされた。",
+    "outcome": "kept",
+    "dictionary": "ゔぃんでぃのうるとでおとされた。",
+    "chosen": "ゔぃんでぃのうるとでおとされた。"
+   },
+   {
+    "text": "ヴィンディのウルトで落とされた。",
+    "outcome": "kept",
+    "dictionary": "ゔぃんでぃのうるとでおとされた。",
+    "chosen": "ゔぃんでぃのうるとでおとされた。"
+   },
+   {
+    "text": "メタスキ押すの遅れた。",
+    "outcome": "kept",
+    "dictionary": "めたすきおすのおくれた。",
+    "chosen": "めたすきおすのおくれた。"
+   },
+   {
+    "text": "メタスキ押すの遅れた。",
+    "outcome": "kept",
+    "dictionary": "めたすきおすのおくれた。",
+    "chosen": "めたすきおすのおくれた。"
+   },
+   {
+    "text": "メタスキ押すの遅れた。",
+    "outcome": "kept",
+    "dictionary": "めたすきおすのおくれた。",
+    "chosen": "めたすきおすのおくれた。"
+   },
+   {
+    "text": "アンストッパ買っとけばよかった。",
+    "outcome": "kept",
+    "dictionary": "あんすとっぱかっとけばよかった。",
+    "chosen": "あんすとっぱかっとけばよかった。"
+   },
+   {
+    "text": "アンストッパ買っとけばよかった。",
+    "outcome": "kept",
+    "dictionary": "あんすとっぱかっとけばよかった。",
+    "chosen": "あんすとっぱかっとけばよかった。"
+   },
+   {
+    "text": "アンストッパ買っとけばよかった。",
+    "outcome": "kept",
+    "dictionary": "あんすとっぱかっとけばよかった。",
+    "chosen": "あんすとっぱかっとけばよかった。"
+   },
+   {
+    "text": "インフェルノスのアフターバーンが痛い。",
+    "outcome": "kept",
+    "dictionary": "いんふぇるのすのあふたーばーんがいたい。",
+    "chosen": "いんふぇるのすのあふたーばーんがいたい。"
+   },
+   {
+    "text": "インフェルノスのアフターバーンが痛い。",
+    "outcome": "kept",
+    "dictionary": "いんふぇるのすのあふたーばーんがいたい。",
+    "chosen": "いんふぇるのすのあふたーばーんがいたい。"
+   },
+   {
+    "text": "インフェルノスのアフターバーンが痛い。",
+    "outcome": "kept",
+    "dictionary": "いんふぇるのすのあふたーばーんがいたい。",
+    "chosen": "いんふぇるのすのあふたーばーんがいたい。"
+   },
+   {
+    "text": "ビーバップのボムに気をつけて。",
+    "outcome": "kept",
+    "dictionary": "びーばっぷのぼむにきをつけて。",
+    "chosen": "びーばっぷのぼむにきをつけて。"
+   },
+   {
+    "text": "ビーバップのボムに気をつけて。",
+    "outcome": "kept",
+    "dictionary": "びーばっぷのぼむにきをつけて。",
+    "chosen": "びーばっぷのぼむにきをつけて。"
+   },
+   {
+    "text": "ビーバップのボムに気をつけて。",
+    "outcome": "kept",
+    "dictionary": "びーばっぷのぼむにきをつけて。",
+    "chosen": "びーばっぷのぼむにきをつけて。"
+   },
+   {
+    "text": "ワーデンのウルト止めて。",
+    "outcome": "kept",
+    "dictionary": "わーでんのうるととめて。",
+    "chosen": "わーでんのうるととめて。"
+   },
+   {
+    "text": "ワーデンのウルト止めて。",
+    "outcome": "kept",
+    "dictionary": "わーでんのうるととめて。",
+    "chosen": "わーでんのうるととめて。"
+   },
+   {
+    "text": "ワーデンのウルト止めて。",
+    "outcome": "kept",
+    "dictionary": "わーでんのうるととめて。",
+    "chosen": "わーでんのうるととめて。"
+   },
+   {
+    "text": "ビンディクタのウルトで狙われてる。",
+    "outcome": "kept",
+    "dictionary": "びんでぃくたのうるとでねらわれてる。",
+    "chosen": "びんでぃくたのうるとでねらわれてる。"
+   },
+   {
+    "text": "ビンディクタのウルトで狙われてる。",
+    "outcome": "kept",
+    "dictionary": "びんでぃくたのうるとでねらわれてる。",
+    "chosen": "びんでぃくたのうるとでねらわれてる。"
+   },
+   {
+    "text": "ビンディクタのウルトで狙われてる。",
+    "outcome": "kept",
+    "dictionary": "びんでぃくたのうるとでねらわれてる。",
+    "chosen": "びんでぃくたのうるとでねらわれてる。"
+   },
+   {
+    "text": "ワープストンで逃げた。",
+    "outcome": "kept",
+    "dictionary": "わーぷすとんでにげた。",
+    "chosen": "わーぷすとんでにげた。"
+   },
+   {
+    "text": "ワープストンで逃げた。",
+    "outcome": "kept",
+    "dictionary": "わーぷすとんでにげた。",
+    "chosen": "わーぷすとんでにげた。"
+   },
+   {
+    "text": "ワープストンで逃げた。",
+    "outcome": "kept",
+    "dictionary": "わーぷすとんでにげた。",
+    "chosen": "わーぷすとんでにげた。"
+   },
+   {
+    "text": "メタルスキーン使った。",
+    "outcome": "kept",
+    "dictionary": "めたるすきーんつかった。",
+    "chosen": "めたるすきーんつかった。"
+   },
+   {
+    "text": "メタルスキーン使った。",
+    "outcome": "kept",
+    "dictionary": "めたるすきーんつかった。",
+    "chosen": "めたるすきーんつかった。"
+   },
+   {
+    "text": "メタルスキーン使った。",
+    "outcome": "kept",
+    "dictionary": "めたるすきーんつかった。",
+    "chosen": "めたるすきーんつかった。"
+   },
+   {
+    "text": "セブンのパワーサージで火力上がってる。",
+    "outcome": "kept",
+    "dictionary": "せぶんのぱわーさーじでかりょくあがってる。",
+    "chosen": "せぶんのぱわーさーじでかりょくあがってる。"
+   },
+   {
+    "text": "セブンのパワーサージで火力上がってる。",
+    "outcome": "kept",
+    "dictionary": "せぶんのぱわーさーじでかりょくあがってる。",
+    "chosen": "せぶんのぱわーさーじでかりょくあがってる。"
+   },
+   {
+    "text": "セブンのパワーサージで火力上がってる。",
+    "outcome": "kept",
+    "dictionary": "せぶんのぱわーさーじでかりょくあがってる。",
+    "chosen": "せぶんのぱわーさーじでかりょくあがってる。"
+   },
+   {
+    "text": "パワーサージ買ったら移動速くなった。",
+    "outcome": "kept",
+    "dictionary": "ぱわーさーじかったらいどうはやくなった。",
+    "chosen": "ぱわーさーじかったらいどうはやくなった。"
+   },
+   {
+    "text": "パワーサージ買ったら移動速くなった。",
+    "outcome": "kept",
+    "dictionary": "ぱわーさーじかったらいどうはやくなった。",
+    "chosen": "ぱわーさーじかったらいどうはやくなった。"
+   },
+   {
+    "text": "パワーサージ買ったら移動速くなった。",
+    "outcome": "kept",
+    "dictionary": "ぱわーさーじかったらいどうはやくなった。",
+    "chosen": "ぱわーさーじかったらいどうはやくなった。"
+   },
+   {
+    "text": "ガイストのライフドレインで吸われた。",
+    "outcome": "kept",
+    "dictionary": "がいすとのらいふどれいんですわれた。",
+    "chosen": "がいすとのらいふどれいんですわれた。"
+   },
+   {
+    "text": "ガイストのライフドレインで吸われた。",
+    "outcome": "kept",
+    "dictionary": "がいすとのらいふどれいんですわれた。",
+    "chosen": "がいすとのらいふどれいんですわれた。"
+   },
+   {
+    "text": "ガイストのライフドレインで吸われた。",
+    "outcome": "kept",
+    "dictionary": "がいすとのらいふどれいんですわれた。",
+    "chosen": "がいすとのらいふどれいんですわれた。"
+   },
+   {
+    "text": "ライフドレイン買って耐久上げる。",
+    "outcome": "kept",
+    "dictionary": "らいふどれいんかってたいきゅうあげる。",
+    "chosen": "らいふどれいんかってたいきゅうあげる。"
+   },
+   {
+    "text": "ライフドレイン買って耐久上げる。",
+    "outcome": "kept",
+    "dictionary": "らいふどれいんかってたいきゅうあげる。",
+    "chosen": "らいふどれいんかってたいきゅうあげる。"
+   },
+   {
+    "text": "ライフドレイン買って耐久上げる。",
+    "outcome": "kept",
+    "dictionary": "らいふどれいんかってたいきゅうあげる。",
+    "chosen": "らいふどれいんかってたいきゅうあげる。"
+   },
+   {
+    "text": "今シルバー帯だからね。",
+    "outcome": "kept",
+    "dictionary": "いましるばーたいだからね。",
+    "chosen": "いましるばーたいだからね。"
+   },
+   {
+    "text": "今シルバー帯だからね。",
+    "outcome": "kept",
+    "dictionary": "いましるばーたいだからね。",
+    "chosen": "いましるばーたいだからね。"
+   },
+   {
+    "text": "今シルバー帯だからね。",
+    "outcome": "kept",
+    "dictionary": "いましるばーたいだからね。",
+    "chosen": "いましるばーたいだからね。"
+   },
+   {
+    "text": "ヤマトの荷物まだ届かないんだよね。",
+    "outcome": "kept",
+    "dictionary": "やまとのにもつまだとどかないんだよね。",
+    "chosen": "やまとのにもつまだとどかないんだよね。"
+   },
+   {
+    "text": "ヤマトの荷物まだ届かないんだよね。",
+    "outcome": "kept",
+    "dictionary": "やまとのにもつまだとどかないんだよね。",
+    "chosen": "やまとのにもつまだとどかないんだよね。"
+   },
+   {
+    "text": "ヤマトの荷物まだ届かないんだよね。",
+    "outcome": "kept",
+    "dictionary": "やまとのにもつまだとどかないんだよね。",
+    "chosen": "やまとのにもつまだとどかないんだよね。"
+   },
+   {
+    "text": "アポロチョコ食べながらやってます。",
+    "outcome": "kept",
+    "dictionary": "あぽろちょこたべながらやってます。",
+    "chosen": "あぽろちょこたべながらやってます。"
+   },
+   {
+    "text": "アポロチョコ食べながらやってます。",
+    "outcome": "kept",
+    "dictionary": "あぽろちょこたべながらやってます。",
+    "chosen": "あぽろちょこたべながらやってます。"
+   },
+   {
+    "text": "アポロチョコ食べながらやってます。",
+    "outcome": "kept",
+    "dictionary": "あぽろちょこたべながらやってます。",
+    "chosen": "あぽろちょこたべながらやってます。"
+   },
+   {
+    "text": "それストーカーみたいで怖いな。",
+    "outcome": "kept",
+    "dictionary": "それすとーかーみたいでこわいな。",
+    "chosen": "それすとーかーみたいでこわいな。"
+   },
+   {
+    "text": "それストーカーみたいで怖いな。",
+    "outcome": "kept",
+    "dictionary": "それすとーかーみたいでこわいな。",
+    "chosen": "それすとーかーみたいでこわいな。"
+   },
+   {
+    "text": "それストーカーみたいで怖いな。",
+    "outcome": "kept",
+    "dictionary": "それすとーかーみたいでこわいな。",
+    "chosen": "それすとーかーみたいでこわいな。"
+   },
+   {
+    "text": "昨日ボクシングでノックダウン見た。",
+    "outcome": "kept",
+    "dictionary": "きのうぼくしんぐでのっくだうんみた。",
+    "chosen": "きのうぼくしんぐでのっくだうんみた。"
+   },
+   {
+    "text": "昨日ボクシングでノックダウン見た。",
+    "outcome": "kept",
+    "dictionary": "きのうぼくしんぐでのっくだうんみた。",
+    "chosen": "きのうぼくしんぐでのっくだうんみた。"
+   },
+   {
+    "text": "昨日ボクシングでノックダウン見た。",
+    "outcome": "kept",
+    "dictionary": "きのうぼくしんぐでのっくだうんみた。",
+    "chosen": "きのうぼくしんぐでのっくだうんみた。"
+   },
+   {
+    "text": "レム睡眠が足りてない。",
+    "outcome": "kept",
+    "dictionary": "れむすいみんがたりてない。",
+    "chosen": "れむすいみんがたりてない。"
+   },
+   {
+    "text": "レム睡眠が足りてない。",
+    "outcome": "kept",
+    "dictionary": "れむすいみんがたりてない。",
+    "chosen": "れむすいみんがたりてない。"
+   },
+   {
+    "text": "レム睡眠が足りてない。",
+    "outcome": "kept",
+    "dictionary": "れむすいみんがたりてない。",
+    "chosen": "れむすいみんがたりてない。"
+   },
+   {
+    "text": "ビリーって友達が見に来てる。",
+    "outcome": "kept",
+    "dictionary": "びりーってともだちがみにきてる。",
+    "chosen": "びりーってともだちがみにきてる。"
+   },
+   {
+    "text": "ビリーって友達が見に来てる。",
+    "outcome": "kept",
+    "dictionary": "びりーってともだちがみにきてる。",
+    "chosen": "びりーってともだちがみにきてる。"
+   },
+   {
+    "text": "ビリーって友達が見に来てる。",
+    "outcome": "kept",
+    "dictionary": "びりーってともだちがみにきてる。",
+    "chosen": "びりーってともだちがみにきてる。"
+   },
+   {
+    "text": "アイビーリーグ出身らしいよ。",
+    "outcome": "kept",
+    "dictionary": "あいびーりーぐしゅっしんらしいよ。",
+    "chosen": "あいびーりーぐしゅっしんらしいよ。"
+   },
+   {
+    "text": "アイビーリーグ出身らしいよ。",
+    "outcome": "kept",
+    "dictionary": "あいびーりーぐしゅっしんらしいよ。",
+    "chosen": "あいびーりーぐしゅっしんらしいよ。"
+   },
+   {
+    "text": "アイビーリーグ出身らしいよ。",
+    "outcome": "kept",
+    "dictionary": "あいびーりーぐしゅっしんらしいよ。",
+    "chosen": "あいびーりーぐしゅっしんらしいよ。"
+   },
+   {
+    "text": "ポケットWi-Fiの調子が悪い。",
+    "outcome": "kept",
+    "dictionary": "ぽけっとWi-Fiのちょうしがわるい。",
+    "chosen": "ぽけっとWi-Fiのちょうしがわるい。"
+   },
+   {
+    "text": "ポケットWi-Fiの調子が悪い。",
+    "outcome": "kept",
+    "dictionary": "ぽけっとWi-Fiのちょうしがわるい。",
+    "chosen": "ぽけっとWi-Fiのちょうしがわるい。"
+   },
+   {
+    "text": "ポケットWi-Fiの調子が悪い。",
+    "outcome": "kept",
+    "dictionary": "ぽけっとWi-Fiのちょうしがわるい。",
+    "chosen": "ぽけっとWi-Fiのちょうしがわるい。"
+   },
+   {
+    "text": "セブンでいいか。",
+    "outcome": "kept",
+    "dictionary": "せぶんでいいか。",
+    "chosen": "せぶんでいいか。"
+   },
+   {
+    "text": "セブンでいいか。",
+    "outcome": "kept",
+    "dictionary": "せぶんでいいか。",
+    "chosen": "せぶんでいいか。"
+   },
+   {
+    "text": "セブンでいいか。",
+    "outcome": "kept",
+    "dictionary": "せぶんでいいか。",
+    "chosen": "せぶんでいいか。"
+   },
+   {
+    "text": "今日はセブンで行くか。",
+    "outcome": "kept",
+    "dictionary": "きょうはせぶんでいくか。",
+    "chosen": "きょうはせぶんでいくか。"
+   },
+   {
+    "text": "今日はセブンで行くか。",
+    "outcome": "kept",
+    "dictionary": "きょうはせぶんでいくか。",
+    "chosen": "きょうはせぶんでいくか。"
+   },
+   {
+    "text": "今日はセブンで行くか。",
+    "outcome": "kept",
+    "dictionary": "きょうはせぶんでいくか。",
+    "chosen": "きょうはせぶんでいくか。"
+   },
+   {
+    "text": "コメントありがとうございます。",
+    "outcome": "kept",
+    "dictionary": "こめんとありがとうございます。",
+    "chosen": "こめんとありがとうございます。"
+   },
+   {
+    "text": "コメントありがとうございます。",
+    "outcome": "kept",
+    "dictionary": "こめんとありがとうございます。",
+    "chosen": "こめんとありがとうございます。"
+   },
+   {
+    "text": "コメントありがとうございます。",
+    "outcome": "kept",
+    "dictionary": "こめんとありがとうございます。",
+    "chosen": "こめんとありがとうございます。"
+   },
+   {
+    "text": "今日は3時間くらいやる予定です。",
+    "outcome": "kept",
+    "dictionary": "きょうは3じかんくらいやるよていです。",
+    "chosen": "きょうは3じかんくらいやるよていです。"
+   },
+   {
+    "text": "今日は3時間くらいやる予定です。",
+    "outcome": "kept",
+    "dictionary": "きょうは3じかんくらいやるよていです。",
+    "chosen": "きょうは3じかんくらいやるよていです。"
+   },
+   {
+    "text": "今日は3時間くらいやる予定です。",
+    "outcome": "kept",
+    "dictionary": "きょうは3じかんくらいやるよていです。",
+    "chosen": "きょうは3じかんくらいやるよていです。"
+   },
+   {
+    "text": "ちょっと水飲むね。",
+    "outcome": "kept",
+    "dictionary": "ちょっとみずのむね。",
+    "chosen": "ちょっとみずのむね。"
+   },
+   {
+    "text": "ちょっと水飲むね。",
+    "outcome": "kept",
+    "dictionary": "ちょっとみずのむね。",
+    "chosen": "ちょっとみずのむね。"
+   },
+   {
+    "text": "ちょっと水飲むね。",
+    "outcome": "kept",
+    "dictionary": "ちょっとみずのむね。",
+    "chosen": "ちょっとみずのむね。"
+   },
+   {
+    "text": "1番レーンが押されてる。",
+    "outcome": "kept",
+    "dictionary": "1ばんれーんがおされてる。",
+    "chosen": "1ばんれーんがおされてる。"
+   },
+   {
+    "text": "1番レーンが押されてる。",
+    "outcome": "kept",
+    "dictionary": "1ばんれーんがおされてる。",
+    "chosen": "1ばんれーんがおされてる。"
+   },
+   {
+    "text": "1番レーンが押されてる。",
+    "outcome": "kept",
+    "dictionary": "1ばんれーんがおされてる。",
+    "chosen": "1ばんれーんがおされてる。"
+   },
+   {
+    "text": "ミッドボス取りに行こう。",
+    "outcome": "kept",
+    "dictionary": "みっどぼすとりにいこう。",
+    "chosen": "みっどぼすとりにいこう。"
+   },
+   {
+    "text": "ミッドボス取りに行こう。",
+    "outcome": "kept",
+    "dictionary": "みっどぼすとりにいこう。",
+    "chosen": "みっどぼすとりにいこう。"
+   },
+   {
+    "text": "ミッドボス取りに行こう。",
+    "outcome": "kept",
+    "dictionary": "みっどぼすとりにいこう。",
+    "chosen": "みっどぼすとりにいこう。"
+   },
+   {
+    "text": "ソウル差が5000ある。",
+    "outcome": "kept",
+    "dictionary": "そうるさが5000ある。",
+    "chosen": "そうるさが5000ある。"
+   },
+   {
+    "text": "ソウル差が5000ある。",
+    "outcome": "kept",
+    "dictionary": "そうるさが5000ある。",
+    "chosen": "そうるさが5000ある。"
+   },
+   {
+    "text": "ソウル差が5000ある。",
+    "outcome": "kept",
+    "dictionary": "そうるさが5000ある。",
+    "chosen": "そうるさが5000ある。"
+   }
+  ]
+ }
+}

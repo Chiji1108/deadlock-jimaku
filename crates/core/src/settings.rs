@@ -741,6 +741,10 @@ impl Engines {
         {
             self.translation = TranslationEngine::Gpt61Terra;
         }
+        // Gemini Nano は Chrome のページの中にある
+        if self.live != LiveSource::Chrome && self.terms == TermsEngine::GeminiNano {
+            self.terms = TermsEngine::Dictionary;
+        }
         self
     }
 }
@@ -908,11 +912,15 @@ pub enum TermsEngine {
     Decision1,
     /// OpenRouter の Perplexity Decider V1.2。いちばん安い
     PplxDecider,
+    /// 同じ候補を、Chrome の中の Gemini Nano に確かめさせる。無料で、文字を PC から出さない。
+    /// 会社の判定モデルほどは当たらない（DESIGN.md 9.7）。途中の字幕が Chrome のときだけ使える
+    GeminiNano,
 }
 
 impl TermsEngine {
-    pub const ALL: [Self; 6] = [
+    pub const ALL: [Self; 7] = [
         Self::Dictionary,
+        Self::GeminiNano,
         Self::Decisions,
         Self::Jev,
         Self::DrexMax,
@@ -923,7 +931,7 @@ impl TermsEngine {
     /// 候補を確かめさせるモデル（辞書の一致なら None）
     pub fn judge(self) -> Option<Model> {
         let (provider, name) = match self {
-            Self::Dictionary => return None,
+            Self::Dictionary | Self::GeminiNano => return None,
             Self::Decisions => (Provider::OpenAi, "gpt-6-luna"),
             Self::Jev => (Provider::TypeSafe, "jev-latest"),
             Self::DrexMax => (Provider::OpenRouter, "nace-ai/drex-max"),
@@ -1040,6 +1048,8 @@ pub enum EmphasisSource {
     Terms,
     /// 候補を Decisions API で確かめる。確かめられなければ辞書の一致を使う
     Decisions,
+    /// 候補を Chrome の中の Gemini Nano で確かめる。確かめられなければ辞書の一致を使う
+    Chrome,
     Llm,
 }
 
@@ -1079,7 +1089,7 @@ impl Phase {
     pub fn local_terms(&self) -> bool {
         matches!(
             self.emphasis,
-            Some(EmphasisSource::Terms | EmphasisSource::Decisions)
+            Some(EmphasisSource::Terms | EmphasisSource::Decisions | EmphasisSource::Chrome)
         )
     }
 }
@@ -1248,6 +1258,7 @@ impl Settings {
                 (Translation::Llm, _) => self.deadlock_mode.then_some(Emphasis::Llm),
                 (_, TermsEngine::Dictionary) => terms,
                 // 候補の出し方（かなの似た名前）は日本語だけ
+                (_, TermsEngine::GeminiNano) => terms.map(|_| Emphasis::Chrome),
                 (_, _) => terms.map(|_| Emphasis::Decisions),
             },
         };
@@ -1965,6 +1976,26 @@ mod tests {
         };
         assert!(!llm.decides_terms());
         assert_eq!(plan_of(llm), plan_of(Engines::STANDARD));
+    }
+
+    /// Gemini Nano は Chrome のページの中にあるので、途中の字幕が Chrome のときだけ使える。鍵は要らない
+    #[test]
+    fn gemini_nano_judges_terms_only_with_the_chrome_page() {
+        let nano = Engines {
+            terms: TermsEngine::GeminiNano,
+            ..Engines::CHROME
+        };
+        assert_eq!(nano.sanitized(), nano);
+        assert_eq!(plan_of(nano).finals.emphasis, Some(EmphasisSource::Chrome));
+        // 途中の字幕は、今までどおり辞書の一致
+        assert_eq!(plan_of(nano).partial.emphasis, Some(EmphasisSource::Terms));
+        assert!(plan_of(nano).finals.local_terms());
+        assert!(nano.providers().is_empty());
+        let without_chrome = Engines {
+            terms: TermsEngine::GeminiNano,
+            ..Engines::LOCAL
+        };
+        assert_eq!(without_chrome.sanitized().terms, TermsEngine::Dictionary);
     }
 
     /// 候補の出し方は日本語だけなので、ほかの言語では Decisions に聞かない

@@ -15,7 +15,7 @@ use crate::assets::Loaded;
 use crate::enrich::Span;
 use crate::secrets::Provider;
 use crate::share;
-use crate::types::{EntityKind, Glossary, LangCode};
+use crate::types::{ChromeChoice, ChromeQuestion, ChromeQuestions, EntityKind, Glossary, LangCode};
 use crate::usage::{Meter, Tokens, Use};
 
 /// 応答は 0.3 秒ほど。待たせすぎずに、辞書の一致に切り替える
@@ -28,8 +28,14 @@ pub struct Decider {
     access: Access,
     /// OpenAI の Decisions API が使えるのは `gpt-6-luna` だけ
     model: &'static str,
-    source_lang: LangCode,
     meter: Arc<Meter>,
+    asker: Asker,
+}
+
+/// 文から用語の候補を出して、確かめる問いを作る。確かめるのは、会社の判定モデル（`Decider`）か、
+/// Chrome の中の Gemini Nano（`chrome::decide`）
+pub struct Asker {
+    source_lang: LangCode,
     /// 辞書と別名から作った索引（辞書が差し替わったら作り直す）
     index: Mutex<Option<(Loaded, Arc<Index>)>>,
 }
@@ -63,9 +69,8 @@ impl Decider {
         Self {
             access,
             model,
-            source_lang,
             meter,
-            index: Mutex::new(None),
+            asker: Asker::new(source_lang),
         }
     }
 
@@ -101,10 +106,30 @@ impl Decider {
 
     /// 文の候補と、それを確かめる問い合わせ。候補がなければ None（聞かなくてよい）
     pub fn ask(&self, text: &str, context: &[String], loaded: &Loaded) -> Option<Asked> {
+        self.asker.ask(self.model, text, context, loaded)
+    }
+}
+
+impl Asker {
+    pub fn new(source_lang: LangCode) -> Self {
+        Self {
+            source_lang,
+            index: Mutex::new(None),
+        }
+    }
+
+    /// 文の候補と、それを確かめる問い合わせ。候補がなければ None（聞かなくてよい）。`model` は会社に送るモデルの名前
+    pub fn ask(
+        &self,
+        model: &str,
+        text: &str,
+        context: &[String],
+        loaded: &Loaded,
+    ) -> Option<Asked> {
         let index = self.index(loaded);
         let candidates = candidates(text, context, &index, &loaded.glossary);
         (!candidates.is_empty()).then(|| Asked {
-            request: question(self.model, text, context, &candidates, &loaded.glossary),
+            request: question(model, text, context, &candidates, &loaded.glossary),
             text: text.to_owned(),
             candidates,
         })
@@ -183,6 +208,27 @@ pub struct Asked {
 }
 
 impl Asked {
+    /// Chrome のページに送る形（`id` は発話）。問いごとに、選択肢とその説明
+    pub fn for_chrome(&self, id: String) -> ChromeQuestions {
+        let text = |v: &Value| v.as_str().unwrap_or_default().to_owned();
+        let questions = self.request["questions"].as_array().into_iter().flatten();
+        let questions = questions.map(|q| ChromeQuestion {
+            name: text(&q["name"]),
+            instructions: text(&q["instructions"]),
+            choices: (q["choices"].as_array().into_iter().flatten())
+                .map(|c| ChromeChoice {
+                    value: text(&c["value"]),
+                    description: text(&c["description"]),
+                })
+                .collect(),
+        });
+        ChromeQuestions {
+            id,
+            state: text(&self.request["input"]),
+            questions: questions.collect(),
+        }
+    }
+
     /// Jev の形の問い合わせ（`state` と、名前ごとの `questions`、選択肢は `criteria`）
     pub fn systemone(&self, model: &str) -> Value {
         let questions = self.request["questions"].as_array().into_iter().flatten();
@@ -593,6 +639,47 @@ mod tests {
 
     fn refs(list: &[&str]) -> Vec<String> {
         list.iter().map(|r| (*r).to_owned()).collect()
+    }
+
+    /// Chrome のページ（Gemini Nano）に同じ問いを送り、選ばれた選択肢で用語が決まる
+    #[tokio::test]
+    async fn the_chrome_page_answers_the_same_questions() {
+        use crate::chrome;
+        use crate::settings::Settings;
+        use crate::store::{ChromeEvent, Store};
+        use crate::types::{ChromeCommand, Decided};
+
+        let store = Store::new(Ok(Settings::default()), std::path::PathBuf::new());
+        let asked = Asker::new("ja".into())
+            .ask("", "拡マガを取る", &[], &loaded())
+            .unwrap();
+        // ページが開いていなければ聞かない
+        assert_eq!(chrome::decide(&store, &asked, "1").await, None);
+
+        let mut page = store.subscribe_chrome_commands();
+        let answering = store.clone();
+        tokio::spawn(async move {
+            let Ok(ChromeCommand::Decide(task)) = page.recv().await else {
+                panic!("a question")
+            };
+            assert!(task.state.contains("拡マガを取る"));
+            // どの問いにも、最初の選択肢を答える
+            let choices = task.questions.iter();
+            let choices = choices.map(|q| (q.name.clone(), q.choices[0].value.clone()));
+            answering.send_chrome_event(ChromeEvent::Decided(Decided {
+                id: task.id,
+                choices: choices.collect(),
+            }));
+        });
+        let choices = chrome::decide(&store, &asked, "1").await.unwrap();
+        let spans = asked.spans(|name| choices.get(name).cloned());
+        assert_eq!(
+            spans[0],
+            Span::Entity {
+                reference: "item:1".into(),
+                spoken: "拡マガ".into()
+            }
+        );
     }
 
     #[test]

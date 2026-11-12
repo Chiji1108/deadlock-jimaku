@@ -12,7 +12,7 @@ use tokio::sync::{broadcast, mpsc};
 
 use crate::access::{Access, Accesses};
 use crate::chrome;
-use crate::decide::Decider;
+use crate::decide::{Asker, Decider};
 use crate::enrich::{Enricher, Span, source_tokens};
 use crate::furigana;
 use crate::mt::Translator;
@@ -31,6 +31,8 @@ pub struct Finisher {
     enricher: Option<Enricher>,
     /// 用語を Decisions API で確かめるときだけ
     decider: Option<Decider>,
+    /// 用語の候補を出す（Chrome の中の Gemini Nano に確かめさせるとき）
+    asker: Asker,
     /// 翻訳専門のモデルで訳すときだけ
     translator: Option<Translator>,
     /// ふりがなを判定モデルに選ばせるときだけ
@@ -109,6 +111,7 @@ impl Finisher {
             store,
             enricher,
             decider,
+            asker: Asker::new(lang.clone()),
             translator,
             chooser,
         }
@@ -126,7 +129,10 @@ impl Finisher {
         let finisher = self.clone();
         // 用語が PC の中の一致で決まっているなら、すぐページに頼む（頼んだときから聞くので、訳がすぐ届いても
         // 取りこぼさない）。Decisions で確かめるなら、用語が決まってから頼む
-        let decides = phase.emphasis == Some(EmphasisSource::Decisions);
+        let decides = matches!(
+            phase.emphasis,
+            Some(EmphasisSource::Decisions | EmphasisSource::Chrome)
+        );
         let chrome = (phase.translation == Some(TranslationSource::ChromeTranslator) && !decides)
             .then(|| {
                 chrome::ask_final_translation(&self.store, heard.id.clone(), translate.clone())
@@ -210,6 +216,7 @@ impl Finisher {
                     .decider
                     .as_ref()
                     .filter(|_| phase.emphasis == Some(EmphasisSource::Decisions));
+                let nano = phase.emphasis == Some(EmphasisSource::Chrome);
                 let decided = match (decider, &loaded) {
                     (Some(d), Some(loaded)) => answer(
                         "terms",
@@ -217,6 +224,15 @@ impl Finisher {
                             .await
                             .map(Some),
                     )?,
+                    // 候補がなければ聞かない。ページが答えなければ、PC の中で付けた用語のまま
+                    (None, Some(loaded)) if nano => {
+                        match self.asker.ask("", &text, &context, loaded) {
+                            Some(asked) => chrome::decide(&self.store, &asked, &id)
+                                .await
+                                .map(|choices| asked.spans(|name| choices.get(name).cloned())),
+                            None => None,
+                        }
+                    }
                     _ => None,
                 };
                 let translations = match phase.translation {

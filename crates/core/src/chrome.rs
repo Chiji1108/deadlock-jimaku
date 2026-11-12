@@ -9,7 +9,7 @@
 //! 字幕の経路が音声の処理と共有するのは、読みと用語（`Annotator`）、確定の仕上げ（`Finisher`）、
 //! 発話の形とオーバーレイへの出力だけ
 
-use std::collections::{HashMap, VecDeque};
+use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -28,12 +28,13 @@ use tokio_tungstenite::tungstenite::Message;
 use crate::DEFAULT_PORT;
 use crate::access::Accesses;
 use crate::annotate::Annotator;
+use crate::decide::Asked;
 use crate::finish::{self, Finished, Finisher};
 use crate::settings::Settings;
 use crate::store::{ChromeEvent, Store};
 use crate::subtitles;
 use crate::types::{
-    ChromeCommand, ChromeTask, Heard, LangCode, LiveState, LiveStatus, Segment, Stage,
+    ChromeCommand, ChromeTask, Decided, Heard, LangCode, LiveState, LiveStatus, Segment, Stage,
     TranscriptionError, Translatable, Translated, Translations,
 };
 
@@ -57,6 +58,8 @@ const REMOVE_ATTEMPTS: u32 = 25;
 const CHECK_INTERVAL: Duration = Duration::from_secs(1);
 /// 確定の文の訳を待つ長さ。ページが固まっても、字幕を仕上げずに残さない
 const FINAL_TRANSLATION_TIMEOUT: Duration = Duration::from_secs(10);
+/// Gemini Nano が用語の候補を確かめるのを待つ長さ。1 問 0.4 秒ほどで、問いは文に 1〜3 個（DESIGN.md 9.7）
+const DECIDE_TIMEOUT: Duration = Duration::from_secs(5);
 /// ページが落ちたときに操作パネルに出す案内
 pub(crate) const CRASHED: &str = "Chrome のページが落ちました。「Chrome を開き直す」で戻せます";
 
@@ -396,6 +399,34 @@ pub(crate) fn ask_final_translation(
     ask_translation(store, id, translate, true).then_some(events)
 }
 
+/// ページに、確定の文の用語の候補を確かめてもらう（Gemini Nano）。答えは、問いの名前 → 選んだ選択肢。
+/// ページが開いていない、Gemini Nano を使えない、答えが来ないなら None（PC の中で付けた用語のままにする）
+pub(crate) async fn decide(
+    store: &Store,
+    asked: &Asked,
+    id: &str,
+) -> Option<BTreeMap<String, String>> {
+    let mut events = store.subscribe_chrome();
+    if !store.send_chrome_command(ChromeCommand::Decide(asked.for_chrome(id.to_owned()))) {
+        return None;
+    }
+    let wait = async {
+        loop {
+            match events.recv().await {
+                Ok(ChromeEvent::Decided(Decided { id: done, choices })) if done == id => {
+                    return Some(choices).filter(|c| !c.is_empty());
+                }
+                Ok(ChromeEvent::Closed) | Err(_) => return None,
+                Ok(_) => {}
+            }
+        }
+    };
+    tokio::time::timeout(DECIDE_TIMEOUT, wait)
+        .await
+        .ok()
+        .flatten()
+}
+
 /// 頼んだ確定の文の訳を待つ。ページが閉じられるか、答えが来なければ訳なし
 pub(crate) async fn final_translation(
     mut events: broadcast::Receiver<ChromeEvent>,
@@ -488,6 +519,8 @@ impl Subtitles {
         match event {
             ChromeEvent::Heard(heard) => self.on_heard(heard),
             ChromeEvent::Translated(translated) => self.on_translated(translated),
+            // 用語の答えは、頼んだ処理（`decide`）が受け取る
+            ChromeEvent::Decided(_) => {}
             ChromeEvent::Closed => self.on_closed(),
         }
     }

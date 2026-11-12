@@ -22,6 +22,7 @@
     type MicTrouble,
   } from "./speech";
   import { Translation } from "./translation";
+  import { Judge, judgeAvailability, prepareJudge } from "./judge";
   import { chromeFinals, usesChrome } from "../lib/engines";
 
   /** ブロックしたあとは確認が出ない。OS で止めていても同じエラーになる */
@@ -100,6 +101,10 @@
   /** 止めるたびに増える。待っている間に止められた処理が、あとから聞き始めないようにする */
   let runs = 0;
   let translation = new Translation(new Map(), reply);
+  /** 用語の候補を確かめる Gemini Nano。用語の選択がそれで、この PC で使えるときだけ */
+  let judge: Judge | undefined;
+  /** Gemini Nano を使えない、または用意できなかった */
+  let judgeTrouble: string | undefined;
   /** 今の `translation` の言語。マイクだけ変えるなら作り直さない */
   let translatorLanguages = "";
 
@@ -119,7 +124,7 @@
   const showListening = () =>
     show({
       state: "listening",
-      detail: [micTrouble, notice].filter(Boolean).join("。") || undefined,
+      detail: [micTrouble, notice, judgeTrouble].filter(Boolean).join("。") || undefined,
     });
 
   function dial() {
@@ -134,6 +139,12 @@
     next.addEventListener("message", (e) => {
       const command = JSON.parse(e.data as string) as ChromeCommand;
       if (command.type === "translate") return translation.onTask(command);
+      if (command.type === "decide") {
+        // Gemini Nano がなければ、空で答える（core は辞書の一致のままにする）
+        const empty = { id: command.id, choices: {} };
+        const decided = judge?.decide(command).catch(() => empty) ?? Promise.resolve(empty);
+        return void decided.then((answer) => send({ type: "decided", ...answer }));
+      }
       if (command.type === "open") return reset?.();
       cuts = command.count;
       cut?.();
@@ -166,6 +177,7 @@
     JSON.stringify([
       s.engines.live,
       s.engines.transcription,
+      s.engines.terms,
       s.micDevice,
       s.micLanguage,
       s.translateTo,
@@ -247,6 +259,27 @@
       translation = new Translation(translators, reply);
       translatorLanguages = languages;
     }
+    // 用語を Gemini Nano に確かめさせるなら、用意する（初回は約 4 GB のダウンロード）。
+    // 用意できなければ、用語は辞書の一致のままで字幕を続ける
+    const nano = s.engines.terms === "geminiNano" && s.deadlockMode;
+    judgeTrouble = undefined;
+    if (!nano) {
+      judge?.destroy();
+      judge = undefined;
+    } else if (!judge) {
+      const progress = (loaded: number) =>
+        show({
+          state: "preparing",
+          detail: `Gemini Nano をダウンロードしています（${Math.round(loaded * 100)}%）`,
+        });
+      const usable = (await judgeAvailability()) !== "unavailable";
+      judge = usable ? await prepareJudge(progress).catch(() => undefined) : undefined;
+      if (!judge) {
+        judgeTrouble = usable
+          ? "Gemini Nano を用意できなかったので、用語は辞書の一致で付けます"
+          : "この PC の Chrome では Gemini Nano を使えないので、用語は辞書の一致で付けます";
+      }
+    }
     const missing = s.translateTo.filter((target) => !targets.includes(target));
     notice = missing.length
       ? `Chrome の翻訳が対応していない言語は訳しません: ${missing.map((l) => names.of(l)).join("、")}`
@@ -319,12 +352,17 @@
     halt();
     const started = runs;
     const { state, targets } = await availability(s.micLanguage, s.translateTo);
+    // Gemini Nano のダウンロードにもクリックが要る
+    const nano =
+      s.engines.terms === "geminiNano" && s.deadlockMode && !judge
+        ? await judgeAvailability()
+        : "available";
     if (started !== runs) return;
     if (state === "unavailable") show({ state: "failed", detail: UNSUPPORTED });
-    else if (state === "available") await run(s, targets);
+    else if (state === "available" && nano !== "downloadable") await run(s, targets);
     else {
       needsDownload = true;
-      if (failures === 0) show({ state: "preparing", detail: "翻訳のモデルを準備しています" });
+      if (failures === 0) show({ state: "preparing", detail: "モデルを準備しています" });
     }
   }
 
@@ -440,7 +478,7 @@
   {/if}
 
   {#if needsDownload && !busy}
-    <button onclick={() => ((failures = 0), download())}>翻訳のモデルをダウンロードする</button>
+    <button onclick={() => ((failures = 0), download())}>モデルをダウンロードする</button>
   {/if}
 
   {#if micChoices.length && (status.state === "listening" || status.state === "blocked")}

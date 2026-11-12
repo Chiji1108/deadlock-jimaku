@@ -48,6 +48,7 @@ export const ENGINE_PROVIDERS = {
   },
   "terms": {
     "dictionary": null,
+    "geminiNano": null,
     "decisions": "openai",
     "jev": "typesafe",
     "drexMax": "openrouter",

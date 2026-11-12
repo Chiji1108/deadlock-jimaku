@@ -14,8 +14,8 @@ use crate::chrome::{self, Browser};
 use crate::fonts::Library;
 use crate::settings::{self, FinalSource, Settings, SettingsPatch, SubtitleDisplay};
 use crate::types::{
-    ChromeCommand, Heard, ItemCardsView, LiveState, LiveStatus, RankState, Segment, ServerMsg,
-    Stage, TranscriptionError, Translated,
+    ChromeCommand, Decided, Heard, ItemCardsView, LiveState, LiveStatus, RankState, Segment,
+    ServerMsg, Stage, TranscriptionError, Translated,
 };
 use crate::usage::Meter;
 
@@ -27,6 +27,7 @@ const KEEP_SEGMENTS: usize = 50;
 pub enum ChromeEvent {
     Heard(Heard),
     Translated(Translated),
+    Decided(Decided),
     /// ページが閉じられた
     Closed,
 }

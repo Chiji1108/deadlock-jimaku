@@ -4,6 +4,10 @@
 // usage: node chrome_eval.mjs translate GLOSSARY.json PROFILE_DIR
 //        node chrome_eval.mjs speech data/sample01.wav data/sample01.txt PROFILE_DIR
 //        node chrome_eval.mjs furigana PROFILE_DIR [REPEAT]
+//        node chrome_eval.mjs choose PROFILE_DIR QUESTIONS.json CASES.json [REPEAT]
+//        node chrome_eval.mjs decider PROFILE_DIR
+//   decider:   Gemini Nano を、判定モデルと同じ形の口で待たせる（用語の判定を `split_eval terms-jev local-gemini-nano` で測る）
+//   choose:    読みが分かれる語を、辞書の候補から Gemini Nano に選ばせる（下の `choose` の説明）
 //   furigana:  data/furigana_cases.json の文の、辞書の読みを Gemini Nano（Prompt API）に直させる。文は PC から出ない
 //   translate: results/terms_cases.json の文を、用語を英語名に置き換えて（アプリが Chrome に渡す形）英語とロシア語に訳す
 //   speech:    録音を 3 回聞かせ、確定した文をつなげて文字誤り率を見る。音声は Google に送られる
@@ -246,6 +250,166 @@ async function furigana(profile, repeat = "3") {
   console.log("gemini-nano", JSON.stringify(summary));
 }
 
+const CHOOSE_SYSTEM =
+  "You decide how a word is read aloud in a Japanese subtitle from a streamer playing the video game Deadlock. " +
+  'The input is JSON: "sentence" is the subtitle, "word" is the part in question (with the kana that follow it), ' +
+  'and "readings" are the possible readings in hiragana, each under a number. ' +
+  'Answer with JSON {"reading": ...}: the number of the one reading that fits the meaning of this sentence.';
+
+/**
+ * 読みが分かれる語を、辞書の候補から Gemini Nano（Prompt API）に選ばせる（DESIGN.md 6.4）。候補はアプリが判定モデルに
+ * 選ばせるものと同じ（`cargo run --release -p overlays-core --example readings -- CASES.json > QUESTIONS.json`）。
+ * CASES.json に語ごとの正しい読みがあれば（`data/furigana_cases.json`）それと比べ、なければ辞書の読みを正しいとみなす
+ */
+async function choose(profile, questionsPath, casesPath, repeat = "3") {
+  const questions = JSON.parse(readFileSync(questionsPath, "utf8"));
+  const cases = JSON.parse(readFileSync(casesPath, "utf8"));
+  const hira = (s) => s.replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60));
+  // 文全体の正しい読み（語ごとの候補の組み合わせ）
+  const gold = (c) => {
+    if (!Array.isArray(c.words)) return undefined;
+    let all = [""];
+    for (const w of c.words) {
+      const alts = w.reading ? (w.accept ?? [w.reading]) : [w.text];
+      all = all.flatMap((head) => alts.map((a) => head + hira(a)));
+    }
+    return new Set(all);
+  };
+  const { evaluate, close } = await open(profile, []);
+  const availability = await evaluate(
+    `"LanguageModel" in window ? LanguageModel.availability(${JSON.stringify(LANGUAGES)}) : "no LanguageModel"`,
+  );
+  console.log("availability:", availability);
+  if (availability === "unavailable" || availability === "no LanguageModel") return close();
+  await evaluate(`(async () => {
+    window.base = await LanguageModel.create({
+      ...${JSON.stringify(LANGUAGES)},
+      initialPrompts: [{ role: "system", content: ${JSON.stringify(CHOOSE_SYSTEM)} }],
+    });
+  })()`);
+  const runs = [];
+  const times = [];
+  for (const [i, q] of questions.entries()) {
+    const read = (words) => hira(words.map((w) => w.chosen ?? w.reading ?? w.text).join(""));
+    const own = read(q.words);
+    const right = gold(cases[i]) ?? new Set([own]);
+    for (let n = 0; n < Number(repeat); n++) {
+      const words = [];
+      for (const w of q.words) {
+        if (!w.options) {
+          words.push(w);
+          continue;
+        }
+        // アプリと同じく、続くかなを付けて見せる
+        const readings = w.options.map((o) => o + w.tail);
+        // 答えは候補の番号（日本語の文字を答えの決まりに入れると、Prompt API がエラーを返した）
+        const numbers = readings.map((_, n) => String(n + 1));
+        const schema = { type: "object", required: ["reading"], additionalProperties: false, properties: { reading: { type: "string", enum: numbers } } };
+        const input = JSON.stringify({ sentence: q.text, word: w.text + w.tail, readings: Object.fromEntries(readings.map((r, n) => [numbers[n], r])) });
+        const { ms, answer } = await evaluate(`(async () => {
+          const session = await window.base.clone();
+          const t0 = performance.now();
+          const answer = await session.prompt(${JSON.stringify(input)}, { responseConstraint: ${JSON.stringify(schema)} });
+          const ms = Math.round(performance.now() - t0);
+          session.destroy();
+          return { ms, answer };
+        })()`);
+        times.push(ms);
+        let picked;
+        try {
+          picked = numbers.indexOf(JSON.parse(answer).reading);
+        } catch {}
+        // 候補にない答えは使わない（辞書の読みのまま）
+        words.push({ ...w, chosen: picked >= 0 ? w.options[picked] : undefined });
+      }
+      const chosen = read(words);
+      const outcome = right.has(own) ? (right.has(chosen) ? "kept" : "broken") : right.has(chosen) ? "fixed" : "still wrong";
+      runs.push({ text: q.text, outcome, dictionary: own, chosen });
+      if (outcome !== "kept" && n === 0) console.log(`${outcome}: ${q.text}\n  dictionary ${own}\n  chosen     ${chosen}`);
+    }
+  }
+  close();
+  times.sort((a, b) => a - b);
+  const count = (o) => runs.filter((r) => r.outcome === o).length;
+  const summary = {
+    runs: runs.length,
+    kept: count("kept"),
+    fixed: count("fixed"),
+    broken: count("broken"),
+    stillWrong: count("still wrong"),
+    asked: times.length,
+    medianMs: times[Math.floor(times.length / 2)],
+    p90Ms: times[Math.floor((times.length * 9) / 10)],
+  };
+  const out = join(HERE, "results/furigana_nano_choose.json");
+  const report = existsSync(out) ? JSON.parse(readFileSync(out, "utf8")) : {};
+  report[casesPath.split("/").pop()] = { system: CHOOSE_SYSTEM, summary, runs };
+  writeFileSync(out, JSON.stringify(report, null, 1) + "\n");
+  console.log("gemini-nano", JSON.stringify(summary));
+}
+
+const DECIDE_SYSTEM =
+  "You answer one multiple-choice question about a transcript. " +
+  'The input is JSON: "state" is the transcript with its context, "question" is what to decide, ' +
+  'and "choices" maps each possible answer to its description. ' +
+  'Answer with JSON {"choice": ...}: the one key of "choices" that is correct.';
+
+/**
+ * Gemini Nano（Prompt API）を、判定モデルと同じ形の口（Jev の `/v1/systemone`）で待たせる（DESIGN.md 9.7）。
+ * `split_eval` の terms-jev に `local-…` のモデル名を渡すと、ここに聞きに来る（`local_decider_server.py` と同じポート）。
+ * 止めるまで待ち続ける
+ */
+async function decider(profile) {
+  const { evaluate } = await open(profile, []);
+  const availability = await evaluate(
+    `"LanguageModel" in window ? LanguageModel.availability(${JSON.stringify(LANGUAGES)}) : "no LanguageModel"`,
+  );
+  console.log("availability:", availability);
+  await evaluate(`(async () => {
+    window.base = await LanguageModel.create({
+      ...${JSON.stringify(LANGUAGES)},
+      initialPrompts: [{ role: "system", content: ${JSON.stringify(DECIDE_SYSTEM)} }],
+    });
+  })()`);
+  const times = [];
+  const server = createServer(async (req, res) => {
+    let body = "";
+    for await (const chunk of req) body += chunk;
+    const { state, questions } = JSON.parse(body);
+    const answers = {};
+    // 問いは 1 つずつ聞く（小さいモデルなので、まとめて聞かない）
+    for (const [name, q] of Object.entries(questions)) {
+      // 答えは選択肢の番号（選択肢の名前を答えの決まりに入れると、Prompt API がエラーを返すことがあった）
+      const keys = Object.keys(q.criteria);
+      const numbers = keys.map((_, n) => String(n + 1));
+      const schema = { type: "object", required: ["choice"], additionalProperties: false, properties: { choice: { type: "string", enum: numbers } } };
+      const choices = Object.fromEntries(keys.map((k, n) => [numbers[n], q.criteria[k]]));
+      const input = JSON.stringify({ state, question: q.instructions, choices });
+      const { ms, answer } = await evaluate(`(async () => {
+        const session = await window.base.clone();
+        const t0 = performance.now();
+        const answer = await session.prompt(${JSON.stringify(input)}, { responseConstraint: ${JSON.stringify(schema)} });
+        const ms = Math.round(performance.now() - t0);
+        session.destroy();
+        return { ms, answer };
+      })()`);
+      times.push(ms);
+      let choice;
+      try {
+        choice = keys[numbers.indexOf(JSON.parse(answer).choice)];
+      } catch {}
+      answers[name] = { type: "choice", choice };
+    }
+    res.setHeader("Content-Type", "application/json");
+    res.end(JSON.stringify({ answers, usage: { input_tokens: 0, output_tokens: 0 } }));
+    const sorted = [...times].sort((a, b) => a - b);
+    console.log(`${times.length} questions, median ${sorted[Math.floor(sorted.length / 2)]} ms per question`);
+  });
+  await new Promise((r) => server.listen(8765, "127.0.0.1", r));
+  console.log("ready");
+  await new Promise(() => {});
+}
+
 const [mode, ...args] = process.argv.slice(2);
-await ({ translate, speech, furigana }[mode])(...args);
+await ({ translate, speech, furigana, choose, decider }[mode])(...args);
 process.exit(0);

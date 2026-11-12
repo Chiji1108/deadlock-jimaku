@@ -1404,7 +1404,8 @@ describe("admin", () => {
     vi.mocked(openrouter).mockImplementation(async (_path, key) =>
       key === "sk-or-0000000000000000-first" ? new Response("slow down", { status: 429 }) : answered(),
     );
-    for (let i = 0; i < 6; i++) expect((await translate(code)).status).toBe(200);
+    // キーは毎回並べ替えるので、断られるキーに 1 度も当たらないことがないよう、十分な回数を送る
+    for (let i = 0; i < 40; i++) expect((await translate(code)).status).toBe(200);
     const [first, second] = await list();
     expect(first!.failures).toBeGreaterThan(0);
     expect([first!.failedStatus, second!.failures]).toEqual([429, 0]);

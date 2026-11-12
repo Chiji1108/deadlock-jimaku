@@ -190,6 +190,7 @@ pub enum ChromeMsg {
     Text(Heard),
     Status { status: LiveStatus },
     Translated(Translated),
+    Decided(Decided),
 }
 
 /// Chrome が認識した文。確定で文が空なら、開いている発話を捨てる
@@ -209,6 +210,8 @@ pub struct Heard {
 #[ts(export)]
 pub enum ChromeCommand {
     Translate(ChromeTask),
+    /// 用語の候補を、Chrome の中の Gemini Nano に確かめてもらう（DESIGN.md 9.7）
+    Decide(ChromeQuestions),
     /// ハイブリッドの発話が開いた。ページがつなげていた文を捨てる
     Open,
     /// ハイブリッドの発話が閉じた。認識を区切り、すぐ聞き直す。`count` はこの区切りの番号で、
@@ -227,6 +230,40 @@ pub struct ChromeTask {
     pub terms: Vec<TermName>,
     #[serde(rename = "final")]
     pub is_final: bool,
+}
+
+/// 確定の文の用語の候補を確かめる問い（Gemini Nano は Chrome の中にある）
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct ChromeQuestions {
+    /// 発話
+    pub id: String,
+    /// 文と、その前の発話
+    pub state: String,
+    pub questions: Vec<ChromeQuestion>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct ChromeQuestion {
+    pub name: String,
+    pub instructions: String,
+    pub choices: Vec<ChromeChoice>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct ChromeChoice {
+    pub value: String,
+    pub description: String,
+}
+
+/// `ChromeQuestions` の答え。問いの名前 → 選んだ選択肢。Gemini Nano を使えなければ空
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct Decided {
+    pub id: String,
+    pub choices: std::collections::BTreeMap<String, String>,
 }
 
 /// `ChromeTask` の答え。訳せる言語がなければ `translations` は空
