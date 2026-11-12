@@ -52,7 +52,7 @@
 <div class="flex flex-col gap-6">
   <Card.Root>
     <Card.Header>
-      <Card.Title>おすすめの組み合わせ</Card.Title>
+      <Card.Title>モード</Card.Title>
       <Card.Description>選ぶと、下の工程がまとめて決まります</Card.Description>
     </Card.Header>
     <Card.Content><ModePicker /></Card.Content>

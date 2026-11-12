@@ -232,16 +232,17 @@ export const MODES: {
   hourlyUsd: number;
   hint: string;
   engines: Engines;
-  recommended?: boolean;
+  /** 名前の横に出すひとこと */
+  badge?: string;
 }[] = [
   {
     name: "beta",
-    label: "ベータ",
+    label: "おすすめ",
     traits: "高精度・キー不要",
     hourlyUsd: 0,
     hint: "ベータの間は無料です。途中の字幕は Chrome、確定の字幕・用語・翻訳・ふりがなの読み分けは、開発者のサーバーを通して作ります（1 日の上限があります）",
     engines: BETA,
-    recommended: true,
+    badge: "ベータの間は無料",
   },
   {
     name: "chrome",

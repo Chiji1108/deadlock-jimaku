@@ -30,7 +30,7 @@
       >
         <span class="flex items-center gap-2 text-sm font-medium">
           {m.label}
-          {#if m.recommended}<Badge variant="secondary">おすすめ</Badge>{/if}
+          {#if m.badge}<Badge variant="secondary">{m.badge}</Badge>{/if}
         </span>
         <span class="text-xs text-muted-foreground">{m.traits}</span>
         <span class="text-xs text-muted-foreground tabular-nums">{price(m.hourlyUsd)}</span>
