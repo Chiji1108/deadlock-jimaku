@@ -41,10 +41,11 @@ export const LOOKS: Look[] = [
   },
   {
     label: "かわいい",
-    text: { ...TEXT, outline: { width: 0.2, color: "#e8559a" } },
+    text: { ...TEXT, outline: { width: 0.18, color: "#e8559a" } },
     background: NO_BAND,
-    fontStyle: { font: "Hachi Maru Pop", weight: 400, letterSpacing: 0.02 },
-    english: { font: "Sniglet", weight: 400, letterSpacing: null },
+    // 線の太い字にする（細い字は、色の縁取りに白が埋もれる）
+    fontStyle: { font: "Mochiy Pop One", weight: 400, letterSpacing: 0.02 },
+    english: { font: "Sniglet", weight: 800, letterSpacing: null },
   },
   {
     label: "ドット",
@@ -54,6 +55,9 @@ export const LOOKS: Look[] = [
     english: { font: "VT323", weight: 400, letterSpacing: null },
   },
 ];
+
+/** 最初に出す見た目。標準のままだと、変えられることが伝わらない */
+export const FIRST_LOOK = LOOKS.findIndex((look) => look.label === "ポップ");
 
 /** assets/fonts の中のファイル名 */
 export const fontFile = (family: string, weight: number) =>
