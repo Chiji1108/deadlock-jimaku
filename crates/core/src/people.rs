@@ -132,6 +132,89 @@ pub fn apply(glossary: &mut Glossary, people: &[Person]) {
     }
 }
 
+/// 書き出したファイルの中身。人に渡して、読み込んでもらう（サーバーは通さない）
+#[derive(Serialize, Deserialize)]
+struct Exported {
+    /// ファイルの形の版
+    version: u32,
+    people: Vec<ExportedPerson>,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ExportedPerson {
+    id: String,
+    names: BTreeMap<LangCode, String>,
+    #[serde(default)]
+    aliases: Vec<String>,
+    /// アイコンの画像（base64）
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    icon: Option<String>,
+}
+
+/// 書き出すファイルの名前
+pub const EXPORT_FILE: &str = "deadlock-jimaku-people.json";
+
+/// 人の辞書を、アイコンごと 1 つのファイルの中身にする。「自分」の印は付けない（読み込んだ人から見れば、ほかの人）
+pub async fn export(data_dir: &Path, people: &[Person]) -> anyhow::Result<String> {
+    use base64::Engine as _;
+    let mut exported = Vec::new();
+    for person in people {
+        let icon = match person.icon.as_deref().and_then(|f| icon_path(data_dir, f)) {
+            Some(path) => tokio::fs::read(path).await.ok(),
+            None => None,
+        };
+        exported.push(ExportedPerson {
+            id: person.id.clone(),
+            names: person.names.clone(),
+            aliases: person.aliases.clone(),
+            icon: icon.map(|bytes| base64::engine::general_purpose::STANDARD.encode(bytes)),
+        });
+    }
+    let file = Exported {
+        version: 1,
+        people: exported,
+    };
+    Ok(serde_json::to_string_pretty(&file)?)
+}
+
+/// 書き出したファイルの中身を、今の一覧に足す。同じ id の人は、名前・呼ばれ方・アイコンを置き換える
+/// （もう一度読み込んでも増えない。「自分」の印はそのまま）。新しい人は、ほかの人として足す
+pub async fn import(
+    data_dir: &Path,
+    file: &str,
+    existing: &[Person],
+) -> anyhow::Result<Vec<Person>> {
+    use base64::Engine as _;
+    let file: Exported = serde_json::from_str(file).context("not a people file")?;
+    ensure!(file.version == 1, "this file is from a newer version");
+    let mut people = existing.to_vec();
+    for imported in file.people {
+        let icon = match imported.icon {
+            Some(data) => {
+                let bytes = base64::engine::general_purpose::STANDARD.decode(data)?;
+                Some(save_icon(data_dir, &bytes).await?)
+            }
+            None => None,
+        };
+        match people.iter_mut().find(|person| person.id == imported.id) {
+            Some(person) => {
+                person.names = imported.names;
+                person.aliases = imported.aliases;
+                person.icon = icon;
+            }
+            None => people.push(Person {
+                id: imported.id,
+                me: false,
+                names: imported.names,
+                aliases: imported.aliases,
+                icon,
+            }),
+        }
+    }
+    sanitized(people).map_err(anyhow::Error::msg)
+}
+
 /// アイコンを置くフォルダ
 pub fn icons_dir(data_dir: &Path) -> PathBuf {
     data_dir.join("people")
@@ -372,6 +455,45 @@ mod tests {
             "https://yt3.googleusercontent.com/abc=s900&x=1"
         );
         assert_eq!(og_image("<html></html>"), None);
+    }
+
+    /// 書き出したファイルを別の PC で読み込むと、アイコンごと人が増える。「自分」は、ほかの人として入る。
+    /// もう一度読み込んでも増えない
+    #[tokio::test]
+    async fn people_travel_in_a_file_with_their_icons() {
+        let (mine, theirs) = (tempfile::tempdir().unwrap(), tempfile::tempdir().unwrap());
+        let png = [0x89, b'P', b'N', b'G', 7, 7];
+        let me = Person {
+            me: true,
+            icon: Some(save_icon(mine.path(), &png).await.unwrap()),
+            ..person("me1", &[("ja", "ちじ"), ("en", "Chiji")], &["ちーさん"])
+        };
+        let file = export(mine.path(), std::slice::from_ref(&me))
+            .await
+            .unwrap();
+        assert!(!file.contains("\"me\""));
+
+        let host = Person {
+            me: true,
+            ..person("host", &[("ja", "みり")], &[])
+        };
+        let merged = import(theirs.path(), &file, std::slice::from_ref(&host))
+            .await
+            .unwrap();
+        assert_eq!(merged.len(), 2);
+        assert_eq!(merged[0], host);
+        let friend = &merged[1];
+        assert!(!friend.me);
+        assert_eq!(
+            (friend.names.clone(), friend.aliases.clone()),
+            (me.names.clone(), me.aliases.clone())
+        );
+        let icon = icon_path(theirs.path(), friend.icon.as_deref().unwrap()).unwrap();
+        assert_eq!(std::fs::read(icon).unwrap(), png);
+        // もう一度読み込んでも、同じ人は増えない
+        let again = import(theirs.path(), &file, &merged).await.unwrap();
+        assert_eq!(again, merged);
+        assert!(import(theirs.path(), "{}", &merged).await.is_err());
     }
 
     #[tokio::test]

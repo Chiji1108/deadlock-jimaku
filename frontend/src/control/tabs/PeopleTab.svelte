@@ -86,6 +86,29 @@
     }
   }
 
+  async function exportPeople() {
+    try {
+      const { path } = await api.exportPeople();
+      toast.success("書き出しました", { description: path });
+    } catch (e) {
+      toast.error("書き出せませんでした", { description: String(e) });
+    }
+  }
+
+  async function importPeople(event: Event) {
+    const input = event.currentTarget as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = "";
+    if (!file) return;
+    try {
+      const before = people.length;
+      panel.view = await api.importPeople(await file.text());
+      toast.success(`読み込みました（${panel.view.settings.people.length - before} 人増えました）`);
+    } catch (e) {
+      toast.error("読み込めませんでした", { description: String(e) });
+    }
+  }
+
   function pick(person: Person, event: Event) {
     const input = event.currentTarget as HTMLInputElement;
     const file = input.files?.[0];
@@ -288,6 +311,28 @@
           <Button type="submit" variant="outline" disabled={!adding.other.trim()}>足す</Button>
         </form>
       {/if}
+    </Card.Content>
+  </Card.Root>
+
+  <Card.Root>
+    <Card.Header>
+      <Card.Title>書き出しと読み込み</Card.Title>
+      <Card.Description>
+        ここの人たちを、アイコンごと 1
+        つのファイルにして、一緒に配信する人に渡せます。読み込むと、相手の一覧に足されます（自分は、相手から見た「一緒に遊ぶ人」として入ります）
+      </Card.Description>
+    </Card.Header>
+    <Card.Content class="flex flex-wrap gap-2">
+      <Button variant="outline" disabled={!people.length} onclick={exportPeople}>
+        ファイルに書き出す
+      </Button>
+      <Button
+        variant="outline"
+        onclick={(e) => (e.currentTarget.nextElementSibling as HTMLInputElement | null)?.click()}
+      >
+        ファイルを読み込む
+      </Button>
+      <input type="file" accept="application/json,.json" class="hidden" onchange={importPeople} />
     </Card.Content>
   </Card.Root>
 

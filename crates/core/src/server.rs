@@ -58,6 +58,12 @@ pub fn router(store: Arc<Store>) -> Router {
             post(put_person_icon).layer(DefaultBodyLimit::max(5 * 1024 * 1024)),
         )
         .route("/people/icon/fetch", post(fetch_person_icon))
+        // 人の辞書を、人に渡すファイルに書き出す・読み込む
+        .route("/people/export", post(export_people))
+        .route(
+            "/people/import",
+            post(import_people).layer(DefaultBodyLimit::max(64 * 1024 * 1024)),
+        )
         .route("/languages", get(languages))
         .route("/fonts", get(fonts))
         .route("/fonts/{family}/faces.css", get(font_faces))
@@ -734,6 +740,46 @@ async fn fetch_person_icon(
     match fetched {
         Ok(fetched) => Json(fetched).into_response(),
         Err(e) => (StatusCode::BAD_GATEWAY, format!("{e:#}")).into_response(),
+    }
+}
+
+#[derive(Serialize)]
+struct ExportedTo {
+    /// 書き出したファイルの場所
+    path: String,
+}
+
+/// 人の辞書を、ダウンロードのフォルダのファイルに書き出す（操作パネルは、アプリの中でも OBS のドックでも開くので、
+/// 保存の画面は出さずに、決まった場所に置く）
+async fn export_people(State(store): State<Arc<Store>>) -> Response {
+    let written = async {
+        let file = people::export(store.data_dir(), &store.saved().people).await?;
+        let dir = dirs::download_dir().ok_or_else(|| anyhow::anyhow!("no Downloads folder"))?;
+        let path = dir.join(people::EXPORT_FILE);
+        tokio::fs::write(&path, file).await?;
+        anyhow::Ok(path)
+    };
+    match written.await {
+        Ok(path) => Json(ExportedTo {
+            path: path.display().to_string(),
+        })
+        .into_response(),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, format!("{e:#}")).into_response(),
+    }
+}
+
+/// 書き出したファイルの中身を読み込んで、人の辞書に足す。本文はファイルの中身
+async fn import_people(State(store): State<Arc<Store>>, body: String) -> Response {
+    let merged = people::import(store.data_dir(), &body, &store.saved().people).await;
+    let saved = merged.map_err(|e| format!("{e:#}")).and_then(|people| {
+        store.update_settings(SettingsPatch {
+            people: Some(people),
+            ..SettingsPatch::default()
+        })
+    });
+    match saved {
+        Ok(_) => get_settings(State(store)).await.into_response(),
+        Err(e) => (StatusCode::BAD_REQUEST, e).into_response(),
     }
 }
 

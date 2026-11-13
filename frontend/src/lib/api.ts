@@ -44,6 +44,15 @@ export const api = {
   /** 人の辞書のアイコンを、チャンネルの URL か、つないである Steam のアカウントから取ってくる */
   fetchPersonIcon: (from: { url: string } | { steam: true }) =>
     request<Fetched>("/api/people/icon/fetch", { method: "POST", body: JSON.stringify(from) }),
+  /** 人の辞書を、ダウンロードのフォルダのファイルに書き出す。書き出した場所を返す */
+  exportPeople: () => request<{ path: string }>("/api/people/export", { method: "POST" }),
+  /** 書き出したファイルの中身を読み込んで、人の辞書に足す */
+  importPeople: (file: string) =>
+    request<SettingsView>("/api/people/import", {
+      method: "POST",
+      body: file,
+      headers: { "content-type": "text/plain" },
+    }),
   /** PC の中の AI に使える GPU。まだ数えられなければ null */
   gpus: () => request<Gpus | null>("/api/gpus"),
   /** 対応している言語のコード */
