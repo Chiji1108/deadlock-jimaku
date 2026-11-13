@@ -375,7 +375,7 @@ export const MODES: {
   {
     name: "chromePlus",
     label: "Chrome+",
-    traits: ["サーバーを使わない", "用語を AI で判定", "GPU を使う"],
+    traits: ["サーバーを使わない", "用語に強い", "GPU を使う"],
     hourlyUsd: 0,
     hint: "Chrome のモードに、用語の判定を足します。Chrome の中の AI（Gemini Nano）が、略称や「〇〇のウルト」も判定します。初回に Chrome が約 4 GB をダウンロードし、判定のたびに GPU を使います",
     engines: CHROME_PLUS,
