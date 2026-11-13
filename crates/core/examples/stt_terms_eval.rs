@@ -100,7 +100,7 @@ async fn main() -> anyhow::Result<()> {
             }
             None => {
                 let dir = std::env::var("STT_EVAL_SPEECH").context("STT_EVAL_SPEECH")?;
-                Transcriber::Local(Arc::new(Speech::start(Path::new(&dir)).await?))
+                Transcriber::Local(Arc::new(Speech::start(Path::new(&dir), None).await?))
             }
         };
         let (mut hit, mut terms, mut edits, mut length, mut failed) = (0, 0, 0, 0, 0);

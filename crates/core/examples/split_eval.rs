@@ -538,7 +538,9 @@ impl App {
         let llama = match local.0 == TermsEngine::Gemma || local.1 == TranslationEngine::Gemma {
             true => {
                 let dir = std::env::var("SPLIT_EVAL_LLAMA").context("SPLIT_EVAL_LLAMA")?;
-                Some(Arc::new(Llama::start(Path::new(&dir), &|_, _| {}).await?))
+                Some(Arc::new(
+                    Llama::start(Path::new(&dir), None, &|_, _| {}).await?,
+                ))
             }
             false => None,
         };

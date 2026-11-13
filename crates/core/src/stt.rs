@@ -310,7 +310,7 @@ mod tests {
     async fn whisper_writes_the_heroes_it_was_told() {
         let dir = std::env::var("WHISPER_TEST_DIR").expect("WHISPER_TEST_DIR");
         let size = crate::whisper::Size::Turbo;
-        let whisper = Whisper::start(std::path::Path::new(&dir), size, &|_, _| {}).await;
+        let whisper = Whisper::start(std::path::Path::new(&dir), size, None, &|_, _| {}).await;
         let wav = concat!(
             env!("CARGO_MANIFEST_DIR"),
             "/../../experiments/data/tts/aya/001.wav"
@@ -344,7 +344,7 @@ mod tests {
             std::path::PathBuf::from,
         );
         let started = std::time::Instant::now();
-        let speech = Speech::start(&dir).await.unwrap();
+        let speech = Speech::start(&dir, None).await.unwrap();
         println!("ready in {:?}", started.elapsed());
         let wav = concat!(
             env!("CARGO_MANIFEST_DIR"),
@@ -507,7 +507,7 @@ mod tests {
         );
         let meter = Arc::new(Meter::new(dir.join("usage-live.json")));
         let cfg = RealtimeConfig {
-            transcriber: Transcriber::Local(Arc::new(Speech::start(&dir).await.unwrap())),
+            transcriber: Transcriber::Local(Arc::new(Speech::start(&dir, None).await.unwrap())),
             model: crate::local::HAAS_JA.into(),
             delay: "low".into(),
             meter: meter.clone(),
