@@ -402,9 +402,9 @@ export const MODES: {
   {
     name: "local",
     label: "ローカル",
-    traits: ["外に送らない", "高スペック PC 向け"],
+    traits: ["外に送らない", "VRAM 12 GB 以上推奨"],
     hourlyUsd: 0,
-    hint: "Chrome を開かず、文字起こし・用語・翻訳を、この PC の中の AI で作ります。文字起こしの正確さは Chrome と同じくらいです。GPU のメモリを 6 GB 以上使い、初回に約 6 GB をダウンロードします",
+    hint: "Chrome を開かず、文字起こし・用語・翻訳を、この PC の中の AI で作ります。文字起こしの正確さは Chrome と同じくらいです。GPU のメモリ（VRAM）を 6 GB 以上使うので、ゲームの分と合わせて 12 GB 以上を薦めます。初回に約 6 GB をダウンロードします",
     engines: LOCAL,
     more: true,
   },
