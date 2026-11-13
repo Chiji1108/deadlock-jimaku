@@ -11,12 +11,14 @@ use std::time::Instant;
 use tokio::sync::{broadcast, mpsc};
 
 use crate::access::{Access, Accesses};
+use crate::annotate::mark_first_person;
 use crate::chrome;
 use crate::decide::{Asker, Decider};
 use crate::enrich::{Enricher, Span, cover, source_tokens};
 use crate::furigana;
 use crate::llama::Llama;
 use crate::mt::Translator;
+use crate::people;
 use crate::reading::Furigana;
 use crate::secrets::Provider;
 use crate::settings::{
@@ -300,8 +302,17 @@ impl Finisher {
             None => ruby_of(&tokens),
         };
         let (spans, translations) = words?.unwrap_or_else(|| (local, Translations::new()));
+        let source = source_tokens(&spans, &ruby);
+        // 用語を強調するなら、自分を指す言葉（一人称）にもアイコンを付ける。用語と翻訳が決まったあとなので、
+        // 翻訳では名前に置き換わらない
+        let me = people::first_person(&self.store.settings().people);
+        let furigana = (phase.emphasis.is_some()).then(Furigana::shared).flatten();
+        let source = match (furigana, me) {
+            (Some(furigana), Some(me)) => mark_first_person(furigana, &text, source, &me),
+            _ => source,
+        };
         Ok(Enriched {
-            source: source_tokens(&spans, &ruby),
+            source,
             translations,
         })
     }
