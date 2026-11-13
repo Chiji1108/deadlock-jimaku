@@ -8,6 +8,7 @@
   import SquareIcon from "@lucide/svelte/icons/square";
   import TrophyIcon from "@lucide/svelte/icons/trophy";
   import WalletIcon from "@lucide/svelte/icons/wallet";
+  import UserRoundIcon from "@lucide/svelte/icons/user-round";
   import WorkflowIcon from "@lucide/svelte/icons/workflow";
   import { ModeWatcher } from "mode-watcher";
   import { onMount } from "svelte";
@@ -25,6 +26,7 @@
   import AudioTab from "./tabs/AudioTab.svelte";
   import DisplayTab from "./tabs/DisplayTab.svelte";
   import EnginesTab from "./tabs/EnginesTab.svelte";
+  import PeopleTab from "./tabs/PeopleTab.svelte";
   import ItemsTab from "./tabs/ItemsTab.svelte";
   import KeysTab from "./tabs/KeysTab.svelte";
   import RankTab from "./tabs/RankTab.svelte";
@@ -41,6 +43,7 @@
   const TABS = [
     { value: "audio", label: "マイクと翻訳", icon: MicIcon, page: AudioTab },
     { value: "engines", label: "モード", icon: WorkflowIcon, page: EnginesTab },
+    { value: "people", label: "プロフィール", icon: UserRoundIcon, page: PeopleTab },
     {
       value: "display",
       label: "字幕",

@@ -81,6 +81,7 @@ const ENTITY_COLORS = {
   "--weapon-color": "#ffb35c",
   "--vitality-color": "#98e36b",
   "--spirit-color": "#cfa2ff",
+  "--person-color": "#ffe27a",
 };
 
 const scaled = (value: number | null | undefined, unit = "1em") =>

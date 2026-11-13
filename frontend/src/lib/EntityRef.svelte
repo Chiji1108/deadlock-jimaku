@@ -58,6 +58,16 @@
   .ability {
     color: var(--ability-color, #8fd8ff);
   }
+  /* 人（配信者と、よく一緒に遊ぶ人）。用語のどれとも違う、黄みの色 */
+  .person {
+    color: var(--person-color, #ffe27a);
+  }
+  /* 人のアイコンは顔なので、丸く切り抜く */
+  .person .icon {
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: 50%;
+  }
   .weapon {
     color: var(--weapon-color, #ffb35c);
   }

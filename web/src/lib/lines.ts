@@ -15,6 +15,7 @@ const hero = (className: string, ja: string, en: string, ru: string, zh: string)
   kind: "hero",
   className,
   names: { ja, en, ru, "zh-Hans": zh },
+  aliases: [],
 });
 const item = (
   className: string,

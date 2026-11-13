@@ -162,6 +162,22 @@ fn table_of(glossary: &Glossary, furigana: Option<&Furigana>) -> Vec<Term> {
             })
         })
         .collect();
+    // 人の呼ばれ方（あだ名）も、名前と同じように探す
+    for (reference, e) in &glossary.entities {
+        let Some(en) = e.names.get("en") else {
+            continue;
+        };
+        terms.extend(e.aliases.iter().map(|alias| {
+            Term {
+                reference: reference.clone(),
+                text: alias.clone(),
+                reading: furigana
+                    .and_then(|f| f.reading(alias))
+                    .unwrap_or_else(|| alias.clone()),
+                en: en.clone(),
+            }
+        }));
+    }
     // スキルと同じ名前のアイテムがある（ライフドレイン）。先の行が勝つので、説明を出せるアイテムを先にする
     terms.sort_by_key(|t| !t.reference.starts_with("item:"));
     terms
@@ -243,6 +259,7 @@ mod tests {
             slot: None,
             hero: None,
             ability_slot: None,
+            aliases: Vec::new(),
         };
         Glossary {
             client_version: 1,
@@ -275,6 +292,33 @@ mod tests {
         let terms = table_of(&magazine(Some(ruby)), None);
         assert_eq!(terms[0].reading, "きそかくちょうマガジン");
         assert_eq!(terms[0].en, "Extended Magazine");
+    }
+
+    /// 人の辞書の人は、名前でも、呼ばれ方でも見つかる。翻訳に渡す文では、その人の英語の名前になる
+    #[test]
+    fn a_person_is_found_by_name_and_by_what_they_are_called() {
+        let mut glossary = magazine(None);
+        glossary.languages = vec!["ja".into(), "en".into()];
+        let me = crate::people::Person {
+            id: "me".into(),
+            me: true,
+            names: [("ja", "ちじ"), ("en", "Chiji")]
+                .map(|(lang, name)| (lang.to_owned(), name.to_owned()))
+                .into(),
+            aliases: vec!["ちーさん".into()],
+            icon: None,
+        };
+        crate::people::apply(&mut glossary, &[me]);
+        let furigana = Furigana::shared().unwrap();
+        let terms = Terms::new(table_of(&glossary, Some(furigana)));
+        for said in ["ちじが行くよ", "ちーさんが行くよ"] {
+            let (tokens, translate) = annotated(Some(furigana), Some(&terms), false, said);
+            let found = tokens.iter().any(|token| {
+                matches!(token, Token::Entity { reference, .. } if reference == "person:me")
+            });
+            assert!(found, "{said}: {tokens:?}");
+            assert!(translate.text.starts_with("Chiji"), "{}", translate.text);
+        }
     }
 
     #[test]

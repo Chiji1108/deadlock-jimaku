@@ -89,6 +89,8 @@ pub async fn load_into(
     let publish = |cache: &readings::Cache, aliases: Option<&aliases::Cache>| {
         let mut glossary = (*loaded.glossary).clone();
         readings::apply(&mut glossary, cache);
+        // 人の辞書（設定）を、用語として足す
+        crate::people::apply(&mut glossary, &settings.people);
         let aliases = aliases.map(|a| aliases::by_reference(&glossary, a));
         tracing::info!(
             "glossary {} ({} entities, {:?})",

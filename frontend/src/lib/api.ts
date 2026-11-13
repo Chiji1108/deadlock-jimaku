@@ -1,4 +1,5 @@
 import type { BetaRefusal } from "../generated/BetaRefusal";
+import type { Fetched } from "../generated/Fetched";
 import type { FontEntry } from "../generated/FontEntry";
 import type { GiftStatus } from "../generated/GiftStatus";
 import type { Gpus } from "../generated/Gpus";
@@ -34,6 +35,15 @@ export const api = {
       body: JSON.stringify({ key }),
     }),
   devices: () => request<string[]>("/api/devices"),
+  /** 人の辞書のアイコンに、選んだ画像を保存する */
+  savePersonIcon: async (image: Blob) => {
+    const res = await fetch("/api/people/icon", { method: "POST", body: image });
+    if (!res.ok) throw new Error((await res.text()) || res.statusText);
+    return (await res.json()) as Fetched;
+  },
+  /** 人の辞書のアイコンを、チャンネルの URL か、つないである Steam のアカウントから取ってくる */
+  fetchPersonIcon: (from: { url: string } | { steam: true }) =>
+    request<Fetched>("/api/people/icon/fetch", { method: "POST", body: JSON.stringify(from) }),
   /** PC の中の AI に使える GPU。まだ数えられなければ null */
   gpus: () => request<Gpus | null>("/api/gpus"),
   /** 対応している言語のコード */

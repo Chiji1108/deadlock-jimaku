@@ -3,6 +3,7 @@ import type { Anchor } from "./Anchor";
 import type { Engines } from "./Engines";
 import type { ItemCards } from "./ItemCards";
 import type { Models } from "./Models";
+import type { Person } from "./Person";
 import type { RankContent } from "./RankContent";
 import type { RankStyle } from "./RankStyle";
 import type { Region } from "./Region";
@@ -31,6 +32,10 @@ micDevice?: string,
  * 翻訳先（最大 4 言語。mic_language は除く）
  */
 translateTo: Array<string>, 
+/**
+ * 人の辞書（自分と、よく一緒に遊ぶ人。DESIGN.md 9.12）
+ */
+people: Array<Person>, 
 /**
  * PC の中の AI に使わせる GPU の名前。None なら自動（内蔵でない GPU を優先。DESIGN.md 9.11）
  */

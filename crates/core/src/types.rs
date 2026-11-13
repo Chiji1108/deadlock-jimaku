@@ -409,6 +409,8 @@ pub enum EntityKind {
     Hero,
     Item,
     Ability,
+    /// 人（配信者と、よく一緒に遊ぶ人。`people.rs` が設定から足す）
+    Person,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -446,6 +448,9 @@ pub struct Entity {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub ability_slot: Option<u8>,
+    /// 呼ばれ方（人だけ。あだ名など）。名前と同じように、字幕の中で探す
+    #[serde(default)]
+    pub aliases: Vec<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]

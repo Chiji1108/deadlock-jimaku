@@ -685,12 +685,18 @@ async fn transcribe(
 }
 
 /// 用語ヒント: 話す言語での名前（DESIGN.md 8.4）。
-/// 上限を超えるときはヒーロー → アイテム → スキルの順に残す
+/// 上限を超えるときは人 → ヒーロー → アイテム → スキルの順に残す
 pub fn keywords(glossary: &Glossary, lang: &str) -> Vec<String> {
-    let names = [EntityKind::Hero, EntityKind::Item, EntityKind::Ability]
-        .into_iter()
-        .flat_map(|kind| glossary.entities.values().filter(move |e| e.kind == kind))
-        .filter_map(|e| e.names.get(lang));
+    // 人の名前は、文字起こしがいちばん間違えやすいので、先に入れる
+    let names = [
+        EntityKind::Person,
+        EntityKind::Hero,
+        EntityKind::Item,
+        EntityKind::Ability,
+    ]
+    .into_iter()
+    .flat_map(|kind| glossary.entities.values().filter(move |e| e.kind == kind))
+    .filter_map(|e| e.names.get(lang));
     let mut terms: Vec<String> = Vec::new();
     for term in names {
         if terms.len() == MAX_KEYWORDS {
@@ -703,12 +709,12 @@ pub fn keywords(glossary: &Glossary, lang: &str) -> Vec<String> {
     terms
 }
 
-/// ヒーローの名前（話す言語で）。Whisper に渡す用語（DESIGN.md 9.10）
+/// ヒーローと人の名前（話す言語で）。少ししか用語を渡せない Whisper に渡す（DESIGN.md 9.10）
 pub fn heroes(glossary: &Glossary, lang: &str) -> Vec<String> {
     let heroes = glossary
         .entities
         .values()
-        .filter(|e| e.kind == EntityKind::Hero);
+        .filter(|e| matches!(e.kind, EntityKind::Hero | EntityKind::Person));
     let mut names: Vec<String> = heroes.filter_map(|e| e.names.get(lang).cloned()).collect();
     names.sort();
     names.dedup();

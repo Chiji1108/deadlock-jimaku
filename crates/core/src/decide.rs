@@ -348,8 +348,10 @@ fn name(i: usize) -> String {
 fn index(loaded: &Loaded, source_lang: &str) -> Index {
     let mut by_surface: std::collections::BTreeMap<&str, Vec<String>> = Default::default();
     for (reference, e) in &loaded.glossary.entities {
+        // 別名（用語は LLM が作ったもの、人は本人が書いた呼ばれ方）
         let aliases = loaded.aliases.get(reference).into_iter().flatten();
         let names = e.names.get(source_lang).into_iter().chain(aliases);
+        let names = names.chain(&e.aliases);
         for name in names.filter(|n| n.chars().count() >= 2) {
             let refs = by_surface.entry(name).or_default();
             if !refs.contains(reference) {
@@ -585,6 +587,14 @@ fn question(
             EntityKind::Hero => "hero",
             EntityKind::Item => "item",
             EntityKind::Ability => "ability",
+            // ゲームの用語ではないので、別の言い方で説明する
+            EntityKind::Person => {
+                return format!(
+                    "{} ({}): a person, the streamer or someone they play with",
+                    name("en"),
+                    name("ja")
+                );
+            }
         };
         let owner = e
             .hero

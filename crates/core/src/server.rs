@@ -5,7 +5,7 @@ use std::sync::Arc;
 use axum::Json;
 use axum::Router;
 use axum::extract::ws::{CloseFrame, Message, WebSocket, WebSocketUpgrade};
-use axum::extract::{Path, Query, Request, State};
+use axum::extract::{DefaultBodyLimit, Path, Query, Request, State};
 use axum::http::{HeaderMap, StatusCode, Uri, header};
 use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Response};
@@ -24,7 +24,7 @@ use crate::store::{ChromeEvent, Store};
 use crate::types::{
     ChromeCommand, ChromeMsg, ClientMsg, LangCode, RankState, ServerMsg, SettingsView, Topic,
 };
-use crate::{audio, lang, local, rank};
+use crate::{audio, lang, local, people, rank};
 use ts_rs::TS;
 
 #[derive(RustEmbed)]
@@ -52,6 +52,12 @@ pub fn router(store: Arc<Store>) -> Router {
         .route("/share/codes/{id}", patch(update_code))
         .route("/devices", get(devices))
         .route("/gpus", get(gpus))
+        // 人の辞書のアイコン。画像そのものを受け取る口と、Steam やチャンネルのページから取ってくる口
+        .route(
+            "/people/icon",
+            post(put_person_icon).layer(DefaultBodyLimit::max(5 * 1024 * 1024)),
+        )
+        .route("/people/icon/fetch", post(fetch_person_icon))
         .route("/languages", get(languages))
         .route("/fonts", get(fonts))
         .route("/fonts/{family}/faces.css", get(font_faces))
@@ -67,6 +73,7 @@ pub fn router(store: Arc<Store>) -> Router {
         .layer(middleware::from_fn(local_only))
         .route("/assets/{version}/icons/{*path}", get(icon))
         .route("/assets/rank/{file}", get(rank_image))
+        .route("/people/{file}", get(person_icon))
         .fallback(frontend)
         .with_state(store)
 }
@@ -119,8 +126,15 @@ async fn patch_settings(
     State(store): State<Arc<Store>>,
     Json(patch): Json<SettingsPatch>,
 ) -> Response {
+    let people = patch.people.is_some();
     match store.update_settings(patch) {
-        Ok(_) => get_settings(State(store)).await.into_response(),
+        Ok(_) => {
+            // 人を消したり、アイコンを差し替えたりしたら、使わなくなった画像を消す
+            if people {
+                people::prune_icons(store.data_dir(), &store.saved().people).await;
+            }
+            get_settings(State(store)).await.into_response()
+        }
         Err(e) => (StatusCode::BAD_REQUEST, e).into_response(),
     }
 }
@@ -670,6 +684,58 @@ async fn icon(
 }
 
 /// ランクのアイコン。名前に元の画像の URL のハッシュを含むので、同じ URL の中身は変わらない
+/// 人の辞書のアイコン。ファイルの名前は中身から作ってあるので、変わらないものとして返す
+async fn person_icon(State(store): State<Arc<Store>>, Path(file): Path<String>) -> Response {
+    let Some(path) = people::icon_path(store.data_dir(), &file) else {
+        return StatusCode::NOT_FOUND.into_response();
+    };
+    match tokio::fs::read(path).await {
+        Ok(bytes) => {
+            let mime = mime_guess::from_path(&file).first_or_octet_stream();
+            immutable(mime.as_ref(), bytes)
+        }
+        Err(_) => StatusCode::NOT_FOUND.into_response(),
+    }
+}
+
+/// 操作パネルで選んだ画像を、人の辞書のアイコンとして保存する。本文は画像そのもの
+async fn put_person_icon(State(store): State<Arc<Store>>, body: axum::body::Bytes) -> Response {
+    match people::save_icon(store.data_dir(), &body).await {
+        Ok(icon) => Json(people::Fetched { icon, name: None }).into_response(),
+        Err(e) => (StatusCode::BAD_REQUEST, format!("{e:#}")).into_response(),
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct IconSource {
+    /// Twitch か YouTube のチャンネルの URL
+    url: Option<String>,
+    /// ランクの表示につないである Steam のアカウントから取る
+    #[serde(default)]
+    steam: bool,
+}
+
+/// アイコンを、Steam のプロフィールか、チャンネルのページから取ってきて保存する
+async fn fetch_person_icon(
+    State(store): State<Arc<Store>>,
+    Json(source): Json<IconSource>,
+) -> Response {
+    let dir = store.data_dir();
+    let fetched = match (source.url, source.steam) {
+        (Some(url), _) => people::fetch_from_page(dir, &url).await,
+        (None, true) => match store.saved().rank_account {
+            Some(account) => people::fetch_from_steam(dir, account).await,
+            None => Err(anyhow::anyhow!("no Steam account is linked")),
+        },
+        (None, false) => Err(anyhow::anyhow!("nothing to fetch from")),
+    };
+    match fetched {
+        Ok(fetched) => Json(fetched).into_response(),
+        Err(e) => (StatusCode::BAD_GATEWAY, format!("{e:#}")).into_response(),
+    }
+}
+
 async fn rank_image(State(store): State<Arc<Store>>, Path(file): Path<String>) -> Response {
     let Some(path) = rank::image_path(&store.rank_images(), &file) else {
         return StatusCode::NOT_FOUND.into_response();
