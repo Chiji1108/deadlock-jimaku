@@ -69,20 +69,27 @@ function displayChars(): string | undefined {
   return chars(pages.map((name) => displayText(readFileSync(join(DIST, name), "utf8"))).join(""));
 }
 
-function catalogFont(family: string) {
+/** その言語に選べるフォント（アプリは、言語ごとにカタログのフォントを出す） */
+function catalogFont(family: string, language: string) {
   const entry = catalog.fonts.find((e) => e.family === family);
-  if (!entry?.languages.includes("ja")) throw new Error(`${family} はカタログの日本語のフォントにありません`);
+  if (!entry?.languages.includes(language)) throw new Error(`${family} は、カタログの ${language} のフォントにありません`);
   return entry;
 }
 
 const fonts: { entry: ReturnType<typeof catalogFont>; weight: number; file: string; text?: string }[] = [
-  ...LOOKS.flatMap(({ fontStyle: { font, weight } }) => {
-    if (!font) return [];
-    if (!weight) throw new Error(`${font} の太さを決めてください`);
-    return [{ entry: catalogFont(font), weight, file: fontFile(font, weight), text: LOOK_TEXT }];
-  }),
+  ...LOOKS.flatMap(({ fontStyle, english }) =>
+    // 英語の訳文の行は、ASCII だけ入れる
+    [
+      { style: fontStyle, language: "ja", text: LOOK_TEXT },
+      { style: english, language: "en", text: chars("") },
+    ].flatMap(({ style: { font, weight }, language, text }) => {
+      if (!font) return [];
+      if (!weight) throw new Error(`${font} の太さを決めてください`);
+      return [{ entry: catalogFont(font, language), weight, file: fontFile(font, weight), text }];
+    }),
+  ),
   {
-    entry: catalogFont(DISPLAY.family),
+    entry: catalogFont(DISPLAY.family, "ja"),
     weight: DISPLAY.weight,
     file: fontFile(DISPLAY.family, DISPLAY.weight),
     text: displayChars(),

@@ -21,29 +21,31 @@
     ...look.text,
     background: look.background,
     lineHeight: null,
-    languages: { ja: look.fontStyle },
+    languages: { ja: look.fontStyle, en: look.english },
   });
   const rank = $derived<RankStyle>({ ...look.text, ...look.fontStyle });
   const segment = enriched("look", LINES[0]!, "en");
 
-  let faces: (FontFace | undefined)[] = [];
+  /** 見た目ごとの、読み込むフォント（日本語と英語） */
+  let faces: FontFace[][] = [];
 
   // 画面に入って動き始めたら（client:visible）見本のフォントを全部読んでおく
   onMount(() => {
-    faces = LOOKS.map(({ fontStyle: { font, weight } }) => {
-      if (!font || !weight) return undefined;
-      const face = new FontFace(font, `url(${FILES[`../assets/fonts/${fontFile(font, weight)}`]})`, {
-        weight: String(weight),
-      });
-      document.fonts.add(face);
-      void face.load().catch(() => {});
-      return face;
-    });
+    faces = LOOKS.map((l) =>
+      [l.fontStyle, l.english].flatMap(({ font, weight }) => {
+        if (!font || !weight) return [];
+        const url = FILES[`../assets/fonts/${fontFile(font, weight)}`];
+        const face = new FontFace(font, `url(${url})`, { weight: String(weight) });
+        document.fonts.add(face);
+        void face.load().catch(() => {});
+        return [face];
+      }),
+    );
   });
 
   /** 読み終えてから切り替え、別のフォントで一瞬出さない。読めなければ標準の候補で出す */
   async function choose(index: number) {
-    await faces[index]?.loaded.catch(() => {});
+    await Promise.all((faces[index] ?? []).map((face) => face.loaded.catch(() => {})));
     chosen = index;
   }
 </script>
