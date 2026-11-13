@@ -1,9 +1,11 @@
 <script lang="ts">
   // モード（おすすめの組み合わせ）を選ぶ。下の工程と同じ、ラジオボタンの一覧。
-  // 自分で組んだ組み合わせは「カスタム」として 1 つ覚えている（DESIGN.md 9.6）。
-  // 選ぶ人が限られるモードは、「その他のモード」を開くと出る
+  // 選ぶ人が限られるモードは、「その他のモード」を開くと出る。
+  // 自分で組んだ組み合わせ（カスタム）は、選ぶものではなく今の状態なので、一覧には入れず、下に 1 行で出す。
+  // 1 つ覚えているので、モードを試したあとに戻れる（DESIGN.md 9.6）
   import ChevronIcon from "@lucide/svelte/icons/chevron-down";
   import { Badge } from "$lib/components/ui/badge";
+  import { Button } from "$lib/components/ui/button";
   import { panel } from "../panel.svelte";
   import { MODES, keyNames, modeOf, monthly, paidItems, price, providers } from "../../lib/engines";
 
@@ -11,8 +13,6 @@
   const t = $derived(s.engines);
   const mode = $derived(modeOf(t));
   const paid = $derived(paidItems(t));
-  /** 覚えているカスタム。今がカスタムなら、今の組み合わせ */
-  const custom = $derived(mode ? s.customEngines : t);
   /** 「その他のモード」を開いている。その中のモードを使っている間は、開いたまま */
   let opened = $state(false);
   const more = $derived(opened || !!mode?.more);
@@ -55,25 +55,6 @@
   {#each MODES.filter((m) => !m.more) as m (m.name)}
     {@render option(m)}
   {/each}
-  {#if custom}
-    <button
-      type="button"
-      role="radio"
-      aria-checked={!mode}
-      class={row}
-      onclick={() => panel.chooseMode(custom)}
-    >
-      <span class="flex flex-wrap items-center gap-2 text-sm">
-        {@render dot(!mode)}
-        <span class="font-medium">カスタム</span>
-      </span>
-      <span class="pl-5 text-xs text-muted-foreground">
-        下の工程ごとに選んだ組み合わせ{#if !mode}{#if paid.length}。鍵の要る工程: {paid.join(
-              "、",
-            )}（{keyNames(providers(t))}が要ります）{:else}。鍵は要りません{/if}{/if}
-      </span>
-    </button>
-  {/if}
   <button
     type="button"
     class="flex items-center gap-2 p-3 text-left text-xs text-muted-foreground transition-colors last:rounded-b-lg hover:bg-muted"
@@ -90,3 +71,22 @@
     {/each}
   {/if}
 </div>
+{#if !mode}
+  <p class="mt-3 rounded-lg bg-muted p-3 text-xs text-muted-foreground">
+    <span class="font-medium text-foreground">カスタム</span>
+    下の工程ごとに選んだ組み合わせを使っています{#if paid.length}。鍵の要る工程: {paid.join(
+        "、",
+      )}（{keyNames(providers(t))}が要ります）{:else}。鍵は要りません{/if}
+  </p>
+{:else if s.customEngines}
+  <div class="mt-2">
+    <Button
+      variant="link"
+      size="sm"
+      class="h-auto p-0 text-xs text-muted-foreground"
+      onclick={() => panel.chooseMode(s.customEngines!)}
+    >
+      前に組んだカスタムに戻す
+    </Button>
+  </div>
+{/if}
