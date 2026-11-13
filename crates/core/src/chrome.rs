@@ -29,6 +29,7 @@ use crate::access::Accesses;
 use crate::annotate::Annotator;
 use crate::decide::Asked;
 use crate::finish::{self, Finished, Finisher};
+use crate::llama::Llama;
 use crate::settings::Settings;
 use crate::store::{ChromeEvent, Store};
 use crate::subtitles;
@@ -458,10 +459,14 @@ pub(crate) async fn final_translation(
 
 /// ページが認識した文を字幕にする。止めるまで続く（ページが閉じられても、開き直せば続きが出る）。
 /// `accesses` は確定の仕上げ（用語、翻訳、ふりがな）に使う会社の送り先と鍵
-pub async fn run(store: Arc<Store>, accesses: Accesses) -> anyhow::Result<()> {
+pub async fn run(
+    store: Arc<Store>,
+    accesses: Accesses,
+    llama: Option<Arc<Llama>>,
+) -> anyhow::Result<()> {
     let settings = store.settings();
     let annotator = Annotator::new(store.clone(), &settings).await;
-    let finisher = Arc::new(Finisher::new(store.clone(), &settings, &accesses));
+    let finisher = Arc::new(Finisher::new(store.clone(), &settings, &accesses, llama));
     let mut events = store.subscribe_chrome();
     let (done_tx, mut done_rx) = tokio::sync::mpsc::channel(64);
     let mut subtitles = Subtitles::new(store, &settings, annotator, finisher, done_tx);
@@ -799,6 +804,7 @@ mod tests {
             store.clone(),
             &settings,
             &Accesses::default(),
+            None,
         ));
         let (done_tx, done) = tokio::sync::mpsc::channel(8);
         let subs = Subtitles::new(store, &settings, annotator, finisher, done_tx);

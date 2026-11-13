@@ -3,6 +3,7 @@ import { toast } from "svelte-sonner";
 import { SvelteMap, SvelteSet } from "svelte/reactivity";
 import type { LiveStatus } from "../generated/LiveStatus";
 import type { BetaRefusal } from "../generated/BetaRefusal";
+import type { Downloading } from "../generated/Downloading";
 import type { Engines } from "../generated/Engines";
 import type { GiftStatus } from "../generated/GiftStatus";
 import type { Provider } from "../generated/Provider";
@@ -60,6 +61,8 @@ class Panel {
   transcriptionError = $state<TranscriptionError | undefined>();
   /** PC の中の文字起こしを準備している（初回はダウンロードを待つ） */
   preparing = $state(false);
+  /** 準備の間に取っているファイルの進み具合 */
+  downloading = $state<Downloading>();
   /** 直近の入力レベル（dBFS）。字幕を動かしている間だけ届く */
   level = $state<number | undefined>();
   /** OpenAI の使用量と概算の料金 */
@@ -197,6 +200,7 @@ class Panel {
     if (msg.type === "transcription.status") {
       this.transcriptionError = msg.error ?? undefined;
       this.preparing = msg.preparing;
+      this.downloading = msg.downloading ?? undefined;
     } else if (msg.type === "chrome.status") {
       this.chromeStatus = msg.status ?? undefined;
     } else if (msg.type === "usage") {

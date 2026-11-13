@@ -15,10 +15,13 @@ use crate::chrome;
 use crate::decide::{Asker, Decider};
 use crate::enrich::{Enricher, Span, cover, source_tokens};
 use crate::furigana;
+use crate::llama::Llama;
 use crate::mt::Translator;
 use crate::reading::Furigana;
 use crate::secrets::Provider;
-use crate::settings::{EmphasisSource, Phase, RubySource, Settings, TranslationSource};
+use crate::settings::{
+    EmphasisSource, Phase, RubySource, Settings, TermsEngine, TranslationEngine, TranslationSource,
+};
 use crate::store::{ChromeEvent, Store};
 use crate::types::{
     Enriched, Glossary, RubySegment, TermName, Token, TranscriptionError, Translatable,
@@ -69,27 +72,46 @@ pub struct Heard {
 }
 
 impl Finisher {
-    /// `accesses` は工程が使う会社の送り先と鍵
-    pub fn new(store: Arc<Store>, settings: &Settings, accesses: &Accesses) -> Self {
+    /// `accesses` は工程が使う会社の送り先と鍵。`llama` は PC の中の LLM（使う工程があるときだけ立ててある）
+    pub fn new(
+        store: Arc<Store>,
+        settings: &Settings,
+        accesses: &Accesses,
+        llama: Option<Arc<Llama>>,
+    ) -> Self {
         let lang = &settings.mic_language;
-        let decider = settings.engines.judge().and_then(|judge| {
-            let access = accesses.get(judge.provider)?;
-            Some(Decider::new(
-                access,
-                judge.name,
+        let engines = settings.engines;
+        let local = |engine: bool| llama.clone().filter(|_| engine);
+        let decider = match local(engines.terms == TermsEngine::Gemma) {
+            Some(llama) => Some(Decider::local(llama, lang.clone(), store.meter())),
+            None => engines.judge().and_then(|judge| {
+                let access = accesses.get(judge.provider)?;
+                Some(Decider::new(
+                    access,
+                    judge.name,
+                    lang.clone(),
+                    store.meter(),
+                ))
+            }),
+        };
+        let targets = settings.translate_to.clone();
+        let translator = match local(engines.translation == TranslationEngine::Gemma) {
+            Some(llama) => Some(Translator::local(
+                llama,
                 lang.clone(),
+                targets,
                 store.meter(),
-            ))
-        });
-        let translator = settings.engines.translation.mt().and_then(|mt| {
-            Some(Translator::new(
-                accesses.get(mt.provider)?,
-                mt.name,
-                lang.clone(),
-                settings.translate_to.clone(),
-                store.meter(),
-            ))
-        });
+            )),
+            None => engines.translation.mt().and_then(|mt| {
+                Some(Translator::new(
+                    accesses.get(mt.provider)?,
+                    mt.name,
+                    lang.clone(),
+                    targets,
+                    store.meter(),
+                ))
+            }),
+        };
         let enricher = accesses.get(Provider::OpenAi).map(|access| {
             Enricher::new(
                 access,
@@ -529,7 +551,7 @@ mod tests {
             is_final: true,
             translations: translations.clone(),
         }));
-        let finisher = Finisher::new(store, &Settings::default(), &Accesses::default());
+        let finisher = Finisher::new(store, &Settings::default(), &Accesses::default(), None);
         let phase = Settings::default().plan().finals;
         let heard = Heard {
             id: "1".into(),
@@ -672,7 +694,7 @@ mod tests {
         });
         let gift = |provider| crate::access::Access::gift(provider, "code".into(), &api);
         let accesses = Accesses::new(settings.engines.providers().into_iter().map(gift));
-        let finisher = Finisher::new(store.clone(), &settings, &accesses);
+        let finisher = Finisher::new(store.clone(), &settings, &accesses, None);
         let heard = Heard {
             id: "1".into(),
             text: "拡マガを取る".into(),
@@ -725,7 +747,7 @@ mod tests {
     #[tokio::test]
     async fn without_llm_the_local_marks_are_kept() {
         let store = Store::new(Ok(Settings::default()), std::path::PathBuf::new());
-        let finisher = Finisher::new(store, &Settings::default(), &Accesses::default());
+        let finisher = Finisher::new(store, &Settings::default(), &Accesses::default(), None);
         let phase = Settings::default().plan().finals;
         let heard = Heard {
             id: "1".into(),

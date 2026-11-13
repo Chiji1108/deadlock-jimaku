@@ -4,16 +4,14 @@
 //! モデル（Apache 2.0、約 0.35 GB）は、speech.cpp が初めての起動で Hugging Face から取る（版は speech.cpp が決めている）。
 //! 音声はこの PC から出ない。プロセスは字幕を止めると終わる
 
-use std::net::{Ipv4Addr, TcpListener};
 use std::path::{Path, PathBuf};
-use std::process::Stdio;
-use std::sync::{Mutex, OnceLock};
 use std::time::Duration;
 
-use anyhow::{Context, bail};
-use tokio::process::{Child, Command};
+use anyhow::Context;
+use tokio::process::Command;
 
 use crate::download::{self, Package};
+use crate::sidecar::{self, Sidecar};
 
 /// speech.cpp でのモデルの名前（料金の表と設定の `models.batch` にも使う）
 pub const HAAS_JA: &str = "haas-ja-v1.0";
@@ -52,15 +50,13 @@ const EXECUTABLE: &str = if cfg!(windows) {
 /// 初めての起動は、モデルのダウンロード（約 0.35 GB）を待つ。遅い回線でも待てる長さにする
 const READY_TIMEOUT: Duration = Duration::from_secs(30 * 60);
 
-/// 動いている speech.cpp のプロセス。同時に動くのは 1 つ（字幕の処理は 1 つしか動かない）。
-/// `Speech` を落とすか、アプリを終わるとき（`stop`。タスクは落とされずに終わるので、ここから止める）に終わらせる
-static RUNNING: Mutex<Option<Child>> = Mutex::new(None);
+/// 動いている speech.cpp のプロセス。`Speech` を落とすか、アプリを終わるとき（`stop`。タスクは落とされずに
+/// 終わるので、ここから止める）に終わらせる
+static RUNNING: Sidecar = Sidecar::new("speech.cpp");
 
 /// speech.cpp を終わらせる
 pub fn stop() {
-    if let Some(mut child) = RUNNING.lock().unwrap().take() {
-        let _ = child.start_kill();
-    }
+    RUNNING.stop();
 }
 
 /// 動いている speech.cpp のサーバー
@@ -74,61 +70,18 @@ impl Drop for Speech {
     }
 }
 
-/// この PC の中の口に送る。プロキシの設定があっても通さない
-fn client() -> &'static reqwest::Client {
-    static CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
-    CLIENT.get_or_init(|| {
-        let client = reqwest::Client::builder().no_proxy();
-        client.build().expect("valid client config")
-    })
-}
-
 impl Speech {
     /// `dir` に speech.cpp とモデルを置き（なければ取る）、サーバーを立てて、頼めるようになるまで待つ
     pub async fn start(dir: &Path) -> anyhow::Result<Self> {
         let executable = installed(dir).await?;
-        // 空いているポートを先に決める（speech.cpp に選ばせると、出力から読み取ることになる）
-        let port = TcpListener::bind((Ipv4Addr::LOCALHOST, 0))?
-            .local_addr()?
-            .port();
+        let port = sidecar::free_port()?;
         let mut command = Command::new(&executable);
         command
             .args(["serve", MODEL, "--port", &port.to_string()])
-            .env("SPEECH_MODEL_DIR", dir.join("models"))
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            // このタスクごと捨てられても残さない（ふだんは `stop` が終わらせる）
-            .kill_on_drop(true);
-        #[cfg(windows)]
-        command.creation_flags(0x0800_0000); // CREATE_NO_WINDOW（コンソールの窓を出さない）
-        let child = command
-            .spawn()
-            .with_context(|| format!("cannot start {}", executable.display()))?;
-        stop();
-        *RUNNING.lock().unwrap() = Some(child);
+            .env("SPEECH_MODEL_DIR", dir.join("models"));
         // ここから先で失敗しても、待っている間に捨てられても、プロセスを残さない
         let speech = Self { port };
-        let speech_url = format!("http://127.0.0.1:{port}/health");
-        let ready = async {
-            loop {
-                let exited = match &mut *RUNNING.lock().unwrap() {
-                    Some(child) => child.try_wait()?,
-                    None => bail!("speech.cpp was stopped"),
-                };
-                if let Some(status) = exited {
-                    bail!("speech.cpp exited: {status}");
-                }
-                let health = client().get(&speech_url).send().await;
-                if health.is_ok_and(|res| res.status().is_success()) {
-                    return Ok(());
-                }
-                tokio::time::sleep(Duration::from_millis(300)).await;
-            }
-        };
-        tokio::time::timeout(READY_TIMEOUT, ready)
-            .await
-            .context("speech.cpp did not get ready")??;
+        RUNNING.serve(command, port, READY_TIMEOUT).await?;
         tracing::info!("speech.cpp {VERSION} serves {MODEL} on port {port}");
         Ok(speech)
     }
@@ -137,7 +90,7 @@ impl Speech {
     pub fn transcriptions(&self) -> reqwest::RequestBuilder {
         let url = format!("http://127.0.0.1:{}/v1/audio/transcriptions", self.port);
         // 長い発話を CPU だけで認識しても足りる長さ
-        client().post(url).timeout(Duration::from_secs(60))
+        sidecar::client().post(url).timeout(Duration::from_secs(60))
     }
 }
 

@@ -133,6 +133,14 @@ export const ITEMS: {
         note: "文字を PC から出さない。初回に Chrome が約 4 GB をダウンロードし、GPU を使う。使えない PC では辞書の一致になる",
       },
       {
+        value: "gemma",
+        label: "Gemma 4 E4B（PC の中で確かめる）",
+        accuracy: "83%",
+        speed: "GPU で約 0.1 秒",
+        price: "無料",
+        note: "文字を PC から出さない。GPU のメモリを 5 GB 以上使う。初回に約 5 GB をダウンロードする。Intel の Mac では動かない",
+      },
+      {
         value: "decisions",
         label: "GPT-6 Luna（確かめるだけ）",
         accuracy: "92%",
@@ -182,6 +190,14 @@ export const ITEMS: {
         speed: "すぐ",
         price: "無料",
         note: "ロシア語では、用語の名前まで訳してしまう。ゲームの言い回しは苦手",
+      },
+      {
+        value: "gemma",
+        label: "Gemma 4 E4B（PC の中）",
+        accuracy: "100% / 100%",
+        speed: "GPU で約 0.3 秒",
+        price: "無料",
+        note: "文字を PC から出さない。GPU のメモリを 5 GB 以上使う（用語と同じものを使う）。初回に約 5 GB をダウンロードする。Intel の Mac では動かない",
       },
       {
         value: "qwenMtFlash",

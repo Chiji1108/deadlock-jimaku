@@ -723,9 +723,14 @@ impl Engines {
             .filter(|_| self.translation.source() != TranslationSource::Llm)
     }
 
-    /// 用語を判定モデルで確かめる
+    /// 用語の候補を、PC の中の LLM に確かめさせる（翻訳が会社の LLM なら、そちらが判定する）
+    fn judges_locally(&self) -> bool {
+        self.terms == TermsEngine::Gemma && self.translation.source() != TranslationSource::Llm
+    }
+
+    /// 用語を判定モデル（会社のものか、PC の中の LLM）で確かめる
     pub fn decides_terms(&self) -> bool {
-        self.judge().is_some()
+        self.judge().is_some() || self.judges_locally()
     }
 
     /// 確定の文を Chrome が作るなら、発話の区切りも Chrome が決めるので、途中の字幕も Chrome。
@@ -913,12 +918,16 @@ pub enum TermsEngine {
     /// 同じ候補を、Chrome の中の Gemini Nano に確かめさせる。無料で、文字を PC から出さない。
     /// 会社の判定モデルほどは当たらない（DESIGN.md 9.7）。途中の字幕が Chrome のときだけ使える
     GeminiNano,
+    /// 同じ候補を、PC の中の Gemma 4 E4B（llama.cpp）に確かめさせる。無料で、文字を PC から出さない。
+    /// GPU を使う（DESIGN.md 9.7）
+    Gemma,
 }
 
 impl TermsEngine {
-    pub const ALL: [Self; 7] = [
+    pub const ALL: [Self; 8] = [
         Self::Dictionary,
         Self::GeminiNano,
+        Self::Gemma,
         Self::Decisions,
         Self::Jev,
         Self::DrexMax,
@@ -929,7 +938,7 @@ impl TermsEngine {
     /// 候補を確かめさせるモデル（辞書の一致なら None）
     pub fn judge(self) -> Option<Model> {
         let (provider, name) = match self {
-            Self::Dictionary | Self::GeminiNano => return None,
+            Self::Dictionary | Self::GeminiNano | Self::Gemma => return None,
             Self::Decisions => (Provider::OpenAi, "gpt-6-luna"),
             Self::Jev => (Provider::TypeSafe, "jev-latest"),
             Self::DrexMax => (Provider::OpenRouter, "nace-ai/drex-max"),
@@ -951,11 +960,14 @@ pub enum TranslationEngine {
     /// OpenRouter の Hy-MT2-30B-A3B。Qwen-MT-Flash の半額で、少し遅い（DESIGN.md 9.7）
     HyMt2,
     Gpt61Terra,
+    /// PC の中の Gemma 4 E4B（llama.cpp）。無料で、文字を PC から出さない。GPU を使う（DESIGN.md 9.7）
+    Gemma,
 }
 
 impl TranslationEngine {
-    pub const ALL: [Self; 4] = [
+    pub const ALL: [Self; 5] = [
         Self::ChromeTranslator,
+        Self::Gemma,
         Self::QwenMtFlash,
         Self::HyMt2,
         Self::Gpt61Terra,
@@ -964,7 +976,7 @@ impl TranslationEngine {
     pub fn source(self) -> TranslationSource {
         match self {
             Self::ChromeTranslator => TranslationSource::ChromeTranslator,
-            Self::QwenMtFlash | Self::HyMt2 => TranslationSource::Mt,
+            Self::QwenMtFlash | Self::HyMt2 | Self::Gemma => TranslationSource::Mt,
             Self::Gpt61Terra => TranslationSource::Llm,
         }
     }
@@ -983,7 +995,7 @@ impl TranslationEngine {
         let (provider, name) = match self {
             Self::QwenMtFlash => (Provider::Qwen, "qwen-mt-flash"),
             Self::HyMt2 => (Provider::OpenRouter, "tencent/hy-mt2-30b-a3b"),
-            Self::ChromeTranslator | Self::Gpt61Terra => return None,
+            Self::ChromeTranslator | Self::Gpt61Terra | Self::Gemma => return None,
         };
         Some(Model { provider, name })
     }
@@ -993,7 +1005,7 @@ impl TranslationEngine {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TranslationSource {
     ChromeTranslator,
-    /// 翻訳専門のモデル（Qwen-MT-Flash、Hy-MT2）
+    /// 用語を決めた文を訳すだけのモデル（Qwen-MT-Flash、Hy-MT2、PC の中の Gemma）
     Mt,
     Llm,
 }
@@ -1266,6 +1278,16 @@ impl Settings {
             finals,
             translation_only,
         }
+    }
+
+    /// PC の中の LLM（llama.cpp）を立てる。翻訳先がない、Deadlock モードでないなど、頼むことがなければ立てない
+    pub fn uses_llama(&self) -> bool {
+        let finals = self.plan().finals;
+        let translates = self.engines.translation == TranslationEngine::Gemma
+            && finals.translation == Some(TranslationSource::Mt);
+        let judges =
+            self.engines.judges_locally() && finals.emphasis == Some(EmphasisSource::Decisions);
+        translates || judges
     }
 
     /// 使うモデル。確定の文字起こしと、翻訳と用語は工程の選択で決まる（GPT-Transcribe と Terra は
@@ -2032,6 +2054,48 @@ mod tests {
             ..Engines::BETA
         };
         assert_eq!(without_chrome.sanitized().terms, TermsEngine::Dictionary);
+    }
+
+    /// PC の中の LLM は、鍵が要らず、頼むことがあるときだけ立てる
+    #[test]
+    fn the_local_llm_starts_only_when_a_step_asks_it() {
+        let local = Engines {
+            terms: TermsEngine::Gemma,
+            translation: TranslationEngine::Gemma,
+            ..Engines::CHROME
+        };
+        assert_eq!(local.sanitized(), local);
+        assert!(local.providers().is_empty());
+        assert!(local.decides_terms());
+        let with = |engines, translate_to: &[&str], deadlock_mode| Settings {
+            engines,
+            translate_to: translate_to.iter().map(|l| (*l).into()).collect(),
+            deadlock_mode,
+            ..Default::default()
+        };
+        let both = with(local, &["en"], true);
+        assert!(both.uses_llama());
+        let finals = both.plan().finals;
+        assert_eq!(finals.translation, Some(TranslationSource::Mt));
+        assert_eq!(finals.emphasis, Some(EmphasisSource::Decisions));
+        // 翻訳先がなく、用語も見ないなら、頼むことがない
+        assert!(!with(local, &[], false).uses_llama());
+        assert!(with(local, &[], true).uses_llama());
+        assert!(with(local, &["en"], false).uses_llama());
+        // 翻訳だけ会社のモデルにしても、用語は PC の中で確かめる
+        let terms_only = Engines {
+            translation: TranslationEngine::QwenMtFlash,
+            ..local
+        };
+        assert!(with(terms_only, &["en"], true).uses_llama());
+        assert!(!with(terms_only, &["en"], false).uses_llama());
+        // 翻訳が会社の LLM なら、用語もそちらが判定する
+        let llm = Engines {
+            translation: TranslationEngine::Gpt61Terra,
+            ..local
+        };
+        assert!(!with(llm, &["en"], true).uses_llama());
+        assert!(!with(Engines::CHROME, &["en"], true).uses_llama());
     }
 
     /// 候補の出し方は日本語だけなので、ほかの言語では Decisions に聞かない

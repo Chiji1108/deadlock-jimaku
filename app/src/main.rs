@@ -102,10 +102,11 @@ fn main() {
                 api, code: None, ..
             } => api.prevent_exit(),
             // 終了しても Chrome を残さない（残ると、次の起動で同じプロファイルを開けない）。
-            // PC の中の文字起こしのプロセスも残さない
+            // PC の中の文字起こしと LLM のプロセスも残さない
             tauri::RunEvent::Exit => {
                 _app.state::<std::sync::Arc<Store>>().close_chrome();
                 overlays_core::local::stop();
+                overlays_core::llama::stop();
             }
             // Mac は Dock のアイコンを押したときに、閉じたウィンドウを開き直す
             #[cfg(target_os = "macos")]

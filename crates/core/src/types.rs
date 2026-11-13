@@ -18,6 +18,16 @@ pub enum Stage {
     Discarded,
 }
 
+/// 取っているファイルの進み具合（バイト）
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct Downloading {
+    #[ts(type = "number")]
+    pub done: u64,
+    #[ts(type = "number")]
+    pub total: u64,
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
 #[serde(tag = "t", rename_all = "lowercase")]
 #[ts(export)]
@@ -125,8 +135,10 @@ pub enum ServerMsg {
     #[serde(rename = "transcription.status")]
     TranscriptionStatus {
         error: Option<TranscriptionError>,
-        /// PC の中の文字起こしを準備している（初回はダウンロードを待つ）
+        /// PC の中の文字起こしか LLM を準備している（初回はダウンロードを待つ）
         preparing: bool,
+        /// 準備の間に取っている大きいファイルの進み具合（分かるときだけ）
+        downloading: Option<Downloading>,
     },
     #[serde(rename = "display", rename_all = "camelCase")]
     Display {

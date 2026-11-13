@@ -3,16 +3,21 @@
 //! 判定モデル（OpenAI の Decisions API、TypeSafe AI の Jev、OpenRouter の判定モデル）は文を書かずに選択肢から選ぶだけなので、LLM に辞書の全部を渡して文を区切らせるより
 //! ずっと速く安い。ただ文の中から用語を探すことはできないので、候補は PC の中で出す:
 //! 辞書の名前と別名の一致、名前の似たカタカナの言葉（略称・名前の一部・聞き違い）、「ウルト」と番号。
-//! 候補は多めに出し、本当にその用語か（ふつうの言葉ではないか、どのスキルか）を文ごとに選ばせる
+//! 候補は多めに出し、本当にその用語か（ふつうの言葉ではないか、どのスキルか）を文ごとに選ばせる。
+//! PC の中の LLM（Gemma 4 E4B）にも、同じ問いを選択肢の記号 1 文字で答えさせられる
 
+use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+use anyhow::Context;
+use futures_util::future::try_join_all;
 use serde_json::{Value, json};
 
 use crate::access::Access;
 use crate::assets::Loaded;
 use crate::enrich::Span;
+use crate::llama::{self, Llama, Prompt};
 use crate::secrets::Provider;
 use crate::share;
 use crate::types::{ChromeChoice, ChromeQuestion, ChromeQuestions, EntityKind, Glossary, LangCode};
@@ -24,10 +29,28 @@ const TIMEOUT: Duration = Duration::from_secs(3);
 /// 1 つの言葉に当てる、似た名前の用語の数
 const MAX_SIMILAR: usize = 5;
 
+/// PC の中の LLM は、GPU の遅い PC でも待てるようにする（M5 Pro で 0.06 秒ほど）
+const LOCAL_TIMEOUT: Duration = Duration::from_secs(5);
+
+/// 選択肢に振る記号。これより多い選択肢は聞かない（候補は `MAX_SIMILAR` までなので、足りる）
+const LETTERS: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+/// PC の中の LLM への指示。問いは 1 つずつ聞く
+const LOCAL_SYSTEM: &str = "You answer one multiple-choice question about a Japanese subtitle from a live stream. \
+     Read the text and the options carefully, then reply with the letter of the single best option and nothing else.";
+
+/// 候補を確かめさせる相手
+enum Judge {
+    /// 会社の判定モデル。OpenAI の Decisions API が使えるのは `gpt-6-luna` だけ
+    Api {
+        access: Access,
+        model: &'static str,
+    },
+    Local(Arc<Llama>),
+}
+
 pub struct Decider {
-    access: Access,
-    /// OpenAI の Decisions API が使えるのは `gpt-6-luna` だけ
-    model: &'static str,
+    judge: Judge,
     meter: Arc<Meter>,
     asker: Asker,
 }
@@ -67,8 +90,16 @@ impl Decider {
         meter: Arc<Meter>,
     ) -> Self {
         Self {
-            access,
-            model,
+            judge: Judge::Api { access, model },
+            meter,
+            asker: Asker::new(source_lang),
+        }
+    }
+
+    /// PC の中の LLM に確かめさせる
+    pub fn local(llama: Arc<Llama>, source_lang: LangCode, meter: Arc<Meter>) -> Self {
+        Self {
+            judge: Judge::Local(llama),
             meter,
             asker: Asker::new(source_lang),
         }
@@ -85,18 +116,24 @@ impl Decider {
         let Some(asked) = self.ask(text, context, loaded) else {
             return Ok(vec![Span::Text(text.to_owned())]);
         };
+        let (access, model) = match &self.judge {
+            Judge::Api { access, model } => (access, *model),
+            Judge::Local(llama) => {
+                let chosen = asked.ask_local(llama, &self.meter).await?;
+                return Ok(asked.spans(|name| chosen.get(name).cloned()));
+            }
+        };
         // OpenAI は Decisions API、ほかの会社は Jev と同じ形の口（OpenRouter も同じ形で中継する）
-        let openai = self.access.provider() == Provider::OpenAi;
+        let openai = access.provider() == Provider::OpenAi;
         let request = if openai {
-            http.post(self.access.url("/decisions"))
-                .json(&asked.request)
+            http.post(access.url("/decisions")).json(&asked.request)
         } else {
-            http.post(self.access.url("/systemone"))
-                .json(&asked.systemone(self.model))
+            http.post(access.url("/systemone"))
+                .json(&asked.systemone(model))
         };
         let asking = Asking {
-            access: &self.access,
-            model: self.model,
+            access,
+            model,
             meter: &self.meter,
             purpose: Use::Translate,
         };
@@ -106,7 +143,11 @@ impl Decider {
 
     /// 文の候補と、それを確かめる問い合わせ。候補がなければ None（聞かなくてよい）
     pub fn ask(&self, text: &str, context: &[String], loaded: &Loaded) -> Option<Asked> {
-        self.asker.ask(self.model, text, context, loaded)
+        let model = match &self.judge {
+            Judge::Api { model, .. } => model,
+            Judge::Local(_) => llama::GEMMA,
+        };
+        self.asker.ask(model, text, context, loaded)
     }
 }
 
@@ -227,6 +268,45 @@ impl Asked {
             state: text(&self.request["input"]),
             questions: questions.collect(),
         }
+    }
+
+    /// PC の中の LLM に、問いを 1 つずつ同時に聞く。選択肢に記号を振り、記号 1 文字だけを答えさせる
+    /// （文法で、ほかの字を書けなくする）。問いの名前 → 選ばれた値。1 つでも答えが返らなければ失敗にする
+    /// （答えのない候補を「用語ではない」として扱うと、辞書の一致より悪くなる）
+    async fn ask_local(
+        &self,
+        llama: &Llama,
+        meter: &Meter,
+    ) -> anyhow::Result<BTreeMap<String, String>> {
+        let state = self.request["input"].as_str().unwrap_or_default();
+        let questions = self.request["questions"].as_array().into_iter().flatten();
+        let asked = questions.map(|q| async move {
+            let text = |v: &Value| v.as_str().unwrap_or_default().to_owned();
+            let choices: Vec<&Value> = q["choices"].as_array().into_iter().flatten().collect();
+            let letters: Vec<char> = LETTERS.chars().take(choices.len()).collect();
+            let listed: Vec<String> = (letters.iter().zip(&choices))
+                .map(|(letter, c)| format!("{letter}. {}", text(&c["description"])))
+                .collect();
+            let either: Vec<String> = letters.iter().map(|l| format!("\"{l}\"")).collect();
+            let user = format!(
+                "{state}\n\nQuestion: {}\n\nOptions:\n{}",
+                text(&q["instructions"]),
+                listed.join("\n")
+            );
+            let prompt = Prompt {
+                system: LOCAL_SYSTEM,
+                user: &user,
+                grammar: &format!("root ::= {}", either.join(" | ")),
+                max_tokens: 2,
+                timeout: LOCAL_TIMEOUT,
+            };
+            let (answer, tokens) = llama.complete(&prompt).await?;
+            meter.tokens(Use::Translate, llama::GEMMA, tokens);
+            let chosen = letters.iter().position(|l| answer.starts_with(*l));
+            let chosen = chosen.with_context(|| format!("no choice: {answer:?}"))?;
+            anyhow::Ok((text(&q["name"]), text(&choices[chosen]["value"])))
+        });
+        try_join_all(asked).await.map(BTreeMap::from_iter)
     }
 
     /// Jev の形の問い合わせ（`state` と、名前ごとの `questions`、選択肢は `criteria`）
