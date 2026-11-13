@@ -1,30 +1,84 @@
-# デドロ字幕
+<div align="center">
 
-Deadlock の配信者向けの OBS オーバーレイ（非公式）。
+<a href="https://jimaku.deadlock.jp"><img src="web/public/og.jpg" alt="デドロ字幕 — 「ドアマンのカートはディスペルで対策できます。」の字幕と英訳" width="720"></a>
 
-- **字幕**: マイクの声をリアルタイムに字幕にし、ふりがなと翻訳（最大 4 言語）を付ける。ヒーロー・アイテム・スキルの名前はアイコン付きで強調する
-- **ランク**: ランクのアイコン・名前・ポイントのゲージ
-- **アイテム説明**: 字幕でアイテム名が出たら、その説明をゲーム内と同じカードで出す
+# デドロ配信を、世界に。
 
-字幕の作り方はモードから選べます。まず無料の Chrome のモード（既定）で、キーなしで始められます。「おすすめ」のモード（ベータ期間中は無料）と、Chrome の中の AI で用語を判定する「Chrome+」も、キーなしで使えます。「その他のモード」には、最高精度（OpenAI の API キーかギフトコードで使う）、クラウド（Chrome を使わない）、ローカル（PC の中の AI だけで作る）があります。「モード」のタブで、工程（途中の字幕・確定の文字起こし・用語・翻訳・ふりがな）ごとに作り方を変えることもできます。どのモードも途中の字幕を Chrome で作るので、Google Chrome が必要で、字幕を始めると小さな Chrome のウィンドウが開きます。設定はアプリの操作パネルから行います。
+Deadlock に特化した、配信者向けの日本語字幕＆翻訳字幕アプリ（非公式）
 
-サイトは [jimaku.deadlock.jp](https://jimaku.deadlock.jp)。設計は [DESIGN.md](DESIGN.md) を見てください。
+[![最新版](https://img.shields.io/github/v/release/Chiji1108/deadlock-jimaku?label=%E6%9C%80%E6%96%B0%E7%89%88&color=ffcf33&labelColor=12110e)](https://github.com/Chiji1108/deadlock-jimaku/releases/latest)
+[![ダウンロード数](https://img.shields.io/github/downloads/Chiji1108/deadlock-jimaku/total?label=%E3%83%80%E3%82%A6%E3%83%B3%E3%83%AD%E3%83%BC%E3%83%89&color=ffcf33&labelColor=12110e)](https://github.com/Chiji1108/deadlock-jimaku/releases)
+[![Discord](https://img.shields.io/badge/Discord-%E5%8F%82%E5%8A%A0%E3%81%99%E3%82%8B-5865F2?logo=discord&logoColor=white&labelColor=12110e)](https://discord.gg/QdVFzMBBD2)
+[![サイト](https://img.shields.io/badge/jimaku.deadlock.jp-%E3%82%B5%E3%82%A4%E3%83%88-ffcf33?labelColor=12110e)](https://jimaku.deadlock.jp)
 
-## インストール
+<br>
 
-[Releases](https://github.com/Chiji1108/deadlock-jimaku/releases) から、使う PC に合ったものをダウンロードします。2 PC 配信なら、配信用の PC（マイクと OBS がある方）に入れます。
+[![Windows 版をダウンロード](https://img.shields.io/badge/Windows-%E3%83%80%E3%82%A6%E3%83%B3%E3%83%AD%E3%83%BC%E3%83%89-0078D4?style=for-the-badge)](https://github.com/Chiji1108/deadlock-jimaku/releases/latest/download/deadlock-jimaku_x64-setup.exe)
+[![Mac 版をダウンロード](https://img.shields.io/badge/macOS-%E3%83%80%E3%82%A6%E3%83%B3%E3%83%AD%E3%83%BC%E3%83%89-000000?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/Chiji1108/deadlock-jimaku/releases/latest/download/deadlock-jimaku_universal.dmg)
+[![Linux 版をダウンロード](https://img.shields.io/badge/Linux-%E3%83%80%E3%82%A6%E3%83%B3%E3%83%AD%E3%83%BC%E3%83%89-FCC624?style=for-the-badge&logo=linux&logoColor=black)](https://github.com/Chiji1108/deadlock-jimaku/releases/latest/download/deadlock-jimaku_amd64.AppImage)
 
-| OS | ファイル |
-|---|---|
-| Windows 10 / 11 | `deadlock-jimaku_x64-setup.exe` |
-| macOS 11 以降（Apple シリコン・Intel） | `deadlock-jimaku_universal.dmg` |
-| Linux | `.AppImage`（どのディストリビューションでも）、`.deb`（Ubuntu など）、`.rpm`（Fedora など） |
+<sub>Windows 10 / 11 ・ macOS 11 以降（Apple シリコン・Intel）・ Linux（AppImage ／ <a href="https://github.com/Chiji1108/deadlock-jimaku/releases/latest/download/deadlock-jimaku_amd64.deb">.deb</a> ／ <a href="https://github.com/Chiji1108/deadlock-jimaku/releases/latest/download/deadlock-jimaku.x86_64.rpm">.rpm</a>）</sub>
+
+</div>
+
+---
+
+## できること
+
+- 💬 **字幕** — マイクの声をリアルタイムに字幕にし、ふりがなと翻訳（最大 4 言語）を付ける。ヒーロー・アイテム・スキルの名前はアイコン付きで強調する
+- 🏆 **ランク** — ランクのアイコン・名前・ポイントのゲージ
+- 🃏 **アイテム説明** — 字幕でアイテム名が出たら、その説明をゲーム内と同じカードで出す
+
+## はじめかた
+
+1. **ダウンロード** — 上のボタンから、使う PC に合ったものを入れます。2 PC 配信なら、配信用の PC（マイクと OBS がある方）に入れます
+2. **OBS に追加** — アプリの画面のボタンを OBS にドラッグするだけです
+3. **字幕を始める** — まずは無料の Chrome のモード（既定）で、キーなしで始まります
+
+> [!NOTE]
+> 既定のモードは途中の字幕を Chrome で作るので、**Google Chrome が必要**です。字幕を始めると小さな Chrome のウィンドウが開きます（クラウドとローカルのモードは Chrome を使いません）。
+
+<details>
+<summary><b>初めて開くとき</b></summary>
 
 macOS 版は Apple の署名と公証を済ませています。Windows 版はまだコード署名をしていないので、初回は警告が出ます。
 
 - **Windows**: 「Windows によって PC が保護されました」と出たら、「詳細情報」→「実行」
-- **macOS**: 初回にマイクの使用を許可する
-- **Linux**: API キーの保存に Secret Service（GNOME キーリングや KWallet）を使う
+- **macOS**: dmg を開いて、アプリを「アプリケーション」にドラッグする。初回にマイクの使用を許可する
+- **Linux**: AppImage は「プログラムとして実行」を許可してから開く（`chmod +x` でも可）。API キーの保存に Secret Service（GNOME キーリングや KWallet）を使う
+
+</details>
+
+## モード
+
+字幕の作り方はモードから選べます。設定はアプリの操作パネルから行います。
+
+| モード | 料金 | ひとこと |
+|---|---|---|
+| **Chrome**（既定） | 無料 | Chrome の音声認識と翻訳だけを使う。サーバーを使わない |
+| **おすすめ** | ベータ期間中は無料 | 確定の字幕・用語・翻訳を、デドロ字幕のサーバーを通して高精度に作る |
+| **Chrome+** | 無料 | Chrome の中の AI で用語を判定する。VRAM 8 GB 以上推奨 |
+
+<details>
+<summary><b>その他のモード</b></summary>
+
+| モード | 料金 | ひとこと |
+|---|---|---|
+| **最高精度** | OpenAI の API キーかギフトコード | 用語の判定と文字起こしがいちばん正確 |
+| **クラウド** | ベータ期間中は無料 | Chrome を開かず、音声を Google に送らない。使用メモリ最小 |
+| **ローカル** | 無料 | PC の中の AI だけで作り、外に送らない。VRAM 12 GB 以上推奨 |
+
+</details>
+
+「モード」のタブで、工程（途中の字幕・確定の文字起こし・用語・翻訳・ふりがな）ごとに作り方を変えることもできます。
+
+---
+
+<div align="center">
+
+**🛠️ ここから下は開発する人向けです**
+
+</div>
 
 ## しくみ
 
