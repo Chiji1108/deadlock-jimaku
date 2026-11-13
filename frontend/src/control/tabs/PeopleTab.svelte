@@ -227,7 +227,9 @@
         value={person.aliases.join("、")}
         onchange={(e) => realias(person, e.currentTarget.value)}
       />
-      <Field.Description>名前と同じように、字幕の中で探します</Field.Description>
+      <Field.Description>
+        名前と同じように、字幕の中で探します。ひらがなとカタカナの違いは自動で拾うので、入れなくて大丈夫です。漢字の名前がかなで書かれるときは、そのかなを足してください
+      </Field.Description>
     </Field.Field>
     {#if person.me}
       <Field.Field>
