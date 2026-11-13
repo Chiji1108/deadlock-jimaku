@@ -379,7 +379,8 @@ async fn terms_jev(
     let Some(asked) = app.decider.ask(text, context, &app.loaded) else {
         return Ok(Outcome::Terms(Vec::new()));
     };
-    let body = asked.systemone(model);
+    // `ollaya-` は、この PC の Ollaya（判定モデルの実行環境）。モデルの名前は、その後ろ
+    let body = asked.systemone(model.strip_prefix("ollaya-").unwrap_or(model));
     // `会社/モデル` の形なら OpenRouter（判定モデルをまとめて同じ形で呼べる。`OPENROUTER_API_KEY`）
     // `drex-` は Nace に直接（`NACE_API_KEY`）。どこも同じ形の口
     let (url, key, price) = match model {
@@ -390,6 +391,7 @@ async fn terms_jev(
         ),
         // `local-` は、この PC で待たせた判定モデル（experiments/local_decider_server.py）。料金はかからない
         m if m.starts_with("local-") => ("http://127.0.0.1:8765/v1/systemone", "", (0.0, 0.0)),
+        m if m.starts_with("ollaya-") => ("http://127.0.0.1:11435/v1/systemone", "", (0.0, 0.0)),
         m if m.starts_with("drex-") => (
             "https://console.nace.ai/v1/systemone",
             "NACE_API_KEY",
