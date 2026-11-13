@@ -60,8 +60,8 @@ pub struct Store {
     unsaved: Mutex<Option<String>>,
     /// 字幕を始められなかった理由（操作パネルに出す）
     transcription_error: Mutex<Option<TranscriptionError>>,
-    /// ベータのコードで断られて、Chrome の作り方で続けている理由（DESIGN.md 17.2）。保存はしない
-    fallback: Mutex<Option<TranscriptionError>>,
+    /// ベータのコードで断られた理由と、そのあとの続け方（DESIGN.md 17.2）。保存はしない
+    fallback: Mutex<Option<(TranscriptionError, Fallback)>>,
     /// PC の中の文字起こしを準備している
     preparing: AtomicBool,
     segments: Mutex<VecDeque<Segment>>,
@@ -121,10 +121,10 @@ impl Store {
         })
     }
 
-    /// 今の字幕の作り方。ベータのコードで断られている間は、工程だけ Chrome のモードにしたもの
+    /// 今の字幕の作り方。ベータのコードで断られて Chrome で続けている間は、工程だけ Chrome のモードにしたもの
     pub fn settings(&self) -> Settings {
         let mut settings = self.saved();
-        if self.fallback().is_some() {
+        if self.continues_with() == Some(Fallback::Chrome) {
             settings.engines = Engines::CHROME;
         }
         settings
@@ -135,23 +135,39 @@ impl Store {
         self.settings.borrow().clone()
     }
 
+    /// ベータのコードで断られた理由（断られていなければ None）
     pub fn fallback(&self) -> Option<TranscriptionError> {
-        self.fallback.lock().unwrap().clone()
+        let fallback = self.fallback.lock().unwrap();
+        fallback.as_ref().map(|(refused, _)| refused.clone())
     }
 
-    /// ベータのコードで断られたら、字幕を止めずに Chrome の作り方で続ける。配信の途中で字幕が消えるのが
-    /// いちばん困るため。続けるなら true。途中の字幕を Chrome で作っていないときは続けない（開いていない
+    /// ベータのコードで断られたあとの続け方
+    pub fn continues_with(&self) -> Option<Fallback> {
+        let fallback = self.fallback.lock().unwrap();
+        fallback.as_ref().map(|(_, with)| *with)
+    }
+
+    /// ベータのコードで断られたら、字幕を止めずに続ける。配信の途中で字幕が消えるのがいちばん困るため。続けるなら true。
+    /// `own_keys`（ベータのコードで使っていた会社すべてに、自分のキーがある）なら、同じ作り方のまま自分のキーで続ける。
+    /// なければ、Chrome の作り方で続ける。ただし、途中の字幕を Chrome で作っていないときは続けない（開いていない
     /// Chrome を開いて、選んでいない送り先に音声を送ることになる）
-    pub fn fall_back(&self, refused: &TranscriptionError) -> bool {
+    pub fn fall_back(&self, refused: &TranscriptionError, own_keys: bool) -> bool {
         let beta = matches!(
             refused,
             TranscriptionError::BetaLimit | TranscriptionError::BetaRefused
         );
-        if !beta || self.saved().engines.live != LiveSource::Chrome {
+        let with = match own_keys {
+            true => Fallback::OwnKeys,
+            false => Fallback::Chrome,
+        };
+        let chrome = self.saved().engines.live == LiveSource::Chrome;
+        // 自分のキーでも断られたのなら、もう続けようがない
+        let again = self.continues_with() == Some(Fallback::OwnKeys);
+        if !beta || again || (with == Fallback::Chrome && !chrome) {
             return false;
         }
-        tracing::info!("beta refused ({refused:?}); continuing with Chrome");
-        *self.fallback.lock().unwrap() = Some(refused.clone());
+        tracing::info!("beta refused ({refused:?}); continuing with {with:?}");
+        *self.fallback.lock().unwrap() = Some((refused.clone(), with));
         let _ = self.tx.send(ServerMsg::SettingsChanged);
         self.restart();
         true
@@ -576,6 +592,17 @@ fn display(settings: &Settings) -> ServerMsg {
     }
 }
 
+/// ベータのコードで断られたあとの続け方（`Store::fall_back`）
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, ts_rs::TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum Fallback {
+    /// 同じ作り方のまま、自分の API キーで続ける
+    OwnKeys,
+    /// 工程を Chrome のモードにして続ける
+    Chrome,
+}
+
 /// 初回のダウンロードを待っている間の印（`Store::preparing`）
 pub struct Preparing(Arc<Store>);
 
@@ -602,9 +629,10 @@ mod tests {
         };
         let store = Store::new(Ok(settings), dir.path().to_owned());
         // ギフトコードの理由や、ほかのエラーでは続けない
-        assert!(!store.fall_back(&TranscriptionError::GiftLimit));
+        assert!(!store.fall_back(&TranscriptionError::GiftLimit, false));
         assert_eq!(store.settings().engines, Engines::BETA);
-        assert!(store.fall_back(&TranscriptionError::BetaLimit));
+        assert!(store.fall_back(&TranscriptionError::BetaLimit, false));
+        assert_eq!(store.continues_with(), Some(Fallback::Chrome));
         // 字幕は Chrome の作り方で続け、選んだモードは変えない（保存もしない）
         assert_eq!(store.settings().engines, Engines::CHROME);
         assert_eq!(store.saved().engines, Engines::BETA);
@@ -636,8 +664,14 @@ mod tests {
             ..Settings::default()
         };
         let store = Store::new(Ok(settings), PathBuf::new());
-        assert!(!store.fall_back(&TranscriptionError::BetaLimit));
+        assert!(!store.fall_back(&TranscriptionError::BetaLimit, false));
         assert_eq!(store.fallback(), None);
+        // 自分のキーがあれば、Chrome を使っていなくても、同じ作り方のまま続ける
+        assert!(store.fall_back(&TranscriptionError::BetaLimit, true));
+        assert_eq!(store.continues_with(), Some(Fallback::OwnKeys));
+        assert_eq!(store.settings().engines, store.saved().engines);
+        // 自分のキーでも断られたら、もう続けない（エラーで止める）
+        assert!(!store.fall_back(&TranscriptionError::BetaRefused, true));
     }
 
     fn seg(id: &str, text: &str) -> Segment {

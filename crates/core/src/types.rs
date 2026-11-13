@@ -508,10 +508,14 @@ pub struct SettingsView {
     pub settings: crate::settings::Settings,
     /// 今の字幕を作っている工程。ふだんは設定と同じ。ベータのコードで断られている間は Chrome のモード
     pub running: crate::settings::Engines,
-    /// ベータのコードで断られて、Chrome の作り方で続けている理由
+    /// ベータのコードで断られた理由（断られたあとも、字幕は止めずに続けている）
     #[ts(optional)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub fallback: Option<TranscriptionError>,
+    /// 断られたあとの続け方（自分のキーか、Chrome の作り方）
+    #[ts(optional)]
+    #[serde(rename = "continuesWith", skip_serializing_if = "Option::is_none")]
+    pub continues_with: Option<crate::store::Fallback>,
     pub keys: crate::secrets::KeyStatus,
     /// 設定ファイルを読めない理由（OS のエラー）。そのときは変更をこの起動の間だけ当て、保存しない
     #[ts(optional)]

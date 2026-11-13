@@ -206,10 +206,15 @@
       <main bind:this={content} class="min-w-0 flex-1 group-data-vertical/tabs:overflow-y-auto">
         <div class="mx-auto flex {pageWidth} flex-col gap-4 px-4 py-6">
           {#if panel.view?.fallback}
+            {@const ownKeys = panel.view.continuesWith === "ownKeys"}
             <Alert.Root>
               <CircleAlertIcon />
-              <Alert.Title>Chrome の作り方で続けています</Alert.Title>
-              <Alert.Description>{fallbackText(panel.view.fallback)}</Alert.Description>
+              <Alert.Title
+                >{ownKeys
+                  ? "自分の API キーで続けています"
+                  : "Chrome の作り方で続けています"}</Alert.Title
+              >
+              <Alert.Description>{fallbackText(panel.view.fallback, ownKeys)}</Alert.Description>
             </Alert.Root>
           {/if}
           {#if panel.view?.unsaved}

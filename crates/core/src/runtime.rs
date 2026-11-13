@@ -13,9 +13,9 @@ use tokio::task::JoinHandle;
 
 use crate::access::{Access, Accesses};
 use crate::local::Speech;
-use crate::secrets::Provider;
+use crate::secrets::{Keys, Provider, Relay};
 use crate::settings::{Engines, FinalSource, Models, Region, Segmentation, Settings, TextSource};
-use crate::store::Store;
+use crate::store::{Fallback, Store};
 use crate::types::{LangCode, TranscriptionError};
 use crate::{assets, audio, chrome, rank, secrets, share, subtitles};
 
@@ -142,6 +142,11 @@ pub async fn run(store: Arc<Store>, options: Options) {
             .await
             .unwrap_or_default();
         let languages = settings.glossary_languages();
+        // ベータのコードで断られて自分のキーで続けている間は、コードを使わない
+        let keys = match store.continues_with() {
+            Some(Fallback::OwnKeys) => Keys { beta: None, ..keys },
+            _ => keys,
+        };
         let accesses = keys.accesses(&settings.engines, &settings.api_base);
         let access = accesses.get(Provider::OpenAi);
 
@@ -342,13 +347,32 @@ async fn gift_accepted(
         if let Err(e) = checked {
             // 1 つのコードが中継する会社は、どれも同じ種類
             let refused = share::for_code(e, used[0]);
-            if !store.fall_back(&refused) {
+            if !fall_back(store, &refused).await {
                 store.set_transcription_error(Some(refused));
             }
             return false;
         }
     }
     true
+}
+
+/// ベータのコードで断られたら、字幕を止めずに続ける（`Store::fall_back`）。ベータのコードで使っていた会社すべてに
+/// 自分のキーがあれば、同じ作り方のまま自分のキーで。なければ Chrome の作り方で
+async fn fall_back(store: &Store, refused: &TranscriptionError) -> bool {
+    // ほかの理由では続けないので、鍵を読みに行かない
+    let beta = matches!(
+        refused,
+        TranscriptionError::BetaLimit | TranscriptionError::BetaRefused
+    );
+    if !beta {
+        return false;
+    }
+    let keys = tokio::task::spawn_blocking(secrets::load)
+        .await
+        .unwrap_or_default();
+    let relayed = store.saved().engines.providers().into_iter();
+    let mut relayed = relayed.filter(|p| p.info().relay == Some(Relay::Beta));
+    store.fall_back(refused, relayed.all(|p| keys.own.contains_key(&p)))
 }
 
 /// 止まったら理由を出す（開始・停止を押し直すと始め直す）。想定外のエラー（panic）でも
@@ -375,7 +399,9 @@ async fn supervise(
     };
     tracing::info!("transcription ended: {error:?}");
     // ベータのコードで断られたら、止めずに Chrome の作り方で続ける
-    if error.as_ref().is_some_and(|e| store.fall_back(e)) {
+    if let Some(refused) = &error
+        && fall_back(&store, refused).await
+    {
         return;
     }
     store.set_transcription_error(error);

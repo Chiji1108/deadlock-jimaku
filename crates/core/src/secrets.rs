@@ -164,18 +164,20 @@ pub struct Keys {
 }
 
 impl Keys {
-    /// 自分のキーがあればその会社へ直接、なければその会社を中継するコード（ギフトコードかベータのコード）で
-    /// 開発者のサーバーを通す（`api` はその根元）。ギフトコードでその会社を使えるか（おすそ分けした人がその会社の
-    /// キーを預けているか）は、字幕を始めるときに確かめる。中継のない会社は、コードでは足りない（鍵がないとして始めない）
+    /// その会社の送り先と鍵（`api` は開発者のサーバーの根元）。
+    /// - ベータのコードが中継する会社（Qwen、OpenRouter）は、コードがあればコードを先に使う。ベータ期間中は無料なので、
+    ///   自分のキーを入れている人にも請求しない。コードがなければ自分のキー
+    /// - ギフトコードが中継する会社（OpenAI、xAI）は、自分のキーを先に使う（コードの分は、おすそ分けした人に請求される）。
+    ///   その会社を使えるか（おすそ分けした人がキーを預けているか）は、字幕を始めるときに確かめる
+    /// - 中継のない会社は、コードでは足りない（鍵がないとして始めない）
     pub fn access(&self, provider: Provider, api: &str) -> Option<Access> {
-        if let Some(key) = self.own.get(&provider) {
-            return Some(Access::key(provider, key.clone()));
+        let own = || Some(Access::key(provider, self.own.get(&provider)?.clone()));
+        let code = |code: &Option<String>| Some(Access::gift(provider, code.clone()?, api));
+        match provider.info().relay {
+            Some(Relay::Beta) => code(&self.beta).or_else(own),
+            Some(Relay::Gift) => own().or_else(|| code(&self.gift)),
+            None => own(),
         }
-        let code = match provider.info().relay? {
-            Relay::Gift => &self.gift,
-            Relay::Beta => &self.beta,
-        };
-        Some(Access::gift(provider, code.clone()?, api))
     }
 
     /// 工程が使う会社の送り先と鍵。使わない会社には何も送らない
@@ -344,10 +346,13 @@ mod tests {
         for provider in Provider::ALL {
             assert_eq!(serde_json::json!(provider), provider.info().id);
         }
+        // ベータのコードがあれば、自分のキーより先に使う（無料の分を先に）。なければ自分のキー
         let own = Keys {
             own: BTreeMap::from([(Provider::Qwen, "sk".to_owned())]),
             ..keys
         };
-        assert!(!own.access(Provider::Qwen, api).unwrap().is_gift());
+        assert_eq!(own.access(Provider::Qwen, api).unwrap().token(), "B3TA");
+        let without_code = Keys { beta: None, ..own };
+        assert!(!without_code.access(Provider::Qwen, api).unwrap().is_gift());
     }
 }

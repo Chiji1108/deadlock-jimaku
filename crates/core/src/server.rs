@@ -108,6 +108,7 @@ async fn get_settings(State(store): State<Arc<Store>>) -> Json<SettingsView> {
         settings: store.saved(),
         running: store.settings().engines,
         fallback: store.fallback(),
+        continues_with: store.continues_with(),
         keys,
         unsaved: store.unsaved(),
     })
