@@ -83,7 +83,7 @@
     onclick={() => (opened = !opened)}
   >
     <ChevronIcon class={["size-3.5 transition-transform", more && "rotate-180"]} />
-    その他のモード（Chrome を使わない、PC の中だけで作る）
+    その他のモード（クラウド、ローカル）
   </button>
   {#if more}
     {#each MODES.filter((m) => m.more) as m (m.name)}

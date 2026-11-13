@@ -679,9 +679,9 @@ impl Engines {
         translation: TranslationEngine::Gemma,
         furigana: RubySource::Dictionary,
     };
-    /// ベータのモードの、Chrome を使わない版（0.7.0）。途中の字幕も Qwen で作る。Chrome のウィンドウを開かず、
+    /// クラウドのモード（0.7.0）。ベータのモードの途中の字幕も Qwen で作る。Chrome のウィンドウを開かず、
     /// 音声を Google に送らない
-    pub const BETA_CLOUD: Self = Self {
+    pub const CLOUD: Self = Self {
         live: LiveSource::QwenAudioStreaming,
         ..Self::BETA
     };
@@ -692,7 +692,7 @@ impl Engines {
         Self::BETA,
         Self::CHROME,
         Self::STANDARD,
-        Self::BETA_CLOUD,
+        Self::CLOUD,
         Self::LOCAL,
     ];
     /// 最高精度のモード（0.5 までの「スタンダード」）。途中の字幕は Chrome、確定は OpenAI
