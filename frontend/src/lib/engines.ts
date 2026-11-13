@@ -313,6 +313,15 @@ export const BEST: Engines = {
   furigana: "llm",
 };
 
+/** 音声も字幕の文字も PC から出さない組み合わせ。3 つとも PC の中で動かす（DESIGN.md 9.7） */
+export const LOCAL: Engines = {
+  live: "haasJa",
+  transcription: "whisperTurbo",
+  terms: "gemma",
+  translation: "gemma",
+  furigana: "dictionary",
+};
+
 /** 月の目安の使い方（毎日 3 時間、30 日） */
 const MONTHLY_HOURS = 3 * 30;
 /** 月の目安を円にするときの 1 ドル（為替で動くので目安） */
@@ -353,6 +362,15 @@ export const MODES: {
     hourlyUsd: 0,
     hint: "多くの字幕ソフトと同じく、Chrome の音声認識と翻訳だけを使います。デドロ字幕のサーバーは使いません",
     engines: CHROME,
+  },
+  {
+    name: "local",
+    label: "ローカル",
+    traits: "PC の中だけ・キー不要",
+    hourlyUsd: 0,
+    hint: "音声と字幕の文字を外に送りません。文字起こし（Haas-ja と Whisper）と、用語・翻訳（Gemma）を、この PC の中で動かします。GPU のメモリを 6 GB 以上使い、初回に約 6 GB をダウンロードします。日本語以外では、途中の字幕は出ません。Intel の Mac では動きません",
+    engines: LOCAL,
+    badge: "無料・GPU に余裕のある PC 向け",
   },
   {
     name: "best",

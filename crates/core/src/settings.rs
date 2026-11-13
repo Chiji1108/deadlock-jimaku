@@ -670,9 +670,18 @@ impl Engines {
         translation: TranslationEngine::HyMt2,
         furigana: RubySource::Decider,
     };
+    /// ローカルのモード（0.7.0）。音声も字幕の文字も PC から出さない: 途中の字幕は Haas-ja、確定は Whisper、
+    /// 用語と翻訳は Gemma。GPU に余裕のある PC 向け（DESIGN.md 9.7）
+    pub const LOCAL: Self = Self {
+        live: LiveSource::HaasJa,
+        transcription: FinalSource::WhisperTurbo,
+        terms: TermsEngine::Gemma,
+        translation: TranslationEngine::Gemma,
+        furigana: RubySource::Dictionary,
+    };
     /// 操作パネルに出すモード（おすすめの組み合わせ）。ほかの組み合わせは「カスタム」（`Settings::custom_engines`）。
     /// `STANDARD` は「最高精度」（OpenAI の鍵が要る）で、ほかは鍵なしで始められる
-    pub const MODES: [Self; 3] = [Self::BETA, Self::CHROME, Self::STANDARD];
+    pub const MODES: [Self; 4] = [Self::BETA, Self::CHROME, Self::LOCAL, Self::STANDARD];
     /// 最高精度のモード（0.5 までの「スタンダード」）。途中の字幕は Chrome、確定は OpenAI
     pub const STANDARD: Self = Self {
         live: LiveSource::Chrome,
@@ -710,11 +719,6 @@ impl Engines {
     /// その会社を使う工程があり、鍵が要る
     pub fn uses(&self, provider: Provider) -> bool {
         self.providers().contains(&provider)
-    }
-
-    /// PC の中の文字起こし（speech.cpp）を立てる工程がある
-    pub fn uses_local(&self) -> bool {
-        self.live == LiveSource::HaasJa || self.transcription == FinalSource::HaasJa
     }
 
     /// PC の中の Whisper（whisper.cpp）を立てるなら、そのモデル。途中の字幕と確定で同じ 1 つを使うので、
@@ -1251,6 +1255,8 @@ impl Settings {
         let ja = self.mic_language == "ja";
         let dictionary = (ruby && ja).then_some(Ruby::Dictionary);
         let terms = (self.deadlock_mode && ja).then_some(Emphasis::Terms);
+        // Haas-ja は日本語だけ。ほかの言語では、途中の字幕を出さない（確定は、選んだもので出る）
+        let live_writes = engines.live != LiveSource::HaasJa || ja;
         let partial = match engines.live {
             LiveSource::Chrome => Phase {
                 text: Some(Text::Chrome),
@@ -1264,7 +1270,7 @@ impl Settings {
             | LiveSource::QwenAudioStreaming
             | LiveSource::HaasJa
             | LiveSource::Whisper
-                if !translation_only =>
+                if !translation_only && live_writes =>
             {
                 Phase {
                     text: Some(match engines.live {
@@ -1313,6 +1319,12 @@ impl Settings {
             finals,
             translation_only,
         }
+    }
+
+    /// PC の中の Haas-ja（speech.cpp）を立てる。途中の字幕は、出すときだけ（日本語で、翻訳だけの表示でない）
+    pub fn uses_speech(&self) -> bool {
+        self.engines.transcription == FinalSource::HaasJa
+            || self.plan().partial.text == Some(TextSource::HaasJa)
     }
 
     /// PC の中の LLM（llama.cpp）を立てる。翻訳先がない、Deadlock モードでないなど、頼むことがなければ立てない
@@ -2118,7 +2130,11 @@ mod tests {
             assert!(hybrid.providers().is_empty());
             assert_eq!(transcription.whisper(), Some(size));
             // speech.cpp は、途中の字幕を Haas-ja にしたときだけ立てる
-            assert!(!hybrid.uses_local());
+            let chrome_live = Settings {
+                engines: hybrid,
+                ..Default::default()
+            };
+            assert!(!chrome_live.uses_speech());
             let settings = Settings {
                 engines: Engines {
                     live: LiveSource::HaasJa,
@@ -2126,7 +2142,7 @@ mod tests {
                 },
                 ..Default::default()
             };
-            assert!(settings.engines.uses_local());
+            assert!(settings.uses_speech());
             assert_eq!(settings.plan().finals.text, Some(TextSource::Whisper));
             assert_eq!(settings.models_in_use().batch, model);
         }
@@ -2151,6 +2167,38 @@ mod tests {
             Some(whisper::Size::Turbo)
         );
         assert_eq!(Engines::BETA.whisper(), None);
+    }
+
+    /// ローカルのモードは、鍵が要らず、3 つとも PC の中で動かす。Haas-ja は日本語だけなので、
+    /// ほかの言語では途中の字幕を出さず、speech.cpp も立てない
+    #[test]
+    fn the_local_mode_runs_on_this_computer() {
+        assert_eq!(Engines::LOCAL.sanitized(), Engines::LOCAL);
+        assert!(Engines::LOCAL.providers().is_empty());
+        let with = |mic_language: &str| Settings {
+            engines: Engines::LOCAL,
+            mic_language: mic_language.into(),
+            translate_to: vec!["en".into()],
+            ..Default::default()
+        };
+        let ja = with("ja");
+        assert!(ja.uses_speech() && ja.uses_llama());
+        assert_eq!(ja.engines.whisper(), Some(whisper::Size::Turbo));
+        assert_eq!(ja.plan().partial.text, Some(TextSource::HaasJa));
+        let ko = with("ko");
+        assert!(!ko.uses_speech() && ko.uses_llama());
+        assert_eq!(ko.plan().partial, Phase::NONE);
+        assert_eq!(ko.plan().finals.text, Some(TextSource::Whisper));
+        // 確定を Haas-ja にしたら、どの言語でも立てる（日本語でなければ、始めるときに止める）
+        let finals = Settings {
+            engines: Engines {
+                transcription: FinalSource::HaasJa,
+                ..Engines::CHROME
+            },
+            mic_language: "ko".into(),
+            ..Default::default()
+        };
+        assert!(finals.uses_speech());
     }
 
     /// PC の中の LLM は、鍵が要らず、頼むことがあるときだけ立てる
