@@ -1,5 +1,5 @@
 Copyright 2020 The Dela Gothic Project Authors (https://github.com/syakuzen/DelaGothic)
-Copyright 2020 The Mochiypop Project Authors (https://github.com/fontdasu/Mochiypop)
+Copyright 2020 The Hachi Maru Pop Project Authors (https://github.com/noriokanisawa/HachiMaruPop)
 Copyright 2020 The DotGothic16 Project Authors (https://github.com/fontworks-fonts/DotGothic16)
 Copyright 2010 The Bangers Project Authors (https://github.com/googlefonts/bangers)
 Copyright (c) 2008, Haley Fiege (haley@kingdomofawesome.com), Copyright (c) 2012, Brenda Gallo (gbrenda1987@gmail.com), Copyright (c) 2013, Pablo Impallari (www.impallari.com|impallari@gmail.com)
