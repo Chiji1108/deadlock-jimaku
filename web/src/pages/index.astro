@@ -107,10 +107,12 @@ const faqs = [
 ];
 
 /** モードの一覧はアプリと同じもの（engines.ts）を出し、LP では「必要なもの」だけを足す */
+/** 料金の説明に出す、有料のモード */
+const best = MODES.find((mode) => mode.name === "best")!;
 const needs: Record<string, string> = {
   beta: "Google Chrome（字幕を始めると小さなウィンドウが開く）",
   chrome: "Google Chrome（字幕を始めると小さなウィンドウが開く）",
-  best: "OpenAI の API キー、Google Chrome",
+  chromePlus: "Google Chrome（初回に、Chrome が AI のモデル約 4 GB をダウンロードする）",
 };
 
 const line = LINES[0]!;
@@ -318,12 +320,12 @@ const official = [
         <h2 class="text-sm font-bold text-gold">料金</h2>
         <p class="display mt-3 text-[clamp(2.6rem,7vw,5.5rem)]">アプリは無料。<br />上乗せなし。</p>
         <p class="mt-5 text-lg leading-relaxed text-paper/70">
-          有料プランや手数料はありません。Chrome のモードは無料で、「おすすめ」のモードもベータ期間中は無料です。どちらも API キーは要りません。「最高精度」のモードや、工程ごとに選んだ有料のモデルの料金は、ご自身の API キーで各社に直接払う分だけです。
+          有料プランや手数料はありません。Chrome のモードは無料で、「おすすめ」のモードもベータ期間中は無料です。どちらも API キーは要りません。アプリの「その他のモード」にある「最高精度」や、工程ごとに選んだ有料のモデルの料金は、ご自身の API キーで各社に直接払う分だけです。
         </p>
       </div>
       <div class="md:pt-9">
         <p class="leading-relaxed text-paper/70">
-          「最高精度」の値段は、翻訳 1 言語・ふりがなありで、配信の半分くらい話したときに払う目安です。月の目安は毎日 3 時間配信したときです。話していない間は、アプリは音声を送らないので、料金はかかりません。翻訳先を増やすと、その分だけ増えます。
+          「最高精度」のモードは、{price(best.hourlyUsd)}（{monthly(best.hourlyUsd)}）が目安です。翻訳 1 言語・ふりがなありで、配信の半分くらい話したときに、OpenAI に払う分です。話していない間は、アプリは音声を送らないので、料金はかかりません。翻訳先を増やすと、その分だけ増えます。
         </p>
         <p class="mt-3 leading-relaxed text-paper/70">
           「おすすめ」のモードには 1 日に使える量の上限がありますが、届いても字幕は止まらず、Chrome のモードと同じ作り方で続きます。ベータ期間中の無料の提供は、予告なく変えたり終えたりすることがあります。

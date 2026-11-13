@@ -692,12 +692,13 @@ impl Engines {
     };
     /// 操作パネルに出すモード（おすすめの組み合わせ）。ほかの組み合わせは「カスタム」（`Settings::custom_engines`）。
     /// `STANDARD` は「最高精度」（OpenAI の鍵が要る）で、ほかは鍵なしで始められる。
-    /// 終わりの 3 つは、画面では「その他のモード」を開くと出る（選ぶ人が限られる）
+    /// 初めから見えるのは、鍵なしで始められる 3 つ。終わりの 3 つは、画面では「その他のモード」を開くと出る
+    /// （選ぶ人が限られる）
     pub const MODES: [Self; 6] = [
         Self::BETA,
         Self::CHROME,
-        Self::STANDARD,
         Self::CHROME_PLUS,
+        Self::STANDARD,
         Self::CLOUD,
         Self::LOCAL,
     ];
