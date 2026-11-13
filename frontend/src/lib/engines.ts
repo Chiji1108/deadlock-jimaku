@@ -381,7 +381,7 @@ export const MODES: {
     label: "クラウド",
     traits: "Chrome を使わない・キー不要",
     hourlyUsd: 0,
-    hint: "途中の字幕も、デドロ字幕のサーバーを通して作ります。Chrome のウィンドウを開かず、音声を Google に送りません",
+    hint: "途中の字幕も、デドロ字幕のサーバーを通して作ります。Chrome を開かないので、使うメモリがいちばん少なく、音声を Google に送りません",
     engines: CLOUD,
     badge: "ベータ期間中は無料",
     more: true,
