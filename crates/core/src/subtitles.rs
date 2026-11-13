@@ -34,6 +34,7 @@ use crate::types::{
     TranscriptionError, Translated, Translations,
 };
 use crate::usage::Meter;
+use crate::whisper::Whisper;
 
 /// 発話の前後に付ける余白
 const PADDING: u64 = SAMPLE_RATE as u64 * 300 / 1000;
@@ -54,29 +55,35 @@ pub async fn run(
     input: audio::Input,
     accesses: Accesses,
     local: Option<Arc<Speech>>,
+    whisper: Option<Arc<Whisper>>,
     llama: Option<Arc<Llama>>,
 ) -> anyhow::Result<()> {
     let settings = store.settings();
     // 確定の文字起こしを頼む相手。鍵と PC の中の文字起こしは、始める前に確かめてある
-    let transcriber = settings.engines.transcription.provider();
-    let transcriber =
-        Transcriber::of(transcriber, &accesses, &local).expect("finals without a transcriber");
+    let transcriber = match whisper {
+        Some(whisper) => Some(Transcriber::Whisper(whisper)),
+        None => Transcriber::of(settings.engines.transcription.provider(), &accesses, &local),
+    };
+    let transcriber = transcriber.expect("finals without a transcriber");
 
     // 用語ヒントは Realtime のセッション開始時に 1 回しか渡せないので、辞書を少し待つ。
     // 入力は待ち終わってから開く（待っている間の音声を溜めない）
-    let keywords = if settings.deadlock_mode {
+    let (keywords, heroes) = if settings.deadlock_mode {
         let glossary = store
             .wait_glossary(&settings.mic_language, Duration::from_secs(20))
             .await;
         match &glossary {
-            Some(loaded) => keywords(&loaded.glossary, &settings.mic_language),
+            Some(loaded) => (
+                keywords(&loaded.glossary, &settings.mic_language),
+                heroes(&loaded.glossary, &settings.mic_language),
+            ),
             None => {
                 tracing::warn!("starting transcription without glossary");
-                Vec::new()
+                (Vec::new(), Vec::new())
             }
         }
     } else {
-        Vec::new()
+        (Vec::new(), Vec::new())
     };
     tracing::info!("keywords: {} terms", keywords.len());
     let hints = Arc::new(Hints {
@@ -89,6 +96,7 @@ pub async fn run(
         }
         .to_owned(),
         keywords,
+        heroes,
     });
     // 文を受け取ったら読みと用語を付ける。ハイブリッドの途中の文は Chrome から届く
     let chrome_events = store.subscribe_chrome();
@@ -692,6 +700,18 @@ pub fn keywords(glossary: &Glossary, lang: &str) -> Vec<String> {
     terms
 }
 
+/// ヒーローの名前（話す言語で）。Whisper に渡す用語（DESIGN.md 9.10）
+pub fn heroes(glossary: &Glossary, lang: &str) -> Vec<String> {
+    let heroes = glossary
+        .entities
+        .values()
+        .filter(|e| e.kind == EntityKind::Hero);
+    let mut names: Vec<String> = heroes.filter_map(|e| e.names.get(lang).cloned()).collect();
+    names.sort();
+    names.dedup();
+    names
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -747,6 +767,7 @@ mod tests {
                     language: "ja".into(),
                     prompt: String::new(),
                     keywords: Vec::new(),
+                    heroes: Vec::new(),
                 }),
                 meter: store.meter(),
             }),
@@ -834,6 +855,7 @@ mod tests {
                 language: "ja".into(),
                 prompt: String::new(),
                 keywords,
+                heroes: Vec::new(),
             }),
             meter: Arc::new(Meter::new(dir.path().join("usage.json"))),
         });
@@ -1125,6 +1147,7 @@ mod tests {
             language: "ja".into(),
             prompt: String::new(),
             keywords: Vec::new(),
+            heroes: Vec::new(),
         });
         let (_input, rx) = mpsc::unbounded_channel();
         let (delta_tx, _deltas) = mpsc::channel(1);

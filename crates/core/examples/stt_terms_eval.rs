@@ -64,6 +64,7 @@ async fn main() -> anyhow::Result<()> {
         language: "ja".into(),
         prompt: PROMPT.into(),
         keywords: keywords(&glossary, "ja"),
+        heroes: overlays_core::subtitles::heroes(&glossary, "ja"),
     };
     let mut voices: Vec<PathBuf> = std::fs::read_dir(&audio)?
         .filter_map(|entry| Some(entry.ok()?.path()))

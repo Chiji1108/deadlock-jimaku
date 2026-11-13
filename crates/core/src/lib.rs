@@ -31,6 +31,7 @@ pub mod subtitles;
 pub mod terms;
 pub mod types;
 pub mod usage;
+pub mod whisper;
 
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;

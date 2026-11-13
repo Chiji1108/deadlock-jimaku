@@ -18,6 +18,7 @@ use crate::secrets::{Keys, Provider, Relay};
 use crate::settings::{Engines, FinalSource, Models, Region, Segmentation, Settings, TextSource};
 use crate::store::{Fallback, Store};
 use crate::types::{LangCode, TranscriptionError};
+use crate::whisper::{self, Whisper};
 use crate::{assets, audio, chrome, rank, secrets, share, subtitles};
 
 pub struct Options {
@@ -290,6 +291,7 @@ fn start_subtitles(
             let accesses = input.accesses;
             let uses_local = input.engines.uses_local();
             let uses_llama = input.uses_llama;
+            let whisper = input.engines.transcription.whisper();
             tracing::info!("transcription started");
             let (input, ended) = match input.source {
                 Source::Mic(device) => (
@@ -309,8 +311,9 @@ fn start_subtitles(
                         true => Some(Arc::new(local_speech(&store).await?)),
                         false => None,
                     };
+                    let whisper = local_whisper(&store, whisper).await?;
                     let llama = local_llm(&store, uses_llama).await?;
-                    subtitles::run(store.clone(), input, accesses, local, llama).await
+                    subtitles::run(store.clone(), input, accesses, local, whisper, llama).await
                 };
                 supervise(store.clone(), run, ended).await;
             }))
@@ -332,6 +335,20 @@ async fn local_speech(store: &Arc<Store>) -> anyhow::Result<Speech> {
     );
     let _preparing = store.preparing();
     Speech::start(&store.data_dir().join("speech")).await
+}
+
+/// PC の中の Whisper を立てる（確定の文字起こしに選んであるとき）。初回は whisper.cpp とモデルを取る
+async fn local_whisper(
+    store: &Arc<Store>,
+    size: Option<whisper::Size>,
+) -> anyhow::Result<Option<Arc<Whisper>>> {
+    let Some(size) = size else {
+        return Ok(None);
+    };
+    let preparing = store.preparing();
+    let progress = |done, total| preparing.downloaded(done, total);
+    let whisper = Whisper::start(&store.data_dir().join("whisper"), size, &progress).await?;
+    Ok(Some(Arc::new(whisper)))
 }
 
 /// PC の中の LLM を立てる（使う工程があるとき）。初回は llama.cpp とモデル（約 5 GB）を取るので、
