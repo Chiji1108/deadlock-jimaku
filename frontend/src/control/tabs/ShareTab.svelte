@@ -100,10 +100,12 @@
 <div class="flex flex-col gap-6">
   <Alert.Root>
     <CircleAlertIcon />
-    <Alert.Title>おすそ分けは、0.7 でなくなります</Alert.Title>
+    <Alert.Title class="flex items-center gap-2">
+      おすそ分けは、将来のバージョンでなくなります
+      <Badge variant="outline">非推奨</Badge>
+    </Alert.Title>
     <Alert.Description>
-      キーなしで使ってもらうなら、「おすすめ」のモードを案内してください。ベータ期間中は無料で、ギフトコードも要りません。今のギフトコードは、0.7
-      までは使えます
+      なくなる時期は決まっていません。キーなしで使ってもらうなら、「おすすめ」のモードを案内してください。ベータ期間中は無料で、ギフトコードも要りません。今のギフトコードは、なくなるまで使えます
     </Alert.Description>
   </Alert.Root>
   <Card.Root>

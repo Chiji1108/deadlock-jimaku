@@ -59,8 +59,8 @@
       heading: "キーと料金",
     },
     { value: "usage", label: "料金", icon: WalletIcon, page: UsageTab },
-    // 0.7 でなくなるので、一番下に置く（DESIGN.md 17.1）
-    { value: "share", label: "おすそ分け", icon: GiftIcon, page: ShareTab },
+    // 非推奨で、将来なくなるので、一番下に置く（DESIGN.md 17.1）
+    { value: "share", label: "おすそ分け", icon: GiftIcon, page: ShareTab, deprecated: true },
   ];
   // デスクトップのウィンドウでは左のサイドバー。OBS のドックのように狭いときは上に並べる
   const wide = new MediaQuery("min-width: 768px");
@@ -198,6 +198,9 @@
               class="group-data-horizontal/tabs:[&>svg]:hidden group-data-vertical/tabs:h-9 group-data-vertical/tabs:flex-none group-data-vertical/tabs:px-3"
             >
               <t.icon />{t.label}
+              {#if t.deprecated}
+                <span class="text-[10px] text-muted-foreground">非推奨</span>
+              {/if}
             </Tabs.Trigger>
           {/each}
         </Tabs.List>

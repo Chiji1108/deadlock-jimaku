@@ -89,11 +89,13 @@
 
   <Card.Root>
     <Card.Header>
-      <Card.Title>ギフトコード</Card.Title>
+      <Card.Title class="flex items-center gap-2">
+        ギフトコード
+        <Badge variant="outline">非推奨</Badge>
+      </Card.Title>
       <Card.Description>
         デドロ字幕を使っている人から「おすそ分け」のコードをもらったら、ここに入れると自分の API
-        キーなしで使えます。使った分はおすそ分けしてくれた人に請求されます。おすそ分けは 0.7
-        でなくなります（キーなしで使うなら、「おすすめ」のモードを選んでください）
+        キーなしで使えます。使った分はおすそ分けしてくれた人に請求されます。おすそ分けは、将来のバージョンでなくなります（キーなしで使うなら、「おすすめ」のモードを選んでください）
       </Card.Description>
     </Card.Header>
     <Card.Content>
