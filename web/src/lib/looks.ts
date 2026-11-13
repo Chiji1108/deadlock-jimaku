@@ -36,8 +36,9 @@ export const LOOKS: Look[] = [
     label: "ポップ",
     text: { ...TEXT, color: "#ffe14d", outline: { width: 0.24, color: "#2a1600" } },
     background: NO_BAND,
-    fontStyle: { font: "Dela Gothic One", weight: 400, letterSpacing: null },
-    english: { font: "Bangers", weight: 400, letterSpacing: 0.02 },
+    // 縁取りが太いので、字間を空ける（詰まっていると、隣の字の縁取りが字に重なる）
+    fontStyle: { font: "Dela Gothic One", weight: 400, letterSpacing: 0.1 },
+    english: { font: "Bangers", weight: 400, letterSpacing: 0.05 },
   },
   {
     label: "かわいい",
