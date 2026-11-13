@@ -1136,7 +1136,7 @@ dependencies = [
 
 [[package]]
 name = "deadlock-jimaku"
-version = "0.6.0-rc.13"
+version = "0.6.0-rc.14"
 dependencies = [
  "overlays-core",
  "serde_json",
@@ -3425,7 +3425,7 @@ dependencies = [
 
 [[package]]
 name = "overlays-core"
-version = "0.6.0-rc.13"
+version = "0.6.0-rc.14"
 dependencies = [
  "anyhow",
  "audioadapter-buffers",
