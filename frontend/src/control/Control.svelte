@@ -18,6 +18,7 @@
   import * as Tabs from "$lib/components/ui/tabs";
   import AboutDialog from "./parts/AboutDialog.svelte";
   import Onboarding from "./parts/Onboarding.svelte";
+  import BetaDialog from "./parts/BetaDialog.svelte";
   import WhatsNew from "./parts/WhatsNew.svelte";
   import { fallbackText, panel, transcriptionErrorText } from "./panel.svelte";
   import { total, unpriced, usd } from "./usage";
@@ -162,6 +163,8 @@
 
   {#if s}
     <WhatsNew />
+    <!-- 「おすすめ」は、どのタブからも選べる（モードのタブ、マイクと翻訳の提案、更新の知らせ） -->
+    <BetaDialog />
     <Tabs.Root
       bind:value={panel.tab}
       orientation={wide.current ? "vertical" : "horizontal"}

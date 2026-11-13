@@ -4,7 +4,6 @@
   import { Badge } from "$lib/components/ui/badge";
   import * as Card from "$lib/components/ui/card";
   import ModePicker from "../parts/ModePicker.svelte";
-  import BetaDialog from "../parts/BetaDialog.svelte";
   import { panel } from "../panel.svelte";
   import {
     ITEMS,
@@ -51,7 +50,6 @@
   }
 </script>
 
-<BetaDialog />
 <div class="flex flex-col gap-6">
   <Card.Root>
     <Card.Header>
