@@ -74,7 +74,7 @@
           <span class="text-sm font-medium">{mode?.label ?? "カスタム"}</span>
           <span class="text-xs text-muted-foreground">
             {#if mode}
-              {mode.traits}・<span class="tabular-nums">{price(mode.hourlyUsd)}</span>
+              {mode.traits.join("・")}・<span class="tabular-nums">{price(mode.hourlyUsd)}</span>
             {:else}
               工程ごとに選んだ組み合わせ
             {/if}

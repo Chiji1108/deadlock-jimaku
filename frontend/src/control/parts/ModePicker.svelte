@@ -39,16 +39,15 @@
     <span class="flex flex-wrap items-center gap-2 text-sm">
       {@render dot(mode?.name === m.name)}
       <span class="font-medium">{m.label}</span>
-      <!-- 「ベータ期間中は無料」のようなひとことがあれば、料金の代わりに出す -->
-      {#if m.badge}
-        <Badge variant="secondary">{m.badge}</Badge>
-      {:else}
-        <span class="text-xs text-muted-foreground tabular-nums">
-          {price(m.hourlyUsd)}{#if m.hourlyUsd}（{monthly(m.hourlyUsd)}）{/if}
-        </span>
-      {/if}
+      <!-- 料金（「ベータ期間中は無料」のようなひとことがあれば、その代わりに）と、選ぶ理由を札で並べる -->
+      <Badge variant="secondary" class="tabular-nums">
+        {m.badge ?? price(m.hourlyUsd)}{#if m.hourlyUsd}（{monthly(m.hourlyUsd)}）{/if}
+      </Badge>
+      {#each m.traits as trait (trait)}
+        <Badge variant="outline">{trait}</Badge>
+      {/each}
     </span>
-    <span class="pl-5 text-xs text-muted-foreground">{m.traits}。{m.hint}</span>
+    <span class="pl-5 text-xs text-muted-foreground">{m.hint}</span>
   </button>
 {/snippet}
 
@@ -83,7 +82,7 @@
     onclick={() => (opened = !opened)}
   >
     <ChevronIcon class={["size-3.5 transition-transform", more && "rotate-180"]} />
-    その他のモード（クラウド、ローカル）
+    その他のモード（Chrome+、クラウド、ローカル）
   </button>
   {#if more}
     {#each MODES.filter((m) => m.more) as m (m.name)}
