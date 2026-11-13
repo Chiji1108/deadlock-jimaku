@@ -45,31 +45,6 @@ const downloads = [
   },
 ] as const;
 
-const keySteps = [
-  {
-    title: "OpenAI の開発者向けサイトに登録する",
-    body: "メールアドレスか Google アカウントで登録します。ChatGPT のアカウントがあれば、それでログインできます。ChatGPT の有料プランとは別の支払いになります。",
-    link: { href: "https://platform.openai.com/signup", label: "登録ページを開く" },
-  },
-  {
-    title: "クレジットカードを登録して、前払いでチャージする",
-    body: "設定の「Billing」で「Add payment method」からカードを登録し、「Add to credit balance」で 5〜10 ドルほどチャージします。使った分だけ残高から引かれます。使いすぎが心配なら、自動チャージ（Auto recharge）はオフのままにしてください。",
-    link: {
-      href: "https://platform.openai.com/settings/organization/billing/overview",
-      label: "Billing を開く",
-    },
-  },
-  {
-    title: "API キーを作る",
-    body: "「API keys」で「Create new secret key」を押し、名前（例: デドロ字幕）を付けて作ります。キーは作ったときに一度しか表示されないので、すぐにコピーしてください。",
-    link: { href: "https://platform.openai.com/api-keys", label: "API keys を開く" },
-  },
-  {
-    title: "アプリに貼り付けて保存する",
-    body: "アプリの「API キー」のタブに貼り付けます。キーは PC の資格情報ストアに保存します。キーは他の人に見せないでください（使われると、あなたの残高から引かれます）。",
-  },
-];
-
 const steps = [
   { title: "ダウンロード", body: "Windows・Mac・Linux 用のアプリを入れます。" },
   {
@@ -78,8 +53,7 @@ const steps = [
   },
   {
     title: "字幕を始める",
-    body: "まずは無料の Chrome のモードで始められます（Google Chrome が必要です）。API キーかギフトコードを入れると、スタンダードに切り替えられます。",
-    link: { href: "#openai-key", label: "キーの作り方を見る" },
+    body: "まずは無料の Chrome のモードで始まります（Google Chrome が必要です）。「モード」のタブで「おすすめ」を選ぶと、キーなしで、もっと正確な字幕と翻訳になります。",
   },
 ];
 
@@ -89,26 +63,25 @@ const faqs = [
     a: "使えます。話す言語は操作画面で選べます。ふりがなは日本語のときだけ付きます。",
   },
   {
-    q: "OpenAI の料金が心配です",
-    a: "アプリの「料金」タブに、使った分の目安がその場で出ます。前払いのチャージで使い、自動チャージをオフにしておけば、残高より多くは使われません。",
+    q: "お金はかかりますか？",
+    a: "かかりません。Chrome のモードは無料で、「おすすめ」のモードもベータ期間中は無料です。API キーも要りません。「最高精度」のモードや、工程ごとに選んだ有料のモデルを使うときだけ、ご自身の API キーで各社に使った分を払います。アプリの「料金」タブに、使った分の目安がその場で出ます。",
   },
   {
-    q: "OpenAI の API キーを作らずに使えますか？",
-    a: "使えます。アプリは無料の Chrome のモードで始まるので、キーは要りません。OpenAI の精度を使いたいときは、Discord のサーバーで声をかけてもらえれば、お試し用のギフトコードをお渡しします。アプリの「API キー」のタブに入れるだけで使えます。知り合いからコードをもらって使うこともできて、その場合の料金はコードをくれた人の OpenAI や xAI のアカウントに請求されます。API キーを持っている人は、アプリの「おすそ分け」のタブでコードを作れます。",
-    link: { href: DISCORD, label: "Discord のサーバーに参加する" },
+    q: "「おすすめ」のモードは、配信の途中で止まりませんか？",
+    a: "止まりません。「おすすめ」のモードには 1 日に使える量の上限がありますが、届いても字幕は消えず、Chrome のモードと同じ作り方に切り替わって続きます。ベータ期間中の無料の提供は、予告なく変えたり終えたりすることがあります。",
   },
   {
     q: "字幕はどこで作っていますか？",
-    a: "スタンダードは、途中の字幕を Chrome で作り、確定の字幕と翻訳を OpenAI で作ります。ライトは、確定の字幕を xAI の Grok で、翻訳を OpenAI の安いモデルで作ります。OpenAI のモードは、すべて OpenAI で作ります。Chrome のモードは、音声認識も翻訳も Chrome で行います。OpenAI のモード以外は Google Chrome が必要で、字幕を始めると小さな Chrome のウィンドウが開きます。翻訳のモデルは初回に Chrome がダウンロードします。",
+    a: "どのモードも、話している途中の字幕は Chrome で作ります（Google Chrome が必要で、字幕を始めると小さな Chrome のウィンドウが開きます）。Chrome のモードは、確定の字幕と翻訳も Chrome で作ります。翻訳のモデルは初回に Chrome がダウンロードします。「おすすめ」のモードは、話し終えた文を、デドロ字幕のサーバーを通して、文字起こし・用語・翻訳の専用のモデル（Qwen と、OpenRouter のモデル）で作り直します。「最高精度」のモードは、OpenAI のモデルで作り直します。ふりがなと用語の辞書は PC の中にあります。",
   },
   {
     q: "どんな情報が送信されますか？",
-    a: "スタンダードと OpenAI のモードでは、字幕を出している間の話し声と字幕の文字を OpenAI に送ります。ライトのモードでは、話し声を xAI に、字幕の文字を OpenAI に送ります。OpenAI のモード以外では、話し声が Chrome を通じて Google に送られます。Chrome のモードの字幕の文字は外に送りません。ランクを出すときは、Steam のアカウント ID を deadlock-api に送ります。デドロ字幕のサーバーを通るのはおすそ分けのときだけで、音声や字幕の文字は保存しません。",
+    a: "どのモードでも、字幕を出している間の話し声が、Chrome を通じて Google に送られます。Chrome のモードの字幕の文字は外に送りません。「おすすめ」のモードでは、話している間の話し声と字幕の文字が、デドロ字幕のサーバーを通って、Qwen と OpenRouter に送られます（サーバーは音声と文字を保存しません）。「最高精度」のモードでは、話し声と字幕の文字を OpenAI に送ります。ランクを出すときは、Steam のアカウント ID を deadlock-api に送ります。",
     link: { href: "/privacy", label: "プライバシーポリシーを見る" },
   },
   {
-    q: "OpenAI の API キーはどこに保存されますか？",
-    a: "キーは PC の OS の資格情報ストア（Windows の資格情報マネージャー、Mac のキーチェーン）に保存し、ふだんは OpenAI との通信にだけ使います。おすそ分けを始めるときだけ、確認のうえでデドロ字幕のサーバーに暗号化して預けます。",
+    q: "API キーはどこに保存されますか？",
+    a: "キーは PC の OS の資格情報ストア（Windows の資格情報マネージャー、Mac のキーチェーン）に保存し、その会社との通信にだけ使います。Chrome のモードと「おすすめ」のモードでは、API キーは要りません。",
     link: { href: "/privacy", label: "プライバシーポリシーを見る" },
   },
   {
@@ -137,15 +110,15 @@ const faqs = [
 const needs: Record<string, string> = {
   beta: "Google Chrome（字幕を始めると小さなウィンドウが開く）",
   chrome: "Google Chrome（字幕を始めると小さなウィンドウが開く）",
-  best: "OpenAI の API キーかギフトコード、Google Chrome",
+  best: "OpenAI の API キー、Google Chrome",
 };
 
 const line = LINES[0]!;
 /** 手元の測定（M5 Pro）とリリースのファイルの大きさ */
 const lightness = [
-  { value: "約 1%", label: "CPU", note: "OpenAI モードで字幕を出している間の、1 コアに対する割合" },
-  { value: "約 20MB", label: "メモリ", note: "OpenAI モード。Windows でウィンドウを閉じて、字幕を出しているとき。Chrome のモードは、Chrome のウィンドウの分が約 200MB 増えます" },
-  { value: "約 13MB", label: "インストーラー", note: "Windows 版" },
+  { value: "約 1%", label: "CPU", note: "アプリが字幕を出している間の、1 コアに対する割合" },
+  { value: "約 20MB", label: "メモリ", note: "Windows でウィンドウを閉じて、字幕を出しているとき。途中の字幕を作る Chrome のウィンドウの分が、別に約 200MB かかります" },
+  { value: "約 20MB", label: "インストーラー", note: "Windows 版" },
 ];
 const cards = await fetchCards();
 /** 「カート」と話しても、翻訳では正式名になる例 */
@@ -165,7 +138,7 @@ const official = [
     </div>
 
     <LiveDemo client:load cards={cards} />
-    <p class="mt-3 text-center text-sm text-muted">見本はスタンダードのモードの字幕です</p>
+    <p class="mt-3 text-center text-sm text-muted">見本は「最高精度」のモードの字幕です</p>
   </section>
 
   <section class="mx-auto mt-24 grid max-w-6xl items-center gap-10 px-4 sm:mt-32 md:grid-cols-2">
@@ -174,7 +147,7 @@ const official = [
         聞き取りの<br /><span class="band">精度が違う。</span>
       </h2>
       <p class="reveal mt-5 text-lg leading-relaxed text-muted">
-        スタンダードと OpenAI のモードでは、確定の字幕を OpenAI の最新モデルで作ります。略して呼んでも、どのアイテムやスキルのことか見分けます。
+        「おすすめ」と「最高精度」のモードでは、話し終えた文を、文字起こし専用のモデルで作り直します。略して呼んでも、どのアイテムやスキルのことか見分けます。
       </p>
     </div>
     <div class="reveal plate relative h-64 overflow-hidden">
@@ -201,7 +174,7 @@ const official = [
       <span class="band">デッドロック特化。</span>
     </h2>
     <p class="reveal mt-5 max-w-2xl text-lg leading-relaxed text-muted">
-      ヒーロー・スキル・アイテムの名前は色とアイコンで強調します。アイテムの名前が出たら、ゲーム内と同じカードで説明も出します。スタンダードと OpenAI のモードでは、略して話しても、翻訳はゲーム内の正式な名前になります。Chrome のモードでは、日本語で正式な名前を話したときだけ色とアイコンが付きます。
+      ヒーロー・スキル・アイテムの名前は色とアイコンで強調します。アイテムの名前が出たら、ゲーム内と同じカードで説明も出します。「おすすめ」と「最高精度」のモードでは、略して話しても、翻訳はゲーム内の正式な名前になります。Chrome のモードでは、日本語で正式な名前を話したときだけ色とアイコンが付きます。
     </p>
     <div class="mt-10 grid gap-4 md:grid-cols-2">
       <figure class="reveal">
@@ -230,7 +203,7 @@ const official = [
         </div>
         <figcaption class="mt-4">
           <h3 class="text-xl font-bold">正式名への翻訳</h3>
-          <p class="mt-1 leading-relaxed text-muted">海外の視聴者にも、何の話か伝わります（スタンダードと OpenAI のモード）。</p>
+          <p class="mt-1 leading-relaxed text-muted">海外の視聴者にも、何の話か伝わります（「おすすめ」と「最高精度」のモード）。</p>
         </figcaption>
       </figure>
     </div>
@@ -345,16 +318,15 @@ const official = [
         <h2 class="text-sm font-bold text-gold">料金</h2>
         <p class="display mt-3 text-[clamp(2.6rem,7vw,5.5rem)]">アプリは無料。<br />上乗せなし。</p>
         <p class="mt-5 text-lg leading-relaxed text-paper/70">
-          有料プランや手数料はありません。ライト・スタンダード・OpenAI のモードの料金は、ご自身の
-          <a href="#openai-key" class="underline hover:text-paper">OpenAI の API キー</a>（ライトは xAI の API キーも）で、各社に直接払う分だけです。まずは Chrome のモードを無料で試せます。API キーは要りません。
+          有料プランや手数料はありません。Chrome のモードは無料で、「おすすめ」のモードもベータ期間中は無料です。どちらも API キーは要りません。「最高精度」のモードや、工程ごとに選んだ有料のモデルの料金は、ご自身の API キーで各社に直接払う分だけです。
         </p>
       </div>
       <div class="md:pt-9">
         <p class="leading-relaxed text-paper/70">
-          モードの値段は、翻訳 1 言語・ふりがなありで、配信の半分くらい話したときに払う目安です。月の目安は毎日 3 時間配信したときです。話していない間は音声を送らないので、料金はかかりません。ずっと話し続けると高くなり、OpenAI モードなら 1 時間あたり約 $2 です。翻訳先を 1 つ増やすと、話し続けて 1 時間あたり約 $0.3 増えます。
+          「最高精度」の値段は、翻訳 1 言語・ふりがなありで、配信の半分くらい話したときに払う目安です。月の目安は毎日 3 時間配信したときです。話していない間は、アプリは音声を送らないので、料金はかかりません。翻訳先を増やすと、その分だけ増えます。
         </p>
         <p class="mt-3 leading-relaxed text-paper/70">
-          ギフトコードで使うときは、自分には請求されません。使った分は、コードをくれた人の OpenAI や xAI のアカウントに請求されます。
+          「おすすめ」のモードには 1 日に使える量の上限がありますが、届いても字幕は止まらず、Chrome のモードと同じ作り方で続きます。ベータ期間中の無料の提供は、予告なく変えたり終えたりすることがあります。
         </p>
       </div>
     </div>
@@ -369,11 +341,6 @@ const official = [
             <span class="display text-5xl">{i + 1}</span>
             <h3 class="mt-3 text-xl font-bold">{s.title}</h3>
             <p class="mt-2 leading-relaxed text-muted">{s.body}</p>
-            {s.link && (
-              <a class="mt-2 inline-block underline" href={s.link.href}>
-                {s.link.label}
-              </a>
-            )}
           </li>
         ))
       }
@@ -408,32 +375,6 @@ const official = [
     <p class="mt-6 text-sm text-muted">
       ほかの版や変更点は <a href={`${REPO}/releases`} class="underline hover:text-ink">GitHub のリリース</a> にあります。
     </p>
-
-    <details id="openai-key" class="mt-12 border-y border-line py-6">
-      <summary class="cursor-pointer text-xl font-bold">OpenAI の API キーの作り方</summary>
-      <p class="mt-4 text-muted">
-        スタンダードと OpenAI のモードは文字起こしと翻訳を OpenAI に頼むので、OpenAI の API キーが必要です。支払いは使った分だけです。デドロ字幕を使っている人からコードをもらった場合は、キーがなくても使えます。アプリの「API
-        キー」のタブの「ギフトコード」に入れてください。
-      </p>
-      <ol class="mt-6 flex flex-col gap-5">
-        {
-          keySteps.map((s, i) => (
-            <li class="flex gap-4">
-              <span class="display w-6 shrink-0 text-2xl">{i + 1}</span>
-              <div>
-                <h3 class="font-bold">{s.title}</h3>
-                <p class="mt-1 text-sm leading-relaxed text-muted">{s.body}</p>
-                {s.link && (
-                  <a class="mt-1 inline-block text-sm underline" href={s.link.href} target="_blank" rel="noreferrer">
-                    {s.link.label}
-                  </a>
-                )}
-              </div>
-            </li>
-          ))
-        }
-      </ol>
-    </details>
   </section>
 
   <section id="faq" class="mx-auto mt-28 max-w-6xl px-4 sm:mt-40">
@@ -466,12 +407,6 @@ const official = [
   </section>
 
   <script>
-    // 「作り方を見る」のリンクから来たら、閉じている節を開く
-    const guide = document.querySelector("details#openai-key") as HTMLDetailsElement;
-    if (location.hash === "#openai-key") guide.open = true;
-    for (const link of document.querySelectorAll('a[href="#openai-key"]'))
-      link.addEventListener("click", () => (guide.open = true));
-
     // 動画は見えている間だけ再生する（OS の「動きを減らす」では再生しない）
     const videos = new IntersectionObserver((entries) => {
       for (const { isIntersecting, target } of entries) {
