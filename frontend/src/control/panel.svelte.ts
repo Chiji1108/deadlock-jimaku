@@ -112,17 +112,32 @@ class Panel {
     return relay !== null && this.view?.keys[relay].state === "saved";
   }
 
+  /** その会社を、コードで使う。ベータのコードは、自分のキーがあっても先に使う（無料の分を先に。断られて自分のキーで
+   * 続けている間は使わない）。ギフトコードは、自分のキーがないときだけ使う。core の `Keys::access` と同じ決まり */
+  private viaCode(p: Provider) {
+    const view = this.view;
+    if (!view) return false;
+    const relay = relayOf(p);
+    if (relay === "beta")
+      return view.keys.beta.state === "saved" && view.continuesWith !== "ownKeys";
+    return relay === "gift" && view.keys[p].state !== "saved" && view.keys.gift.state === "saved";
+  }
+
   /** コードで使う（おすそ分けしてくれた人か、開発者に請求される）会社。ギフトコードが中継する会社が分かれば、それだけ */
   get giftPaid(): Provider[] {
+    const view = this.view;
+    if (!view) return [];
     const relayed = this.gift?.state === "active" ? this.gift.providers : undefined;
     const unrelayed = (p: Provider) => relayOf(p) === "gift" && relayed && !relayed.includes(p);
-    return this.withoutKey.filter((p) => this.hasCode(p) && !unrelayed(p));
+    return providers(view.settings.engines).filter((p) => this.viaCode(p) && !unrelayed(p));
   }
 
   /** 自分の API キーで払う分がある（コードで使う会社だけなら、本人には請求されない） */
   get pays() {
     const view = this.view;
-    return !!view && providers(view.settings.engines).some((p) => view.keys[p].state === "saved");
+    if (!view) return false;
+    const own = (p: Provider) => view.keys[p].state === "saved" && !this.viaCode(p);
+    return providers(view.settings.engines).some(own);
   }
 
   /** 字幕を始められる鍵がそろっている。有料の工程がなければ鍵は要らない */
@@ -496,12 +511,15 @@ export function betaRefusalText(e: BetaRefusal): string {
 }
 
 /** ベータのコードで断られて、Chrome の作り方で続けていることを知らせる文 */
-export function fallbackText(e: TranscriptionError): string {
+export function fallbackText(e: TranscriptionError, ownKeys: boolean): string {
   const reason =
     e.code === "betaLimit"
       ? `今日の無料の分を使い切りました。${LIMIT_RESET}`
       : "ベータ期間中の無料の提供が止まっています";
-  return `${reason}。字幕は止めずに、Chrome の作り方で続けています。字幕を始め直すと、選んだモードに戻ります`;
+  const how = ownKeys
+    ? "字幕は止めずに、自分の API キーで続けています（ここからの料金は、自分に請求されます）"
+    : "字幕は止めずに、Chrome の作り方で続けています";
+  return `${reason}。${how}。字幕を始め直すと、選んだモードの無料の分に戻ります`;
 }
 
 export const giftValid = (s: GiftStatus | undefined) =>

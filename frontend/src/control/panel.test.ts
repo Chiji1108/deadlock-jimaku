@@ -4,7 +4,7 @@ import { panel, type FontTarget } from "./panel.svelte";
 import { addFontFaces, fontWeights } from "../lib/overlay-fonts";
 import type { FontEntry } from "../generated/FontEntry";
 import type { SettingsView } from "../generated/SettingsView";
-import { BETA, CHROME } from "../lib/engines";
+import { BEST, BETA, CHROME } from "../lib/engines";
 
 vi.mock("../lib/overlay-fonts", () => ({ addFontFaces: vi.fn(), fontWeights: vi.fn() }));
 vi.mock("../lib/ws", () => ({ connect: vi.fn(() => () => {}) }));
@@ -298,27 +298,36 @@ test("ベータのモードは、ベータのコードがあれば鍵が要ら�
 
 test("起動してからの料金は、自分のキーで払う分があるときだけ出す", () => {
   const fresh = freshPanel();
-  const keys = (openrouter: string, typesafe: string) => ({
-    openai: { state: "missing" },
-    gift: { state: "missing" },
-    beta: { state: "saved" },
-    xai: { state: "missing" },
-    qwen: { state: "missing" },
-    openrouter: { state: openrouter },
-    typesafe: { state: typesafe },
-  });
-  const view = (engines: unknown, openrouter = "missing", typesafe = "missing") =>
-    ({ settings: { engines }, keys: keys(openrouter, typesafe) }) as unknown as SettingsView;
+  const view = (engines: unknown, saved: string[], continuesWith?: string) => {
+    const state = (name: string) => ({ state: saved.includes(name) ? "saved" : "missing" });
+    const names = ["openai", "gift", "beta", "xai", "qwen", "openrouter", "typesafe"];
+    const keys = Object.fromEntries(names.map((name) => [name, state(name)]));
+    return { settings: { engines }, keys, continuesWith } as unknown as SettingsView;
+  };
   // 無料のモードと、コードで使うだけのモードは出さない
-  fresh.view = view(CHROME);
+  fresh.view = view(CHROME, ["beta"]);
   expect(fresh.pays).toBe(false);
-  fresh.view = view(BETA);
+  fresh.view = view(BETA, ["beta"]);
   expect(fresh.pays).toBe(false);
-  // 自分のキーがある会社を使うなら、コードがあっても自分に請求される
-  fresh.view = view(BETA, "saved");
+  // ベータのコードがあれば、自分のキーを入れていても、無料の分を先に使う
+  fresh.view = view(BETA, ["beta", "qwen", "openrouter"]);
+  expect(fresh.pays).toBe(false);
+  expect(fresh.giftPaid).toEqual(["qwen", "openrouter"]);
+  // コードがなければ、自分のキーで払う
+  fresh.view = view(BETA, ["qwen", "openrouter"]);
   expect(fresh.pays).toBe(true);
-  fresh.view = view({ ...BETA, terms: "jev" }, "missing", "saved");
+  expect(fresh.giftPaid).toEqual([]);
+  // コードで断られて、自分のキーで続けている間も、自分で払う
+  fresh.view = view(BETA, ["beta", "qwen", "openrouter"], "ownKeys");
   expect(fresh.pays).toBe(true);
+  // 中継のない会社（Jev）は、いつも自分のキー
+  fresh.view = view({ ...BETA, terms: "jev" }, ["beta", "typesafe"]);
+  expect(fresh.pays).toBe(true);
+  // ギフトコードの会社は、自分のキーが先
+  fresh.view = view(BEST, ["gift", "openai"]);
+  expect(fresh.pays).toBe(true);
+  fresh.view = view(BEST, ["gift"]);
+  expect(fresh.pays).toBe(false);
 });
 
 test("設定が届く前はキーの案内を出さない", () => {
