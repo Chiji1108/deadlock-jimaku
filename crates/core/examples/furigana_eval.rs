@@ -2,6 +2,7 @@
 //!
 //! usage: OPENROUTER_API_KEY=… OPENAI_API_KEY=… cargo run -p overlays-core --example furigana_eval -- CASES.json REPEAT [HOW]
 //!   HOW は choose（既定。判定モデルに候補から選ばせる）か、直させるモデルの名前（gpt-6.1-terra、gpt-6-luna）
+//!   `FURIGANA_EVAL_API=http://127.0.0.1:8765/v1` を付けると、choose は PC の中のモデルに聞く
 //!   CASES.json は `experiments/data/furigana_cases.json`（語ごとの正しい読みがある）か、`text` のある文の配列
 //!   （正しい読みがないので、GPT-6.1 Terra に直させた読みを基準にして、違うところを出す）
 
@@ -57,7 +58,12 @@ async fn main() -> anyhow::Result<()> {
     let repeat: usize = args.next().expect("REPEAT").parse()?;
     let how = args.next().unwrap_or_else(|| "choose".into());
     let env = |name: &str| std::env::var(name).unwrap_or_else(|_| panic!("{name}"));
-    let openrouter = Access::key(Provider::OpenRouter, env("OPENROUTER_API_KEY"));
+    // `FURIGANA_EVAL_API` があれば、判定は PC の中のモデルに聞く（experiments/llama_decider_server.py。
+    // `{API}/openrouter/systemone` に、同じ形の問いを送る）
+    let openrouter = match std::env::var("FURIGANA_EVAL_API") {
+        Ok(api) => Access::gift(Provider::OpenRouter, "local".into(), &api),
+        Err(_) => Access::key(Provider::OpenRouter, env("OPENROUTER_API_KEY")),
+    };
     let openai = Access::key(Provider::OpenAi, env("OPENAI_API_KEY"));
     let meter = Meter::new(std::env::temp_dir().join("overlays-furigana-eval-usage.json"));
     let judge = Judge {
