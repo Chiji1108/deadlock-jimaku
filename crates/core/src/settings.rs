@@ -679,9 +679,22 @@ impl Engines {
         translation: TranslationEngine::Gemma,
         furigana: RubySource::Dictionary,
     };
+    /// ベータのモードの、Chrome を使わない版（0.7.0）。途中の字幕も Qwen で作る。Chrome のウィンドウを開かず、
+    /// 音声を Google に送らない
+    pub const BETA_CLOUD: Self = Self {
+        live: LiveSource::QwenAudioStreaming,
+        ..Self::BETA
+    };
     /// 操作パネルに出すモード（おすすめの組み合わせ）。ほかの組み合わせは「カスタム」（`Settings::custom_engines`）。
-    /// `STANDARD` は「最高精度」（OpenAI の鍵が要る）で、ほかは鍵なしで始められる
-    pub const MODES: [Self; 4] = [Self::BETA, Self::CHROME, Self::LOCAL, Self::STANDARD];
+    /// `STANDARD` は「最高精度」（OpenAI の鍵が要る）で、ほかは鍵なしで始められる。
+    /// 終わりの 2 つは、画面では「その他のモード」を開くと出る（選ぶ人が限られる）
+    pub const MODES: [Self; 5] = [
+        Self::BETA,
+        Self::CHROME,
+        Self::STANDARD,
+        Self::BETA_CLOUD,
+        Self::LOCAL,
+    ];
     /// 最高精度のモード（0.5 までの「スタンダード」）。途中の字幕は Chrome、確定は OpenAI
     pub const STANDARD: Self = Self {
         live: LiveSource::Chrome,
