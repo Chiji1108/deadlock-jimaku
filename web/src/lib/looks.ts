@@ -41,8 +41,8 @@ export const LOOKS: Look[] = [
   },
   {
     label: "かわいい",
-    // 線の細い字なので、字をピンクに、縁取りを白にする（白い字にピンクの縁取りだと、字が縁取りに埋もれる）
-    text: { ...TEXT, color: "#ff4f9e", outline: { width: 0.14, color: "#ffffff" } },
+    // 線の細い字なので、縁取りは細くする（太いと、白い字が縁取りの色に埋もれる）
+    text: { ...TEXT, outline: { width: 0.08, color: "#e8559a" } },
     background: NO_BAND,
     fontStyle: { font: "Hachi Maru Pop", weight: 400, letterSpacing: 0.02 },
     english: { font: "Sniglet", weight: 400, letterSpacing: null },
