@@ -49,6 +49,7 @@ export const ENGINE_PROVIDERS = {
   "terms": {
     "dictionary": null,
     "geminiNano": null,
+    "gemma": null,
     "decisions": "openai",
     "jev": "typesafe",
     "drexMax": "openrouter",
@@ -57,6 +58,7 @@ export const ENGINE_PROVIDERS = {
   },
   "translation": {
     "chromeTranslator": null,
+    "gemma": null,
     "qwenMtFlash": "qwen",
     "hyMt2": "openrouter",
     "gpt61Terra": "openai"

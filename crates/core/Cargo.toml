@@ -33,6 +33,8 @@ sha2 = "0.11.1"
 # 読みの辞書（`dictionary/`）を読む。学習の機能（`train`）は、辞書を組み立てる例だけが使う
 vibrato = { version = "0.5.3", default-features = false }
 flate2 = "1"
+# llama.cpp の Mac と Linux の配布物（tar.gz）を広げる
+tar = { version = "0.4", default-features = false }
 jiter = "0.18.0"
 rustls = { version = "0.23.46", default-features = false, features = ["aws_lc_rs"] }
 tokio = { version = "1.54.1", features = ["rt-multi-thread", "macros", "sync", "time", "net", "fs", "process"] }

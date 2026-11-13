@@ -12,6 +12,7 @@ use futures_util::FutureExt;
 use tokio::task::JoinHandle;
 
 use crate::access::{Access, Accesses};
+use crate::llama::Llama;
 use crate::local::Speech;
 use crate::secrets::{Keys, Provider, Relay};
 use crate::settings::{Engines, FinalSource, Models, Region, Segmentation, Settings, TextSource};
@@ -100,6 +101,8 @@ struct AudioInput {
     segmentation: Segmentation,
     /// 工程が使う会社の送り先と鍵（鍵のない会社は入っていない）
     accesses: Accesses,
+    /// PC の中の LLM を立てる
+    uses_llama: bool,
 }
 
 /// ページは準備が整い直すたびに設定を読むので、ページが使う設定もここに入れる
@@ -115,6 +118,8 @@ struct ChromeInput {
     models: Models,
     /// 工程が使う会社の送り先と鍵。要るのに鍵のない会社があれば始めない
     accesses: Accesses,
+    /// PC の中の LLM を立てる
+    uses_llama: bool,
 }
 
 #[derive(Clone, PartialEq)]
@@ -212,6 +217,7 @@ fn subtitles_input(settings: &Settings, options: &Options, accesses: Accesses) -
             engines: settings.engines,
             models: settings.models.clone(),
             accesses,
+            uses_llama: settings.uses_llama(),
         }));
     }
     let source = match &options.input_file {
@@ -230,6 +236,7 @@ fn subtitles_input(settings: &Settings, options: &Options, accesses: Accesses) -
         realtime_delay: settings.realtime_delay.clone(),
         segmentation: settings.segmentation.clone(),
         accesses,
+        uses_llama: settings.uses_llama(),
     }))
 }
 
@@ -268,8 +275,11 @@ fn start_subtitles(
                 if !gift_accepted(&store, input.accesses.iter(), check_gift.as_deref()).await {
                     return;
                 }
-                let run = chrome::run(store.clone(), input.accesses);
-                supervise(store, run, None).await;
+                let run = async {
+                    let llama = local_llm(&store, input.uses_llama).await?;
+                    chrome::run(store.clone(), input.accesses, llama).await
+                };
+                supervise(store.clone(), run, None).await;
             }))
         }
         SubtitlesInput::Audio(input) => {
@@ -279,6 +289,7 @@ fn start_subtitles(
             }
             let accesses = input.accesses;
             let uses_local = input.engines.uses_local();
+            let uses_llama = input.uses_llama;
             tracing::info!("transcription started");
             let (input, ended) = match input.source {
                 Source::Mic(device) => (
@@ -298,7 +309,8 @@ fn start_subtitles(
                         true => Some(Arc::new(local_speech(&store).await?)),
                         false => None,
                     };
-                    subtitles::run(store.clone(), input, accesses, local).await
+                    let llama = local_llm(&store, uses_llama).await?;
+                    subtitles::run(store.clone(), input, accesses, local, llama).await
                 };
                 supervise(store.clone(), run, ended).await;
             }))
@@ -320,6 +332,18 @@ async fn local_speech(store: &Arc<Store>) -> anyhow::Result<Speech> {
     );
     let _preparing = store.preparing();
     Speech::start(&store.data_dir().join("speech")).await
+}
+
+/// PC の中の LLM を立てる（使う工程があるとき）。初回は llama.cpp とモデル（約 5 GB）を取るので、
+/// 待っていることを操作パネルに出す
+async fn local_llm(store: &Arc<Store>, uses: bool) -> anyhow::Result<Option<Arc<Llama>>> {
+    if !uses {
+        return Ok(None);
+    }
+    let preparing = store.preparing();
+    let progress = |done, total| preparing.downloaded(done, total);
+    let llama = Llama::start(&store.data_dir().join("llama"), &progress).await?;
+    Ok(Some(Arc::new(llama)))
 }
 
 /// コード（ギフトコードとベータのコード）を使うなら、`check` の API の根元で、使えるか・使う会社を中継するかを
@@ -430,6 +454,7 @@ mod tests {
             engines: Engines::CHROME,
             models: Settings::default().models,
             accesses: Accesses::default(),
+            uses_llama: false,
         }))
     }
 
@@ -513,6 +538,7 @@ mod tests {
                 accesses: Accesses::new(
                     code.map(|code| Access::gift(Provider::OpenAi, code.into(), &self.api)),
                 ),
+                uses_llama: false,
             }))
         }
 

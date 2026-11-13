@@ -95,11 +95,16 @@
   const status = $derived.by(() => {
     if (!s?.transcriptionEnabled) return { label: "停止中", dot: "bg-muted-foreground/50" };
     if (panel.transcriptionError) return { label: "止まっています", dot: "bg-destructive" };
-    if (panel.preparing)
+    if (panel.preparing) {
+      const gb = (bytes: number) => (bytes / 1e9).toFixed(1);
+      const d = panel.downloading;
       return {
-        label: "音声認識のモデルを準備しています（初回はダウンロードに数分かかります）…",
+        label: d?.total
+          ? `PC の中のモデルをダウンロードしています（${gb(d.done)} / ${gb(d.total)} GB）…`
+          : "PC の中のモデルを準備しています（初回はダウンロードします）…",
         dot: "bg-sky-500 animate-pulse",
       };
+    }
     if (panel.silent) return { label: "音が届いていません", dot: "bg-amber-500" };
     if (chromeFinals(panel.view!.running)) return chromeStatus();
     if (panel.level === undefined)

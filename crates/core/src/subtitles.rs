@@ -22,6 +22,7 @@ use crate::audio::{self, History, SAMPLE_RATE};
 use crate::chrome;
 use crate::finish::{self, Finished, Finisher};
 use crate::lang;
+use crate::llama::Llama;
 use crate::local::Speech;
 use crate::now_ms;
 use crate::segment::{Close, Event, Segmenter};
@@ -53,6 +54,7 @@ pub async fn run(
     input: audio::Input,
     accesses: Accesses,
     local: Option<Arc<Speech>>,
+    llama: Option<Arc<Llama>>,
 ) -> anyhow::Result<()> {
     let settings = store.settings();
     // 確定の文字起こしを頼む相手。鍵と PC の中の文字起こしは、始める前に確かめてある
@@ -124,7 +126,7 @@ pub async fn run(
     };
 
     let cloud = Cloud {
-        finisher: Arc::new(Finisher::new(store.clone(), &settings, &accesses)),
+        finisher: Arc::new(Finisher::new(store.clone(), &settings, &accesses, llama)),
         finished_tx,
         batch: Arc::new(BatchContext {
             http: crate::http().clone(),
@@ -734,6 +736,7 @@ mod tests {
                 store.clone(),
                 &settings,
                 &Accesses::new([access.clone()]),
+                None,
             )),
             finished_tx,
             batch: Arc::new(BatchContext {

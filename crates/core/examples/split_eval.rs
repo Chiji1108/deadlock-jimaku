@@ -29,11 +29,12 @@ use overlays_core::assets;
 use overlays_core::assets::Loaded;
 use overlays_core::decide::Decider;
 use overlays_core::enrich::{Enricher, Question, Span};
+use overlays_core::llama::Llama;
 use overlays_core::llm;
 use overlays_core::mt::Translator;
 use overlays_core::secrets::Provider;
 use overlays_core::settings::Models;
-use overlays_core::settings::{Engines, Settings};
+use overlays_core::settings::{Engines, Settings, TermsEngine, TranslationEngine};
 use overlays_core::store::Store;
 use overlays_core::types::Token;
 use overlays_core::types::{EntityKind, Glossary};
@@ -139,7 +140,7 @@ async fn main() -> anyhow::Result<()> {
             )),
         );
         let parts = match mode.as_str() {
-            "pipeline" => Some(app.parts(model)?),
+            "pipeline" => Some(app.parts(model).await?),
             _ => None,
         };
         let mut runs = Vec::new();
@@ -510,7 +511,8 @@ impl App {
     }
 
     /// `用語+翻訳` の工程の名前（設定と同じ。`decisions+qwenMtFlash`、`jev+hyMt2` など）から、アプリと同じ部品を作る
-    fn parts(&self, model: &str) -> anyhow::Result<(Decider, Translator)> {
+    /// `gemma` は PC の中の LLM（`SPLIT_EVAL_LLAMA` に、llama.cpp とモデルの置き場所）
+    async fn parts(&self, model: &str) -> anyhow::Result<(Decider, Translator)> {
         let (terms, translation) = model
             .split_once('+')
             .context("pipeline TERMS+TRANSLATION")?;
@@ -529,27 +531,38 @@ impl App {
             };
             Access::key(provider, std::env::var(key).unwrap_or_default())
         };
-        let judge = engines.judge().context("terms need a judge")?;
-        let mt = engines
-            .translation
-            .mt()
-            .context("translation needs a model")?;
         let lang = self.settings.mic_language.clone();
-        Ok((
-            Decider::new(
-                access(judge.provider),
-                judge.name,
-                lang.clone(),
-                self.meter.clone(),
-            ),
-            Translator::new(
-                access(mt.provider),
-                mt.name,
-                lang,
-                self.settings.translate_to.clone(),
-                self.meter.clone(),
-            ),
-        ))
+        let targets = self.settings.translate_to.clone();
+        let meter = self.meter.clone();
+        let local = (engines.terms, engines.translation);
+        let llama = match local.0 == TermsEngine::Gemma || local.1 == TranslationEngine::Gemma {
+            true => {
+                let dir = std::env::var("SPLIT_EVAL_LLAMA").context("SPLIT_EVAL_LLAMA")?;
+                Some(Arc::new(Llama::start(Path::new(&dir), &|_, _| {}).await?))
+            }
+            false => None,
+        };
+        let decider = match (&llama, local.0) {
+            (Some(llama), TermsEngine::Gemma) => {
+                Decider::local(llama.clone(), lang.clone(), meter.clone())
+            }
+            _ => {
+                let judge = engines.judge().context("terms need a judge")?;
+                let access = access(judge.provider);
+                Decider::new(access, judge.name, lang.clone(), meter.clone())
+            }
+        };
+        let translator = match (llama, local.1) {
+            (Some(llama), TranslationEngine::Gemma) => {
+                Translator::local(llama, lang, targets, meter)
+            }
+            _ => {
+                let mt = engines.translation.mt();
+                let mt = mt.context("translation needs a model")?;
+                Translator::new(access(mt.provider), mt.name, lang, targets, meter)
+            }
+        };
+        Ok((decider, translator))
     }
 }
 

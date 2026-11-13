@@ -936,6 +936,21 @@ LLM に用語と翻訳を 1 回で聞く形（9.1）は、いちばん正確だ�
 - **確かめていないこと:** Windows の実機（配布物の SHA-256 と中身は確かめたが、動かしていない）と、ゲームが GPU を使っている最中の速さ。rc.4 まで使っていた別プログラム（SenseVoice）は、Chrome より精度が低く、ダウンロードも要るのでやめた（9.6）。今回は精度が Chrome と同じか少し良く、選んだ人だけがダウンロードする
 - **確かめ方:** `cargo test -p overlays-core haas_ja -- --ignored --nocapture`（本物をダウンロードして、録音を文字にする）
 
+### 9.9 PC の中の LLM（`llama.rs`）
+
+翻訳と用語の判定を、PC の中で動く Gemma 4 E4B（Apache 2.0）にできる（0.7.0。`TranslationEngine::Gemma`、`TermsEngine::Gemma`）。無料で、字幕の文字は PC から出ない。配信用の PC が別にある人や、GPU に余裕のある人向け（9.7 の実測と見立て）。文字起こしを Haas-ja（9.8）にすれば、Google と会社のどこにも音声と文字を送らずに、字幕と翻訳を作れる。ふりがなは、辞書より悪かったので足していない（9.7）。
+
+- **動かし方:** llama.cpp（MIT）の `llama-server` を別のプロセスで立て（`--model … --n-gpu-layers 99 --ctx-size 8192 --parallel 4 --no-webui`）、OpenAI と同じ形の口（`/v1/chat/completions`）に頼む。別のプロセスにする理由は speech.cpp と同じ（9.8）。立てて待つ部分は、speech.cpp と共通（`sidecar.rs`）。翻訳と用語の両方に選んでも、プロセスとモデルは 1 つ。頼むことがなければ立てない（翻訳先がない、Deadlock モードでない。`Settings::uses_llama`）。途中の字幕と確定が Chrome でも使える
+- **翻訳（`mt.rs`）:** 用語を `⟦英語名⟧` に置き換えた文を、翻訳先ごとに同時に頼む（会社の翻訳専門のモデルと同じ流れ）。答えは文法（llama.cpp の GBNF）で縛る: 括弧の中には、その文の用語の名前しか書けない。用語のない文では括弧を書けない。括弧の直後に字を続けられない（`⟦Sticky Bomb⟧s` を防ぐ）。縛らないと 63 文中 8 文で名前が崩れ、縛ると 0（9.7）
+- **用語の判定（`decide.rs`）:** 候補と問いは、会社の判定モデルに送るものと同じ（`Asker`）。問いを 1 つずつ同時に頼み、選択肢に A、B、… を振って、記号 1 文字だけを答えさせる（文法で縛る）。1 つでも答えが返らなければ、その文は辞書の一致のまま
+- **考えさせない:** `chat_template_kwargs.enable_thinking = false`。考えを本文に書くと、字幕に間に合わない
+- **入れ方:** 初めて使うときに、llama.cpp の配布物（GitHub のリリース。ビルドは `llama.rs` に固定。Mac は tar.gz 17 MB、Windows は Vulkan 版の zip 38 MB）と、モデル（Google の公式の GGUF `gemma-4-E4B_q4_0-it.gguf`、5.15 GB。Hugging Face の、版を固定した URL）を取り、どちらも SHA-256 を確かめてからデータフォルダの `llama/` に置く。モデルは `.part` のファイルに書きためて、止まったら次は続きから取る（`download::model`）。待っている間は、操作パネルに「準備しています」と出す（9.8 と同じ）。進み具合はまだ出していない
+- **アプリと同じ処理で測った結果:** 用語の正解は 189 回中 156、訳文の用語は 189 回すべて崩れず、判定と 2 言語の翻訳を合わせて中央値 0.39 秒（遅いとき 0.66 秒。M5 Pro。`SPLIT_EVAL_LLAMA=… split_eval pipeline gemma+gemma`）
+- **動かない PC:** Intel の Mac（GPU を使えないので配らない）。始めるときにエラーで止める
+- **残ること:** アプリが強制終了されると、llama.cpp のプロセスが残る（speech.cpp も同じ。ふつうに終わるときと、字幕を止めたときは終わらせる）。途中でプロセスが落ちたら、立て直さない（訳と判定が付かなくなる。字幕を始め直すと戻る）
+- **確かめていないこと:** 配布物を実際に取って動かす流れ（開発の PC では、同じビルドの Homebrew の `llama-server` で確かめた。配布物の SHA-256 と中身の場所は確かめた）。Windows の実機での速さと GPU のメモリ、ゲームが GPU を使っている最中の速さ。GPU のメモリが足りない PC での動き
+- **確かめ方:** `LLAMA_TEST_DIR=… cargo test -p overlays-core local_llm -- --ignored --nocapture`
+
 ## 10. イベントプロトコル（WS `/ws`）
 
 差分ではなく、**最新の状態をそのまま upsert** する。

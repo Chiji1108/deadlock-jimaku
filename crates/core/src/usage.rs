@@ -108,6 +108,11 @@ fn price(model: &str) -> Option<Price> {
         "microsoft/mai-transcribe-2" => Price::PerMinute(0.10 / 60.0),
         // PC の中で動くので無料
         crate::local::HAAS_JA => Price::PerMinute(0.0),
+        crate::llama::GEMMA => Price::PerMillion {
+            input: 0.0,
+            cached: 0.0,
+            output: 0.0,
+        },
         "gpt-6.1-terra" => Price::PerMillion {
             input: 1.00,
             cached: 0.05,

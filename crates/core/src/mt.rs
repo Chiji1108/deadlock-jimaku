@@ -1,8 +1,9 @@
-//! 翻訳専門のモデル（Qwen-MT-Flash、Hy-MT2）で訳す（DESIGN.md 9.7）。
+//! 翻訳専門のモデル（Qwen-MT-Flash、Hy-MT2）か、PC の中の LLM（Gemma 4 E4B）で訳す（DESIGN.md 9.7）。
 //!
 //! 用語は先に決めてあるので、英語名に置き換えて `⟦Haze⟧` と囲んだ文を渡し、訳文に残った名前を用語に戻す。
 //! 翻訳先ごとに 1 回ずつ、同時に聞く（1 回の応答は 0.2〜0.3 秒）。括弧を外したり引用符に替えたりすることが
-//! あるので、括弧がなくても英語名があれば用語にする。名前まで訳された用語は、ふつうの文字のまま出る
+//! あるので、括弧がなくても英語名があれば用語にする。名前まで訳された用語は、ふつうの文字のまま出る。
+//! PC の中の LLM には、括弧の中にその文の用語の名前しか書けないよう、文法で縛る（縛らないと名前を崩す）
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -14,6 +15,7 @@ use serde_json::{Value, json};
 use crate::access::Access;
 use crate::enrich::Span;
 use crate::lang;
+use crate::llama::{self, Llama, Prompt};
 use crate::secrets::Provider;
 use crate::share;
 use crate::types::{Glossary, LangCode, Token, TranscriptionError, Translations};
@@ -31,9 +33,17 @@ const DOMAINS: &str = "Casual live commentary by a streamer playing the video ga
      Words in ⟦ ⟧ are game terms (names of heroes, items and abilities); \
      keep them exactly as they are, with the brackets.";
 
+/// PC の中の LLM は、GPU の遅い PC でも待てるようにする（M5 Pro で 0.3 秒ほど）
+const LOCAL_TIMEOUT: Duration = Duration::from_secs(5);
+
+/// 訳を頼む相手
+enum Backend {
+    Api { access: Access, model: &'static str },
+    Local(Arc<Llama>),
+}
+
 pub struct Translator {
-    access: Access,
-    model: &'static str,
+    backend: Backend,
     source_lang: LangCode,
     targets: Vec<LangCode>,
     meter: Arc<Meter>,
@@ -48,8 +58,22 @@ impl Translator {
         meter: Arc<Meter>,
     ) -> Self {
         Self {
-            access,
-            model,
+            backend: Backend::Api { access, model },
+            source_lang,
+            targets,
+            meter,
+        }
+    }
+
+    /// PC の中の LLM に訳させる
+    pub fn local(
+        llama: Arc<Llama>,
+        source_lang: LangCode,
+        targets: Vec<LangCode>,
+        meter: Arc<Meter>,
+    ) -> Self {
+        Self {
+            backend: Backend::Local(llama),
             source_lang,
             targets,
             meter,
@@ -66,7 +90,12 @@ impl Translator {
         let (source, terms) = tagged(spans, glossary);
         let (source, terms) = (&source, &terms);
         let asked = self.targets.iter().map(|target| async move {
-            let translated = self.ask(http, source, target).await?;
+            let translated = match &self.backend {
+                Backend::Api { access, model } => {
+                    self.ask(http, access, model, source, target).await?
+                }
+                Backend::Local(llama) => self.ask_local(llama, source, target, terms).await?,
+            };
             anyhow::Ok((target.clone(), tokens(&translated, terms)))
         });
         let mut translations = Translations::new();
@@ -84,16 +113,42 @@ impl Translator {
         Ok(translations)
     }
 
+    async fn ask_local(
+        &self,
+        llama: &Llama,
+        source: &str,
+        target: &str,
+        terms: &[(String, String)],
+    ) -> anyhow::Result<String> {
+        let system = format!(
+            "Translate the {} text into {}. {DOMAINS} Reply with the translation only.",
+            lang::english_name(&self.source_lang),
+            lang::english_name(target),
+        );
+        let prompt = Prompt {
+            system: &system,
+            user: source,
+            grammar: &grammar(terms.iter().map(|(name, _)| name.as_str())),
+            max_tokens: 200,
+            timeout: LOCAL_TIMEOUT,
+        };
+        let (text, tokens) = llama.complete(&prompt).await?;
+        self.meter.tokens(Use::Translate, llama::GEMMA, tokens);
+        Ok(text)
+    }
+
     async fn ask(
         &self,
         http: &reqwest::Client,
+        access: &Access,
+        model: &str,
         source: &str,
         target: &str,
     ) -> anyhow::Result<String> {
-        let body = match self.access.provider() {
+        let body = match access.provider() {
             // Hy-MT2。system はなく、モデルの説明にある「背景を添えて訳す」指示文で送る。設定は説明の勧める値
             Provider::OpenRouter => json!({
-                "model": self.model,
+                "model": model,
                 "messages": [{ "role": "user", "content": format!(
                     "[Background Information]\n{DOMAINS}\n\nPlease translate the following text into {}, \
                      taking the provided background information into consideration.\n\n[Source Text]\n{source}",
@@ -104,7 +159,7 @@ impl Translator {
                 "max_tokens": 512,
             }),
             _ => json!({
-                "model": self.model,
+                "model": model,
                 "messages": [{ "role": "user", "content": source }],
                 "translation_options": {
                     "source_lang": code(&self.source_lang),
@@ -114,8 +169,8 @@ impl Translator {
             }),
         };
         let send = || {
-            http.post(self.access.url("/chat/completions"))
-                .bearer_auth(self.access.token())
+            http.post(access.url("/chat/completions"))
+                .bearer_auth(access.token())
                 .timeout(TIMEOUT)
                 .json(&body)
                 .send()
@@ -132,7 +187,7 @@ impl Translator {
         if !status.is_success() {
             let body = res.text().await.unwrap_or_default();
             let reason = share::refusal_reason(&body);
-            if let Some(refused) = share::refusal(&self.access, status, reason.as_deref()) {
+            if let Some(refused) = share::refusal(access, status, reason.as_deref()) {
                 return Err(refused.into());
             }
             anyhow::bail!("{target}: {status}: {body}");
@@ -148,13 +203,31 @@ impl Translator {
         // OpenRouter は料金を答えに入れる
         match usage["cost"].as_f64() {
             Some(usd) => self.meter.billed(Use::Translate, tokens, usd),
-            None => self.meter.tokens(Use::Translate, self.model, tokens),
+            None => self.meter.tokens(Use::Translate, model, tokens),
         }
         res["choices"][0]["message"]["content"]
             .as_str()
             .map(|text| text.trim().to_owned())
             .context("no translation")
     }
+}
+
+/// PC の中の LLM の答えを縛る文法（llama.cpp の GBNF）。`⟦…⟧` の中は、その文の用語の名前だけ。
+/// 用語のない文では、括弧を書けない。括弧の直後に字を続けられない（`⟦Sticky Bomb⟧s` のように語尾を付けさせない）
+fn grammar<'a>(names: impl Iterator<Item = &'a str>) -> String {
+    let quoted: Vec<String> = names
+        .map(|name| serde_json::to_string(name).expect("a string"))
+        .collect();
+    if quoted.is_empty() {
+        return "root ::= [^⟦⟧]+\n".into();
+    }
+    format!(
+        "root ::= text? (term after?)+\n\
+         term ::= \"⟦\" ({}) \"⟧\"\n\
+         after ::= [^⟦⟧a-zA-Zа-яёА-ЯЁ] [^⟦⟧]*\n\
+         text ::= [^⟦⟧]+\n",
+        quoted.join(" | ")
+    )
 }
 
 /// Qwen-MT の言語コード。地域は分けない（中国語の簡体と繁体だけ別）
@@ -421,6 +494,50 @@ mod tests {
             .translate(&http, &spans, None)
             .await;
         assert!(failed.unwrap().is_empty());
+    }
+
+    #[test]
+    fn the_grammar_only_lets_the_terms_of_the_sentence_in_brackets() {
+        assert_eq!(grammar([].into_iter()), "root ::= [^⟦⟧]+\n");
+        let with_terms = grammar(["Haze", "Smoke \"Bomb\""].into_iter());
+        assert!(with_terms.contains(r#"term ::= "⟦" ("Haze" | "Smoke \"Bomb\"") "⟧""#));
+        assert!(with_terms.starts_with("root ::= text? (term after?)+\n"));
+    }
+
+    /// 実際に llama.cpp を立てて訳す（初回は約 5 GB を取る）。`cargo test -- --ignored local_llm`
+    #[tokio::test]
+    #[ignore = "downloads llama.cpp and a 5 GB model"]
+    async fn local_llm_keeps_the_terms() {
+        let dir = std::env::var("LLAMA_TEST_DIR").expect("LLAMA_TEST_DIR");
+        let llama = Arc::new(
+            Llama::start(std::path::Path::new(&dir), &|_, _| {})
+                .await
+                .unwrap(),
+        );
+        let meter = Arc::new(Meter::new(std::env::temp_dir().join("mt_local_usage.json")));
+        let translator =
+            Translator::local(llama, "ja".into(), vec!["en".into(), "ru".into()], meter);
+        let (source, terms) = (
+            "⟦Haze⟧来てる来てる、⟦Smoke Bomb⟧で隠れてるから気をつけて。",
+            vec![
+                ("Smoke Bomb".to_owned(), "b".to_owned()),
+                ("Haze".to_owned(), "a".to_owned()),
+            ],
+        );
+        for target in ["en", "ru"] {
+            let Backend::Local(llama) = &translator.backend else {
+                unreachable!()
+            };
+            let text = translator
+                .ask_local(llama, source, target, &terms)
+                .await
+                .unwrap();
+            println!("{target}: {text}");
+            assert!(
+                text.contains("⟦Haze⟧") && text.contains("⟦Smoke Bomb⟧"),
+                "{text}"
+            );
+        }
     }
 
     #[test]

@@ -16,8 +16,8 @@ use crate::settings::{
     self, Engines, FinalSource, LiveSource, Settings, SettingsPatch, SubtitleDisplay,
 };
 use crate::types::{
-    ChromeCommand, Decided, Heard, ItemCardsView, LiveState, LiveStatus, RankState, Segment,
-    ServerMsg, Stage, TranscriptionError, Translated,
+    ChromeCommand, Decided, Downloading, Heard, ItemCardsView, LiveState, LiveStatus, RankState,
+    Segment, ServerMsg, Stage, TranscriptionError, Translated,
 };
 use crate::usage::Meter;
 
@@ -64,6 +64,8 @@ pub struct Store {
     fallback: Mutex<Option<(TranscriptionError, Fallback)>>,
     /// PC の中の文字起こしを準備している
     preparing: AtomicBool,
+    /// 準備の間に取っているファイルの進み具合
+    downloading: Mutex<Option<Downloading>>,
     segments: Mutex<VecDeque<Segment>>,
     glossary: watch::Sender<Option<Loaded>>,
     /// 新しい版の辞書を作り直すよう頼んだ回数。変わると `runtime` が辞書の処理を張り直す
@@ -104,6 +106,7 @@ impl Store {
             transcription_error: Mutex::new(None),
             fallback: Mutex::new(None),
             preparing: AtomicBool::new(false),
+            downloading: Mutex::new(None),
             segments: Mutex::new(VecDeque::new()),
             glossary: watch::Sender::new(None),
             glossary_refreshes: AtomicU64::new(0),
@@ -229,10 +232,16 @@ impl Store {
         if !self.chrome_needed() {
             self.close_chrome();
         }
-        let preparing = self.preparing.load(Ordering::Relaxed);
-        let _ = self
-            .tx
-            .send(ServerMsg::TranscriptionStatus { error, preparing });
+        let _ = self.tx.send(self.transcription_status());
+    }
+
+    /// 字幕の処理の状態（止まった理由、準備中か、ダウンロードの進み具合）
+    fn transcription_status(&self) -> ServerMsg {
+        ServerMsg::TranscriptionStatus {
+            error: self.transcription_error(),
+            preparing: self.preparing.load(Ordering::Relaxed),
+            downloading: *self.downloading.lock().unwrap(),
+        }
     }
 
     /// 初回のダウンロード（PC の中の文字起こし）を待っている間、操作パネルに出す。
@@ -245,11 +254,9 @@ impl Store {
     /// 準備の間は Chrome を閉じ、終わったら開く
     fn set_preparing(self: &Arc<Self>, preparing: bool) {
         self.preparing.store(preparing, Ordering::Relaxed);
+        *self.downloading.lock().unwrap() = None;
         self.sync_chrome();
-        let error = self.transcription_error();
-        let _ = self
-            .tx
-            .send(ServerMsg::TranscriptionStatus { error, preparing });
+        let _ = self.tx.send(self.transcription_status());
     }
 
     pub fn transcription_error(&self) -> Option<TranscriptionError> {
@@ -306,10 +313,7 @@ impl Store {
         if let Some(rank) = self.rank.lock().unwrap().clone() {
             msgs.push(ServerMsg::RankUpdate { rank: Some(rank) });
         }
-        msgs.push(ServerMsg::TranscriptionStatus {
-            error: self.transcription_error(),
-            preparing: self.preparing.load(Ordering::Relaxed),
-        });
+        msgs.push(self.transcription_status());
         msgs.push(ServerMsg::LiveStatus {
             status: self.live_status.lock().unwrap().clone(),
         });
@@ -605,6 +609,18 @@ pub enum Fallback {
 
 /// 初回のダウンロードを待っている間の印（`Store::preparing`）
 pub struct Preparing(Arc<Store>);
+
+impl Preparing {
+    /// 取っているファイルの進み具合を、操作パネルに出す。1% 進むごとに知らせる
+    pub fn downloaded(&self, done: u64, total: u64) {
+        let percent = |d: Downloading| d.done * 100 / d.total.max(1);
+        let now = Downloading { done, total };
+        let before = self.0.downloading.lock().unwrap().replace(now);
+        if before.is_none_or(|before| percent(before) != percent(now)) {
+            let _ = self.0.tx.send(self.0.transcription_status());
+        }
+    }
+}
 
 impl Drop for Preparing {
     fn drop(&mut self) {
