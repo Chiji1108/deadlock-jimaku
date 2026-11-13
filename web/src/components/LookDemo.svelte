@@ -7,7 +7,7 @@
   import RankBadge from "../../../frontend/src/lib/RankBadge.svelte";
   import scene from "../assets/hero.webp?url";
   import { display, enriched, LINES, RANK } from "../lib/demo";
-  import { fontFile, LOOKS } from "../lib/looks";
+  import { FIRST_LOOK, fontFile, LOOKS } from "../lib/looks";
 
   const FILES = import.meta.glob<string>("../assets/fonts/*.woff2", {
     eager: true,
@@ -28,8 +28,11 @@
 
   /** 見た目ごとの、読み込むフォント（日本語と英語） */
   let faces: FontFace[][] = [];
+  /** 自動で切り替える間隔（ミリ秒） */
+  const EVERY = 3500;
+  let timer: ReturnType<typeof setInterval> | undefined;
 
-  // 画面に入って動き始めたら（client:visible）見本のフォントを全部読んでおく
+  // 画面に入って動き始めたら（client:visible）見本のフォントを全部読んでおき、標準でない見た目から順に見せる
   onMount(() => {
     faces = LOOKS.map((l) =>
       [l.fontStyle, l.english].flatMap(({ font, weight }) => {
@@ -41,12 +44,24 @@
         return [face];
       }),
     );
+    void show(FIRST_LOOK);
+    // OS の「動きを減らす」では、自動で切り替えない
+    if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      timer = setInterval(() => void show((chosen + 1) % LOOKS.length), EVERY);
+    }
+    return () => clearInterval(timer);
   });
 
   /** 読み終えてから切り替え、別のフォントで一瞬出さない。読めなければ標準の候補で出す */
-  async function choose(index: number) {
+  async function show(index: number) {
     await Promise.all((faces[index] ?? []).map((face) => face.loaded.catch(() => {})));
     chosen = index;
+  }
+
+  /** 自分で選んだら、自動の切り替えは止める（選んだ見た目を、勝手に変えない） */
+  function choose(index: number) {
+    clearInterval(timer);
+    void show(index);
   }
 </script>
 
