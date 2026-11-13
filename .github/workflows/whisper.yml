@@ -1,0 +1,96 @@
+# PC の中の文字起こし（Whisper）に使う whisper.cpp の `whisper-server` を作って、リリースに載せる（DESIGN.md 9.10）。
+# whisper.cpp の公式の配布物には、Mac の実行ファイルと、Windows の GPU 全般（Vulkan）用がないので、ここで作る。
+# 手で動かす。版を上げるときは WHISPER_VERSION と WHISPER_COMMIT を書き換えてから動かし、できた zip の SHA-256 を
+# `crates/core/src/whisper.rs` に書く。リリースは「最新」にしない（アプリの自動更新は、最新のリリースを見る）
+name: whisper
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  WHISPER_VERSION: 1.9.5
+  # v1.9.5 のタグが指すコミット（タグは動かせるので、コミットで固定する）
+  WHISPER_COMMIT: d1be6fde11ac6e0407606b4e42fe72d34add8037
+  VULKAN_VERSION: 1.4.357.0
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Metal（シェーダーは実行ファイルに埋め込む）
+          - os: macos-14
+            target: macos-arm64-metal
+            defines: -DGGML_METAL=ON -DGGML_METAL_EMBED_LIBRARY=ON
+          # Vulkan（NVIDIA・AMD・Intel の GPU）。C++ のランタイムと OpenMP の DLL が要らないようにする
+          - os: windows-2022
+            target: windows-x64-vulkan
+            defines: -DGGML_VULKAN=ON -DGGML_OPENMP=OFF -DCMAKE_POLICY_DEFAULT_CMP0091=NEW -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
+          - os: ubuntu-22.04
+            target: linux-x64-cpu
+            defines: -DGGML_OPENMP=OFF
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ggml-org/whisper.cpp
+          ref: ${{ env.WHISPER_COMMIT }}
+      - name: Vulkan SDK を入れる
+        if: runner.os == 'Windows'
+        run: |
+          curl.exe -o $env:RUNNER_TEMP/VulkanSDK-Installer.exe -L "https://sdk.lunarg.com/sdk/download/${env:VULKAN_VERSION}/windows/vulkansdk-windows-X64-${env:VULKAN_VERSION}.exe"
+          & "$env:RUNNER_TEMP\VulkanSDK-Installer.exe" --accept-licenses --default-answer --confirm-command install
+          Add-Content $env:GITHUB_ENV "VULKAN_SDK=C:\VulkanSDK\${env:VULKAN_VERSION}"
+          Add-Content $env:GITHUB_PATH "C:\VulkanSDK\${env:VULKAN_VERSION}\bin"
+      - name: ビルドする
+        shell: bash
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
+            -DWHISPER_BUILD_TESTS=OFF -DWHISPER_BUILD_EXAMPLES=ON -DWHISPER_BUILD_SERVER=ON \
+            ${{ matrix.defines }}
+          cmake --build build --config Release --target whisper-server --parallel
+      - name: zip にまとめる
+        shell: bash
+        run: |
+          mkdir dist
+          server=$(find build/bin -name 'whisper-server*' -type f | head -1)
+          cp "$server" LICENSE dist/
+          # 立ち上がるか（ほかの DLL が要らないか）を確かめる
+          "dist/$(basename "$server")" --help > /dev/null
+          name="whisper-$WHISPER_VERSION-${{ matrix.target }}.zip"
+          if [ "$RUNNER_OS" = Windows ]; then
+            (cd dist && 7z a -tzip "../$name" . > /dev/null)
+          else
+            (cd dist && zip -q "../$name" *)
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: whisper-${{ matrix.target }}
+          path: whisper-*.zip
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: whisper-*
+          merge-multiple: true
+      - name: リリースに載せる
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sha256sum whisper-*.zip > SHA256SUMS
+          cat SHA256SUMS
+          # 同じ版のリリースがあれば止まる（配った zip を差し替えない。アプリが SHA-256 を覚えている）
+          gh release create "whisper-v$WHISPER_VERSION" whisper-*.zip SHA256SUMS \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --latest=false \
+            --title "whisper.cpp $WHISPER_VERSION（PC の中の文字起こし用）" \
+            --notes "アプリが、確定の文字起こしに Whisper を選んだときに取る部品です（アプリ本体ではありません）。[whisper.cpp](https://github.com/ggml-org/whisper.cpp)（MIT）の \`whisper-server\` を、コミット \`$WHISPER_COMMIT\` からビルドしたものです。Mac は Metal、Windows は Vulkan、Linux は CPU。"
