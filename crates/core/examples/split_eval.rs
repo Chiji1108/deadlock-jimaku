@@ -356,7 +356,7 @@ async fn terms_list(
 async fn terms_decisions(app: &App, text: &str, context: &[String]) -> anyhow::Result<Outcome> {
     let spans = app
         .decider
-        .terms(overlays_core::http(), text, context, &app.loaded)
+        .terms(overlays_core::http(), text, context, None, &app.loaded)
         .await?;
     Ok(Outcome::Terms(entities(spans)))
 }
@@ -377,7 +377,7 @@ async fn terms_jev(
     text: &str,
     context: &[String],
 ) -> anyhow::Result<Outcome> {
-    let Some(asked) = app.decider.ask(text, context, &app.loaded) else {
+    let Some(asked) = app.decider.ask(text, context, None, &app.loaded) else {
         return Ok(Outcome::Terms(Vec::new()));
     };
     // `ollaya-` は、この PC の Ollaya（判定モデルの実行環境）。モデルの名前は、その後ろ
@@ -433,7 +433,9 @@ async fn pipeline(
     context: &[String],
 ) -> anyhow::Result<Outcome> {
     let http = overlays_core::http();
-    let spans = decider.terms(http, text, context, &app.loaded).await?;
+    let spans = decider
+        .terms(http, text, context, None, &app.loaded)
+        .await?;
     let translations = translator
         .translate(http, &spans, Some(&app.loaded.glossary))
         .await?;
