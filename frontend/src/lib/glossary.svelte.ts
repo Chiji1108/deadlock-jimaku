@@ -12,6 +12,10 @@ export const glossary = {
   entity(ref: string): Entity | undefined {
     return current?.entities[ref];
   },
+  /** ヒーローの参照と中身（辞書の順） */
+  get heroes(): [string, Entity][] {
+    return Object.entries(current?.entities ?? {}).filter(([, entity]) => entity.kind === "hero");
+  },
 };
 
 /** サーバーのない LP の見本は、用意した辞書を渡す */

@@ -26,6 +26,10 @@ fallback?: TranscriptionError,
  */
 continuesWith?: Fallback, keys: KeyStatus, 
 /**
+ * 試合から分かった、配信者が使っているヒーロー（`hero:{id}`。設定で選んだものではなく、自動のほう）
+ */
+played?: string, 
+/**
  * 設定ファイルを読めない理由（OS のエラー）。そのときは変更をこの起動の間だけ当て、保存しない
  */
 unsaved?: string, };

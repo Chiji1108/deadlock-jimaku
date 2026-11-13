@@ -21,7 +21,11 @@ localGpu?: string,
 /**
  * 人の辞書の全体（差し替える）
  */
-people?: Array<Person>, translateTo?: Array<string>, deadlockMode?: boolean, 
+people?: Array<Person>, 
+/**
+ * 使っているヒーロー（`hero:{id}`）。空文字列なら自動
+ */
+playing?: string, translateTo?: Array<string>, deadlockMode?: boolean, 
 /**
  * 今の仕組みで作れない組み合わせは直して保存する
  */

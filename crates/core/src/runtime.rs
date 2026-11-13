@@ -20,7 +20,7 @@ use crate::settings::{Engines, FinalSource, Models, Region, Segmentation, Settin
 use crate::store::{Fallback, Store};
 use crate::types::{LangCode, TranscriptionError};
 use crate::whisper::{self, Whisper};
-use crate::{assets, audio, chrome, rank, secrets, share, subtitles};
+use crate::{assets, audio, chrome, playing, rank, secrets, share, subtitles};
 
 pub struct Options {
     /// 開発・検証用: マイクの代わりに WAV ファイルを流す（設定の開始・停止に関係なく流す）。
@@ -80,6 +80,15 @@ struct RankInput {
     languages: Vec<LangCode>,
     poll_seconds: u64,
     region: Option<Region>,
+}
+
+/// 使っているヒーローを試合から取る処理の入力
+#[derive(PartialEq)]
+struct PlayingInput {
+    /// 見に行くアカウント（Deadlock モードでなければ None）
+    account: Option<u32>,
+    /// 自分で選んだヒーロー（選んであれば、取りに行かない）
+    chosen: Option<String>,
 }
 
 /// 字幕の処理の入力。モードごとに、使う設定だけを持つ
@@ -148,6 +157,7 @@ pub async fn run(store: Arc<Store>, options: Options) {
     let mut settings_rx = store.watch_settings();
     let mut assets_slot = Slot::new();
     let mut rank_slot = Slot::new();
+    let mut playing_slot = Slot::new();
     let mut subtitles_slot = Slot::new();
     let mut rank_account = None;
     loop {
@@ -200,6 +210,17 @@ pub async fn run(store: Arc<Store>, options: Options) {
                     store.clear_rank();
                 }
                 Some(tokio::spawn(rank::run_configured(store.clone())))
+            })
+            .await;
+
+        // 使っているヒーローを試合から取る。字幕の用語の判定に使うので、Deadlock モードのときだけ
+        let playing_input = PlayingInput {
+            account: settings.rank_account.filter(|_| settings.deadlock_mode),
+            chosen: settings.playing.clone(),
+        };
+        playing_slot
+            .update(playing_input, || {
+                Some(tokio::spawn(playing::run_configured(store.clone())))
             })
             .await;
 

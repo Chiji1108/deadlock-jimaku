@@ -37,6 +37,10 @@ translateTo: Array<string>,
  */
 people: Array<Person>, 
 /**
+ * 配信者が使っているヒーロー（`hero:{id}`）。None なら、試合から自動で取る（DESIGN.md 9.13）
+ */
+playing?: string, 
+/**
  * PC の中の AI に使わせる GPU の名前。None なら自動（内蔵でない GPU を優先。DESIGN.md 9.11）
  */
 localGpu?: string, 

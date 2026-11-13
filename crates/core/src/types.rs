@@ -534,6 +534,10 @@ pub struct SettingsView {
     #[serde(rename = "continuesWith", skip_serializing_if = "Option::is_none")]
     pub continues_with: Option<crate::store::Fallback>,
     pub keys: crate::secrets::KeyStatus,
+    /// 試合から分かった、配信者が使っているヒーロー（`hero:{id}`。設定で選んだものではなく、自動のほう）
+    #[ts(optional)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub played: Option<String>,
     /// 設定ファイルを読めない理由（OS のエラー）。そのときは変更をこの起動の間だけ当て、保存しない
     #[ts(optional)]
     pub unsaved: Option<String>,

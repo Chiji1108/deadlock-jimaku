@@ -66,6 +66,8 @@ pub struct Store {
     preparing: AtomicBool,
     /// 準備の間に取っているファイルの進み具合
     downloading: Mutex<Option<Downloading>>,
+    /// 試合から分かった、配信者が使っているヒーロー（`playing.rs`）
+    played: Mutex<Option<String>>,
     segments: Mutex<VecDeque<Segment>>,
     glossary: watch::Sender<Option<Loaded>>,
     /// 新しい版の辞書を作り直すよう頼んだ回数。変わると `runtime` が辞書の処理を張り直す
@@ -107,6 +109,7 @@ impl Store {
             fallback: Mutex::new(None),
             preparing: AtomicBool::new(false),
             downloading: Mutex::new(None),
+            played: Mutex::new(None),
             segments: Mutex::new(VecDeque::new()),
             glossary: watch::Sender::new(None),
             glossary_refreshes: AtomicU64::new(0),
@@ -257,6 +260,24 @@ impl Store {
         *self.downloading.lock().unwrap() = None;
         self.sync_chrome();
         let _ = self.tx.send(self.transcription_status());
+    }
+
+    /// 配信者が今使っているヒーロー。設定で選んであればそれ、なければ試合から分かったもの
+    pub fn playing(&self) -> Option<String> {
+        self.saved().playing.or_else(|| self.played())
+    }
+
+    /// 試合から分かったヒーロー（設定で選んだものは含めない）
+    pub fn played(&self) -> Option<String> {
+        self.played.lock().unwrap().clone()
+    }
+
+    /// 試合から分かったヒーローを覚える。変わったら、操作パネルに知らせる
+    pub fn set_played(&self, hero: Option<String>) {
+        let before = std::mem::replace(&mut *self.played.lock().unwrap(), hero.clone());
+        if before != hero {
+            let _ = self.tx.send(ServerMsg::SettingsChanged);
+        }
     }
 
     pub fn transcription_error(&self) -> Option<TranscriptionError> {
