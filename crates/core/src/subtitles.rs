@@ -26,7 +26,7 @@ use crate::llama::Llama;
 use crate::local::Speech;
 use crate::now_ms;
 use crate::segment::{Close, Event, Segmenter};
-use crate::settings::{Settings, TextSource};
+use crate::settings::{LiveSource, Settings, TextSource};
 use crate::store::{ChromeEvent, Store};
 use crate::stt::{self, BatchRequest, Hints, RealtimeConfig, Transcriber};
 use crate::types::{
@@ -60,10 +60,11 @@ pub async fn run(
 ) -> anyhow::Result<()> {
     let settings = store.settings();
     // 確定の文字起こしを頼む相手。鍵と PC の中の文字起こしは、始める前に確かめてある
-    let transcriber = match whisper {
-        Some(whisper) => Some(Transcriber::Whisper(whisper)),
-        None => Transcriber::of(settings.engines.transcription.provider(), &accesses, &local),
-    };
+    let engines = settings.engines;
+    // PC の中の Whisper は、途中の字幕だけに立ててあることもある
+    let whisper = |used: bool| whisper.clone().filter(|_| used).map(Transcriber::Whisper);
+    let transcriber = whisper(engines.transcription.whisper().is_some())
+        .or_else(|| Transcriber::of(engines.transcription.provider(), &accesses, &local));
     let transcriber = transcriber.expect("finals without a transcriber");
 
     // 用語ヒントは Realtime のセッション開始時に 1 回しか渡せないので、辞書を少し待つ。
@@ -111,8 +112,10 @@ pub async fn run(
     let plan = settings.plan();
     // 途中の字幕をアプリが作るなら（Chrome でなければ）、その会社か、PC の中の文字起こしにつなぐ
     let live = plan.partial.text.filter(|text| *text != TextSource::Chrome);
-    let live =
-        live.and_then(|_| Transcriber::of(settings.engines.live.provider(), &accesses, &local));
+    let live = live.and_then(|_| {
+        whisper(engines.live == LiveSource::Whisper)
+            .or_else(|| Transcriber::of(engines.live.provider(), &accesses, &local))
+    });
     let realtime = if let Some(transcriber) = live {
         let (tx, rx) = mpsc::unbounded_channel();
         let config = RealtimeConfig {

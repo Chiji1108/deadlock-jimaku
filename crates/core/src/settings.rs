@@ -717,6 +717,13 @@ impl Engines {
         self.live == LiveSource::HaasJa || self.transcription == FinalSource::HaasJa
     }
 
+    /// PC の中の Whisper（whisper.cpp）を立てるなら、そのモデル。途中の字幕と確定で同じ 1 つを使うので、
+    /// 確定が Whisper ならそのモデル、途中の字幕だけなら turbo
+    pub fn whisper(&self) -> Option<whisper::Size> {
+        let live = (self.live == LiveSource::Whisper).then_some(whisper::Size::Turbo);
+        self.transcription.whisper().or(live)
+    }
+
     /// 用語の候補を確かめさせる相手（翻訳が LLM なら、LLM が同時に判定するので使わない）
     pub fn judge(&self) -> Option<Model> {
         self.terms
@@ -807,22 +814,26 @@ pub enum LiveSource {
     QwenAudioStreaming,
     /// PC の中で動く Haas-ja（speech.cpp）。話している間、同じ発話を何度も認識し直して出す。無料。日本語だけ（DESIGN.md 9.8）
     HaasJa,
+    /// PC の中で動く Whisper（whisper.cpp）。同じやり方で出す。確定も Whisper ならそのモデル、ほかなら turbo。
+    /// ヒーローの名前を教えられ、どの言語でも書けるが、話している間の半分ほど GPU を使う（DESIGN.md 9.10）
+    Whisper,
     /// 話し終えてから出す。途中の字幕の料金がかからない
     Off,
 }
 
 impl LiveSource {
-    pub const ALL: [Self; 5] = [
+    pub const ALL: [Self; 6] = [
         Self::Chrome,
         Self::GptLiveTranscribe,
         Self::QwenAudioStreaming,
         Self::HaasJa,
+        Self::Whisper,
         Self::Off,
     ];
 
     pub fn provider(self) -> Option<Provider> {
         match self {
-            Self::Chrome | Self::HaasJa | Self::Off => None,
+            Self::Chrome | Self::HaasJa | Self::Whisper | Self::Off => None,
             Self::GptLiveTranscribe => Some(Provider::OpenAi),
             Self::QwenAudioStreaming => Some(Provider::Qwen),
         }
@@ -1249,13 +1260,17 @@ impl Settings {
             },
             // 翻訳だけなら途中の字幕は見えないので、料金をかけない
             // アプリが作る途中の字幕（会社か、PC の中）
-            LiveSource::GptLiveTranscribe | LiveSource::QwenAudioStreaming | LiveSource::HaasJa
+            LiveSource::GptLiveTranscribe
+            | LiveSource::QwenAudioStreaming
+            | LiveSource::HaasJa
+            | LiveSource::Whisper
                 if !translation_only =>
             {
                 Phase {
                     text: Some(match engines.live {
                         LiveSource::QwenAudioStreaming => Text::QwenAudioStreaming,
                         LiveSource::HaasJa => Text::HaasJa,
+                        LiveSource::Whisper => Text::Whisper,
                         _ => Text::GptLiveTranscribe,
                     }),
                     translation: None,
@@ -1266,6 +1281,7 @@ impl Settings {
             LiveSource::GptLiveTranscribe
             | LiveSource::QwenAudioStreaming
             | LiveSource::HaasJa
+            | LiveSource::Whisper
             | LiveSource::Off => Phase::NONE,
         };
         let finals = Phase {
@@ -1321,6 +1337,10 @@ impl Settings {
                 models.realtime = "qwen-audio-3.1-asr-flash-streaming".into();
             }
             LiveSource::HaasJa => models.realtime = crate::local::HAAS_JA.into(),
+            LiveSource::Whisper => {
+                let size = self.engines.whisper().expect("live Whisper");
+                models.realtime = size.name().into();
+            }
             LiveSource::Chrome | LiveSource::GptLiveTranscribe | LiveSource::Off => {}
         }
         if self.engines.furigana == RubySource::Luna {
@@ -2111,6 +2131,26 @@ mod tests {
             assert_eq!(settings.models_in_use().batch, model);
         }
         assert_eq!(FinalSource::HaasJa.whisper(), None);
+        // 途中の字幕も Whisper にできる。確定と同じモデルを使い、確定がほかなら turbo
+        let live = |transcription| Engines {
+            live: LiveSource::Whisper,
+            transcription,
+            ..Engines::BETA
+        };
+        let both = live(FinalSource::WhisperLarge);
+        assert_eq!(both.sanitized(), both);
+        assert_eq!(both.whisper(), Some(whisper::Size::Large));
+        let settings = Settings {
+            engines: both,
+            ..Default::default()
+        };
+        assert_eq!(settings.plan().partial.text, Some(TextSource::Whisper));
+        assert_eq!(settings.models_in_use().realtime, whisper::LARGE);
+        assert_eq!(
+            live(FinalSource::QwenAudio).whisper(),
+            Some(whisper::Size::Turbo)
+        );
+        assert_eq!(Engines::BETA.whisper(), None);
     }
 
     /// PC の中の LLM は、鍵が要らず、頼むことがあるときだけ立てる

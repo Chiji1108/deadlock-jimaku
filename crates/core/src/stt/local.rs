@@ -1,7 +1,8 @@
-//! PC の中で動く speech.cpp（Haas-ja）で、途中の字幕を作る（DESIGN.md 9.8）。
+//! PC の中で動く文字起こし（speech.cpp の Haas-ja、whisper.cpp の Whisper）で、途中の字幕を作る（DESIGN.md 9.8、9.10）。
 //!
-//! Haas-ja は録音を最後まで聞いてから書くモデルなので、話している発話を、始まりから今までまとめて何度も
-//! 認識し直し、そのたびに発話の文字を置き換える（`Delta::whole`）。1 回の認識は 0.1 秒ほどなので間に合う。
+//! どちらも録音を最後まで聞いてから書くモデルなので、話している発話を、始まりから今までまとめて何度も
+//! 認識し直し、そのたびに発話の文字を置き換える（`Delta::whole`）。1 回の認識は、Haas-ja が 0.02 秒、
+//! Whisper が 0.2〜0.4 秒ほど（Whisper は、話している間の半分ほど GPU を使う）。
 //! speech.cpp の Realtime の口（`/v1/realtime`）も試したが、2 回続けて同じだった先頭しか返さないので、
 //! 言い出しが揺れる発話では何秒も文字が出なかった（実測）
 
@@ -17,7 +18,7 @@ const MIN_SAMPLES: usize = SAMPLE_RATE as usize * 3 / 10;
 
 /// 1 セッション分。入力が尽きたら Ok、認識に失敗したら Err で返る（`super::realtime` と同じ決まり）
 pub(super) async fn live(
-    speech: &Speech,
+    recognizer: &Recognizer<'_>,
     speaking: &mut Speaking,
     input: &mut mpsc::UnboundedReceiver<Input>,
     deltas: &mpsc::Sender<Delta>,
@@ -34,7 +35,7 @@ pub(super) async fn live(
             received = input.recv() => received,
             () = tokio::time::sleep_until(next), if waiting => {
                 let (segment, samples) = (speaking.current.clone().expect("speaking"), heard.len());
-                let text = transcribe(speech, &heard).await?;
+                let text = transcribe(recognizer, &heard).await?;
                 asked = samples;
                 next = Instant::now() + INTERVAL;
                 if !text.is_empty() {
@@ -65,12 +66,26 @@ pub(super) async fn live(
     }
 }
 
-async fn transcribe(speech: &Speech, samples: &[f32]) -> anyhow::Result<String> {
+/// 途中の字幕を書かせる、PC の中の文字起こし
+pub(super) enum Recognizer<'a> {
+    Speech(&'a Speech),
+    Whisper(&'a Whisper, &'a Hints),
+}
+
+async fn transcribe(recognizer: &Recognizer<'_>, samples: &[f32]) -> anyhow::Result<String> {
     let file = reqwest::multipart::Part::bytes(audio::wav(samples))
         .file_name("utterance.wav")
         .mime_str("audio/wav")?;
-    let form = reqwest::multipart::Form::new().part("file", file);
-    let res = speech.transcriptions().multipart(form).send().await?;
+    let request = match recognizer {
+        Recognizer::Speech(speech) => {
+            let form = reqwest::multipart::Form::new().part("file", file);
+            speech.transcriptions().multipart(form)
+        }
+        Recognizer::Whisper(whisper, hints) => whisper
+            .transcriptions()
+            .multipart(whisper_form(hints).part("file", file)),
+    };
+    let res = request.send().await?;
     let status = res.status();
     if !status.is_success() {
         bail!("{status}: {}", res.text().await.unwrap_or_default());

@@ -36,6 +36,7 @@ export const ENGINE_PROVIDERS = {
     "gptLiveTranscribe": "openai",
     "qwenAudioStreaming": "qwen",
     "haasJa": null,
+    "whisper": null,
     "off": null
   },
   "transcription": {

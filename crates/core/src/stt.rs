@@ -121,8 +121,13 @@ pub async fn realtime(
             qwen::live(cfg, access, hints, speaking, input, deltas).await
         }
         Transcriber::Api(_) => openai::live(cfg, hints, speaking, input, deltas).await,
-        Transcriber::Local(speech) => local::live(speech, speaking, input, deltas).await,
-        Transcriber::Whisper(_) => bail!("Whisper does not write partial subtitles"),
+        Transcriber::Local(speech) => {
+            local::live(&local::Recognizer::Speech(speech), speaking, input, deltas).await
+        }
+        Transcriber::Whisper(whisper) => {
+            let recognizer = local::Recognizer::Whisper(whisper, hints);
+            local::live(&recognizer, speaking, input, deltas).await
+        }
     }
 }
 
@@ -156,7 +161,7 @@ pub enum Transcriber {
     Api(Access),
     /// PC の中で動く speech.cpp（Haas-ja）。途中の字幕と確定で、同じ 1 つを使う
     Local(Arc<Speech>),
-    /// PC の中で動く whisper.cpp。確定だけ
+    /// PC の中で動く whisper.cpp。途中の字幕と確定で、同じ 1 つを使う
     Whisper(Arc<Whisper>),
 }
 
@@ -208,19 +213,8 @@ pub async fn transcribe(http: &reqwest::Client, req: BatchRequest<'_>) -> anyhow
             return text(&res.json().await?);
         }
         Transcriber::Whisper(whisper) => {
-            let mut form = reqwest::multipart::Form::new()
-                .text("language", req.hints.language.clone())
-                .text("response_format", "json");
-            // 渡せるのは少しだけ（全部渡すと効かず、遅くなる）。ヒーローの名前で、用語がよく書けるようになる
-            if !req.hints.heroes.is_empty() {
-                let comma = if req.hints.language == "ja" {
-                    "、"
-                } else {
-                    ", "
-                };
-                form = form.text("prompt", req.hints.heroes.join(comma));
-            }
-            let request = whisper.transcriptions().multipart(form.part("file", file));
+            let form = whisper_form(req.hints).part("file", file);
+            let request = whisper.transcriptions().multipart(form);
             let res = request.send().await?;
             let status = res.status();
             if !status.is_success() {
@@ -283,6 +277,19 @@ pub async fn transcribe(http: &reqwest::Client, req: BatchRequest<'_>) -> anyhow
     }
     req.meter.audio(Use::Batch, req.model, req.seconds);
     text(&res.json().await?)
+}
+
+/// whisper.cpp に送る欄（音声のほか）。言語と、ヒーローの名前。
+/// 渡せる用語は少しだけ（全部渡すと効かず、遅くなる）。ヒーローの名前で、用語がよく書けるようになる
+fn whisper_form(hints: &Hints) -> reqwest::multipart::Form {
+    let form = reqwest::multipart::Form::new()
+        .text("language", hints.language.clone())
+        .text("response_format", "json");
+    if hints.heroes.is_empty() {
+        return form;
+    }
+    let comma = if hints.language == "ja" { "、" } else { ", " };
+    form.text("prompt", hints.heroes.join(comma))
 }
 
 fn text(res: &Value) -> anyhow::Result<String> {
