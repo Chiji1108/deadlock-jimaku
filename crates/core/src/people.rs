@@ -155,7 +155,7 @@ pub fn apply(glossary: &mut Glossary, people: &[Person]) {
             slot: None,
             hero: None,
             ability_slot: None,
-            aliases: person.aliases.clone(),
+            aliases: called(person),
         };
         glossary.entities.insert(person.reference(), entity);
     }
@@ -243,6 +243,46 @@ pub async fn import(
         }
     }
     sanitized(people).map_err(anyhow::Error::msg)
+}
+
+/// 字幕の中で探す、名前のほかの書き方。本人が入れた呼ばれ方と、名前と呼ばれ方の、ひらがなとカタカナを
+/// 入れ替えたもの（文字起こしは、同じ音を、どちらで書くか決まっていない。「ちじ」と「チジ」）。
+/// 漢字とかなの入れ替えはしない（同じ読みの別の言葉に当たる）
+fn called(person: &Person) -> Vec<String> {
+    let mut all = person.aliases.clone();
+    let written = person.names.values().chain(&person.aliases);
+    for name in written.filter(|name| name.chars().count() >= 2 && name.chars().all(is_kana)) {
+        for variant in [kana(name, Kana::Hiragana), kana(name, Kana::Katakana)] {
+            let known = person.names.values().any(|n| *n == variant) || all.contains(&variant);
+            if !known {
+                all.push(variant);
+            }
+        }
+    }
+    all
+}
+
+#[derive(Clone, Copy)]
+enum Kana {
+    Hiragana,
+    Katakana,
+}
+
+/// ひらがなか、カタカナ（長音の「ー」も）
+fn is_kana(c: char) -> bool {
+    matches!(c, '\u{3041}'..='\u{3096}' | '\u{30a1}'..='\u{30f6}' | 'ー')
+}
+
+/// かなを、ひらがなかカタカナにそろえる（ほかの字はそのまま）
+fn kana(text: &str, to: Kana) -> String {
+    let shifted = |c: char, by: i32| char::from_u32((c as i32 + by) as u32).unwrap_or(c);
+    text.chars()
+        .map(|c| match (to, c) {
+            (Kana::Hiragana, '\u{30a1}'..='\u{30f6}') => shifted(c, -0x60),
+            (Kana::Katakana, '\u{3041}'..='\u{3096}') => shifted(c, 0x60),
+            _ => c,
+        })
+        .collect()
 }
 
 /// アイコンを置くフォルダ
@@ -492,7 +532,8 @@ mod tests {
             ("みり", "みり")
         );
         assert_eq!(entity.icon.as_deref(), Some("/people/abcd.png"));
-        assert_eq!(entity.aliases, ["みりちゃん"]);
+        // 呼ばれ方には、名前と呼ばれ方の、もう一方のかなの書き方も入る
+        assert_eq!(entity.aliases, ["みりちゃん", "ミリ", "ミリチャン"]);
     }
 
     #[test]

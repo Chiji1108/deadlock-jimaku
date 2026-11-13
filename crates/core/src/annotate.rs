@@ -429,6 +429,41 @@ mod tests {
         assert_eq!(ruby.as_ref().unwrap()[0].ruby.as_deref(), Some("わたし"));
     }
 
+    /// 人の名前と呼ばれ方は、ひらがなとカタカナのどちらで書かれても見つかる（短い名前でも）。
+    /// 漢字とかなの違いは拾わない（同じ読みの別の言葉に当たる。呼ばれ方に足してもらう）
+    #[test]
+    fn a_person_is_found_in_either_kana() {
+        let furigana = Furigana::shared().unwrap();
+        for (name, said, found) in [
+            ("ミリちゃんねる", "ミリチャンネル見てね", true),
+            ("ミリちゃんねる", "みりちゃんねる見てね", true),
+            ("ちじ", "チジが行くよ", true),
+            ("ミリ", "みりが来た", true),
+            ("ちーさん", "チーさんが来た", true),
+            ("加藤", "かとうが来た", false),
+            // 別の言葉の一部には当てない
+            ("ミリ", "みりんを入れる", false),
+        ] {
+            let mut glossary = magazine(None);
+            glossary.languages = vec!["ja".into(), "en".into()];
+            let person = crate::people::Person {
+                id: "p".into(),
+                names: [("ja".to_owned(), name.to_owned())].into(),
+                ..Default::default()
+            };
+            crate::people::apply(&mut glossary, &[person]);
+            let terms = Terms::new(table_of(&glossary, Some(furigana)));
+            let (tokens, _) = annotated(Some(furigana), Some(&terms), false, said);
+            let is_person =
+                |t: &Token| matches!(t, Token::Entity { reference, .. } if reference == "person:p");
+            assert_eq!(
+                tokens.iter().any(is_person),
+                found,
+                "{name} / {said}: {tokens:?}"
+            );
+        }
+    }
+
     /// 人の辞書の人は、名前でも、呼ばれ方でも見つかる。翻訳に渡す文では、その人の英語の名前になる
     #[test]
     fn a_person_is_found_by_name_and_by_what_they_are_called() {
