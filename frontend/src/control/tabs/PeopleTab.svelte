@@ -59,7 +59,13 @@
   function add(isMe: boolean) {
     const name = (isMe ? adding.me : adding.other).trim();
     if (!name) return;
-    const person: Person = { id: newId(), me: isMe, names: { [s.micLanguage]: name }, aliases: [] };
+    const person: Person = {
+      id: newId(),
+      me: isMe,
+      names: { [s.micLanguage]: name },
+      aliases: [],
+      firstPerson: [],
+    };
     void save(isMe ? [person, ...people] : [...people, person]);
     adding = isMe ? { ...adding, me: "" } : { ...adding, other: "" };
   }
@@ -71,8 +77,9 @@
     void change(person.id, { names });
   }
 
-  const realias = (person: Person, text: string) =>
-    change(person.id, { aliases: text.split(/[、,，\n]/).map((alias) => alias.trim()) });
+  /** 「、」で区切った言葉 */
+  const words = (text: string) => text.split(/[、,，\n]/).map((word) => word.trim());
+  const realias = (person: Person, text: string) => change(person.id, { aliases: words(text) });
 
   async function setIcon(person: Person, get: () => Promise<{ icon: string; name?: string }>) {
     fetching = person.id;
@@ -222,6 +229,21 @@
       />
       <Field.Description>名前と同じように、字幕の中で探します</Field.Description>
     </Field.Field>
+    {#if person.me}
+      <Field.Field>
+        <Field.Label for="{person.id}-first-person">一人称</Field.Label>
+        <Input
+          id="{person.id}-first-person"
+          placeholder="私、わたし、俺、僕 など。「、」で区切る"
+          value={person.firstPerson.join("、")}
+          onchange={(e) => change(person.id, { firstPerson: words(e.currentTarget.value) })}
+        />
+        <Field.Description>
+          入れると、字幕で自分を指す言葉にも、自分のアイコンが付きます。翻訳は変わりません（"I"
+          のまま）。「自分」は、相手を指すこともあるので、入れないのがおすすめです。空なら付けません
+        </Field.Description>
+      </Field.Field>
+    {/if}
   </div>
 {/snippet}
 

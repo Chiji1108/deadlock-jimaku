@@ -10,11 +10,14 @@ use std::sync::Arc;
 use tokio::sync::watch;
 
 use crate::assets::Loaded;
+use crate::people::{self, FirstPerson};
 use crate::reading::{Furigana, Morpheme, annotate};
 use crate::settings::{Phase, Settings};
 use crate::store::Store;
 use crate::terms::{Found, Term, Terms, ruby};
-use crate::types::{Entity, Glossary, LiveState, LiveStatus, TermName, Token, Translatable};
+use crate::types::{
+    Entity, Glossary, LiveState, LiveStatus, RubySegment as Part, TermName, Token, Translatable,
+};
 
 /// 字幕の処理が持つ。あるあいだ、ページの文を受け取れる（`live.status`）
 pub struct Annotator {
@@ -68,7 +71,14 @@ impl Annotator {
         let with_ruby = phase.ruby.is_some();
         let furigana = self.furigana.filter(|_| with_ruby || with_terms);
         let terms = with_terms.then_some(&self.terms);
-        annotated(furigana, terms, with_ruby, text)
+        let (tokens, translate) = annotated(furigana, terms, with_ruby, text);
+        // 用語を強調するなら、自分を指す言葉（一人称）にもアイコンを付ける。翻訳に渡す文は変えない
+        let me = people::first_person(&self.store.settings().people);
+        let tokens = match (self.furigana.filter(|_| with_terms), me) {
+            (Some(furigana), Some(me)) => mark_first_person(furigana, text, tokens, &me),
+            _ => tokens,
+        };
+        (tokens, translate)
     }
 }
 
@@ -98,6 +108,78 @@ fn annotated(
     };
     let spoken = source_tokens(text, &morphemes, &found, with_ruby);
     (spoken, translate)
+}
+
+/// 自分を指す言葉（一人称）を、自分の用語にする（DESIGN.md 9.12）。原文の見た目だけを変える: 用語を決めて、
+/// 翻訳に渡す文を作ったあとに呼ぶので、翻訳では名前に置き換わらない（"I" のまま）。
+/// 言葉の区切りで見るので、「私立」「下僕」「そのうち」には当たらない。意味は見ない（「私」「俺」は、ほぼ必ず自分を指す）
+pub fn mark_first_person(
+    furigana: &Furigana,
+    text: &str,
+    tokens: Vec<Token>,
+    me: &FirstPerson,
+) -> Vec<Token> {
+    let morphemes = furigana.morphemes(text);
+    let is_word = |m: &&Morpheme| me.words.iter().any(|word| *word == text[m.start..m.end]);
+    let words: Vec<&Morpheme> = morphemes.iter().filter(is_word).collect();
+    if words.is_empty() {
+        return tokens;
+    }
+    let mut marked = Vec::new();
+    let mut pos = 0;
+    for token in tokens {
+        let Token::Text { text: part, ruby } = token else {
+            // もう用語になっている所は、そのまま
+            let Token::Entity { spoken, .. } = &token else {
+                unreachable!()
+            };
+            pos += spoken.as_ref().map_or(0, String::len);
+            marked.push(token);
+            continue;
+        };
+        let (start, end) = (pos, pos + part.len());
+        pos = end;
+        // 文字の並びが原文とずれていたら、何もしない
+        if text.get(start..end) != Some(part.as_str()) {
+            marked.push(Token::Text { text: part, ruby });
+            continue;
+        }
+        let inside: Vec<&&Morpheme> = (words.iter())
+            .filter(|m| start <= m.start && m.end <= end)
+            .collect();
+        // ふりがなの付いた所は、まるごと一人称のときだけ（「私」に「わたし」）
+        let whole = inside.len() == 1 && inside[0].start == start && inside[0].end == end;
+        if inside.is_empty() || (ruby.is_some() && !whole) {
+            marked.push(Token::Text { text: part, ruby });
+            continue;
+        }
+        let plain = |from: usize, to: usize| Token::Text {
+            text: text[from..to].to_owned(),
+            ruby: None,
+        };
+        let mut at = start;
+        for word in inside {
+            if at < word.start {
+                marked.push(plain(at, word.start));
+            }
+            let spoken = text[word.start..word.end].to_owned();
+            marked.push(Token::Entity {
+                reference: me.reference.clone(),
+                ruby: ruby.clone().map(|ruby| {
+                    vec![Part {
+                        text: spoken.clone(),
+                        ruby: Some(ruby),
+                    }]
+                }),
+                spoken: Some(spoken),
+            });
+            at = word.end;
+        }
+        if at < end {
+            marked.push(plain(at, end));
+        }
+    }
+    marked
 }
 
 /// 話した言葉はそのまま残し、用語にアイコンと色が付くようにする
@@ -294,6 +376,59 @@ mod tests {
         assert_eq!(terms[0].en, "Extended Magazine");
     }
 
+    /// 一人称は、言葉の区切りで見て、自分の用語にする。ほかの言葉の一部や、用語の中には当てない
+    #[test]
+    fn first_person_words_become_the_streamer() {
+        let furigana = Furigana::shared().unwrap();
+        let me = FirstPerson {
+            reference: "person:me".into(),
+            words: vec!["私".into(), "俺".into(), "僕".into()],
+        };
+        let marked = |text: &str, with_ruby: bool| {
+            let (tokens, translate) = annotated(Some(furigana), None, with_ruby, text);
+            assert_eq!(translate.text, text);
+            mark_first_person(furigana, text, tokens, &me)
+        };
+        let words = |tokens: &[Token]| -> Vec<String> {
+            let entity = |token: &Token| match token {
+                Token::Entity { spoken, .. } => spoken.clone(),
+                Token::Text { .. } => None,
+            };
+            tokens.iter().filter_map(entity).collect()
+        };
+        let whole = |tokens: &[Token]| -> String {
+            let text = |token: &Token| match token {
+                Token::Entity { spoken, .. } => spoken.clone().unwrap_or_default(),
+                Token::Text { text, .. } => text.clone(),
+            };
+            tokens.iter().map(text).collect()
+        };
+        for (text, found) in [
+            ("俺が行くよ", vec!["俺"]),
+            ("私は下がるから僕に任せて", vec!["私", "僕"]),
+            // ほかの言葉の一部
+            ("私立の学校と下僕の話", vec![]),
+            ("ウルト使うよ", vec![]),
+        ] {
+            for with_ruby in [false, true] {
+                let tokens = marked(text, with_ruby);
+                assert_eq!(words(&tokens), found, "{text}: {tokens:?}");
+                // 文字は変えない
+                assert_eq!(whole(&tokens), text);
+            }
+        }
+        // ふりがなは、一人称に付けたまま
+        let tokens = marked("私は行く", true);
+        let Token::Entity {
+            reference, ruby, ..
+        } = &tokens[0]
+        else {
+            panic!("{tokens:?}");
+        };
+        assert_eq!(reference, "person:me");
+        assert_eq!(ruby.as_ref().unwrap()[0].ruby.as_deref(), Some("わたし"));
+    }
+
     /// 人の辞書の人は、名前でも、呼ばれ方でも見つかる。翻訳に渡す文では、その人の英語の名前になる
     #[test]
     fn a_person_is_found_by_name_and_by_what_they_are_called() {
@@ -307,6 +442,7 @@ mod tests {
                 .into(),
             aliases: vec!["ちーさん".into()],
             icon: None,
+            first_person: Vec::new(),
         };
         crate::people::apply(&mut glossary, &[me]);
         let furigana = Furigana::shared().unwrap();

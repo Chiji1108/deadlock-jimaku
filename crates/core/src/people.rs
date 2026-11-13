@@ -43,6 +43,9 @@ pub struct Person {
     /// アイコンのファイルの名前（データフォルダの `people/` の中）
     #[ts(optional)]
     pub icon: Option<String>,
+    /// 一人称（「私」「俺」など。自分だけ）。字幕でこの言葉にもアイコンを付ける。名前や呼ばれ方と違って、
+    /// 翻訳では名前に置き換えない（"I" のまま）。空なら付けない
+    pub first_person: Vec<String>,
 }
 
 impl Person {
@@ -90,9 +93,18 @@ pub fn sanitized(people: Vec<Person>) -> Result<Vec<Person>, String> {
         if person.icon.as_deref().is_some_and(|file| !safe_file(file)) {
             return Err("bad icon file name".into());
         }
+        // 一人称は、自分にだけ意味がある
+        let mut first_person: Vec<String> = Vec::new();
+        for word in person.first_person.iter().map(|word| short(word)) {
+            let keep = person.me && !word.is_empty() && !first_person.contains(&word);
+            if keep && first_person.len() < MAX_ALIASES {
+                first_person.push(word);
+            }
+        }
         cleaned.push(Person {
             names,
             aliases,
+            first_person,
             ..person
         });
     }
@@ -100,6 +112,23 @@ pub fn sanitized(people: Vec<Person>) -> Result<Vec<Person>, String> {
         return Err("only one person can be me".into());
     }
     Ok(cleaned)
+}
+
+/// 字幕で、自分を指す言葉（一人称）にアイコンを付けるための情報
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct FirstPerson {
+    /// 自分の参照（`person:{id}`）
+    pub reference: String,
+    pub words: Vec<String>,
+}
+
+/// 一人称に反応する設定。自分がいて、一人称を入れてあるときだけ
+pub fn first_person(people: &[Person]) -> Option<FirstPerson> {
+    let me = people.iter().find(|person| person.me)?;
+    (!me.first_person.is_empty()).then(|| FirstPerson {
+        reference: me.reference(),
+        words: me.first_person.clone(),
+    })
 }
 
 /// 用語の辞書に、人を足す。辞書の言語に名前がなければ、ある名前で埋める（翻訳でも名前が出るように）
@@ -209,6 +238,7 @@ pub async fn import(
                 names: imported.names,
                 aliases: imported.aliases,
                 icon,
+                first_person: Vec::new(),
             }),
         }
     }
@@ -402,6 +432,29 @@ mod tests {
         assert_eq!(cleaned[0].names.len(), 2);
         assert_eq!(cleaned[0].names["ja"], "ちじ");
         assert_eq!(cleaned[0].aliases, ["ちーさん"]);
+
+        // 一人称は、自分にだけ残す
+        let wordy = |me: bool| Person {
+            me,
+            first_person: vec![" 俺 ".into(), "俺".into(), "".into(), "私".into()],
+            ..person("w1", &[("ja", "x")], &[])
+        };
+        assert_eq!(
+            sanitized(vec![wordy(true)]).unwrap()[0].first_person,
+            ["俺", "私"]
+        );
+        assert!(
+            sanitized(vec![wordy(false)]).unwrap()[0]
+                .first_person
+                .is_empty()
+        );
+        assert_eq!(
+            first_person(&sanitized(vec![wordy(true)]).unwrap())
+                .unwrap()
+                .reference,
+            "person:w1"
+        );
+        assert_eq!(first_person(&sanitized(vec![wordy(false)]).unwrap()), None);
 
         let nameless = person("b2", &[("ja", "  ")], &[]);
         assert!(sanitized(vec![nameless]).is_err());
