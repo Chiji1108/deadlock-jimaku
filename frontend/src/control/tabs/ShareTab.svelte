@@ -1,6 +1,8 @@
 <script lang="ts">
   // おすそ分け（DESIGN.md 17.1）。自分のキーを預けてギフトコードを作り、知り合いに使ってもらう。
   // キーは会社ごとに、確かめてから預ける。コードはどれも、預けたキーの会社に使える
+  import CircleAlertIcon from "@lucide/svelte/icons/circle-alert";
+  import * as Alert from "$lib/components/ui/alert";
   import { Badge } from "$lib/components/ui/badge";
   import { Button } from "$lib/components/ui/button";
   import * as Card from "$lib/components/ui/card";
@@ -96,6 +98,14 @@
 </script>
 
 <div class="flex flex-col gap-6">
+  <Alert.Root>
+    <CircleAlertIcon />
+    <Alert.Title>おすそ分けは、0.7 でなくなります</Alert.Title>
+    <Alert.Description>
+      キーなしで使ってもらうなら、「おすすめ」のモードを案内してください。ベータ期間中は無料で、ギフトコードも要りません。今のギフトコードは、0.7
+      までは使えます
+    </Alert.Description>
+  </Alert.Root>
   <Card.Root>
     <Card.Header>
       <Card.Title>おすそ分け</Card.Title>

@@ -57,8 +57,9 @@
       page: KeysTab,
       heading: "キーと料金",
     },
-    { value: "share", label: "おすそ分け", icon: GiftIcon, page: ShareTab },
     { value: "usage", label: "料金", icon: WalletIcon, page: UsageTab },
+    // 0.7 でなくなるので、一番下に置く（DESIGN.md 17.1）
+    { value: "share", label: "おすそ分け", icon: GiftIcon, page: ShareTab },
   ];
   // デスクトップのウィンドウでは左のサイドバー。OBS のドックのように狭いときは上に並べる
   const wide = new MediaQuery("min-width: 768px");
