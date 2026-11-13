@@ -107,7 +107,9 @@ fn price(model: &str) -> Option<Price> {
         // OpenRouter でも 1 時間 $0.10
         "microsoft/mai-transcribe-2" => Price::PerMinute(0.10 / 60.0),
         // PC の中で動くので無料
-        crate::local::HAAS_JA => Price::PerMinute(0.0),
+        crate::local::HAAS_JA | crate::whisper::TURBO | crate::whisper::LARGE => {
+            Price::PerMinute(0.0)
+        }
         crate::llama::GEMMA => Price::PerMillion {
             input: 0.0,
             cached: 0.0,

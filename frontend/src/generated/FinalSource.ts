@@ -3,4 +3,4 @@
 /**
  * 確定の文字起こしを何で作るか
  */
-export type FinalSource = "chrome" | "gptTranscribe" | "grokVoiceTranscribe" | "qwenAudio" | "maiTranscribe2" | "haasJa";
+export type FinalSource = "chrome" | "gptTranscribe" | "grokVoiceTranscribe" | "qwenAudio" | "maiTranscribe2" | "haasJa" | "whisperTurbo" | "whisperLarge";

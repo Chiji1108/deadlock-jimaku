@@ -449,6 +449,7 @@ mod tests {
                 language: "ja".into(),
                 prompt: String::new(),
                 keywords: vec!["ヘイズ".into()],
+                heroes: Vec::new(),
             },
             wav: std::fs::read(wav).unwrap(),
             seconds: 21.8,

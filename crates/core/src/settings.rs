@@ -13,6 +13,7 @@ use ts_rs::TS;
 use crate::lang;
 use crate::secrets::Provider;
 use crate::types::LangCode;
+use crate::whisper;
 
 /// `{データディレクトリ}` の中の設定ファイル
 pub const FILE: &str = "settings.json";
@@ -843,22 +844,28 @@ pub enum FinalSource {
     MaiTranscribe2,
     /// PC の中で動く Haas-ja（speech.cpp）。無料。日本語だけ（DESIGN.md 9.8）
     HaasJa,
+    /// PC の中で動く Whisper large-v3-turbo（whisper.cpp）。無料。ヒーローの名前を教えられる。GPU を使う（DESIGN.md 9.10）
+    WhisperTurbo,
+    /// 同じく Whisper large-v3。turbo より用語に強く、約 2 倍遅い
+    WhisperLarge,
 }
 
 impl FinalSource {
-    pub const ALL: [Self; 6] = [
+    pub const ALL: [Self; 8] = [
         Self::Chrome,
         Self::GptTranscribe,
         Self::GrokVoiceTranscribe,
         Self::QwenAudio,
         Self::MaiTranscribe2,
         Self::HaasJa,
+        Self::WhisperTurbo,
+        Self::WhisperLarge,
     ];
 
     /// 文字起こしを頼む会社（Chrome と PC の中なら None）
     pub fn provider(self) -> Option<Provider> {
         match self {
-            Self::Chrome | Self::HaasJa => None,
+            Self::Chrome | Self::HaasJa | Self::WhisperTurbo | Self::WhisperLarge => None,
             Self::GptTranscribe => Some(Provider::OpenAi),
             Self::GrokVoiceTranscribe => Some(Provider::Xai),
             Self::QwenAudio => Some(Provider::Qwen),
@@ -874,6 +881,16 @@ impl FinalSource {
             Self::QwenAudio => Some("qwen-audio-3.1-asr-flash"),
             Self::MaiTranscribe2 => Some("microsoft/mai-transcribe-2"),
             Self::HaasJa => Some(crate::local::HAAS_JA),
+            Self::WhisperTurbo | Self::WhisperLarge => self.whisper().map(whisper::Size::name),
+        }
+    }
+
+    /// PC の中の Whisper（whisper.cpp）で書くなら、そのモデル
+    pub fn whisper(self) -> Option<whisper::Size> {
+        match self {
+            Self::WhisperTurbo => Some(whisper::Size::Turbo),
+            Self::WhisperLarge => Some(whisper::Size::Large),
+            _ => None,
         }
     }
 }
@@ -896,6 +913,7 @@ pub enum TextSource {
     QwenAudioStreaming,
     MaiTranscribe2,
     HaasJa,
+    Whisper,
 }
 
 /// 用語を何で判定するか（翻訳が LLM でないとき）
@@ -1258,6 +1276,7 @@ impl Settings {
                 FinalSource::QwenAudio => Text::QwenAudio,
                 FinalSource::MaiTranscribe2 => Text::MaiTranscribe2,
                 FinalSource::HaasJa => Text::HaasJa,
+                FinalSource::WhisperTurbo | FinalSource::WhisperLarge => Text::Whisper,
             }),
             translation: translates.then_some(engines.translation.source()),
             ruby: match engines.furigana {
@@ -2054,6 +2073,44 @@ mod tests {
             ..Engines::BETA
         };
         assert_eq!(without_chrome.sanitized().terms, TermsEngine::Dictionary);
+    }
+
+    /// PC の中の Whisper は確定だけ。鍵が要らず、途中の字幕は Chrome でも Haas-ja でもよい
+    #[test]
+    fn whisper_writes_finals_on_this_computer() {
+        for (transcription, size, model) in [
+            (
+                FinalSource::WhisperTurbo,
+                whisper::Size::Turbo,
+                whisper::TURBO,
+            ),
+            (
+                FinalSource::WhisperLarge,
+                whisper::Size::Large,
+                whisper::LARGE,
+            ),
+        ] {
+            let hybrid = Engines {
+                transcription,
+                ..Engines::CHROME
+            };
+            assert_eq!(hybrid.sanitized(), hybrid);
+            assert!(hybrid.providers().is_empty());
+            assert_eq!(transcription.whisper(), Some(size));
+            // speech.cpp は、途中の字幕を Haas-ja にしたときだけ立てる
+            assert!(!hybrid.uses_local());
+            let settings = Settings {
+                engines: Engines {
+                    live: LiveSource::HaasJa,
+                    ..hybrid
+                },
+                ..Default::default()
+            };
+            assert!(settings.engines.uses_local());
+            assert_eq!(settings.plan().finals.text, Some(TextSource::Whisper));
+            assert_eq!(settings.models_in_use().batch, model);
+        }
+        assert_eq!(FinalSource::HaasJa.whisper(), None);
     }
 
     /// PC の中の LLM は、鍵が要らず、頼むことがあるときだけ立てる

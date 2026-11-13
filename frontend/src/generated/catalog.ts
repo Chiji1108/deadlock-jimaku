@@ -44,7 +44,9 @@ export const ENGINE_PROVIDERS = {
     "grokVoiceTranscribe": "xai",
     "qwenAudio": "qwen",
     "maiTranscribe2": "openrouter",
-    "haasJa": null
+    "haasJa": null,
+    "whisperTurbo": null,
+    "whisperLarge": null
   },
   "terms": {
     "dictionary": null,

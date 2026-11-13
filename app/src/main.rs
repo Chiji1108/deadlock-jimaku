@@ -107,6 +107,7 @@ fn main() {
                 _app.state::<std::sync::Arc<Store>>().close_chrome();
                 overlays_core::local::stop();
                 overlays_core::llama::stop();
+                overlays_core::whisper::stop();
             }
             // Mac は Dock のアイコンを押したときに、閉じたウィンドウを開き直す
             #[cfg(target_os = "macos")]

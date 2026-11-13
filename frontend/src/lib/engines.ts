@@ -109,6 +109,22 @@ export const ITEMS: {
         price: "無料",
         note: "日本語だけ。音声は PC から出ない。用語を教えられないので、カタカナの用語は間違えやすい。初回に約 400 MB をダウンロードする。Intel の Mac では動かない",
       },
+      {
+        value: "whisperTurbo",
+        label: "Whisper large-v3-turbo（PC の中）",
+        accuracy: "94〜98%",
+        speed: "GPU で約 0.3 秒",
+        price: "無料",
+        note: "音声は PC から出ない。ヒーローの名前を教えるので、Haas-ja よりカタカナの用語に強い。GPU を使う。初回に約 600 MB をダウンロードする。Intel の Mac では動かない",
+      },
+      {
+        value: "whisperLarge",
+        label: "Whisper large-v3（PC の中）",
+        accuracy: "95〜98%",
+        speed: "GPU で約 0.5 秒",
+        price: "無料",
+        note: "turbo より用語に強く、約 2 倍遅い。初回に約 1.1 GB をダウンロードする。ほかは turbo と同じ",
+      },
     ],
   },
   terms: {

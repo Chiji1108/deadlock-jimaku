@@ -24,6 +24,7 @@ use crate::secrets::Provider;
 use crate::share;
 use crate::types::TranscriptionError;
 use crate::usage::{Meter, Tokens, Use};
+use crate::whisper::Whisper;
 
 mod local;
 mod openai;
@@ -42,6 +43,8 @@ pub struct Hints {
     pub prompt: String,
     /// 出てきそうな用語（DESIGN.md 8.4）
     pub keywords: Vec<String>,
+    /// ヒーローの名前（話す言語で）。少ししか用語を渡せない Whisper に渡す（DESIGN.md 9.10）
+    pub heroes: Vec<String>,
 }
 
 pub struct RealtimeConfig {
@@ -119,6 +122,7 @@ pub async fn realtime(
         }
         Transcriber::Api(_) => openai::live(cfg, hints, speaking, input, deltas).await,
         Transcriber::Local(speech) => local::live(speech, speaking, input, deltas).await,
+        Transcriber::Whisper(_) => bail!("Whisper does not write partial subtitles"),
     }
 }
 
@@ -152,6 +156,8 @@ pub enum Transcriber {
     Api(Access),
     /// PC の中で動く speech.cpp（Haas-ja）。途中の字幕と確定で、同じ 1 つを使う
     Local(Arc<Speech>),
+    /// PC の中で動く whisper.cpp。確定だけ
+    Whisper(Arc<Whisper>),
 }
 
 impl Transcriber {
@@ -194,6 +200,28 @@ pub async fn transcribe(http: &reqwest::Client, req: BatchRequest<'_>) -> anyhow
             // 用語は渡さない（辞書の名前を全部渡すと、話していない用語を書いた。DESIGN.md 9.7）
             let form = reqwest::multipart::Form::new().part("file", file);
             let res = speech.transcriptions().multipart(form).send().await?;
+            let status = res.status();
+            if !status.is_success() {
+                bail!("{status}: {}", res.text().await.unwrap_or_default());
+            }
+            req.meter.audio(Use::Batch, req.model, req.seconds);
+            return text(&res.json().await?);
+        }
+        Transcriber::Whisper(whisper) => {
+            let mut form = reqwest::multipart::Form::new()
+                .text("language", req.hints.language.clone())
+                .text("response_format", "json");
+            // 渡せるのは少しだけ（全部渡すと効かず、遅くなる）。ヒーローの名前で、用語がよく書けるようになる
+            if !req.hints.heroes.is_empty() {
+                let comma = if req.hints.language == "ja" {
+                    "、"
+                } else {
+                    ", "
+                };
+                form = form.text("prompt", req.hints.heroes.join(comma));
+            }
+            let request = whisper.transcriptions().multipart(form.part("file", file));
+            let res = request.send().await?;
             let status = res.status();
             if !status.is_success() {
                 bail!("{status}: {}", res.text().await.unwrap_or_default());
@@ -268,6 +296,37 @@ fn text(res: &Value) -> anyhow::Result<String> {
 mod tests {
     use super::*;
 
+    /// 本物の whisper.cpp とモデルを取って（約 600 MB）、合成音声を文字起こしする。ヒーローの名前を渡す。
+    /// ふだんは動かさない: `WHISPER_TEST_DIR=… cargo test -p overlays-core whisper_writes -- --ignored --nocapture`
+    #[tokio::test]
+    #[ignore = "downloads whisper.cpp and the model"]
+    async fn whisper_writes_the_heroes_it_was_told() {
+        let dir = std::env::var("WHISPER_TEST_DIR").expect("WHISPER_TEST_DIR");
+        let size = crate::whisper::Size::Turbo;
+        let whisper = Whisper::start(std::path::Path::new(&dir), size, &|_, _| {}).await;
+        let wav = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../experiments/data/tts/aya/001.wav"
+        );
+        let meter = Meter::new(std::env::temp_dir().join("whisper_test_usage.json"));
+        let request = BatchRequest {
+            transcriber: &Transcriber::Whisper(Arc::new(whisper.unwrap())),
+            model: size.name(),
+            hints: &Hints {
+                language: "ja".into(),
+                prompt: String::new(),
+                keywords: Vec::new(),
+                heroes: vec!["ヘイズ".into(), "インファーナス".into()],
+            },
+            wav: std::fs::read(wav).unwrap(),
+            seconds: 4.0,
+            meter: &meter,
+        };
+        let text = transcribe(&reqwest::Client::new(), request).await.unwrap();
+        println!("{text}");
+        assert!(text.contains("ヘイズ"), "{text}");
+    }
+
     /// 本物の speech.cpp とモデルを取って（約 400 MB）、録音を文字起こしする。ふだんは動かさない:
     /// `cargo test -p overlays-core haas_ja -- --ignored --nocapture`
     #[tokio::test]
@@ -293,6 +352,7 @@ mod tests {
                 language: "ja".into(),
                 prompt: String::new(),
                 keywords: Vec::new(),
+                heroes: Vec::new(),
             },
             wav: std::fs::read(wav).unwrap(),
             seconds: 21.8,
@@ -323,6 +383,7 @@ mod tests {
                 language: "ja".into(),
                 prompt: String::new(),
                 keywords: vec!["ヘイズ".into()],
+                heroes: Vec::new(),
             },
             wav: std::fs::read(wav).unwrap(),
             seconds: 21.8,
@@ -357,6 +418,7 @@ mod tests {
                 language: "ja".into(),
                 prompt: String::new(),
                 keywords: vec!["ヘイズ".into(), "バイオレット".into()],
+                heroes: Vec::new(),
             },
             wav: std::fs::read(sample("sample01.wav")).unwrap(),
             seconds: 21.8,
@@ -447,6 +509,7 @@ mod tests {
             language: "ja".into(),
             prompt: "x".into(),
             keywords: vec!["ヘイズ".into()],
+            heroes: Vec::new(),
         };
         // アプリの区切り（無音 0.75 秒）で分けた 3 つの発話
         let spans = &[
@@ -491,6 +554,7 @@ mod tests {
             language: "ja".into(),
             prompt: String::new(),
             keywords: Vec::new(),
+            heroes: Vec::new(),
         };
         // 4.3 秒まで（最初の文の終わり）を 1 つ目、30 秒黙って（切られないことも見る）、残りを 2 つ目の発話にする
         let spans = &[("a", 0, 4300, 30), ("b", 4300, 60_000, 4)];
