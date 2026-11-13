@@ -12,6 +12,7 @@ use anyhow::Context;
 use tokio::process::Command;
 
 use crate::download::{self, Model, Package};
+use crate::local::Gpu;
 use crate::sidecar::{self, Sidecar};
 
 /// モデルの名前（料金の表と設定の `models.batch` に使う）
@@ -103,10 +104,12 @@ impl Drop for Whisper {
 
 impl Whisper {
     /// `dir` に whisper.cpp とモデルを置き（なければ取る）、サーバーを立てて、頼めるようになるまで待つ。
+    /// `gpu` は使う GPU（None なら whisper.cpp に任せる。0 番を使う）。
     /// `progress` に、モデルを取った量と全体の量（バイト）を知らせる
     pub async fn start(
         dir: &Path,
         size: Size,
+        gpu: Option<&Gpu>,
         progress: &(dyn Fn(u64, u64) + Sync),
     ) -> anyhow::Result<Self> {
         let (target, sha256) = RELEASE
@@ -130,6 +133,10 @@ impl Whisper {
             .args(["--host", "127.0.0.1", "--port", &port.to_string()])
             // OpenAI と同じパスで受ける（言語と用語は、頼むたびに渡す）
             .args(["--inference-path", "/v1/audio/transcriptions"]);
+        // GPU は番号で選ぶ（並び順は、一覧を取った speech.cpp と同じ）
+        if let Some(index) = gpu.and_then(Gpu::vulkan_index) {
+            command.args(["--device", &index.to_string()]);
+        }
         // ここから先で失敗しても、待っている間に捨てられても、プロセスを残さない
         let whisper = Self { port };
         RUNNING.serve(command, port, READY_TIMEOUT).await?;

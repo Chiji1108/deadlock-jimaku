@@ -3,6 +3,7 @@
   // 押したらすぐ保存する
   import { Badge } from "$lib/components/ui/badge";
   import * as Card from "$lib/components/ui/card";
+  import LocalGpu from "../parts/LocalGpu.svelte";
   import ModePicker from "../parts/ModePicker.svelte";
   import { panel } from "../panel.svelte";
   import {
@@ -105,6 +106,7 @@
       </Card.Content>
     </Card.Root>
   {/each}
+  <LocalGpu />
   <p class="text-sm text-muted-foreground">
     料金は、話し続けた 1 時間の目安です（1 ドル {YEN_PER_USD} 円で計算）。正確さと速さはデドロ字幕で測った値で、話し方や
     PC で変わります。切り替えると、字幕は始め直します。使った分の目安は「料金」タブに工程ごとに出ます

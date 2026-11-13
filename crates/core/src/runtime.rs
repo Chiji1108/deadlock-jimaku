@@ -13,7 +13,7 @@ use tokio::task::JoinHandle;
 
 use crate::access::{Access, Accesses};
 use crate::llama::Llama;
-use crate::local::Speech;
+use crate::local::{self, Gpu, Speech};
 use crate::secrets::{Keys, Provider, Relay};
 use crate::settings::{Engines, FinalSource, Models, Region, Segmentation, Settings, TextSource};
 use crate::store::{Fallback, Store};
@@ -102,6 +102,8 @@ struct AudioInput {
     segmentation: Segmentation,
     /// 工程が使う会社の送り先と鍵（鍵のない会社は入っていない）
     accesses: Accesses,
+    /// PC の中の AI に使わせる GPU（選んだ名前）。変えたら始め直す
+    local_gpu: Option<String>,
     /// PC の中の Haas-ja を立てる
     uses_speech: bool,
     /// PC の中の LLM を立てる
@@ -121,6 +123,8 @@ struct ChromeInput {
     models: Models,
     /// 工程が使う会社の送り先と鍵。要るのに鍵のない会社があれば始めない
     accesses: Accesses,
+    /// PC の中の AI に使わせる GPU（選んだ名前）。変えたら始め直す
+    local_gpu: Option<String>,
     /// PC の中の LLM を立てる
     uses_llama: bool,
 }
@@ -220,6 +224,7 @@ fn subtitles_input(settings: &Settings, options: &Options, accesses: Accesses) -
             engines: settings.engines,
             models: settings.models.clone(),
             accesses,
+            local_gpu: settings.local_gpu.clone(),
             uses_llama: settings.uses_llama(),
         }));
     }
@@ -239,6 +244,7 @@ fn subtitles_input(settings: &Settings, options: &Options, accesses: Accesses) -
         realtime_delay: settings.realtime_delay.clone(),
         segmentation: settings.segmentation.clone(),
         accesses,
+        local_gpu: settings.local_gpu.clone(),
         uses_speech: settings.uses_speech(),
         uses_llama: settings.uses_llama(),
     }))
@@ -280,7 +286,8 @@ fn start_subtitles(
                     return;
                 }
                 let run = async {
-                    let llama = local_llm(&store, input.uses_llama).await?;
+                    let gpu = local_gpu(&store, input.uses_llama).await;
+                    let llama = local_llm(&store, input.uses_llama, gpu.as_ref()).await?;
                     chrome::run(store.clone(), input.accesses, llama).await
                 };
                 supervise(store.clone(), run, None).await;
@@ -309,13 +316,16 @@ fn start_subtitles(
                     return;
                 }
                 let run = async {
+                    let any = uses_local || whisper.is_some() || uses_llama;
+                    let gpu = local_gpu(&store, any).await;
+                    let gpu = gpu.as_ref();
                     // PC の中の文字起こしは、途中の字幕と確定で同じ 1 つを使う
                     let local = match uses_local {
-                        true => Some(Arc::new(local_speech(&store).await?)),
+                        true => Some(Arc::new(local_speech(&store, gpu).await?)),
                         false => None,
                     };
-                    let whisper = local_whisper(&store, whisper).await?;
-                    let llama = local_llm(&store, uses_llama).await?;
+                    let whisper = local_whisper(&store, whisper, gpu).await?;
+                    let llama = local_llm(&store, uses_llama, gpu).await?;
                     subtitles::run(store.clone(), input, accesses, local, whisper, llama).await
                 };
                 supervise(store.clone(), run, ended).await;
@@ -330,39 +340,66 @@ fn missing_key(engines: &Engines, accesses: &Accesses) -> Option<Provider> {
     needed.find(|provider| accesses.get(*provider).is_none())
 }
 
+/// PC の中の AI に使わせる GPU（PC の中の AI を立てるとき）。GPU が 2 つ以上あれば、設定で選んだものか、
+/// 内蔵でないもの。1 つ以下か、数えられなければ None（実行ファイルに任せる）。
+/// 数えるのに speech.cpp を使うので、まだなければ取る
+async fn local_gpu(store: &Arc<Store>, uses: bool) -> Option<Gpu> {
+    if !uses {
+        return None;
+    }
+    let _preparing = store.preparing();
+    let gpus = match local::gpus(&store.data_dir().join("speech")).await {
+        Ok(gpus) => gpus,
+        Err(e) => {
+            tracing::warn!("cannot list GPUs: {e:#}");
+            return None;
+        }
+    };
+    let gpu = local::pick(&gpus, store.settings().local_gpu.as_deref()).cloned();
+    if let Some(gpu) = &gpu {
+        tracing::info!("local AI runs on {} ({})", gpu.name, gpu.id);
+    }
+    gpu
+}
+
 /// PC の中の文字起こしを立てる。初回は speech.cpp とモデルを取るので、待っていることを操作パネルに出す
-async fn local_speech(store: &Arc<Store>) -> anyhow::Result<Speech> {
+async fn local_speech(store: &Arc<Store>, gpu: Option<&Gpu>) -> anyhow::Result<Speech> {
     anyhow::ensure!(
         store.settings().mic_language == "ja",
         "Haas-ja only transcribes Japanese"
     );
     let _preparing = store.preparing();
-    Speech::start(&store.data_dir().join("speech")).await
+    Speech::start(&store.data_dir().join("speech"), gpu).await
 }
 
 /// PC の中の Whisper を立てる（確定の文字起こしに選んであるとき）。初回は whisper.cpp とモデルを取る
 async fn local_whisper(
     store: &Arc<Store>,
     size: Option<whisper::Size>,
+    gpu: Option<&Gpu>,
 ) -> anyhow::Result<Option<Arc<Whisper>>> {
     let Some(size) = size else {
         return Ok(None);
     };
     let preparing = store.preparing();
     let progress = |done, total| preparing.downloaded(done, total);
-    let whisper = Whisper::start(&store.data_dir().join("whisper"), size, &progress).await?;
+    let whisper = Whisper::start(&store.data_dir().join("whisper"), size, gpu, &progress).await?;
     Ok(Some(Arc::new(whisper)))
 }
 
 /// PC の中の LLM を立てる（使う工程があるとき）。初回は llama.cpp とモデル（約 5 GB）を取るので、
 /// 待っていることを操作パネルに出す
-async fn local_llm(store: &Arc<Store>, uses: bool) -> anyhow::Result<Option<Arc<Llama>>> {
+async fn local_llm(
+    store: &Arc<Store>,
+    uses: bool,
+    gpu: Option<&Gpu>,
+) -> anyhow::Result<Option<Arc<Llama>>> {
     if !uses {
         return Ok(None);
     }
     let preparing = store.preparing();
     let progress = |done, total| preparing.downloaded(done, total);
-    let llama = Llama::start(&store.data_dir().join("llama"), &progress).await?;
+    let llama = Llama::start(&store.data_dir().join("llama"), gpu, &progress).await?;
     Ok(Some(Arc::new(llama)))
 }
 
@@ -474,6 +511,7 @@ mod tests {
             engines: Engines::CHROME,
             models: Settings::default().models,
             accesses: Accesses::default(),
+            local_gpu: None,
             uses_llama: false,
         }))
     }
@@ -558,6 +596,7 @@ mod tests {
                 accesses: Accesses::new(
                     code.map(|code| Access::gift(Provider::OpenAi, code.into(), &self.api)),
                 ),
+                local_gpu: None,
                 uses_speech: false,
                 uses_llama: false,
             }))

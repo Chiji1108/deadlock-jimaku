@@ -39,6 +39,9 @@ pub struct Settings {
     pub mic_device: Option<String>,
     /// 翻訳先（最大 4 言語。mic_language は除く）
     pub translate_to: Vec<LangCode>,
+    /// PC の中の AI に使わせる GPU の名前。None なら自動（内蔵でない GPU を優先。DESIGN.md 9.11）
+    #[ts(optional)]
+    pub local_gpu: Option<String>,
     /// ヒーロー・スキル・アイテムを判定して強調し、アイテム説明を出す。雑談の配信ならオフにする
     pub deadlock_mode: bool,
     /// 字幕オーバーレイの見せ方。変えると表示中のオーバーレイにそのまま届く
@@ -1191,6 +1194,7 @@ impl Default for Settings {
             engines: Engines::default(),
             mic_language: "ja".into(),
             mic_device: None,
+            local_gpu: None,
             translate_to: vec!["en".into()],
             deadlock_mode: true,
             subtitle_display: SubtitleDisplay::default(),
@@ -1435,6 +1439,9 @@ impl Settings {
         if let Some(device) = patch.mic_device {
             next.mic_device = Some(device).filter(|d| !d.is_empty());
         }
+        if let Some(gpu) = patch.local_gpu {
+            next.local_gpu = Some(gpu).filter(|g| !g.is_empty());
+        }
         if let Some(code) = patch.mic_language {
             if lang::find(&code).is_none() {
                 return Err(format!("unknown language: {code}"));
@@ -1539,6 +1546,9 @@ pub struct SettingsPatch {
     pub mic_device: Option<String>,
     #[ts(optional)]
     pub mic_language: Option<LangCode>,
+    /// 空文字列なら自動
+    #[ts(optional)]
+    pub local_gpu: Option<String>,
     #[ts(optional)]
     pub translate_to: Option<Vec<LangCode>>,
     #[ts(optional)]
@@ -1735,6 +1745,22 @@ mod tests {
             .unwrap();
         assert_eq!(cleared.rank_account, None);
         assert_eq!(cleared.mic_device, None);
+    }
+
+    /// PC の中の AI に使う GPU は、名前で覚える。空にすると自動に戻る
+    #[test]
+    fn the_gpu_for_local_ai_is_saved_by_name() {
+        let gpu = |name: &str| SettingsPatch {
+            local_gpu: Some(name.into()),
+            ..SettingsPatch::default()
+        };
+        let chosen = Settings::default()
+            .apply(gpu("AMD Radeon(TM) Graphics"))
+            .unwrap();
+        assert_eq!(chosen.local_gpu.as_deref(), Some("AMD Radeon(TM) Graphics"));
+        let saved = serde_json::to_string(&chosen).unwrap();
+        assert!(saved.contains(r#""localGpu":"AMD Radeon(TM) Graphics""#));
+        assert_eq!(chosen.apply(gpu("")).unwrap().local_gpu, None);
     }
 
     #[test]

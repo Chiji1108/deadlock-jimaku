@@ -32,6 +32,10 @@ micDevice?: string,
  */
 translateTo: Array<string>, 
 /**
+ * PC の中の AI に使わせる GPU の名前。None なら自動（内蔵でない GPU を優先。DESIGN.md 9.11）
+ */
+localGpu?: string, 
+/**
  * ヒーロー・スキル・アイテムを判定して強調し、アイテム説明を出す。雑談の配信ならオフにする
  */
 deadlockMode: boolean, 

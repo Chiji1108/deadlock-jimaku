@@ -12,7 +12,11 @@ export type SettingsPatch = { transcriptionEnabled?: boolean,
 /**
  * 空文字列なら OS の既定の入力デバイス
  */
-micDevice?: string, micLanguage?: string, translateTo?: Array<string>, deadlockMode?: boolean, 
+micDevice?: string, micLanguage?: string, 
+/**
+ * 空文字列なら自動
+ */
+localGpu?: string, translateTo?: Array<string>, deadlockMode?: boolean, 
 /**
  * 今の仕組みで作れない組み合わせは直して保存する
  */

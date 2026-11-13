@@ -13,6 +13,7 @@ use serde_json::{Value, json};
 use tokio::process::Command;
 
 use crate::download::{self, Model, Package};
+use crate::local::Gpu;
 use crate::sidecar::{self, Sidecar};
 use crate::usage::Tokens;
 
@@ -92,8 +93,13 @@ pub struct Prompt<'a> {
 
 impl Llama {
     /// `dir` に llama.cpp とモデルを置き（なければ取る）、サーバーを立てて、頼めるようになるまで待つ。
+    /// `gpu` は使う GPU（None なら llama.cpp に任せる。見つけた GPU に分けて載せる）。
     /// `progress` に、モデルを取った量と全体の量（バイト）を知らせる
-    pub async fn start(dir: &Path, progress: &(dyn Fn(u64, u64) + Sync)) -> anyhow::Result<Self> {
+    pub async fn start(
+        dir: &Path,
+        gpu: Option<&Gpu>,
+        progress: &(dyn Fn(u64, u64) + Sync),
+    ) -> anyhow::Result<Self> {
         let (target, sha256, file) =
             RELEASE.context("llama.cpp has no build for this computer (Gemma cannot run here)")?;
         let url = format!(
@@ -118,6 +124,10 @@ impl Llama {
             .args(["--ctx-size", &(SLOTS * CONTEXT_PER_SLOT).to_string()])
             .args(["--parallel", &SLOTS.to_string()])
             .arg("--no-webui");
+        // 1 つの GPU だけに載せる（内蔵の GPU に分けると遅い）
+        if let Some(gpu) = gpu {
+            command.args(["--device", &gpu.id]);
+        }
         // ここから先で失敗しても、待っている間に捨てられても、プロセスを残さない
         let llama = Self { port };
         RUNNING.serve(command, port, READY_TIMEOUT).await?;

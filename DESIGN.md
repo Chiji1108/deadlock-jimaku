@@ -976,6 +976,22 @@ LLM に用語と翻訳を 1 回で聞く形（9.1）は、いちばん正確だ�
 - **確かめていないこと:** Windows の実機（速さ、GPU のメモリ、ゲーム中の動き。`vulkan-1.dll` は GPU のドライバーが入れるので、ドライバーのない PC では立ち上がらない見込み）。無音や雑音だけの区間を渡したときに、話していない文を書かないか（Whisper の知られた癖。アプリは声のある区間だけを切り出して渡す）
 - **確かめ方:** `WHISPER_TEST_DIR=… cargo test -p overlays-core whisper_writes -- --ignored --nocapture`
 
+### 9.11 PC の中の AI に使う GPU（`local.rs` の `Gpu`）
+
+GPU が 2 つ以上ある PC（CPU に内蔵の GPU と、あとから付けた GPU）では、PC の中の AI（speech.cpp、whisper.cpp、llama.cpp）に、どの GPU を使うかを渡す（0.7.0-rc.4）。渡さないと、遅いほうで動く。Windows の実機（内蔵の AMD Radeon と RTX 3070）で、何も渡さないときの動きを一覧から読んだ（rc.3）:
+
+- 一覧は `Vulkan0`（内蔵の Radeon、17 GB）、`Vulkan1`（RTX 3070、8.6 GB）の順。llama.cpp（`--list-devices`）と speech.cpp（`devices`）で、名前も並び順も同じだった（どれも ggml の Vulkan で数える）
+- whisper.cpp は 0 番の GPU を使う（＝内蔵）。llama.cpp は、見つけた GPU に層を分けて載せる（内蔵の GPU は、PC のメモリを分け合うので空きが多く見え、多く載る）。speech.cpp は「最初の GPU」
+- **メモリの多さでは選べない:** 内蔵の GPU のほうが多く見える。speech.cpp の一覧は、内蔵（`igpu`）とそうでないもの（`gpu`）を分けて出すので、それで選ぶ
+
+**決め方（`local::pick`）:** 設定（`Settings::local_gpu`。GPU の名前）で選んだ GPU があれば、それ。なければ、内蔵でない GPU を優先し、同じ種類ならメモリの多いもの。GPU が 1 つ以下なら、何も渡さない（今までどおり、実行ファイルに任せる。Mac はいつもこちら）。
+
+**渡し方:** 字幕を始めるときに、speech.cpp の `devices` で一覧を取る（数えるためだけに speech.cpp を使うので、Haas-ja を使わない組み合わせでも、PC の中の AI を使うなら speech.cpp を取る。Windows は 30 MB）。3 つとも同じ GPU に: speech.cpp と llama.cpp には `--device Vulkan1`、whisper.cpp には `--device 1`（`Vulkan` の後ろの番号）。llama.cpp は、1 つの GPU だけに載る。
+
+**選ぶ画面（`LocalGpu.svelte`、`GET /api/gpus`）:** 「モード」のタブのいちばん下に、GPU が 2 つ以上あるときだけ出す。「自動（RTX 3070）」と、一覧（内蔵かどうかと、メモリ）。ゲームは外付けの GPU、AI は内蔵の GPU、と分けたい人が選び直せる（内蔵は遅い）。一覧は、speech.cpp を取ってあるときだけ出る（見るだけのためには取らない。PC の中の AI を一度動かすと出る）。変えると、字幕を始め直す。
+
+**確かめたこと:** 実機の一覧の文字を読んで、RTX 3070 を選ぶこと（`local::tests`）。同じ一覧を返す見本を置いた環境で、画面に「自動（NVIDIA GeForce RTX 3070）」と出ること。**確かめていないこと:** 実機で、3 つとも選んだ GPU で動くこと（特に、whisper.cpp の番号が、一覧の番号と同じ GPU を指すこと）と、速さがどれだけ変わるか。RTX 3070 のメモリは 8 GB で、Gemma（約 5 GB）と Whisper と Haas-ja を載せると、ゲームの分が足りなくなるかもしれない
+
 ## 10. イベントプロトコル（WS `/ws`）
 
 差分ではなく、**最新の状態をそのまま upsert** する。

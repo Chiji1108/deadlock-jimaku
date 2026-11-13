@@ -24,7 +24,7 @@ use crate::store::{ChromeEvent, Store};
 use crate::types::{
     ChromeCommand, ChromeMsg, ClientMsg, LangCode, RankState, ServerMsg, SettingsView, Topic,
 };
-use crate::{audio, lang, rank};
+use crate::{audio, lang, local, rank};
 use ts_rs::TS;
 
 #[derive(RustEmbed)]
@@ -51,6 +51,7 @@ pub fn router(store: Arc<Store>) -> Router {
         .route("/share/codes", post(create_code))
         .route("/share/codes/{id}", patch(update_code))
         .route("/devices", get(devices))
+        .route("/gpus", get(gpus))
         .route("/languages", get(languages))
         .route("/fonts", get(fonts))
         .route("/fonts/{family}/faces.css", get(font_faces))
@@ -541,6 +542,13 @@ async fn devices() -> Response {
         Ok(Err(e)) => (StatusCode::INTERNAL_SERVER_ERROR, format!("{e:#}")).into_response(),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
     }
+}
+
+/// PC の中の AI に使える GPU の一覧。数える部品（speech.cpp）をまだ取っていなければ null
+/// （一覧を見るだけのためには取らない。PC の中の AI を一度動かすと、出るようになる）
+async fn gpus(State(store): State<Arc<Store>>) -> Json<Option<local::Gpus>> {
+    let listed = local::gpus_if_installed(&store.data_dir().join("speech")).await;
+    Json(listed.map(local::Gpus::new))
 }
 
 /// 対応している言語のコード。表示名は画面の言語に合わせて操作パネルが作る

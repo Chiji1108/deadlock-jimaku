@@ -1,6 +1,7 @@
 import type { BetaRefusal } from "../generated/BetaRefusal";
 import type { FontEntry } from "../generated/FontEntry";
 import type { GiftStatus } from "../generated/GiftStatus";
+import type { Gpus } from "../generated/Gpus";
 import type { Provider } from "../generated/Provider";
 import type { RankState } from "../generated/RankState";
 import type { SettingsPatch } from "../generated/SettingsPatch";
@@ -33,6 +34,8 @@ export const api = {
       body: JSON.stringify({ key }),
     }),
   devices: () => request<string[]>("/api/devices"),
+  /** PC の中の AI に使える GPU。まだ数えられなければ null */
+  gpus: () => request<Gpus | null>("/api/gpus"),
   /** 対応している言語のコード */
   languages: () => request<string[]>("/api/languages"),
   /** 選べるフォント */

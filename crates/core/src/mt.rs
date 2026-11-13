@@ -510,7 +510,7 @@ mod tests {
     async fn local_llm_keeps_the_terms() {
         let dir = std::env::var("LLAMA_TEST_DIR").expect("LLAMA_TEST_DIR");
         let llama = Arc::new(
-            Llama::start(std::path::Path::new(&dir), &|_, _| {})
+            Llama::start(std::path::Path::new(&dir), None, &|_, _| {})
                 .await
                 .unwrap(),
         );
