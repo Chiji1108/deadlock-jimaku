@@ -4,9 +4,10 @@
 OpenAI と同じ形の口（/v1/audio/transcriptions）に 1 発話ずつ送る。
 用語を渡せるモデルには、辞書の日本語の公式名を `prompt` で渡した場合も測る。
 
-usage: python3 stt_terms_eval_local.py SPEECH GLOSSARY.json MODEL... [--prompts none,all,heroes]
+usage: python3 stt_terms_eval_local.py SPEECH GLOSSARY.json MODEL... [--prompts none,all,heroes] [--cpu]
   SPEECH は speech.cpp の `speech` コマンドの場所。MODEL は `speech models` の名前（qwen3-asr-1.7b など）か、
   whisper.cpp の ggml のファイル（ggml-large-v3-turbo.bin など。`whisper-server` は PATH から探す）。
+  `--cpu` は、speech.cpp を CPU だけで動かす（結果の名前に `@cpu` が付く）。
   モデルは `SPEECH_MODEL_DIR`（なければ speech.cpp の既定の場所）に取る。結果は results/stt_terms.json に足す
 """
 
@@ -52,11 +53,11 @@ def post(wav: bytes, prompt: str | None) -> dict:
         return {"text": "", "ms": 0, "error": e.read().decode()[:200]}
 
 
-def serve(speech: str, model: str) -> subprocess.Popen:
+def serve(speech: str, model: str, cpu: bool) -> subprocess.Popen:
     command = (
         ["whisper-server", "-m", model, "-l", "ja", "--port", str(PORT), "--inference-path", "/v1/audio/transcriptions"]
         if model.endswith(".bin")
-        else [speech, "serve", model, "--port", str(PORT)]
+        else [speech, "serve", model, "--port", str(PORT), *(["--device", "cpu"] if cpu else [])]
     )
     process = subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     for _ in range(900):
@@ -71,6 +72,46 @@ def serve(speech: str, model: str) -> subprocess.Popen:
     sys.exit(f"{model}: did not start")
 
 
+def score(model: str, kind: str, transcribe) -> None:
+    """台本の全発話を `transcribe(wav のパス) -> {"text", "ms"}` に通して数え、results/stt_terms.json に足す"""
+    script = json.loads((HERE / "data/stt_script.json").read_text())
+    voices = sorted(p for p in (HERE / "data/tts").iterdir() if p.is_dir())
+    runs, hit, terms, edits, length, failed = [], 0, 0, 0, 0, 0
+    for voice in voices:
+        for i, line in enumerate(script):
+            got = transcribe(voice / f"{i:03}.wav")
+            failed += "error" in got
+            written = normalize(got["text"])
+            missed = [
+                term
+                for term in line["terms"]
+                if not any(normalize(s) in written for s in [term, *line.get("accept", {}).get(term, [])])
+            ]
+            terms += len(line["terms"])
+            hit += len(line["terms"]) - len(missed)
+            edits += distance(normalize(line["text"]), written)
+            length += len(normalize(line["text"]))
+            runs.append({"voice": voice.name, "line": i, "heard": got["text"], "missed": missed, "ms": got["ms"], **({"error": got["error"]} if "error" in got else {})})
+    times = sorted(r["ms"] for r in runs if r["ms"]) or [0]
+    summary = {
+        "model": model,
+        "prompt": kind,
+        "terms": terms,
+        "termsWritten": hit,
+        "characters": length,
+        "characterErrors": edits,
+        "failed": failed,
+        "medianMs": times[len(times) // 2],
+        "p90Ms": times[len(times) * 9 // 10],
+    }
+    key = f"local/{model}" + ("" if kind == "none" else f"+{kind}")
+    print(f"{key}: {json.dumps(summary, ensure_ascii=False)}", flush=True)
+    path = HERE / "results/stt_terms.json"
+    results = json.loads(path.read_text())
+    results[key] = {"summary": summary, "runs": runs}
+    path.write_text(json.dumps(results, ensure_ascii=False, indent=1))
+
+
 def main() -> None:
     args = sys.argv[1:]
     which = args[args.index("--prompts") + 1].split(",") if "--prompts" in args else ["none", "all"]
@@ -82,46 +123,12 @@ def main() -> None:
         "all": "、".join(names({"hero", "item", "ability"})),
         "heroes": "、".join(names({"hero"})),
     }
-    script = json.loads((HERE / "data/stt_script.json").read_text())
-    voices = sorted(p for p in (HERE / "data/tts").iterdir() if p.is_dir())
     for model in models:
-        process = serve(speech, model)
+        process = serve(speech, model, "--cpu" in args)
         try:
             for kind in which:
-                runs, hit, terms, edits, length, failed = [], 0, 0, 0, 0, 0
-                for voice in voices:
-                    for i, line in enumerate(script):
-                        got = post((voice / f"{i:03}.wav").read_bytes(), prompts[kind])
-                        failed += "error" in got
-                        written = normalize(got["text"])
-                        missed = [
-                            term
-                            for term in line["terms"]
-                            if not any(normalize(s) in written for s in [term, *line.get("accept", {}).get(term, [])])
-                        ]
-                        terms += len(line["terms"])
-                        hit += len(line["terms"]) - len(missed)
-                        edits += distance(normalize(line["text"]), written)
-                        length += len(normalize(line["text"]))
-                        runs.append({"voice": voice.name, "line": i, "heard": got["text"], "missed": missed, "ms": got["ms"], **({"error": got["error"]} if "error" in got else {})})
-                times = sorted(r["ms"] for r in runs if r["ms"]) or [0]
-                summary = {
-                    "model": Path(model).stem if model.endswith(".bin") else model,
-                    "prompt": kind,
-                    "terms": terms,
-                    "termsWritten": hit,
-                    "characters": length,
-                    "characterErrors": edits,
-                    "failed": failed,
-                    "medianMs": times[len(times) // 2],
-                    "p90Ms": times[len(times) * 9 // 10],
-                }
-                key = f"local/{summary['model']}" + ("" if kind == "none" else f"+{kind}")
-                print(f"{key}: {json.dumps(summary, ensure_ascii=False)}", flush=True)
-                path = HERE / "results/stt_terms.json"
-                results = json.loads(path.read_text())
-                results[key] = {"summary": summary, "runs": runs}
-                path.write_text(json.dumps(results, ensure_ascii=False, indent=1))
+                name = (Path(model).stem if model.endswith(".bin") else model) + ("@cpu" if "--cpu" in args else "")
+                score(name, kind, lambda wav: post(wav.read_bytes(), prompts[kind]))
         finally:
             process.terminate()
             process.wait()

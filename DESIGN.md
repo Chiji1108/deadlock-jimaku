@@ -194,6 +194,19 @@
 - 小さくした turbo（q5_0）は、精度も速さも元と変わらない
 - 応答は Haas-ja（0.02 秒）の 10〜25 倍。Windows の GPU での速さと、ゲームへの影響はまだ測っていない
 
+**CPU だけで動かす場合と、SenseVoice**（同じ日。SenseVoice-Small は sherpa-onnx 2.0.1 で、CPU の 4 スレッド。`experiments/stt_terms_eval_sherpa.py`。Haas-ja と Parakeet は speech.cpp に `--device cpu`）。
+
+| | 用語を書けた（207 個中） | 文字誤り率 | 応答（中央値） |
+|---|---|---|---|
+| Haas-ja v1.0（Q4_K）を CPU で | 177 | 4.8% | 0.13 秒 |
+| SenseVoice-Small（0.93 GB） | 153 | 6.1% | 0.05 秒 |
+| 同 int8（0.24 GB） | 149 | 6.2% | 0.05 秒 |
+| Parakeet-TDT_CTC-0.6b-ja を CPU で | 150 | 6.8% | 0.14 秒 |
+
+- Haas-ja は、CPU だけでも精度が変わらず、1 発話 0.13 秒で返る。GPU をゲームに空けたい人は、CPU で動かせる
+- SenseVoice は CPU で Haas-ja の 2.5 倍速いが、用語は 24 個少ない。途中の字幕に使うなら、Haas-ja を CPU で動かすほうが良い（speech.cpp は、話している途中の文字を返す口 `/v1/realtime` も持っている。まだ試していない）
+- sherpa-onnx の配布物のうち `…-2025-09-09` は、広東語向けに鍛え直した別のモデル（日本語を書けない）。測ったのは `…-2024-07-17`
+
 **partial の候補として Qwen-Audio-3.1-ASR-Flash-Streaming も測った**（2026-11、`experiments/stt_eval_qwen_streaming.py`。各 3 回、100ms ずつ実時間で送る。用語なし）:
 
 | | sample01 | sample02 | 話した 1 分 | 最初の partial（送り始めから） |
