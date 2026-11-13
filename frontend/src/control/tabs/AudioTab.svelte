@@ -1,5 +1,6 @@
 <script lang="ts">
   import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
+  import SparklesIcon from "@lucide/svelte/icons/sparkles";
   import * as Alert from "$lib/components/ui/alert";
   import { Button } from "$lib/components/ui/button";
   import * as Card from "$lib/components/ui/card";
@@ -13,6 +14,7 @@
   import PauseDialog from "../parts/PauseDialog.svelte";
   import { panel } from "../panel.svelte";
   import {
+    BETA,
     anyPaid,
     chromeFinals,
     llmTranslation,
@@ -80,6 +82,24 @@
         </div>
         <Button variant="outline" size="sm" onclick={() => (panel.tab = "engines")}>変える</Button>
       </div>
+      <!-- Chrome のモードの人に、「おすすめ」を知らせる。既定は Chrome のままで、選ぶのは本人（音声の送り先が変わる） -->
+      {#if mode?.name === "chrome" && !s.hybridHintClosed}
+        <Alert.Root>
+          <SparklesIcon />
+          <Alert.Title>「おすすめ」のモードにすると、字幕と翻訳がもっと正確になります</Alert.Title>
+          <Alert.Description class="flex flex-col gap-2">
+            <span>ベータ期間中は無料で、API キーも要りません</span>
+            <span class="flex flex-wrap gap-2">
+              <Button size="sm" onclick={() => panel.chooseMode(BETA)}>おすすめにする</Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onclick={() => panel.update({ hybridHintClosed: true })}>閉じる</Button
+              >
+            </span>
+          </Alert.Description>
+        </Alert.Root>
+      {/if}
       {#if usesChrome(t)}
         {#if s.transcriptionEnabled}
           <div class="flex flex-wrap items-center gap-3">
