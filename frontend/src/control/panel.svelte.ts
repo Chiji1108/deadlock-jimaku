@@ -119,6 +119,12 @@ class Panel {
     return this.withoutKey.filter((p) => this.hasCode(p) && !unrelayed(p));
   }
 
+  /** 自分の API キーで払う分がある（コードで使う会社だけなら、本人には請求されない） */
+  get pays() {
+    const view = this.view;
+    return !!view && providers(view.settings.engines).some((p) => view.keys[p].state === "saved");
+  }
+
   /** 字幕を始められる鍵がそろっている。有料の工程がなければ鍵は要らない */
   get hasAccess() {
     return !!this.view && this.missingKeys.length === 0;
