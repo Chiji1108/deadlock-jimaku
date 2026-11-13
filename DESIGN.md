@@ -178,7 +178,21 @@
 | ReazonSpeech v2 | 84 | 37.9% | 0.04 秒 |
 
 - 用語を教えられる Qwen3-ASR に期待したが、ヒーローの名前を渡しても、何も渡さない Haas-ja に届かない。全部渡すと壊れる（Haas-ja と同じ）
-- Whisper large-v3-turbo と、途中の字幕に向くモデル（Nemotron 3.5 Streaming、Voxtral Realtime）は、speech.cpp に入っていないので測っていない
+- 途中の字幕に向くモデル（Nemotron 3.5 Streaming、Voxtral Realtime）は、speech.cpp に入っていないので測っていない
+
+**Whisper は、ヒーローの名前を渡すと Haas-ja を超える**（同じ日、同じ道具。whisper.cpp 1.9.5 の `whisper-server`。`prompt` に名前を「、」でつないで渡す）。
+
+| | 何も渡さない | ヒーローの名前 44 個 | 辞書の公式名を全部 | 応答（中央値） |
+|---|---|---|---|---|
+| Whisper large-v3（3.1 GB） | 182（文字誤り率 4.0%） | **202**（3.0%） | 182 | 0.49〜0.54 秒 |
+| Whisper large-v3-turbo（1.6 GB） | 180（4.4%） | **194**（4.4%） | 181 | 0.22〜0.24 秒 |
+| 同 q5_0（574 MB） | 179（4.5%） | 194（4.2%） | — | 0.22〜0.24 秒 |
+| kotoba-whisper v2.0（1.5 GB。q5_0 も同じ） | 164（7.0%） | 0（何も書かない） | — | 0.21 秒 |
+
+- large-v3 にヒーローの名前を渡した 202 は、会社のモデルで一番良かった GPT（191）より上。turbo の 194 も上
+- 全部渡しても効かない（Whisper が `prompt` として読むのは終わりの 224 トークンまで。応答は 2.4 秒以上に延びる）。渡すのは、ヒーローの名前くらいの量にする
+- 小さくした turbo（q5_0）は、精度も速さも元と変わらない
+- 応答は Haas-ja（0.02 秒）の 10〜25 倍。Windows の GPU での速さと、ゲームへの影響はまだ測っていない
 
 **partial の候補として Qwen-Audio-3.1-ASR-Flash-Streaming も測った**（2026-11、`experiments/stt_eval_qwen_streaming.py`。各 3 回、100ms ずつ実時間で送る。用語なし）:
 
@@ -860,7 +874,18 @@ LLM に用語と翻訳を 1 回で聞く形（9.1）は、いちばん正確だ�
   - 用語の判定は、選択肢に A、B、… の記号を振って、記号 1 文字だけを答えさせた（文法で縛る）。Gemma 4 E4B の 83% は、Chrome の Gemini Nano（71%）より良く、Perplexity Decider Flash のローカル版（86〜89%。1.0 秒、GPU のメモリ 19 GB）に近い。大きい 12B のほうが悪い（「用語ではない」を選びすぎる）。Qwen3.5-4B は使えない（ヒーローの「ケルビン」を、ふつうの言葉と答える）
   - ふりがなの読み分けは、どれも辞書だけより良くならないか、少し良いだけ（12B の 165 でも、クラウドの判定モデルの 171 に届かない）。小さいモデルは音読みを選ぶ（「店」を「てん」、「金」を「きん」、「床」を「とこ」）。ローカルでは、辞書のままにする
   - 小さい E2B は、どの工程でも E4B より下（速さは約 2 倍）。Qwen3.5 は、9B でも用語の判定が 33%（「用語ではない」を選ぶ）。翻訳専用の Hy-MT2 7B は、縛りをかけると 36 から 60 に上がるが、E4B（63、0.28 秒）に届かず、遅い
-  - Perplexity Decider Flash の公式の GGUF（Q8_0、5.16 GB、Apache 2.0）は、素の llama-server では動かない（モデルの説明に、専用の読み出し方を実装した実行環境が要るとある）。判定モデル用の実行環境 Ollaya（Apache 2.0。Jev と同じ形の口。Decider Flash のほか、Gemma 4 E4B を判定用に鍛えた Winnow などを動かせると README にある）は、まだ試していない
+  - Perplexity Decider Flash の公式の GGUF（Q8_0、5.16 GB、Apache 2.0）は、素の llama-server では動かない（モデルの説明に、専用の読み出し方を実装した実行環境が要るとある）。
+  - 判定モデル用の実行環境 Ollaya 0.18.0（Apache 2.0。Jev と同じ形の口を `127.0.0.1:11435` に開く）で、判定用に作られたモデルを同じ 189 回で測った（2026-11-13。`split_eval terms-jev ollaya-モデル名`）。どれも、汎用の Gemma 4 E4B（156・0.06 秒）より良くて速い、とはならなかった
+
+    | | 大きさ | 正解 | 応答（中央値） | 動いた場所 |
+    |---|---|---|---|---|
+    | Perplexity Decider（`pplx-decider`。ONNX、32 bit） | 9.1 GB | 161（85%） | 2.0 秒 | — |
+    | Kev | 9.5 GB | 155（82%） | 2.0 秒 | CPU |
+    | JevK5（Q8_0） | 4.5 GB | 144（76%） | 0.23 秒 | GPU |
+    | Winnow E4B（Gemma 4 E4B を判定用に鍛えたもの。Q8_0） | 8.0 GB | 141（75%） | 0.21 秒 | GPU |
+    | Laya（多言語版は 683 MB） | — | 54（29%） | 0.04 秒 | GPU |
+
+    Decider は 5 点だけ上だが、30 倍以上遅く、大きい。PC の中の用語の判定は、Gemma 4 E4B を llama.cpp で動かす案のまま
   - 見立て: 翻訳と用語の判定は、Gemma 4 E4B の 1 つ（約 5 GB、llama.cpp）でまかなえる。メモリの使用量と、Windows の GPU での速さ、ゲームと同時に動かしたときの FPS は、まだ測っていない
 
 - **Google の Gemini も測ったが、入れない（2026-11-12。Gemini API のキーで直接。`experiments/gemini_decider_server.py`、`mt_eval_gemini.py`、`stt_eval_gemini.py`）:**

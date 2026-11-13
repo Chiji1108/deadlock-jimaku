@@ -1,10 +1,12 @@
-"""PC の中で動く文字起こし（speech.cpp が対応するモデル）を、合成音声で比べる（DESIGN.md 3 章）。
+"""PC の中で動く文字起こし（speech.cpp か whisper.cpp が対応するモデル）を、合成音声で比べる（DESIGN.md 3 章）。
 台本・音声・数え方は `crates/core/examples/stt_terms_eval.rs` と同じ（用語を書けたか、文字誤り率）。
-モデルごとに `speech serve` を立てて、OpenAI と同じ形の口（/v1/audio/transcriptions）に 1 発話ずつ送る。
+モデルごとに `speech serve`（MODEL が `.bin` のファイルなら whisper.cpp の `whisper-server`）を立てて、
+OpenAI と同じ形の口（/v1/audio/transcriptions）に 1 発話ずつ送る。
 用語を渡せるモデルには、辞書の日本語の公式名を `prompt` で渡した場合も測る。
 
 usage: python3 stt_terms_eval_local.py SPEECH GLOSSARY.json MODEL... [--prompts none,all,heroes]
-  SPEECH は speech.cpp の `speech` コマンドの場所。MODEL は `speech models` の名前（qwen3-asr-1.7b など）。
+  SPEECH は speech.cpp の `speech` コマンドの場所。MODEL は `speech models` の名前（qwen3-asr-1.7b など）か、
+  whisper.cpp の ggml のファイル（ggml-large-v3-turbo.bin など。`whisper-server` は PATH から探す）。
   モデルは `SPEECH_MODEL_DIR`（なければ speech.cpp の既定の場所）に取る。結果は results/stt_terms.json に足す
 """
 
@@ -26,7 +28,7 @@ URL = f"http://127.0.0.1:{PORT}"
 
 def post(wav: bytes, prompt: str | None) -> dict:
     boundary = uuid.uuid4().hex
-    fields = {"language": "ja"}
+    fields = {"language": "ja", "response_format": "json"}
     if prompt:
         fields["prompt"] = prompt
     body = b""
@@ -51,10 +53,15 @@ def post(wav: bytes, prompt: str | None) -> dict:
 
 
 def serve(speech: str, model: str) -> subprocess.Popen:
-    process = subprocess.Popen([speech, "serve", model, "--port", str(PORT)], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    command = (
+        ["whisper-server", "-m", model, "-l", "ja", "--port", str(PORT), "--inference-path", "/v1/audio/transcriptions"]
+        if model.endswith(".bin")
+        else [speech, "serve", model, "--port", str(PORT)]
+    )
+    process = subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     for _ in range(900):
         if process.poll() is not None:
-            sys.exit(f"{model}: {process.stderr.read().decode()[-400:]}")
+            sys.exit(f"{model}: did not start")
         try:
             urllib.request.urlopen(f"{URL}/health", timeout=2)
             return process
@@ -99,7 +106,7 @@ def main() -> None:
                         runs.append({"voice": voice.name, "line": i, "heard": got["text"], "missed": missed, "ms": got["ms"], **({"error": got["error"]} if "error" in got else {})})
                 times = sorted(r["ms"] for r in runs if r["ms"]) or [0]
                 summary = {
-                    "model": model,
+                    "model": Path(model).stem if model.endswith(".bin") else model,
                     "prompt": kind,
                     "terms": terms,
                     "termsWritten": hit,
@@ -109,7 +116,7 @@ def main() -> None:
                     "medianMs": times[len(times) // 2],
                     "p90Ms": times[len(times) * 9 // 10],
                 }
-                key = f"local/{model}" + ("" if kind == "none" else f"+{kind}")
+                key = f"local/{summary['model']}" + ("" if kind == "none" else f"+{kind}")
                 print(f"{key}: {json.dumps(summary, ensure_ascii=False)}", flush=True)
                 path = HERE / "results/stt_terms.json"
                 results = json.loads(path.read_text())
