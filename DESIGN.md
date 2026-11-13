@@ -829,6 +829,19 @@ LLM に用語と翻訳を 1 回で聞く形（9.1）は、いちばん正確だ�
 - つなげたものは、発話の間を 2.5 秒空けて送った（続けて送ると Qwen の回数の上限に当たり、63 回中 19 回で英語の訳が抜けた）。空ければ 189 回すべて訳が返った。ロシア語では 189 回中 19 回、用語の名前まで訳された（その用語は色もアイコンも付かず、訳された名前の文字で出る）
 - TypeSafe AI の Jev（`POST https://api.typesafe.ai/v1/systemone`。選択肢から選ぶだけのモデル）も、同じ候補と問いで測った。精度は Decisions と同じくらいで、0.1 秒速く、料金は約 6 割（単価は 10 億トークン $42、出力は無料。料金のページはなく、解説の記事の値）。外し方は違う（Jev は正式な名前「アンストッパブル」を用語にせず、Decisions は「サイレンス食らった」をアイテムにした）。0.6.0-rc.2 で、用語の選択肢として入れた（`TermsEngine::Jev`。問いの形だけ Jev に合わせる `Asked::systemone`）
 - **用語の判定を、Chrome の中の Gemini Nano にさせる（2026-11 に測り、0.6.0-rc.10 で用語の選択肢にした。`TermsEngine::GeminiNano`）:** core が候補と問いを作り（`decide::Asker`。会社の判定モデルに送るものと同じ）、Chrome のページに送る（`ChromeCommand::Decide`）。ページは Prompt API で 1 問ずつ聞き、選ばれた選択肢を返す（`frontend/src/chrome/judge.ts`、`ChromeMsg::Decided`）。答えが 5 秒来ない、Gemini Nano を使えない、ページが閉じているなら、PC の中の辞書の一致のまま。モデルの用意（初回は約 4 GB）は、翻訳のモデルと同じ流れ（クリックが要るので、アプリが代わりに押す）。途中の字幕が Chrome のときだけ選べる（`Engines::sanitized`）。実際のアプリで、ページを通した動きはまだ確かめていない（測ったのは、同じ聞き方を測定用の Chrome に直接送ったもの）。測ったときの記録: Gemini Nano を判定モデルと同じ形の口で待たせて（`experiments/chrome_eval.mjs decider`）、アプリと同じ候補と問いを 1 問ずつ聞いた（`split_eval terms-jev local-gemini-nano`。答えは選択肢の番号）。189 回中 135 が正しい（71%）。応答の中央値は 1 文 0.44 秒（1 問 0.38 秒）。Perplexity Decider V1.2 は 178、OpenAI の Decisions は 175。PC の中の辞書の一致だけだと、同じ 63 文で正解と同じになるのは 27 文（43%。`annotate::tests::local_terms_on_the_cases`）なので、サーバーを使わない Chrome のモードでは、用語の強調が大きく良くなる見込み。GPU をゲームと取り合うこと、使える PC が限られることは、ふりがなと同じ（6.4）
+- **PC の中で動く汎用の小さい LLM で、翻訳・用語の判定・ふりがなをまかなえるかを測った（2026-11-13。0.7 に向けて。llama.cpp 0.9.0 の `llama-server` に GGUF を載せ、Apple M5 Pro の GPU で。`experiments/llama_decider_server.py`、`mt_eval_llama.py`。答える前の「考え」は `chat_template_kwargs.enable_thinking = false` で止める）:** 対象は、2 台の PC で配信している人か、GPU に余裕がある人。
+
+  | モデル（どれも Apache 2.0、4 bit） | 大きさ | 用語の判定（189 回） | 翻訳（63 文。縛りなし → 縛りあり） | ふりがな（180 回。辞書だけは 153） |
+  |---|---|---|---|---|
+  | Gemma 4 E4B（Google の公式の QAT q4_0） | 5.15 GB | 156（83%）・中央値 0.06 秒 | 46 → **63**（英語 63 / ロシア語 63）・1 言語 0.28 秒 | 150（直す 15、壊す 18） |
+  | Gemma 4 12B（同） | 6.98 GB | 132（70%）・0.12 秒 | 55 → 62・0.61 秒 | 165（直す 18、壊す 6） |
+  | Qwen3.5-4B（bartowski の Q4_K_M） | 3.01 GB | 66（35%）・0.05 秒 | 55 → 58・0.29 秒 | 129（直す 12、壊す 36） |
+
+  - 翻訳は、Gemma 4 E4B に llama.cpp の文法（GBNF）で縛りをかけると、63 文すべてで用語の名前が崩れなかった。前に測った PLaMo 2B（59〜60、0.44 秒。ライセンスが独自）より正確で速い。縛りは「`⟦` のあとは、その文の用語の名前しか書けない」「用語のない文では括弧を書けない」「括弧の直後に字を続けられない（`⟦Sticky Bomb⟧s`。`'s` は書ける）」。縛りなしで崩れた 15 文は、どれも所有の `'s` を括弧の中に入れたもの（`⟦Kelvin's⟧`）。訳は、ゲームの話し言葉として自然（「遠くから抜かれた」を Got sniped … from way out there。Qwen-MT-Flash は passed と取り違えた）。ロシア語の質は判断しきれていない
+  - 用語の判定は、選択肢に A、B、… の記号を振って、記号 1 文字だけを答えさせた（文法で縛る）。Gemma 4 E4B の 83% は、Chrome の Gemini Nano（71%）より良く、Perplexity Decider Flash のローカル版（86〜89%。1.0 秒、GPU のメモリ 19 GB）に近い。大きい 12B のほうが悪い（「用語ではない」を選びすぎる）。Qwen3.5-4B は使えない（ヒーローの「ケルビン」を、ふつうの言葉と答える）
+  - ふりがなの読み分けは、どれも辞書だけより良くならないか、少し良いだけ（12B の 165 でも、クラウドの判定モデルの 171 に届かない）。小さいモデルは音読みを選ぶ（「店」を「てん」、「金」を「きん」、「床」を「とこ」）。ローカルでは、辞書のままにする
+  - 見立て: 翻訳と用語の判定は、Gemma 4 E4B の 1 つ（約 5 GB、llama.cpp）でまかなえる。メモリの使用量と、Windows の GPU での速さ、ゲームと同時に動かしたときの FPS は、まだ測っていない
+
 - **Google の Gemini も測ったが、入れない（2026-11-12。Gemini API のキーで直接。`experiments/gemini_decider_server.py`、`mt_eval_gemini.py`、`stt_eval_gemini.py`）:**
   - 判定モデルの Gemini Decision 1（`POST /v1beta/decisions`。問いと答えの形は Jev とほぼ同じで、文を `input` の text で渡す。入力 100 万トークン $0.10、出力は無料）は、同じ候補と問いで 189 回中 168・中央値 0.44 秒・約 $0.006。今の選択肢のどれよりも下で、Perplexity Decider の約 5 倍の料金。ふつうの言葉を用語にする（レム睡眠、ビリーって友達、アイビーリーグ、ストーカー）
   - 翻訳だけ（`split_eval translate` と同じ文と数え方、63 文を 1 回ずつ）の Gemini 3.5 Flash-Lite は、用語が崩れなかったのが 51（英語 55 / ロシア語 56）。Qwen-MT-Flash（93%）と Hy-MT2（85%）より下。応答は、無料枠のキーで直接送ると中央値 8 秒、OpenRouter を通すと約 0.8 秒（無料枠は後回しにされる）。Gemini 3.8 Flash は、OpenRouter でも 6〜7 秒かかる（答える前に考える）
