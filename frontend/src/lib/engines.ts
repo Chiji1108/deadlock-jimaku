@@ -358,7 +358,7 @@ export const MODES: {
   {
     name: "beta",
     label: "おすすめ",
-    traits: ["高精度", "キー不要"],
+    traits: ["高精度"],
     hourlyUsd: 0,
     hint: "途中の字幕は Chrome、確定の字幕・用語・翻訳・ふりがなの読み分けは、デドロ字幕のサーバーを通して作ります。1 日の上限に届いても、字幕は Chrome の作り方で続きます",
     engines: BETA,
@@ -367,10 +367,18 @@ export const MODES: {
   {
     name: "chrome",
     label: "Chrome",
-    traits: ["サーバーを使わない", "キー不要"],
+    traits: ["サーバーを使わない"],
     hourlyUsd: 0,
     hint: "多くの字幕ソフトと同じく、Chrome の音声認識と翻訳だけを使います。デドロ字幕のサーバーは使いません",
     engines: CHROME,
+  },
+  {
+    name: "chromePlus",
+    label: "Chrome+",
+    traits: ["サーバーを使わない", "用語に強い", "GPU を使う"],
+    hourlyUsd: 0,
+    hint: "Chrome のモードに、用語の判定を足します。Chrome の中の AI（Gemini Nano）が、略称や「〇〇のウルト」も判定します。初回に Chrome が約 4 GB をダウンロードし、判定のたびに GPU を使います",
+    engines: CHROME_PLUS,
   },
   {
     name: "best",
@@ -379,14 +387,6 @@ export const MODES: {
     hourlyUsd: 0.6,
     hint: "途中の字幕は Chrome、確定の字幕・翻訳・ふりがなは OpenAI の GPT で作ります。用語の判定と文字起こしがいちばん正確ですが、確定の字幕が出るまで 1〜2 秒長くかかります",
     engines: BEST,
-  },
-  {
-    name: "chromePlus",
-    label: "Chrome+",
-    traits: ["サーバーを使わない", "用語を AI で判定", "GPU を使う"],
-    hourlyUsd: 0,
-    hint: "Chrome のモードに、用語の判定を足します。Chrome の中の AI（Gemini Nano）が、略称や「〇〇のウルト」も判定します。初回に Chrome が約 4 GB をダウンロードし、判定のたびに GPU を使います",
-    engines: CHROME_PLUS,
     more: true,
   },
   {
@@ -402,9 +402,9 @@ export const MODES: {
   {
     name: "local",
     label: "ローカル",
-    traits: ["外に送らない", "GPU を使う", "CPU を使う"],
+    traits: ["外に送らない", "高スペック PC 向け"],
     hourlyUsd: 0,
-    hint: "Chrome を開かず、文字起こし・用語・翻訳を、この PC の中の AI で作ります。文字起こしの正確さは Chrome と同じくらいです。初回に約 6 GB をダウンロードします",
+    hint: "Chrome を開かず、文字起こし・用語・翻訳を、この PC の中の AI で作ります。文字起こしの正確さは Chrome と同じくらいです。GPU のメモリを 6 GB 以上使い、初回に約 6 GB をダウンロードします",
     engines: LOCAL,
     more: true,
   },
