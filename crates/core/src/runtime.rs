@@ -102,6 +102,8 @@ struct AudioInput {
     segmentation: Segmentation,
     /// 工程が使う会社の送り先と鍵（鍵のない会社は入っていない）
     accesses: Accesses,
+    /// PC の中の Haas-ja を立てる
+    uses_speech: bool,
     /// PC の中の LLM を立てる
     uses_llama: bool,
 }
@@ -237,6 +239,7 @@ fn subtitles_input(settings: &Settings, options: &Options, accesses: Accesses) -
         realtime_delay: settings.realtime_delay.clone(),
         segmentation: settings.segmentation.clone(),
         accesses,
+        uses_speech: settings.uses_speech(),
         uses_llama: settings.uses_llama(),
     }))
 }
@@ -289,7 +292,7 @@ fn start_subtitles(
                 return None;
             }
             let accesses = input.accesses;
-            let uses_local = input.engines.uses_local();
+            let uses_local = input.uses_speech;
             let uses_llama = input.uses_llama;
             let whisper = input.engines.whisper();
             tracing::info!("transcription started");
@@ -555,6 +558,7 @@ mod tests {
                 accesses: Accesses::new(
                     code.map(|code| Access::gift(Provider::OpenAi, code.into(), &self.api)),
                 ),
+                uses_speech: false,
                 uses_llama: false,
             }))
         }
