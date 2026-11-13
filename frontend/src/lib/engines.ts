@@ -152,7 +152,7 @@ export const ITEMS: {
         accuracy: "71%",
         speed: "1 問 約 0.4 秒",
         price: "無料",
-        note: "文字を PC から出さない。初回に Chrome が約 4 GB をダウンロードし、GPU を使う。使えない PC では辞書の一致になる",
+        note: "文字を PC から出さない。初回に Chrome が約 4 GB をダウンロードし、GPU のメモリ（VRAM）を約 3 GB 使う。使えない PC では辞書の一致になる",
       },
       {
         value: "gemma",
@@ -375,9 +375,9 @@ export const MODES: {
   {
     name: "chromePlus",
     label: "Chrome+",
-    traits: ["サーバーを使わない", "GPU を使う"],
+    traits: ["サーバーを使わない", "VRAM 8 GB 以上推奨"],
     hourlyUsd: 0,
-    hint: "Chrome のモードに、用語の判定を足します。Chrome の中の AI（Gemini Nano）が、略称や「〇〇のウルト」も判定します。初回に Chrome が約 4 GB をダウンロードし、判定のたびに GPU を使います",
+    hint: "Chrome モード上で、Chrome 内蔵の AI を使い用語の判定をします。略称や「〇〇のウルト」なども用語として拾うようになります。初回に Chrome が約 4 GB をダウンロードします",
     engines: CHROME_PLUS,
   },
   {
