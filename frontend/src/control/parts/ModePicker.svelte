@@ -4,10 +4,10 @@
   // 自分で組んだ組み合わせ（カスタム）は、選ぶものではなく今の状態なので、一覧には入れず、下に 1 行で出す。
   // 1 つ覚えているので、モードを試したあとに戻れる（DESIGN.md 9.6）
   import ChevronIcon from "@lucide/svelte/icons/chevron-down";
-  import { Badge } from "$lib/components/ui/badge";
   import { Button } from "$lib/components/ui/button";
   import { panel } from "../panel.svelte";
-  import { MODES, keyNames, modeOf, monthly, paidItems, price, providers } from "../../lib/engines";
+  import ModeBadges from "./ModeBadges.svelte";
+  import { MODES, keyNames, modeOf, paidItems, providers } from "../../lib/engines";
 
   const s = $derived(panel.settings!);
   const t = $derived(s.engines);
@@ -39,13 +39,7 @@
     <span class="flex flex-wrap items-center gap-2 text-sm">
       {@render dot(mode?.name === m.name)}
       <span class="font-medium">{m.label}</span>
-      <!-- 料金（「ベータ期間中は無料」のようなひとことがあれば、その代わりに）と、選ぶ理由を札で並べる -->
-      <Badge variant="secondary" class="tabular-nums">
-        {m.badge ?? price(m.hourlyUsd)}{#if m.hourlyUsd}（{monthly(m.hourlyUsd)}）{/if}
-      </Badge>
-      {#each m.traits as trait (trait)}
-        <Badge variant="outline">{trait}</Badge>
-      {/each}
+      <ModeBadges mode={m} />
     </span>
     <span class="pl-5 text-xs text-muted-foreground">{m.hint}</span>
   </button>

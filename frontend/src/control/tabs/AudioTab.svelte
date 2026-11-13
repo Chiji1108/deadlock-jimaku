@@ -11,6 +11,7 @@
   import ConfirmDialog from "../parts/ConfirmDialog.svelte";
   import DeadlockModeDialog from "../parts/DeadlockModeDialog.svelte";
   import LevelMeter from "../parts/LevelMeter.svelte";
+  import ModeBadges from "../parts/ModeBadges.svelte";
   import PauseDialog from "../parts/PauseDialog.svelte";
   import { panel } from "../panel.svelte";
   import {
@@ -19,7 +20,6 @@
     chromeFinals,
     llmTranslation,
     modeOf,
-    price,
     usesChrome,
   } from "../../lib/engines";
 
@@ -70,15 +70,13 @@
     </Card.Header>
     <Card.Content class="flex flex-col gap-3">
       <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
-        <div class="flex flex-col gap-1">
+        <div class="flex flex-wrap items-center gap-2">
           <span class="text-sm font-medium">{mode?.label ?? "カスタム"}</span>
-          <span class="text-xs text-muted-foreground">
-            {#if mode}
-              {mode.traits.join("・")}・<span class="tabular-nums">{price(mode.hourlyUsd)}</span>
-            {:else}
-              工程ごとに選んだ組み合わせ
-            {/if}
-          </span>
+          {#if mode}
+            <ModeBadges {mode} />
+          {:else}
+            <span class="text-xs text-muted-foreground">工程ごとに選んだ組み合わせ</span>
+          {/if}
         </div>
         <Button variant="outline" size="sm" onclick={() => (panel.tab = "engines")}>変える</Button>
       </div>
