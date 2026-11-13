@@ -14,6 +14,7 @@ use tokio::task::JoinHandle;
 use crate::access::{Access, Accesses};
 use crate::llama::Llama;
 use crate::local::{self, Gpu, Speech};
+use crate::people::Person;
 use crate::secrets::{Keys, Provider, Relay};
 use crate::settings::{Engines, FinalSource, Models, Region, Segmentation, Settings, TextSource};
 use crate::store::{Fallback, Store};
@@ -69,6 +70,8 @@ struct AssetsInput {
     refreshes: u64,
     /// 用語の別名も作る（用語を Decisions API で確かめるとき）
     aliases: bool,
+    /// 人の辞書。変えたら、辞書に足し直す
+    people: Vec<Person>,
 }
 
 #[derive(PartialEq)]
@@ -169,6 +172,7 @@ pub async fn run(store: Arc<Store>, options: Options) {
                     access: access.clone(),
                     refreshes: store.glossary_refreshes(),
                     aliases: settings.engines.decides_terms(),
+                    people: settings.people.clone(),
                 },
                 || {
                     Some(tokio::spawn(assets::load_into(

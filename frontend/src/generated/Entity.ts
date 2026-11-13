@@ -19,4 +19,8 @@ hero?: string,
 /**
  * 持ち主の何番目のスキルか（1〜4。4 がウルト）。「ヘイズのウルト」をこのスキルにする
  */
-abilitySlot?: number, };
+abilitySlot?: number, 
+/**
+ * 呼ばれ方（人だけ。あだ名など）。名前と同じように、字幕の中で探す
+ */
+aliases: Array<string>, };

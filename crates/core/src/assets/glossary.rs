@@ -173,6 +173,7 @@ fn entity(kind: EntityKind, class_name: &str, names: BTreeMap<LangCode, String>)
         slot: None,
         hero: None,
         ability_slot: None,
+        aliases: Vec::new(),
     }
 }
 
@@ -181,6 +182,7 @@ fn kind_str(kind: EntityKind) -> &'static str {
         EntityKind::Hero => "hero",
         EntityKind::Item => "item",
         EntityKind::Ability => "ability",
+        EntityKind::Person => "person",
     }
 }
 

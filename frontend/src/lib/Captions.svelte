@@ -93,6 +93,7 @@
     --text-color: #fff;
     --hero-color: #ff7ab6;
     --ability-color: #8fd8ff;
+    --person-color: #ffe27a;
     --pending-color: #c8c8c8;
     --outline-color: rgb(0 0 0 / 0.85);
     --gap: 12px;

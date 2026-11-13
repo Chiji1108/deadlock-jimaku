@@ -16,6 +16,7 @@ pub mod llm;
 pub mod local;
 pub mod markup;
 pub mod mt;
+pub mod people;
 pub mod rank;
 pub mod reading;
 pub mod runtime;

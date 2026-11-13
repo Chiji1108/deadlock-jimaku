@@ -11,6 +11,7 @@ use serde_json::Value;
 use ts_rs::TS;
 
 use crate::lang;
+use crate::people::{self, Person};
 use crate::secrets::Provider;
 use crate::types::LangCode;
 use crate::whisper;
@@ -39,6 +40,8 @@ pub struct Settings {
     pub mic_device: Option<String>,
     /// 翻訳先（最大 4 言語。mic_language は除く）
     pub translate_to: Vec<LangCode>,
+    /// 人の辞書（自分と、よく一緒に遊ぶ人。DESIGN.md 9.12）
+    pub people: Vec<Person>,
     /// PC の中の AI に使わせる GPU の名前。None なら自動（内蔵でない GPU を優先。DESIGN.md 9.11）
     #[ts(optional)]
     pub local_gpu: Option<String>,
@@ -1194,6 +1197,7 @@ impl Default for Settings {
             engines: Engines::default(),
             mic_language: "ja".into(),
             mic_device: None,
+            people: Vec::new(),
             local_gpu: None,
             translate_to: vec!["en".into()],
             deadlock_mode: true,
@@ -1439,6 +1443,9 @@ impl Settings {
         if let Some(device) = patch.mic_device {
             next.mic_device = Some(device).filter(|d| !d.is_empty());
         }
+        if let Some(people) = patch.people {
+            next.people = people::sanitized(people)?;
+        }
         if let Some(gpu) = patch.local_gpu {
             next.local_gpu = Some(gpu).filter(|g| !g.is_empty());
         }
@@ -1553,6 +1560,9 @@ pub struct SettingsPatch {
     /// 空文字列なら自動
     #[ts(optional)]
     pub local_gpu: Option<String>,
+    /// 人の辞書の全体（差し替える）
+    #[ts(optional)]
+    pub people: Option<Vec<Person>>,
     #[ts(optional)]
     pub translate_to: Option<Vec<LangCode>>,
     #[ts(optional)]

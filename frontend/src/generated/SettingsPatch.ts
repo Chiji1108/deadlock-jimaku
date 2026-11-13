@@ -2,6 +2,7 @@
 import type { Anchor } from "./Anchor";
 import type { Engines } from "./Engines";
 import type { ItemCardsPatch } from "./ItemCardsPatch";
+import type { Person } from "./Person";
 import type { RankContent } from "./RankContent";
 import type { SubtitleDisplayPatch } from "./SubtitleDisplayPatch";
 
@@ -16,7 +17,11 @@ micDevice?: string, micLanguage?: string,
 /**
  * 空文字列なら自動
  */
-localGpu?: string, translateTo?: Array<string>, deadlockMode?: boolean, 
+localGpu?: string, 
+/**
+ * 人の辞書の全体（差し替える）
+ */
+people?: Array<Person>, translateTo?: Array<string>, deadlockMode?: boolean, 
 /**
  * 今の仕組みで作れない組み合わせは直して保存する
  */

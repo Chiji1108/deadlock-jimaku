@@ -66,7 +66,7 @@ test("縁取りより暗い字では、用語の色の明るさを反転し、�
   expect(inverted["--pending-color"]).toBe("#373737");
   expect(inverted["--hero-color"]).toBe("#81004c");
   expect(inverted["--ability-color"]).toBe("#00354b");
-  expect(Object.keys(inverted).filter((name) => name.endsWith("-color"))).toHaveLength(8);
+  expect(Object.keys(inverted).filter((name) => name.endsWith("-color"))).toHaveLength(9);
 });
 
 test("帯だけなら縁取りを細くして影を消す", () => {
