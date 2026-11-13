@@ -296,6 +296,31 @@ test("ベータのモードは、ベータのコードがあれば鍵が要ら�
   expect(fresh.giftPaid).toEqual(["qwen", "openrouter"]);
 });
 
+test("起動してからの料金は、自分のキーで払う分があるときだけ出す", () => {
+  const fresh = freshPanel();
+  const keys = (openrouter: string, typesafe: string) => ({
+    openai: { state: "missing" },
+    gift: { state: "missing" },
+    beta: { state: "saved" },
+    xai: { state: "missing" },
+    qwen: { state: "missing" },
+    openrouter: { state: openrouter },
+    typesafe: { state: typesafe },
+  });
+  const view = (engines: unknown, openrouter = "missing", typesafe = "missing") =>
+    ({ settings: { engines }, keys: keys(openrouter, typesafe) }) as unknown as SettingsView;
+  // 無料のモードと、コードで使うだけのモードは出さない
+  fresh.view = view(CHROME);
+  expect(fresh.pays).toBe(false);
+  fresh.view = view(BETA);
+  expect(fresh.pays).toBe(false);
+  // 自分のキーがある会社を使うなら、コードがあっても自分に請求される
+  fresh.view = view(BETA, "saved");
+  expect(fresh.pays).toBe(true);
+  fresh.view = view({ ...BETA, terms: "jev" }, "missing", "saved");
+  expect(fresh.pays).toBe(true);
+});
+
 test("設定が届く前はキーの案内を出さない", () => {
   expect(freshPanel().needsKey).toBe(false);
 });

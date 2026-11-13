@@ -30,7 +30,7 @@
   import RankTab from "./tabs/RankTab.svelte";
   import ShareTab from "./tabs/ShareTab.svelte";
   import UsageTab from "./tabs/UsageTab.svelte";
-  import { CHROME, anyPaid, chromeFinals, enterKeys, keyNames } from "../lib/engines";
+  import { CHROME, chromeFinals, enterKeys, keyNames } from "../lib/engines";
 
   onMount(() => panel.start());
 
@@ -124,8 +124,8 @@
           <span class="size-2 shrink-0 rounded-full {status.dot}"></span>
           {panel.server === "open" ? status.label : "アプリに接続しています…"}
         </p>
-        <!-- 有料の工程がなければ無料なので出さない。使用量が届く前も行の高さを取っておく（届いたときにページがずれない） -->
-        {#if s && anyPaid(s.engines)}
+        <!-- 自分で払う分があるときだけ出す（無料のモードや、コードで使うだけなら、増えていく額を見せない）。使用量が届く前も行の高さを取っておく（届いたときに帯の高さが変わらないように） -->
+        {#if s && panel.pays}
           <p class="h-4 text-xs text-muted-foreground tabular-nums">
             {#if panel.server === "open" && panel.usage}
               <button
