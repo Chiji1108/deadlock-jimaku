@@ -1,0 +1,54 @@
+{
+ "haas-ja-v1.0:q4_k": {
+  "model": "haas-ja-v1.0:q4_k",
+  "prompt": "none",
+  "cpu": false,
+  "requests": 544,
+  "medianMs": 13,
+  "p90Ms": 16,
+  "medianGapMs": 313,
+  "busy": 0.04,
+  "partialErrorRate": 0.11,
+  "longerThanFinal": 0,
+  "partials": 544
+ },
+ "haas-ja-v1.0:q4_k@cpu": {
+  "model": "haas-ja-v1.0:q4_k",
+  "prompt": "none",
+  "cpu": true,
+  "requests": 482,
+  "medianMs": 56,
+  "p90Ms": 102,
+  "medianGapMs": 356,
+  "busy": 0.16,
+  "partialErrorRate": 0.126,
+  "longerThanFinal": 0,
+  "partials": 482
+ },
+ "ggml-large-v3-turbo-q5_0+heroes": {
+  "model": "ggml-large-v3-turbo-q5_0",
+  "prompt": "heroes",
+  "cpu": false,
+  "requests": 299,
+  "medianMs": 224,
+  "p90Ms": 243,
+  "medianGapMs": 524,
+  "busy": 0.49,
+  "partialErrorRate": 0.118,
+  "longerThanFinal": 2,
+  "partials": 299
+ },
+ "ggml-large-v3-q5_0+heroes": {
+  "model": "ggml-large-v3-q5_0",
+  "prompt": "heroes",
+  "cpu": false,
+  "requests": 202,
+  "medianMs": 388,
+  "p90Ms": 492,
+  "medianGapMs": 688,
+  "busy": 0.73,
+  "partialErrorRate": 0.13,
+  "longerThanFinal": 3,
+  "partials": 202
+ }
+}

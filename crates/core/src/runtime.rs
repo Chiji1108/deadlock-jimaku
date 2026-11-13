@@ -291,7 +291,7 @@ fn start_subtitles(
             let accesses = input.accesses;
             let uses_local = input.engines.uses_local();
             let uses_llama = input.uses_llama;
-            let whisper = input.engines.transcription.whisper();
+            let whisper = input.engines.whisper();
             tracing::info!("transcription started");
             let (input, ended) = match input.source {
                 Source::Mic(device) => (

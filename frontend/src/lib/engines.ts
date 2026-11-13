@@ -56,6 +56,12 @@ export const ITEMS: {
         price: "無料",
         note: "日本語だけ。Chrome を使わず、音声は PC から出ない。話している間、PC の中で何度も認識し直すので、PC の負荷は上がる。初回に約 400 MB をダウンロードする。途中の字幕としての正確さは測っていない",
       },
+      {
+        value: "whisper",
+        label: "Whisper（PC の中）",
+        price: "無料",
+        note: "Chrome を使わず、音声は PC から出ない。ヒーローの名前を教えられ、日本語以外でも出せる。文字が進むのは約 0.5 秒おき（Haas-ja は約 0.3 秒おき）で、話している間の半分ほど GPU を使う。確定も Whisper ならそのモデル、ほかなら large-v3-turbo を使う（初回に約 600 MB をダウンロードする）",
+      },
       { value: "off", label: "出さない", price: "無料" },
     ],
   },
