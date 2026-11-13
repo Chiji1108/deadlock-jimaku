@@ -41,11 +41,11 @@ export const LOOKS: Look[] = [
   },
   {
     label: "かわいい",
-    text: { ...TEXT, outline: { width: 0.18, color: "#e8559a" } },
+    // 線の細い字なので、字をピンクに、縁取りを白にする（白い字にピンクの縁取りだと、字が縁取りに埋もれる）
+    text: { ...TEXT, color: "#ff4f9e", outline: { width: 0.14, color: "#ffffff" } },
     background: NO_BAND,
-    // 線の太い字にする（細い字は、色の縁取りに白が埋もれる）
-    fontStyle: { font: "Mochiy Pop One", weight: 400, letterSpacing: 0.02 },
-    english: { font: "Sniglet", weight: 800, letterSpacing: null },
+    fontStyle: { font: "Hachi Maru Pop", weight: 400, letterSpacing: 0.02 },
+    english: { font: "Sniglet", weight: 400, letterSpacing: null },
   },
   {
     label: "ドット",
