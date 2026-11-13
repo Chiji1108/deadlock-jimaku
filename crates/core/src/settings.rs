@@ -1496,6 +1496,10 @@ impl Settings {
             next.deadlock_mode = enabled;
         }
         if let Some(engines) = patch.engines {
+            // 今の組み合わせが自分で組んだものなら、離れる前に覚える（前の版から使っている人は、まだ覚えていない）
+            if !Engines::MODES.contains(&self.engines) {
+                next.custom_engines = Some(self.engines);
+            }
             next.engines = engines.sanitized();
             // 自分で組んだ組み合わせは覚えておく（モードを試したあとに戻れる）
             if !Engines::MODES.contains(&next.engines) {
@@ -1745,6 +1749,27 @@ mod tests {
             .unwrap();
         assert_eq!(cleared.rank_account, None);
         assert_eq!(cleared.mic_device, None);
+    }
+
+    /// 覚えていない自分の組み合わせ（前の版から使っている人）も、モードに変えるときに覚える
+    #[test]
+    fn a_custom_combination_is_remembered_when_leaving_it() {
+        let mine = Engines {
+            transcription: FinalSource::HaasJa,
+            ..Engines::CHROME
+        };
+        let old = Settings {
+            engines: mine,
+            ..Default::default()
+        };
+        assert_eq!(old.custom_engines, None);
+        let mode = old
+            .apply(SettingsPatch {
+                engines: Some(Engines::CHROME),
+                ..SettingsPatch::default()
+            })
+            .unwrap();
+        assert_eq!(mode.custom_engines, Some(mine));
     }
 
     /// PC の中の AI に使う GPU は、名前で覚える。空にすると自動に戻る
