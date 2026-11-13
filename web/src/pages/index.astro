@@ -292,7 +292,7 @@ const official = [
     </h2>
     <ul class="mt-10 grid gap-8 md:grid-cols-3">
       {
-        MODES.map((e) => (
+        MODES.filter((e) => !e.more).map((e) => (
           <li class="reveal border-t-2 border-ink pt-4">
             <h3 class="flex items-center gap-2 text-xl font-bold">
               {e.label}

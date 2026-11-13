@@ -313,6 +313,9 @@ export const BEST: Engines = {
   furigana: "llm",
 };
 
+/** 「おすすめ」の、Chrome を使わない版。途中の字幕も Qwen で作る */
+export const BETA_CLOUD: Engines = { ...BETA, live: "qwenAudioStreaming" };
+
 /** 音声も字幕の文字も PC から出さない組み合わせ。3 つとも PC の中で動かす（DESIGN.md 9.7） */
 export const LOCAL: Engines = {
   live: "haasJa",
@@ -345,6 +348,8 @@ export const MODES: {
   engines: Engines;
   /** 名前の横に出すひとこと */
   badge?: string;
+  /** 「その他のモード」を開くと出る（選ぶ人が限られる。LP には出さない） */
+  more?: true;
 }[] = [
   {
     name: "beta",
@@ -364,6 +369,24 @@ export const MODES: {
     engines: CHROME,
   },
   {
+    name: "best",
+    label: "最高精度",
+    traits: "OpenAI のキーが要る",
+    hourlyUsd: 0.6,
+    hint: "途中の字幕は Chrome、確定の字幕・翻訳・ふりがなは OpenAI の GPT で作ります。用語の判定と文字起こしがいちばん正確ですが、確定の字幕が出るまで 1〜2 秒長くかかります",
+    engines: BEST,
+  },
+  {
+    name: "betaCloud",
+    label: "おすすめ（Chrome なし）",
+    traits: "Chrome を使わない・キー不要",
+    hourlyUsd: 0,
+    hint: "「おすすめ」の、途中の字幕も Qwen で作る版です。Chrome のウィンドウを開かず、音声を Google に送りません。途中の字幕も、デドロ字幕のサーバーを通して作ります。1 日の上限に届くと、Chrome の作り方に切り替わります（Chrome のウィンドウが開きます）",
+    engines: BETA_CLOUD,
+    badge: "ベータ期間中は無料",
+    more: true,
+  },
+  {
     name: "local",
     label: "ローカル",
     traits: "外に送らない・GPU を使う・キー不要",
@@ -371,14 +394,7 @@ export const MODES: {
     hint: "音声と字幕の文字を外に送りたくない人のためのモードです。文字起こし・用語・翻訳を、この PC の中の AI で作ります。文字起こしの正確さは Chrome と同じくらいで、大きくは変わりません（用語と翻訳は Chrome より正確ですが、「おすすめ」のほうが上です）。ゲームと同じ GPU を使うので（メモリ 6 GB 以上）、余裕がないと FPS が落ちたり、字幕が遅れたりします。初回に約 6 GB をダウンロードします。日本語以外では、途中の字幕は出ません。Intel の Mac では動きません",
     engines: LOCAL,
     badge: "無料・GPU に余裕のある PC 向け",
-  },
-  {
-    name: "best",
-    label: "最高精度",
-    traits: "OpenAI のキーが要る",
-    hourlyUsd: 0.6,
-    hint: "途中の字幕は Chrome、確定の字幕・翻訳・ふりがなは OpenAI の GPT で作ります。用語の判定と文字起こしがいちばん正確ですが、確定の字幕が出るまで 1〜2 秒長くかかります",
-    engines: BEST,
+    more: true,
   },
 ];
 
