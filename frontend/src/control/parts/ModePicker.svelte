@@ -68,7 +68,7 @@
 {#if !mode}
   <p class="mt-3 rounded-lg bg-muted p-3 text-xs text-muted-foreground">
     <span class="font-medium text-foreground">カスタム</span>
-    下の工程ごとに選んだ組み合わせを使っています{#if paid.length}。鍵の要る工程: {paid.join(
+    工程ごとに選んだ組み合わせを使っています{#if paid.length}。鍵の要る工程: {paid.join(
         "、",
       )}（{keyNames(providers(t))}が要ります）{:else}。鍵は要りません{/if}
   </p>
