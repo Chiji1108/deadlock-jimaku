@@ -19,7 +19,7 @@
   import AboutDialog from "./parts/AboutDialog.svelte";
   import BetaDialog from "./parts/BetaDialog.svelte";
   import WhatsNew from "./parts/WhatsNew.svelte";
-  import { fallbackText, panel, transcriptionErrorText } from "./panel.svelte";
+  import { STATUS_DOTS, fallbackText, panel, transcriptionErrorText } from "./panel.svelte";
   import { total, unpriced, usd } from "./usage";
   import AudioTab from "./tabs/AudioTab.svelte";
   import HomeTab from "./tabs/HomeTab.svelte";
@@ -29,7 +29,7 @@
   import ItemsTab from "./tabs/ItemsTab.svelte";
   import KeysTab from "./tabs/KeysTab.svelte";
   import RankTab from "./tabs/RankTab.svelte";
-  import { ENTER_KEYS, chromeFinals, keyNames } from "../lib/engines";
+  import { ENTER_KEYS, keyNames } from "../lib/engines";
 
   onMount(() => panel.start());
 
@@ -38,7 +38,7 @@
   let content = $state<HTMLElement>();
 
   const TABS = [
-    { value: "home", label: "ホーム", icon: HouseIcon, page: HomeTab },
+    { value: "home", label: "ホーム", icon: HouseIcon, page: HomeTab, wide: true },
     {
       value: "audio",
       label: "マイクと翻訳",
@@ -63,7 +63,7 @@
   ];
   // デスクトップのウィンドウでは左のサイドバー。OBS のドックのように狭いときは上に並べる
   const wide = new MediaQuery("min-width: 768px");
-  /** オーバーレイのタブはプレビューと設定を 2 列に並べるので広く取る。ほかは読みやすい幅に留める */
+  /** ホームとオーバーレイのタブは 2 列に並べるので広く取る。ほかは読みやすい幅に留める */
   const pageWidth = $derived(
     TABS.find((t) => t.value === panel.tab)?.wide ? "max-w-6xl" : "max-w-3xl",
   );
@@ -82,40 +82,7 @@
     });
   });
 
-  /** 確定の文を Chrome が作るなら（Chrome のモード）、字幕は Chrome のウィンドウが動いて出る */
-  function chromeStatus() {
-    if (panel.chromeStatus?.state === "failed")
-      return { label: "止まっています", dot: "bg-destructive" };
-    if (panel.chromeStatus?.state === "missing")
-      return { label: "Google Chrome が必要です", dot: "bg-destructive" };
-    if (!panel.chromeStatus)
-      return { label: "Chrome のウィンドウが開いていません", dot: "bg-amber-500" };
-    if (panel.chromeStatus.state === "blocked")
-      return { label: "再開を待っています", dot: "bg-amber-500" };
-    if (panel.chromeStatus.state === "listening")
-      return { label: "字幕を出しています", dot: "bg-emerald-500 animate-pulse" };
-    return { label: "準備しています…", dot: "bg-sky-500 animate-pulse" };
-  }
-
-  const status = $derived.by(() => {
-    if (!s?.transcriptionEnabled) return { label: "停止中", dot: "bg-muted-foreground/50" };
-    if (panel.transcriptionError) return { label: "止まっています", dot: "bg-destructive" };
-    if (panel.preparing) {
-      const gb = (bytes: number) => (bytes / 1e9).toFixed(1);
-      const d = panel.downloading;
-      return {
-        label: d?.total
-          ? `PC の中のモデルをダウンロードしています（${gb(d.done)} / ${gb(d.total)} GB）…`
-          : "PC の中のモデルを準備しています（初回はダウンロードします）…",
-        dot: "bg-sky-500 animate-pulse",
-      };
-    }
-    if (panel.silent) return { label: "音が届いていません", dot: "bg-amber-500" };
-    if (chromeFinals(panel.view!.running)) return chromeStatus();
-    if (panel.level === undefined)
-      return { label: "準備しています…", dot: "bg-sky-500 animate-pulse" };
-    return { label: "字幕を出しています", dot: "bg-emerald-500 animate-pulse" };
-  });
+  const status = $derived(panel.status);
 </script>
 
 <ModeWatcher />
@@ -131,7 +98,7 @@
       <h1 class="sr-only">デドロ字幕</h1>
       <div class="flex min-w-40 flex-1 flex-col gap-0.5">
         <p class="flex items-center gap-2 text-sm font-medium">
-          <span class="size-2 shrink-0 rounded-full {status.dot}"></span>
+          <span class="size-2 shrink-0 rounded-full {STATUS_DOTS[status.tone]}"></span>
           {panel.server === "open" ? status.label : "アプリに接続しています…"}
         </p>
         <!-- 自分で払う分があるときだけ出す（無料のモードや、コードで使うだけなら、増えていく額を見せない）。使用量が届く前も行の高さを取っておく（届いたときに帯の高さが変わらないように） -->
@@ -243,7 +210,8 @@
               </Alert.Description>
             </Alert.Root>
           {/if}
-          {#if s.transcriptionEnabled && panel.transcriptionError}
+          <!-- ホームでは、状態の帯が同じことを出す -->
+          {#if s.transcriptionEnabled && panel.transcriptionError && panel.tab !== "home"}
             <Alert.Root variant="destructive">
               <CircleAlertIcon />
               <Alert.Title>字幕が止まっています</Alert.Title>

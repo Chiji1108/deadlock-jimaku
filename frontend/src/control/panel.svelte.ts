@@ -39,6 +39,18 @@ const NAME_CODE: Record<string, string> = { "pt-PT": "pt" };
 const SILENT_DB = -60;
 const SILENT_MS = 5000;
 
+/** 今の状態。`tone` で点の色を決める */
+export type PanelStatus = { label: string; tone: keyof typeof STATUS_DOTS };
+
+/** 状態の点の色 */
+export const STATUS_DOTS = {
+  idle: "bg-muted-foreground/50",
+  live: "bg-emerald-500 animate-pulse",
+  busy: "bg-sky-500 animate-pulse",
+  warning: "bg-amber-500",
+  error: "bg-destructive",
+};
+
 class Panel {
   view = $state<SettingsView | undefined>();
   /** 対応している言語のコード */
@@ -155,6 +167,37 @@ class Panel {
       this.level !== undefined &&
       this.now - this.heardAt > SILENT_MS
     );
+  }
+
+  /** 確定の文を Chrome が作るなら（Chrome のモード）、字幕は Chrome のウィンドウが動いて出る */
+  private get chromeState(): PanelStatus {
+    const chrome = this.chromeStatus;
+    if (chrome?.state === "failed") return { label: "止まっています", tone: "error" };
+    if (chrome?.state === "missing") return { label: "Google Chrome が必要です", tone: "error" };
+    if (!chrome) return { label: "Chrome のウィンドウが開いていません", tone: "warning" };
+    if (chrome.state === "blocked") return { label: "再開を待っています", tone: "warning" };
+    if (chrome.state === "listening") return { label: "字幕を出しています", tone: "live" };
+    return { label: "準備しています…", tone: "busy" };
+  }
+
+  /** 今の状態のひとこと。上の帯と、ホームの状態の欄で同じものを出す */
+  get status(): PanelStatus {
+    if (!this.settings?.transcriptionEnabled) return { label: "停止中", tone: "idle" };
+    if (this.transcriptionError) return { label: "止まっています", tone: "error" };
+    if (this.preparing) {
+      const gb = (bytes: number) => (bytes / 1e9).toFixed(1);
+      const d = this.downloading;
+      return {
+        label: d?.total
+          ? `PC の中のモデルをダウンロードしています（${gb(d.done)} / ${gb(d.total)} GB）…`
+          : "PC の中のモデルを準備しています（初回はダウンロードします）…",
+        tone: "busy",
+      };
+    }
+    if (this.silent) return { label: "音が届いていません", tone: "warning" };
+    if (chromeFinals(this.view!.running)) return this.chromeState;
+    if (this.level === undefined) return { label: "準備しています…", tone: "busy" };
+    return { label: "字幕を出しています", tone: "live" };
   }
 
   /** タブを開いて、その中の欄まで送る */
