@@ -3,6 +3,7 @@
 //! usage: OPENROUTER_API_KEY=… OPENAI_API_KEY=… cargo run -p overlays-core --example furigana_eval -- CASES.json REPEAT [HOW]
 //!   HOW は choose（既定。判定モデルに候補から選ばせる）か、直させるモデルの名前（gpt-6.1-terra、gpt-6-luna）
 //!   `FURIGANA_EVAL_API=http://127.0.0.1:8765/v1` を付けると、choose は PC の中のモデルに聞く
+//!   `FURIGANA_EVAL_JUDGE=会社/モデル` を付けると、choose は OpenRouter のその判定モデルに聞く（既定はアプリと同じ）
 //!   CASES.json は `experiments/data/furigana_cases.json`（語ごとの正しい読みがある）か、`text` のある文の配列
 //!   （正しい読みがないので、GPT-6.1 Terra に直させた読みを基準にして、違うところを出す）
 
@@ -66,10 +67,11 @@ async fn main() -> anyhow::Result<()> {
     };
     let openai = Access::key(Provider::OpenAi, env("OPENAI_API_KEY"));
     let meter = Meter::new(std::env::temp_dir().join("overlays-furigana-eval-usage.json"));
+    let judge_model = std::env::var("FURIGANA_EVAL_JUDGE").unwrap_or_else(|_| JUDGE.into());
     let judge = Judge {
         deadlock: true,
         access: &openrouter,
-        model: JUDGE,
+        model: &judge_model,
         meter: &meter,
     };
     let model = |model| Model {
