@@ -20,7 +20,7 @@ use crate::settings::{Engines, FinalSource, Models, Region, Segmentation, Settin
 use crate::store::{Fallback, Store};
 use crate::types::{LangCode, TranscriptionError};
 use crate::whisper::{self, Whisper};
-use crate::{assets, audio, chrome, playing, rank, secrets, share, subtitles};
+use crate::{assets, audio, chrome, playing, rank, relay, secrets, subtitles};
 
 pub struct Options {
     /// 開発・検証用: マイクの代わりに WAV ファイルを流す（設定の開始・停止に関係なく流す）。
@@ -151,6 +151,8 @@ pub async fn run(store: Arc<Store>, options: Options) {
     // 依存が ring と aws-lc の両方を有効にするので、rustls は TLS の実装を自分では選べない。
     // 選ばないと、Realtime につなぐときに panic する（reqwest と同じ aws-lc にする）
     let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
+    // 0.7 までの「おすそ分け」が資格情報ストアに置いたものは、もう使わないので消す
+    tokio::task::spawn_blocking(secrets::forget_share);
     let meter = store.meter();
     tokio::spawn(async move { meter.persist().await });
     tokio::spawn(assets::watch_versions(store.clone()));
@@ -275,7 +277,7 @@ fn subtitles_input(settings: &Settings, options: &Options, accesses: Accesses) -
     }))
 }
 
-/// 動いていない状態から始めるときだけ、ギフトコードを確かめる（DESIGN.md 17.1）
+/// 動いていない状態から始めるときだけ、コードを確かめる（DESIGN.md 17.2）
 async fn update_subtitles(
     slot: &mut Slot<SubtitlesInput>,
     store: &Arc<Store>,
@@ -293,8 +295,8 @@ async fn update_subtitles(
 fn start_subtitles(
     store: &Arc<Store>,
     input: SubtitlesInput,
-    // Some なら、始める前にギフトコードを確かめる（その API の根元）
-    check_gift: Option<String>,
+    // Some なら、始める前にコードを確かめる（その API の根元）
+    check_code: Option<String>,
 ) -> Option<JoinHandle<()>> {
     store.set_transcription_error(None);
     match input {
@@ -307,7 +309,7 @@ fn start_subtitles(
             tracing::info!("transcription started");
             let store = store.clone();
             Some(tokio::spawn(async move {
-                if !gift_accepted(&store, input.accesses.iter(), check_gift.as_deref()).await {
+                if !code_accepted(&store, input.accesses.iter(), check_code.as_deref()).await {
                     return;
                 }
                 let run = async {
@@ -337,7 +339,7 @@ fn start_subtitles(
             };
             let store = store.clone();
             Some(tokio::spawn(async move {
-                if !gift_accepted(&store, accesses.iter(), check_gift.as_deref()).await {
+                if !code_accepted(&store, accesses.iter(), check_code.as_deref()).await {
                     return;
                 }
                 let run = async {
@@ -428,9 +430,9 @@ async fn local_llm(
     Ok(Some(Arc::new(llama)))
 }
 
-/// コード（ギフトコードとベータのコード）を使うなら、`check` の API の根元で、使えるか・使う会社を中継するかを
-/// コードごとに確かめる。断られたら理由を出して false
-async fn gift_accepted(
+/// ベータのコードを使うなら、`check` の API の根元で、使えるか・使う会社を中継するかを確かめる。
+/// 断られたら、字幕を止めずに続ける（`fall_back`）か、理由を出して、false
+async fn code_accepted(
     store: &Store,
     accesses: impl Iterator<Item = &Access>,
     check: Option<&str>,
@@ -439,20 +441,19 @@ async fn gift_accepted(
         return true;
     };
     let mut codes: BTreeMap<&str, Vec<Provider>> = BTreeMap::new();
-    for access in accesses.filter(|a| a.is_gift()) {
+    for access in accesses.filter(|a| a.is_code()) {
         let used = codes.entry(access.token()).or_default();
         used.push(access.provider());
     }
     for (code, used) in codes {
-        let checked = share::check_gift(api, code).await.and_then(|relayed| {
+        let checked = relay::check_code(api, code).await.and_then(|relayed| {
             match used.iter().find(|p| !relayed.contains(p)) {
-                Some(&provider) => Err(TranscriptionError::GiftUnsupported { provider }),
+                // そのコードでは中継しない会社
+                Some(_) => Err(TranscriptionError::BetaRefused),
                 None => Ok(()),
             }
         });
-        if let Err(e) = checked {
-            // 1 つのコードが中継する会社は、どれも同じ種類
-            let refused = share::for_code(e, used[0]);
+        if let Err(refused) = checked {
             if !fall_back(store, &refused).await {
                 store.set_transcription_error(Some(refused));
             }
@@ -568,7 +569,7 @@ mod tests {
         match code {
             "revoked" => refused.into_response(),
             "down" => StatusCode::BAD_GATEWAY.into_response(),
-            // おすそ分けした人が xAI のキーも預けている
+            // 2 つの会社を中継するコード
             "both" => {
                 axum::Json(serde_json::json!({ "providers": ["openai", "xai"] })).into_response()
             }
@@ -619,7 +620,7 @@ mod tests {
                 realtime_delay: "low".into(),
                 segmentation: Settings::default().segmentation,
                 accesses: Accesses::new(
-                    code.map(|code| Access::gift(Provider::OpenAi, code.into(), &self.api)),
+                    code.map(|code| Access::code(Provider::OpenAi, code.into(), &self.api)),
                 ),
                 local_gpu: None,
                 uses_speech: false,
@@ -651,19 +652,27 @@ mod tests {
         }
     }
 
+    /// コードを確かめられずに止まっている間に設定を変えたら、もう一度確かめる
+    /// （ベータのコードが断られたときは、止めずに続ける。`Store::fall_back` のテスト）
     #[tokio::test]
-    async fn changing_a_setting_while_stopped_by_a_refusal_checks_the_gift_again() {
+    async fn changing_a_setting_while_stopped_checks_the_code_again() {
         let mut app = App::new().await;
-        let input = app.audio(Some("revoked"), "ja");
+        let input = app.audio(Some("down"), "ja");
         app.update(input).await;
         app.settle(1).await;
-        assert_eq!(app.error(), Some(TranscriptionError::GiftRevoked));
+        assert!(matches!(
+            app.error(),
+            Some(TranscriptionError::Failed { .. })
+        ));
 
-        let input = app.audio(Some("revoked"), "en");
+        let input = app.audio(Some("down"), "en");
         app.update(input).await;
         app.settle(2).await;
         assert_eq!(app.checks(), 2);
-        assert_eq!(app.error(), Some(TranscriptionError::GiftRevoked));
+        assert!(matches!(
+            app.error(),
+            Some(TranscriptionError::Failed { .. })
+        ));
         assert!(!app.slot.is_running());
     }
 
@@ -679,10 +688,13 @@ mod tests {
             })
         );
 
-        let input = app.audio(Some("revoked"), "ja");
+        let input = app.audio(Some("down"), "ja");
         app.update(input).await;
         app.settle(1).await;
-        assert_eq!(app.error(), Some(TranscriptionError::GiftRevoked));
+        assert!(matches!(
+            app.error(),
+            Some(TranscriptionError::Failed { .. })
+        ));
     }
 
     /// 確定の文を Chrome が作っても、OpenAI を使う工程があって鍵がなければ始めない
@@ -735,63 +747,9 @@ mod tests {
         assert!(app.slot.is_running());
     }
 
-    /// ギフトコードで Grok を使うには、おすそ分けした人が xAI のキーを預けている必要がある
+    /// 動いている間に断られるようになっても、関連の要求で止まる（DESIGN.md 17.2）
     #[tokio::test]
-    async fn grok_through_a_gift_needs_the_issuer_xai_key() {
-        let mut app = App::new().await;
-        let grok = |app: &App, code: &str| {
-            let SubtitlesInput::Audio(mut input) = app.audio(Some(code), "ja") else {
-                unreachable!()
-            };
-            input.engines.transcription = FinalSource::GrokVoiceTranscribe;
-            let xai = Access::gift(Provider::Xai, code.into(), &app.api);
-            input.accesses = Accesses::new(input.accesses.iter().cloned().chain([xai]));
-            SubtitlesInput::Audio(input)
-        };
-
-        app.update(grok(&app, "good")).await;
-        app.settle(1).await;
-        assert_eq!(
-            app.error(),
-            Some(TranscriptionError::GiftUnsupported {
-                provider: Provider::Xai
-            })
-        );
-        assert!(!app.slot.is_running());
-
-        app.update(grok(&app, "both")).await;
-        app.settle(2).await;
-        assert_eq!(app.error(), None);
-        assert!(app.slot.is_running());
-    }
-
-    /// ギフトコードとベータのコードは別に持つので、使うコードをどれも確かめる
-    #[tokio::test]
-    async fn every_code_in_use_is_checked() {
-        let mut app = App::new().await;
-        let with = |app: &App, other: &str| {
-            let SubtitlesInput::Audio(mut input) = app.audio(Some("good"), "ja") else {
-                unreachable!()
-            };
-            input.engines.transcription = FinalSource::GrokVoiceTranscribe;
-            let xai = Access::gift(Provider::Xai, other.into(), &app.api);
-            input.accesses = Accesses::new(input.accesses.iter().cloned().chain([xai]));
-            SubtitlesInput::Audio(input)
-        };
-        app.update(with(&app, "revoked")).await;
-        app.settle(2).await;
-        assert_eq!(app.error(), Some(TranscriptionError::GiftRevoked));
-        assert!(!app.slot.is_running());
-
-        app.update(with(&app, "both")).await;
-        app.settle(4).await;
-        assert_eq!(app.error(), None);
-        assert!(app.slot.is_running());
-    }
-
-    /// 動いている間に断られるようになっても、関連の要求で止まる（DESIGN.md 17.1）
-    #[tokio::test]
-    async fn changes_while_running_do_not_check_the_gift() {
+    async fn changes_while_running_do_not_check_the_code() {
         let mut app = App::new().await;
         app.update(chrome()).await;
         let changes = [
@@ -825,11 +783,14 @@ mod tests {
     async fn the_reason_a_key_was_refused_reaches_the_panel() {
         let dir = tempfile::tempdir().unwrap();
         let store = Store::new(Ok(Settings::default()), dir.path().to_owned());
-        let refused = async { Err(TranscriptionError::GiftRevoked.into()) };
+        let invalid = TranscriptionError::InvalidKey {
+            provider: Provider::OpenAi,
+        };
+        let refused = {
+            let invalid = invalid.clone();
+            async move { Err(invalid.into()) }
+        };
         supervise(store.clone(), refused, None).await;
-        assert_eq!(
-            store.transcription_error(),
-            Some(TranscriptionError::GiftRevoked)
-        );
+        assert_eq!(store.transcription_error(), Some(invalid));
     }
 }

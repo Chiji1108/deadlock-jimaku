@@ -16,8 +16,8 @@ use crate::access::Access;
 use crate::enrich::Span;
 use crate::lang;
 use crate::llama::{self, Llama, Prompt};
+use crate::relay;
 use crate::secrets::Provider;
-use crate::share;
 use crate::types::{Glossary, LangCode, Token, TranscriptionError, Translations};
 use crate::usage::{Meter, Tokens, Use};
 
@@ -186,8 +186,8 @@ impl Translator {
         let status = res.status();
         if !status.is_success() {
             let body = res.text().await.unwrap_or_default();
-            let reason = share::refusal_reason(&body);
-            if let Some(refused) = share::refusal(access, status, reason.as_deref()) {
+            let reason = relay::refusal_reason(&body);
+            if let Some(refused) = relay::refusal(access, status, reason.as_deref()) {
                 return Err(refused.into());
             }
             anyhow::bail!("{target}: {status}: {body}");
@@ -471,7 +471,7 @@ mod tests {
         tokio::spawn(async move { axum::serve(listener, router).await });
         let translator = |provider| {
             let meter = Arc::new(Meter::new(std::env::temp_dir().join("mt_test_usage.json")));
-            let access = Access::gift(provider, "code".into(), &api);
+            let access = Access::code(provider, "code".into(), &api);
             Translator::new(
                 access,
                 "qwen-mt-flash",

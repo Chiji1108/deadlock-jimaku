@@ -18,8 +18,8 @@ use crate::access::Access;
 use crate::assets::Loaded;
 use crate::enrich::Span;
 use crate::llama::{self, Llama, Prompt};
+use crate::relay;
 use crate::secrets::Provider;
-use crate::share;
 use crate::types::{ChromeChoice, ChromeQuestion, ChromeQuestions, EntityKind, Glossary, LangCode};
 use crate::usage::{Meter, Tokens, Use};
 
@@ -119,7 +119,7 @@ impl Decider {
         }
     }
 
-    /// 文の区切り（用語なら参照）。鍵やギフトコードが断られたら `TranscriptionError`
+    /// 文の区切り（用語なら参照）。鍵やコードが断られたら `TranscriptionError`
     pub async fn terms(
         &self,
         http: &reqwest::Client,
@@ -225,7 +225,7 @@ pub(crate) struct Asking<'a> {
     pub purpose: Use,
 }
 
-/// 判定モデルに送って、答え（`answers`）を受け取る。鍵やギフトコードが断られたら `TranscriptionError`
+/// 判定モデルに送って、答え（`answers`）を受け取る。鍵やコードが断られたら `TranscriptionError`
 pub(crate) async fn answers(
     request: reqwest::RequestBuilder,
     asking: &Asking<'_>,
@@ -238,8 +238,8 @@ pub(crate) async fn answers(
     let status = res.status();
     if !status.is_success() {
         let body = res.text().await.unwrap_or_default();
-        let reason = share::refusal_reason(&body);
-        if let Some(refused) = share::refusal(asking.access, status, reason.as_deref()) {
+        let reason = relay::refusal_reason(&body);
+        if let Some(refused) = relay::refusal(asking.access, status, reason.as_deref()) {
             return Err(refused.into());
         }
         anyhow::bail!("{status}: {body}");

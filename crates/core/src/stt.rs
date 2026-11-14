@@ -20,8 +20,8 @@ use tokio_tungstenite::tungstenite::{self, Message, client::IntoClientRequest, h
 use crate::access::Access;
 use crate::audio::{SAMPLE_RATE, to_i16};
 use crate::local::Speech;
+use crate::relay;
 use crate::secrets::Provider;
-use crate::share;
 use crate::types::TranscriptionError;
 use crate::usage::{Meter, Tokens, Use};
 use crate::whisper::Whisper;
@@ -269,8 +269,8 @@ pub async fn transcribe(http: &reqwest::Client, req: BatchRequest<'_>) -> anyhow
             Provider::Xai if xai_refused(status, &body) => StatusCode::UNAUTHORIZED,
             _ => status,
         };
-        let reason = share::refusal_reason(&body);
-        if let Some(refused) = share::refusal(access, status, reason.as_deref()) {
+        let reason = relay::refusal_reason(&body);
+        if let Some(refused) = relay::refusal(access, status, reason.as_deref()) {
             return Err(refused.into());
         }
         bail!("{status}: {body}");
@@ -542,9 +542,9 @@ mod tests {
                 // コードは 1 日に同じ所から 3 つまでなので、持っていれば `BETA_TEST_CODE` で渡す
                 let code = match std::env::var("BETA_TEST_CODE") {
                     Ok(code) => code,
-                    Err(_) => crate::share::join_beta(&api).await.unwrap(),
+                    Err(_) => crate::relay::join_beta(&api).await.unwrap(),
                 };
-                Access::gift(Provider::Qwen, code, &api)
+                Access::code(Provider::Qwen, code, &api)
             }
             Err(_) => Access::key(Provider::Qwen, std::env::var("QWEN_SOUTH_API_KEY").unwrap()),
         };

@@ -1,5 +1,5 @@
-//! API の送り先と鍵（DESIGN.md 17.1）。自分のキーがあればその会社へ直接、なければギフトコードで
-//! 開発者のサーバー（おすそ分け）を通す。サーバーは会社ごとに同じパスで中継するので、使う側は送り先を替えるだけ
+//! API の送り先と鍵（DESIGN.md 17.2）。会社へ直接送る（自分のキー）か、開発者のサーバーを通す（ベータのコード）。
+//! サーバーは会社ごとに同じパスで中継するので、使う側は送り先を替えるだけ
 
 use std::collections::BTreeMap;
 
@@ -10,9 +10,9 @@ pub struct Access {
     provider: Provider,
     /// `https://…/v1` まで（このあとに `/responses` などを付ける）
     base: String,
-    /// `Authorization: Bearer` に付けるもの（API キーかギフトコード）
+    /// `Authorization: Bearer` に付けるもの（API キーか、中継するコード）
     token: String,
-    gift: bool,
+    code: bool,
 }
 
 impl Access {
@@ -22,18 +22,18 @@ impl Access {
             provider,
             base: base.to_owned(),
             token: key,
-            gift: false,
+            code: false,
         }
     }
 
     /// `api` は開発者のサーバーの根元（設定の `apiBase`）。会社ごとに `/openai`、`/xai` の下で中継する
-    /// （中継のない会社には `Keys::access` がギフトコードを使わない）
-    pub fn gift(provider: Provider, code: String, api: &str) -> Self {
+    /// （中継のない会社には `Keys::access` がコードを使わない）
+    pub fn code(provider: Provider, code: String, api: &str) -> Self {
         Self {
             provider,
             base: format!("{}/{}", api.trim_end_matches('/'), provider.info().id),
             token: code,
-            gift: true,
+            code: true,
         }
     }
 
@@ -58,8 +58,8 @@ impl Access {
         &self.token
     }
 
-    pub fn is_gift(&self) -> bool {
-        self.gift
+    pub fn is_code(&self) -> bool {
+        self.code
     }
 }
 
@@ -86,29 +86,29 @@ mod tests {
     use super::*;
 
     #[test]
-    fn gift_goes_through_the_server_on_the_same_paths() {
+    fn a_code_goes_through_the_server_on_the_same_paths() {
         let key = Access::key(Provider::OpenAi, "sk".into());
         assert_eq!(key.url("/responses"), "https://api.openai.com/v1/responses");
         assert_eq!(
             key.realtime_url(),
             "wss://api.openai.com/v1/realtime?intent=transcription"
         );
-        assert!(!key.is_gift());
-        let gift = Access::gift(Provider::OpenAi, "K7M2".into(), "http://127.0.0.1:8787/v1/");
+        assert!(!key.is_code());
+        let code = Access::code(Provider::OpenAi, "K7M2".into(), "http://127.0.0.1:8787/v1/");
         assert_eq!(
-            gift.url("/audio/transcriptions"),
+            code.url("/audio/transcriptions"),
             "http://127.0.0.1:8787/v1/openai/audio/transcriptions"
         );
         assert_eq!(
-            gift.realtime_url(),
+            code.realtime_url(),
             "ws://127.0.0.1:8787/v1/openai/realtime?intent=transcription"
         );
-        assert!(gift.is_gift());
+        assert!(code.is_code());
 
         let xai = Access::key(Provider::Xai, "xai".into());
         assert_eq!(xai.url("/stt"), "https://api.x.ai/v1/stt");
-        let gift = Access::gift(Provider::Xai, "K7M2".into(), "http://127.0.0.1:8787/v1");
-        assert_eq!(gift.url("/stt"), "http://127.0.0.1:8787/v1/xai/stt");
-        assert_eq!(gift.provider(), Provider::Xai);
+        let code = Access::code(Provider::Xai, "K7M2".into(), "http://127.0.0.1:8787/v1");
+        assert_eq!(code.url("/stt"), "http://127.0.0.1:8787/v1/xai/stt");
+        assert_eq!(code.provider(), Provider::Xai);
     }
 }

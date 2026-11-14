@@ -98,7 +98,7 @@ pub struct Settings {
     /// ランクを取りに行く間隔（試合後すぐには反映されないので短くしない）
     #[ts(type = "number")]
     pub rank_poll_seconds: u64,
-    /// 開発者のサーバー（おすそ分け。DESIGN.md 17.1）の根元。手元で試すときに `wrangler dev` に向ける
+    /// 開発者のサーバー（DESIGN.md 17.2）の根元。手元で試すときに `wrangler dev` に向ける
     pub api_base: String,
 }
 
@@ -793,7 +793,7 @@ impl Engines {
     }
 }
 
-/// 画面と LP が使う一覧（`frontend/src/generated/catalog.ts`）。会社の名前とギフトコードで使えるか、
+/// 画面と LP が使う一覧（`frontend/src/generated/catalog.ts`）。会社の名前と、ベータのコードで使えるか、
 /// 工程の選択肢ごとの会社。同じことを TypeScript に手で書かない（`cargo test` が書き出す）
 pub fn catalog() -> String {
     fn step<T: Serialize + Copy>(all: &[T], provider: impl Fn(T) -> Option<Provider>) -> Value {

@@ -363,7 +363,7 @@ mod tests {
         let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
         let provider = crate::secrets::Provider::OpenRouter;
         let access = match std::env::var("BETA_TEST_API") {
-            Ok(api) => Access::gift(provider, std::env::var("BETA_TEST_CODE").unwrap(), &api),
+            Ok(api) => Access::code(provider, std::env::var("BETA_TEST_CODE").unwrap(), &api),
             Err(_) => Access::key(provider, std::env::var("OPENROUTER_API_KEY").unwrap()),
         };
         let meter = Meter::new(std::env::temp_dir().join("overlays-furigana-test-usage.json"));

@@ -160,7 +160,7 @@ pub async fn run(
     .await
 }
 
-/// 入力が終わるか、鍵やギフトコードが断られるまで字幕にする
+/// 入力が終わるか、鍵やコードが断られるまで字幕にする
 async fn listen(
     mut pipeline: Pipeline,
     mut audio_rx: mpsc::Receiver<Vec<f32>>,
@@ -255,7 +255,7 @@ struct Pipeline {
     context: VecDeque<String>,
     /// バッチか enrich の結果を待っている数
     pending: usize,
-    /// 鍵やギフトコードが断られた。確定の字幕は発話ごとに送るので、これで気づける
+    /// 鍵やコードが断られた。確定の字幕は発話ごとに送るので、これで気づける
     refused: Option<TranscriptionError>,
 }
 
@@ -652,7 +652,7 @@ struct BatchContext {
 enum Done {
     /// None ならバッチが失敗した
     Transcribed { id: String, text: Option<String> },
-    /// 鍵やギフトコードが断られた
+    /// 鍵やコードが断られた
     Refused(TranscriptionError),
 }
 
@@ -727,9 +727,9 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     use crate::access::Access;
+    use crate::relay;
     use crate::secrets::Provider;
     use crate::segment::{FRAME, FRAME_MS};
-    use crate::share;
     use crate::usage::Meter;
     use axum::http::StatusCode;
     use futures_util::{SinkExt, StreamExt};
@@ -744,7 +744,7 @@ mod tests {
         tokio::sync::broadcast::Receiver<crate::types::ServerMsg>,
     ) {
         let (done_tx, _done) = mpsc::channel(1);
-        let access = Access::gift(Provider::OpenAi, "code".into(), "http://127.0.0.1:9");
+        let access = Access::code(Provider::OpenAi, "code".into(), "http://127.0.0.1:9");
         let (pipeline, _finished) = hybrid_pipeline_to(access, done_tx).await;
         let messages = pipeline.store.subscribe();
         (pipeline, messages)
@@ -890,27 +890,22 @@ mod tests {
             (
                 StatusCode::UNAUTHORIZED,
                 "unknown",
-                TranscriptionError::GiftUnknown,
+                TranscriptionError::BetaRefused,
             ),
             (
                 StatusCode::FORBIDDEN,
                 "revoked",
-                TranscriptionError::GiftRevoked,
-            ),
-            (
-                StatusCode::FORBIDDEN,
-                "expired",
-                TranscriptionError::GiftExpired { expires_at: None },
+                TranscriptionError::BetaRefused,
             ),
             (
                 StatusCode::FORBIDDEN,
                 "limit",
-                TranscriptionError::GiftLimit,
+                TranscriptionError::BetaLimit,
             ),
         ] {
             let api = answering(status, json!({ "error": error })).await;
             let done =
-                transcribe_through(Access::gift(Provider::OpenAi, "code".into(), &api)).await;
+                transcribe_through(Access::code(Provider::OpenAi, "code".into(), &api)).await;
             assert!(
                 matches!(&done[0], Done::Refused(refused) if *refused == expected),
                 "{error}"
@@ -930,7 +925,7 @@ mod tests {
             "http://127.0.0.1:9".to_owned(),
         ] {
             let done =
-                transcribe_through(Access::gift(Provider::OpenAi, "code".into(), &api)).await;
+                transcribe_through(Access::code(Provider::OpenAi, "code".into(), &api)).await;
             assert!(matches!(done[..], [Done::Transcribed { text: None, .. }]));
         }
     }
@@ -965,8 +960,8 @@ mod tests {
 
         let mut keywords = vec!["x".repeat(51)];
         keywords.extend((0..150).map(|i| format!("用語{i}")));
-        // ギフトコードでも自分のキーでも、同じ欄を送る（ギフトコードは開発者のサーバーが中継する）
-        let transcriber = Access::gift(Provider::Xai, "code".into(), &api);
+        // コードでも自分のキーでも、同じ欄を送る（コードは開発者のサーバーが中継する）
+        let transcriber = Access::code(Provider::Xai, "code".into(), &api);
         let done = transcribe_with(transcriber, keywords).await;
         assert!(
             matches!(&done[..], [Done::Transcribed { text: Some(t), .. }] if t == "ヘイズ強い")
@@ -985,7 +980,7 @@ mod tests {
         assert_eq!(fields.last().unwrap().0, "file");
     }
 
-    /// 間違った鍵には 400 が返る。ほかの 400 では止めない。ギフトコードなら、おすそ分けした人の鍵が断られた
+    /// 間違った鍵には 400 が返る。ほかの 400 では止めない
     #[tokio::test]
     async fn a_refused_xai_key_stops_the_subtitles() {
         let incorrect = r#"{"code":"Client specified an invalid argument","error":"Incorrect API key provided. You can obtain an API key from https://console.x.ai."}"#;
@@ -1003,9 +998,9 @@ mod tests {
             let answer = move || async move { (status, body) };
             let router = axum::Router::new().route("/xai/stt", axum::routing::post(answer));
             tokio::spawn(async move { axum::serve(listener, router).await });
-            let transcriber = Access::gift(Provider::Xai, "code".into(), &api);
+            let transcriber = Access::code(Provider::Xai, "code".into(), &api);
             let done = transcribe_with(transcriber, Vec::new()).await;
-            let expected = TranscriptionError::GiftUnknown;
+            let expected = TranscriptionError::BetaRefused;
             assert_eq!(
                 matches!(&done[0], Done::Refused(r) if *r == expected),
                 refused,
@@ -1017,8 +1012,8 @@ mod tests {
     #[tokio::test]
     async fn the_pipeline_remembers_why_it_was_refused() {
         let (mut pipeline, _messages) = hybrid_pipeline().await;
-        pipeline.on_done(Done::Refused(TranscriptionError::GiftRevoked));
-        assert_eq!(pipeline.refused, Some(TranscriptionError::GiftRevoked));
+        pipeline.on_done(Done::Refused(TranscriptionError::BetaRefused));
+        assert_eq!(pipeline.refused, Some(TranscriptionError::BetaRefused));
     }
 
     /// 1 回目の発話の文字起こしは答えず、2 回目から断るサーバー。呼ばれた回数も返す
@@ -1090,7 +1085,7 @@ mod tests {
         let (api, requests) = refusing_after_one_silent_request().await;
         let (done_tx, done_rx) = mpsc::channel(64);
         let (mut pipeline, finished_rx) =
-            hybrid_pipeline_to(Access::gift(Provider::OpenAi, "code".into(), &api), done_tx).await;
+            hybrid_pipeline_to(Access::code(Provider::OpenAi, "code".into(), &api), done_tx).await;
         let store = pipeline.store.clone();
         let mut messages = store.subscribe();
         let open = open_utterance(&mut pipeline);
@@ -1107,7 +1102,7 @@ mod tests {
             .unwrap_err();
         assert_eq!(
             TranscriptionError::from_error(&refused),
-            TranscriptionError::GiftRevoked
+            TranscriptionError::BetaRefused
         );
 
         tokio::time::sleep(Duration::from_millis(100)).await;
@@ -1125,7 +1120,7 @@ mod tests {
         let (api, _requests) = refusing_after_one_silent_request().await;
         let (done_tx, done_rx) = mpsc::channel(64);
         let (mut pipeline, finished_rx) =
-            hybrid_pipeline_to(Access::gift(Provider::OpenAi, "code".into(), &api), done_tx).await;
+            hybrid_pipeline_to(Access::code(Provider::OpenAi, "code".into(), &api), done_tx).await;
         let events = pipeline.store.subscribe_chrome();
         utterance(&mut pipeline);
         utterance(&mut pipeline);
@@ -1139,7 +1134,7 @@ mod tests {
             .unwrap_err();
         assert_eq!(
             TranscriptionError::from_error(&refused),
-            TranscriptionError::GiftRevoked
+            TranscriptionError::BetaRefused
         );
     }
 
@@ -1186,30 +1181,30 @@ mod tests {
             // Worker の close（server/src/realtime.ts）
             let frame = CloseFrame {
                 code: CloseCode::Policy,
-                reason: share::LIMIT.into(),
+                reason: relay::LIMIT.into(),
             };
             ws.close(Some(frame)).await.unwrap();
         });
-        let access = Access::gift(Provider::OpenAi, "code".into(), &api);
-        stops_on_refusal(access, TranscriptionError::GiftLimit).await;
+        let access = Access::code(Provider::OpenAi, "code".into(), &api);
+        stops_on_refusal(access, TranscriptionError::BetaLimit).await;
     }
 
     #[tokio::test]
     async fn a_realtime_handshake_refused_at_the_daily_limit_does_not_reconnect() {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let api = format!("http://{}", listener.local_addr().unwrap());
-        // Worker の giftKey の答え
+        // Worker の、コードを確かめる所の答え
         let refuse = || async {
             (
                 StatusCode::FORBIDDEN,
-                [(share::REFUSAL_HEADER, share::LIMIT)],
+                [(relay::REFUSAL_HEADER, relay::LIMIT)],
                 axum::Json(json!({ "error": "limit" })),
             )
         };
         let router = axum::Router::new().route("/openai/realtime", axum::routing::get(refuse));
         tokio::spawn(async move { axum::serve(listener, router).await });
-        let access = Access::gift(Provider::OpenAi, "code".into(), &api);
-        stops_on_refusal(access, TranscriptionError::GiftLimit).await;
+        let access = Access::code(Provider::OpenAi, "code".into(), &api);
+        stops_on_refusal(access, TranscriptionError::BetaLimit).await;
     }
 
     /// Worker の 401 にはヘッダーがない
@@ -1220,8 +1215,8 @@ mod tests {
         let refuse = || async { StatusCode::UNAUTHORIZED };
         let router = axum::Router::new().route("/openai/realtime", axum::routing::get(refuse));
         tokio::spawn(async move { axum::serve(listener, router).await });
-        let access = Access::gift(Provider::OpenAi, "code".into(), &api);
-        stops_on_refusal(access, TranscriptionError::GiftUnknown).await;
+        let access = Access::code(Provider::OpenAi, "code".into(), &api);
+        stops_on_refusal(access, TranscriptionError::BetaRefused).await;
     }
 
     #[test]

@@ -452,17 +452,15 @@ export const PROVIDER_NAMES = Object.fromEntries(PROVIDERS.map((p) => [p.id, p.n
   string
 >;
 
-/** その会社を中継するコードの種類。gift は人からもらったギフトコード（おすそ分けした人がその会社のキーを預けていれば）、
- * beta はベータのコード（開発者のキー）。中継がなければ null */
+/** その会社を、ベータのコード（開発者のキー）が中継するなら "beta"。中継がなければ null */
 export const relayOf = (p: Provider) => PROVIDERS.find((info) => info.id === p)?.relay ?? null;
 
-/** 足りない鍵を入れに行くボタンの文。ギフトコードで足りる会社があれば、そう添える */
-export const enterKeys = (list: Provider[]) =>
-  list.some((p) => relayOf(p) === "gift") ? "キーかギフトコードを入れる" : "API キーを入れる";
+/** 足りない鍵を入れに行くボタンの文 */
+export const ENTER_KEYS = "API キーを入れる";
 
-/** 要る鍵の名前。ギフトコードで足りる会社があれば、そう添える */
+/** 要る鍵の名前 */
 export const keyNames = (list: Provider[]) =>
-  `${list.map((p) => PROVIDER_NAMES[p]).join(" と ")} の API キー${list.some((p) => relayOf(p) === "gift") ? "かギフトコード" : ""}`;
+  `${list.map((p) => PROVIDER_NAMES[p]).join(" と ")} の API キー`;
 
 /** 今の仕組みで作れない選び方。core の `Engines::sanitized` と同じ決まり。
  * Chrome の翻訳を使っている間は途中の字幕を Chrome から変えさせない（変えると core が翻訳を有料に直し、黙って料金がかかる） */

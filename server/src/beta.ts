@@ -1,13 +1,10 @@
 // ベータ期間中の無料の提供（DESIGN.md 17.2）。開発者のキーで、いちばん安い組み合わせ（Qwen と OpenRouter）を中継する。
-// 使う人はアプリが自動でもらうコードで見分ける。コードはおすそ分けのコードと同じ表に置き、同じ決まり（1 日の上限、止める）で動く
+// 使う人はアプリが自動でもらうコードで見分ける。コードには 1 日の上限があり、管理画面から止められる
 
 import { and, eq, inArray, sql } from "drizzle-orm";
-import { day, month, type Db } from "./db";
-import { betaGrants, betaKeys, betaSettings, betaSpend, codes, codeUsage, issuers } from "./schema";
+import { CODE_DAILY_USD, day, month, type Db } from "./db";
+import { betaGrants, betaKeys, betaSettings, betaSpend, codes, codeUsage } from "./schema";
 import { decrypt, newCode, newId, normalizeCode, sha256 } from "./secrets";
-
-/** ベータのコードの持ち主（開発者）。キーは表に置かず、Worker の秘密の設定から読む */
-export const BETA_ISSUER = "beta";
 
 /** ベータで中継する会社 */
 export type BetaProvider = "qwen" | "openrouter";
@@ -18,8 +15,6 @@ export interface BetaEnv {
   BETA_OPENROUTER_KEY?: string;
 }
 
-/** 1 つのコード（1 台）の 1 日の上限（ドル）の既定。いちばん安い組み合わせで約 14 時間分。ふつうの配信では届かない */
-export const BETA_CODE_DAILY_USD = 0.5;
 /** ベータ全体の 1 日の上限（ドル）の既定。届いたら、その日はどのコードも中継しない（悪用されても、ここで止まる）。
  * 最後の 1 回は上限を少し越える（届く前の要求は通す）ので、越える幅は 1 回の見積もりまで */
 export const BETA_DAILY_USD = 5;
@@ -52,7 +47,7 @@ export async function betaLimits(db: Db): Promise<{ dailyUsd: number; codeDailyU
     const value = Number(rows.find((row) => row.name === name)?.value);
     return value > 0 ? value : standard;
   };
-  return { dailyUsd: saved("dailyUsd", BETA_DAILY_USD), codeDailyUsd: saved("codeDailyUsd", BETA_CODE_DAILY_USD) };
+  return { dailyUsd: saved("dailyUsd", BETA_DAILY_USD), codeDailyUsd: saved("codeDailyUsd", CODE_DAILY_USD) };
 }
 
 /**
@@ -128,21 +123,12 @@ export async function grantBetaCode(db: Db, place: string, now: number): Promise
   if ((await counted(ALL_PLACES)).count > BETA_CODES_PER_DAY) return { error: "full" };
   const code = newCode();
   const { codeDailyUsd } = await betaLimits(db);
-  await db.batch([
-    // 持ち主の行は、初めてのコードを出すときに作る（合言葉は使えない値。管理の口には入れない）
-    db
-      .insert(issuers)
-      .values({ id: BETA_ISSUER, adminTokenHash: BETA_ISSUER, tokenSalt: "", createdAt: now })
-      .onConflictDoNothing(),
-    db.insert(codes).values({
-      id: newId(),
-      codeHash: await sha256(normalizeCode(code)),
-      issuerId: BETA_ISSUER,
-      memo: "beta",
-      dailyLimitUsd: codeDailyUsd,
-      createdAt: now,
-    }),
-  ]);
+  await db.insert(codes).values({
+    id: newId(),
+    codeHash: await sha256(normalizeCode(code)),
+    dailyLimitUsd: codeDailyUsd,
+    createdAt: now,
+  });
   return { code };
 }
 
@@ -160,7 +146,7 @@ export async function reserveBeta(db: Db, codeId: string, estimate: number, now:
   const mine = await db
     .update(codes)
     .set({ dayUsd: sql`${spentToday} + ${estimate}`, day: today })
-    .where(and(eq(codes.id, codeId), sql`${spentToday} < COALESCE(${codes.dailyLimitUsd}, ${BETA_CODE_DAILY_USD})`))
+    .where(and(eq(codes.id, codeId), sql`${spentToday} < COALESCE(${codes.dailyLimitUsd}, ${CODE_DAILY_USD})`))
     .returning({ id: codes.id })
     .get();
   if (!mine) return false;

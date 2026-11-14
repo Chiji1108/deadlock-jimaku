@@ -5,12 +5,10 @@ import type { LiveStatus } from "../generated/LiveStatus";
 import type { BetaRefusal } from "../generated/BetaRefusal";
 import type { Downloading } from "../generated/Downloading";
 import type { Engines } from "../generated/Engines";
-import type { GiftStatus } from "../generated/GiftStatus";
 import type { Provider } from "../generated/Provider";
 import type { ServerMsg } from "../generated/ServerMsg";
 import type { SettingsPatch } from "../generated/SettingsPatch";
 import type { SettingsView } from "../generated/SettingsView";
-import type { ShareView } from "../generated/ShareView";
 import type { MicError } from "../generated/MicError";
 import type { TranscriptionError } from "../generated/TranscriptionError";
 import type { UsageView } from "../generated/UsageView";
@@ -70,14 +68,8 @@ class Panel {
   usage = $state<UsageView | undefined>();
   /** 起動してから、字幕を動かして字幕が出た（テスト字幕は数えない） */
   subtitled = $state(false);
-  /** もらったギフトコードの状態（保存していれば開いたときに確かめる） */
-  gift = $state<GiftStatus | undefined>();
   /** ベータのコードをもらえば使える作り方。選んだ人の同意を待っている（DESIGN.md 17.2） */
   betaOffer = $state<Engines>();
-  /** おすそ分け。起動したとき・キーを変えたとき・おすそ分けか料金のタブを開いたときに取り直す */
-  share = $state<ShareView | undefined>();
-  /** おすそ分けの状態を取れなかった理由 */
-  shareError = $state<string | undefined>();
   /** 送った設定の変更の数 */
   private updates = 0;
   /** 最後に SILENT_DB を超えた時刻 */
@@ -104,36 +96,29 @@ class Panel {
     return this.view ? this.keyless(this.view.settings.engines) : [];
   }
 
-  /** 選んだ作り方に要るのに、自分のキーもギフトコードもない会社。ギフトコードが xAI を中継するかは、
-   * 字幕を始めるときに中核が確かめる（中継しなければ `giftUnsupported` で止まる） */
+  /** 選んだ作り方に要るのに、自分のキーも、中継するコードもない会社 */
   get missingKeys(): Provider[] {
     return this.withoutKey.filter((p) => !this.hasCode(p));
   }
 
-  /** その会社を中継するコード（ギフトコードかベータのコード）を持っている */
+  /** その会社を中継するコード（ベータのコード）を持っている */
   private hasCode(p: Provider) {
-    const relay = relayOf(p);
-    return relay !== null && this.view?.keys[relay].state === "saved";
+    return relayOf(p) === "beta" && this.view?.keys.beta.state === "saved";
   }
 
   /** その会社を、コードで使う。ベータのコードは、自分のキーがあっても先に使う（無料の分を先に。断られて自分のキーで
-   * 続けている間は使わない）。ギフトコードは、自分のキーがないときだけ使う。core の `Keys::access` と同じ決まり */
+   * 続けている間は使わない）。core の `Keys::access` と同じ決まり */
   private viaCode(p: Provider) {
     const view = this.view;
-    if (!view) return false;
-    const relay = relayOf(p);
-    if (relay === "beta")
-      return view.keys.beta.state === "saved" && view.continuesWith !== "ownKeys";
-    return relay === "gift" && view.keys[p].state !== "saved" && view.keys.gift.state === "saved";
+    if (!view || relayOf(p) !== "beta") return false;
+    return view.keys.beta.state === "saved" && view.continuesWith !== "ownKeys";
   }
 
-  /** コードで使う（おすそ分けしてくれた人か、開発者に請求される）会社。ギフトコードが中継する会社が分かれば、それだけ */
-  get giftPaid(): Provider[] {
+  /** ベータのコードで使う（開発者に請求される）会社 */
+  get codePaid(): Provider[] {
     const view = this.view;
     if (!view) return [];
-    const relayed = this.gift?.state === "active" ? this.gift.providers : undefined;
-    const unrelayed = (p: Provider) => relayOf(p) === "gift" && relayed && !relayed.includes(p);
-    return providers(view.settings.engines).filter((p) => this.viaCode(p) && !unrelayed(p));
+    return providers(view.settings.engines).filter((p) => this.viaCode(p));
   }
 
   /** 自分の API キーで払う分がある（コードで使う会社だけなら、本人には請求されない） */
@@ -180,8 +165,6 @@ class Panel {
     void this.refreshDevices();
     // WebView が名前で描ける PC のフォントは、起動したときにあったもの。その一覧をここで覚える
     void this.loadFonts();
-    void this.refreshGift();
-    void this.refreshShare();
     const disconnect = connect(
       ["status", "level", "usage", "subtitle", "glossary"],
       (msg) => this.onMessage(msg),
@@ -259,14 +242,13 @@ class Panel {
     return this.update({ transcriptionEnabled: enabled });
   }
 
-  /** 保存できたら true。預けたキーの差し替えに失敗しても、画面は今の状態にする */
+  /** 保存できたら true。失敗しても、画面は今の状態にする */
   setKey = async (provider: Provider, key: string) => {
     const saved = await this.run(async () => {
       this.view = await api.setKey(provider, key);
       toast.success(key ? "保存しました" : "削除しました");
     });
     if (!saved) this.view = await api.settings().catch(() => this.view);
-    void this.refreshShare();
     return saved;
   };
 
@@ -360,10 +342,6 @@ class Panel {
     if (this.chosenFont(target) === chosen) await this.setFont(target, family);
   };
 
-  refreshGift = async () => {
-    this.gift = await api.gift().catch(() => undefined);
-  };
-
   /** モードを選ぶ。ベータのコードが要るなら、変える前に同意を聞く（DESIGN.md 17.2） */
   chooseMode = async (engines: Engines) => {
     const needsCode =
@@ -386,41 +364,6 @@ class Panel {
     return this.update({ engines });
   };
 
-  /** 有効なコードなら保存する。保存できたら true */
-  setGift = (code: string) =>
-    this.run(async () => {
-      const status = await api.setGift(code);
-      if (!giftValid(status)) throw new Error(giftStatusText(status));
-      this.gift = status;
-      this.view = await api.settings();
-      toast.success("ギフトコードを保存しました");
-    });
-
-  removeGift = () =>
-    this.run(async () => {
-      await api.removeGift();
-      this.gift = { state: "none" };
-      this.view = await api.settings();
-      toast.success("ギフトコードを削除しました");
-    });
-
-  /** 自動で取り直すので、失敗してもトーストは出さない（おすそ分けタブに理由を出す） */
-  refreshShare = async () => {
-    try {
-      this.share = await api.share();
-      this.shareError = undefined;
-    } catch (e) {
-      this.shareError = e instanceof Error ? e.message : String(e);
-    }
-  };
-
-  /** 失敗したら理由を出す。成功したら true */
-  shareAction = (action: () => Promise<ShareView>, done?: string) =>
-    this.run(async () => {
-      this.share = await action();
-      if (done) toast.success(done);
-    });
-
   demo = () =>
     this.run(async () => {
       const res = await api.demo();
@@ -441,7 +384,7 @@ class Panel {
 
 export const panel = new Panel();
 
-/** コード（ギフトコードとベータのコード）の 1 日の上限は UTC の日で区切る */
+/** ベータのコードの 1 日の上限は UTC の日で区切る */
 export const LIMIT_RESET = "日本時間の朝 9 時（UTC の 0 時）にまた使えます";
 
 /** 字幕が止まった理由を文にする（サーバーは種類と中身だけを返す） */
@@ -449,24 +392,10 @@ export function transcriptionErrorText(e: TranscriptionError): string {
   switch (e.code) {
     case "missingKey":
       return `${keyNames([e.provider])}が設定されていません`;
-    case "giftExpired":
-      return e.expiresAt === null
-        ? "ギフトコードの期限が切れました"
-        : `ギフトコードの期限が切れました（${dateTime(e.expiresAt)} まで）`;
-    case "giftRevoked":
-      return "ギフトコードが止められています。おすそ分けしてくれた人に確かめてください";
-    case "giftLimit":
-      return `ギフトコードの今日の上限に達しました。${LIMIT_RESET}`;
-    case "giftUnknown":
-      return "ギフトコードが見つかりません。おすそ分けしてくれた人に確かめてください";
     case "betaLimit":
       return `ベータ期間中の無料の提供の、今日の上限に達しました。${LIMIT_RESET}。ほかのモードなら、今すぐ使えます`;
     case "betaRefused":
       return "ベータのコードが使えなくなっています（無料の提供が止まっているか、終わっています）。ほかのモードを選ぶか、自分の API キーを入れてください";
-    case "giftUnsupported":
-      return relayOf(e.provider) === "beta"
-        ? `ベータのコードでは ${PROVIDER_NAMES[e.provider]} の この工程を使えません。「おすすめ」のモードにするか、自分の API キーを入れてください`
-        : `このギフトコードでは ${PROVIDER_NAMES[e.provider]} を使えません。おすそ分けしてくれた人に ${PROVIDER_NAMES[e.provider]} のキーも預けてもらうか、自分の API キーを入れてください`;
     case "invalidKey":
       return `${PROVIDER_NAMES[e.provider]} の API キーが使えません。キーを確かめてください`;
     case "inputEnded":
@@ -527,34 +456,6 @@ export function fallbackText(e: TranscriptionError, ownKeys: boolean): string {
     ? "字幕は止めずに、自分の API キーで続けています（ここからの料金は、自分に請求されます）"
     : "字幕は止めずに、Chrome の作り方で続けています";
   return `${reason}。${how}。字幕を始め直すと、選んだモードの無料の分に戻ります`;
-}
-
-export const giftValid = (s: GiftStatus | undefined) =>
-  s?.state === "active" || s?.state === "limit";
-
-/** ギフトコードの状態を文にする（使えるときは期限） */
-export function giftStatusText(s: GiftStatus): string {
-  switch (s.state) {
-    case "none":
-      return "ギフトコードがありません";
-    case "active": {
-      const until = s.expiresAt === null ? "期限なしで" : `${dateTime(s.expiresAt)} まで`;
-      const names = s.providers.map((p) => PROVIDER_NAMES[p]).join(" と ");
-      return `${until}使えます（${names}）`;
-    }
-    case "expired":
-      return `期限が切れています（${dateTime(s.expiresAt)} まで）`;
-    case "revoked":
-      return "おすそ分けした人が止めています";
-    case "limit":
-      return `今日の上限に達しました。${LIMIT_RESET}`;
-    case "unknown":
-      return "このコードは見つかりません。打ち間違いがないか確かめてください";
-    case "unreachable":
-      return `サーバーにつながりません（${s.detail}）`;
-    default:
-      return unknown(s);
-  }
 }
 
 /** 「11/10（月）12:00」 */

@@ -112,7 +112,7 @@ export async function relayQwenLive(db: Db, codeId: string, keys: RelayKey[], ct
       const code = await codeById(db, codeId);
       const refused = code ? refusal(code, Date.now()) : "revoked";
       if ((refused && refused !== "limit") || (await betaClosed(db))) {
-        return shut(1008, "gift code is no longer usable");
+        return shut(1008, "code is no longer usable");
       }
       if (await reserveBeta(db, codeId, WINDOW_USD, Date.now())) reserved = WINDOW_USD;
       else shut(1008, "limit");

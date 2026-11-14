@@ -3,10 +3,6 @@ import type { KeyState } from "./KeyState";
 
 export type KeyStatus = { openai: KeyState, xai: KeyState, qwen: KeyState, openrouter: KeyState, typesafe: KeyState, 
 /**
- * ギフトコード。コードそのものは返さない
- */
-gift: KeyState, 
-/**
- * ベータのコード
+ * ベータのコード。コードそのものは返さない
  */
 beta: KeyState, };

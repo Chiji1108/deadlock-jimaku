@@ -5,7 +5,7 @@
   "main": "src/worker.ts",
   "compatibility_date": "2026-10-01",
   "routes": [{ "pattern": "api.jimaku.deadlock.jp", "custom_domain": true }],
-  // おすそ分け（キー・コード・使われた額）。表は migrations/。
+  // ベータのコードと使われた額、開発者のキー。表は migrations/。
   // database_id は `wrangler d1 create deadlock-jimaku` で作ったもの（手元のテストと開発では使わない）
   "d1_databases": [
     {
@@ -15,7 +15,7 @@
       "migrations_dir": "migrations"
     }
   ],
-  // コードごとの 1 分あたりの要求数（giftKey）。根拠は DESIGN.md 17.1。場所ごとの近似の値
-  "ratelimits": [{ "name": "GIFT_RATE", "namespace_id": "1006", "simple": { "limit": 600, "period": 60 } }]
+  // コードごとの 1 分あたりの要求数（index.ts の relayCode）。根拠は DESIGN.md 17.2。場所ごとの近似の値
+  "ratelimits": [{ "name": "CODE_RATE", "namespace_id": "1006", "simple": { "limit": 600, "period": 60 } }]
   // SHARE_KEY（キーを暗号化する鍵）は `wrangler secret put SHARE_KEY` で入れる
 }

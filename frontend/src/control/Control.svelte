@@ -1,7 +1,6 @@
 <script lang="ts">
   import CaptionsIcon from "@lucide/svelte/icons/captions";
   import CircleAlertIcon from "@lucide/svelte/icons/circle-alert";
-  import GiftIcon from "@lucide/svelte/icons/gift";
   import KeyRoundIcon from "@lucide/svelte/icons/key-round";
   import MicIcon from "@lucide/svelte/icons/mic";
   import PackageIcon from "@lucide/svelte/icons/package";
@@ -30,9 +29,8 @@
   import ItemsTab from "./tabs/ItemsTab.svelte";
   import KeysTab from "./tabs/KeysTab.svelte";
   import RankTab from "./tabs/RankTab.svelte";
-  import ShareTab from "./tabs/ShareTab.svelte";
   import UsageTab from "./tabs/UsageTab.svelte";
-  import { CHROME, chromeFinals, enterKeys, keyNames } from "../lib/engines";
+  import { CHROME, ENTER_KEYS, chromeFinals, keyNames } from "../lib/engines";
 
   onMount(() => panel.start());
 
@@ -62,8 +60,6 @@
       heading: "キーと料金",
     },
     { value: "usage", label: "料金", icon: WalletIcon, page: UsageTab },
-    // 非推奨で、将来なくなるので、一番下に置く（DESIGN.md 17.1）
-    { value: "share", label: "おすそ分け", icon: GiftIcon, page: ShareTab, deprecated: true },
   ];
   // デスクトップのウィンドウでは左のサイドバー。OBS のドックのように狭いときは上に並べる
   const wide = new MediaQuery("min-width: 768px");
@@ -72,10 +68,9 @@
     TABS.find((t) => t.value === panel.tab)?.wide ? "max-w-6xl" : "max-w-3xl",
   );
 
-  // タブを変えたら（サイドバーからでも、料金や注意のリンクからでも）先頭から見せる。
-  // おすそ分けで使われた額はサーバーにあるので、それを出すタブを開いたら取り直す
+  // タブを変えたら（サイドバーからでも、料金や注意のリンクからでも）先頭から見せる
   $effect(() => {
-    if (panel.tab === "share" || panel.tab === "usage") void panel.refreshShare();
+    void panel.tab;
     content?.scrollTo({ top: 0 });
     window.scrollTo({ top: 0 });
   });
@@ -155,9 +150,7 @@
           </Button>
         {:else if panel.needsKey}
           <div class="flex flex-wrap gap-2">
-            <Button variant="outline" onclick={() => (panel.tab = "keys")}
-              >{enterKeys(panel.missingKeys)}</Button
-            >
+            <Button variant="outline" onclick={() => (panel.tab = "keys")}>{ENTER_KEYS}</Button>
             <Button onclick={panel.startWithChrome}>無料の Chrome モードで始める</Button>
           </div>
         {:else}
@@ -201,9 +194,6 @@
               class="group-data-horizontal/tabs:[&>svg]:hidden group-data-vertical/tabs:h-9 group-data-vertical/tabs:flex-none group-data-vertical/tabs:px-3"
             >
               <t.icon />{t.label}
-              {#if t.deprecated}
-                <span class="text-[10px] text-muted-foreground">非推奨</span>
-              {/if}
             </Tabs.Trigger>
           {/each}
         </Tabs.List>
@@ -243,9 +233,7 @@
               <KeyRoundIcon />
               <Alert.Title>この作り方には {keyNames(panel.missingKeys)}が要ります</Alert.Title>
               <Alert.Description class="flex flex-wrap gap-2 pt-1">
-                <Button size="sm" onclick={() => (panel.tab = "keys")}
-                  >{enterKeys(panel.missingKeys)}</Button
-                >
+                <Button size="sm" onclick={() => (panel.tab = "keys")}>{ENTER_KEYS}</Button>
                 <Button
                   size="sm"
                   variant="outline"
