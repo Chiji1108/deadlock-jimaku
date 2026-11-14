@@ -99,7 +99,7 @@
       <div class="flex min-w-40 flex-1 flex-col gap-0.5">
         <p class="flex items-center gap-2 text-sm font-medium">
           <span class="size-2 shrink-0 rounded-full {STATUS_DOTS[status.tone]}"></span>
-          {panel.server === "open" ? status.label : "アプリに接続しています…"}
+          {status.label}
         </p>
         <!-- 自分で払う分があるときだけ出す（無料のモードや、コードで使うだけなら、増えていく額を見せない）。使用量が届く前も行の高さを取っておく（届いたときに帯の高さが変わらないように） -->
         {#if s && panel.pays}

@@ -31,7 +31,7 @@
   const status = $derived(panel.status);
   /** 状態の下に添えるひとこと。止まっているときは理由と直し方、そうでなければ今の作り方 */
   const detail = $derived.by(() => {
-    if (panel.server !== "open") return "アプリに接続しています…";
+    if (panel.server !== "open") return "つながると、今の状態が出ます";
     if (s.transcriptionEnabled && panel.transcriptionError)
       return `${transcriptionErrorText(panel.transcriptionError)}。直したら「字幕を止める」→「字幕を始める」で始め直してください`;
     const to = s.translateTo.length ? ` → ${s.translateTo.map(panel.label).join("、")}` : "";

@@ -182,6 +182,8 @@ class Panel {
 
   /** 今の状態のひとこと。上の帯と、ホームの状態の欄で同じものを出す */
   get status(): PanelStatus {
+    // つながっていない間は、届いている状態が古い（アプリが終わっても、最後の「字幕を出しています」が残る）
+    if (this.server !== "open") return { label: "アプリに接続しています…", tone: "busy" };
     if (!this.settings?.transcriptionEnabled) return { label: "停止中", tone: "idle" };
     if (this.transcriptionError) return { label: "止まっています", tone: "error" };
     if (this.preparing) {
