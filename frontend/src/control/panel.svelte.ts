@@ -20,6 +20,7 @@ import { addFontFaces, fontWeights } from "../lib/overlay-fonts";
 import type { MergePatch } from "../lib/text-style";
 import type { FontEntry } from "../generated/FontEntry";
 import type { FontStyle } from "../generated/FontStyle";
+import { loadGlossary } from "../lib/glossary.svelte";
 import { connect, type Status } from "../lib/ws";
 
 /** 選べるフォントの一覧。取れるまでと、取れなかったときは名前の配列の代わりにその状態が入る */
@@ -182,7 +183,7 @@ class Panel {
     void this.refreshGift();
     void this.refreshShare();
     const disconnect = connect(
-      ["status", "level", "usage", "subtitle"],
+      ["status", "level", "usage", "subtitle", "glossary"],
       (msg) => this.onMessage(msg),
       (s) => {
         this.server = s;
@@ -197,7 +198,9 @@ class Panel {
   }
 
   private onMessage(msg: ServerMsg) {
-    if (msg.type === "transcription.status") {
+    // 辞書が変わった（人を足した、など）。プロフィールの見本と、ヒーローの一覧に使う
+    if (msg.type === "glossary.updated") void loadGlossary();
+    else if (msg.type === "transcription.status") {
       this.transcriptionError = msg.error ?? undefined;
       this.preparing = msg.preparing;
       this.downloading = msg.downloading ?? undefined;
