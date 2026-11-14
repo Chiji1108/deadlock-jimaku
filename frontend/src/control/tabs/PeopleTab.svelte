@@ -14,6 +14,8 @@
   import { Input } from "$lib/components/ui/input";
   import * as Select from "$lib/components/ui/select";
   import type { Person } from "../../generated/Person";
+  import type { Segment } from "../../generated/Segment";
+  import Captions from "../../lib/Captions.svelte";
   import { api } from "../../lib/api";
   import { entityName, glossary, loadGlossary } from "../../lib/glossary.svelte";
   import { panel } from "../panel.svelte";
@@ -42,6 +44,43 @@
   const auto = $derived.by(() => {
     if (!s.rankAccount) return "自動（Steam のアカウントをつなぐと、試合から取ります）";
     return `自動（${heroName(panel.view?.played) ?? "まだ分かりません"}）`;
+  });
+
+  // 見本の字幕。入れた名前と一人称が、字幕でどう見えるかを出す（自分がいなければ、初めの人）
+  const shown = $derived(me ?? people[0]);
+  const sample = $derived.by((): Segment[] => {
+    const person = shown;
+    const name = person && (person.names[s.micLanguage] ?? Object.values(person.names)[0]);
+    if (!person || !name) return [];
+    const ref = `person:${person.id}`;
+    const line = (id: string, said: string, rest: string, en: Segment["tokens"]): Segment => ({
+      id,
+      startedAt: 0,
+      stage: "enriched",
+      lang: "ja",
+      text: said + rest,
+      enriched: {
+        source: [
+          { t: "entity", ref, spoken: said },
+          { t: "text", text: rest },
+        ],
+        translations: { en: en ?? [] },
+      },
+    });
+    const named = line("name", name, "、ナイス！", [
+      { t: "entity", ref },
+      { t: "text", text: ", nice!" },
+    ]);
+    const word = person.firstPerson[0];
+    const first = word && line("first", word, "についてきて", [{ t: "text", text: "Follow me." }]);
+    return first ? [named, first] : [named];
+  });
+  // 字幕の見た目は「字幕」のタブの設定のまま、欄に収まる大きさにする
+  const display = $derived({
+    ...s.subtitleDisplay,
+    showSource: true,
+    fontSize: 30,
+    translationFontSize: 20,
   });
 
   /** 足すときの名前（自分、ほかの人） */
@@ -250,6 +289,23 @@
 {/snippet}
 
 <div class="flex flex-col gap-6">
+  <figure class="flex flex-col gap-1.5">
+    <div
+      class="relative h-48 overflow-hidden rounded-lg border bg-[radial-gradient(ellipse_at_30%_20%,#3b4a5e,#11151c_70%)]"
+    >
+      {#if sample.length}
+        <Captions segments={sample} {display} look={s.subtitleStyle} />
+      {:else}
+        <p class="absolute inset-0 flex items-center justify-center text-sm text-white/70">
+          名前を入れると、字幕での見え方がここに出ます
+        </p>
+      {/if}
+    </div>
+    <figcaption class="text-xs text-muted-foreground">
+      見本の字幕です。名前{#if shown?.firstPerson.length}と一人称{/if}に、アイコンと色が付きます。翻訳では、名前はその言語の名前になり、一人称はそのままです
+    </figcaption>
+  </figure>
+
   <Card.Root>
     <Card.Header>
       <Card.Title>自分</Card.Title>
