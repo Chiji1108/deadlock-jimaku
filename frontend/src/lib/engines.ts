@@ -473,6 +473,21 @@ export function unavailable<K extends Item>(t: Engines, item: K, value: Engines[
   return false;
 }
 
+/**
+ * モードを見比べるための、工程ごとの正確さ（その工程で選んだ選択肢の、測った値。物差しは工程ごとに違う）。
+ * 翻訳を GPT にしたモードは、用語を GPT が翻訳と同時に判定するので、用語の値はない
+ */
+export function modeStats(t: Engines): { label: string; value: string }[] {
+  const accuracy = <K extends Item>(item: K) =>
+    ITEMS[item].options.find((o) => o.value === t[item])?.accuracy;
+  const terms = llmTranslation(t) ? "GPT が判定" : accuracy("terms");
+  return [
+    { label: "文字起こし", value: accuracy("transcription") },
+    { label: "用語", value: terms },
+    { label: "ふりがな", value: accuracy("furigana") },
+  ].flatMap((stat) => (stat.value ? [{ label: stat.label, value: stat.value }] : []));
+}
+
 /** 有料の工程の名前（詳しく選んだときの説明に使う） */
 export const paidItems = (t: Engines) =>
   (Object.keys(ITEMS) as Item[])

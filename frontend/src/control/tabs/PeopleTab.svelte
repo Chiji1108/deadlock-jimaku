@@ -29,23 +29,6 @@
   const languages = $derived([...new Set([s.micLanguage, "en", ...s.translateTo])]);
   const languageNames = new Intl.DisplayNames(["ja"], { type: "language" });
 
-  // 使っているヒーロー。自分で選ぶか、試合から取ったもの（`panel.view.played`）に任せる
-  const AUTO = "auto";
-  void loadGlossary();
-  const heroName = (ref: string | undefined) => {
-    const entity = ref ? glossary.entity(ref) : undefined;
-    return entity ? entityName(entity, "ja") : undefined;
-  };
-  const heroes = $derived(
-    glossary.heroes
-      .map(([ref, entity]) => ({ ref, name: entityName(entity, "ja"), icon: entity.icon }))
-      .sort((a, b) => a.name.localeCompare(b.name, "ja")),
-  );
-  const auto = $derived.by(() => {
-    if (!s.rankAccount) return "自動（Steam のアカウントをつなぐと、試合から取ります）";
-    return `自動（${heroName(panel.view?.played) ?? "まだ分かりません"}）`;
-  });
-
   // 見本の字幕。入れた名前と一人称が、字幕でどう見えるかを出す（自分がいなければ、初めの人）
   const shown = $derived(me ?? people[0]);
   const sample = $derived.by((): Segment[] => {
@@ -328,40 +311,6 @@
           <Button type="submit" disabled={!adding.me.trim()}>足す</Button>
         </form>
       {/if}
-    </Card.Content>
-  </Card.Root>
-
-  <Card.Root>
-    <Card.Header>
-      <Card.Title>使っているヒーロー</Card.Title>
-      <Card.Description>
-        「ウルト使う」「2
-        番」のように、ヒーローの名前を言わずにスキルの話をしたとき、このヒーローのスキルとして判定します。用語を
-        AI で判定するモード（おすすめ・Chrome+・クラウド・ローカル）で効きます
-      </Card.Description>
-    </Card.Header>
-    <Card.Content class="flex flex-col gap-2">
-      <Select.Root
-        type="single"
-        value={s.playing ?? AUTO}
-        onValueChange={(v) => panel.update({ playing: v === AUTO ? "" : v })}
-        onOpenChange={(open) => open && void loadGlossary()}
-      >
-        <Select.Trigger class="w-full">{heroName(s.playing) ?? auto}</Select.Trigger>
-        <Select.Content>
-          <Select.Item value={AUTO}>{auto}</Select.Item>
-          {#each heroes as hero (hero.ref)}
-            <Select.Item value={hero.ref}>
-              {#if hero.icon}<img class="size-5 rounded" src={hero.icon} alt="" />{/if}
-              {hero.name}
-            </Select.Item>
-          {/each}
-        </Select.Content>
-      </Select.Root>
-      <p class="text-xs text-muted-foreground">
-        自動は、ランクの表示につないだ Steam
-        のアカウントの試合から取ります。進行中の試合が分かるのは上位の試合だけなので、ふつうは前の試合のヒーローになります。違っていたら、ここで選んでください
-      </p>
     </Card.Content>
   </Card.Root>
 

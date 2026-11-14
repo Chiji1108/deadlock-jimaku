@@ -1,5 +1,14 @@
 import { expect, test } from "vitest";
-import { BEST, CHROME, MODES, keyNames, modeOf, providers, unavailable } from "./engines";
+import {
+  BEST,
+  CHROME,
+  MODES,
+  keyNames,
+  modeOf,
+  modeStats,
+  providers,
+  unavailable,
+} from "./engines";
 
 test("モードの組み合わせは、そのモードとして見分ける", () => {
   for (const mode of MODES) expect(modeOf(mode.engines)?.name).toBe(mode.name);
@@ -36,4 +45,16 @@ test("OpenRouter と TypeSafe AI の工程は、その会社の鍵が要る", ()
 test("要る鍵は、会社の名前を並べて案内する", () => {
   expect(keyNames(["openai", "xai"])).toBe("OpenAI と xAI の API キー");
   expect(keyNames(["qwen"])).toBe("Qwen の API キー");
+});
+
+test("モードを見比べる正確さは、どのモードも同じ並びで出る", () => {
+  for (const mode of MODES) {
+    expect(modeStats(mode.engines).map((stat) => stat.label)).toEqual([
+      "文字起こし",
+      "用語",
+      "ふりがな",
+    ]);
+  }
+  // 翻訳を GPT にしたモードは、用語を GPT が翻訳と同時に判定する（辞書の一致の値を出さない）
+  expect(modeStats(BEST)[1]).toEqual({ label: "用語", value: "GPT が判定" });
 });

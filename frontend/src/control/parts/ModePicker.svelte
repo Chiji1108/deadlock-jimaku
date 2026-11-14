@@ -7,7 +7,7 @@
   import { Button } from "$lib/components/ui/button";
   import { panel } from "../panel.svelte";
   import ModeBadges from "./ModeBadges.svelte";
-  import { MODES, keyNames, modeOf, paidItems, providers } from "../../lib/engines";
+  import { MODES, keyNames, modeOf, modeStats, paidItems, providers } from "../../lib/engines";
 
   const s = $derived(panel.settings!);
   const t = $derived(s.engines);
@@ -40,6 +40,12 @@
       {@render dot(mode?.name === m.name)}
       <span class="font-medium">{m.label}</span>
       <ModeBadges mode={m} />
+    </span>
+    <!-- どのモードも同じ並びで、工程ごとの正確さを出す（見比べられるように） -->
+    <span class="flex flex-wrap gap-x-4 pl-5 text-xs tabular-nums">
+      {#each modeStats(m.engines) as stat (stat.label)}
+        <span><span class="text-muted-foreground">{stat.label}</span> {stat.value}</span>
+      {/each}
     </span>
     <span class="pl-5 text-xs text-muted-foreground">{m.hint}</span>
   </button>
