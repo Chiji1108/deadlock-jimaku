@@ -665,8 +665,11 @@ mod tests {
             ..Settings::default()
         };
         let store = Store::new(Ok(settings), dir.path().to_owned());
-        // ギフトコードの理由や、ほかのエラーでは続けない
-        assert!(!store.fall_back(&TranscriptionError::GiftLimit, false));
+        // ほかのエラーでは続けない
+        let invalid = TranscriptionError::InvalidKey {
+            provider: crate::secrets::Provider::OpenAi,
+        };
+        assert!(!store.fall_back(&invalid, false));
         assert_eq!(store.settings().engines, Engines::BETA);
         assert!(store.fall_back(&TranscriptionError::BetaLimit, false));
         assert_eq!(store.continues_with(), Some(Fallback::Chrome));
@@ -747,7 +750,7 @@ mod tests {
     async fn a_stopped_hybrid_closes_chrome_and_does_not_open_it_again() {
         let (_dir, store) = chrome_store(Engines::STANDARD);
         *store.browser.lock().unwrap() = Some(Browser::exited());
-        store.set_transcription_error(Some(TranscriptionError::GiftRevoked));
+        store.set_transcription_error(Some(TranscriptionError::BetaRefused));
         assert!(store.browser.lock().unwrap().is_none());
         store.sync_chrome();
         assert!(store.browser.lock().unwrap().is_none());

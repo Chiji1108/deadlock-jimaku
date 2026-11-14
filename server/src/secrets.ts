@@ -1,4 +1,4 @@
-// コード・合言葉・キーの扱い。どれもそのものは保存しない（キーは暗号化、ほかはハッシュ）
+// コードとキーの扱い。どちらもそのものは保存しない（キーは暗号化、コードはハッシュ）
 
 /** Crockford Base32。O と 0、I・L と 1 を同じに扱えるよう、まぎらわしい文字を使わない */
 const ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
@@ -17,19 +17,6 @@ export function normalizeCode(code: string): string {
     .replace(/[\s-]/g, "")
     .replace(/O/g, "0")
     .replace(/[IL]/g, "1");
-}
-
-/** おすそ分けする人の合言葉。人（id）と、キーを替えるたびに変わる salt で決まり、預けたキーのどれを持つ PC でも同じものを使う */
-export async function issuerToken(id: string, salt: string, secret: string): Promise<string> {
-  const key = await crypto.subtle.importKey(
-    "raw",
-    rawKey(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const mac = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`issuer:${id}:${salt}`));
-  return base64url(new Uint8Array(mac));
 }
 
 export function newId(): string {

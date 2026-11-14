@@ -314,22 +314,8 @@ pub struct TermName {
 )]
 #[ts(export)]
 pub enum TranscriptionError {
-    /// 選んだ工程に要る鍵がない（その会社の API キーもギフトコードもない）
+    /// 選んだ工程に要る鍵がない（その会社の API キーも、中継するコードもない）
     MissingKey { provider: crate::secrets::Provider },
-    /// ギフトコードの期限が切れた（DESIGN.md 17.1）
-    GiftExpired {
-        /// 中継の 403 は期限を返さない
-        #[ts(type = "number | null")]
-        expires_at: Option<i64>,
-    },
-    /// おすそ分けした人がギフトコードを止めた
-    GiftRevoked,
-    /// ギフトコードの今日（UTC）の上限に達した
-    GiftLimit,
-    /// ないギフトコード（おすそ分けをやめたなど）
-    GiftUnknown,
-    /// おすそ分けした人が、その会社のキーを預けていない（xAI。DESIGN.md 17.1）
-    GiftUnsupported { provider: crate::secrets::Provider },
     /// ベータのコードの今日（UTC）の上限に達した（コードごとか、ベータ全体。DESIGN.md 17.2）
     BetaLimit,
     /// ベータのコードが使えない（止められた、なくなった）

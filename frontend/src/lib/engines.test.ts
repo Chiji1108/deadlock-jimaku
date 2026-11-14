@@ -20,7 +20,7 @@ test("用語と翻訳を分けると、工程ごとの会社の鍵が要る", ()
   expect(providers({ ...CHROME, translation: "qwenMtFlash" })).toEqual(["qwen"]);
 });
 
-test("OpenRouter と TypeSafe AI の工程は、その会社の鍵が要る（ギフトコードでは足りない）", () => {
+test("OpenRouter と TypeSafe AI の工程は、その会社の鍵が要る", () => {
   const mixed = {
     ...CHROME,
     transcription: "maiTranscribe2",
@@ -33,9 +33,7 @@ test("OpenRouter と TypeSafe AI の工程は、その会社の鍵が要る（�
   expect(providers({ ...CHROME, transcription: "haasJa" })).toEqual([]);
 });
 
-test("ギフトコードで足りる会社があるときだけ、ギフトコードを案内する", () => {
-  expect(keyNames(["openai", "xai"])).toBe("OpenAI と xAI の API キーかギフトコード");
+test("要る鍵は、会社の名前を並べて案内する", () => {
+  expect(keyNames(["openai", "xai"])).toBe("OpenAI と xAI の API キー");
   expect(keyNames(["qwen"])).toBe("Qwen の API キー");
-  // ベータのコードで使える会社は、ギフトコードとは案内しない（人からもらったコードでは使えない）
-  expect(keyNames(["qwen", "openrouter"])).toBe("Qwen と OpenRouter の API キー");
 });

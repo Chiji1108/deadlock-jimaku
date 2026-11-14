@@ -1,13 +1,12 @@
 import type { BetaRefusal } from "../generated/BetaRefusal";
+import type { CodeStatus } from "../generated/CodeStatus";
 import type { Fetched } from "../generated/Fetched";
 import type { FontEntry } from "../generated/FontEntry";
-import type { GiftStatus } from "../generated/GiftStatus";
 import type { Gpus } from "../generated/Gpus";
 import type { Provider } from "../generated/Provider";
 import type { RankState } from "../generated/RankState";
 import type { SettingsPatch } from "../generated/SettingsPatch";
 import type { SettingsView } from "../generated/SettingsView";
-import type { ShareView } from "../generated/ShareView";
 
 /** エラーのときは本文（サーバーの説明）を投げる */
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -70,53 +69,10 @@ export const api = {
   rankSample: (lang: string, signal?: AbortSignal) =>
     request<RankState>(`/api/rank/sample?lang=${encodeURIComponent(lang)}`, { signal }),
 
-  /** もらったギフトコードの状態 */
-  gift: () => request<GiftStatus>("/api/gift"),
   /** ベータのコードをもらって保存する。もらえなければ理由を返す（投げない） */
-  joinBeta: async (): Promise<GiftStatus | BetaRefusal> => {
+  joinBeta: async (): Promise<CodeStatus | BetaRefusal> => {
     const res = await fetch("/api/beta", { method: "POST" });
-    if (res.ok || res.status === 400) return (await res.json()) as GiftStatus | BetaRefusal;
+    if (res.ok || res.status === 400) return (await res.json()) as CodeStatus | BetaRefusal;
     throw new Error((await res.text()) || res.statusText);
   },
-  /** 有効なコードだけ保存される。無効ならその状態を返す（投げない） */
-  setGift: async (code: string): Promise<GiftStatus> => {
-    const res = await fetch("/api/gift", {
-      method: "PUT",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ code }),
-    });
-    if (res.ok || res.status === 400) return (await res.json()) as GiftStatus;
-    throw new Error((await res.text()) || res.statusText);
-  },
-  removeGift: async () => {
-    const res = await fetch("/api/gift", { method: "DELETE" });
-    if (!res.ok) throw new Error((await res.text()) || res.statusText);
-  },
-
-  /** おすそ分け（自分のキーで人に使ってもらう） */
-  share: () => request<ShareView>("/api/share"),
-  /** ほかの PC で始めたおすそ分けを、この PC のキーで見る */
-  joinShare: () => request<ShareView>("/api/share", { method: "POST" }),
-  disableShare: () => request<ShareView>("/api/share", { method: "DELETE" }),
-  /** この PC のその会社のキーを預ける（おすそ分けしていなければ、これで始まる） */
-  shareKey: (provider: Provider) =>
-    request<ShareView>(`/api/share/keys/${provider}`, { method: "POST" }),
-  unshareKey: (provider: Provider) =>
-    request<ShareView>(`/api/share/keys/${provider}`, { method: "DELETE" }),
-  /** `expiresAt` はミリ秒。null は期限なし */
-  createCode: (body: { memo: string; expiresAt: number | null; dailyLimitUsd: number }) =>
-    request<ShareView>("/api/share/codes", { method: "POST", body: JSON.stringify(body) }),
-  updateCode: (
-    id: string,
-    body: {
-      memo?: string;
-      expiresAt?: number | null;
-      dailyLimitUsd?: number;
-      revoked?: boolean;
-    },
-  ) =>
-    request<ShareView>(`/api/share/codes/${encodeURIComponent(id)}`, {
-      method: "PATCH",
-      body: JSON.stringify(body),
-    }),
 };

@@ -1,4 +1,4 @@
-//! API キーとギフトコードとおすそ分けの合言葉。OS の資格情報ストア（Windows の資格情報マネージャー、macOS のキーチェーン、Linux の Secret Service）に保存する。
+//! API キーと、ベータのコード。OS の資格情報ストア（Windows の資格情報マネージャー、macOS のキーチェーン、Linux の Secret Service）に保存する。
 //! 環境変数は読まない（ほかのツールのために設定した `OPENAI_API_KEY` を黙って使い、思わぬキーに請求しない）。
 //!
 //! キーそのものは画面に返さない（保存してあるかだけを返す）。呼び出しは同期処理なので、
@@ -45,12 +45,10 @@ pub struct ProviderInfo {
     pub relay: Option<Relay>,
 }
 
-/// 開発者のサーバーが中継するコードの種類。アプリは別々に保存するので、両方を持てる
+/// 開発者のサーバーが中継するコードの種類。0.7 までは、人からもらうギフトコード（おすそ分け）もあった
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Relay {
-    /// 人からもらったギフトコード（おすそ分けした人のキー。DESIGN.md 17.1）
-    Gift,
     /// ベータのコード（開発者のキー。ベータ期間中は無料。DESIGN.md 17.2）
     Beta,
 }
@@ -67,13 +65,8 @@ impl Provider {
 
     pub const fn info(self) -> ProviderInfo {
         let (id, name, base, relay) = match self {
-            Self::OpenAi => (
-                "openai",
-                "OpenAI",
-                "https://api.openai.com/v1",
-                Some(Relay::Gift),
-            ),
-            Self::Xai => ("xai", "xAI", "https://api.x.ai/v1", Some(Relay::Gift)),
+            Self::OpenAi => ("openai", "OpenAI", "https://api.openai.com/v1", None),
+            Self::Xai => ("xai", "xAI", "https://api.x.ai/v1", None),
             // QwenCloud のシンガポールの口（OpenAI 互換）。鍵は地域ごとに別で、ほかの地域の鍵は 401 になる
             Self::Qwen => (
                 "qwen",
@@ -107,24 +100,15 @@ impl Provider {
 #[derive(Clone, Copy, Debug)]
 enum Slot {
     Key(Provider),
-    /// 人からもらったギフトコード（DESIGN.md 17.1）
-    Gift,
     /// ベータのコード（DESIGN.md 17.2）
     Beta,
-    /// おすそ分けを管理する合言葉（サーバーが発行）
-    ShareToken,
-    /// 自分が作ったおすそ分けのコード（1 つずつ。サーバーはハッシュしか持たないので、こちらで覚える）
-    ShareCode,
 }
 
 impl Slot {
     fn account(self) -> &'static str {
         match self {
             Self::Key(provider) => provider.info().id,
-            Self::Gift => "gift",
             Self::Beta => "beta",
-            Self::ShareToken => "share-token",
-            Self::ShareCode => "share-code",
         }
     }
 }
@@ -149,9 +133,7 @@ pub struct KeyStatus {
     pub qwen: KeyState,
     pub openrouter: KeyState,
     pub typesafe: KeyState,
-    /// ギフトコード。コードそのものは返さない
-    pub gift: KeyState,
-    /// ベータのコード
+    /// ベータのコード。コードそのものは返さない
     pub beta: KeyState,
 }
 
@@ -159,7 +141,6 @@ pub struct KeyStatus {
 pub struct Keys {
     /// 自分のキー
     pub own: BTreeMap<Provider, String>,
-    pub gift: Option<String>,
     pub beta: Option<String>,
 }
 
@@ -167,15 +148,12 @@ impl Keys {
     /// その会社の送り先と鍵（`api` は開発者のサーバーの根元）。
     /// - ベータのコードが中継する会社（Qwen、OpenRouter）は、コードがあればコードを先に使う。ベータ期間中は無料なので、
     ///   自分のキーを入れている人にも請求しない。コードがなければ自分のキー
-    /// - ギフトコードが中継する会社（OpenAI、xAI）は、自分のキーを先に使う（コードの分は、おすそ分けした人に請求される）。
-    ///   その会社を使えるか（おすそ分けした人がキーを預けているか）は、字幕を始めるときに確かめる
-    /// - 中継のない会社は、コードでは足りない（鍵がないとして始めない）
+    /// - 中継のない会社（OpenAI、xAI、TypeSafe AI）は、自分のキーが要る（なければ、鍵がないとして始めない）
     pub fn access(&self, provider: Provider, api: &str) -> Option<Access> {
         let own = || Some(Access::key(provider, self.own.get(&provider)?.clone()));
-        let code = |code: &Option<String>| Some(Access::gift(provider, code.clone()?, api));
+        let code = || Some(Access::code(provider, self.beta.clone()?, api));
         match provider.info().relay {
-            Some(Relay::Beta) => code(&self.beta).or_else(own),
-            Some(Relay::Gift) => own().or_else(|| code(&self.gift)),
+            Some(Relay::Beta) => code().or_else(own),
             None => own(),
         }
     }
@@ -242,7 +220,6 @@ pub fn load() -> Keys {
         own: own
             .filter_map(|provider| Some((provider, get_or_warn(Slot::Key(provider))?)))
             .collect(),
-        gift: get_or_warn(Slot::Gift),
         beta: get_or_warn(Slot::Beta),
     }
 }
@@ -255,7 +232,6 @@ pub fn status() -> KeyStatus {
         qwen: key(Provider::Qwen),
         openrouter: key(Provider::OpenRouter),
         typesafe: key(Provider::TypeSafe),
-        gift: state(Slot::Gift),
         beta: state(Slot::Beta),
     }
 }
@@ -278,15 +254,6 @@ pub fn xai() -> Option<String> {
     get_or_warn(Slot::Key(Provider::Xai))
 }
 
-pub fn gift() -> Option<String> {
-    get_or_warn(Slot::Gift)
-}
-
-/// 空文字列なら消す
-pub fn set_gift(code: &str) -> anyhow::Result<()> {
-    put(Slot::Gift, code)
-}
-
 pub fn beta() -> Option<String> {
     get_or_warn(Slot::Beta)
 }
@@ -296,27 +263,15 @@ pub fn set_beta(code: &str) -> anyhow::Result<()> {
     put(Slot::Beta, code)
 }
 
-pub fn share_token() -> Option<String> {
-    get_or_warn(Slot::ShareToken)
-}
-
-/// 空文字列なら消す
-pub fn set_share_token(token: &str) -> anyhow::Result<()> {
-    put(Slot::ShareToken, token)
-}
-
-/// 自分が作ったおすそ分けのコード。この PC で作っていなければ None
-pub fn share_code(id: &str) -> Option<String> {
-    let account = format!("{}:{id}", Slot::ShareCode.account());
-    get_account(&account).unwrap_or_else(|e| {
-        tracing::warn!("keyring ({account}): {e}");
-        None
-    })
-}
-
-/// 空文字列なら消す
-pub fn set_share_code(id: &str, code: &str) -> anyhow::Result<()> {
-    put_account(&format!("{}:{id}", Slot::ShareCode.account()), code)
+/// 0.7 までの「おすそ分け」（人にキーを貸す仕組み。0.8 でなくした）が資格情報ストアに置いたものを消す。
+/// もらったギフトコードと、おすそ分けを管理する合言葉。自分が作ったコード（`share-code:{id}`）は、
+/// 名前が分からないので残る（サーバーの側で、もう使えなくしてある）
+pub fn forget_share() {
+    for account in ["gift", "share-token"] {
+        if let Err(e) = put_account(account, "") {
+            tracing::warn!("keyring ({account}): {e}");
+        }
+    }
 }
 
 #[cfg(test)]
@@ -324,23 +279,22 @@ mod tests {
     use super::*;
 
     #[test]
-    fn a_gift_stands_in_for_a_missing_key_only_where_the_server_relays() {
+    fn the_beta_code_stands_in_for_a_key_only_where_the_server_relays() {
         let keys = Keys {
             own: BTreeMap::from([(Provider::Xai, "xai".to_owned())]),
-            gift: Some("K7M2".into()),
             beta: None,
         };
         let api = "http://worker/v1";
-        assert!(keys.access(Provider::OpenAi, api).unwrap().is_gift());
-        assert!(!keys.access(Provider::Xai, api).unwrap().is_gift());
-        // 人からもらったギフトコードは、ベータの会社には使わない。ベータのコードは別に持つ
+        // 中継のない会社は、自分のキーだけ
+        assert_eq!(keys.access(Provider::OpenAi, api), None);
+        assert!(!keys.access(Provider::Xai, api).unwrap().is_code());
         assert_eq!(keys.access(Provider::Qwen, api), None);
         let keys = Keys {
             beta: Some("B3TA".into()),
             ..keys
         };
         assert_eq!(keys.access(Provider::Qwen, api).unwrap().token(), "B3TA");
-        assert_eq!(keys.access(Provider::OpenAi, api).unwrap().token(), "K7M2");
+        assert_eq!(keys.access(Provider::OpenAi, api), None);
         assert_eq!(keys.access(Provider::TypeSafe, api), None);
         // 設定や画面とやりとりする名前は、表の名前と同じ
         for provider in Provider::ALL {
@@ -353,6 +307,6 @@ mod tests {
         };
         assert_eq!(own.access(Provider::Qwen, api).unwrap().token(), "B3TA");
         let without_code = Keys { beta: None, ..own };
-        assert!(!without_code.access(Provider::Qwen, api).unwrap().is_gift());
+        assert!(!without_code.access(Provider::Qwen, api).unwrap().is_code());
     }
 }

@@ -64,7 +64,7 @@ macOS 版は Apple の署名と公証を済ませています。Windows 版は�
 
 | モード | 料金 | ひとこと |
 |---|---|---|
-| **最高精度** | OpenAI の API キーかギフトコード | 用語の判定と文字起こしがいちばん正確 |
+| **最高精度** | OpenAI の API キー | 用語の判定と文字起こしがいちばん正確 |
 | **クラウド** | ベータ期間中は無料 | Chrome を開かず、音声を Google に送らない。使用メモリ最小 |
 | **ローカル** | 無料 | PC の中の AI だけで作り、外に送らない。VRAM 12 GB 以上推奨 |
 
@@ -82,7 +82,7 @@ macOS 版は Apple の署名と公証を済ませています。Windows 版は�
 
 ## しくみ
 
-開発する人のための地図です。理由は [DESIGN.md](DESIGN.md) を見てください（モードは 9.6、おすそ分けは 17.1、LP は 17 章）。
+開発する人のための地図です。理由は [DESIGN.md](DESIGN.md) を見てください（モードは 9.6、開発者のサーバーと LP は 17 章）。
 
 字幕を何で作るかは、工程ごとの選択（設定の `engines`。モードを選ぶとまとめて決まる）と設定から `Settings::plan` が決めます（`crates/core/src/settings.rs`。操作パネルのモードはおすすめ（コードの中の名前は `beta`）・Chrome・最高精度（表の「スタンダード」）で、ほかの組み合わせは「モード」のタブで工程ごとに選びます。この表は、鍵の要る組み合わせを含む 3 つの組み合わせ（`Engines::STANDARD` など）の値で、テストに同じ値があります）。工程を 1 つ変えると、確定の欄はその工程の行だけが変わります。
 
@@ -103,7 +103,7 @@ macOS 版は Apple の署名と公証を済ませています。Windows 版は�
 
 「おすすめ」のモード（`Engines::BETA`。表にはありません）は、ベータ期間中、API キーなしで無料で使えます。途中の字幕は Chrome、確定の字幕は Qwen-Audio-3.1-ASR-Flash、用語は Perplexity Decider、翻訳は Hy-MT2、ふりがなは辞書の候補から Perplexity Decider が選び、開発者のサーバーが開発者のキーで中継します（`server/src/beta.ts`。DESIGN.md 17.2）。
 
-用語と翻訳は、表の 4 つのモードでは 1 回の問い合わせ（GPT）か、辞書の一致と Chrome の翻訳です。詳しく選ぶと、2 つを別々に作れます（DESIGN.md 9.7）。用語は、PC の中で出した候補を判定モデルに確かめさせます（`decide.rs`。OpenAI の Decisions API、TypeSafe AI の Jev、OpenRouter の Drex Max・Microsoft Decision 1・Perplexity Decider）。翻訳は、用語を英語名に置き換えた文を Chrome か翻訳専門のモデル（`mt.rs`。Qwen-MT-Flash か OpenRouter の Hy-MT2）に渡します。途中の字幕と確定の文字起こしは、Qwen-Audio-3.1-ASR-Flash も選べます（`stt/qwen.rs`。DESIGN.md 3.4）。確定の文字起こしは、OpenRouter の MAI-Transcribe 2 と、PC の中で動く Haas-ja（`local.rs`。speech.cpp を初回にダウンロードします。DESIGN.md 9.8）も選べます。OpenAI と xAI のほかは、その会社の自分の API キーが要ります（ギフトコードでは使えません）。作れない組み合わせは `Engines::sanitized` が直します。確定の文字起こしが Chrome なら途中の字幕も Chrome（発話の区切りを Chrome が決める）、Chrome の翻訳は途中の字幕が Chrome のときだけです。翻訳を GPT にしたときは、用語も同じ問い合わせで判定します（訳文の名前を用語から作るので）。確定の文には、どちらの経路でも `finish.rs` が工程ごとに用語・ふりがな・翻訳を付け、1 つの字幕にまとめます。
+用語と翻訳は、表の 4 つのモードでは 1 回の問い合わせ（GPT）か、辞書の一致と Chrome の翻訳です。詳しく選ぶと、2 つを別々に作れます（DESIGN.md 9.7）。用語は、PC の中で出した候補を判定モデルに確かめさせます（`decide.rs`。OpenAI の Decisions API、TypeSafe AI の Jev、OpenRouter の Drex Max・Microsoft Decision 1・Perplexity Decider）。翻訳は、用語を英語名に置き換えた文を Chrome か翻訳専門のモデル（`mt.rs`。Qwen-MT-Flash か OpenRouter の Hy-MT2）に渡します。途中の字幕と確定の文字起こしは、Qwen-Audio-3.1-ASR-Flash も選べます（`stt/qwen.rs`。DESIGN.md 3.4）。確定の文字起こしは、OpenRouter の MAI-Transcribe 2 と、PC の中で動く Haas-ja（`local.rs`。speech.cpp を初回にダウンロードします。DESIGN.md 9.8）も選べます。「おすすめ」のモードのほかは、その会社の自分の API キーが要ります。作れない組み合わせは `Engines::sanitized` が直します。確定の文字起こしが Chrome なら途中の字幕も Chrome（発話の区切りを Chrome が決める）、Chrome の翻訳は途中の字幕が Chrome のときだけです。翻訳を GPT にしたときは、用語も同じ問い合わせで判定します（訳文の名前を用語から作るので）。確定の文には、どちらの経路でも `finish.rs` が工程ごとに用語・ふりがな・翻訳を付け、1 つの字幕にまとめます。
 
 ```mermaid
 flowchart LR
@@ -116,7 +116,7 @@ flowchart LR
     end
     tab["Chrome のウィンドウ<br/>/chrome<br/>音声認識、翻訳"]
   end
-  worker["Cloudflare Worker（server/）<br/>おすそ分け"]
+  worker["Cloudflare Worker（server/）<br/>ベータの無料の提供"]
   openai["OpenAI"]
   xai["xAI"]
   qwen["Qwen"]
@@ -131,9 +131,9 @@ flowchart LR
   tab <-- "文と訳" --> core
   core -- "起動、閉じる" --> tab
   tab -- "声" --> google
-  core -- "ギフトコード" --> worker
-  worker -- "おすそ分けした人のキー" --> openai
-  worker -- "おすそ分けした人のキー" --> xai
+  core -- "ベータのコード" --> worker
+  worker -- "開発者のキー" --> qwen
+  worker -- "開発者のキー" --> others
   core -- "自分の API キー" --> openai
   core -- "自分の API キー" --> xai
   core -- "自分の API キー" --> qwen
@@ -145,7 +145,7 @@ flowchart LR
 
 - 操作パネルは Tauri のウィンドウでも OBS のドックでも同じ画面で、`/api` と `/ws` だけを使います。
 - OpenAI のモード以外では、アプリが専用のプロファイルの Chrome を起動します。音声認識と翻訳は Chrome が行い、ふりがなと辞書の一致は中核の中で行います（vibrato と話し言葉の UniDic）。
-- 自分の API キーがあれば OpenAI（確定の文字起こしを Grok にしたら xAI）へ直接送ります。なければギフトコードで Worker を通します。Worker は会社ごとに同じパスで中継するので、下の図の OpenAI はどちらの経路でも同じです。ギフトコードは、おすそ分けした人がキーを預けた会社（OpenAI、xAI、または両方）に使えます。
+- OpenAI と xAI、TypeSafe AI には、自分の API キーで直接送ります。Qwen と OpenRouter は、ベータのコードがあれば Worker を通し（開発者のキー。「おすすめ」のモード）、なければ自分の API キーで直接送ります。Worker は会社ごとに同じパスで中継するので、アプリは送り先を替えるだけです。
 
 ### 声と文字の流れ
 

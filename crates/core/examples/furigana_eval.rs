@@ -61,7 +61,7 @@ async fn main() -> anyhow::Result<()> {
     // `FURIGANA_EVAL_API` があれば、判定は PC の中のモデルに聞く（experiments/llama_decider_server.py。
     // `{API}/openrouter/systemone` に、同じ形の問いを送る）
     let openrouter = match std::env::var("FURIGANA_EVAL_API") {
-        Ok(api) => Access::gift(Provider::OpenRouter, "local".into(), &api),
+        Ok(api) => Access::code(Provider::OpenRouter, "local".into(), &api),
         Err(_) => Access::key(Provider::OpenRouter, env("OPENROUTER_API_KEY")),
     };
     let openai = Access::key(Provider::OpenAi, env("OPENAI_API_KEY"));

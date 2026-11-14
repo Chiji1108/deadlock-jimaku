@@ -70,7 +70,7 @@ const never = () => new Promise<never>(() => {});
 
 test("操作パネルを開いたときに一覧を読む（あとで入れたフォントを最初の一覧に入れない）", () => {
   const fresh = freshPanel();
-  for (const name of ["settings", "languages", "devices", "gift", "share"] as const)
+  for (const name of ["settings", "languages", "devices"] as const)
     vi.spyOn(api, name).mockImplementation(never);
   const fonts = vi.spyOn(api, "fonts").mockImplementation(never);
   const stop = fresh.start();
@@ -212,20 +212,19 @@ test("太さは 1 回だけ読み、読めなければ覚えずに読み直す",
 });
 
 test.each([
-  ["chrome", "missing", "missing", "missing", []],
-  ["gptTranscribe", "missing", "missing", "missing", ["openai"]],
-  ["gptTranscribe", "saved", "missing", "missing", []],
-  ["gptTranscribe", "missing", "saved", "missing", []],
-  ["grokVoiceTranscribe", "missing", "missing", "missing", ["xai"]],
-  ["grokVoiceTranscribe", "missing", "saved", "missing", []],
-  ["grokVoiceTranscribe", "missing", "missing", "saved", []],
+  ["chrome", "missing", "missing", []],
+  ["gptTranscribe", "missing", "missing", ["openai"]],
+  ["gptTranscribe", "saved", "missing", []],
+  ["grokVoiceTranscribe", "missing", "missing", ["xai"]],
+  ["grokVoiceTranscribe", "saved", "missing", ["xai"]],
+  ["grokVoiceTranscribe", "missing", "saved", []],
 ] as const)(
-  "キーの案内: 確定の文字起こし %s、OpenAI %s、ギフトコード %s、xAI %s → %j",
-  (transcription, openai, gift, xai, missing) => {
+  "キーの案内: 確定の文字起こし %s、OpenAI %s、xAI %s → %j",
+  (transcription, openai, xai, missing) => {
     const fresh = freshPanel();
     fresh.view = {
       settings: { engines: { ...CHROME, transcription } },
-      keys: { openai: { state: openai }, gift: { state: gift }, xai: { state: xai } },
+      keys: { openai: { state: openai }, beta: { state: "saved" }, xai: { state: xai } },
     } as unknown as SettingsView;
     expect(fresh.missingKeys).toEqual(missing);
     expect(fresh.needsKey).toBe(missing.length > 0);
@@ -238,27 +237,15 @@ test("Grok と Terra なら、xAI と OpenAI の鍵が要る", () => {
     settings: {
       engines: { ...CHROME, transcription: "grokVoiceTranscribe", translation: "gpt61Terra" },
     },
-    keys: { openai: { state: "missing" }, gift: { state: "missing" }, xai: { state: "missing" } },
+    keys: { openai: { state: "missing" }, beta: { state: "missing" }, xai: { state: "missing" } },
   } as unknown as SettingsView;
   expect(fresh.missingKeys).toEqual(["openai", "xai"]);
-});
-
-test("ギフトコードで払ってもらうのは、自分のキーがない会社の分", () => {
-  const fresh = freshPanel();
-  fresh.view = {
-    settings: {
-      engines: { ...CHROME, transcription: "grokVoiceTranscribe", translation: "gpt61Terra" },
-    },
-    keys: { openai: { state: "saved" }, gift: { state: "saved" }, xai: { state: "missing" } },
-  } as unknown as SettingsView;
-  expect(fresh.giftPaid).toEqual(["xai"]);
 });
 
 test("中継のない会社（TypeSafe AI）は、コードがあっても自分のキーが要る", () => {
   const fresh = freshPanel();
   const keys = (typesafe: string) => ({
     openai: { state: "missing" },
-    gift: { state: "missing" },
     beta: { state: "saved" },
     xai: { state: "missing" },
     qwen: { state: "missing" },
@@ -269,38 +256,27 @@ test("中継のない会社（TypeSafe AI）は、コードがあっても自分
   const engines = { ...CHROME, terms: "jev", translation: "qwenMtFlash" };
   fresh.view = { settings: { engines }, keys: keys("missing") } as unknown as SettingsView;
   expect(fresh.missingKeys).toEqual(["typesafe"]);
-  expect(fresh.giftPaid).toEqual(["qwen"]);
+  expect(fresh.codePaid).toEqual(["qwen"]);
   fresh.view = { settings: { engines }, keys: keys("saved") } as unknown as SettingsView;
   expect(fresh.missingKeys).toEqual([]);
 });
 
-test("ベータのモードは、ベータのコードがあれば鍵が要らない（人からもらったギフトコードでは足りない）", () => {
+test("ベータのモードは、ベータのコードがあれば鍵が要らない", () => {
   const fresh = freshPanel();
-  const keys = (gift: string, beta: string) => ({
-    openai: { state: "missing" },
-    gift: { state: gift },
-    beta: { state: beta },
-    xai: { state: "missing" },
-    qwen: { state: "missing" },
-    openrouter: { state: "missing" },
-    typesafe: { state: "missing" },
-  });
-  const view = (gift: string, beta: string) =>
-    ({ settings: { engines: BETA }, keys: keys(gift, beta) }) as unknown as SettingsView;
-  fresh.view = view("missing", "missing");
+  const view = (beta: string) =>
+    ({ settings: { engines: BETA }, keys: betaKeys(beta) }) as unknown as SettingsView;
+  fresh.view = view("missing");
   expect(fresh.missingKeys).toEqual(["qwen", "openrouter"]);
-  fresh.view = view("saved", "missing");
-  expect(fresh.missingKeys).toEqual(["qwen", "openrouter"]);
-  fresh.view = view("saved", "saved");
+  fresh.view = view("saved");
   expect(fresh.missingKeys).toEqual([]);
-  expect(fresh.giftPaid).toEqual(["qwen", "openrouter"]);
+  expect(fresh.codePaid).toEqual(["qwen", "openrouter"]);
 });
 
 test("起動してからの料金は、自分のキーで払う分があるときだけ出す", () => {
   const fresh = freshPanel();
   const view = (engines: unknown, saved: string[], continuesWith?: string) => {
     const state = (name: string) => ({ state: saved.includes(name) ? "saved" : "missing" });
-    const names = ["openai", "gift", "beta", "xai", "qwen", "openrouter", "typesafe"];
+    const names = ["openai", "beta", "xai", "qwen", "openrouter", "typesafe"];
     const keys = Object.fromEntries(names.map((name) => [name, state(name)]));
     return { settings: { engines }, keys, continuesWith } as unknown as SettingsView;
   };
@@ -312,22 +288,20 @@ test("起動してからの料金は、自分のキーで払う分があると�
   // ベータのコードがあれば、自分のキーを入れていても、無料の分を先に使う
   fresh.view = view(BETA, ["beta", "qwen", "openrouter"]);
   expect(fresh.pays).toBe(false);
-  expect(fresh.giftPaid).toEqual(["qwen", "openrouter"]);
+  expect(fresh.codePaid).toEqual(["qwen", "openrouter"]);
   // コードがなければ、自分のキーで払う
   fresh.view = view(BETA, ["qwen", "openrouter"]);
   expect(fresh.pays).toBe(true);
-  expect(fresh.giftPaid).toEqual([]);
+  expect(fresh.codePaid).toEqual([]);
   // コードで断られて、自分のキーで続けている間も、自分で払う
   fresh.view = view(BETA, ["beta", "qwen", "openrouter"], "ownKeys");
   expect(fresh.pays).toBe(true);
   // 中継のない会社（Jev）は、いつも自分のキー
   fresh.view = view({ ...BETA, terms: "jev" }, ["beta", "typesafe"]);
   expect(fresh.pays).toBe(true);
-  // ギフトコードの会社は、自分のキーが先
-  fresh.view = view(BEST, ["gift", "openai"]);
+  // 中継のない会社（OpenAI）も、自分のキー
+  fresh.view = view(BEST, ["beta", "openai"]);
   expect(fresh.pays).toBe(true);
-  fresh.view = view(BEST, ["gift"]);
-  expect(fresh.pays).toBe(false);
 });
 
 test("設定が届く前はキーの案内を出さない", () => {
@@ -336,7 +310,6 @@ test("設定が届く前はキーの案内を出さない", () => {
 
 const betaKeys = (beta: string) => ({
   openai: { state: "missing" },
-  gift: { state: "missing" },
   beta: { state: beta },
   xai: { state: "missing" },
   qwen: { state: "missing" },
@@ -357,15 +330,6 @@ test("ベータのコードが要るモードは、同意してからコード�
   expect(join).toHaveBeenCalledTimes(1);
   expect(update).toHaveBeenCalledWith({ engines: BETA });
   expect(fresh.betaOffer).toBeUndefined();
-});
-
-test("人からもらったギフトコードを持っていても、ベータのコードは別にもらう", async () => {
-  const fresh = freshPanel();
-  const keys = { ...betaKeys("missing"), gift: { state: "saved" } };
-  fresh.view = { settings: { engines: CHROME }, keys } as never;
-  vi.spyOn(fresh, "update").mockResolvedValue(true);
-  await fresh.chooseMode(BETA);
-  expect(fresh.betaOffer).toEqual(BETA);
 });
 
 test("ベータのコードをもらえなければ、モードを変えない", async () => {

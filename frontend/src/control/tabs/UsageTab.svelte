@@ -23,11 +23,7 @@
 
   const unpriced = $derived(columns.some((c) => hasUnpriced(panel.usage?.[c.key])));
 
-  // おすそ分けで使われた分も、預けたキーに請求される（今月の分だけ。コードごとはおすそ分けタブ）
-  const shared = $derived(
-    panel.share?.enabled ? panel.share.codes.reduce((sum, c) => sum + c.monthUsd, 0) : undefined,
-  );
-  const giftPaid = $derived(panel.giftPaid.map((p) => PROVIDER_NAMES[p]).join(" と "));
+  const codePaid = $derived(panel.codePaid.map((p) => PROVIDER_NAMES[p]).join(" と "));
 </script>
 
 <Card.Root>
@@ -57,21 +53,16 @@
           </div>
         {/each}
       {/each}
-      {#if shared !== undefined}
-        <div>おすそ分けで使われた分</div>
-        <div class="text-right text-muted-foreground">—</div>
-        <div class="text-right tabular-nums">{usd(shared)}</div>
-      {/if}
       <div class="border-t pt-2 font-medium">合計</div>
       {#each columns as c (c.key)}
         <div class="border-t pt-2 text-right font-medium tabular-nums">
-          {usd(total(panel.usage?.[c.key]) + (c.key === "month" ? (shared ?? 0) : 0))}
+          {usd(total(panel.usage?.[c.key]))}
         </div>
       {/each}
     </div>
-    {#if giftPaid}
+    {#if codePaid}
       <p class="mt-4 text-xs text-muted-foreground">
-        コードで使っているので、{giftPaid} の料金はあなたには請求されません（ギフトコードなら、おすそ分けしてくれた人に請求されます。ベータのコードなら、ベータ期間中は無料です）
+        ベータのコードで使っているので、{codePaid} の料金はあなたには請求されません（ベータ期間中は無料です）
       </p>
     {/if}
     {#if unpriced}

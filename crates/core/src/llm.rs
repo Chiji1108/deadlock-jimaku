@@ -10,7 +10,7 @@ use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 
 use crate::access::Access;
-use crate::share;
+use crate::relay;
 use crate::usage::{Meter, Tokens, Use};
 
 pub struct Request<'a> {
@@ -105,10 +105,10 @@ async fn send(
         .await?;
     let status = res.status();
     if !status.is_success() {
-        // 鍵やギフトコードが断られたら、確定の文字起こしと同じく字幕を止める理由にする（DESIGN.md 17.1）
+        // 鍵やコードが断られたら、確定の文字起こしと同じく字幕を止める理由にする（DESIGN.md 17.2）
         let body = res.text().await.unwrap_or_default();
-        let reason = share::refusal_reason(&body);
-        if let Some(refused) = share::refusal(req.access, status, reason.as_deref()) {
+        let reason = relay::refusal_reason(&body);
+        if let Some(refused) = relay::refusal(req.access, status, reason.as_deref()) {
             return Err(refused.into());
         }
         anyhow::bail!("{status}: {body}");

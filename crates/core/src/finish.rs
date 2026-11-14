@@ -60,7 +60,7 @@ pub enum Finished {
     },
     /// 翻訳に失敗しても、用語とふりがなは付いている
     Done { id: String, enriched: Enriched },
-    /// LLM に鍵やギフトコードが断られた。送り直しても断られるだけなので、字幕を止める
+    /// LLM に鍵やコードが断られた。送り直しても断られるだけなので、字幕を止める
     Refused(TranscriptionError),
 }
 
@@ -540,10 +540,10 @@ mod tests {
 
     #[test]
     fn a_refusal_stops_and_other_failures_skip_the_sentence() {
-        let refused: anyhow::Result<Option<()>> = Err(TranscriptionError::GiftRevoked.into());
+        let refused: anyhow::Result<Option<()>> = Err(TranscriptionError::BetaRefused.into());
         assert_eq!(
             answer("x", refused).unwrap_err(),
-            TranscriptionError::GiftRevoked
+            TranscriptionError::BetaRefused
         );
         let offline: anyhow::Result<Option<()>> = Err(anyhow::anyhow!("offline"));
         assert_eq!(answer("x", offline).unwrap(), None);
@@ -706,8 +706,8 @@ mod tests {
             root: std::path::PathBuf::new(),
             aliases: Arc::new([("item:1".to_owned(), vec!["拡マガ".to_owned()])].into()),
         });
-        let gift = |provider| crate::access::Access::gift(provider, "code".into(), &api);
-        let accesses = Accesses::new(settings.engines.providers().into_iter().map(gift));
+        let code = |provider| crate::access::Access::code(provider, "code".into(), &api);
+        let accesses = Accesses::new(settings.engines.providers().into_iter().map(code));
         let finisher = Finisher::new(store.clone(), &settings, &accesses, None);
         let heard = Heard {
             id: "1".into(),

@@ -120,6 +120,6 @@ rankAccount?: number,
  */
 rankPollSeconds: number, 
 /**
- * 開発者のサーバー（おすそ分け。DESIGN.md 17.1）の根元。手元で試すときに `wrangler dev` に向ける
+ * 開発者のサーバー（DESIGN.md 17.2）の根元。手元で試すときに `wrangler dev` に向ける
  */
 apiBase: string, };

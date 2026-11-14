@@ -8,7 +8,6 @@ import { page, script } from "./adminPage";
 import {
   BETA_CODES_PER_DAY,
   BETA_CODES_PER_IP,
-  BETA_ISSUER,
   BETA_LIMIT_MAX_USD,
   betaClosed,
   betaLimits,
@@ -92,14 +91,13 @@ admin.get("/api/summary", async (c) => {
     db
       .select({ usd: sql<number>`COALESCE(SUM(${codeUsage.usd}), 0)` })
       .from(codeUsage)
-      .innerJoin(codes, eq(codes.id, codeUsage.codeId))
-      .where(and(eq(codes.issuerId, BETA_ISSUER), eq(codeUsage.month, month(now))))
+      .where(eq(codeUsage.month, month(now)))
       .get(),
-    db.select({ n: sql<number>`COUNT(*)` }).from(codes).where(eq(codes.issuerId, BETA_ISSUER)).get(),
+    db.select({ n: sql<number>`COUNT(*)` }).from(codes).get(),
     db
       .select({ n: sql<number>`COUNT(*)` })
       .from(codes)
-      .where(and(eq(codes.issuerId, BETA_ISSUER), eq(codes.day, today), sql`${codes.dayUsd} > 0`))
+      .where(and(eq(codes.day, today), sql`${codes.dayUsd} > 0`))
       .get(),
     db
       .select({ n: betaGrants.count })
@@ -135,7 +133,6 @@ admin.get("/api/codes", async (c) => {
     })
     .from(codes)
     .leftJoin(codeUsage, eq(codeUsage.codeId, codes.id))
-    .where(eq(codes.issuerId, BETA_ISSUER))
     .groupBy(codes.id)
     .orderBy(desc(todayUsd), desc(codes.createdAt))
     .limit(LISTED_CODES);
@@ -149,7 +146,7 @@ admin.patch("/api/codes/:id", async (c) => {
   const { meta } = await c.var.db
     .update(codes)
     .set({ revoked: body.revoked })
-    .where(and(eq(codes.id, c.req.param("id")), eq(codes.issuerId, BETA_ISSUER)));
+    .where(eq(codes.id, c.req.param("id")));
   return meta.changes ? c.body(null, 204) : c.json({ error: "notFound" }, 404);
 });
 
@@ -236,10 +233,7 @@ admin.put("/api/settings", async (c) => {
       .onConflictDoUpdate({ target: betaSettings.name, set: { value } });
   }
   if (values.codeDailyUsd) {
-    await db
-      .update(codes)
-      .set({ dailyLimitUsd: Number(values.codeDailyUsd) })
-      .where(eq(codes.issuerId, BETA_ISSUER));
+    await db.update(codes).set({ dailyLimitUsd: Number(values.codeDailyUsd) });
   }
   return c.body(null, 204);
 });

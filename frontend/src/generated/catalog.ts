@@ -5,12 +5,12 @@ export const PROVIDERS = [
   {
     "id": "openai",
     "name": "OpenAI",
-    "relay": "gift"
+    "relay": null
   },
   {
     "id": "xai",
     "name": "xAI",
-    "relay": "gift"
+    "relay": null
   },
   {
     "id": "qwen",
