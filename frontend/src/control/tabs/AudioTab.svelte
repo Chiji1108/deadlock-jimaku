@@ -1,6 +1,5 @@
 <script lang="ts">
   import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
-  import SparklesIcon from "@lucide/svelte/icons/sparkles";
   import * as Alert from "$lib/components/ui/alert";
   import { Button } from "$lib/components/ui/button";
   import * as Card from "$lib/components/ui/card";
@@ -8,20 +7,11 @@
   import * as Select from "$lib/components/ui/select";
   import { Switch } from "$lib/components/ui/switch";
   import * as ToggleGroup from "$lib/components/ui/toggle-group";
-  import ConfirmDialog from "../parts/ConfirmDialog.svelte";
   import DeadlockModeDialog from "../parts/DeadlockModeDialog.svelte";
   import LevelMeter from "../parts/LevelMeter.svelte";
-  import ModeBadges from "../parts/ModeBadges.svelte";
   import PauseDialog from "../parts/PauseDialog.svelte";
   import { panel } from "../panel.svelte";
-  import {
-    BETA,
-    anyPaid,
-    chromeFinals,
-    llmTranslation,
-    modeOf,
-    usesChrome,
-  } from "../../lib/engines";
+  import { chromeFinals, llmTranslation } from "../../lib/engines";
 
   const MAX_TRANSLATE_TO = 4;
   /** 何 ms 黙ったら区切るか */
@@ -33,121 +23,25 @@
 
   const s = $derived(panel.settings!);
   const t = $derived(s.engines);
-  const mode = $derived(modeOf(t));
-  /** Chrome のウィンドウが字幕を止めている理由。止まっているか、回線の回復を待っている */
-  const chromeProblem = $derived(
-    panel.chromeStatus?.state === "failed" ||
-      panel.chromeStatus?.state === "blocked" ||
-      panel.chromeStatus?.state === "missing"
-      ? panel.chromeStatus.detail
-      : undefined,
-  );
-  /** 鍵の要る工程があるか、確定をアプリが作る字幕が止まったら Chrome を閉じる（字幕にならない音声を Google に
-   * 送らない）。PC の中の文字起こしを準備している間も閉じる。core の `chrome_needed` と同じ決まり */
-  const chromeClosed = $derived(
-    ((anyPaid(t) || !chromeFinals(t)) && !!panel.transcriptionError) || panel.preparing,
-  );
-  /** Chrome のウィンドウの今の状態 */
-  const chromeNote = $derived.by(() => {
-    if (chromeClosed) return "字幕が止まっているので閉じています";
-    if (!panel.chromeStatus) return "Chrome のウィンドウを開いています";
-    if (panel.chromeStatus.detail) return panel.chromeStatus.detail;
-    if (panel.chromeStatus.state === "listening") return "聞き取っています";
-    return "字幕の準備をしています";
-  });
   const pause = $derived(s.segmentation.minSilenceMs);
   const preset = $derived(PAUSES.find((p) => p.ms === pause));
 
   const DEFAULT_DEVICE = "__default__";
-  let confirmingReset = $state(false);
+  /** 翻訳先は、選んだ言語だけを並べておく。ほかの言語は、開いたときに出す（1 つも選んでいなければ、開いておく） */
+  let allTargets = $state(false);
+  const targets = $derived(
+    panel.languages.filter(
+      (code) =>
+        code !== s.micLanguage &&
+        (allTargets || s.translateTo.length === 0 || s.translateTo.includes(code)),
+    ),
+  );
+  const moreTargets = $derived(
+    panel.languages.filter((code) => code !== s.micLanguage).length - targets.length,
+  );
 </script>
 
 <div class="flex flex-col gap-6">
-  <Card.Root>
-    <Card.Header>
-      <Card.Title>モード</Card.Title>
-      <Card.Description>字幕をどこで作るかです。「モード」のタブで選びます</Card.Description>
-    </Card.Header>
-    <Card.Content class="flex flex-col gap-3">
-      <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
-        <div class="flex flex-wrap items-center gap-2">
-          <span class="text-sm font-medium">{mode?.label ?? "カスタム"}</span>
-          {#if mode}
-            <ModeBadges {mode} />
-          {:else}
-            <span class="text-xs text-muted-foreground">工程ごとに選んだ組み合わせ</span>
-          {/if}
-        </div>
-        <Button variant="outline" size="sm" onclick={() => (panel.tab = "engines")}>変える</Button>
-      </div>
-      <!-- Chrome のモードの人に、「おすすめ」を知らせる。既定は Chrome のままで、選ぶのは本人（音声の送り先が変わる） -->
-      {#if mode?.name === "chrome" && !s.hybridHintClosed}
-        <Alert.Root>
-          <SparklesIcon />
-          <Alert.Title>「おすすめ」のモードにすると、字幕と翻訳がもっと正確になります</Alert.Title>
-          <Alert.Description class="flex flex-col gap-2">
-            <span>ベータ期間中は無料で、API キーも要りません</span>
-            <span class="flex flex-wrap gap-2">
-              <Button size="sm" onclick={() => panel.chooseMode(BETA)}>おすすめにする</Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onclick={() => panel.update({ hybridHintClosed: true })}>閉じる</Button
-              >
-            </span>
-          </Alert.Description>
-        </Alert.Root>
-      {/if}
-      {#if usesChrome(t)}
-        {#if s.transcriptionEnabled}
-          <div class="flex flex-wrap items-center gap-3">
-            {#if !chromeClosed}
-              <Button variant="outline" size="sm" onclick={panel.openChrome}
-                >Chrome を開き直す</Button
-              >
-            {/if}
-            {#if !chromeProblem}<p class="text-sm text-muted-foreground">{chromeNote}</p>{/if}
-          </div>
-        {/if}
-        <p class="text-xs text-muted-foreground">
-          字幕を始めると小さな Chrome のウィンドウが開きます。音声は Chrome を通じて Google
-          に送られます。途中の翻訳は Chrome
-          の中で動きます。字幕を出す間はウィンドウを閉じないでください
-        </p>
-        {#if s.transcriptionEnabled && chromeProblem}
-          <Alert.Root variant="destructive">
-            <Alert.Title>{chromeProblem}</Alert.Title>
-            <Alert.Description class="flex flex-col items-start gap-2">
-              {#if !chromeFinals(t)}
-                確定の字幕は出ています。話している途中の字幕だけが止まっています。
-              {/if}
-              {#if panel.chromeStatus?.state === "missing"}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  href="https://www.google.com/chrome/"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Google Chrome をインストールする
-                </Button>
-              {:else}
-                {@render resetButton()}
-              {/if}
-            </Alert.Description>
-          </Alert.Root>
-        {:else}
-          <div class="flex flex-wrap items-center gap-3">
-            <p class="text-xs text-muted-foreground">
-              マイクの許可をやり直したいとき、字幕が出ないときに
-            </p>
-            {@render resetButton()}
-          </div>
-        {/if}
-      {/if}
-    </Card.Content>
-  </Card.Root>
-
   <Card.Root>
     <Card.Header>
       <Card.Title>マイク</Card.Title>
@@ -264,7 +158,7 @@
           value={s.translateTo}
           onValueChange={(v) => panel.update({ translateTo: v })}
         >
-          {#each panel.languages.filter((code) => code !== s.micLanguage) as code (code)}
+          {#each targets as code (code)}
             <ToggleGroup.Item
               value={code}
               size="sm"
@@ -274,6 +168,16 @@
             </ToggleGroup.Item>
           {/each}
         </ToggleGroup.Root>
+        {#if moreTargets > 0 || (allTargets && s.translateTo.length > 0)}
+          <Button
+            variant="link"
+            size="sm"
+            class="h-auto w-fit p-0 text-xs text-muted-foreground"
+            onclick={() => (allTargets = !allTargets)}
+          >
+            {allTargets ? "選んだ言語だけにする" : `ほかの言語を選ぶ（${moreTargets}）`}
+          </Button>
+        {/if}
       </Field.Field>
     </Card.Content>
   </Card.Root>
@@ -307,26 +211,3 @@
     </Card.Content>
   </Card.Root>
 </div>
-
-{#snippet resetButton()}
-  <Button variant="outline" size="sm" onclick={() => (confirmingReset = true)}>
-    Chrome をリセット
-  </Button>
-{/snippet}
-
-<ConfirmDialog
-  bind:open={confirmingReset}
-  title="Chrome をリセットしますか？"
-  action="リセットする"
-  destructive
-  onconfirm={panel.resetChrome}
->
-  <p>
-    字幕に使う Chrome のウィンドウを閉じて、専用のデータを消します。ふだん使っている Chrome
-    には影響しません。
-  </p>
-  <p>
-    マイクの許可はもう一度聞かれ、ウィンドウで選んだマイクは戻ります。翻訳のモデルもダウンロードし直すことがあります。
-  </p>
-  {#if s.transcriptionEnabled}<p>字幕を出している間なら、Chrome は自動で起動し直します。</p>{/if}
-</ConfirmDialog>

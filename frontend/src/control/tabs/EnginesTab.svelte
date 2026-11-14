@@ -1,7 +1,9 @@
 <script lang="ts">
   // 「モード」のタブ。モードを選ぶのはここだけ（「マイクと翻訳」は今のモードを出すだけ）。モードを選ぶと工程ごとの作り方がまとめて決まり、工程ごとにも変えられる（DESIGN.md 9.6）。
   // 押したらすぐ保存する
+  import ChevronIcon from "@lucide/svelte/icons/chevron-down";
   import { Badge } from "$lib/components/ui/badge";
+  import { Button } from "$lib/components/ui/button";
   import * as Card from "$lib/components/ui/card";
   import LocalGpu from "../parts/LocalGpu.svelte";
   import ModePicker from "../parts/ModePicker.svelte";
@@ -12,6 +14,7 @@
     YEN_PER_USD,
     chromeFinals,
     llmTranslation,
+    modeOf,
     paidLive,
     providerOfOption,
     relayOf,
@@ -23,6 +26,13 @@
 
   const s = $derived(panel.settings!);
   const t = $derived(s.engines);
+  /** 工程ごとの選択は、開いたときだけ出す。自分で組んだ組み合わせ（カスタム）を使っている間は、開いたまま */
+  let opened = $state(false);
+  const custom = $derived(!modeOf(t));
+  const stages = $derived(opened || custom);
+  /** 今の選択肢の名前 */
+  const chosen = (item: keyof Engines) =>
+    ITEMS[item].options.find((o) => o.value === t[item])?.label ?? "";
   const items = Object.entries(ITEMS) as [keyof Engines, (typeof ITEMS)[keyof Engines]][];
   const choose = <K extends keyof Engines>(item: K, value: Engines[K]) =>
     panel.chooseMode({ ...t, [item]: value });
@@ -55,12 +65,41 @@
   <Card.Root>
     <Card.Header>
       <Card.Title>モード</Card.Title>
-      <Card.Description>選ぶと、下の工程がまとめて決まります</Card.Description>
+      <Card.Description>字幕をどこで作るかを選びます</Card.Description>
     </Card.Header>
     <Card.Content><ModePicker /></Card.Content>
   </Card.Root>
 
-  {#each items as [item, spec] (item)}
+  <Card.Root>
+    <Card.Header>
+      <Card.Title>工程ごとに選ぶ</Card.Title>
+      <Card.Description>
+        モードは、下の工程の組み合わせです。工程ごとに変えると「カスタム」になります
+      </Card.Description>
+    </Card.Header>
+    <Card.Content class="flex flex-col gap-3">
+      <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+        {#each items as [item, spec] (item)}
+          <dt class="text-muted-foreground">{spec.label}</dt>
+          <dd>{chosen(item)}</dd>
+        {/each}
+      </dl>
+      {#if !custom}
+        <Button
+          variant="outline"
+          size="sm"
+          class="self-start"
+          aria-expanded={stages}
+          onclick={() => (opened = !opened)}
+        >
+          <ChevronIcon class={["transition-transform", stages && "rotate-180"]} />
+          {stages ? "選択肢を閉じる" : "選択肢を開く"}
+        </Button>
+      {/if}
+    </Card.Content>
+  </Card.Root>
+
+  {#each stages ? items : [] as [item, spec] (item)}
     <Card.Root>
       <Card.Header>
         <Card.Title>{spec.label}</Card.Title>
@@ -107,8 +146,10 @@
     </Card.Root>
   {/each}
   <LocalGpu />
-  <p class="text-sm text-muted-foreground">
-    料金は、話し続けた 1 時間の目安です（1 ドル {YEN_PER_USD} 円で計算）。正確さと速さはデドロ字幕で測った値で、話し方や
-    PC で変わります。切り替えると、字幕は始め直します。使った分の目安は「料金」タブに工程ごとに出ます
-  </p>
+  {#if stages}
+    <p class="text-sm text-muted-foreground">
+      料金は、話し続けた 1 時間の目安です（1 ドル {YEN_PER_USD} 円で計算）。正確さと速さはデドロ字幕で測った値で、話し方や
+      PC で変わります。切り替えると、字幕は始め直します。使った分の目安は「API キーと料金」のタブに工程ごとに出ます
+    </p>
+  {/if}
 </div>

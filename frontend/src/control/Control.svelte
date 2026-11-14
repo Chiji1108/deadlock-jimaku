@@ -1,36 +1,35 @@
 <script lang="ts">
   import CaptionsIcon from "@lucide/svelte/icons/captions";
   import CircleAlertIcon from "@lucide/svelte/icons/circle-alert";
+  import HouseIcon from "@lucide/svelte/icons/house";
   import KeyRoundIcon from "@lucide/svelte/icons/key-round";
   import MicIcon from "@lucide/svelte/icons/mic";
   import PackageIcon from "@lucide/svelte/icons/package";
   import SquareIcon from "@lucide/svelte/icons/square";
   import TrophyIcon from "@lucide/svelte/icons/trophy";
-  import WalletIcon from "@lucide/svelte/icons/wallet";
   import UserRoundIcon from "@lucide/svelte/icons/user-round";
   import WorkflowIcon from "@lucide/svelte/icons/workflow";
   import { ModeWatcher } from "mode-watcher";
-  import { onMount } from "svelte";
+  import { onMount, untrack } from "svelte";
   import { MediaQuery } from "svelte/reactivity";
   import * as Alert from "$lib/components/ui/alert";
   import { Button } from "$lib/components/ui/button";
   import { Toaster } from "$lib/components/ui/sonner";
   import * as Tabs from "$lib/components/ui/tabs";
   import AboutDialog from "./parts/AboutDialog.svelte";
-  import Onboarding from "./parts/Onboarding.svelte";
   import BetaDialog from "./parts/BetaDialog.svelte";
   import WhatsNew from "./parts/WhatsNew.svelte";
   import { fallbackText, panel, transcriptionErrorText } from "./panel.svelte";
   import { total, unpriced, usd } from "./usage";
   import AudioTab from "./tabs/AudioTab.svelte";
+  import HomeTab from "./tabs/HomeTab.svelte";
   import DisplayTab from "./tabs/DisplayTab.svelte";
   import EnginesTab from "./tabs/EnginesTab.svelte";
   import PeopleTab from "./tabs/PeopleTab.svelte";
   import ItemsTab from "./tabs/ItemsTab.svelte";
   import KeysTab from "./tabs/KeysTab.svelte";
   import RankTab from "./tabs/RankTab.svelte";
-  import UsageTab from "./tabs/UsageTab.svelte";
-  import { CHROME, ENTER_KEYS, chromeFinals, keyNames } from "../lib/engines";
+  import { ENTER_KEYS, chromeFinals, keyNames } from "../lib/engines";
 
   onMount(() => panel.start());
 
@@ -39,7 +38,14 @@
   let content = $state<HTMLElement>();
 
   const TABS = [
-    { value: "audio", label: "マイクと翻訳", icon: MicIcon, page: AudioTab },
+    { value: "home", label: "ホーム", icon: HouseIcon, page: HomeTab },
+    {
+      value: "audio",
+      label: "マイクと翻訳",
+      icon: MicIcon,
+      page: AudioTab,
+      heading: "字幕の作り方",
+    },
     { value: "engines", label: "モード", icon: WorkflowIcon, page: EnginesTab },
     { value: "people", label: "プロフィール", icon: UserRoundIcon, page: PeopleTab },
     {
@@ -52,14 +58,8 @@
     },
     { value: "items", label: "アイテム説明", icon: PackageIcon, page: ItemsTab, wide: true },
     { value: "rank", label: "ランク", icon: TrophyIcon, page: RankTab, wide: true },
-    {
-      value: "keys",
-      label: "API キー",
-      icon: KeyRoundIcon,
-      page: KeysTab,
-      heading: "キーと料金",
-    },
-    { value: "usage", label: "料金", icon: WalletIcon, page: UsageTab },
+    // 自分の API キーを使う人だけが開く。料金も同じタブに置く
+    { value: "keys", label: "API キーと料金", icon: KeyRoundIcon, page: KeysTab, heading: "" },
   ];
   // デスクトップのウィンドウでは左のサイドバー。OBS のドックのように狭いときは上に並べる
   const wide = new MediaQuery("min-width: 768px");
@@ -68,11 +68,18 @@
     TABS.find((t) => t.value === panel.tab)?.wide ? "max-w-6xl" : "max-w-3xl",
   );
 
-  // タブを変えたら（サイドバーからでも、料金や注意のリンクからでも）先頭から見せる
+  // タブを変えたら（サイドバーからでも、注意のリンクからでも）先頭から見せる。
+  // 料金へのリンクだけは、タブの中の料金の欄まで送る
   $effect(() => {
     void panel.tab;
-    content?.scrollTo({ top: 0 });
-    window.scrollTo({ top: 0 });
+    // 送り先は読むだけで、この処理をやり直すきっかけにしない（消したときに、先頭へ戻さない）
+    untrack(() => {
+      const target = panel.anchor && document.getElementById(panel.anchor);
+      panel.anchor = undefined;
+      if (target) return target.scrollIntoView({ block: "start" });
+      content?.scrollTo({ top: 0 });
+      window.scrollTo({ top: 0 });
+    });
   });
 
   /** 確定の文を Chrome が作るなら（Chrome のモード）、字幕は Chrome のウィンドウが動いて出る */
@@ -133,7 +140,7 @@
             {#if panel.server === "open" && panel.usage}
               <button
                 class="hover:text-foreground hover:underline"
-                onclick={() => (panel.tab = "usage")}
+                onclick={() => panel.show("keys", "usage")}
               >
                 起動してからの料金 {usd(total(panel.usage.session))}{unpriced(panel.usage.session)
                   ? " ＋α"
@@ -148,13 +155,9 @@
           <Button variant="outline" onclick={() => panel.setTranscription(false)}>
             <SquareIcon />字幕を止める
           </Button>
-        {:else if panel.needsKey}
-          <div class="flex flex-wrap gap-2">
-            <Button variant="outline" onclick={() => (panel.tab = "keys")}>{ENTER_KEYS}</Button>
-            <Button onclick={panel.startWithChrome}>無料の Chrome モードで始める</Button>
-          </div>
         {:else}
-          <Button onclick={() => panel.setTranscription(true)}>
+          <!-- ボタンはいつも同じ所に置く。鍵が足りないときは押せず、下の注意が入れ方を案内する -->
+          <Button disabled={panel.needsKey} onclick={() => panel.setTranscription(true)}>
             <MicIcon />字幕を始める
           </Button>
         {/if}
@@ -227,19 +230,15 @@
               </Alert.Description>
             </Alert.Root>
           {/if}
-          <Onboarding open={(value) => (panel.tab = value)} />
-          {#if panel.needsKey && s.onboardingClosed}
+          <!-- ホームで「はじめかた」が同じ案内を出している間は、重ねない -->
+          {#if panel.needsKey && !s.transcriptionEnabled && (s.onboardingClosed || panel.tab !== "home")}
             <Alert.Root>
               <KeyRoundIcon />
-              <Alert.Title>この作り方には {keyNames(panel.missingKeys)}が要ります</Alert.Title>
+              <Alert.Title>このモードには {keyNames(panel.missingKeys)}が要ります</Alert.Title>
               <Alert.Description class="flex flex-wrap gap-2 pt-1">
                 <Button size="sm" onclick={() => (panel.tab = "keys")}>{ENTER_KEYS}</Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onclick={() => panel.update({ engines: CHROME })}
-                >
-                  無料の Chrome モードにする
+                <Button size="sm" variant="outline" onclick={panel.startWithChrome}>
+                  無料の Chrome モードで始める
                 </Button>
               </Alert.Description>
             </Alert.Root>

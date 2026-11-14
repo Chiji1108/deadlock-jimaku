@@ -56,7 +56,9 @@ class Panel {
   server = $state<Status>("connecting");
   /** 字幕を始められなかった・止まった理由 */
   /** 開いているタブ（ほかのタブへの案内から切り替える） */
-  tab = $state("audio");
+  tab = $state("home");
+  /** タブを開いたときに見せる欄の id（なければ先頭から見せる） */
+  anchor = $state<string>();
   transcriptionError = $state<TranscriptionError | undefined>();
   /** PC の中の文字起こしを準備している（初回はダウンロードを待つ） */
   preparing = $state(false);
@@ -153,6 +155,13 @@ class Panel {
       this.level !== undefined &&
       this.now - this.heardAt > SILENT_MS
     );
+  }
+
+  /** タブを開いて、その中の欄まで送る */
+  show(tab: string, anchor: string) {
+    this.anchor = anchor;
+    if (this.tab === tab) document.getElementById(anchor)?.scrollIntoView({ block: "start" });
+    this.tab = tab;
   }
 
   label = (code: string) => languageNames.of(NAME_CODE[code] ?? code) ?? code;
