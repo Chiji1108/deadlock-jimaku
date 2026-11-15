@@ -8,6 +8,18 @@ use tauri::{AppHandle, Manager};
 use tauri_plugin_notification::NotificationExt;
 use tokio::sync::broadcast::error::RecvError;
 
+/// `body` が空なら、題名だけを出す
+pub fn show(app: &AppHandle, title: &str, body: &str) {
+    let mut notification = app.notification().builder().title(title);
+    if !body.is_empty() {
+        notification = notification.body(body);
+    }
+    let shown = notification.show();
+    if let Err(e) = shown {
+        tracing::warn!("notification: {e}");
+    }
+}
+
 pub fn install(app: AppHandle, store: Arc<Store>) {
     let mut messages = store.subscribe();
     let mut failed = store.transcription_error().is_some();
@@ -28,15 +40,11 @@ pub fn install(app: AppHandle, store: Arc<Store>) {
             if !failed || watching {
                 continue;
             }
-            let shown = app
-                .notification()
-                .builder()
-                .title("字幕が止まりました")
-                .body("デドロ字幕を開いて、理由を確かめてください")
-                .show();
-            if let Err(e) = shown {
-                tracing::warn!("notification: {e}");
-            }
+            show(
+                &app,
+                "字幕が止まりました",
+                "デドロ字幕を開いて、理由を確かめてください",
+            );
         }
     });
 }

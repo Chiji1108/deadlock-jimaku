@@ -8,6 +8,7 @@
   import { Button } from "$lib/components/ui/button";
   import * as Card from "$lib/components/ui/card";
   import ChromeWindow from "../parts/ChromeWindow.svelte";
+  import HotkeyCard from "../parts/HotkeyCard.svelte";
   import LevelMeter from "../parts/LevelMeter.svelte";
   import SilentAlert from "../parts/SilentAlert.svelte";
   import ModeBadges from "../parts/ModeBadges.svelte";
@@ -172,6 +173,7 @@
           </Card.Action>
         </Card.Header>
       </Card.Root>
+      <HotkeyCard />
     </div>
   </div>
 </div>

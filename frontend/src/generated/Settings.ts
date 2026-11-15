@@ -98,6 +98,11 @@ trayNoticeSeen: boolean,
  */
 hybridHintClosed: boolean, 
 /**
+ * どのアプリが前にあっても字幕を始める・止めるキー（`Ctrl+Shift+F9` の形。なければ使わない）。
+ * 登録するのはデスクトップアプリ（`app/src/hotkey.rs`）
+ */
+toggleHotkey?: string, 
+/**
  * 最後に自分で組んだ工程の組み合わせ（モードにないもの）。操作パネルの「カスタム」
  */
 customEngines?: Engines, 
