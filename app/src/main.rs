@@ -1,14 +1,17 @@
 // リリースビルドで Windows のコンソールウィンドウを出さない
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod hotkey;
 mod notice;
 #[cfg(not(target_os = "linux"))]
 mod tray;
 
 use std::net::{Ipv4Addr, SocketAddr};
+use std::sync::Arc;
 use std::time::Duration;
 
-use overlays_core::{port, runtime, server, settings, store::Store};
+use overlays_core::settings::SettingsPatch;
+use overlays_core::{port, runtime, secrets, server, settings, store::Store};
 use tauri::webview::NewWindowResponse;
 use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
@@ -35,6 +38,7 @@ fn main() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
+        .plugin(hotkey::plugin())
         .setup(|app| {
             // 設定は操作パネルから変えて保存する。API キーは OS の資格情報ストア
             let data_dir = match overlays_core::data_dir_override() {
@@ -48,6 +52,7 @@ fn main() {
             #[cfg(not(target_os = "linux"))]
             tray::install(app, store.clone())?;
             notice::install(app.handle().clone(), store.clone());
+            hotkey::install(app.handle().clone(), store.clone());
             tauri::async_runtime::spawn(runtime::run(
                 store.clone(),
                 runtime::Options { input_file: None },
@@ -107,7 +112,7 @@ fn main() {
             // 終了しても Chrome を残さない（残ると、次の起動で同じプロファイルを開けない）。
             // PC の中の文字起こしと LLM のプロセスも残さない
             tauri::RunEvent::Exit => {
-                _app.state::<std::sync::Arc<Store>>().close_chrome();
+                _app.state::<Arc<Store>>().close_chrome();
                 overlays_core::local::stop();
                 overlays_core::llama::stop();
                 overlays_core::whisper::stop();
@@ -140,6 +145,32 @@ fn open_window(app: &AppHandle) -> tauri::Result<WebviewWindow> {
         NewWindowResponse::Deny
     })
     .build()
+}
+
+/// 字幕を始める・止める（トレイのメニューとキー）。キーがないと字幕は始められないので、始める代わりに操作パネルを開く。
+/// `notify` なら、結果を OS の通知で返す（キーで押したときは、画面を見ていない）
+fn toggle_subtitles(app: AppHandle, store: Arc<Store>, notify: bool) {
+    tauri::async_runtime::spawn_blocking(move || {
+        let settings = store.settings();
+        let start = !settings.transcription_enabled;
+        // 字幕の処理が始めるときに確かめるのと同じ決まり（工程が使う会社ごとに、自分のキーか、中継するコード）
+        let keys = secrets::load();
+        let mut needed = settings.engines.providers().into_iter();
+        if start && needed.any(|p| keys.access(p, &settings.api_base).is_none()) {
+            show_window(&app);
+            return;
+        }
+        let patch = SettingsPatch {
+            transcription_enabled: Some(start),
+            ..Default::default()
+        };
+        match store.update_settings(patch) {
+            Ok(_) if notify && start => notice::show(&app, "字幕を始めました", ""),
+            Ok(_) if notify => notice::show(&app, "字幕を止めました", ""),
+            Ok(_) => {}
+            Err(e) => tracing::warn!("toggle subtitles: {e}"),
+        }
+    });
 }
 
 /// 閉じていれば開き直す。Windows はイベントハンドラーの中でウィンドウを作ると止まるので、別のスレッドで行う

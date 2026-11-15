@@ -77,6 +77,10 @@ pub struct Settings {
     pub tray_notice_seen: bool,
     /// 無料で使っている人への「おすすめにする」の提案を閉じた
     pub hybrid_hint_closed: bool,
+    /// どのアプリが前にあっても字幕を始める・止めるキー（`Ctrl+Shift+F9` の形。なければ使わない）。
+    /// 登録するのはデスクトップアプリ（`app/src/hotkey.rs`）
+    #[ts(optional)]
+    pub toggle_hotkey: Option<String>,
     /// 最後に自分で組んだ工程の組み合わせ（モードにないもの）。操作パネルの「カスタム」
     #[ts(optional)]
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1217,6 +1221,7 @@ impl Default for Settings {
             custom_engines: None,
             notes_seen: None,
             tray_notice_seen: false,
+            toggle_hotkey: None,
             rank_region: None,
             rank_style: RankStyle::default(),
             models: Models::default(),
@@ -1533,6 +1538,9 @@ impl Settings {
         next.onboarding_closed = patch.onboarding_closed.unwrap_or(next.onboarding_closed);
         next.hybrid_hint_closed = patch.hybrid_hint_closed.unwrap_or(next.hybrid_hint_closed);
         next.tray_notice_seen = patch.tray_notice_seen.unwrap_or(next.tray_notice_seen);
+        if let Some(hotkey) = patch.toggle_hotkey {
+            next.toggle_hotkey = Some(hotkey.trim().to_owned()).filter(|key| !key.is_empty());
+        }
         next.notes_seen = patch.notes_seen.or(next.notes_seen);
         if let Some(region) = patch.rank_region {
             next.rank_region = match region.as_str() {
@@ -1620,6 +1628,9 @@ pub struct SettingsPatch {
     pub hybrid_hint_closed: Option<bool>,
     #[ts(optional)]
     pub tray_notice_seen: Option<bool>,
+    /// 空なら使わない
+    #[ts(optional)]
+    pub toggle_hotkey: Option<String>,
     #[ts(optional)]
     pub notes_seen: Option<String>,
     /// 地域（`Region`）。空文字列なら順位を調べない

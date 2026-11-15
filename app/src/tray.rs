@@ -3,16 +3,15 @@
 
 use std::sync::Arc;
 
-use overlays_core::secrets;
 use overlays_core::settings::SettingsPatch;
 use overlays_core::store::Store;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri::{App, AppHandle, Manager, Window};
+use tauri::{App, Manager, Window};
 use tauri_plugin_dialog::DialogExt;
 use tokio::sync::broadcast::error::RecvError;
 
-use crate::show_window;
+use crate::{show_window, toggle_subtitles};
 
 const OPEN: &str = "open";
 const TOGGLE: &str = "toggle";
@@ -79,7 +78,7 @@ pub fn install(app: &App, store: Arc<Store>) -> tauri::Result<()> {
         .show_menu_on_left_click(false)
         .on_menu_event(move |app, event| match event.id.as_ref() {
             OPEN => show_window(app),
-            TOGGLE => toggle_subtitles(app.clone(), on_menu.clone()),
+            TOGGLE => toggle_subtitles(app.clone(), on_menu.clone(), false),
             QUIT => app.exit(0),
             _ => {}
         })
@@ -115,28 +114,6 @@ pub fn install(app: &App, store: Arc<Store>) -> tauri::Result<()> {
         }
     });
     Ok(())
-}
-
-/// キーがないと字幕は始められないので、始める代わりに操作パネルを開く
-fn toggle_subtitles(app: AppHandle, store: Arc<Store>) {
-    tauri::async_runtime::spawn_blocking(move || {
-        let settings = store.settings();
-        let start = !settings.transcription_enabled;
-        // 字幕の処理が始めるときに確かめるのと同じ決まり（工程が使う会社ごとに、自分のキーか、中継するコード）
-        let keys = secrets::load();
-        let mut needed = settings.engines.providers().into_iter();
-        if start && needed.any(|p| keys.access(p, &settings.api_base).is_none()) {
-            show_window(&app);
-            return;
-        }
-        let patch = SettingsPatch {
-            transcription_enabled: Some(start),
-            ..Default::default()
-        };
-        if let Err(e) = store.update_settings(patch) {
-            tracing::warn!("tray toggle: {e}");
-        }
-    });
 }
 
 /// 閉じるボタンで WebView ごとウィンドウを閉じ、メモリを空ける。字幕はアプリの本体で動き続ける。

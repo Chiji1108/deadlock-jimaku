@@ -49,7 +49,11 @@ minSilenceMs?: number,
 /**
  * 空文字列なら話す言語
  */
-rankLanguage?: string, rankContent?: RankContent, rankAnchor?: Anchor, obsSeen?: boolean, onboardingClosed?: boolean, hybridHintClosed?: boolean, trayNoticeSeen?: boolean, notesSeen?: string, 
+rankLanguage?: string, rankContent?: RankContent, rankAnchor?: Anchor, obsSeen?: boolean, onboardingClosed?: boolean, hybridHintClosed?: boolean, trayNoticeSeen?: boolean, 
+/**
+ * 空なら使わない
+ */
+toggleHotkey?: string, notesSeen?: string, 
 /**
  * 地域（`Region`）。空文字列なら順位を調べない
  */
