@@ -197,28 +197,6 @@
             </Button>
           {/if}
         </div>
-        <form
-          class="flex gap-2"
-          onsubmit={(e) => {
-            e.preventDefault();
-            const url = urls[person.id]?.trim();
-            if (url) void setIcon(person, () => api.fetchPersonIcon({ url }));
-          }}
-        >
-          <Input
-            class="flex-1"
-            placeholder="Twitch か YouTube のチャンネルの URL"
-            bind:value={urls[person.id]}
-          />
-          <Button
-            type="submit"
-            variant="outline"
-            size="sm"
-            disabled={fetching === person.id || !urls[person.id]?.trim()}
-          >
-            <LinkIcon />アイコンを取る
-          </Button>
-        </form>
       </div>
       <Button
         variant="ghost"
@@ -229,6 +207,29 @@
         <TrashIcon />
       </Button>
     </div>
+    <!-- 幅いっぱいに取る（アイコンの横に置くと、狭いときに入力欄がつぶれる） -->
+    <form
+      class="flex flex-wrap gap-2"
+      onsubmit={(e) => {
+        e.preventDefault();
+        const url = urls[person.id]?.trim();
+        if (url) void setIcon(person, () => api.fetchPersonIcon({ url }));
+      }}
+    >
+      <Input
+        class="min-w-48 flex-1"
+        placeholder="Twitch か YouTube のチャンネルの URL"
+        bind:value={urls[person.id]}
+      />
+      <Button
+        type="submit"
+        variant="outline"
+        size="sm"
+        disabled={fetching === person.id || !urls[person.id]?.trim()}
+      >
+        <LinkIcon />アイコンを取る
+      </Button>
+    </form>
     <div class="grid gap-3 sm:grid-cols-2">
       {#each languages as lang (lang)}
         <Field.Field>
