@@ -18,6 +18,7 @@
   import Captions from "../../lib/Captions.svelte";
   import { api } from "../../lib/api";
   import { entityName, glossary, loadGlossary } from "../../lib/glossary.svelte";
+  import OverlayPage from "../parts/OverlayPage.svelte";
   import { panel } from "../panel.svelte";
 
   const MAX_PEOPLE = 50;
@@ -270,101 +271,107 @@
   </div>
 {/snippet}
 
-<div class="flex flex-col gap-6">
-  <figure class="flex flex-col gap-1.5">
-    <div
-      class="relative h-48 overflow-hidden rounded-lg border bg-[radial-gradient(ellipse_at_30%_20%,#3b4a5e,#11151c_70%)]"
-    >
-      {#if sample.length}
-        <Captions segments={sample} {display} look={s.subtitleStyle} />
-      {:else}
-        <p class="absolute inset-0 flex items-center justify-center text-sm text-white/70">
-          名前を入れると、字幕での見え方がここに出ます
-        </p>
-      {/if}
-    </div>
-    <figcaption class="text-xs text-muted-foreground">
-      見本の字幕です。名前{#if shown?.firstPerson.length}と一人称{/if}に、アイコンと色が付きます。翻訳では、名前はその言語の名前になり、一人称はそのままです
-    </figcaption>
-  </figure>
-
-  <Card.Root>
-    <Card.Header>
-      <Card.Title>自分</Card.Title>
-      <Card.Description>
-        字幕で自分の名前が、ヒーローの名前と同じように強調されます。翻訳では、その言語の名前になります
-      </Card.Description>
-    </Card.Header>
-    <Card.Content class="flex flex-col gap-4">
-      {#if me}
-        {@render editor(me)}
-      {:else}
-        <form
-          class="flex gap-2"
-          onsubmit={(e) => {
-            e.preventDefault();
-            add(true);
-          }}
-        >
-          <Input class="flex-1" placeholder="自分の名前" bind:value={adding.me} />
-          <Button type="submit" disabled={!adding.me.trim()}>足す</Button>
-        </form>
-      {/if}
-    </Card.Content>
-  </Card.Root>
-
-  <Card.Root>
-    <Card.Header>
-      <Card.Title class="flex items-center gap-2">
-        一緒に遊ぶ人
-        {#if others.length}<Badge variant="secondary">{others.length}</Badge>{/if}
-      </Card.Title>
-      <Card.Description>
-        よく名前を呼ぶ人を入れておくと、文字起こしが名前を書き間違えにくくなります
-      </Card.Description>
-    </Card.Header>
-    <Card.Content class="flex flex-col gap-4">
-      {#each others as person (person.id)}
-        {@render editor(person)}
-      {/each}
-      {#if people.length < MAX_PEOPLE}
-        <form
-          class="flex gap-2"
-          onsubmit={(e) => {
-            e.preventDefault();
-            add(false);
-          }}
-        >
-          <Input class="flex-1" placeholder="足す人の名前" bind:value={adding.other} />
-          <Button type="submit" variant="outline" disabled={!adding.other.trim()}>足す</Button>
-        </form>
-      {/if}
-    </Card.Content>
-  </Card.Root>
-
-  <Card.Root>
-    <Card.Header>
-      <Card.Title>書き出しと読み込み</Card.Title>
-      <Card.Description>
-        アイコンごと 1 つのファイルにして、一緒に配信する人に渡せます。読み込むと、一覧に足されます
-      </Card.Description>
-    </Card.Header>
-    <Card.Content class="flex flex-wrap gap-2">
-      <Button variant="outline" disabled={!people.length} onclick={exportPeople}>
-        ファイルに書き出す
-      </Button>
-      <Button
-        variant="outline"
-        onclick={(e) => (e.currentTarget.nextElementSibling as HTMLInputElement | null)?.click()}
+<!-- 見本を右に止めておき、名前を入れながら見え方を確かめられるようにする（オーバーレイのタブと同じ並び） -->
+<OverlayPage>
+  {#snippet preview()}
+    <figure class="flex flex-col gap-1.5">
+      <div
+        class="relative h-48 overflow-hidden rounded-lg border bg-[radial-gradient(ellipse_at_30%_20%,#3b4a5e,#11151c_70%)]"
       >
-        ファイルを読み込む
-      </Button>
-      <input type="file" accept="application/json,.json" class="hidden" onchange={importPeople} />
-    </Card.Content>
-  </Card.Root>
+        {#if sample.length}
+          <Captions segments={sample} {display} look={s.subtitleStyle} />
+        {:else}
+          <p class="absolute inset-0 flex items-center justify-center text-sm text-white/70">
+            名前を入れると、字幕での見え方がここに出ます
+          </p>
+        {/if}
+      </div>
+      <figcaption class="text-xs text-muted-foreground">
+        見本の字幕です。名前{#if shown?.firstPerson.length}と一人称{/if}に、アイコンと色が付きます。翻訳では、名前はその言語の名前になり、一人称はそのままです
+      </figcaption>
+    </figure>
+  {/snippet}
 
-  <p class="text-sm text-muted-foreground">
-    名前とアイコンは、この PC
-    にだけ保存します。名前は、用語と同じように、文字起こしや翻訳のサービスに送られることがあります（Chrome・Chrome+・ローカルのモードでは送りません）。アイコンは送りません
-  </p>
-</div>
+  <div class="flex flex-col gap-6">
+    <Card.Root>
+      <Card.Header>
+        <Card.Title>自分</Card.Title>
+        <Card.Description>
+          字幕で自分の名前が、ヒーローの名前と同じように強調されます。翻訳では、その言語の名前になります
+        </Card.Description>
+      </Card.Header>
+      <Card.Content class="flex flex-col gap-4">
+        {#if me}
+          {@render editor(me)}
+        {:else}
+          <form
+            class="flex gap-2"
+            onsubmit={(e) => {
+              e.preventDefault();
+              add(true);
+            }}
+          >
+            <Input class="flex-1" placeholder="自分の名前" bind:value={adding.me} />
+            <Button type="submit" disabled={!adding.me.trim()}>足す</Button>
+          </form>
+        {/if}
+      </Card.Content>
+    </Card.Root>
+
+    <Card.Root>
+      <Card.Header>
+        <Card.Title class="flex items-center gap-2">
+          一緒に遊ぶ人
+          {#if others.length}<Badge variant="secondary">{others.length}</Badge>{/if}
+        </Card.Title>
+        <Card.Description>
+          よく名前を呼ぶ人を入れておくと、文字起こしが名前を書き間違えにくくなります
+        </Card.Description>
+      </Card.Header>
+      <Card.Content class="flex flex-col gap-4">
+        {#each others as person (person.id)}
+          {@render editor(person)}
+        {/each}
+        {#if people.length < MAX_PEOPLE}
+          <form
+            class="flex gap-2"
+            onsubmit={(e) => {
+              e.preventDefault();
+              add(false);
+            }}
+          >
+            <Input class="flex-1" placeholder="足す人の名前" bind:value={adding.other} />
+            <Button type="submit" variant="outline" disabled={!adding.other.trim()}>足す</Button>
+          </form>
+        {/if}
+      </Card.Content>
+    </Card.Root>
+
+    <Card.Root>
+      <Card.Header>
+        <Card.Title>書き出しと読み込み</Card.Title>
+        <Card.Description>
+          アイコンごと 1
+          つのファイルにして、一緒に配信する人に渡せます。読み込むと、一覧に足されます
+        </Card.Description>
+      </Card.Header>
+      <Card.Content class="flex flex-wrap gap-2">
+        <Button variant="outline" disabled={!people.length} onclick={exportPeople}>
+          ファイルに書き出す
+        </Button>
+        <Button
+          variant="outline"
+          onclick={(e) => (e.currentTarget.nextElementSibling as HTMLInputElement | null)?.click()}
+        >
+          ファイルを読み込む
+        </Button>
+        <input type="file" accept="application/json,.json" class="hidden" onchange={importPeople} />
+      </Card.Content>
+    </Card.Root>
+
+    <p class="text-sm text-muted-foreground">
+      名前とアイコンは、この PC
+      にだけ保存します。名前は、用語と同じように、文字起こしや翻訳のサービスに送られることがあります（Chrome・Chrome+・ローカルのモードでは送りません）。アイコンは送りません
+    </p>
+  </div>
+</OverlayPage>

@@ -46,7 +46,7 @@
       heading: "字幕の作り方",
     },
     { value: "engines", label: "モード", icon: WorkflowIcon, page: EnginesTab },
-    { value: "people", label: "プロフィール", icon: UserRoundIcon, page: PeopleTab },
+    { value: "people", label: "プロフィール", icon: UserRoundIcon, page: PeopleTab, wide: true },
     {
       value: "display",
       label: "字幕",
@@ -60,7 +60,7 @@
     // 自分の API キーを使う人だけが開く。料金も同じタブに置く
     { value: "keys", label: "API キーと料金", icon: KeyRoundIcon, page: KeysTab, heading: "" },
   ];
-  /** ホームとオーバーレイのタブは 2 列に並べるので広く取る。ほかは読みやすい幅に留める */
+  /** 見本のあるタブ（ホーム、プロフィール、オーバーレイ）は 2 列に並べるので広く取る。ほかは読みやすい幅に留める */
   const pageWidth = $derived(
     TABS.find((t) => t.value === panel.tab)?.wide ? "max-w-6xl" : "max-w-3xl",
   );
