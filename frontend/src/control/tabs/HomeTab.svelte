@@ -72,7 +72,10 @@
 
   <Onboarding open={(value) => (panel.tab = value)} />
 
-  <div class="grid items-start gap-6 @[52rem]:grid-cols-[3fr_2fr]">
+  <!-- 列の幅は中身に押し広げさせない（狭いときに、長い名前やプレビューで横にはみ出さない） -->
+  <div
+    class="grid grid-cols-[minmax(0,1fr)] items-start gap-6 @[52rem]:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]"
+  >
     <Card.Root>
       <Card.Header>
         <Card.Title>{panel.running ? "いま出ている字幕" : "字幕の見本"}</Card.Title>
