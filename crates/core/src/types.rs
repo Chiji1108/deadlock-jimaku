@@ -114,7 +114,12 @@ pub enum Topic {
 #[serde(tag = "type", rename_all = "lowercase")]
 #[ts(export)]
 pub enum ClientMsg {
-    Subscribe { topics: Vec<Topic> },
+    Subscribe {
+        topics: Vec<Topic>,
+        /// OBS の中で開いた字幕オーバーレイ。つながっている間、操作パネルに「OBS に表示中」と出す
+        #[serde(default)]
+        obs: bool,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
@@ -161,6 +166,9 @@ pub enum ServerMsg {
     /// Chrome のページの状態。None はタブが開いていない
     #[serde(rename = "chrome.status")]
     ChromeStatus { status: Option<LiveStatus> },
+    /// OBS の中で、字幕オーバーレイがつながっているか（字幕が OBS に出ているか）
+    #[serde(rename = "obs.status")]
+    ObsStatus { subtitles: bool },
     /// 操作パネル以外（OBS の字幕オーバーレイ、トレイ）で設定が変わった。パネルは取り直す
     #[serde(rename = "settings.changed")]
     SettingsChanged,
@@ -368,7 +376,8 @@ impl ServerMsg {
             Self::TranscriptionStatus { .. }
             | Self::SettingsChanged
             | Self::LiveStatus { .. }
-            | Self::ChromeStatus { .. } => Topic::Status,
+            | Self::ChromeStatus { .. }
+            | Self::ObsStatus { .. } => Topic::Status,
             Self::Display { .. } => Topic::Display,
             Self::AudioLevel { .. } => Topic::Level,
             Self::Usage { .. } => Topic::Usage,

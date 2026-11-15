@@ -1,5 +1,6 @@
 <script lang="ts">
   import CaptionsIcon from "@lucide/svelte/icons/captions";
+  import CheckIcon from "@lucide/svelte/icons/check";
   import CircleAlertIcon from "@lucide/svelte/icons/circle-alert";
   import HouseIcon from "@lucide/svelte/icons/house";
   import KeyRoundIcon from "@lucide/svelte/icons/key-round";
@@ -112,7 +113,14 @@
           </p>
         {/if}
       </div>
-      {#if s}
+      <!-- 設定は変えたらすぐ保存する。保存できたことを、少しの間だけ出す -->
+      {#if panel.now - panel.savedAt < 2000}
+        <p class="flex items-center gap-1 text-xs text-muted-foreground" role="status">
+          <CheckIcon class="size-3.5" />保存しました
+        </p>
+      {/if}
+      <!-- ホームでは、状態の帯が同じボタンを大きく出す -->
+      {#if s && panel.tab !== "home"}
         {#if s.transcriptionEnabled}
           <Button variant="outline" onclick={() => panel.setTranscription(false)}>
             <SquareIcon />字幕を止める
@@ -167,6 +175,10 @@
       </div>
       <main bind:this={content} class="min-w-0 flex-1 overflow-y-auto">
         <div class="mx-auto flex {pageWidth} flex-col gap-4 px-4 py-6">
+          <!-- 狭いときはタブがアイコンだけなので、開いているタブの名前を出す -->
+          <h2 class="text-lg font-semibold md:hidden">
+            {TABS.find((t) => t.value === panel.tab)?.label}
+          </h2>
           {#if panel.view?.fallback}
             {@const ownKeys = panel.view.continuesWith === "ownKeys"}
             <Alert.Root>

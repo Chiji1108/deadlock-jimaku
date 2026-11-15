@@ -57,6 +57,28 @@
         >
           {detail}
         </p>
+        <!-- 字幕を作っていても、OBS につながっていなければ配信には出ない -->
+        <p class="flex items-center gap-2 text-xs text-muted-foreground">
+          <span
+            class={[
+              "size-2 shrink-0 rounded-full",
+              panel.obsSubtitles ? "bg-emerald-500" : "bg-muted-foreground/50",
+            ]}
+          ></span>
+          {#if panel.obsSubtitles}
+            OBS に字幕がつながっています
+          {:else}
+            OBS に字幕がつながっていません（OBS を開いていないか、字幕を追加していません）
+            <Button
+              variant="link"
+              size="sm"
+              class="h-auto p-0 text-xs"
+              onclick={() => (panel.tab = "display")}
+            >
+              追加する
+            </Button>
+          {/if}
+        </p>
       </div>
       {#if s.transcriptionEnabled}
         <Button size="lg" variant="outline" onclick={() => panel.setTranscription(false)}>

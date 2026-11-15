@@ -24,6 +24,8 @@ export function connect(
   topics: Topic[],
   onMessage: (msg: ServerMsg) => void,
   onStatus: (status: Status) => void = () => {},
+  /** OBS の中で開いた字幕オーバーレイ。つながっている間、操作パネルに「OBS に表示中」と出る */
+  obs = false,
 ): () => void {
   let ws: WebSocket | undefined;
   let retry = 0;
@@ -43,7 +45,7 @@ export function connect(
       if (reconnecting) void reloadIfUpdated();
       reconnecting = true;
       onStatus("open");
-      socket.send(JSON.stringify({ type: "subscribe", topics } satisfies ClientMsg));
+      socket.send(JSON.stringify({ type: "subscribe", topics, obs } satisfies ClientMsg));
     });
     socket.addEventListener("message", (e) => onMessage(JSON.parse(e.data) as ServerMsg));
     socket.addEventListener("close", () => {

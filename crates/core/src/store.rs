@@ -85,8 +85,21 @@ pub struct Store {
     browser: Mutex<Option<Browser>>,
     /// ハイブリッドの発話を閉じた回数
     chrome_cuts: AtomicU32,
+    /// OBS の中で開いている字幕オーバーレイの数
+    obs_subtitles: AtomicU32,
     meter: Arc<Meter>,
     fonts: Arc<Library>,
+}
+
+/// OBS の中でつながっている字幕オーバーレイ。切れたら（落としたら）数から外す
+pub struct ObsSubtitles(Arc<Store>);
+
+impl Drop for ObsSubtitles {
+    fn drop(&mut self) {
+        if self.0.obs_subtitles.fetch_sub(1, Ordering::Relaxed) == 1 {
+            let _ = self.0.tx.send(ServerMsg::ObsStatus { subtitles: false });
+        }
+    }
 }
 
 impl Store {
@@ -122,6 +135,7 @@ impl Store {
             chrome_tab: watch::Sender::new(ChromeTab::default()),
             browser: Mutex::new(None),
             chrome_cuts: AtomicU32::new(0),
+            obs_subtitles: AtomicU32::new(0),
             meter,
             fonts,
         })
@@ -341,11 +355,22 @@ impl Store {
         msgs.push(ServerMsg::ChromeStatus {
             status: self.chrome_tab.borrow().view(),
         });
+        msgs.push(ServerMsg::ObsStatus {
+            subtitles: self.obs_subtitles.load(Ordering::Relaxed) > 0,
+        });
         msgs.push(display(&self.settings()));
         msgs.push(ServerMsg::Usage {
             usage: self.meter.watch().borrow().clone(),
         });
         msgs
+    }
+
+    /// OBS の中の字幕オーバーレイがつながった。返したものを持っている間、つながっていると数える
+    pub fn obs_subtitles(self: &Arc<Self>) -> ObsSubtitles {
+        if self.obs_subtitles.fetch_add(1, Ordering::Relaxed) == 0 {
+            let _ = self.tx.send(ServerMsg::ObsStatus { subtitles: true });
+        }
+        ObsSubtitles(self.clone())
     }
 
     /// 字幕の処理が文を受け取れるか。変わったときだけ知らせる
@@ -815,6 +840,34 @@ mod tests {
         store.update_settings(stop).unwrap();
         store.sync_chrome();
         assert!(store.browser.lock().unwrap().is_none());
+    }
+
+    /// OBS の字幕オーバーレイは、1 つでもつながっていれば「出ている」。変わったときだけ知らせる
+    #[tokio::test]
+    async fn obs_shows_subtitles_while_an_overlay_is_connected() {
+        let store = Store::new(Ok(Settings::default()), PathBuf::new());
+        let mut messages = store.subscribe();
+        let shown = |store: &Store| {
+            store
+                .current_state()
+                .contains(&ServerMsg::ObsStatus { subtitles: true })
+        };
+        assert!(!shown(&store));
+        let first = store.obs_subtitles();
+        let second = store.obs_subtitles();
+        assert_eq!(
+            messages.try_recv(),
+            Ok(ServerMsg::ObsStatus { subtitles: true })
+        );
+        drop(first);
+        assert!(messages.try_recv().is_err());
+        assert!(shown(&store));
+        drop(second);
+        assert_eq!(
+            messages.try_recv(),
+            Ok(ServerMsg::ObsStatus { subtitles: false })
+        );
+        assert!(!shown(&store));
     }
 
     /// ページの読み込みで消えるのは落ちたという案内だけで、消えたことは操作パネルに届く

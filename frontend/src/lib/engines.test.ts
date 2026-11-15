@@ -56,5 +56,8 @@ test("モードを見比べる正確さは、どのモードも同じ並びで�
     ]);
   }
   // 翻訳を GPT にしたモードは、用語を GPT が翻訳と同時に判定する（辞書の一致の値を出さない）
-  expect(modeStats(BEST)[1]).toEqual({ label: "用語", value: "GPT が判定" });
+  expect(modeStats(BEST)[1]).toEqual({ label: "用語", value: "GPT が判定", grade: "◎" });
+  // 辞書の一致だけの Chrome は △、Chrome 内蔵の AI で確かめる Chrome+ は ○
+  const terms = (name: string) => modeStats(MODES.find((m) => m.name === name)!.engines)[1]!.grade;
+  expect([terms("beta"), terms("chrome"), terms("chromePlus")]).toEqual(["◎", "△", "○"]);
 });

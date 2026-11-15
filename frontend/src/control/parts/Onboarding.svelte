@@ -31,7 +31,7 @@
       tab: "display",
       go: "字幕へ",
     },
-    { title: "右上の「字幕を始める」を押す", done: celebrating || panel.running },
+    { title: "「字幕を始める」を押す", done: celebrating || panel.running },
     { title: "話してみて、字幕が出るのを確かめる", done: celebrating || panel.subtitled },
   ]);
   const finished = $derived(steps.every((step) => step.done));

@@ -534,9 +534,9 @@ async fn ws(upgrade: WebSocketUpgrade, State(store): State<Arc<Store>>) -> Respo
 
 /// 最初のメッセージで購読するトピックを受け取り、現在の状態を送った後は更新を流し続ける
 async fn session(mut socket: WebSocket, store: Arc<Store>) {
-    let topics = match socket.recv().await {
+    let (topics, obs) = match socket.recv().await {
         Some(Ok(Message::Text(text))) => match serde_json::from_str(text.as_str()) {
-            Ok(ClientMsg::Subscribe { topics }) => topics,
+            Ok(ClientMsg::Subscribe { topics, obs }) => (topics, obs),
             Err(e) => {
                 tracing::warn!("invalid subscribe: {e}");
                 return;
@@ -545,6 +545,8 @@ async fn session(mut socket: WebSocket, store: Arc<Store>) {
         _ => return,
     };
 
+    // OBS の字幕オーバーレイなら、つながっている間だけ数える（この関数を抜けると外れる）
+    let _obs = obs.then(|| store.obs_subtitles());
     let mut rx = store.subscribe();
     let wants_level = topics.contains(&Topic::Level);
     let mut level = store.watch_level();
