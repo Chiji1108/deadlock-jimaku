@@ -52,13 +52,13 @@ export const ITEMS: {
       },
       {
         value: "haasJa",
-        label: "Haas-ja（PC の中）",
+        label: "Haas-ja（ローカル）",
         price: "無料",
         note: "日本語だけ。Chrome を使わず、音声は PC から出ない。話している間、PC の中で何度も認識し直すので、PC の負荷は上がる。初回に約 400 MB をダウンロードする。途中の字幕としての正確さは測っていない",
       },
       {
         value: "whisper",
-        label: "Whisper（PC の中）",
+        label: "Whisper（ローカル）",
         price: "無料",
         note: "Chrome を使わず、音声は PC から出ない。ヒーローの名前を教えられ、日本語以外でも出せる。文字が進むのは約 0.5 秒おき（Haas-ja は約 0.3 秒おき）で、話している間の半分ほど GPU を使う。確定も Whisper ならそのモデル、ほかなら large-v3-turbo を使う（初回に約 600 MB をダウンロードする）",
       },
@@ -109,7 +109,7 @@ export const ITEMS: {
       },
       {
         value: "haasJa",
-        label: "Haas-ja（PC の中）",
+        label: "Haas-ja（ローカル）",
         accuracy: "95〜97%",
         speed: "GPU で約 0.1 秒、CPU だけなら 1〜1.5 秒",
         price: "無料",
@@ -117,7 +117,7 @@ export const ITEMS: {
       },
       {
         value: "whisperTurbo",
-        label: "Whisper large-v3-turbo（PC の中）",
+        label: "Whisper large-v3-turbo（ローカル）",
         accuracy: "94〜98%",
         speed: "GPU で約 0.3 秒",
         price: "無料",
@@ -125,7 +125,7 @@ export const ITEMS: {
       },
       {
         value: "whisperLarge",
-        label: "Whisper large-v3（PC の中）",
+        label: "Whisper large-v3（ローカル）",
         accuracy: "95〜98%",
         speed: "GPU で約 0.5 秒",
         price: "無料",
@@ -140,7 +140,7 @@ export const ITEMS: {
     options: [
       {
         value: "dictionary",
-        label: "辞書の一致（PC の中）",
+        label: "辞書の一致（ローカル）",
         accuracy: "43%",
         speed: "すぐ",
         price: "無料",
@@ -156,7 +156,7 @@ export const ITEMS: {
       },
       {
         value: "gemma",
-        label: "Gemma 4 E4B（PC の中）",
+        label: "Gemma 4 E4B（ローカル）",
         accuracy: "83%",
         speed: "GPU で約 0.1 秒",
         price: "無料",
@@ -215,7 +215,7 @@ export const ITEMS: {
       },
       {
         value: "gemma",
-        label: "Gemma 4 E4B（PC の中）",
+        label: "Gemma 4 E4B（ローカル）",
         accuracy: "100% / 100%",
         speed: "GPU で約 0.3 秒",
         price: "無料",
@@ -253,7 +253,7 @@ export const ITEMS: {
     options: [
       {
         value: "dictionary",
-        label: "辞書（PC の中）",
+        label: "辞書（ローカル）",
         accuracy: "85%",
         speed: "すぐ",
         price: "無料",

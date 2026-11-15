@@ -21,7 +21,7 @@
 {#if listed && listed.gpus.length > 1}
   <Card.Root>
     <Card.Header>
-      <Card.Title>PC の中の AI に使う GPU</Card.Title>
+      <Card.Title>ローカルの AI に使う GPU</Card.Title>
       <Card.Description>
         自動は、内蔵でない GPU を使います。ゲームと分けたいときは、内蔵の GPU
         を選べます（遅くなります）

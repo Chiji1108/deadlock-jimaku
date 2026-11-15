@@ -978,7 +978,7 @@ LLM に用語と翻訳を 1 回で聞く形（9.1）は、いちばん正確だ�
 - **確かめていないこと:** Windows の実機（速さ、GPU のメモリ、ゲーム中の動き。`vulkan-1.dll` は GPU のドライバーが入れるので、ドライバーのない PC では立ち上がらない見込み）。無音や雑音だけの区間を渡したときに、話していない文を書かないか（Whisper の知られた癖。アプリは声のある区間だけを切り出して渡す）
 - **確かめ方:** `WHISPER_TEST_DIR=… cargo test -p overlays-core whisper_writes -- --ignored --nocapture`
 
-### 9.11 PC の中の AI に使う GPU（`local.rs` の `Gpu`）
+### 9.11 ローカルの AI に使う GPU（`local.rs` の `Gpu`）
 
 GPU が 2 つ以上ある PC（CPU に内蔵の GPU と、あとから付けた GPU）では、PC の中の AI（speech.cpp、whisper.cpp、llama.cpp）に、どの GPU を使うかを渡す（0.7.0-rc.4）。渡さないと、遅いほうで動く。Windows の実機（内蔵の AMD Radeon と RTX 3070）で、何も渡さないときの動きを一覧から読んだ（rc.3）:
 
