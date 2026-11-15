@@ -20,4 +20,4 @@ preparing: boolean,
 /**
  * 準備の間に取っている大きいファイルの進み具合（分かるときだけ）
  */
-downloading: Downloading | null, } | { "type": "display", subtitles: SubtitleDisplay, subtitleStyle: SubtitleStyle, rankLanguage: string, rankContent: RankContent, rankAnchor: Anchor, rankStyle: RankStyle, itemCards: ItemCardsView, } | { "type": "audio.level", db: number, } | { "type": "usage", usage: UsageView, } | { "type": "live.status", status: LiveStatus | null, } | { "type": "chrome.status", status: LiveStatus | null, } | { "type": "settings.changed" };
+downloading: Downloading | null, } | { "type": "display", subtitles: SubtitleDisplay, subtitleStyle: SubtitleStyle, rankLanguage: string, rankContent: RankContent, rankAnchor: Anchor, rankStyle: RankStyle, itemCards: ItemCardsView, } | { "type": "audio.level", db: number, } | { "type": "usage", usage: UsageView, } | { "type": "live.status", status: LiveStatus | null, } | { "type": "chrome.status", status: LiveStatus | null, } | { "type": "obs.status", subtitles: boolean, } | { "type": "settings.changed" };

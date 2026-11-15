@@ -41,10 +41,13 @@
       <span class="font-medium">{m.label}</span>
       <ModeBadges mode={m} />
     </span>
-    <!-- どのモードも同じ並びで、工程ごとの正確さを出す（見比べられるように） -->
+    <!-- どのモードも同じ並びで、工程ごとの正確さを 3 段階で出す（見比べられるように。数字は title と、工程ごとの選択肢に出る） -->
     <span class="flex flex-wrap gap-x-4 pl-5 text-xs tabular-nums">
       {#each modeStats(m.engines) as stat (stat.label)}
-        <span><span class="text-muted-foreground">{stat.label}</span> {stat.value}</span>
+        <span title="{stat.label}: {stat.value}">
+          <span class="text-muted-foreground">{stat.label}</span>
+          {stat.grade}
+        </span>
       {/each}
     </span>
     <span class="pl-5 text-xs text-muted-foreground">{m.hint}</span>

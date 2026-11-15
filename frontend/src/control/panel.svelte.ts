@@ -94,6 +94,10 @@ class Panel {
   now = $state(Date.now());
   /** Chrome のページの状態。ページが開いていなければ undefined */
   chromeStatus = $state<LiveStatus>();
+  /** OBS の中で、字幕オーバーレイがつながっている（字幕が OBS に出ている） */
+  obsSubtitles = $state(false);
+  /** 最後に設定を保存できた時刻。上の帯に、少しの間「保存しました」と出す */
+  savedAt = $state(0);
 
   get settings() {
     return this.view?.settings;
@@ -243,6 +247,8 @@ class Panel {
       this.downloading = msg.downloading ?? undefined;
     } else if (msg.type === "chrome.status") {
       this.chromeStatus = msg.status ?? undefined;
+    } else if (msg.type === "obs.status") {
+      this.obsSubtitles = msg.subtitles;
     } else if (msg.type === "usage") {
       this.usage = msg.usage;
     } else if (msg.type === "settings.changed") {
@@ -275,6 +281,8 @@ class Panel {
       const id = ++this.updates;
       const view = await api.updateSettings(patch);
       if (id === this.updates) this.view = view;
+      // 字幕を始める・止めるのは設定の変更ではないので、知らせない
+      if (patch.transcriptionEnabled === undefined) this.savedAt = Date.now();
     });
 
   openChrome = () => this.run(api.openChrome);

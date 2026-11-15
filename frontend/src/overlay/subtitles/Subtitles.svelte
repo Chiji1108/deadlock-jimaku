@@ -61,34 +61,39 @@
   onMount(() => {
     // OBS の中で開かれたか（はじめかたのチェックに使う）。OBS のドックの操作パネルのプレビューも
     // obsstudio を持つかもしれないので、iframe の中は除く
-    if ("obsstudio" in window && window.parent === window)
-      void api.updateSettings({ obsSeen: true }).catch(() => {});
+    const inObs = "obsstudio" in window && window.parent === window;
+    if (inObs) void api.updateSettings({ obsSeen: true }).catch(() => {});
     const tick = setInterval(() => {
       now = Date.now();
       for (const [id, s] of segments) if (!isLive(s)) segments.delete(id);
     }, 250);
-    const disconnect = connect(["subtitle", "glossary", "display"], (msg) => {
-      switch (msg.type) {
-        case "snapshot":
-          segments.clear();
-          for (const s of msg.segments) segments.set(s.id, s);
-          break;
-        case "segment.upsert":
-          segments.set(msg.segment.id, msg.segment);
-          break;
-        // 辞書ができたとき（と接続直後）に届く
-        case "glossary.updated":
-          void loadGlossary();
-          break;
-        case "display":
-          applyFontImports(
-            fontImports(Object.values(msg.subtitleStyle.languages).map(({ font }) => font)),
-          );
-          display = msg.subtitles;
-          look = msg.subtitleStyle;
-          break;
-      }
-    });
+    const disconnect = connect(
+      ["subtitle", "glossary", "display"],
+      (msg) => {
+        switch (msg.type) {
+          case "snapshot":
+            segments.clear();
+            for (const s of msg.segments) segments.set(s.id, s);
+            break;
+          case "segment.upsert":
+            segments.set(msg.segment.id, msg.segment);
+            break;
+          // 辞書ができたとき（と接続直後）に届く
+          case "glossary.updated":
+            void loadGlossary();
+            break;
+          case "display":
+            applyFontImports(
+              fontImports(Object.values(msg.subtitleStyle.languages).map(({ font }) => font)),
+            );
+            display = msg.subtitles;
+            look = msg.subtitleStyle;
+            break;
+        }
+      },
+      undefined,
+      inObs,
+    );
     return () => {
       clearInterval(tick);
       disconnect();

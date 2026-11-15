@@ -18,9 +18,10 @@
       .map(([ref, entity]) => ({ ref, name: entityName(entity, "ja"), icon: entity.icon }))
       .toSorted((a, b) => a.name.localeCompare(b.name, "ja")),
   );
+  /** 自動で取ったヒーロー。選択肢の名前は短くして、中身はここで出す */
   const auto = $derived.by(() => {
-    if (!s.rankAccount) return "自動（Steam のアカウントをつなぐと、試合から取ります）";
-    return `自動（${heroName(panel.view?.played) ?? "まだ分かりません"}）`;
+    if (!s.rankAccount) return "ランクのタブで Steam のアカウントをつなぐと、試合から取ります";
+    return `今は ${heroName(panel.view?.played) ?? "まだ分かりません"}`;
   });
 </script>
 
@@ -38,9 +39,9 @@
       onValueChange={(v) => panel.update({ playing: v === AUTO ? "" : v })}
       onOpenChange={(open) => open && void loadGlossary()}
     >
-      <Select.Trigger class="w-full">{heroName(s.playing) ?? auto}</Select.Trigger>
+      <Select.Trigger class="w-full">{heroName(s.playing) ?? "自動"}</Select.Trigger>
       <Select.Content>
-        <Select.Item value={AUTO}>{auto}</Select.Item>
+        <Select.Item value={AUTO}>自動</Select.Item>
         {#each heroes as hero (hero.ref)}
           <Select.Item value={hero.ref}>
             {#if hero.icon}<img class="size-5 rounded" src={hero.icon} alt="" />{/if}
@@ -50,7 +51,7 @@
       </Select.Content>
     </Select.Root>
     <p class="text-xs text-muted-foreground">
-      自動は、前の試合のヒーローです（Steam のアカウントの試合から取ります）。用語を AI
+      {#if !s.playing}自動: {auto}。{/if}自動は、前の試合のヒーローです。用語を AI
       で判定するモードで効きます
     </p>
   </Card.Content>
