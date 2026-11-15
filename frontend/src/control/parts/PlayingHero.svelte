@@ -50,10 +50,8 @@
       </Select.Content>
     </Select.Root>
     <p class="text-xs text-muted-foreground">
-      用語を AI
-      で判定するモード（おすすめ・Chrome+・クラウド・ローカル）で効きます。自動は、ランクの表示につないだ
-      Steam
-      のアカウントの試合から取ります。進行中の試合が分かるのは上位の試合だけなので、ふつうは前の試合のヒーローになります
+      自動は、前の試合のヒーローです（Steam のアカウントの試合から取ります）。用語を AI
+      で判定するモードで効きます
     </p>
   </Card.Content>
 </Card.Root>

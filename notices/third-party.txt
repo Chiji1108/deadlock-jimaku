@@ -2,7 +2,7 @@
 mise run notices で生成します。手で編集しないでください。
 複数のライセンスから選べるものは、そのうち 1 つのもとで利用しています。[n] はパッケージに含まれるライセンスファイルの本文で、末尾にあります。
 
-=== フロントエンドとフォント（26 件）===
+=== フロントエンドとフォント（25 件）===
 
 @deadlock-api/ui-core 1.7.0  MIT
 @floating-ui/core 1.8.0  MIT [1]
@@ -11,8 +11,6 @@ mise run notices で生成します。手で編集しないでください。
   Copyright (c) 2021-present Floating UI contributors
 @floating-ui/utils 0.2.12  MIT [1]
   Copyright (c) 2021-present Floating UI contributors
-@fontsource-variable/inter 5.3.0  OFL-1.1 [54]
-  Copyright 2016 The Inter Project Authors (https://github.com/rsms/inter) Inter-Italic[opsz,wght].ttf: Copyright 2016 The Inter Project Authors (https://github.com/rsms/inter)
 @lucide/svelte 1.66.0  ISC [36]
   Copyright (c) 2026 Lucide Icons and Contributors
   Copyright (c) 2013-present Cole Bemis
@@ -323,7 +321,7 @@ foldhash 0.2.0  Zlib [7]
   Copyright (c) 2024 Orson Peters
 fontconfig-parser 0.5.8  MIT [1]
   Copyright (c) 2021 Riey
-fontdb 0.24.0  MIT [1][59]
+fontdb 0.24.0  MIT [1][58]
   Copyright (c) 2020 Yevhenii Reizner
 foreign-types 0.5.0  MIT/Apache-2.0 [2][1]
   Copyright (c) 2017 The foreign-types Developers
@@ -670,7 +668,7 @@ regex 1.13.1  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2014 The Rust Project Developers
 regex-automata 0.4.18  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2014 The Rust Project Developers
-regex-syntax 0.8.11  MIT OR Apache-2.0 [2][1][57]
+regex-syntax 0.8.11  MIT OR Apache-2.0 [2][1][56]
   Copyright (c) 2014 The Rust Project Developers
   Copyright © 1991-2018 Unicode, Inc. All rights reserved.
 reqwest 0.13.5  MIT OR Apache-2.0 [2][1]
@@ -686,7 +684,7 @@ ring 0.17.14  Apache-2.0 AND ISC [47][22][43][2][41][53]
   Copyright 2015-2020 the fiat-crypto authors (see the AUTHORS file)
 roxmltree 0.20.0  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2018 Yevhenii Reizner
-rubato 5.0.1  MIT OR Apache-2.0 [2][1][56]
+rubato 5.0.1  MIT OR Apache-2.0 [2][1][55]
   Copyright (c) 2020 Henrik Enquist
 rust-embed 8.13.0  MIT [1]
   Copyright (c) 2018 pyros2097
@@ -718,7 +716,7 @@ scopeguard 1.2.0  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2016-2019 Ulrik Sverdrup "bluss" and scopeguard developers
 secret-service 5.2.0  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2025 secret-service Developers
-security-framework 3.7.0  MIT OR Apache-2.0 [2][1][55]
+security-framework 3.7.0  MIT OR Apache-2.0 [2][1][54]
   Copyright (c) 2015 Steven Fackler
 security-framework-sys 2.17.0  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2015 Steven Fackler
@@ -903,7 +901,7 @@ typenum 1.20.1  MIT OR Apache-2.0 [39][2][1]
   Copyright (c) 2014 Paho Lurie-Gregg
 unicase 2.10.0  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2014-2026 Sean McArthur
-unicode-ident 1.0.27  (MIT OR Apache-2.0) AND Unicode-3.0 [2][1][58]
+unicode-ident 1.0.27  (MIT OR Apache-2.0) AND Unicode-3.0 [2][1][57]
   Copyright © 1991-2023 Unicode, Inc.
 unicode-segmentation 1.13.3  MIT OR Apache-2.0 [12][2][1]
   Copyright (c) 2015 The Rust Project Developers
@@ -5434,102 +5432,6 @@ limitations under the License.
 
 --- [54]
 
-Copyright 2016 The Inter Project Authors (https://github.com/rsms/inter) Inter-Italic[opsz,wght].ttf: Copyright 2016 The Inter Project Authors (https://github.com/rsms/inter)
-
-This Font Software is licensed under the SIL Open Font License, Version 1.1.
-This license is copied below, and is also available with a FAQ at:
-http://scripts.sil.org/OFL
-
-
------------------------------------------------------------
-SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007
------------------------------------------------------------
-
-PREAMBLE
-The goals of the Open Font License (OFL) are to stimulate worldwide
-development of collaborative font projects, to support the font creation
-efforts of academic and linguistic communities, and to provide a free and
-open framework in which fonts may be shared and improved in partnership
-with others.
-
-The OFL allows the licensed fonts to be used, studied, modified and
-redistributed freely as long as they are not sold by themselves. The
-fonts, including any derivative works, can be bundled, embedded,
-redistributed and/or sold with any software provided that any reserved
-names are not used by derivative works. The fonts and derivatives,
-however, cannot be released under any other type of license. The
-requirement for fonts to remain under this license does not apply
-to any document created using the fonts or their derivatives.
-
-DEFINITIONS
-"Font Software" refers to the set of files released by the Copyright
-Holder(s) under this license and clearly marked as such. This may
-include source files, build scripts and documentation.
-
-"Reserved Font Name" refers to any names specified as such after the
-copyright statement(s).
-
-"Original Version" refers to the collection of Font Software components as
-distributed by the Copyright Holder(s).
-
-"Modified Version" refers to any derivative made by adding to, deleting,
-or substituting -- in part or in whole -- any of the components of the
-Original Version, by changing formats or by porting the Font Software to a
-new environment.
-
-"Author" refers to any designer, engineer, programmer, technical
-writer or other person who contributed to the Font Software.
-
-PERMISSION & CONDITIONS
-Permission is hereby granted, free of charge, to any person obtaining
-a copy of the Font Software, to use, study, copy, merge, embed, modify,
-redistribute, and sell modified and unmodified copies of the Font
-Software, subject to the following conditions:
-
-1) Neither the Font Software nor any of its individual components,
-in Original or Modified Versions, may be sold by itself.
-
-2) Original or Modified Versions of the Font Software may be bundled,
-redistributed and/or sold with any software, provided that each copy
-contains the above copyright notice and this license. These can be
-included either as stand-alone text files, human-readable headers or
-in the appropriate machine-readable metadata fields within text or
-binary files as long as those fields can be easily viewed by the user.
-
-3) No Modified Version of the Font Software may use the Reserved Font
-Name(s) unless explicit written permission is granted by the corresponding
-Copyright Holder. This restriction only applies to the primary font name as
-presented to the users.
-
-4) The name(s) of the Copyright Holder(s) or the Author(s) of the Font
-Software shall not be used to promote, endorse or advertise any
-Modified Version, except to acknowledge the contribution(s) of the
-Copyright Holder(s) and the Author(s) or with their explicit written
-permission.
-
-5) The Font Software, modified or unmodified, in part or in whole,
-must be distributed entirely under this license, and must not be
-distributed under any other license. The requirement for fonts to
-remain under this license does not apply to any document created
-using the Font Software.
-
-TERMINATION
-This license becomes null and void if any of the above conditions are
-not met.
-
-DISCLAIMER
-THE FONT SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF
-MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT
-OF COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL THE
-COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
-INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL
-DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
-OTHER DEALINGS IN THE FONT SOFTWARE.
-
---- [55]
-
 This project contains documentation adapted from Apple Inc.'s Security Framework
 under the following license:
 
@@ -5634,7 +5536,7 @@ This file contains Original Code and/or Modifications of Original Code as define
 
 The Original Code and all software distributed under the License are distributed on an 'AS IS' basis, WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES, INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT.  Please see the License for the specific language governing rights and limitations under the License."
 
---- [56]
+--- [55]
 
 This project is dual-licensed under either of:
 
@@ -5643,7 +5545,7 @@ This project is dual-licensed under either of:
 
 You may choose either license, at your option.
 
---- [57]
+--- [56]
 
 UNICODE, INC. LICENSE AGREEMENT - DATA FILES AND SOFTWARE
 
@@ -5703,7 +5605,7 @@ shall not be used in advertising or otherwise to promote the sale,
 use or other dealings in these Data Files or Software without prior
 written authorization of the copyright holder.
 
---- [58]
+--- [57]
 
 UNICODE LICENSE V3
 
@@ -5745,7 +5647,7 @@ not be used in advertising or otherwise to promote the sale, use or other
 dealings in these Data Files or Software without prior written
 authorization of the copyright holder.
 
---- [59]
+--- [58]
 
 We, the copyright holders of this work, hereby release it into the
 public domain. This applies worldwide.
