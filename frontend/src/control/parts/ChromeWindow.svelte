@@ -65,8 +65,8 @@
       {#if s.transcriptionEnabled}
         Chrome: {note}
       {:else}
-        字幕を始めると小さな Chrome のウィンドウが開きます。音声は Chrome を通じて Google
-        に送られます。字幕を出す間はウィンドウを閉じないでください
+        字幕を始めると、小さな Chrome のウィンドウが開きます（閉じないでください）。音声は Google
+        に送られます
       {/if}
     </p>
     {#if s.transcriptionEnabled && !closed}

@@ -84,9 +84,8 @@
     <Card.Header>
       <Card.Title>API キー</Card.Title>
       <Card.Description>
-        自分の API
-        キーで使うモード（「最高精度」や、工程ごとに選んだ有料のモデル）に要ります。「おすすめ」や
-        Chrome のモードには要りません。OS の資格情報ストアに保存し、保存したキーは画面に表示しません
+        「最高精度」や、工程ごとに選んだ有料のモデルに要ります。「おすすめ」と Chrome
+        のモードには要りません。キーは OS の資格情報ストアに保存します
       </Card.Description>
     </Card.Header>
     <Card.Content>

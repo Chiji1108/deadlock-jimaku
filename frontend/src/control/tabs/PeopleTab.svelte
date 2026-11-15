@@ -250,7 +250,7 @@
         onchange={(e) => realias(person, e.currentTarget.value)}
       />
       <Field.Description>
-        名前と同じように、字幕の中で探します。ひらがなとカタカナの違いは自動で拾うので、入れなくて大丈夫です。漢字の名前がかなで書かれるときは、そのかなを足してください
+        あだ名など。ひらがなとカタカナの違いは自動で拾います。漢字の名前は、かなも足してください
       </Field.Description>
     </Field.Field>
     {#if person.me}
@@ -263,8 +263,7 @@
           onchange={(e) => change(person.id, { firstPerson: words(e.currentTarget.value) })}
         />
         <Field.Description>
-          入れると、字幕で自分を指す言葉にも、自分のアイコンが付きます。翻訳は変わりません（"I"
-          のまま）。「自分」は、相手を指すこともあるので、入れないのがおすすめです。空なら付けません
+          字幕の「私」「俺」などにも、自分のアイコンが付きます（翻訳は変わりません）。「自分」は相手を指すこともあるので、入れないのがおすすめです
         </Field.Description>
       </Field.Field>
     {/if}
@@ -293,7 +292,7 @@
     <Card.Header>
       <Card.Title>自分</Card.Title>
       <Card.Description>
-        名前とアイコンを入れると、字幕で自分の名前が、ヒーローの名前と同じように強調されます。翻訳では、その言語の名前になります。デッドロックモードがオンで、話す言語が日本語のときに効きます
+        字幕で自分の名前が、ヒーローの名前と同じように強調されます。翻訳では、その言語の名前になります
       </Card.Description>
     </Card.Header>
     <Card.Content class="flex flex-col gap-4">
@@ -347,8 +346,7 @@
     <Card.Header>
       <Card.Title>書き出しと読み込み</Card.Title>
       <Card.Description>
-        ここの人たちを、アイコンごと 1
-        つのファイルにして、一緒に配信する人に渡せます。読み込むと、相手の一覧に足されます（自分は、相手から見た「一緒に遊ぶ人」として入ります）
+        アイコンごと 1 つのファイルにして、一緒に配信する人に渡せます。読み込むと、一覧に足されます
       </Card.Description>
     </Card.Header>
     <Card.Content class="flex flex-wrap gap-2">
@@ -367,7 +365,6 @@
 
   <p class="text-sm text-muted-foreground">
     名前とアイコンは、この PC
-    にだけ保存します。名前は、選んだモードによっては、用語と同じように、文字起こしや翻訳のサービスに送られます（サーバーを使わない
-    Chrome・Chrome+・ローカルのモードでは送りません）。アイコンの画像は送りません
+    にだけ保存します。名前は、用語と同じように、文字起こしや翻訳のサービスに送られることがあります（Chrome・Chrome+・ローカルのモードでは送りません）。アイコンは送りません
   </p>
 </div>

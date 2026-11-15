@@ -93,9 +93,8 @@
             <Button type="submit" disabled={account === saved()}>保存</Button>
           </div>
           <Field.Description>
-            Steam
-            の「フレンド」→「フレンドを追加」に出ている、あなたのフレンドコード（数字）を入れてください。SteamID64（7656…
-            で始まる 17 桁）でも使えます。空にすると表示しません
+            Steam の「フレンド」→「フレンドを追加」に出ている数字です（SteamID64
+            でも可）。空にすると表示しません
           </Field.Description>
         </Field.Field>
       </form>
@@ -145,8 +144,7 @@
         </Select.Root>
         <Field.Description>
           エターナスのときだけ、ポイントの代わりにリーダーボードの順位（例: アジア
-          123位）を出します。更新は 1
-          時間ごとです。載っていないときや、同じ名前のプレイヤーがいて見分けられないときはポイントを出します
+          123位）を出します。更新は 1 時間ごとで、順位が分からないときはポイントを出します
         </Field.Description>
       </Field.Field>
 

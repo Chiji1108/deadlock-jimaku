@@ -23,8 +23,8 @@
     <Card.Header>
       <Card.Title>PC の中の AI に使う GPU</Card.Title>
       <Card.Description>
-        Haas-ja・Whisper・Gemma を動かす GPU です。自動は、内蔵でない GPU
-        を選びます。ゲームと分けたいときは、内蔵の GPU を選べます（遅くなります）
+        自動は、内蔵でない GPU を使います。ゲームと分けたいときは、内蔵の GPU
+        を選べます（遅くなります）
       </Card.Description>
     </Card.Header>
     <Card.Content>
