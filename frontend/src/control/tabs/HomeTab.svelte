@@ -2,9 +2,7 @@
   // 開いたときの画面。配信の間に見るものを 1 つに集める: 状態、今出ている字幕、マイクに届いている音、今のモード、言語。
   // 広いときは 2 列にして、スクロールせずに見渡せるようにする。細かい設定は、それぞれのタブへ送る（DESIGN.md 13 章）
   import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
-  import MicIcon from "@lucide/svelte/icons/mic";
   import PlayIcon from "@lucide/svelte/icons/play";
-  import SquareIcon from "@lucide/svelte/icons/square";
   import SparklesIcon from "@lucide/svelte/icons/sparkles";
   import * as Alert from "$lib/components/ui/alert";
   import { Button } from "$lib/components/ui/button";
@@ -15,7 +13,7 @@
   import Onboarding from "../parts/Onboarding.svelte";
   import OverlayPreview from "../parts/OverlayPreview.svelte";
   import PlayingHero from "../parts/PlayingHero.svelte";
-  import { STATUS_DOTS, panel, transcriptionErrorText } from "../panel.svelte";
+  import { panel, transcriptionErrorText } from "../panel.svelte";
   import { BETA, chromeFinals, modeOf, usesChrome } from "../../lib/engines";
   import { SUBTITLE_SIZE } from "../../lib/overlay-size";
 
@@ -41,54 +39,36 @@
 </script>
 
 <div class="@container flex flex-col gap-6">
-  <!-- 状態の帯。配信の間に、ちらっと見て分かる大きさにする -->
+  <!-- 状態の中身。状態のひとことと開始・停止のボタンは、上の帯の 1 か所にだけ出す -->
   <Card.Root>
-    <Card.Content class="flex-row flex-wrap items-center gap-x-6 gap-y-3">
-      <div class="flex min-w-48 flex-1 flex-col gap-1">
-        <p class="flex items-center gap-3 text-xl font-semibold">
-          <span class="size-3 shrink-0 rounded-full {STATUS_DOTS[status.tone]}"></span>
-          {status.label}
-        </p>
-        <p
+    <Card.Content class="gap-1">
+      <p
+        class={["text-sm", status.tone === "error" ? "text-destructive" : "text-muted-foreground"]}
+      >
+        {detail}
+      </p>
+      <!-- 字幕を作っていても、OBS につながっていなければ配信には出ない -->
+      <p class="flex items-center gap-2 text-xs text-muted-foreground">
+        <span
           class={[
-            "text-sm",
-            status.tone === "error" ? "text-destructive" : "text-muted-foreground",
+            "size-2 shrink-0 rounded-full",
+            panel.obsSubtitles ? "bg-emerald-500" : "bg-muted-foreground/50",
           ]}
-        >
-          {detail}
-        </p>
-        <!-- 字幕を作っていても、OBS につながっていなければ配信には出ない -->
-        <p class="flex items-center gap-2 text-xs text-muted-foreground">
-          <span
-            class={[
-              "size-2 shrink-0 rounded-full",
-              panel.obsSubtitles ? "bg-emerald-500" : "bg-muted-foreground/50",
-            ]}
-          ></span>
-          {#if panel.obsSubtitles}
-            OBS に字幕がつながっています
-          {:else}
-            OBS に字幕がつながっていません（OBS を開いていないか、字幕を追加していません）
-            <Button
-              variant="link"
-              size="sm"
-              class="h-auto p-0 text-xs"
-              onclick={() => (panel.tab = "display")}
-            >
-              追加する
-            </Button>
-          {/if}
-        </p>
-      </div>
-      {#if s.transcriptionEnabled}
-        <Button size="lg" variant="outline" onclick={() => panel.setTranscription(false)}>
-          <SquareIcon />字幕を止める
-        </Button>
-      {:else}
-        <Button size="lg" disabled={panel.needsKey} onclick={() => panel.setTranscription(true)}>
-          <MicIcon />字幕を始める
-        </Button>
-      {/if}
+        ></span>
+        {#if panel.obsSubtitles}
+          OBS に字幕がつながっています
+        {:else}
+          OBS に字幕がつながっていません（OBS を開いていないか、字幕を追加していません）
+          <Button
+            variant="link"
+            size="sm"
+            class="h-auto p-0 text-xs"
+            onclick={() => (panel.tab = "display")}
+          >
+            追加する
+          </Button>
+        {/if}
+      </p>
     </Card.Content>
   </Card.Root>
 

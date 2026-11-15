@@ -119,8 +119,7 @@
           <CheckIcon class="size-3.5" />保存しました
         </p>
       {/if}
-      <!-- ホームでは、状態の帯が同じボタンを大きく出す -->
-      {#if s && panel.tab !== "home"}
+      {#if s}
         {#if s.transcriptionEnabled}
           <Button variant="outline" onclick={() => panel.setTranscription(false)}>
             <SquareIcon />字幕を止める

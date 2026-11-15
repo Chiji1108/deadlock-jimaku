@@ -1,8 +1,9 @@
 <script lang="ts">
+  import LinkIcon from "@lucide/svelte/icons/link";
+  import * as Alert from "$lib/components/ui/alert";
   import { Button } from "$lib/components/ui/button";
   import * as Card from "$lib/components/ui/card";
   import * as Field from "$lib/components/ui/field";
-  import { Input } from "$lib/components/ui/input";
   import * as Select from "$lib/components/ui/select";
   import * as ToggleGroup from "$lib/components/ui/toggle-group";
   import type { RankContent } from "../../generated/RankContent";
@@ -40,15 +41,6 @@
   );
 
   const setStyle = (patch: MergePatch<RankStyle>) => panel.update({ rankStyle: patch });
-
-  const saved = () => panel.settings?.rankAccount?.toString() ?? "";
-  let account = $state(saved());
-
-  /** サーバーは SteamID64 も 32bit の ID に直して保存するので、保存した値を入力欄に戻す */
-  async function saveAccount() {
-    // 失敗したら直せるよう、入力は残す
-    if (await panel.update({ rankAccount: account })) account = saved();
-  }
 </script>
 
 <OverlayPage>
@@ -74,30 +66,17 @@
       </Card.Description>
     </Card.Header>
     <Card.Content class="flex flex-col gap-6">
-      <form
-        onsubmit={(e) => {
-          e.preventDefault();
-          void saveAccount();
-        }}
-      >
-        <Field.Field>
-          <Field.Label for="account">Steam のフレンドコード</Field.Label>
-          <div class="flex gap-2">
-            <Input
-              id="account"
-              bind:value={account}
-              placeholder="フレンドコード"
-              inputmode="numeric"
-              autocomplete="off"
-            />
-            <Button type="submit" disabled={account === saved()}>保存</Button>
-          </div>
-          <Field.Description>
-            Steam の「フレンド」→「フレンドを追加」に出ている数字です（SteamID64
-            でも可）。空にすると表示しません
-          </Field.Description>
-        </Field.Field>
-      </form>
+      {#if !s.rankAccount}
+        <Alert.Root>
+          <LinkIcon />
+          <Alert.Title>Steam のアカウントをつなぐと、ランクが出ます</Alert.Title>
+          <Alert.Description>
+            <Button size="sm" variant="outline" onclick={() => panel.show("people", "steam")}>
+              プロフィールでつなぐ
+            </Button>
+          </Alert.Description>
+        </Alert.Root>
+      {/if}
 
       <Field.Field>
         <Field.Label>出すもの</Field.Label>
