@@ -49,7 +49,7 @@
 
 <Card.Root>
   <Card.Header>
-    <Card.Title>始める・止めるキー</Card.Title>
+    <Card.Title>ホットキー</Card.Title>
     <Card.Description>ゲームをしたまま、キーで字幕を始めたり止めたりできます</Card.Description>
   </Card.Header>
   <Card.Content class="flex flex-col gap-2">
@@ -57,7 +57,7 @@
       <Button
         variant="outline"
         class="min-w-40 justify-start tabular-nums"
-        aria-label="始める・止めるキーを決める"
+        aria-label="ホットキーを決める"
         onclick={listen}
         {onkeydown}
         onblur={() => (listening = false)}

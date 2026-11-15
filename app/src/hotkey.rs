@@ -52,7 +52,7 @@ fn register(app: &AppHandle, key: Option<&str>) {
         tracing::warn!("hotkey {key}: {e}");
         notice::show(
             app,
-            "キーを登録できませんでした",
+            "ホットキーを登録できませんでした",
             "ほかのアプリが使っているキーかもしれません。デドロ字幕で、別のキーを選んでください",
         );
     }
