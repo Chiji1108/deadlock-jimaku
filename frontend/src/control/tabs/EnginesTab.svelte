@@ -64,8 +64,8 @@
 <div class="flex flex-col gap-6">
   <Card.Root>
     <Card.Header>
-      <Card.Title>モード</Card.Title>
-      <Card.Description>字幕をどこで作るかを選びます</Card.Description>
+      <Card.Title>字幕をどこで作るか</Card.Title>
+      <Card.Description>正確さ、速さ、料金、音声の送り先が変わります</Card.Description>
     </Card.Header>
     <Card.Content><ModePicker /></Card.Content>
   </Card.Root>
