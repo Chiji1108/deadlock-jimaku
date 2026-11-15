@@ -195,8 +195,8 @@ class Panel {
       const d = this.downloading;
       return {
         label: d?.total
-          ? `PC の中のモデルをダウンロードしています（${gb(d.done)} / ${gb(d.total)} GB）…`
-          : "PC の中のモデルを準備しています（初回はダウンロードします）…",
+          ? `ローカルのモデルをダウンロードしています（${gb(d.done)} / ${gb(d.total)} GB）…`
+          : "ローカルのモデルを準備しています（初回はダウンロードします）…",
         tone: "busy",
       };
     }
