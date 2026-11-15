@@ -20,7 +20,7 @@
   );
   /** 自動で取ったヒーロー。選択肢の名前は短くして、中身はここで出す */
   const auto = $derived.by(() => {
-    if (!s.rankAccount) return "ランクのタブで Steam のアカウントをつなぐと、試合から取ります";
+    if (!s.rankAccount) return "プロフィールで Steam のアカウントをつなぐと、試合から取ります";
     return `今は ${heroName(panel.view?.played) ?? "まだ分かりません"}`;
   });
 </script>

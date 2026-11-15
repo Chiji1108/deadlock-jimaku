@@ -19,6 +19,7 @@
   import { api } from "../../lib/api";
   import { entityName, glossary, loadGlossary } from "../../lib/glossary.svelte";
   import OverlayPage from "../parts/OverlayPage.svelte";
+  import SteamAccount from "../parts/SteamAccount.svelte";
   import { panel } from "../panel.svelte";
 
   const MAX_PEOPLE = 50;
@@ -317,6 +318,8 @@
         {/if}
       </Card.Content>
     </Card.Root>
+
+    <SteamAccount />
 
     <Card.Root>
       <Card.Header>
