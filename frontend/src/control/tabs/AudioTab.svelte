@@ -1,6 +1,5 @@
 <script lang="ts">
   import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
-  import * as Alert from "$lib/components/ui/alert";
   import { Button } from "$lib/components/ui/button";
   import * as Card from "$lib/components/ui/card";
   import * as Field from "$lib/components/ui/field";
@@ -9,6 +8,7 @@
   import * as ToggleGroup from "$lib/components/ui/toggle-group";
   import DeadlockModeDialog from "../parts/DeadlockModeDialog.svelte";
   import LevelMeter from "../parts/LevelMeter.svelte";
+  import SilentAlert from "../parts/SilentAlert.svelte";
   import PauseDialog from "../parts/PauseDialog.svelte";
   import { panel } from "../panel.svelte";
   import { chromeFinals, llmTranslation } from "../../lib/engines";
@@ -92,15 +92,7 @@
           {/if}
         </Field.Field>
 
-        {#if panel.silent}
-          <Alert.Root variant="destructive">
-            <Alert.Title>音が届いていません</Alert.Title>
-            <Alert.Description>
-              マイクの選択と、OS のマイクの許可（macOS: システム設定 → プライバシーとセキュリティ →
-              マイク）を確認してください
-            </Alert.Description>
-          </Alert.Root>
-        {/if}
+        <SilentAlert />
       {/if}
     </Card.Content>
   </Card.Root>

@@ -1,6 +1,7 @@
 // リリースビルドで Windows のコンソールウィンドウを出さない
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod notice;
 #[cfg(not(target_os = "linux"))]
 mod tray;
 
@@ -33,6 +34,7 @@ fn main() {
         )
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_notification::init())
         .setup(|app| {
             // 設定は操作パネルから変えて保存する。API キーは OS の資格情報ストア
             let data_dir = match overlays_core::data_dir_override() {
@@ -45,6 +47,7 @@ fn main() {
             app.manage(store.clone());
             #[cfg(not(target_os = "linux"))]
             tray::install(app, store.clone())?;
+            notice::install(app.handle().clone(), store.clone());
             tauri::async_runtime::spawn(runtime::run(
                 store.clone(),
                 runtime::Options { input_file: None },

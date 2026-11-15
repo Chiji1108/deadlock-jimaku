@@ -64,9 +64,9 @@ torph 0.1.3  MIT [1]
 tw-animate-css 1.4.0  MIT [1]
   Copyright (c) 2025 Wombosvideo
 
-=== Rust の crate（422 件）===
+=== Rust の crate（429 件）===
 
-adler2 2.0.1  0BSD OR MIT OR Apache-2.0 [45][21][1]
+adler2 2.0.1  0BSD OR MIT OR Apache-2.0 [46][21][1]
   Copyright (C) Jonas Schievink <jonasschievink@gmail.com>
 aes 0.9.4  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2018-2024 The RustCrypto Project Developers
@@ -123,7 +123,7 @@ audioadapter-buffers 5.2.0  MIT OR Apache-2.0 [2][1][13]
   Copyright (c) 2026 Henrik Enquist
 audioadapter-sample 5.2.0  MIT OR Apache-2.0 [2][1][13]
   Copyright (c) 2026 Henrik Enquist
-aws-lc-rs 1.19.0  ISC AND (Apache-2.0 OR ISC) [52]
+aws-lc-rs 1.19.0  ISC AND (Apache-2.0 OR ISC) [53]
   Author: AWS-LibCrypto
 aws-lc-sys 0.47.0  ISC AND (Apache-2.0 OR ISC) AND Apache-2.0 AND MIT AND BSD-3-Clause AND (Apache-2.0 OR ISC OR MIT) AND (Apache-2.0 OR ISC OR MIT-0) [25][35]
   Copyright (c) 2014-2024 Google Inc.
@@ -272,7 +272,7 @@ dlopen2 0.8.2  MIT
   Author: Szymon Wieloch <szymon.wieloch@gmail.com>
   Author: Ahmed Masud <ahmed.masud@saf.ai>
   Author: OpenByte <development.openbyte@gmail.com>
-dpi 0.1.2  Apache-2.0 AND MIT [2][48]
+dpi 0.1.2  Apache-2.0 AND MIT [2][49]
   Copyright (c) 2018 Jorge Aparicio
   Copyright © 2005-2020 Rich Felker, et al.
   Copyright © 1993,2004 Sun Microsystems or
@@ -321,7 +321,7 @@ foldhash 0.2.0  Zlib [7]
   Copyright (c) 2024 Orson Peters
 fontconfig-parser 0.5.8  MIT [1]
   Copyright (c) 2021 Riey
-fontdb 0.24.0  MIT [1][58]
+fontdb 0.24.0  MIT [1][59]
   Copyright (c) 2020 Yevhenii Reizner
 foreign-types 0.5.0  MIT/Apache-2.0 [2][1]
   Copyright (c) 2017 The foreign-types Developers
@@ -504,7 +504,7 @@ libc 0.2.191  MIT OR Apache-2.0 [2][1]
 libdbus-sys 0.2.7  Apache-2.0/MIT [2][1]
   Copyright 2014-2018 David Henningsson <diwic@ubuntu.com> and other contributors
   Copyright (c) 2014-2018 David Henningsson <diwic@ubuntu.com> and other contributors
-linux-raw-sys 0.12.1  Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT [50][2][14][1]
+linux-raw-sys 0.12.1  Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT [51][2][14][1]
   Author: Dan Gohman <dev@sunfishcode.online>
 litemap 0.8.3  Unicode-3.0 [3]
   Copyright © 2020-2024 Unicode, Inc.
@@ -512,6 +512,9 @@ lock_api 0.4.14  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2016 The Rust Project Developers
 log 0.4.35  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2014 The Rust Project Developers
+mac-notification-sys 0.6.15  MIT/Apache-2.0
+  Author: Felix Döring <development@felixdoering.com>
+  Author: Hendrik Sollich <hendrik@hoodie.de>
 mach2 0.6.0  BSD-2-Clause OR MIT OR Apache-2.0 [2][20][1]
   Copyright (c) 2019 Nick Fitzgerald, 2021 Yuki Okushi
 matchit 0.8.4  MIT AND BSD-3-Clause [1][27]
@@ -551,6 +554,8 @@ muda 0.20.0  Apache-2.0 OR MIT [2][1]
   Copyright (c) 2022-2022 Tauri Programme within The Commons Conservancy
 nix 0.31.3  MIT [1]
   Copyright (c) 2015 Carl Lerche + nix-rust Authors
+notify-rust 4.19.0  MIT OR Apache-2.0 [2][1]
+  Copyright (c) 2017 Hendrik Sollich
 nu-ansi-term 0.50.3  MIT [1]
   Copyright (c) 2014 Benjamin Sago
   Copyright (c) 2021-2022 The Nushell Project Developers
@@ -668,7 +673,7 @@ regex 1.13.1  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2014 The Rust Project Developers
 regex-automata 0.4.18  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2014 The Rust Project Developers
-regex-syntax 0.8.11  MIT OR Apache-2.0 [2][1][56]
+regex-syntax 0.8.11  MIT OR Apache-2.0 [2][1][57]
   Copyright (c) 2014 The Rust Project Developers
   Copyright © 1991-2018 Unicode, Inc. All rights reserved.
 reqwest 0.13.5  MIT OR Apache-2.0 [2][1]
@@ -677,14 +682,14 @@ reqwest 0.13.5  MIT OR Apache-2.0 [2][1]
 rfd 0.17.2  MIT [1]
   Copyright (c) 2022 Bartłomiej Maryńczak
   Copyright (c) 2020 Bilal Elmoussaoui
-ring 0.17.14  Apache-2.0 AND ISC [47][22][43][2][41][53]
+ring 0.17.14  Apache-2.0 AND ISC [48][22][44][2][41][54]
   Copyright (c) 2009 The Go Authors. All rights reserved.
   Copyright 2015 The Chromium Authors. All rights reserved.
   Copyright 2015-2025 Brian Smith.
   Copyright 2015-2020 the fiat-crypto authors (see the AUTHORS file)
 roxmltree 0.20.0  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2018 Yevhenii Reizner
-rubato 5.0.1  MIT OR Apache-2.0 [2][1][55]
+rubato 5.0.1  MIT OR Apache-2.0 [2][1][56]
   Copyright (c) 2020 Henrik Enquist
 rust-embed 8.13.0  MIT [1]
   Copyright (c) 2018 pyros2097
@@ -692,13 +697,13 @@ rust-embed-utils 8.13.0  MIT [1]
   Copyright (c) 2018 pyros2097
 rustfft 6.4.1  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2015 The RustFFT Developers
-rustix 1.1.6  Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT [51][2][14][1]
+rustix 1.1.6  Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT [52][2][14][1]
   Author: Dan Gohman <dev@sunfishcode.online>
   Author: Jakub Konka <kubkon@jakubkonka.com>
 rustls 0.23.46  Apache-2.0 OR ISC OR MIT [2][11][1]
   Copyright (c) 2016, Joseph Birr-Pixton <jpixton@gmail.com>
   Copyright (c) 2016 Joseph Birr-Pixton <jpixton@gmail.com>
-rustls-native-certs 0.8.5  Apache-2.0 OR ISC OR MIT [49][2][11][1]
+rustls-native-certs 0.8.5  Apache-2.0 OR ISC OR MIT [50][2][11][1]
   Copyright (c) 2016, Joseph Birr-Pixton <jpixton@gmail.com>
   Copyright (c) 2016 Joseph Birr-Pixton <jpixton@gmail.com>
 rustls-pki-types 1.15.1  MIT OR Apache-2.0 [2][1]
@@ -716,7 +721,7 @@ scopeguard 1.2.0  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2016-2019 Ulrik Sverdrup "bluss" and scopeguard developers
 secret-service 5.2.0  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2025 secret-service Developers
-security-framework 3.7.0  MIT OR Apache-2.0 [2][1][54]
+security-framework 3.7.0  MIT OR Apache-2.0 [2][1][55]
   Copyright (c) 2015 Steven Fackler
 security-framework-sys 2.17.0  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2015 Steven Fackler
@@ -808,6 +813,8 @@ tauri-plugin-dialog 2.8.4  Apache-2.0 OR MIT [2][1]
   Copyright (c) 2017 - Present Tauri Apps Contributors
 tauri-plugin-fs 2.7.1  Apache-2.0 OR MIT [2][1]
   Copyright (c) 2017 - Present Tauri Apps Contributors
+tauri-plugin-notification 2.8.1  Apache-2.0 OR MIT [2][1]
+  Copyright (c) 2017 - Present Tauri Apps Contributors
 tauri-plugin-opener 2.7.2  Apache-2.0 OR MIT [2][1]
   Copyright (c) 2017 - Present Tauri Apps Contributors
 tauri-plugin-single-instance 2.5.5  Apache-2.0 OR MIT [2][1]
@@ -821,6 +828,8 @@ tauri-runtime 2.12.2  Apache-2.0 OR MIT [2][1]
 tauri-runtime-wry 2.12.3  Apache-2.0 OR MIT [2][1]
   Copyright (c) 2017 - Present Tauri Apps Contributors
 tauri-utils 2.10.2  Apache-2.0 OR MIT [2][1]
+  Copyright (c) 2017 - Present Tauri Apps Contributors
+tauri-winrt-notification 0.8.1  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2017 - Present Tauri Apps Contributors
 tempfile 3.27.0  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2015 Steven Allen
@@ -901,11 +910,11 @@ typenum 1.20.1  MIT OR Apache-2.0 [39][2][1]
   Copyright (c) 2014 Paho Lurie-Gregg
 unicase 2.10.0  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2014-2026 Sean McArthur
-unicode-ident 1.0.27  (MIT OR Apache-2.0) AND Unicode-3.0 [2][1][57]
+unicode-ident 1.0.27  (MIT OR Apache-2.0) AND Unicode-3.0 [2][1][58]
   Copyright © 1991-2023 Unicode, Inc.
 unicode-segmentation 1.13.3  MIT OR Apache-2.0 [12][2][1]
   Copyright (c) 2015 The Rust Project Developers
-untrusted 0.9.0  ISC [44]
+untrusted 0.9.0  ISC [45]
   Copyright 2015-2016 Brian Smith.
 unty 0.0.4  MIT OR Apache-2.0 [2][1]
   Copyright 2023 Bincode
@@ -995,14 +1004,18 @@ yoke 0.8.4  Unicode-3.0 [3]
   Copyright © 2020-2024 Unicode, Inc.
 zbus 5.19.0  MIT [1]
   Copyright (c) 2024 Zeeshan Ali Khan & zbus contributors
+zbus 6.3.0  MIT [1]
+  Copyright (c) 2024 Zeeshan Ali Khan & zbus contributors
 zbus-secret-service-keyring-store 1.0.1  MIT OR Apache-2.0 [2][1]
   Copyright [2017] [keyring developers]
   Copyright (c) 2016 keyring Developers
 zbus_names 4.3.5  MIT [1]
   Copyright (c) 2024 Zeeshan Ali Khan & zbus contributors
+zbus_utils 6.1.0  MIT [1]
+  Copyright (c) 2024 Zeeshan Ali Khan & zbus contributors
 zcheapstr 1.2.0  MIT [1]
   Copyright (c) 2026 Zeeshan Ali Khan & zcheapstr contributors
-zerocopy 0.8.63  BSD-2-Clause OR Apache-2.0 OR MIT [2][46][1]
+zerocopy 0.8.63  BSD-2-Clause OR Apache-2.0 OR MIT [2][47][1]
   Copyright 2023 The Fuchsia Authors
   Copyright 2019 The Fuchsia Authors.
 zerofrom 0.1.8  Unicode-3.0 [3]
@@ -1021,6 +1034,9 @@ zmij 1.0.23  MIT [1]
   Author: David Tolnay <dtolnay@gmail.com>
 zopfli 0.8.4  Apache-2.0 [2]
   Copyright 2011 Google Inc.
+zruntime 0.2.3  MIT [43]
+  Copyright (c) 2026 Zeeshan Ali Khan & zruntime contributors
+  Copyright (c) 2020 Yoshua Wuyts, Stjepan Glavina & Zeeshan Ali Khan
 zvariant 5.15.1  MIT [1]
   Copyright (c) 2024 Zeeshan Ali Khan & zbus contributors
 zvariant_utils 4.2.0  MIT [1]
@@ -1096,7 +1112,7 @@ Ubuntu 22.04 のパッケージから取った共有ライブラリを、動的�
   そのほか（MIT、BSD、Apache-2.0 など）: ICU、HarfBuzz、libxml2、libxslt、SQLite、libpng、
     libjpeg-turbo、libwebp、libtiff、Wayland、X11 の各ライブラリ、CUPS など
 
-=== パッケージにライセンスファイルがないもの（24 件）===
+=== パッケージにライセンスファイルがないもの（25 件）===
 
 ライセンスはパッケージのメタデータの記載です。
 
@@ -1107,6 +1123,7 @@ dasp_sample 0.11.0  MIT OR Apache-2.0
 dispatch2 0.3.1  Zlib OR Apache-2.0 OR MIT
 dlopen2 0.8.2  MIT
 earshot 1.2.2  MIT OR Apache-2.0
+mac-notification-sys 0.6.15  MIT/Apache-2.0
 objc2 0.6.5  MIT
 objc2-app-kit 0.3.2  Zlib OR Apache-2.0 OR MIT
 objc2-audio-toolbox 0.3.2  Zlib OR Apache-2.0 OR MIT
@@ -4993,6 +5010,40 @@ DEALINGS IN THE SOFTWARE.
 
 --- [43]
 
+Copyright (c) 2026 Zeeshan Ali Khan & zruntime contributors
+
+Permission is hereby granted, free of charge, to any
+person obtaining a copy of this software and associated
+documentation files (the "Software"), to deal in the
+Software without restriction, including without
+limitation the rights to use, copy, modify, merge,
+publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following
+conditions:
+
+The above copyright notice and this permission notice
+shall be included in all copies or substantial portions
+of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF
+ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
+TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
+SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
+IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+
+The broadcast channel (`src/broadcast.rs`), its tests (`src/tests/broadcast.rs`) and its
+benchmark (`benches/broadcast.rs`) come from the async-broadcast crate
+(https://github.com/smol-rs/async-broadcast), under the license above and this notice:
+
+Copyright (c) 2020 Yoshua Wuyts, Stjepan Glavina & Zeeshan Ali Khan
+
+--- [44]
+
 Copyright 2015-2025 Brian Smith.
 
 Permission to use, copy, modify, and/or distribute this software for any
@@ -5007,7 +5058,7 @@ WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
 OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
 CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
---- [44]
+--- [45]
 
 // Copyright 2015-2016 Brian Smith.
 //
@@ -5023,7 +5074,7 @@ CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
---- [45]
+--- [46]
 
 Copyright (C) Jonas Schievink <jonasschievink@gmail.com>
 
@@ -5038,7 +5089,7 @@ WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN
 AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT
 OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
---- [46]
+--- [47]
 
 Copyright 2019 The Fuchsia Authors.
 
@@ -5065,7 +5116,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
---- [47]
+--- [48]
 
 *ring* uses an "ISC" license, like BoringSSL used to use, for new code
 files. See LICENSE-other-bits for the text of that license.
@@ -5077,7 +5128,7 @@ license. In each case, the license info is at the top of the file.
 See src/polyfill/once_cell/LICENSE-APACHE and src/polyfill/once_cell/LICENSE-MIT
 for the license to code that was sourced from the once_cell project.
 
---- [48]
+--- [49]
 
 rust-lang/libm as a whole is available for use under the MIT license:
 
@@ -5131,7 +5182,7 @@ and labelled as such in comments in the individual source files. All
 have been licensed under extremely permissive terms.
 ------------------------------------------------------------------------------
 
---- [49]
+--- [50]
 
 Rustls is distributed under the following three licenses:
 
@@ -5143,7 +5194,7 @@ These are included as LICENSE-APACHE, LICENSE-MIT and LICENSE-ISC
 respectively.  You may use this software under the terms of any
 of these licenses, at your option.
 
---- [50]
+--- [51]
 
 Short version for non-lawyers:
 
@@ -5175,7 +5226,7 @@ is licensed under:
 
 at your option.
 
---- [51]
+--- [52]
 
 Short version for non-lawyers:
 
@@ -5207,7 +5258,7 @@ is licensed under:
 
 at your option.
 
---- [52]
+--- [53]
 
 SPDX-License-Identifier: ISC AND (Apache-2.0 OR ISC)
 
@@ -5412,7 +5463,7 @@ WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
---- [53]
+--- [54]
 
 The Apache License, Version 2.0 (Apache-2.0)
 
@@ -5430,7 +5481,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
---- [54]
+--- [55]
 
 This project contains documentation adapted from Apple Inc.'s Security Framework
 under the following license:
@@ -5536,7 +5587,7 @@ This file contains Original Code and/or Modifications of Original Code as define
 
 The Original Code and all software distributed under the License are distributed on an 'AS IS' basis, WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES, INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT.  Please see the License for the specific language governing rights and limitations under the License."
 
---- [55]
+--- [56]
 
 This project is dual-licensed under either of:
 
@@ -5545,7 +5596,7 @@ This project is dual-licensed under either of:
 
 You may choose either license, at your option.
 
---- [56]
+--- [57]
 
 UNICODE, INC. LICENSE AGREEMENT - DATA FILES AND SOFTWARE
 
@@ -5605,7 +5656,7 @@ shall not be used in advertising or otherwise to promote the sale,
 use or other dealings in these Data Files or Software without prior
 written authorization of the copyright holder.
 
---- [57]
+--- [58]
 
 UNICODE LICENSE V3
 
@@ -5647,7 +5698,7 @@ not be used in advertising or otherwise to promote the sale, use or other
 dealings in these Data Files or Software without prior written
 authorization of the copyright holder.
 
---- [58]
+--- [59]
 
 We, the copyright holders of this work, hereby release it into the
 public domain. This applies worldwide.

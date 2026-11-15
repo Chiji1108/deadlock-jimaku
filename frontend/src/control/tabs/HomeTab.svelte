@@ -9,6 +9,7 @@
   import * as Card from "$lib/components/ui/card";
   import ChromeWindow from "../parts/ChromeWindow.svelte";
   import LevelMeter from "../parts/LevelMeter.svelte";
+  import SilentAlert from "../parts/SilentAlert.svelte";
   import ModeBadges from "../parts/ModeBadges.svelte";
   import Onboarding from "../parts/Onboarding.svelte";
   import OverlayPreview from "../parts/OverlayPreview.svelte";
@@ -105,18 +106,11 @@
             <LevelMeter />
           </div>
         {/if}
-        {#if panel.silent}
-          <Alert.Root variant="destructive">
-            <Alert.Title>音が届いていません</Alert.Title>
-            <Alert.Description class="flex flex-col items-start gap-2">
-              マイクの選択と、OS のマイクの許可（macOS: システム設定 → プライバシーとセキュリティ →
-              マイク）を確認してください
-              <Button variant="outline" size="sm" onclick={() => (panel.tab = "audio")}>
-                マイクを選ぶ
-              </Button>
-            </Alert.Description>
-          </Alert.Root>
-        {/if}
+        <SilentAlert>
+          <Button variant="outline" size="sm" onclick={() => (panel.tab = "audio")}>
+            マイクを選ぶ
+          </Button>
+        </SilentAlert>
       </Card.Content>
     </Card.Root>
 
