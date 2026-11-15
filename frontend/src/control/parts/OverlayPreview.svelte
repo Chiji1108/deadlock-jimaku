@@ -35,7 +35,7 @@
       style:color-scheme="light"
     ></iframe>
   </div>
-  <figcaption class="flex items-center justify-between gap-2">
+  <figcaption class="flex flex-wrap items-center justify-between gap-2">
     <span class="text-xs whitespace-nowrap text-muted-foreground tabular-nums">
       プレビュー　{size[0]} × {size[1]}
     </span>

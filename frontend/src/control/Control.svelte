@@ -11,7 +11,6 @@
   import WorkflowIcon from "@lucide/svelte/icons/workflow";
   import { ModeWatcher } from "mode-watcher";
   import { onMount, untrack } from "svelte";
-  import { MediaQuery } from "svelte/reactivity";
   import * as Alert from "$lib/components/ui/alert";
   import { Button } from "$lib/components/ui/button";
   import { Toaster } from "$lib/components/ui/sonner";
@@ -61,8 +60,6 @@
     // 自分の API キーを使う人だけが開く。料金も同じタブに置く
     { value: "keys", label: "API キーと料金", icon: KeyRoundIcon, page: KeysTab, heading: "" },
   ];
-  // デスクトップのウィンドウでは左のサイドバー。OBS のドックのように狭いときは上に並べる
-  const wide = new MediaQuery("min-width: 768px");
   /** ホームとオーバーレイのタブは 2 列に並べるので広く取る。ほかは読みやすい幅に留める */
   const pageWidth = $derived(
     TABS.find((t) => t.value === panel.tab)?.wide ? "max-w-6xl" : "max-w-3xl",
@@ -88,9 +85,7 @@
 <ModeWatcher />
 <Toaster richColors position="bottom-right" />
 
-<div
-  class="flex min-h-screen flex-col bg-background text-foreground has-data-[orientation=vertical]:h-screen"
->
+<div class="flex h-screen flex-col bg-background text-foreground">
   <header class="sticky top-0 z-10 shrink-0 border-b bg-background/80 backdrop-blur">
     <!-- 狭いときはボタンを次の行に回す -->
     <div class="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
@@ -136,45 +131,41 @@
     <WhatsNew />
     <!-- 「おすすめ」は、どのタブからも選べる（モードのタブ、マイクと翻訳の提案、更新の知らせ） -->
     <BetaDialog />
-    <Tabs.Root
-      bind:value={panel.tab}
-      orientation={wide.current ? "vertical" : "horizontal"}
-      class="min-h-0 flex-1 gap-0"
-    >
-      <!-- 縦のとき（サイドバー）は高さいっぱいに伸ばし、入りきらなければサイドバーだけスクロールする -->
+    <Tabs.Root bind:value={panel.tab} orientation="vertical" class="min-h-0 flex-1 gap-0">
+      <!-- サイドバーは高さいっぱいに伸ばし、入りきらなければサイドバーだけスクロールする。
+           狭いとき（OBS のドックや、細くしたウィンドウ）は、アイコンだけの細い帯にする（名前は title で出す）。
+           開け閉めのボタンは置かない（幅で決まるので、畳んだまま忘れない） -->
       <div
-        class="flex shrink-0 flex-col px-4 pt-4 group-data-vertical/tabs:w-48 group-data-vertical/tabs:overflow-y-auto group-data-vertical/tabs:border-r group-data-vertical/tabs:bg-muted/30 group-data-vertical/tabs:p-3"
+        class="flex w-14 shrink-0 flex-col overflow-y-auto border-r bg-muted/30 p-2 md:w-48 md:p-3"
       >
-        <Tabs.List
-          class="w-full shrink-0 justify-start overflow-x-auto overflow-y-hidden group-data-vertical/tabs:gap-1 group-data-vertical/tabs:bg-transparent"
-        >
+        <Tabs.List class="w-full shrink-0 justify-start gap-1 bg-transparent">
           {#each TABS as t (t.value)}
-            <!-- サイドバーでは種類ごとに分ける（heading が空なら区切りの余白だけ） -->
+            <!-- 種類ごとに分ける。広いときは見出し（空なら余白だけ）、狭いときは線 -->
             {#if t.heading !== undefined}
               <p
                 role="presentation"
-                class="self-stretch px-[15px] pt-3 text-xs text-muted-foreground group-data-horizontal/tabs:hidden"
+                class="hidden self-stretch px-[15px] pt-3 text-xs text-muted-foreground md:block"
               >
                 {t.heading}
               </p>
+              <span role="presentation" class="my-1 h-px self-stretch bg-border md:hidden"></span>
             {/if}
-            <!-- 横に並べるときは幅が狭いので、アイコンを出さない（入りきらなければ横にスクロール） -->
             <Tabs.Trigger
               value={t.value}
-              class="group-data-horizontal/tabs:[&>svg]:hidden group-data-vertical/tabs:h-9 group-data-vertical/tabs:flex-none group-data-vertical/tabs:px-3"
+              title={t.label}
+              aria-label={t.label}
+              class="h-9 flex-none px-0 md:justify-start md:px-3"
             >
-              <t.icon />{t.label}
+              <t.icon /><span class="hidden md:inline">{t.label}</span>
             </Tabs.Trigger>
           {/each}
         </Tabs.List>
         <!-- 不具合の報告や、更新できたかの確認に使う。狭いときはページの一番下に出す -->
-        <div
-          class="mt-auto self-start px-[15px] pt-3 tabular-nums group-data-horizontal/tabs:hidden"
-        >
+        <div class="mt-auto hidden self-start px-[15px] pt-3 tabular-nums md:block">
           <AboutDialog />
         </div>
       </div>
-      <main bind:this={content} class="min-w-0 flex-1 group-data-vertical/tabs:overflow-y-auto">
+      <main bind:this={content} class="min-w-0 flex-1 overflow-y-auto">
         <div class="mx-auto flex {pageWidth} flex-col gap-4 px-4 py-6">
           {#if panel.view?.fallback}
             {@const ownKeys = panel.view.continuesWith === "ownKeys"}
@@ -226,7 +217,7 @@
           {#each TABS as t (t.value)}
             <Tabs.Content value={t.value}><t.page /></Tabs.Content>
           {/each}
-          <div class="hidden tabular-nums group-data-horizontal/tabs:block">
+          <div class="tabular-nums md:hidden">
             <AboutDialog />
           </div>
         </div>
