@@ -250,8 +250,10 @@ mod tests {
         let started = std::time::Instant::now();
         let text = reazon.transcribe(&samples).await.unwrap();
         println!("{text}（{:?}）", started.elapsed());
+        // 話の間には空白が入る（語の途中にも入ることがあり、`tidy.rs` が消す）
+        let joined = text.replace(' ', "");
         assert!(
-            text.contains("ヘイズ") && text.contains("スモークボム"),
+            joined.contains("ヘイズ") && joined.contains("スモークボム"),
             "{text}"
         );
         // 続けて頼んでも、答えがずれない
