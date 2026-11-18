@@ -31,6 +31,7 @@ pub mod store;
 pub mod stt;
 pub mod subtitles;
 pub mod terms;
+pub mod tidy;
 pub mod types;
 pub mod usage;
 pub mod whisper;

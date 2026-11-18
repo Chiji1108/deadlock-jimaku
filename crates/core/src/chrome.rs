@@ -554,6 +554,12 @@ impl Subtitles {
         }
         let plan = self.store.settings().plan();
         let phase = if is_final { plan.finals } else { plan.partial };
+        // 確定の文だけ、数字と句読点を整える（途中の文は、話すたびに変わる）
+        let text = if is_final {
+            self.annotator.tidy(&text)
+        } else {
+            text
+        };
         let (tokens, translate) = self.annotator.annotate(&text, &phase);
         let Some(seg) = self.live.get_mut(&id) else {
             return;
@@ -874,7 +880,8 @@ mod tests {
         assert!(subs.current.is_none());
         assert_eq!(
             last_upsert(&mut messages),
-            Some((Stage::Final, "ヘイズが強い".to_owned()))
+            // 確定の文には、句読点が付く（`tidy.rs`）
+            Some((Stage::Final, "ヘイズが強い。".to_owned()))
         );
         assert!(matches!(tasks.try_recv(), Ok(ChromeCommand::Translate(t)) if t.is_final));
         subs.store
@@ -882,7 +889,7 @@ mod tests {
         finish_next(&mut subs, &mut done).await;
         assert_eq!(
             last_upsert(&mut messages),
-            Some((Stage::Enriched, "ヘイズが強い".to_owned()))
+            Some((Stage::Enriched, "ヘイズが強い。".to_owned()))
         );
         assert!(subs.live.is_empty());
     }
@@ -930,7 +937,7 @@ mod tests {
         finish_next(&mut subs, &mut done).await;
         assert_eq!(
             last_upsert(&mut messages),
-            Some((Stage::Enriched, "リロード".to_owned()))
+            Some((Stage::Enriched, "リロード。".to_owned()))
         );
     }
 

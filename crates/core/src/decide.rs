@@ -399,7 +399,8 @@ fn candidates(
             // 数字は普通の言葉にも出る（「1人」「1番いい」「10秒」）ので、ヒーローの名前のすぐ後ろ
             // （「ヘイズの2」）だけ、そのヒーローのスキルにする。外すと、翻訳にスキルの名前が入ってしまう
             let after_name = |c: &&Candidate| matches!(text.get(c.end()..at), Some("" | "の"));
-            let more_digits = rest[len..].starts_with(|c: char| c.is_numeric());
+            let numeral = |c: char| c.is_numeric() || "〇一二三四五六七八九十百千万".contains(c);
+            let more_digits = rest[len..].starts_with(numeral);
             found
                 .iter()
                 .filter(|c| after_name(c) && !more_digits)
@@ -563,7 +564,8 @@ fn similar(word: &str, index: &Index) -> Vec<String> {
     refs
 }
 
-/// スキルの呼び方（「ウルト」は 4 番、「2」「３番」はその番号）。何番か、話した言葉の長さ、数字で呼んだか
+/// スキルの呼び方（「ウルト」は 4 番、「2」「３番」「二番」はその番号）。何番か、話した言葉の長さ、数字で呼んだか。
+/// 漢数字の「二」〜「四」も受ける（数える言葉のない「ヘイズの二」は、`tidy.rs` が算用数字にしない）
 fn ability_word(rest: &str) -> Option<(u8, usize, bool)> {
     for word in ["ウルト", "アルティメット", "ult"] {
         if rest.starts_with(word) {
@@ -574,6 +576,10 @@ fn ability_word(rest: &str) -> Option<(u8, usize, bool)> {
     let slot = match first {
         '1'..='4' => first as u8 - b'0',
         '１'..='４' => (first as u32 - '１' as u32) as u8 + 1,
+        // 「一」は受けない（「ヘイズの一番いいところ」の「一番」は、ほぼ「いちばん」）
+        '二' => 2,
+        '三' => 3,
+        '四' => 4,
         _ => return None,
     };
     let after = &rest[first.len_utf8()..];
@@ -886,6 +892,9 @@ mod tests {
                 .collect::<Vec<_>>()
         };
         assert_eq!(spoken("ヘイズの2番で寝かせる。", &[]), ["ヘイズ", "2番"]);
+        assert_eq!(spoken("ヘイズの二で寝かせる。", &[]), ["ヘイズ", "二"]);
+        assert_eq!(spoken("ヘイズの二十発。", &[]), ["ヘイズ"]);
+        assert_eq!(spoken("ヘイズの一番いいところ。", &[]), ["ヘイズ"]);
         assert_eq!(spoken("ヘイズ2で寝かせる。", &[]), ["ヘイズ", "2"]);
         // 数字だけでは拾わない（普通の言葉にも出る）
         assert_eq!(spoken("1人で来てる。2番ある。", &[]), [] as [&str; 0]);
