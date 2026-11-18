@@ -24,7 +24,8 @@ jobs:
             wheel: https://files.pythonhosted.org/packages/ec/81/5d7f89b4c3dc64e9100590609d5c168448fc379d89a08c6498aad46b6feb/sherpa_onnx_core-2.0.1-py3-none-macosx_11_0_arm64.whl
             sha256: 82ab505a835e616f568ba6804555969e1b5699341d2b18eb27f0083b068b61ff
             name: macos-arm64
-          - os: macos-latest
+          # 立ち上がるかを確かめるので、Intel の Mac で作る（Apple シリコンの runner に Rosetta があるとは限らない）
+          - os: macos-15-intel
             target: x86_64-apple-darwin
             wheel: https://files.pythonhosted.org/packages/6d/69/5e25f0c3aa933d679b0e377516bf9b5649cbc892d688a504096cd68963e6/sherpa_onnx_core-2.0.1-py3-none-macosx_10_15_x86_64.whl
             sha256: fe43986eff8ccdfbb7fc851ee1b40e6df9869ff14da2de6b70302872e555480d
@@ -71,8 +72,11 @@ jobs:
           cp LICENSE.md dist/
           cp crates/sherpa/licenses/*.txt dist/
           ls -la dist
-          # 立ち上がるか（ライブラリが見つかるか）を確かめる。引数がないと使い方を出して止まる
-          if "dist/jimaku-sherpa" 2>&1 | grep -q usage; then echo ok; else echo "does not start"; exit 1; fi
+          # 立ち上がるか（ライブラリが見つかるか）を確かめる。引数がないと使い方を出して、1 で終わる
+          # （pipefail なので、パイプでつながず、出力を受けてから探す）
+          started=$("dist/jimaku-sherpa" 2>&1 || true)
+          echo "$started"
+          grep -q usage <<< "$started" || { echo "does not start"; exit 1; }
           name="jimaku-sherpa-$version-${{ matrix.name }}.zip"
           if [ "$RUNNER_OS" = Windows ]; then
             (cd dist && 7z a -tzip "../$name" . > /dev/null)

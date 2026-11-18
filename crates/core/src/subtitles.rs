@@ -688,8 +688,6 @@ async fn transcribe(
     let _ = done.send(Done::Transcribed { id, text }).await;
 }
 
-/// 用語ヒント: 話す言語での名前（DESIGN.md 8.4）。
-/// 上限を超えるときは人 → ヒーロー → アイテム → スキルの順に残す
 /// 文字起こしに渡す用語（`keywords`）とヒーローの名前（`heroes`）。デッドロックモードでなければ渡さない。
 /// 辞書を少し待つ（読み込む前に始めると、用語なしで字幕を始めることになる）
 pub async fn terms(store: &Store, settings: &Settings) -> (Vec<String>, Vec<String>) {
@@ -709,6 +707,8 @@ pub async fn terms(store: &Store, settings: &Settings) -> (Vec<String>, Vec<Stri
     }
 }
 
+/// 用語ヒント: 話す言語での名前（DESIGN.md 8.4）。
+/// 上限を超えるときは人 → ヒーロー → アイテム → スキルの順に残す
 pub fn keywords(glossary: &Glossary, lang: &str) -> Vec<String> {
     // 人の名前は、文字起こしがいちばん間違えやすいので、先に入れる
     let names = [

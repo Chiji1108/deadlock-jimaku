@@ -11,7 +11,7 @@ use std::path::Path;
 use std::process::Stdio;
 use std::time::Duration;
 
-use anyhow::{Context, bail};
+use anyhow::Context;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, Lines};
 use tokio::process::{Child, ChildStdin, ChildStdout, Command};
 use tokio::sync::Mutex;
@@ -175,22 +175,15 @@ impl Reazon {
     /// 発話（16kHz mono）を文字にする
     pub async fn transcribe(&self, samples: &[f32]) -> anyhow::Result<String> {
         let mut io = self.io.lock().await;
-        let Some(running) = io.as_mut() else {
-            bail!("jimaku-sherpa stopped");
-        };
-        let answer = tokio::time::timeout(ANSWER_TIMEOUT, ask(running, samples)).await;
-        match answer {
-            Ok(Ok(text)) => Ok(text),
-            // 答えの行がずれると、次の発話に前の答えが付くので、もう頼まない（プロセスも終わる）
-            Ok(Err(e)) => {
-                *io = None;
-                Err(e)
-            }
-            Err(_) => {
-                *io = None;
-                bail!("jimaku-sherpa did not answer")
-            }
-        }
+        // 頼んでいる間は取り出しておき、答えが届いたときだけ戻す。失敗しても、待ち時間が切れても、
+        // 頼んだ処理が途中で捨てられても、答えの行がずれる（次の発話に前の答えが付く）ので、
+        // もう頼まない（落としたプロセスは終わる）
+        let mut running = io.take().context("jimaku-sherpa stopped")?;
+        let answer = tokio::time::timeout(ANSWER_TIMEOUT, ask(&mut running, samples))
+            .await
+            .context("jimaku-sherpa did not answer")??;
+        *io = Some(running);
+        Ok(answer)
     }
 }
 

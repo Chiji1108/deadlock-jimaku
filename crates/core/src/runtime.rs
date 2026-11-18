@@ -416,8 +416,9 @@ async fn local_reazon(store: &Arc<Store>, uses: bool) -> anyhow::Result<Option<A
         settings.mic_language == "ja",
         "ReazonSpeech only transcribes Japanese"
     );
-    let (hotwords, _) = subtitles::terms(store, &settings).await;
+    // 辞書を待つ間も、準備していることを出す
     let preparing = store.preparing();
+    let (hotwords, _) = subtitles::terms(store, &settings).await;
     let progress = |done, total| preparing.downloaded(done, total);
     let reazon = Reazon::start(&store.data_dir().join("reazon"), &hotwords, &progress).await?;
     Ok(Some(Arc::new(reazon)))
