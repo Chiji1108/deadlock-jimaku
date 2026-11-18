@@ -54,9 +54,14 @@ jobs:
       - name: 実行環境のライブラリを取る
         run: |
           curl -sfL -o core.whl "${{ matrix.wheel }}"
-          echo "${{ matrix.sha256 }}  core.whl" | shasum -a 256 -c -
+          # shasum は Windows の Git Bash にないので、どの runner にもある openssl で確かめる
+          got=$(openssl dgst -sha256 -r core.whl | cut -d' ' -f1)
+          [ "$got" = "${{ matrix.sha256 }}" ] || { echo "wrong checksum: $got"; exit 1; }
           unzip -q core.whl 'sherpa_onnx/lib/*' -d core
-          echo "SHERPA_ONNX_LIB_DIR=$PWD/core/sherpa_onnx/lib" >> "$GITHUB_ENV"
+          # ビルドの処理（Rust）には、Windows では Windows の形のパスを渡す
+          lib="$PWD/core/sherpa_onnx/lib"
+          if [ "$RUNNER_OS" = Windows ]; then lib=$(cygpath -w "$lib"); fi
+          echo "SHERPA_ONNX_LIB_DIR=$lib" >> "$GITHUB_ENV"
       - name: ビルドする
         run: cargo build --release --locked --manifest-path crates/sherpa/Cargo.toml --target ${{ matrix.target }}
       - name: zip にまとめる
