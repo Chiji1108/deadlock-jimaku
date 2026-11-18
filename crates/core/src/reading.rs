@@ -93,6 +93,19 @@ impl Furigana {
 
     /// 辞書の選んだ分け方と、読みが分かれるところ（漢字を含む語だけ）。同じ文字の語の、辞書にある別の読みを
     /// 候補にする（「辛い」の「つらい」「からい」）
+    /// 語と、辞書の素性（UniDic の品詞など。`,` 区切り）。数字と句読点を整える（`tidy.rs`）のに使う
+    pub fn words(&self, text: &str) -> Vec<(std::ops::Range<usize>, String)> {
+        let mut worker = self.tokenizer.new_worker();
+        worker.reset_sentence(text);
+        worker.tokenize();
+        (0..worker.num_tokens())
+            .map(|i| {
+                let token = worker.token(i);
+                (token.range_byte(), token.feature().to_owned())
+            })
+            .collect()
+    }
+
     pub fn alternatives(&self, text: &str) -> (Vec<Morpheme>, Vec<Alternatives>) {
         let best = self.morphemes(text);
         let alternatives = best.iter().enumerate().filter_map(|(i, m)| {

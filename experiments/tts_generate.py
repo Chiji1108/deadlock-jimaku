@@ -7,8 +7,9 @@
 合成音声ははっきり話すので、ふだんの配信の正確さではなく、用語を書けるかを比べるのに使う。
 作ったあと、何本か聞いて、読み違いがないか確かめる。
 
-usage: uv run tts_generate.py [--only N]
-  ELEVENLABS_API_KEY を使う。出力は data/tts/声の名前/000.wav …（リポジトリには入れない）
+usage: uv run tts_generate.py [--only N] [--script data/tidy_script.json --out data/tts_tidy]
+  ELEVENLABS_API_KEY を使う。出力は data/tts/声の名前/000.wav …（リポジトリには入れない）。
+  `--script` と `--out` で、ほかの台本（数字と句読点の測定の data/tidy_script.json など）を別のフォルダに作る
 """
 
 import json
@@ -29,7 +30,9 @@ HERE = Path(__file__).parent
 
 def main() -> None:
     only = int(sys.argv[sys.argv.index("--only") + 1]) if "--only" in sys.argv else None
-    lines = json.loads((HERE / "data/stt_script.json").read_text())[:only]
+    arg = lambda name, default: sys.argv[sys.argv.index(name) + 1] if name in sys.argv else default
+    lines = json.loads((HERE / arg("--script", "data/stt_script.json")).read_text())[:only]
+    root = HERE / arg("--out", "data/tts")
     client = httpx.Client(
         base_url="https://api.elevenlabs.io",
         headers={"xi-api-key": os.environ["ELEVENLABS_API_KEY"]},
@@ -39,7 +42,7 @@ def main() -> None:
     chars = 0
     for folder, name in VOICES.items():
         voice = next(v["voice_id"] for v in listed if v["name"].startswith(name))
-        out = HERE / "data/tts" / folder
+        out = root / folder
         out.mkdir(parents=True, exist_ok=True)
         for i, line in enumerate(lines):
             path = out / f"{i:03}.wav"

@@ -460,6 +460,7 @@ impl Pipeline {
             self.discard(id);
             return;
         }
+        let text = self.annotator.tidy(&text);
         // 途中の字幕を出さないときはここで初めて表示する。読む時間と並びはこの時刻から数える
         if seg.text.is_empty() {
             seg.started_at = now_ms();

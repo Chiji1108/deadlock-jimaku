@@ -55,6 +55,14 @@ impl Annotator {
         }
     }
 
+    /// 確定した文の数字と句読点を整える（`tidy.rs`。日本語だけ。辞書がなければそのまま）
+    pub fn tidy(&self, text: &str) -> String {
+        match self.furigana {
+            Some(furigana) => crate::tidy::tidy(furigana, text),
+            None => text.to_owned(),
+        }
+    }
+
     /// `phase` のとおりに読みと用語を付けた文と、翻訳に渡す文
     pub fn annotate(&mut self, text: &str, phase: &Phase) -> (Vec<Token>, Translatable) {
         if let Some(glossary) = self
