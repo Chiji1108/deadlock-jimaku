@@ -79,7 +79,8 @@ jobs:
           # ライブラリは、sherpa-onnx の Rust の部品が、つないだものを出力のフォルダに写している。
           # Windows は DLL を実行ファイルの隣に置く（Mac と Linux は rpath で隣を探す）
           shopt -s nullglob
-          cp "$out"/*onnxruntime*.{dll,dylib,so} "$out"/*sherpa-onnx-c-api*.{dll,dylib,so} dist/
+          # Linux は、版の付いた名前（libonnxruntime.so.1 など）も入れる
+          cp "$out"/*onnxruntime*.{dll,dylib,so,so.*} "$out"/*sherpa-onnx-c-api*.{dll,dylib,so,so.*} dist/
           cp LICENSE.md dist/
           cp crates/sherpa/licenses/*.txt dist/
           ls -la dist
