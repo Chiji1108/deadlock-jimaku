@@ -82,28 +82,32 @@ macOS 版は Apple の署名と公証を済ませています。Windows 版は�
 
 ## しくみ
 
-開発する人のための地図です。理由は [DESIGN.md](DESIGN.md) を見てください（モードは 9.6、開発者のサーバーと LP は 17 章）。
+開発する人のための地図です。理由は [DESIGN.md](DESIGN.md) を見てください（モードは 9.6、ローカルの AI は 9.8〜9.11、開発者のサーバーと LP は 17 章）。
 
-字幕を何で作るかは、工程ごとの選択（設定の `engines`。モードを選ぶとまとめて決まる）と設定から `Settings::plan` が決めます（`crates/core/src/settings.rs`。操作パネルのモードはおすすめ（コードの中の名前は `beta`）・Chrome・最高精度（表の「スタンダード」）で、ほかの組み合わせは「モード」のタブで工程ごとに選びます。この表は、鍵の要る組み合わせを含む 3 つの組み合わせ（`Engines::STANDARD` など）の値で、テストに同じ値があります）。工程を 1 つ変えると、確定の欄はその工程の行だけが変わります。
+字幕は 5 つの工程で作ります。工程ごとに何を使うかは設定の `engines` にあり、モードはその組み合わせに付けた名前です（`Engines::MODES`。`crates/core/src/settings.rs`）。操作パネルでモードを選ぶと 5 つがまとめて決まり、「モード」のタブで工程ごとに変えると「カスタム」になります。
 
-| | スタンダード | OpenAI | Chrome |
-|---|---|---|---|
-| 途中の字幕 | Chrome | GPT-Live-Transcribe | Chrome |
-| 途中の翻訳 | Chrome Translator | なし | Chrome Translator |
-| 途中のふりがな | 辞書 | 辞書 | 辞書 |
-| 途中の強調 | 辞書の一致 | 辞書の一致 | 辞書の一致 |
-| 確定の字幕 | GPT-Transcribe | GPT-Transcribe | Chrome |
-| 確定の翻訳 | GPT-6.1 Terra | GPT-6.1 Terra | Chrome Translator |
-| 確定のふりがな | 辞書 + GPT-6.1 Terra | 辞書 + GPT-6.1 Terra | 辞書 |
-| 確定の強調 | GPT-6.1 Terra | GPT-6.1 Terra | 辞書の一致 |
+| 工程 | おすすめ | Chrome（既定） | Chrome+ | 最高精度 | クラウド | ローカル |
+|---|---|---|---|---|---|---|
+| 途中の字幕 | Chrome | Chrome | Chrome | Chrome | Qwen-Audio-3.1-ASR-Flash-Streaming | Haas-ja |
+| 確定の文字起こし | Qwen-Audio-3.1-ASR-Flash | Chrome | Chrome | GPT-Transcribe | Qwen-Audio-3.1-ASR-Flash | Whisper large-v3-turbo |
+| 用語 | Perplexity Decider | 辞書の一致 | Gemini Nano | GPT-6.1 Terra | Perplexity Decider | Gemma 4 E4B |
+| 翻訳 | Hy-MT2 | Chrome Translator | Chrome Translator | GPT-6.1 Terra | Hy-MT2 | Gemma 4 E4B |
+| ふりがな | 辞書 + Perplexity Decider | 辞書 | 辞書 | 辞書 + GPT-6.1 Terra | 辞書 + Perplexity Decider | 辞書 |
+| 要るもの | なし（ベータ期間中） | なし | なし | OpenAI の API キー | なし（ベータ期間中） | なし |
+| 声と文字の送り先 | Google、開発者のサーバー | Google | Google | Google、OpenAI | 開発者のサーバー | PC から出ない |
 
-翻訳先がない、翻訳だけを見せる、ふりがなやデッドロックモードを切る、話す言語が日本語でない（読みの辞書と用語の一致は日本語だけ）ときは、その項目が「なし」になります。
+- 途中の字幕が Chrome のときは、話している途中から訳も出ます（Chrome Translator）。途中の字幕には、辞書の読みと、辞書の一致で見つけた用語が付きます。
+- 翻訳先がない、翻訳だけを見せる、ふりがなやデッドロックモードを切る、話す言語が日本語でない（読みの辞書と用語の一致は日本語だけ）ときは、その工程を動かしません。設定と `engines` から、実際に何を動かすかを `Settings::plan` が決めます。
+- 作れない組み合わせは `Engines::sanitized` が直します。確定の文字起こしが Chrome なら途中の字幕も Chrome（発話の区切りを Chrome が決める）、Chrome の翻訳は途中の字幕が Chrome のときだけです。翻訳を GPT にしたときは、用語も同じ問い合わせで判定します（訳文の名前を用語から作るので）。
 
-確定の文字起こしが Grok Voice Transcribe のとき（工程ごとに選んだとき）は xAI の API キーが要ります。
+**工程ごとに選べるもの。** 表のほかにも選べます。「おすすめ」と「クラウド」のモードのほかは、その会社の自分の API キーが要ります（PC の中で動くものは要りません）。
 
-「おすすめ」のモード（`Engines::BETA`。表にはありません）は、ベータ期間中、API キーなしで無料で使えます。途中の字幕は Chrome、確定の字幕は Qwen-Audio-3.1-ASR-Flash、用語は Perplexity Decider、翻訳は Hy-MT2、ふりがなは辞書の候補から Perplexity Decider が選び、開発者のサーバーが開発者のキーで中継します（`server/src/beta.ts`。DESIGN.md 17.2）。
+- **途中の字幕と確定の文字起こし**（`stt/`、`local.rs`、`whisper.rs`）: Chrome、OpenAI（GPT-Live-Transcribe、GPT-Transcribe）、xAI の Grok Voice Transcribe、Qwen-Audio-3.1-ASR-Flash（DESIGN.md 3.4）、OpenRouter の MAI-Transcribe 2、PC の中の Haas-ja（speech.cpp）と Whisper（whisper.cpp。ヒーローの名前を教える）。
+- **用語**（`terms.rs`、`decide.rs`）: 辞書の一致か、PC の中で出した候補を判定モデルに確かめさせます。判定モデルは、Chrome の中の Gemini Nano、PC の中の Gemma 4 E4B、OpenAI の Decisions API、TypeSafe AI の Jev、OpenRouter の Drex Max・Microsoft Decision 1・Perplexity Decider（DESIGN.md 9.7）。
+- **翻訳**（`mt.rs`、`enrich.rs`）: 用語を英語名に置き換えた文を、Chrome Translator、PC の中の Gemma 4 E4B、翻訳専門のモデル（Qwen-MT-Flash、OpenRouter の Hy-MT2）に渡します。GPT-6.1 Terra は、用語と翻訳を 1 回の問い合わせで作ります。
+- **ふりがな**（`reading.rs`、`furigana.rs`）: 辞書の読み（vibrato と話し言葉の UniDic）をそのまま使うか、判定モデルか GPT に直させます。
 
-用語と翻訳は、表の 4 つのモードでは 1 回の問い合わせ（GPT）か、辞書の一致と Chrome の翻訳です。詳しく選ぶと、2 つを別々に作れます（DESIGN.md 9.7）。用語は、PC の中で出した候補を判定モデルに確かめさせます（`decide.rs`。OpenAI の Decisions API、TypeSafe AI の Jev、OpenRouter の Drex Max・Microsoft Decision 1・Perplexity Decider）。翻訳は、用語を英語名に置き換えた文を Chrome か翻訳専門のモデル（`mt.rs`。Qwen-MT-Flash か OpenRouter の Hy-MT2）に渡します。途中の字幕と確定の文字起こしは、Qwen-Audio-3.1-ASR-Flash も選べます（`stt/qwen.rs`。DESIGN.md 3.4）。確定の文字起こしは、OpenRouter の MAI-Transcribe 2 と、PC の中で動く Haas-ja（`local.rs`。speech.cpp を初回にダウンロードします。DESIGN.md 9.8）も選べます。「おすすめ」のモードのほかは、その会社の自分の API キーが要ります。作れない組み合わせは `Engines::sanitized` が直します。確定の文字起こしが Chrome なら途中の字幕も Chrome（発話の区切りを Chrome が決める）、Chrome の翻訳は途中の字幕が Chrome のときだけです。翻訳を GPT にしたときは、用語も同じ問い合わせで判定します（訳文の名前を用語から作るので）。確定の文には、どちらの経路でも `finish.rs` が工程ごとに用語・ふりがな・翻訳を付け、1 つの字幕にまとめます。
+確定の文には、どの組み合わせでも `finish.rs` が工程ごとに用語・ふりがな・翻訳を付け、1 つの字幕にまとめます。
 
 ```mermaid
 flowchart LR
@@ -112,9 +116,10 @@ flowchart LR
     subgraph app["Tauri アプリ（app/）"]
       panel["操作パネル<br/>control.html"]
       core["中核（crates/core）<br/>字幕の処理、Store<br/>localhost:4510 の /api、/ws、/overlay/*"]
-      shell["トレイ<br/>自動更新"]
+      shell["トレイ、通知、ホットキー<br/>自動更新"]
     end
-    tab["Chrome のウィンドウ<br/>/chrome<br/>音声認識、翻訳"]
+    tab["Chrome のウィンドウ<br/>/chrome<br/>音声認識、翻訳、Gemini Nano"]
+    local["ローカルの AI<br/>speech.cpp、whisper.cpp、llama.cpp"]
   end
   worker["Cloudflare Worker（server/）<br/>ベータの無料の提供"]
   openai["OpenAI"]
@@ -130,6 +135,7 @@ flowchart LR
   panel --> core
   tab <-- "文と訳" --> core
   core -- "起動、閉じる" --> tab
+  core <-- "音声、文字" --> local
   tab -- "声" --> google
   core -- "ベータのコード" --> worker
   worker -- "開発者のキー" --> qwen
@@ -144,45 +150,33 @@ flowchart LR
 ```
 
 - 操作パネルは Tauri のウィンドウでも OBS のドックでも同じ画面で、`/api` と `/ws` だけを使います。
-- OpenAI のモード以外では、アプリが専用のプロファイルの Chrome を起動します。音声認識と翻訳は Chrome が行い、ふりがなと辞書の一致は中核の中で行います（vibrato と話し言葉の UniDic）。
-- OpenAI と xAI、TypeSafe AI には、自分の API キーで直接送ります。Qwen と OpenRouter は、ベータのコードがあれば Worker を通し（開発者のキー。「おすすめ」のモード）、なければ自分の API キーで直接送ります。Worker は会社ごとに同じパスで中継するので、アプリは送り先を替えるだけです。
+- 途中の字幕が Chrome の組み合わせでは、アプリが専用のプロファイルの Chrome を起動します。音声認識と翻訳は Chrome が行い、ふりがなと辞書の一致は中核の中で行います。
+- ローカルの AI（Haas-ja、Whisper、Gemma 4 E4B）は、選んだときに初めてダウンロードし、別のプロセスで立てて、OpenAI と同じ形の口で頼みます。字幕を止めると終わります。
+- OpenAI と xAI、TypeSafe AI には、自分の API キーで直接送ります。Qwen と OpenRouter は、ベータのコードがあれば Worker を通し（開発者のキー。「おすすめ」と「クラウド」のモード）、なければ自分の API キーで直接送ります。Worker は会社ごとに同じパスで中継するので、アプリは送り先を替えるだけです（`server/src/beta.ts`。DESIGN.md 17.2）。
 
 ### 声と文字の流れ
 
-図はモードごとの処理の順です（確定の文字起こしが OpenAI か xAI なら上の 2 つ、Chrome なら 3 つ目の経路）。黄色は PC の外です。OpenAI とのやりとりは、すべて中核が行います。字幕は `/ws` でオーバーレイと操作パネルに届きます。
+代表の 3 つのモードの、処理の順です。黄色は PC の外です。字幕は `/ws` でオーバーレイと操作パネルに届きます。
 
-**`standard`（スタンダード）。** 途中の字幕は Chrome で作ります。発話が終わると、アプリのマイクの声と文字を OpenAI に送ります。Chrome にも同じマイクを渡します（渡せない環境では Chrome の既定のマイクを使い、操作パネルに出します）。
+**おすすめ。** 途中の字幕は Chrome で作ります。発話が終わると、アプリのマイクの声を開発者のサーバーに送り、確定の文に用語・翻訳・ふりがなを付けます。Chrome にも同じマイクを渡します（渡せない環境では Chrome の既定のマイクを使い、操作パネルに出します）。「最高精度」も同じ形で、送り先が OpenAI（自分の API キー）になります。「クラウド」は、途中の字幕も開発者のサーバーを通して作り、Chrome を開きません。
 
 ```mermaid
 flowchart LR
-  mic["マイク"] --> core["中核<br/>発話を区切る<br/>読み、用語"]
+  mic["マイク"] --> core["中核<br/>発話を区切る<br/>読み、用語の候補"]
   mic --> tab["Chrome のウィンドウ<br/>/chrome<br/>途中の翻訳"]
   tab -- "声" --> google["Google の音声認識"]
   google -- "途中の文" --> tab
   tab <-- "/api/chrome/ws" --> core
-  core -- "区切った音声" --> batch["OpenAI /audio/transcriptions<br/>確定の字幕"]
-  batch --> llm["OpenAI /responses<br/>用語、翻訳<br/>ふりがな"]
+  core -- "区切った音声" --> worker["開発者のサーバー"]
+  worker --> stt["Qwen<br/>確定の文字起こし"]
+  stt --> words["OpenRouter<br/>用語、翻訳、ふりがな"]
   core --> ws["/ws"]
-  llm --> ws
+  words --> ws
   classDef cloud fill:#ffcf33,stroke:#12110e,color:#12110e
-  class google,batch,llm cloud
+  class google,worker,stt,words cloud
 ```
 
-**`openai`（OpenAI）。** 途中の字幕も OpenAI で作ります。途中の字幕を「出さない」にすると、Realtime にはつなぎません。
-
-```mermaid
-flowchart LR
-  mic["マイク"] --> core["中核<br/>発話を区切る"]
-  core -- "発話の音声" --> realtime["OpenAI /realtime<br/>途中の字幕"]
-  core -- "区切った音声" --> batch["OpenAI /audio/transcriptions<br/>確定の字幕"]
-  batch --> llm["OpenAI /responses<br/>用語、翻訳<br/>ふりがな"]
-  realtime --> ws["/ws"]
-  llm --> ws
-  classDef cloud fill:#ffcf33,stroke:#12110e,color:#12110e
-  class realtime,batch,llm cloud
-```
-
-**`chrome`（Chrome）。** 音声認識も翻訳も Chrome で行い、声は Chrome を通じて Google に送られます。読みと用語は中核で付け、OpenAI には何も送りません。
+**Chrome。** 音声認識も翻訳も Chrome で行い、声は Chrome を通じて Google に送られます。読みと用語は中核で付け、ほかには何も送りません。「Chrome+」は、用語の候補を Chrome の中の Gemini Nano に確かめさせます。
 
 ```mermaid
 flowchart LR
@@ -193,6 +187,18 @@ flowchart LR
   core --> ws["/ws"]
   classDef cloud fill:#ffcf33,stroke:#12110e,color:#12110e
   class google cloud
+```
+
+**ローカル。** 声も文字も PC から出しません。Chrome も開きません。
+
+```mermaid
+flowchart LR
+  mic["マイク"] --> core["中核<br/>発話を区切る<br/>読み、用語の候補"]
+  core -- "話している間の音声" --> live["speech.cpp（Haas-ja）<br/>途中の字幕"]
+  core -- "区切った音声" --> stt["whisper.cpp（Whisper）<br/>確定の文字起こし"]
+  stt --> words["llama.cpp（Gemma 4 E4B）<br/>用語、翻訳"]
+  live --> ws["/ws"]
+  words --> ws
 ```
 
 読みと辞書の一致は話す言語が日本語のときだけ動きます。ほかの言語でも Chrome は認識するので、字幕は出ます。
@@ -238,4 +244,4 @@ DEADLOCK_JIMAKU_DATA_DIR=/tmp/jimaku-dev DEADLOCK_JIMAKU_PORT=4599 cargo run -p 
 
 [PolyForm Strict License 1.0.0](LICENSE.md)。ソースは公開していますが、改変や再配布はできません。個人の利用はできます（詳しくは本文を見てください）。
 
-<sub>参考にしたプロジェクト: [音声認識字幕ちゃん](https://github.com/sayonari/jimakuChan)（sayonari さん。Chrome の音声認識の扱いの設計）、[ゆかりねっとコネクター NEO](https://nmori.github.io/yncneo-Docs/)（Chrome の音声認識を選ぶきっかけ）。ありがとうございます。</sub>
+<sub>参考にしたプロジェクト: [音声認識字幕ちゃん](https://github.com/sayonari/jimakuChan)（sayonari さん。Chrome の音声認識の扱いの設計）、[ゆかりねっとコネクター NEO](https://nmori.github.io/yncneo-Docs/)（Chrome の音声認識を選ぶきっかけ）、[Mojicast](https://github.com/ishiki-emo/mojicast)（ishiki-emo さん。ローカルの音声認識）。ありがとうございます。</sub>
