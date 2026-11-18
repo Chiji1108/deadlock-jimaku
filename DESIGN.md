@@ -1048,8 +1048,9 @@ GPU が 2 つ以上ある PC（CPU に内蔵の GPU と、あとから付けた 
 - **途中の字幕には選べない:** 話している途中の文字を出さないモデルなので、確定だけ。途中の字幕は Chrome などと組み合わせる。途中の字幕が Chrome でないときは、Chrome の翻訳は使えない（9.6 の決まり）
 - **動かない PC:** 日本語以外の話す言語。始めるときにエラーで止める
 - **確かめたこと:** Mac（M5 Pro）で、PyPI のライブラリでビルドした補助プログラムで、合成音声の 126 発話が Python の結果と同じ（用語 185、文字の誤り 163）。アプリを通して（`overlays-headless --input-file`）、録音から確定の字幕まで出た
-- **確かめていないこと:** Windows と Linux と Intel の Mac の実機（速さ、ゲーム中の CPU の負荷）。CI のビルド（リリースを作るまで動かしていない）
-- **確かめ方:** `REAZON_TEST_DIR=… cargo test -p overlays-core reazon_writes -- --ignored --nocapture`（リリースの前は、`REAZON_TEST_DIR/1.0.0/` に手元で作った補助プログラムを置く）
+- **確かめたこと（リリースのあと）:** Mac（M5 Pro）で、空のフォルダから、リリース `sherpa-v1.0.0` の zip とモデル（約 0.6 GB）を取り、SHA-256 を確かめて、合成音声を文字にした（44 秒。1 発話 0.10 秒）。CI では、4 つの OS で補助プログラムが立ち上がり、Mac と Linux で単体テストが通った
+- **確かめていないこと:** Windows と Linux と Intel の Mac の実機（速さ、ゲーム中の CPU の負荷）
+- **確かめ方:** `REAZON_TEST_DIR=… cargo test -p overlays-core reazon_writes -- --ignored --nocapture`（補助プログラムとモデルを取って、合成音声を文字にする）
 
 ### 9.15 確定の文の数字と句読点（`tidy.rs`）
 
