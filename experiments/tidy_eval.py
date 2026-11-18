@@ -13,7 +13,7 @@
 k2 が書いた文で、正解の算用数字が書けたか、変えてはいけない言い回し（一気、一緒、一瞬、一番）が残ったかを数える。
 
 usage: python3 tidy_eval.py [--k2-tidy results/tidy_k2.json]
-  `--k2-tidy` は、tts_tidy の録音を k2 で書いた文（stt_eval_k2_tidy の出力）。なければ数字は測らない
+  `--k2-tidy` は、tts_tidy の録音を k2 で書いた文（stt_k2_tidy.py の出力）。なければ数字は測らない
 """
 
 import difflib

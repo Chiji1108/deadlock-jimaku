@@ -3,7 +3,7 @@
 //! 形態素解析（`reading.rs`。ふりがなと同じ辞書）の語の区切りと品詞を使う。新しいモデルは使わない。
 //! - 数字: 数の語のあとに数える言葉（秒、回、キル、ソウルなど）が続くときだけ、算用数字にする（「三十五秒」→「35秒」、
 //!   「一万五千ソウル」→「1万5000ソウル」）。語の区切りで見るので、「一気」「一緒」「一瞬」は変えない。
-//!   「一番」（いちばん好き）と「一人」（ひとりで）は、言い回しのことが多いので変えない
+//!   「一番」（いちばん好き）と「一人」（ひとりで）は、言い回しのことが多いので変えない。ひらがなの数える言葉（「十ぷん」）は漢字にする
 //! - 句読点: 句読点を書かない文字起こし（Chrome、ReazonSpeech）の文にだけ付ける。Chrome は話の間に空白を入れるので、
 //!   空白を、言い切りの形（です、ます、ね、よ…）のあとなら「。」、ほかは「、」にする。助詞や助動詞の前の空白
 //!   （「カース は」）と、名詞と名詞の間の空白（「デッドロック 実況」）と、「は」のあとの間は、ただ消す。文の初めの感動詞（「うわ」「よし」）のあとに「、」、終わりに「。」を付ける
@@ -12,8 +12,9 @@ use crate::reading::Furigana;
 
 /// 数字と句読点を整えた文
 pub fn tidy(furigana: &Furigana, text: &str) -> String {
-    let text = numbers(furigana, text);
-    punctuate(furigana, &text)
+    // 句読点を先に付ける。数と数える言葉の間の空白（ReazonSpeech の「三 割」）が消えてから、数を読む
+    let text = punctuate(furigana, text);
+    numbers(furigana, &text)
 }
 
 /// 数える言葉。数の語のすぐ後ろにあれば、算用数字にする
@@ -63,6 +64,28 @@ const COUNTERS: &[&str] = &[
     "分間",
     "か月",
 ];
+/// ひらがなで書かれた数える言葉（ReazonSpeech は「十ぷん」「二ばん」と書くことがある）と、その漢字。
+/// 数のすぐ後ろのときだけ読むので、ほかの意味（「まい」「かい」）に取らない
+const KANA_COUNTERS: &[(&str, &str)] = &[
+    ("びょう", "秒"),
+    ("ふん", "分"),
+    ("ぷん", "分"),
+    ("かい", "回"),
+    ("ばん", "番"),
+    ("にん", "人"),
+    ("まい", "枚"),
+];
+
+/// 数える言葉なら、その書き方（ひらがなは漢字にする）
+fn counter(word: &str) -> Option<&'static str> {
+    COUNTERS.iter().copied().find(|c| *c == word).or_else(|| {
+        KANA_COUNTERS
+            .iter()
+            .find(|(kana, _)| *kana == word)
+            .map(|(_, kanji)| *kanji)
+    })
+}
+
 /// 数える言葉が付いていても、言い回しのことが多い語（そのまま残す）
 const IDIOMS: &[&str] = &[
     "一番",
@@ -103,13 +126,13 @@ fn numbers(furigana: &Furigana, text: &str) -> String {
             let digits: String = word.chars().take_while(|c| is_numeral(*c)).collect();
             let rest = &word[digits.len()..];
             if !digits.is_empty()
-                && COUNTERS.contains(&rest)
+                && let Some(unit) = counter(rest)
                 && !IDIOMS.contains(&word)
                 && let Some(n) = digits_or_value(&digits)
             {
                 out.push_str(&text[pos..start]);
                 out.push_str(&n);
-                out.push_str(rest);
+                out.push_str(unit);
                 pos = words[i].0.end;
             }
             i += 1;
@@ -120,7 +143,7 @@ fn numbers(furigana: &Furigana, text: &str) -> String {
         // 数の語のあとの、数で始まる 1 語（「三」「十分」）は、続きの数と数える言葉（三十分）。言い回しではない
         if let Some(word) = next {
             let digits: String = word.chars().take_while(|c| is_numeral(*c)).collect();
-            if !digits.is_empty() && COUNTERS.contains(&&word[digits.len()..]) {
+            if !digits.is_empty() && counter(&word[digits.len()..]).is_some() {
                 end += digits.len();
                 next = Some(&word[digits.len()..]);
             }
@@ -131,12 +154,20 @@ fn numbers(furigana: &Furigana, text: &str) -> String {
         let idiom = words
             .get(j)
             .is_some_and(|w| IDIOMS.contains(&&text[start..w.0.end]));
-        let counted = next.is_some_and(|w| COUNTERS.contains(&w) && !idiom)
-            || before.is_some_and(|w| BEFORE.contains(&w) || w == "対");
+        let unit = next.and_then(counter).filter(|_| !idiom);
+        let counted = unit.is_some() || before.is_some_and(|w| BEFORE.contains(&w) || w == "対");
         if counted && let Some(n) = digits_or_value(number) {
             out.push_str(&text[pos..start]);
             out.push_str(&n);
             pos = end;
+            // ひらがなの数える言葉は、漢字で書き直す
+            if let Some(unit) = unit
+                && next != Some(unit)
+            {
+                out.push_str(unit);
+                end = words[j].0.end;
+                pos = end;
+            }
         }
         // 数える言葉の 1 語に入り込んだ数（「十分」の「十」）を読んだら、その語は終わっている
         i = if end > words[j - 1].0.end { j + 1 } else { j };
@@ -365,6 +396,10 @@ mod tests {
         assert_eq!(numbers(f, "二対一は無理"), "2対1は無理");
         assert_eq!(numbers(f, "レベル五になった"), "レベル5になった");
         assert_eq!(numbers(f, "あと三十分後"), "あと30分後");
+        // ひらがなの数える言葉は、漢字にする
+        assert_eq!(numbers(f, "いま十ぷんだから"), "いま10分だから");
+        assert_eq!(numbers(f, "ヘイズの二ばんで"), "ヘイズの2番で");
+        assert_eq!(numbers(f, "二まいめのカード"), "2枚めのカード");
         // 算用数字は、値を読み直さない
         assert_eq!(numbers(f, "0.05秒だけ遅い"), "0.05秒だけ遅い");
         assert_eq!(numbers(f, "００７番"), "007番");
@@ -399,6 +434,15 @@ mod tests {
         assert_eq!(format_number(15_000), "1万5000");
         assert_eq!(format_number(20_000), "2万");
         assert_eq!(format_number(123_456_789), "1億2345万6789");
+    }
+
+    #[test]
+    fn numbers_split_by_pauses_are_read() {
+        let f = furigana();
+        // ReazonSpeech は、数と数える言葉の間にも話の間の空白を入れる
+        assert_eq!(tidy(f, "パッチで三 割くらい"), "パッチで3割くらい。");
+        assert_eq!(tidy(f, "ヘイズの四 番 強い"), "ヘイズの4番、強い。");
+        assert_eq!(tidy(f, "そっち二 人いるよ"), "そっち2人いるよ。");
     }
 
     #[test]
