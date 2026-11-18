@@ -1,6 +1,4 @@
 <script lang="ts">
-  import LinkIcon from "@lucide/svelte/icons/link";
-  import * as Alert from "$lib/components/ui/alert";
   import { Button } from "$lib/components/ui/button";
   import * as Card from "$lib/components/ui/card";
   import * as Field from "$lib/components/ui/field";
@@ -14,6 +12,7 @@
   import AnchorPicker from "../parts/AnchorPicker.svelte";
   import FontPicker from "../parts/FontPicker.svelte";
   import OverlayPreview from "../parts/OverlayPreview.svelte";
+  import SteamAccount from "../parts/SteamAccount.svelte";
   import StyleNumber from "../parts/StyleNumber.svelte";
   import TextStyleFields from "../parts/TextStyleFields.svelte";
   import { rankSize } from "../../lib/overlay-size";
@@ -58,127 +57,119 @@
     />
   {/snippet}
 
-  <Card.Root>
-    <Card.Header>
-      <Card.Title>ランクオーバーレイ</Card.Title>
-      <Card.Description>
-        ランクのアイコン・名前・ゲージを出します。試合の結果が反映されるまで少しかかります
-      </Card.Description>
-    </Card.Header>
-    <Card.Content class="flex flex-col gap-6">
-      {#if !s.rankAccount}
-        <Alert.Root>
-          <LinkIcon />
-          <Alert.Title>Steam のアカウントをつなぐと、ランクが出ます</Alert.Title>
-          <Alert.Description>
-            <Button size="sm" variant="outline" onclick={() => panel.show("people", "steam")}>
-              プロフィールでつなぐ
-            </Button>
-          </Alert.Description>
-        </Alert.Root>
-      {/if}
+  <div class="flex flex-col gap-6">
+    <SteamAccount />
 
-      <Field.Field>
-        <Field.Label>出すもの</Field.Label>
-        <Field.Description>「アイコンだけ」以外は、アイコンの横に出します</Field.Description>
-        <ToggleGroup.Root
-          type="single"
-          variant="outline"
-          class="w-full"
-          value={s.rankContent}
-          onValueChange={(v) => v && panel.update({ rankContent: v as RankContent })}
-        >
-          {#each CONTENTS as c (c.value)}
-            <ToggleGroup.Item value={c.value} class="flex-1">{c.label}</ToggleGroup.Item>
-          {/each}
-        </ToggleGroup.Root>
-      </Field.Field>
-
-      <Field.Field>
-        <Field.Label>位置</Field.Label>
-        <AnchorPicker
-          label="ランクの位置"
-          value={s.rankAnchor}
-          onchange={(rankAnchor) => panel.update({ rankAnchor })}
-        />
-        <Field.Description>OBS のソースの箱の中で、ランクを寄せる位置です</Field.Description>
-      </Field.Field>
-
-      <Field.Field>
-        <Field.Label>エターナスの順位</Field.Label>
-        <Select.Root
-          type="single"
-          value={s.rankRegion ?? NO_REGION}
-          onValueChange={(v) => panel.update({ rankRegion: v })}
-        >
-          <Select.Trigger class="w-full">
-            {s.rankRegion ? REGIONS[s.rankRegion].ja : "出さない"}
-          </Select.Trigger>
-          <Select.Content>
-            <Select.Item value={NO_REGION}>出さない</Select.Item>
-            {#each regions as [value, name] (value)}
-              <Select.Item {value}>{name.ja}のリーダーボード</Select.Item>
+    <Card.Root>
+      <Card.Header>
+        <Card.Title>ランクオーバーレイ</Card.Title>
+        <Card.Description>
+          ランクのアイコン・名前・ゲージを出します。試合の結果が反映されるまで少しかかります
+        </Card.Description>
+      </Card.Header>
+      <Card.Content class="flex flex-col gap-6">
+        <Field.Field>
+          <Field.Label>出すもの</Field.Label>
+          <Field.Description>「アイコンだけ」以外は、アイコンの横に出します</Field.Description>
+          <ToggleGroup.Root
+            type="single"
+            variant="outline"
+            class="w-full"
+            value={s.rankContent}
+            onValueChange={(v) => v && panel.update({ rankContent: v as RankContent })}
+          >
+            {#each CONTENTS as c (c.value)}
+              <ToggleGroup.Item value={c.value} class="flex-1">{c.label}</ToggleGroup.Item>
             {/each}
-          </Select.Content>
-        </Select.Root>
-        <Field.Description>
-          エターナスのときだけ、ポイントの代わりにリーダーボードの順位（例: アジア
-          123位）を出します。更新は 1 時間ごとで、順位が分からないときはポイントを出します
-        </Field.Description>
-      </Field.Field>
+          </ToggleGroup.Root>
+        </Field.Field>
 
-      <Field.Field>
-        <Field.Label>ランク名の言語</Field.Label>
-        <Select.Root
-          type="single"
-          value={language}
-          onValueChange={(v) => panel.update({ rankLanguage: v })}
+        <Field.Field>
+          <Field.Label>位置</Field.Label>
+          <AnchorPicker
+            label="ランクの位置"
+            value={s.rankAnchor}
+            onchange={(rankAnchor) => panel.update({ rankAnchor })}
+          />
+          <Field.Description>OBS のソースの箱の中で、ランクを寄せる位置です</Field.Description>
+        </Field.Field>
+
+        <Field.Field>
+          <Field.Label>エターナスの順位</Field.Label>
+          <Select.Root
+            type="single"
+            value={s.rankRegion ?? NO_REGION}
+            onValueChange={(v) => panel.update({ rankRegion: v })}
+          >
+            <Select.Trigger class="w-full">
+              {s.rankRegion ? REGIONS[s.rankRegion].ja : "出さない"}
+            </Select.Trigger>
+            <Select.Content>
+              <Select.Item value={NO_REGION}>出さない</Select.Item>
+              {#each regions as [value, name] (value)}
+                <Select.Item {value}>{name.ja}のリーダーボード</Select.Item>
+              {/each}
+            </Select.Content>
+          </Select.Root>
+          <Field.Description>
+            エターナスのときだけ、ポイントの代わりにリーダーボードの順位（例: アジア
+            123位）を出します。更新は 1 時間ごとで、順位が分からないときはポイントを出します
+          </Field.Description>
+        </Field.Field>
+
+        <Field.Field>
+          <Field.Label>ランク名の言語</Field.Label>
+          <Select.Root
+            type="single"
+            value={language}
+            onValueChange={(v) => panel.update({ rankLanguage: v })}
+          >
+            <Select.Trigger class="w-full">
+              {language === FOLLOW
+                ? `話す言語に合わせる（${panel.label(s.micLanguage)}）`
+                : panel.label(language)}
+            </Select.Trigger>
+            <Select.Content>
+              <Select.Item value={FOLLOW}
+                >話す言語に合わせる（{panel.label(s.micLanguage)}）</Select.Item
+              >
+              {#each languages as code (code)}
+                <Select.Item value={code}>{panel.label(code)}</Select.Item>
+              {/each}
+            </Select.Content>
+          </Select.Root>
+        </Field.Field>
+
+        <Field.Separator />
+
+        <TextStyleFields
+          look={s.rankStyle}
+          standard={RANK_TEXT}
+          onchange={setStyle}
+          onreset={() => setStyle(cleared(s.rankStyle))}
+          detailValues={[s.rankStyle.letterSpacing]}
         >
-          <Select.Trigger class="w-full">
-            {language === FOLLOW
-              ? `話す言語に合わせる（${panel.label(s.micLanguage)}）`
-              : panel.label(language)}
-          </Select.Trigger>
-          <Select.Content>
-            <Select.Item value={FOLLOW}
-              >話す言語に合わせる（{panel.label(s.micLanguage)}）</Select.Item
-            >
-            {#each languages as code (code)}
-              <Select.Item value={code}>{panel.label(code)}</Select.Item>
-            {/each}
-          </Select.Content>
-        </Select.Root>
-      </Field.Field>
-
-      <Field.Separator />
-
-      <TextStyleFields
-        look={s.rankStyle}
-        standard={RANK_TEXT}
-        onchange={setStyle}
-        onreset={() => setStyle(cleared(s.rankStyle))}
-        detailValues={[s.rankStyle.letterSpacing]}
-      >
-        {#snippet fonts()}
-          <FontPicker
-            target={{ kind: "rank" }}
-            language={language || s.micLanguage}
-            label="ランク"
-            standardWeight={RANK_TEXT.weight}
-          />
-        {/snippet}
-        {#snippet details()}
-          <StyleNumber
-            label="字間"
-            value={s.rankStyle.letterSpacing}
-            standard={RANK_TEXT.letterSpacing}
-            presets={[0, 0.02, 0.05, 0.1]}
-            percent
-            range={{ min: -10, max: 10, step: 1 }}
-            onchange={(letterSpacing) => setStyle({ letterSpacing })}
-          />
-        {/snippet}
-      </TextStyleFields>
-    </Card.Content>
-  </Card.Root>
+          {#snippet fonts()}
+            <FontPicker
+              target={{ kind: "rank" }}
+              language={language || s.micLanguage}
+              label="ランク"
+              standardWeight={RANK_TEXT.weight}
+            />
+          {/snippet}
+          {#snippet details()}
+            <StyleNumber
+              label="字間"
+              value={s.rankStyle.letterSpacing}
+              standard={RANK_TEXT.letterSpacing}
+              presets={[0, 0.02, 0.05, 0.1]}
+              percent
+              range={{ min: -10, max: 10, step: 1 }}
+              onchange={(letterSpacing) => setStyle({ letterSpacing })}
+            />
+          {/snippet}
+        </TextStyleFields>
+      </Card.Content>
+    </Card.Root>
+  </div>
 </OverlayPage>

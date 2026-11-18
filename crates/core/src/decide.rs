@@ -26,20 +26,6 @@ use crate::usage::{Meter, Tokens, Use};
 /// 応答は 0.3 秒ほど。待たせすぎずに、辞書の一致に切り替える
 const TIMEOUT: Duration = Duration::from_secs(3);
 
-/// スキルの前に付くと、配信者のスキルではないと分かる言葉
-const OTHERS: [&str; 10] = [
-    "相手の",
-    "敵の",
-    "味方の",
-    "向こうの",
-    "あっちの",
-    "あいつの",
-    "こいつの",
-    "そいつの",
-    "誰かの",
-    "みんなの",
-];
-
 /// 1 つの言葉に当てる、似た名前の用語の数
 const MAX_SIMILAR: usize = 5;
 
@@ -125,10 +111,9 @@ impl Decider {
         http: &reqwest::Client,
         text: &str,
         context: &[String],
-        playing: Option<&str>,
         loaded: &Loaded,
     ) -> anyhow::Result<Vec<Span>> {
-        let Some(asked) = self.ask(text, context, playing, loaded) else {
+        let Some(asked) = self.ask(text, context, loaded) else {
             return Ok(vec![Span::Text(text.to_owned())]);
         };
         let (access, model) = match &self.judge {
@@ -157,18 +142,12 @@ impl Decider {
     }
 
     /// 文の候補と、それを確かめる問い合わせ。候補がなければ None（聞かなくてよい）
-    pub fn ask(
-        &self,
-        text: &str,
-        context: &[String],
-        playing: Option<&str>,
-        loaded: &Loaded,
-    ) -> Option<Asked> {
+    pub fn ask(&self, text: &str, context: &[String], loaded: &Loaded) -> Option<Asked> {
         let model = match &self.judge {
             Judge::Api { model, .. } => model,
             Judge::Local(_) => llama::GEMMA,
         };
-        self.asker.ask(model, text, context, playing, loaded)
+        self.asker.ask(model, text, context, loaded)
     }
 }
 
@@ -180,20 +159,18 @@ impl Asker {
         }
     }
 
-    /// 文の候補と、それを確かめる問い合わせ。候補がなければ None（聞かなくてよい）。`model` は会社に送るモデルの名前。
-    /// `playing` は、配信者が今使っているヒーロー（参照。分からなければ None）
+    /// 文の候補と、それを確かめる問い合わせ。候補がなければ None（聞かなくてよい）。`model` は会社に送るモデルの名前
     pub fn ask(
         &self,
         model: &str,
         text: &str,
         context: &[String],
-        playing: Option<&str>,
         loaded: &Loaded,
     ) -> Option<Asked> {
         let index = self.index(loaded);
-        let candidates = candidates(text, context, playing, &index, &loaded.glossary);
+        let candidates = candidates(text, context, &index, &loaded.glossary);
         (!candidates.is_empty()).then(|| Asked {
-            request: question(model, text, context, playing, &candidates, &loaded.glossary),
+            request: question(model, text, context, &candidates, &loaded.glossary),
             text: text.to_owned(),
             candidates,
         })
@@ -394,19 +371,14 @@ fn index(loaded: &Loaded, source_lang: &str) -> Index {
 fn candidates(
     text: &str,
     context: &[String],
-    playing: Option<&str>,
     index: &Index,
     glossary: &Glossary,
 ) -> Vec<Candidate> {
     let mut found = named(text, index);
-    // 文と前の発話に出たヒーロー（その言葉が指しうるものを全部）と、配信者が今使っているヒーロー。
-    // 「ウルト」は、そのスキルから選ばせる（誰の名前も出ていなくても、自分のスキルの話かもしれない）
+    // 文と前の発話に出たヒーロー（その言葉が指しうるものを全部）。「ウルト」は、そのスキルから選ばせる。
+    // 誰の名前も出ていなければ、誰のスキルか分からないので候補にしない
     let before: Vec<Candidate> = context.iter().flat_map(|c| named(c, index)).collect();
     let said = before.iter().chain(&found).flat_map(|c| &c.refs);
-    let own = playing
-        .and_then(|hero| glossary.entities.get_key_value(hero))
-        .filter(|(_, e)| e.kind == EntityKind::Hero)
-        .map(|(r, _)| r);
     let heroes: Vec<&String> = said
         .filter_map(|r| glossary.entities.get_key_value(r))
         .filter(|(_, e)| e.kind == EntityKind::Hero)
@@ -435,10 +407,7 @@ fn candidates(
                 .filter(|r| heroes.contains(r))
                 .collect()
         } else {
-            // 「相手のウルト」のように、ほかの人のものだと言っていたら、自分のヒーローのスキルは候補にしない
-            // （判定モデルに任せると、自分のスキルを選んでしまう。実測）
-            let own = own.filter(|_| !OTHERS.iter().any(|other| text[..at].ends_with(other)));
-            heroes.iter().copied().chain(own).collect()
+            heroes.clone()
         };
         let refs: Vec<String> = glossary
             .entities
@@ -621,18 +590,9 @@ fn question(
     model: &str,
     text: &str,
     context: &[String],
-    playing: Option<&str>,
     candidates: &[Candidate],
     glossary: &Glossary,
 ) -> Value {
-    // 配信者が使っているヒーロー。名前を言わずに「ウルト」と言ったら、たいてい自分のスキル
-    let own = playing
-        .and_then(|hero| glossary.entities.get(hero)?.names.get("en"))
-        .map_or(String::new(), |hero| {
-            format!(
-                "The streamer is playing {hero}; an ability named without a hero is usually their own.\n"
-            )
-        });
     let describe = |reference: &String| {
         let e = &glossary.entities[reference];
         let name = |lang: &str| e.names.get(lang).map_or("", String::as_str);
@@ -689,7 +649,7 @@ fn question(
         "model": model,
         "input": format!(
             "Live commentary from a Japanese streamer playing the video game Deadlock, written by speech recognition.\n\
-             {own}Previous utterances (context only): {}\nTranscript: {text}",
+             Previous utterances (context only): {}\nTranscript: {text}",
             json!(context)
         ),
         "questions": questions,
@@ -774,143 +734,14 @@ mod tests {
     fn found(text: &str, context: &[&str]) -> Vec<(String, Vec<String>)> {
         let loaded = loaded();
         let context: Vec<String> = context.iter().map(|c| (*c).to_owned()).collect();
-        candidates(
-            text,
-            &context,
-            None,
-            &index(&loaded, "ja"),
-            &loaded.glossary,
-        )
-        .into_iter()
-        .map(|c| (c.spoken, c.refs))
-        .collect()
+        candidates(text, &context, &index(&loaded, "ja"), &loaded.glossary)
+            .into_iter()
+            .map(|c| (c.spoken, c.refs))
+            .collect()
     }
 
     fn refs(list: &[&str]) -> Vec<String> {
         list.iter().map(|r| (*r).to_owned()).collect()
-    }
-
-    /// 本物の辞書と PC の中の LLM で、名前の出ていない「ウルト」が、使っているヒーローのスキルになるかを見る:
-    /// `LLAMA_TEST_DIR=… SPLIT_EVAL_ASSETS=… cargo test -p overlays-core bare_ult -- --ignored --nocapture`
-    #[tokio::test]
-    #[ignore = "starts llama.cpp and reads the app's glossary"]
-    async fn local_llm_takes_a_bare_ult_as_the_streamers_own() {
-        let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
-        let assets = std::env::var("SPLIT_EVAL_ASSETS").expect("SPLIT_EVAL_ASSETS");
-        let languages = ["ja".to_owned(), "en".to_owned()];
-        let loaded = crate::assets::load(std::path::Path::new(&assets), &languages)
-            .await
-            .unwrap();
-        let dir = std::env::var("LLAMA_TEST_DIR").expect("LLAMA_TEST_DIR");
-        let llama = Llama::start(std::path::Path::new(&dir), None, &|_, _| {}).await;
-        let meter = Arc::new(Meter::new(
-            std::env::temp_dir().join("decide_playing_usage.json"),
-        ));
-        let decider = Decider::local(Arc::new(llama.unwrap()), "ja".into(), meter);
-        let haze = "hero:13";
-        let ult =
-            |e: &crate::types::Entity| e.hero.as_deref() == Some(haze) && e.ability_slot == Some(4);
-        let (ult, _) = loaded
-            .glossary
-            .entities
-            .iter()
-            .find(|(_, e)| ult(e))
-            .unwrap();
-        for said in [
-            "ウルト使うよ",
-            "ウルト溜まった、行くよ",
-            "今ウルトないから下がるね",
-        ] {
-            let mut found = Vec::new();
-            for playing in [Some(haze), None] {
-                let spans = decider
-                    .terms(crate::http(), said, &[], playing, &loaded)
-                    .await;
-                let refs = spans.unwrap().into_iter().filter_map(|span| match span {
-                    Span::Entity { reference, .. } => Some(reference),
-                    Span::Text(_) => None,
-                });
-                found.push(refs.collect::<Vec<String>>());
-            }
-            println!("{said}: with {:?}, without {:?}", found[0], found[1]);
-            assert!(found[1].is_empty(), "{said}");
-            assert_eq!(found[0], std::slice::from_ref(ult), "{said}");
-        }
-        // ほかのヒーローの名前が出ていれば、そのヒーローのスキル。相手のスキルの話は、自分のものにしない
-        let name = |reference: &str| loaded.glossary.entities[reference].names["en"].clone();
-        for (said, own) in [
-            ("ダイナモのウルトやばい", false),
-            ("相手のウルト来るよ、気をつけて", false),
-        ] {
-            let spans = decider
-                .terms(crate::http(), said, &[], Some(haze), &loaded)
-                .await;
-            let refs: Vec<String> = (spans.unwrap().into_iter())
-                .filter_map(|span| match span {
-                    Span::Entity { reference, .. } => Some(name(&reference)),
-                    Span::Text(_) => None,
-                })
-                .collect();
-            println!("{said}: {refs:?}");
-            assert_eq!(refs.contains(&name(ult)), own, "{said}");
-        }
-    }
-
-    /// 誰の名前も出ていない「ウルト」は、配信者が使っているヒーローのスキルを候補にする。
-    /// 名前の出たヒーローがいれば、そちらも候補に残す（選ぶのは判定モデル）
-    #[test]
-    fn an_ability_without_a_hero_is_the_streamers_own() {
-        let loaded = loaded();
-        let index = index(&loaded, "ja");
-        let found = |text: &str, playing: Option<&str>| -> Vec<(String, Vec<String>)> {
-            candidates(text, &[], playing, &index, &loaded.glossary)
-                .into_iter()
-                .map(|c| (c.spoken, c.refs))
-                .collect()
-        };
-        assert!(found("ウルト使うよ", None).is_empty());
-        assert_eq!(
-            found("ウルト使うよ", Some("hero:13")),
-            [("ウルト".to_owned(), refs(&["ability:4"]))]
-        );
-        let both = found("ポケットのウルト", Some("hero:13"));
-        assert_eq!(
-            both[1],
-            ("ウルト".to_owned(), refs(&["ability:24", "ability:4"]))
-        );
-        // ほかの人のスキルだと言っていたら、自分のスキルは候補にしない
-        assert!(found("相手のウルト来るよ", Some("hero:13")).is_empty());
-        assert!(found("敵のウルトやばい", Some("hero:13")).is_empty());
-        // 辞書にないヒーローや、ヒーローでない参照は、何も足さない
-        assert!(found("ウルト使うよ", Some("hero:999")).is_empty());
-        assert!(found("ウルト使うよ", Some("item:1")).is_empty());
-
-        let candidates = candidates(
-            "ウルト使うよ",
-            &[],
-            Some("hero:13"),
-            &index,
-            &loaded.glossary,
-        );
-        let body = question(
-            "m",
-            "ウルト使うよ",
-            &[],
-            Some("hero:13"),
-            &candidates,
-            &loaded.glossary,
-        );
-        let input = body["input"].as_str().unwrap();
-        assert!(input.contains("The streamer is playing Haze"), "{input}");
-        let without = question(
-            "m",
-            "ウルト使うよ",
-            &[],
-            None,
-            &candidates,
-            &loaded.glossary,
-        );
-        assert!(!without["input"].as_str().unwrap().contains("playing Haze"));
     }
 
     /// Chrome のページ（Gemini Nano）に同じ問いを送り、選ばれた選択肢で用語が決まる
@@ -923,7 +754,7 @@ mod tests {
 
         let store = Store::new(Ok(Settings::default()), std::path::PathBuf::new());
         let asked = Asker::new("ja".into())
-            .ask("", "拡マガを取る", &[], None, &loaded())
+            .ask("", "拡マガを取る", &[], &loaded())
             .unwrap();
         // ページが開いていなければ聞かない
         assert_eq!(chrome::decide(&store, &asked, "1").await, None);
@@ -946,7 +777,7 @@ mod tests {
         let choices = chrome::decide(&store, &asked, "1").await.unwrap();
         // 答えのない問いがあれば使わない（辞書の一致まで消さない）
         let both = Asker::new("ja".into())
-            .ask("", "拡マガとヘイズ", &[], None, &loaded())
+            .ask("", "拡マガとヘイズ", &[], &loaded())
             .unwrap();
         let mut page = store.subscribe_chrome_commands();
         let answering = store.clone();
@@ -1049,21 +880,14 @@ mod tests {
         let spoken = |text: &str, context: &[&str]| {
             let loaded = loaded();
             let context: Vec<String> = context.iter().map(|c| (*c).to_owned()).collect();
-            let playing = Some("hero:13");
-            candidates(
-                text,
-                &context,
-                playing,
-                &index(&loaded, "ja"),
-                &loaded.glossary,
-            )
-            .into_iter()
-            .map(|c| c.spoken)
-            .collect::<Vec<_>>()
+            candidates(text, &context, &index(&loaded, "ja"), &loaded.glossary)
+                .into_iter()
+                .map(|c| c.spoken)
+                .collect::<Vec<_>>()
         };
         assert_eq!(spoken("ヘイズの2番で寝かせる。", &[]), ["ヘイズ", "2番"]);
         assert_eq!(spoken("ヘイズ2で寝かせる。", &[]), ["ヘイズ", "2"]);
-        // 使っているヒーローが分かっていても、数字だけでは拾わない（普通の言葉にも出る）
+        // 数字だけでは拾わない（普通の言葉にも出る）
         assert_eq!(spoken("1人で来てる。2番ある。", &[]), [] as [&str; 0]);
         assert_eq!(
             spoken("それが1番いい。", &["ヘイズもいる。"]),
@@ -1071,16 +895,15 @@ mod tests {
         );
         assert_eq!(spoken("ヘイズが1人で来てる。", &[]), ["ヘイズ"]);
         assert_eq!(spoken("ヘイズの20秒。", &[]), ["ヘイズ"]);
-        // 「ウルト」は、今までどおり自分のスキルから選ばせる
-        assert_eq!(spoken("ウルト使うよ。", &[]), ["ウルト"]);
+        // 誰の名前も出ていない「ウルト」は、誰のスキルか分からないので拾わない
+        assert_eq!(spoken("ウルト使うよ。", &[]), [] as [&str; 0]);
     }
 
     #[test]
     fn chosen_candidates_become_spans() {
         let text = "ヘイズの2で寝かせてからウルト。";
         let loaded = loaded();
-        let mut all =
-            candidates(text, &[], None, &index(&loaded, "ja"), &loaded.glossary).into_iter();
+        let mut all = candidates(text, &[], &index(&loaded, "ja"), &loaded.glossary).into_iter();
         let (hero, two) = (all.next().unwrap(), all.next().unwrap());
         let chosen = [(hero, "hero:13".to_owned()), (two, "ability:2".to_owned())];
         let entity = |reference: &str, spoken: &str| Span::Entity {
@@ -1103,7 +926,7 @@ mod tests {
         let loaded = loaded();
         // 「バレット」はバレットダンスに似ている。ウルトがバレットダンスなら、同じ用語を 2 度付けない
         let text = "ヘイズのウルトのバレットが痛い。";
-        let found = candidates(text, &[], None, &index(&loaded, "ja"), &loaded.glossary);
+        let found = candidates(text, &[], &index(&loaded, "ja"), &loaded.glossary);
         let spoken: Vec<&str> = found.iter().map(|c| c.spoken.as_str()).collect();
         assert_eq!(spoken, ["ヘイズ", "ウルト", "バレット"]);
         let chosen: Vec<(Candidate, String)> = found
@@ -1121,12 +944,11 @@ mod tests {
     fn the_question_offers_each_candidate_and_none() {
         let loaded = loaded();
         let text = "ポケットのウルト避けて。";
-        let candidates = candidates(text, &[], None, &index(&loaded, "ja"), &loaded.glossary);
+        let candidates = candidates(text, &[], &index(&loaded, "ja"), &loaded.glossary);
         let body = question(
             "gpt-6-luna",
             text,
             &["前の発話".to_owned()],
-            None,
             &candidates,
             &loaded.glossary,
         );

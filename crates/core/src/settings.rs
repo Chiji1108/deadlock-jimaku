@@ -42,9 +42,6 @@ pub struct Settings {
     pub translate_to: Vec<LangCode>,
     /// 人の辞書（自分と、よく一緒に遊ぶ人。DESIGN.md 9.12）
     pub people: Vec<Person>,
-    /// 配信者が使っているヒーロー（`hero:{id}`）。None なら、試合から自動で取る（DESIGN.md 9.13）
-    #[ts(optional)]
-    pub playing: Option<String>,
     /// PC の中の AI に使わせる GPU の名前。None なら自動（内蔵でない GPU を優先。DESIGN.md 9.11）
     #[ts(optional)]
     pub local_gpu: Option<String>,
@@ -1205,7 +1202,6 @@ impl Default for Settings {
             mic_language: "ja".into(),
             mic_device: None,
             people: Vec::new(),
-            playing: None,
             local_gpu: None,
             translate_to: vec!["en".into()],
             deadlock_mode: true,
@@ -1452,12 +1448,6 @@ impl Settings {
         if let Some(device) = patch.mic_device {
             next.mic_device = Some(device).filter(|d| !d.is_empty());
         }
-        if let Some(hero) = patch.playing {
-            if !hero.is_empty() && !hero.starts_with("hero:") {
-                return Err(format!("not a hero: {hero}"));
-            }
-            next.playing = Some(hero).filter(|h| !h.is_empty());
-        }
         if let Some(people) = patch.people {
             next.people = people::sanitized(people)?;
         }
@@ -1581,9 +1571,6 @@ pub struct SettingsPatch {
     /// 人の辞書の全体（差し替える）
     #[ts(optional)]
     pub people: Option<Vec<Person>>,
-    /// 使っているヒーロー（`hero:{id}`）。空文字列なら自動
-    #[ts(optional)]
-    pub playing: Option<String>,
     #[ts(optional)]
     pub translate_to: Option<Vec<LangCode>>,
     #[ts(optional)]

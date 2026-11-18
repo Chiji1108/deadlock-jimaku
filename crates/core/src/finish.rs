@@ -245,19 +245,16 @@ impl Finisher {
                     .as_ref()
                     .filter(|_| phase.emphasis == Some(EmphasisSource::Decisions));
                 let nano = phase.emphasis == Some(EmphasisSource::Chrome);
-                // 配信者が今使っているヒーロー（「ウルト」だけ言ったときに、そのスキルを候補にする）
-                let playing = self.store.playing();
-                let playing = playing.as_deref();
                 let decided = match (decider, &loaded) {
                     (Some(d), Some(loaded)) => answer(
                         "terms",
-                        d.terms(crate::http(), &text, &context, playing, loaded)
+                        d.terms(crate::http(), &text, &context, loaded)
                             .await
                             .map(Some),
                     )?,
                     // 候補がなければ聞かない。ページが答えなければ、PC の中で付けた用語のまま
                     (None, Some(loaded)) if nano => {
-                        match self.asker.ask("", &text, &context, playing, loaded) {
+                        match self.asker.ask("", &text, &context, loaded) {
                             Some(asked) => chrome::decide(&self.store, &asked, &id)
                                 .await
                                 .map(|choices| asked.spans(|name| choices.get(name).cloned())),

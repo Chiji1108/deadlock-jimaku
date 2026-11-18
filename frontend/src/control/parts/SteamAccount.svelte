@@ -1,6 +1,5 @@
 <script lang="ts">
-  // Steam のアカウント。ランク、使っているヒーロー、自分のアイコンが、ここから取る。
-  // 1 つのオーバーレイのものではないので、「プロフィール」に置く
+  // Steam のアカウント。ランクを取るのに使うので、「ランク」のタブに置く（プロフィールの自分のアイコンも、ここから取れる）
   import { Button } from "$lib/components/ui/button";
   import * as Card from "$lib/components/ui/card";
   import * as Field from "$lib/components/ui/field";
@@ -17,12 +16,10 @@
   }
 </script>
 
-<Card.Root id="steam" class="scroll-mt-6">
+<Card.Root>
   <Card.Header>
     <Card.Title>Steam のアカウント</Card.Title>
-    <Card.Description>
-      つなぐと、ランクのオーバーレイが出て、使っているヒーローを試合から取ります
-    </Card.Description>
+    <Card.Description>つなぐと、ランクのオーバーレイが出ます</Card.Description>
   </Card.Header>
   <Card.Content>
     <form
