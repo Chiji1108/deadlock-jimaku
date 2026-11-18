@@ -17,7 +17,6 @@ pub mod local;
 pub mod markup;
 pub mod mt;
 pub mod people;
-pub mod playing;
 pub mod rank;
 pub mod reading;
 pub mod relay;

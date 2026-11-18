@@ -14,7 +14,6 @@
   import ModeBadges from "../parts/ModeBadges.svelte";
   import Onboarding from "../parts/Onboarding.svelte";
   import OverlayPreview from "../parts/OverlayPreview.svelte";
-  import PlayingHero from "../parts/PlayingHero.svelte";
   import { panel, transcriptionErrorText } from "../panel.svelte";
   import { BETA, chromeFinals, modeOf, usesChrome } from "../../lib/engines";
   import { SUBTITLE_SIZE } from "../../lib/overlay-size";
@@ -158,7 +157,6 @@
           {#if usesChrome(t)}<ChromeWindow />{/if}
         </Card.Content>
       </Card.Root>
-      {#if s.deadlockMode && s.micLanguage === "ja"}<PlayingHero />{/if}
       <Card.Root>
         <Card.Header>
           <Card.Title>言語</Card.Title>
