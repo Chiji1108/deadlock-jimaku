@@ -6,6 +6,8 @@
 - chrome: 本物の声（data/sample01、02）を Chrome が書いた確定の文（results/sample0N.chrome.json。話の間に空白が入る）
 - chrome-tts: ElevenLabs の 126 発話を、声ごとに 1 本につないで Chrome に聞かせた文（results/stt_terms.json の chrome）
 - k2: ElevenLabs の 126 発話（data/tts）を ReazonSpeech k2 が書いた文（results/stt_terms.json。句読点も空白もない）
+- k2-pauses-tts、k2-pauses-real: 補助プログラム（crates/sherpa）が、話の間（文字の間の無音）に空白を入れて書いた文
+  （ElevenLabs の 126 発話と、本物の声 2 本。results/k2_pauses.json。stt_k2_pauses.py が作る）
 - oracle: 台本の文の句読点を空白に置き換えたもの（話の間が完全にわかるとき、「、」と「。」を選べるか）
 数字: data/tidy_script.json の 36 文で、台本の算用数字を漢数字に書き換えた文（oracle。決まりそのものを確かめる）と、録音（data/tts_tidy。`tts_generate.py --script data/tidy_script.json --out data/tts_tidy`）を
 k2 が書いた文で、正解の算用数字が書けたか、変えてはいけない言い回し（一気、一緒、一瞬、一番）が残ったかを数える。
@@ -144,6 +146,14 @@ def main() -> None:
     refs = [script[r["line"]] for r in runs]
     report["k2/none"] = list(zip(refs, heard))
     report["k2/tidy"] = list(zip(refs, tidy(heard)))
+
+    # k2-pauses: 補助プログラムが話の間に空白を入れた文（stt_k2_pauses.py が作る）
+    pauses = HERE / "results/k2_pauses.json"
+    if pauses.exists():
+        written = json.loads(pauses.read_text())
+        for part in ["tts", "real"]:
+            rows = written[part]
+            report[f"k2-pauses-{part}/tidy"] = list(zip([r["ref"] for r in rows], tidy([r["heard"] for r in rows])))
 
     # oracle: 台本の句読点を空白にした文（終わりの句読点は消す）
     spaced = [re.sub(f"[{MARKS}]", " ", t).strip() for t in script]
