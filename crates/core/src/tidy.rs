@@ -67,6 +67,8 @@ const COUNTERS: &[&str] = &[
 const IDIOMS: &[&str] = &[
     "一番",
     "一人",
+    // じゅうぶん（10 分のことは少ない）
+    "十分",
     "一度",
     "一本",
     "一発",
@@ -113,20 +115,31 @@ fn numbers(furigana: &Furigana, text: &str) -> String {
             i += 1;
             continue;
         }
-        let end = words[j - 1].0.end;
+        let mut end = words[j - 1].0.end;
+        let mut next = words.get(j).map(|w| &text[w.0.clone()]);
+        // 数の語のあとの、数で始まる 1 語（「三」「十分」）は、続きの数と数える言葉（三十分）。言い回しではない
+        if let Some(word) = next {
+            let digits: String = word.chars().take_while(|c| is_numeral(*c)).collect();
+            if !digits.is_empty() && COUNTERS.contains(&&word[digits.len()..]) {
+                end += digits.len();
+                next = Some(&word[digits.len()..]);
+            }
+        }
         let number = &text[start..end];
-        let next = words.get(j).map(|w| &text[w.0.clone()]);
         let before = i.checked_sub(1).map(|k| &text[words[k].0.clone()]);
         // 「2対1」の「1」は、前の「対」で数とわかる
-        let counted = next.is_some_and(|w| {
-            COUNTERS.contains(&w) && !IDIOMS.contains(&&text[start..words[j].0.end])
-        }) || before.is_some_and(|w| BEFORE.contains(&w) || w == "対");
+        let idiom = words
+            .get(j)
+            .is_some_and(|w| IDIOMS.contains(&&text[start..w.0.end]));
+        let counted = next.is_some_and(|w| COUNTERS.contains(&w) && !idiom)
+            || before.is_some_and(|w| BEFORE.contains(&w) || w == "対");
         if counted && let Some(n) = value(number) {
             out.push_str(&text[pos..start]);
             out.push_str(&format_number(n));
             pos = end;
         }
-        i = j;
+        // 数える言葉の 1 語に入り込んだ数（「十分」の「十」）を読んだら、その語は終わっている
+        i = if end > words[j - 1].0.end { j + 1 } else { j };
     }
     out.push_str(&text[pos..]);
     out
@@ -168,18 +181,18 @@ fn value(number: &str) -> Option<u64> {
                     '百' => 100,
                     _ => 1000,
                 };
-                section += run.take().unwrap_or(1) * unit;
+                section = section.checked_add(run.take().unwrap_or(1).checked_mul(unit)?)?;
             }
             '万' | '億' => {
                 let unit = if c == '万' { 10_000 } else { 100_000_000 };
-                let part = section + run.take().unwrap_or(0);
-                total += part.max(1) * unit;
+                let part = section.checked_add(run.take().unwrap_or(0))?;
+                total = total.checked_add(part.max(1).checked_mul(unit)?)?;
                 section = 0;
             }
             _ => return None,
         }
     }
-    Some(total + section + run.unwrap_or(0))
+    total.checked_add(section)?.checked_add(run.unwrap_or(0))
 }
 
 /// 1 万より大きい数は、万と億を残す（「1万5000」「2億」）
@@ -255,7 +268,11 @@ fn punctuate(furigana: &Furigana, text: &str) -> String {
         .filter(|p| !p.is_empty())
         .enumerate()
     {
-        if k > 0 {
+        // 英字どうしの間（「Bullet Dance」）は語の区切りなので、空白のまま残す
+        let latin = |c: Option<char>| c.is_some_and(|c| c.is_ascii_alphanumeric());
+        if k > 0 && latin(joined.chars().last()) && latin(part.chars().next()) {
+            joined.push(' ');
+        } else if k > 0 {
             pauses.push(joined.len());
         }
         joined.push_str(part);
@@ -334,6 +351,7 @@ mod tests {
         assert_eq!(numbers(f, "ヘイズの二番で三キル"), "ヘイズの2番で3キル");
         assert_eq!(numbers(f, "二対一は無理"), "2対1は無理");
         assert_eq!(numbers(f, "レベル五になった"), "レベル5になった");
+        assert_eq!(numbers(f, "あと三十分後"), "あと30分後");
     }
 
     #[test]
@@ -345,6 +363,8 @@ mod tests {
             "一瞬で溶けた",
             "これが一番強い",
             "一人で来た",
+            "これで十分強い",
+            "一度やってみる",
         ] {
             assert_eq!(numbers(f, text), text);
         }
@@ -358,6 +378,8 @@ mod tests {
         assert_eq!(value("1万5000"), Some(15_000));
         assert_eq!(value("百"), Some(100));
         assert_eq!(value("十万"), Some(100_000));
+        assert_eq!(value("九九九九九九九九九九九九九九九九九九九九九九"), None);
+        assert_eq!(value("九九九九九九九九九九九九九九九九万"), None);
         assert_eq!(format_number(15_000), "1万5000");
         assert_eq!(format_number(20_000), "2万");
         assert_eq!(format_number(123_456_789), "1億2345万6789");
@@ -373,6 +395,8 @@ mod tests {
         // 助詞の前の空白は、ただ消す
         assert_eq!(punctuate(f, "カース は最終盤"), "カースは最終盤。");
         assert_eq!(punctuate(f, "うわ痛い"), "うわ、痛い。");
+        // 英字の語の間の空白は残す
+        assert_eq!(punctuate(f, "Bullet Dance 強い"), "Bullet Dance、強い。");
         // 句読点のある文は変えない
         assert_eq!(
             punctuate(f, "もう書いてある、これ。"),

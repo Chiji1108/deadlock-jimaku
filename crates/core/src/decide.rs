@@ -565,7 +565,7 @@ fn similar(word: &str, index: &Index) -> Vec<String> {
 }
 
 /// スキルの呼び方（「ウルト」は 4 番、「2」「３番」「二番」はその番号）。何番か、話した言葉の長さ、数字で呼んだか。
-/// 漢数字も受ける（数える言葉のない「ヘイズの二」は、`tidy.rs` が算用数字にしない）
+/// 漢数字の「二」〜「四」も受ける（数える言葉のない「ヘイズの二」は、`tidy.rs` が算用数字にしない）
 fn ability_word(rest: &str) -> Option<(u8, usize, bool)> {
     for word in ["ウルト", "アルティメット", "ult"] {
         if rest.starts_with(word) {
@@ -576,7 +576,7 @@ fn ability_word(rest: &str) -> Option<(u8, usize, bool)> {
     let slot = match first {
         '1'..='4' => first as u8 - b'0',
         '１'..='４' => (first as u32 - '１' as u32) as u8 + 1,
-        '一' => 1,
+        // 「一」は受けない（「ヘイズの一番いいところ」の「一番」は、ほぼ「いちばん」）
         '二' => 2,
         '三' => 3,
         '四' => 4,
@@ -894,6 +894,7 @@ mod tests {
         assert_eq!(spoken("ヘイズの2番で寝かせる。", &[]), ["ヘイズ", "2番"]);
         assert_eq!(spoken("ヘイズの二で寝かせる。", &[]), ["ヘイズ", "二"]);
         assert_eq!(spoken("ヘイズの二十発。", &[]), ["ヘイズ"]);
+        assert_eq!(spoken("ヘイズの一番いいところ。", &[]), ["ヘイズ"]);
         assert_eq!(spoken("ヘイズ2で寝かせる。", &[]), ["ヘイズ", "2"]);
         // 数字だけでは拾わない（普通の言葉にも出る）
         assert_eq!(spoken("1人で来てる。2番ある。", &[]), [] as [&str; 0]);
