@@ -47,7 +47,8 @@ async function load() {
   $("keys").innerHTML = "<tr><th>会社</th><th>キー</th><th>メモ</th><th>状態</th><th class=num>断られた回数</th><th>最後に断られた</th><th></th></tr>" +
     k.keys.map((key) => "<tr><td>" + esc(key.provider) + "</td><td>…" + esc(key.tail) + "</td><td>" + esc(key.memo) + "</td><td>" +
       (key.enabled ? '<span class="tag ok">有効</span>' : '<span class="tag">停止</span>') + "</td><td class=num>" + key.failures + "</td><td>" +
-      (key.failedAt ? date(key.failedAt) + "（" + (key.failedStatus === 0 ? "読めない" : key.failedStatus) + "）" : "") + '</td><td><button data-key="' + esc(key.id) + '" data-enabled="' + !key.enabled + '">' +
+      (key.failedAt ? date(key.failedAt) + "（" + (key.failedStatus === 0 ? "読めない" : key.failedStatus) + "）" : "") +
+      (key.failedReason ? '<div class="muted reason">' + esc(key.failedReason) + "</div>" : "") + '</td><td><button data-key="' + esc(key.id) + '" data-enabled="' + !key.enabled + '">' +
       (key.enabled ? "止める" : "戻す") + '</button> <button class="danger" data-remove="' + esc(key.id) + '">消す</button></td></tr>').join("") +
     fallback.map((p) => "<tr><td>" + esc(p) + '</td><td colspan="6" class="muted">秘密の設定（wrangler）のキー。ほかのキーが断られたときに使います</td></tr>').join("");
 
@@ -92,6 +93,7 @@ export const page = /* html */ `<!doctype html>
   h1 { font-size: 18px; margin: 0; }
   h2 { font-size: 14px; margin: 0 0 12px; }
   .muted { color: var(--muted); font-size: 12px; }
+  .reason { max-width: 360px; overflow-wrap: anywhere; }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; overflow-x: auto; }
   .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
   .stat b { display: block; font-size: 22px; font-variant-numeric: tabular-nums; }

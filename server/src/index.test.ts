@@ -541,6 +541,8 @@ describe("admin", () => {
     const [first, second] = await list();
     expect(first!.failures).toBeGreaterThan(0);
     expect([first!.failedStatus, second!.failures]).toEqual([429, 0]);
+    // 何で断られたかは、外が返した本文で分かる（管理画面に出す）
+    expect(first!.failedReason).toBe("slow down");
     // 断られたキーは後回しにするので、次からは通るキーを先に使う
     vi.mocked(openrouter).mockClear();
     await translate(code);

@@ -162,6 +162,7 @@ admin.get("/api/keys", async (c) => {
       failures: betaKeys.failures,
       failedAt: betaKeys.failedAt,
       failedStatus: betaKeys.failedStatus,
+      failedReason: betaKeys.failedReason,
       createdAt: betaKeys.createdAt,
     })
     .from(betaKeys)
@@ -195,7 +196,7 @@ admin.patch("/api/keys/:id", async (c) => {
   const enabled = typeof body.enabled === "boolean" ? body.enabled : undefined;
   const memo = typeof body.memo === "string" && body.memo.length <= MAX_MEMO ? body.memo.trim() : undefined;
   if (enabled === undefined && memo === undefined) return c.json({ error: "invalid" }, 400);
-  const cleared = enabled ? { failures: 0, failedAt: null, failedStatus: null } : {};
+  const cleared = enabled ? { failures: 0, failedAt: null, failedStatus: null, failedReason: null } : {};
   const { meta } = await c.var.db
     .update(betaKeys)
     .set({ enabled, memo, ...cleared })
