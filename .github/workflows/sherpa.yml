@@ -4,7 +4,7 @@
 #
 # 実行環境のライブラリ（ONNX Runtime と sherpa-onnx の C の API）は、sherpa-onnx の公式の PyPI の
 # `sherpa-onnx-core` から取る（SHA-256 を下に固定）。sherpa-onnx の GitHub のリリースの Mac 用は、
-# 同じ版でも 2.7 倍遅かった（M5 Pro、1 発話 0.27 秒と 0.10 秒。Windows 用は中身が同じ）
+# 同じ版でも 2.7 倍遅かった（M5 Pro、1 発話 0.27 秒と 0.10 秒）。Windows 用は中身が同じなので、GitHub のリリースのまま
 name: sherpa
 
 on:
@@ -30,10 +30,10 @@ jobs:
             wheel: https://files.pythonhosted.org/packages/6d/69/5e25f0c3aa933d679b0e377516bf9b5649cbc892d688a504096cd68963e6/sherpa_onnx_core-2.0.1-py3-none-macosx_10_15_x86_64.whl
             sha256: fe43986eff8ccdfbb7fc851ee1b40e6df9869ff14da2de6b70302872e555480d
             name: macos-x64
+          # Windows は wheel を使わない（リンクに要る onnxruntime.lib が入っていない）。sherpa-onnx の Rust の部品が
+          # 既定で取る GitHub のリリースの DLL は、PyPI のものと同じファイル（SHA-256 が同じ）
           - os: windows-2022
             target: x86_64-pc-windows-msvc
-            wheel: https://files.pythonhosted.org/packages/68/ea/8f02cc34c19d956697dda2f2c470c14cd6b7af77f3ae855c514a86039b68/sherpa_onnx_core-2.0.1-py3-none-win_amd64.whl
-            sha256: 08890e9ea23ed2f59f81d5840c63b6b5cc8674d0f6e48d9069126a848aa0e022
             name: windows-x64
           # 古い glibc で作ると、新しいディストリビューションでも動く
           - os: ubuntu-22.04
@@ -52,6 +52,7 @@ jobs:
           install_args: rust
       - run: rustup target add ${{ matrix.target }}
       - name: 実行環境のライブラリを取る
+        if: matrix.wheel
         run: |
           curl -sfL -o core.whl "${{ matrix.wheel }}"
           # shasum は Windows の Git Bash にないので、どの runner にもある openssl で確かめる
@@ -71,9 +72,10 @@ jobs:
           out=crates/sherpa/target/${{ matrix.target }}/release
           cp "$out"/jimaku-sherpa* dist/ 2>/dev/null || true
           rm -f dist/*.d dist/*.pdb
+          # ライブラリは、sherpa-onnx の Rust の部品が、つないだものを出力のフォルダに写している。
           # Windows は DLL を実行ファイルの隣に置く（Mac と Linux は rpath で隣を探す）
-          cp core/sherpa_onnx/lib/*onnxruntime*.* core/sherpa_onnx/lib/*sherpa-onnx-c-api*.* dist/
-          rm -f dist/*.lib
+          shopt -s nullglob
+          cp "$out"/*onnxruntime*.{dll,dylib,so} "$out"/*sherpa-onnx-c-api*.{dll,dylib,so} dist/
           cp LICENSE.md dist/
           cp crates/sherpa/licenses/*.txt dist/
           ls -la dist
@@ -97,6 +99,8 @@ jobs:
 
   release:
     needs: build
+    # ほかのブランチで動かしたときは、ビルドを確かめるだけ（リリースは main のものだけ）
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: write
