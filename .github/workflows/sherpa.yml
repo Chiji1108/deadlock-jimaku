@@ -99,6 +99,8 @@ jobs:
 
   release:
     needs: build
+    # ほかのブランチで動かしたときは、ビルドを確かめるだけ（リリースは main のものだけ）
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: write
