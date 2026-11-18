@@ -25,6 +25,7 @@ use crate::lang;
 use crate::llama::Llama;
 use crate::local::Speech;
 use crate::now_ms;
+use crate::reazon::Reazon;
 use crate::segment::{Close, Event, Segmenter};
 use crate::settings::{LiveSource, Settings, TextSource};
 use crate::store::{ChromeEvent, Store};
@@ -49,43 +50,46 @@ pub const PROMPT: &str = "Live commentary by a streamer playing the video game D
 /// デッドロックモードを切ったとき（雑談の配信など）
 const PLAIN_PROMPT: &str = "Live commentary by a streamer.";
 
-/// `accesses` は工程が使う会社の送り先と鍵、`transcriber` は確定の文字起こしを頼む相手
+/// PC の中で立てた部品（使う工程があるものだけ）
+#[derive(Default)]
+pub struct Locals {
+    /// Haas-ja（speech.cpp）。途中の字幕と確定で、同じ 1 つを使う
+    pub speech: Option<Arc<Speech>>,
+    /// Whisper（whisper.cpp）。途中の字幕だけに立ててあることもある
+    pub whisper: Option<Arc<Whisper>>,
+    /// ReazonSpeech（jimaku-sherpa）。確定だけ
+    pub reazon: Option<Arc<Reazon>>,
+    /// Gemma（llama.cpp）
+    pub llama: Option<Arc<Llama>>,
+}
+
+/// `accesses` は工程が使う会社の送り先と鍵
 pub async fn run(
     store: Arc<Store>,
     input: audio::Input,
     accesses: Accesses,
-    local: Option<Arc<Speech>>,
-    whisper: Option<Arc<Whisper>>,
-    llama: Option<Arc<Llama>>,
+    locals: Locals,
 ) -> anyhow::Result<()> {
+    let Locals {
+        speech: local,
+        whisper,
+        reazon,
+        llama,
+    } = locals;
     let settings = store.settings();
     // 確定の文字起こしを頼む相手。鍵と PC の中の文字起こしは、始める前に確かめてある
     let engines = settings.engines;
     // PC の中の Whisper は、途中の字幕だけに立ててあることもある
     let whisper = |used: bool| whisper.clone().filter(|_| used).map(Transcriber::Whisper);
+    // ReazonSpeech は確定だけなので、途中の字幕の Haas-ja（`local`）より先に見る
     let transcriber = whisper(engines.transcription.whisper().is_some())
+        .or_else(|| reazon.map(Transcriber::Reazon))
         .or_else(|| Transcriber::of(engines.transcription.provider(), &accesses, &local));
     let transcriber = transcriber.expect("finals without a transcriber");
 
     // 用語ヒントは Realtime のセッション開始時に 1 回しか渡せないので、辞書を少し待つ。
     // 入力は待ち終わってから開く（待っている間の音声を溜めない）
-    let (keywords, heroes) = if settings.deadlock_mode {
-        let glossary = store
-            .wait_glossary(&settings.mic_language, Duration::from_secs(20))
-            .await;
-        match &glossary {
-            Some(loaded) => (
-                keywords(&loaded.glossary, &settings.mic_language),
-                heroes(&loaded.glossary, &settings.mic_language),
-            ),
-            None => {
-                tracing::warn!("starting transcription without glossary");
-                (Vec::new(), Vec::new())
-            }
-        }
-    } else {
-        (Vec::new(), Vec::new())
-    };
+    let (keywords, heroes) = terms(&store, &settings).await;
     tracing::info!("keywords: {} terms", keywords.len());
     let hints = Arc::new(Hints {
         language: lang::find(&settings.mic_language)
@@ -682,6 +686,25 @@ async fn transcribe(
         }
     };
     let _ = done.send(Done::Transcribed { id, text }).await;
+}
+
+/// 文字起こしに渡す用語（`keywords`）とヒーローの名前（`heroes`）。デッドロックモードでなければ渡さない。
+/// 辞書を少し待つ（読み込む前に始めると、用語なしで字幕を始めることになる）
+pub async fn terms(store: &Store, settings: &Settings) -> (Vec<String>, Vec<String>) {
+    if !settings.deadlock_mode {
+        return (Vec::new(), Vec::new());
+    }
+    let lang = &settings.mic_language;
+    match store.wait_glossary(lang, Duration::from_secs(20)).await {
+        Some(loaded) => (
+            keywords(&loaded.glossary, lang),
+            heroes(&loaded.glossary, lang),
+        ),
+        None => {
+            tracing::warn!("starting transcription without glossary");
+            (Vec::new(), Vec::new())
+        }
+    }
 }
 
 /// 用語ヒント: 話す言語での名前（DESIGN.md 8.4）。

@@ -1,0 +1,22 @@
+# PC の中の文字起こし（ReazonSpeech k2）を動かす補助プログラム（DESIGN.md 9.14）。
+# 実行環境（ONNX Runtime）が大きいので、アプリには入れず、使う人だけ初回にダウンロードする。
+# `.github/workflows/sherpa.yml` が作ってリリースに載せる。
+# ワークスペースの外に置くのは、アプリのビルドにネイティブのライブラリを持ち込まないため
+[package]
+name = "jimaku-sherpa"
+version = "1.0.0"
+edition = "2024"
+license-file = "../../LICENSE.md"
+publish = false
+
+[workspace]
+
+[dependencies]
+anyhow = "1.0.104"
+serde_json = "1.0.154"
+# static は shared より 3.7 倍遅かった（0.6 の jimaku-local で測った。原因は不明）
+sherpa-onnx = { version = "2.0.1", default-features = false, features = ["shared"] }
+
+[profile.release]
+strip = true
+lto = "thin"

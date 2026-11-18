@@ -19,6 +19,7 @@ pub mod mt;
 pub mod people;
 pub mod rank;
 pub mod reading;
+pub mod reazon;
 pub mod relay;
 pub mod runtime;
 pub mod secrets;

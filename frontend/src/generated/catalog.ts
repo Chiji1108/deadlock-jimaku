@@ -46,6 +46,7 @@ export const ENGINE_PROVIDERS = {
     "qwenAudio": "qwen",
     "maiTranscribe2": "openrouter",
     "haasJa": null,
+    "reazonSpeech": null,
     "whisperTurbo": null,
     "whisperLarge": null
   },

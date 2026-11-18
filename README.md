@@ -82,7 +82,7 @@ macOS 版は Apple の署名と公証を済ませています。Windows 版は�
 
 ## しくみ
 
-開発する人のための地図です。理由は [DESIGN.md](DESIGN.md) を見てください（モードは 9.6、ローカルの AI は 9.8〜9.11、開発者のサーバーと LP は 17 章）。
+開発する人のための地図です。理由は [DESIGN.md](DESIGN.md) を見てください（モードは 9.6、ローカルの AI は 9.8〜9.11 と 9.14、開発者のサーバーと LP は 17 章）。
 
 字幕は 5 つの工程で作ります。工程ごとに何を使うかは設定の `engines` にあり、モードはその組み合わせに付けた名前です（`Engines::MODES`。`crates/core/src/settings.rs`）。操作パネルでモードを選ぶと 5 つがまとめて決まり、「モード」のタブで工程ごとに変えると「カスタム」になります。
 
@@ -102,7 +102,7 @@ macOS 版は Apple の署名と公証を済ませています。Windows 版は�
 
 **工程ごとに選べるもの。** 表のほかにも選べます。「おすすめ」と「クラウド」のモードのほかは、その会社の自分の API キーが要ります（PC の中で動くものは要りません）。
 
-- **途中の字幕と確定の文字起こし**（`stt/`、`local.rs`、`whisper.rs`）: Chrome、OpenAI（GPT-Live-Transcribe、GPT-Transcribe）、xAI の Grok Voice Transcribe、Qwen-Audio-3.1-ASR-Flash（DESIGN.md 3.4）、OpenRouter の MAI-Transcribe 2、PC の中の Haas-ja（speech.cpp）と Whisper（whisper.cpp。ヒーローの名前を教える）。
+- **途中の字幕と確定の文字起こし**（`stt/`、`local.rs`、`whisper.rs`、`reazon.rs`）: Chrome、OpenAI（GPT-Live-Transcribe、GPT-Transcribe）、xAI の Grok Voice Transcribe、Qwen-Audio-3.1-ASR-Flash（DESIGN.md 3.4）、OpenRouter の MAI-Transcribe 2、PC の中の Haas-ja（speech.cpp）と Whisper（whisper.cpp。ヒーローの名前を教える）。確定だけなら、PC の中の ReazonSpeech k2（補助プログラム `crates/sherpa`。辞書の用語をホットワードで教える。DESIGN.md 9.14）も選べます。
 - **用語**（`terms.rs`、`decide.rs`）: 辞書の一致か、PC の中で出した候補を判定モデルに確かめさせます。判定モデルは、Chrome の中の Gemini Nano、PC の中の Gemma 4 E4B、OpenAI の Decisions API、TypeSafe AI の Jev、OpenRouter の Drex Max・Microsoft Decision 1・Perplexity Decider（DESIGN.md 9.7）。
 - **翻訳**（`mt.rs`、`enrich.rs`）: 用語を英語名に置き換えた文を、Chrome Translator、PC の中の Gemma 4 E4B、翻訳専門のモデル（Qwen-MT-Flash、OpenRouter の Hy-MT2）に渡します。GPT-6.1 Terra は、用語と翻訳を 1 回の問い合わせで作ります。
 - **ふりがな**（`reading.rs`、`furigana.rs`）: 辞書の読み（vibrato と話し言葉の UniDic）をそのまま使うか、判定モデルか GPT に直させます。

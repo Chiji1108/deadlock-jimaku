@@ -13,3 +13,6 @@ node_modules/
 .dev.vars
 # 文字起こしの測定のために作った合成音声
 /experiments/data/tts/
+
+# 補助プログラム（crates/sherpa。ワークスペースの外）のビルド成果物
+/crates/sherpa/target

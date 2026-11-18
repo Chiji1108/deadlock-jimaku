@@ -340,6 +340,14 @@ pub fn wav(samples: &[f32]) -> Vec<u8> {
     cursor.into_inner()
 }
 
+/// `wav` で作った WAV の音声（16kHz mono）
+pub fn samples(wav: &[u8]) -> anyhow::Result<Vec<f32>> {
+    let reader = hound::WavReader::new(Cursor::new(wav))?;
+    let samples = reader.into_samples::<i16>();
+    let samples = samples.map(|s| s.map(|s| f32::from(s) / f32::from(i16::MAX)));
+    Ok(samples.collect::<Result<_, _>>()?)
+}
+
 pub fn to_i16(s: f32) -> i16 {
     (s.clamp(-1.0, 1.0) * f32::from(i16::MAX)) as i16
 }
@@ -380,6 +388,13 @@ mod tests {
         let out = r.process(&vec![0.0; 48_000]);
         // 内部の遅延とチャンク待ちがあるので、おおよそ 1/3
         assert!((15_000..=16_100).contains(&out.len()), "{}", out.len());
+    }
+
+    #[test]
+    fn wav_reads_back_its_samples() {
+        let back = samples(&wav(&[0.0, 0.5, -0.5])).unwrap();
+        assert_eq!(back.len(), 3);
+        assert!((back[1] - 0.5).abs() < 1e-4 && (back[2] + 0.5).abs() < 1e-4);
     }
 
     #[test]

@@ -116,6 +116,14 @@ export const ITEMS: {
         note: "日本語だけ。音声は PC から出ない。用語を教えられないので、カタカナの用語は間違えやすい。初回に約 400 MB をダウンロードする。Intel の Mac では動かない",
       },
       {
+        value: "reazonSpeech",
+        label: "ReazonSpeech k2（ローカル）",
+        accuracy: "86〜96%",
+        speed: "CPU で約 0.1 秒",
+        price: "無料",
+        note: "日本語だけ。音声は PC から出ない。辞書の用語を教えるので、カタカナの用語に強い（合成音声の 207 個のうち 185 個。Haas-ja は 177 個、Chrome は 171 個）。書き方の違い（「バイオレット」を「ヴァイオレット」）もあり、ふだんの言葉の正確さは Chrome より下。句読点は付かない。GPU を使わない。初回に約 650 MB をダウンロードする",
+      },
+      {
         value: "whisperTurbo",
         label: "Whisper large-v3-turbo（ローカル）",
         accuracy: "94〜98%",
