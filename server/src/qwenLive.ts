@@ -3,7 +3,7 @@
 // `run-task` は作り直して送る（モデルやパラメータを足させない）。
 // 料金は、音声 30 秒分ごとに見積もりを先に足し（上限に届いていたら切る）、Qwen が知らせる使用量で実際の額に直す
 
-import { betaClosed, keyFailed, reserveBeta, settleBeta, type RelayKey } from "./beta";
+import { betaClosed, keyFailed, reasonOf, reserveBeta, settleBeta, type RelayKey } from "./beta";
 import { codeById, refusal, type Db } from "./db";
 import { QWEN_LIVE } from "./price";
 import { qwenLive } from "./upstream";
@@ -39,10 +39,13 @@ export async function relayQwenLive(db: Db, codeId: string, keys: RelayKey[], ct
     upstream = res?.webSocket ?? null;
     used = key;
     if (upstream) break;
-    void res?.body?.cancel();
     const trouble = secret === undefined ? 0 : res && KEY_TROUBLE.includes(res.status) ? res.status : undefined;
-    if (trouble === undefined) break;
-    if (key.id) ctx.waitUntil(keyFailed(db, key.id, trouble, Date.now()));
+    if (trouble === undefined) {
+      void res?.body?.cancel();
+      break;
+    }
+    const reason = await reasonOf(res);
+    if (key.id) ctx.waitUntil(keyFailed(db, key.id, trouble, reason, Date.now()));
   }
   if (!upstream) {
     release();
@@ -166,7 +169,11 @@ export async function relayQwenLive(db: Db, codeId: string, keys: RelayKey[], ct
     }
     // 開発者のキーが断られた。利用者には関係がないので、中身を渡さずに切る（アプリは張り直し、次は別のキーを使う）
     if (msg?.header?.event === "task-failed" && KEY_FAILURE.test(String(msg.header.error_code))) {
-      if (used?.id) ctx.waitUntil(keyFailed(db, used.id, 401, Date.now()));
+      // 番号は、HTTP で断られたときに合わせる（回数の上限は 429、それ以外はキーが使えない 401）
+      const code = String(msg.header.error_code);
+      const status = /Throttling|Quota/i.test(code) ? 429 : 401;
+      const message = typeof msg.header.error_message === "string" ? msg.header.error_message : "";
+      if (used?.id) ctx.waitUntil(keyFailed(db, used.id, status, [code, message].filter(Boolean).join(": "), Date.now()));
       return close(1011, "upstream");
     }
     send(server, event.data);
@@ -182,7 +189,7 @@ export async function relayQwenLive(db: Db, codeId: string, keys: RelayKey[], ct
 }
 
 interface Message {
-  header?: { action?: unknown; event?: unknown; task_id?: unknown; error_code?: unknown };
+  header?: { action?: unknown; event?: unknown; task_id?: unknown; error_code?: unknown; error_message?: unknown };
   payload?: {
     model?: unknown;
     parameters?: { language_hints?: unknown };

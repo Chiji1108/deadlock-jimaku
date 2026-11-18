@@ -62,10 +62,11 @@ export const betaKeys = sqliteTable(
     tail: text().notNull(),
     memo: text().notNull().default(""),
     enabled: integer({ mode: "boolean" }).notNull().default(true),
-    /** 外に断られた回数と、最後に断られたとき（ミリ秒）とその理由（HTTP の番号） */
+    /** 外に断られた回数と、最後に断られたとき（ミリ秒）とその理由（HTTP の番号と、外が返した本文の先頭） */
     failures: integer().notNull().default(0),
     failedAt: integer(),
     failedStatus: integer(),
+    failedReason: text(),
     createdAt: integer().notNull(),
   },
   (t) => [index("beta_keys_provider").on(t.provider)],

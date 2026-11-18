@@ -80,13 +80,22 @@ export async function betaProviders(db: Db, env: BetaEnv): Promise<BetaProvider[
   return (["qwen", "openrouter"] as const).filter(has);
 }
 
-/** キーが外に断られたことを覚える（管理画面に出す。次は、ほかのキーを先に使う） */
-export async function keyFailed(db: Db, id: string, status: number, now: number) {
+/** 断られた理由として覚える、外が返した本文の長さ（文字数）。何の上限に当たったかが分かれば足りる */
+const MAX_REASON = 300;
+
+/**
+ * キーが外に断られたことを、その理由（外が返した本文）と一緒に覚える（管理画面に出す。次は、ほかのキーを先に使う）
+ */
+export async function keyFailed(db: Db, id: string, status: number, reason: string, now: number) {
+  const failedReason = reason.trim().slice(0, MAX_REASON);
   await db
     .update(betaKeys)
-    .set({ failures: sql`${betaKeys.failures} + 1`, failedAt: now, failedStatus: status })
+    .set({ failures: sql`${betaKeys.failures} + 1`, failedAt: now, failedStatus: status, failedReason })
     .where(eq(betaKeys.id, id));
 }
+
+/** 断られた応答の本文（読めなければ空）。読み切るので、応答はもう使えない */
+export const reasonOf = (res: Response | undefined) => res?.text().catch(() => "") ?? Promise.resolve("");
 
 /** コードを出した所を数えるための値。IPv6 は先頭の 64 ビット（1 台が持つ範囲）にまとめる */
 export function network(ip: string): string {

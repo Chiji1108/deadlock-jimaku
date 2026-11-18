@@ -10,6 +10,7 @@ import {
   grantBetaCode,
   keyFailed,
   network,
+  reasonOf,
   reserveBeta,
   settleBeta,
   type BetaEnv,
@@ -111,14 +112,14 @@ async function relayed(
   let res: Response | undefined;
   for (const key of gift.keys) {
     const secret = await key.key().catch(() => undefined);
-    const tried = secret === undefined ? undefined : await send(secret).catch(() => undefined);
-    void res?.body?.cancel();
-    res = tried;
+    res = secret === undefined ? undefined : await send(secret).catch(() => undefined);
     // 読めなかったキーと、キーのせいで断られたとき（その番号）だけ、次に回す
-    const refused = tried && KEY_TROUBLE.includes(tried.status) ? tried.status : undefined;
+    const refused = res && KEY_TROUBLE.includes(res.status) ? res.status : undefined;
     const trouble = secret === undefined ? KEY_UNREADABLE : refused;
     if (trouble === undefined) break;
-    if (key.id) c.executionCtx.waitUntil(keyFailed(c.var.db, key.id, trouble, now));
+    // 断られた応答は本文を読み切る（理由として覚える）。利用者には返さない
+    const reason = await reasonOf(res);
+    if (key.id) c.executionCtx.waitUntil(keyFailed(c.var.db, key.id, trouble, reason, now));
   }
   if (!res?.ok) {
     settle(0);
