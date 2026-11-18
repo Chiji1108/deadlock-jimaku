@@ -1,0 +1,111 @@
+# PC の中の文字起こし（ReazonSpeech k2）に使う補助プログラム `jimaku-sherpa`（crates/sherpa）を作って、リリースに載せる（DESIGN.md 9.14）。
+# 手で動かす。補助プログラムを変えたら crates/sherpa/Cargo.toml の version を上げてから動かし、できた zip の SHA-256 を
+# `crates/core/src/reazon.rs` に書く。リリースは「最新」にしない（アプリの自動更新は、最新のリリースを見る）。
+#
+# 実行環境のライブラリ（ONNX Runtime と sherpa-onnx の C の API）は、sherpa-onnx の公式の PyPI の
+# `sherpa-onnx-core` から取る（SHA-256 を下に固定）。sherpa-onnx の GitHub のリリースの Mac 用は、
+# 同じ版でも 2.7 倍遅かった（M5 Pro、1 発話 0.27 秒と 0.10 秒。Windows 用は中身が同じ）
+name: sherpa
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            wheel: https://files.pythonhosted.org/packages/ec/81/5d7f89b4c3dc64e9100590609d5c168448fc379d89a08c6498aad46b6feb/sherpa_onnx_core-2.0.1-py3-none-macosx_11_0_arm64.whl
+            sha256: 82ab505a835e616f568ba6804555969e1b5699341d2b18eb27f0083b068b61ff
+            name: macos-arm64
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            wheel: https://files.pythonhosted.org/packages/6d/69/5e25f0c3aa933d679b0e377516bf9b5649cbc892d688a504096cd68963e6/sherpa_onnx_core-2.0.1-py3-none-macosx_10_15_x86_64.whl
+            sha256: fe43986eff8ccdfbb7fc851ee1b40e6df9869ff14da2de6b70302872e555480d
+            name: macos-x64
+          - os: windows-2022
+            target: x86_64-pc-windows-msvc
+            wheel: https://files.pythonhosted.org/packages/68/ea/8f02cc34c19d956697dda2f2c470c14cd6b7af77f3ae855c514a86039b68/sherpa_onnx_core-2.0.1-py3-none-win_amd64.whl
+            sha256: 08890e9ea23ed2f59f81d5840c63b6b5cc8674d0f6e48d9069126a848aa0e022
+            name: windows-x64
+          # 古い glibc で作ると、新しいディストリビューションでも動く
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            wheel: https://files.pythonhosted.org/packages/9a/4e/d946cc081864c8c242e787a73dd2ea61f861445f3d4207787d873e4dc65d/sherpa_onnx_core-2.0.1-py3-none-manylinux2014_x86_64.whl
+            sha256: f4ee0ab91c4ae596e0e49d7de32522a946295e038a652f1c1884d89014ee4ec2
+            name: linux-x64
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v2
+        with:
+          install_args: rust
+      - run: rustup target add ${{ matrix.target }}
+      - name: 実行環境のライブラリを取る
+        run: |
+          curl -sfL -o core.whl "${{ matrix.wheel }}"
+          echo "${{ matrix.sha256 }}  core.whl" | shasum -a 256 -c -
+          unzip -q core.whl 'sherpa_onnx/lib/*' -d core
+          echo "SHERPA_ONNX_LIB_DIR=$PWD/core/sherpa_onnx/lib" >> "$GITHUB_ENV"
+      - name: ビルドする
+        run: cargo build --release --locked --manifest-path crates/sherpa/Cargo.toml --target ${{ matrix.target }}
+      - name: zip にまとめる
+        run: |
+          version=$(sed -n 's/^version = "\(.*\)"/\1/p' crates/sherpa/Cargo.toml | head -1)
+          mkdir dist
+          out=crates/sherpa/target/${{ matrix.target }}/release
+          cp "$out"/jimaku-sherpa* dist/ 2>/dev/null || true
+          rm -f dist/*.d dist/*.pdb
+          # Windows は DLL を実行ファイルの隣に置く（Mac と Linux は rpath で隣を探す）
+          cp core/sherpa_onnx/lib/*onnxruntime*.* core/sherpa_onnx/lib/*sherpa-onnx-c-api*.* dist/
+          rm -f dist/*.lib
+          cp LICENSE.md dist/
+          cp crates/sherpa/licenses/*.txt dist/
+          ls -la dist
+          # 立ち上がるか（ライブラリが見つかるか）を確かめる。引数がないと使い方を出して止まる
+          if "dist/jimaku-sherpa" 2>&1 | grep -q usage; then echo ok; else echo "does not start"; exit 1; fi
+          name="jimaku-sherpa-$version-${{ matrix.name }}.zip"
+          if [ "$RUNNER_OS" = Windows ]; then
+            (cd dist && 7z a -tzip "../$name" . > /dev/null)
+          else
+            (cd dist && zip -q "../$name" *)
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jimaku-sherpa-${{ matrix.name }}
+          path: jimaku-sherpa-*.zip
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: jimaku-sherpa-*
+          merge-multiple: true
+      - name: リリースに載せる
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(sed -n 's/^version = "\(.*\)"/\1/p' crates/sherpa/Cargo.toml | head -1)
+          sha256sum jimaku-sherpa-*.zip > SHA256SUMS
+          cat SHA256SUMS
+          # 同じ版のリリースがあれば止まる（配った zip を差し替えない。アプリが SHA-256 を覚えている）
+          gh release create "sherpa-v$version" jimaku-sherpa-*.zip SHA256SUMS \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --latest=false \
+            --title "jimaku-sherpa $version（PC の中の文字起こし用）" \
+            --notes "アプリが、確定の文字起こしに ReazonSpeech k2 を選んだときに取る部品です（アプリ本体ではありません）。\`crates/sherpa\` を [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx)（Apache-2.0）2.0.1 でビルドし、PyPI の \`sherpa-onnx-core\` 2.0.1 の ONNX Runtime（MIT）を添えたものです。"

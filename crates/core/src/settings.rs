@@ -893,16 +893,20 @@ pub enum FinalSource {
     WhisperTurbo,
     /// 同じく Whisper large-v3。turbo より用語に強く、約 2 倍遅い
     WhisperLarge,
+    /// PC の中で動く ReazonSpeech k2（jimaku-sherpa）。無料。日本語だけ。辞書の用語を教えられる。
+    /// CPU の 1 スレッドで動き、GPU を使わない（DESIGN.md 9.14）
+    ReazonSpeech,
 }
 
 impl FinalSource {
-    pub const ALL: [Self; 8] = [
+    pub const ALL: [Self; 9] = [
         Self::Chrome,
         Self::GptTranscribe,
         Self::GrokVoiceTranscribe,
         Self::QwenAudio,
         Self::MaiTranscribe2,
         Self::HaasJa,
+        Self::ReazonSpeech,
         Self::WhisperTurbo,
         Self::WhisperLarge,
     ];
@@ -910,7 +914,11 @@ impl FinalSource {
     /// 文字起こしを頼む会社（Chrome と PC の中なら None）
     pub fn provider(self) -> Option<Provider> {
         match self {
-            Self::Chrome | Self::HaasJa | Self::WhisperTurbo | Self::WhisperLarge => None,
+            Self::Chrome
+            | Self::HaasJa
+            | Self::ReazonSpeech
+            | Self::WhisperTurbo
+            | Self::WhisperLarge => None,
             Self::GptTranscribe => Some(Provider::OpenAi),
             Self::GrokVoiceTranscribe => Some(Provider::Xai),
             Self::QwenAudio => Some(Provider::Qwen),
@@ -926,6 +934,7 @@ impl FinalSource {
             Self::QwenAudio => Some("qwen-audio-3.1-asr-flash"),
             Self::MaiTranscribe2 => Some("microsoft/mai-transcribe-2"),
             Self::HaasJa => Some(crate::local::HAAS_JA),
+            Self::ReazonSpeech => Some(crate::reazon::REAZONSPEECH),
             Self::WhisperTurbo | Self::WhisperLarge => self.whisper().map(whisper::Size::name),
         }
     }
@@ -958,6 +967,7 @@ pub enum TextSource {
     QwenAudioStreaming,
     MaiTranscribe2,
     HaasJa,
+    ReazonSpeech,
     Whisper,
 }
 
@@ -1331,6 +1341,7 @@ impl Settings {
                 FinalSource::QwenAudio => Text::QwenAudio,
                 FinalSource::MaiTranscribe2 => Text::MaiTranscribe2,
                 FinalSource::HaasJa => Text::HaasJa,
+                FinalSource::ReazonSpeech => Text::ReazonSpeech,
                 FinalSource::WhisperTurbo | FinalSource::WhisperLarge => Text::Whisper,
             }),
             translation: translates.then_some(engines.translation.source()),
@@ -1358,6 +1369,11 @@ impl Settings {
     pub fn uses_speech(&self) -> bool {
         self.engines.transcription == FinalSource::HaasJa
             || self.plan().partial.text == Some(TextSource::HaasJa)
+    }
+
+    /// PC の中の ReazonSpeech（jimaku-sherpa）を立てる
+    pub fn uses_reazon(&self) -> bool {
+        self.engines.transcription == FinalSource::ReazonSpeech
     }
 
     /// PC の中の LLM（llama.cpp）を立てる。翻訳先がない、Deadlock モードでないなど、頼むことがなければ立てない

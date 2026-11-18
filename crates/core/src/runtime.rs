@@ -15,6 +15,7 @@ use crate::access::{Access, Accesses};
 use crate::llama::Llama;
 use crate::local::{self, Gpu, Speech};
 use crate::people::Person;
+use crate::reazon::Reazon;
 use crate::secrets::{Keys, Provider, Relay};
 use crate::settings::{Engines, FinalSource, Models, Region, Segmentation, Settings, TextSource};
 use crate::store::{Fallback, Store};
@@ -109,6 +110,8 @@ struct AudioInput {
     local_gpu: Option<String>,
     /// PC の中の Haas-ja を立てる
     uses_speech: bool,
+    /// PC の中の ReazonSpeech を立てる
+    uses_reazon: bool,
     /// PC の中の LLM を立てる
     uses_llama: bool,
 }
@@ -252,6 +255,7 @@ fn subtitles_input(settings: &Settings, options: &Options, accesses: Accesses) -
         accesses,
         local_gpu: settings.local_gpu.clone(),
         uses_speech: settings.uses_speech(),
+        uses_reazon: settings.uses_reazon(),
         uses_llama: settings.uses_llama(),
     }))
 }
@@ -306,6 +310,7 @@ fn start_subtitles(
             }
             let accesses = input.accesses;
             let uses_local = input.uses_speech;
+            let uses_reazon = input.uses_reazon;
             let uses_llama = input.uses_llama;
             let whisper = input.engines.whisper();
             tracing::info!("transcription started");
@@ -331,8 +336,15 @@ fn start_subtitles(
                         false => None,
                     };
                     let whisper = local_whisper(&store, whisper, gpu).await?;
+                    let reazon = local_reazon(&store, uses_reazon).await?;
                     let llama = local_llm(&store, uses_llama, gpu).await?;
-                    subtitles::run(store.clone(), input, accesses, local, whisper, llama).await
+                    let locals = subtitles::Locals {
+                        speech: local,
+                        whisper,
+                        reazon,
+                        llama,
+                    };
+                    subtitles::run(store.clone(), input, accesses, locals).await
                 };
                 supervise(store.clone(), run, ended).await;
             }))
@@ -391,6 +403,24 @@ async fn local_whisper(
     let progress = |done, total| preparing.downloaded(done, total);
     let whisper = Whisper::start(&store.data_dir().join("whisper"), size, gpu, &progress).await?;
     Ok(Some(Arc::new(whisper)))
+}
+
+/// PC の中の ReazonSpeech を立てる（確定の文字起こしに選んであるとき）。初回は補助プログラムとモデル（約 0.6 GB）を取る。
+/// 辞書の用語をホットワードとして渡す（立てるときにしか渡せない）
+async fn local_reazon(store: &Arc<Store>, uses: bool) -> anyhow::Result<Option<Arc<Reazon>>> {
+    if !uses {
+        return Ok(None);
+    }
+    let settings = store.settings();
+    anyhow::ensure!(
+        settings.mic_language == "ja",
+        "ReazonSpeech only transcribes Japanese"
+    );
+    let (hotwords, _) = subtitles::terms(store, &settings).await;
+    let preparing = store.preparing();
+    let progress = |done, total| preparing.downloaded(done, total);
+    let reazon = Reazon::start(&store.data_dir().join("reazon"), &hotwords, &progress).await?;
+    Ok(Some(Arc::new(reazon)))
 }
 
 /// PC の中の LLM を立てる（使う工程があるとき）。初回は llama.cpp とモデル（約 5 GB）を取るので、
@@ -603,6 +633,7 @@ mod tests {
                 ),
                 local_gpu: None,
                 uses_speech: false,
+                uses_reazon: false,
                 uses_llama: false,
             }))
         }

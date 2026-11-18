@@ -3,7 +3,7 @@
 //! ここには、どの会社でも同じもの（手がかり、入力、途中の文字、接続をまたいで持つ状態）と、会社への振り分けを置く。
 //! 発話の区切りはアプリが決める（`segment.rs`）。途中の字幕は、その区切りに会社ごとのやり方で合わせる:
 //! OpenAI の Realtime は発話ごとに commit し（`openai.rs`）、Qwen の Streaming は文字ごとの時刻で割り当てる（`qwen.rs`）。
-//! 確定は、発話の WAV を 1 回送る（OpenAI、xAI、OpenRouter、Qwen、PC の中の speech.cpp）
+//! 確定は、発話の WAV を 1 回送る（OpenAI、xAI、OpenRouter、Qwen、PC の中の speech.cpp、whisper.cpp、jimaku-sherpa）
 
 use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
@@ -18,8 +18,9 @@ use tokio::sync::mpsc;
 use tokio_tungstenite::tungstenite::{self, Message, client::IntoClientRequest, http::HeaderValue};
 
 use crate::access::Access;
-use crate::audio::{SAMPLE_RATE, to_i16};
+use crate::audio::{self, SAMPLE_RATE, to_i16};
 use crate::local::Speech;
+use crate::reazon::Reazon;
 use crate::relay;
 use crate::secrets::Provider;
 use crate::types::TranscriptionError;
@@ -128,6 +129,8 @@ pub async fn realtime(
             let recognizer = local::Recognizer::Whisper(whisper, hints);
             local::live(&recognizer, speaking, input, deltas).await
         }
+        // 途中の字幕には選べない（`LiveSource` にない）
+        Transcriber::Reazon(_) => bail!("ReazonSpeech does not write live subtitles"),
     }
 }
 
@@ -163,6 +166,8 @@ pub enum Transcriber {
     Local(Arc<Speech>),
     /// PC の中で動く whisper.cpp。途中の字幕と確定で、同じ 1 つを使う
     Whisper(Arc<Whisper>),
+    /// PC の中で動く jimaku-sherpa（ReazonSpeech k2）。確定だけ
+    Reazon(Arc<Reazon>),
 }
 
 impl Transcriber {
@@ -196,6 +201,12 @@ pub async fn transcribe(http: &reqwest::Client, req: BatchRequest<'_>) -> anyhow
     {
         return qwen::transcribe(http, access, req).await;
     }
+    // 音声をそのまま渡す。用語は、立てるときにホットワードとして渡してある
+    if let Transcriber::Reazon(reazon) = req.transcriber {
+        let text = reazon.transcribe(&audio::samples(&req.wav)?).await?;
+        req.meter.audio(Use::Batch, req.model, req.seconds);
+        return Ok(text.trim().to_owned());
+    }
     let file = reqwest::multipart::Part::bytes(req.wav)
         .file_name("segment.wav")
         .mime_str("audio/wav")?;
@@ -212,6 +223,8 @@ pub async fn transcribe(http: &reqwest::Client, req: BatchRequest<'_>) -> anyhow
             req.meter.audio(Use::Batch, req.model, req.seconds);
             return text(&res.json().await?);
         }
+        // 上で頼んでいる
+        Transcriber::Reazon(_) => bail!("ReazonSpeech is asked above"),
         Transcriber::Whisper(whisper) => {
             let form = whisper_form(req.hints).part("file", file);
             let request = whisper.transcriptions().multipart(form);
