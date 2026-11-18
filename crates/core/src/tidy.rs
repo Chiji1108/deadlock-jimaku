@@ -105,10 +105,10 @@ fn numbers(furigana: &Furigana, text: &str) -> String {
             if !digits.is_empty()
                 && COUNTERS.contains(&rest)
                 && !IDIOMS.contains(&word)
-                && let Some(n) = value(&digits)
+                && let Some(n) = digits_or_value(&digits)
             {
                 out.push_str(&text[pos..start]);
-                out.push_str(&format_number(n));
+                out.push_str(&n);
                 out.push_str(rest);
                 pos = words[i].0.end;
             }
@@ -133,9 +133,9 @@ fn numbers(furigana: &Furigana, text: &str) -> String {
             .is_some_and(|w| IDIOMS.contains(&&text[start..w.0.end]));
         let counted = next.is_some_and(|w| COUNTERS.contains(&w) && !idiom)
             || before.is_some_and(|w| BEFORE.contains(&w) || w == "対");
-        if counted && let Some(n) = value(number) {
+        if counted && let Some(n) = digits_or_value(number) {
             out.push_str(&text[pos..start]);
-            out.push_str(&format_number(n));
+            out.push_str(&n);
             pos = end;
         }
         // 数える言葉の 1 語に入り込んだ数（「十分」の「十」）を読んだら、その語は終わっている
@@ -143,6 +143,19 @@ fn numbers(furigana: &Furigana, text: &str) -> String {
     }
     out.push_str(&text[pos..]);
     out
+}
+
+/// 書き直した数。算用数字だけの数は、値を読み直さない（「0.05秒」の「05」を 5 にしない）。全角は半角にするだけ
+fn digits_or_value(number: &str) -> Option<String> {
+    let ascii = |c: char| match c {
+        '0'..='9' => Some(c),
+        '０'..='９' => char::from_u32(c as u32 - '０' as u32 + '0' as u32),
+        _ => None,
+    };
+    match number.chars().map(ascii).collect::<Option<String>>() {
+        Some(digits) => Some(digits),
+        None => value(number).map(format_number),
+    }
 }
 
 /// 漢数字（「三十五」「一万五千」「二〇二六」）と算用数字の混じった数（「1万5000」）の値
@@ -352,6 +365,9 @@ mod tests {
         assert_eq!(numbers(f, "二対一は無理"), "2対1は無理");
         assert_eq!(numbers(f, "レベル五になった"), "レベル5になった");
         assert_eq!(numbers(f, "あと三十分後"), "あと30分後");
+        // 算用数字は、値を読み直さない
+        assert_eq!(numbers(f, "0.05秒だけ遅い"), "0.05秒だけ遅い");
+        assert_eq!(numbers(f, "００７番"), "007番");
     }
 
     #[test]
