@@ -63,6 +63,10 @@ jobs:
           lib="$PWD/core/sherpa_onnx/lib"
           if [ "$RUNNER_OS" = Windows ]; then lib=$(cygpath -w "$lib"); fi
           echo "SHERPA_ONNX_LIB_DIR=$lib" >> "$GITHUB_ENV"
+      - name: テストする
+        # Windows は、テストの実行ファイルの隣に DLL がないので動かさない（同じコードを Mac と Linux で確かめる）
+        if: runner.os != 'Windows'
+        run: cargo test --release --locked --manifest-path crates/sherpa/Cargo.toml --target ${{ matrix.target }}
       - name: ビルドする
         run: cargo build --release --locked --manifest-path crates/sherpa/Cargo.toml --target ${{ matrix.target }}
       - name: zip にまとめる

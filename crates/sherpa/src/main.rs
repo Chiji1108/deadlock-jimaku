@@ -27,6 +27,8 @@ const FRAME: usize = SAMPLE_RATE / 50;
 const PAUSE_FRAMES: usize = 6;
 /// 発話のいちばん大きい音に比べて、これより小さい音を無音とする
 const QUIET: f32 = 0.04;
+/// 雑音から決めるしきい値の上限（いちばん大きい音に比べて）
+const MAX_QUIET: f32 = 0.15;
 /// 文字の出た時刻から、その文字の音が続くとみなす長さ（秒）
 const CHAR_SECONDS: f32 = 0.06;
 
@@ -74,6 +76,8 @@ fn main() -> anyhow::Result<()> {
         recognizer.decode(&stream);
         let text = match stream.get_result() {
             Some(result) => with_pauses(&result.tokens, result.timestamps.as_deref(), &speech)
+                // つないだ文字が、認識した文と同じときだけ使う（空白のほかは変えない）
+                .filter(|spaced| spaced.replace(' ', "") == result.text.replace(' ', ""))
                 .unwrap_or(result.text),
             None => String::new(),
         };
@@ -95,7 +99,8 @@ fn with_pauses(tokens: &[String], timestamps: Option<&[f32]>, speech: &[f32]) ->
     let mut sorted = loudness.clone();
     sorted.sort_by(f32::total_cmp);
     let noise = sorted.get(sorted.len() / 10).copied().unwrap_or(0.0);
-    let threshold = (loudest * QUIET).max(noise * 2.0);
+    // 雑音が大きくても、声まで無音にしない
+    let threshold = (loudest * QUIET).max(noise * 2.0).min(loudest * MAX_QUIET);
     let quiet: Vec<bool> = loudness.iter().map(|l| *l < threshold).collect();
     // 時刻は、前に足した無音のぶん後ろにずれている
     let frame_at = |seconds: f32| {
@@ -125,4 +130,74 @@ fn emit(message: &serde_json::Value) -> io::Result<()> {
     let mut out = BufWriter::new(io::stdout().lock());
     writeln!(out, "{message}")?;
     out.flush()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 声（0.5 の大きさ）と無音を、秒で並べた音声
+    fn speech(parts: &[(f32, f32)]) -> Vec<f32> {
+        parts
+            .iter()
+            .flat_map(|(seconds, level)| {
+                (0..(seconds * SAMPLE_RATE as f32) as usize)
+                    .map(move |k| if k % 2 == 0 { *level } else { -level })
+            })
+            .collect()
+    }
+
+    /// 時刻は、前に足した無音（0.9 秒）のぶん後ろにずれている
+    fn at(seconds: &[f32]) -> Vec<f32> {
+        seconds.iter().map(|s| s + 0.9).collect()
+    }
+
+    fn tokens(text: &str) -> Vec<String> {
+        text.chars().map(String::from).collect()
+    }
+
+    #[test]
+    fn a_silence_between_characters_becomes_a_space() {
+        // 「あい」を話して 0.3 秒黙り、「うえ」を話す
+        let audio = speech(&[(0.4, 0.5), (0.3, 0.0), (0.4, 0.5)]);
+        let times = at(&[0.0, 0.2, 0.7, 0.9]);
+        assert_eq!(
+            with_pauses(&tokens("あいうえ"), Some(&times), &audio).unwrap(),
+            "あい うえ"
+        );
+    }
+
+    #[test]
+    fn a_long_sound_is_not_a_pause() {
+        // 「う」を伸ばして（声は続く）から「わ」
+        let audio = speech(&[(0.8, 0.5)]);
+        let times = at(&[0.0, 0.6]);
+        assert_eq!(
+            with_pauses(&tokens("うわ"), Some(&times), &audio).unwrap(),
+            "うわ"
+        );
+    }
+
+    #[test]
+    fn a_noisy_mic_does_not_turn_every_gap_into_a_pause() {
+        // 雑音（0.3）が声（0.5）に近くても、しきい値は声より下
+        let audio = speech(&[(0.4, 0.5), (0.3, 0.3), (0.4, 0.5)]);
+        let times = at(&[0.0, 0.2, 0.7, 0.9]);
+        assert_eq!(
+            with_pauses(&tokens("あいうえ"), Some(&times), &audio).unwrap(),
+            "あいうえ"
+        );
+    }
+
+    #[test]
+    fn without_times_it_gives_up() {
+        assert_eq!(
+            with_pauses(&tokens("あい"), None, &speech(&[(0.4, 0.5)])),
+            None
+        );
+        assert_eq!(
+            with_pauses(&tokens("あい"), Some(&[0.9]), &speech(&[(0.4, 0.5)])),
+            None
+        );
+    }
 }
