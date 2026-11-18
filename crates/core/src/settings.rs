@@ -1145,7 +1145,7 @@ pub struct Phase {
     pub emphasis: Option<EmphasisSource>,
 }
 
-/// 工程ごとの選択と設定から決まる、字幕の作り方。README の「しくみ」の表を写したもの。
+/// 工程ごとの選択と設定から決まる、字幕の作り方（工程ごとの選択は、README の「しくみ」の表）。
 /// 呼び出し側は工程ごとの選択ではなくこれを見る（DESIGN.md 9.6）
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Plan {
@@ -2019,8 +2019,7 @@ mod tests {
         .plan()
     }
 
-    /// README の「しくみ」の表と同じ値。表を変えたら、ここも変える。
-    /// 0.4 までの 3 つのモードと同じ作り方になる
+    /// 0.4 までの 3 つのモード（スタンダード・OpenAI・Chrome）と同じ作り方になる
     #[test]
     fn the_plan_matches_the_table_in_the_readme() {
         use EmphasisSource as E;
