@@ -400,7 +400,7 @@ fn candidates(
 ) -> Vec<Candidate> {
     let mut found = named(text, index);
     // 文と前の発話に出たヒーロー（その言葉が指しうるものを全部）と、配信者が今使っているヒーロー。
-    // 「ウルト」と番号は、そのスキルから選ばせる（誰の名前も出ていなくても、自分のスキルの話かもしれない）
+    // 「ウルト」は、そのスキルから選ばせる（誰の名前も出ていなくても、自分のスキルの話かもしれない）
     let before: Vec<Candidate> = context.iter().flat_map(|c| named(c, index)).collect();
     let said = before.iter().chain(&found).flat_map(|c| &c.refs);
     let own = playing
@@ -419,20 +419,32 @@ fn candidates(
             continue;
         }
         let rest = &text[at..];
-        let Some((slot, len)) = ability_word(rest) else {
+        let Some((slot, len, number)) = ability_word(rest) else {
             at += rest.chars().next().map_or(1, char::len_utf8);
             continue;
         };
-        // 「相手のウルト」のように、ほかの人のものだと言っていたら、自分のヒーローのスキルは候補にしない
-        // （判定モデルに任せると、自分のスキルを選んでしまう。実測）
-        let own = own.filter(|_| !OTHERS.iter().any(|other| text[..at].ends_with(other)));
+        let owners: Vec<&String> = if number {
+            // 数字は普通の言葉にも出る（「1人」「1番いい」「10秒」）ので、ヒーローの名前のすぐ後ろ
+            // （「ヘイズの2」）だけ、そのヒーローのスキルにする。外すと、翻訳にスキルの名前が入ってしまう
+            let after_name = |c: &&Candidate| matches!(text.get(c.end()..at), Some("" | "の"));
+            let more_digits = rest[len..].starts_with(|c: char| c.is_numeric());
+            found
+                .iter()
+                .filter(|c| after_name(c) && !more_digits)
+                .flat_map(|c| &c.refs)
+                .filter(|r| heroes.contains(r))
+                .collect()
+        } else {
+            // 「相手のウルト」のように、ほかの人のものだと言っていたら、自分のヒーローのスキルは候補にしない
+            // （判定モデルに任せると、自分のスキルを選んでしまう。実測）
+            let own = own.filter(|_| !OTHERS.iter().any(|other| text[..at].ends_with(other)));
+            heroes.iter().copied().chain(own).collect()
+        };
         let refs: Vec<String> = glossary
             .entities
             .iter()
             .filter(|(_, e)| {
-                let hero = e.hero.as_ref();
-                e.ability_slot == Some(slot)
-                    && hero.is_some_and(|h| heroes.contains(&h) || own == Some(h))
+                e.ability_slot == Some(slot) && e.hero.as_ref().is_some_and(|h| owners.contains(&h))
             })
             .map(|(r, _)| r.clone())
             .collect();
@@ -582,11 +594,11 @@ fn similar(word: &str, index: &Index) -> Vec<String> {
     refs
 }
 
-/// スキルの呼び方（「ウルト」は 4 番、「2」「３番」はその番号）。何番かと、話した言葉の長さ
-fn ability_word(rest: &str) -> Option<(u8, usize)> {
+/// スキルの呼び方（「ウルト」は 4 番、「2」「３番」はその番号）。何番か、話した言葉の長さ、数字で呼んだか
+fn ability_word(rest: &str) -> Option<(u8, usize, bool)> {
     for word in ["ウルト", "アルティメット", "ult"] {
         if rest.starts_with(word) {
-            return Some((4, word.len()));
+            return Some((4, word.len(), false));
         }
     }
     let first = rest.chars().next()?;
@@ -601,7 +613,7 @@ fn ability_word(rest: &str) -> Option<(u8, usize)> {
     } else {
         0
     };
-    Some((slot, first.len_utf8() + counter))
+    Some((slot, first.len_utf8() + counter, true))
 }
 
 /// 候補ごとに「どの用語か、どれでもないか」を選ばせる問い合わせ
@@ -1030,6 +1042,37 @@ mod tests {
         );
         // ヒーローが分からなければ聞かない
         assert_eq!(found("ウルト溜まった。3番も。", &[]), []);
+    }
+
+    #[test]
+    fn numbers_are_abilities_only_right_after_a_hero() {
+        let spoken = |text: &str, context: &[&str]| {
+            let loaded = loaded();
+            let context: Vec<String> = context.iter().map(|c| (*c).to_owned()).collect();
+            let playing = Some("hero:13");
+            candidates(
+                text,
+                &context,
+                playing,
+                &index(&loaded, "ja"),
+                &loaded.glossary,
+            )
+            .into_iter()
+            .map(|c| c.spoken)
+            .collect::<Vec<_>>()
+        };
+        assert_eq!(spoken("ヘイズの2番で寝かせる。", &[]), ["ヘイズ", "2番"]);
+        assert_eq!(spoken("ヘイズ2で寝かせる。", &[]), ["ヘイズ", "2"]);
+        // 使っているヒーローが分かっていても、数字だけでは拾わない（普通の言葉にも出る）
+        assert_eq!(spoken("1人で来てる。2番ある。", &[]), [] as [&str; 0]);
+        assert_eq!(
+            spoken("それが1番いい。", &["ヘイズもいる。"]),
+            [] as [&str; 0]
+        );
+        assert_eq!(spoken("ヘイズが1人で来てる。", &[]), ["ヘイズ"]);
+        assert_eq!(spoken("ヘイズの20秒。", &[]), ["ヘイズ"]);
+        // 「ウルト」は、今までどおり自分のスキルから選ばせる
+        assert_eq!(spoken("ウルト使うよ。", &[]), ["ウルト"]);
     }
 
     #[test]
