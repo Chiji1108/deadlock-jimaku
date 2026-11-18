@@ -28,22 +28,22 @@ const VERSION: &str = "1.0.0";
 const RELEASE: Option<(&str, &str)> = if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
     Some((
         "macos-arm64",
-        "0000000000000000000000000000000000000000000000000000000000000000",
+        "4f3a950c7abaf75208f7846f7a09535afe0961eda427fb30618be94a9b431ed1",
     ))
 } else if cfg!(all(target_os = "macos", target_arch = "x86_64")) {
     Some((
         "macos-x64",
-        "0000000000000000000000000000000000000000000000000000000000000000",
+        "2d4677d1538fa6256ba33fdae7a2b3cf4839ad199625a124d43fa0aa29a6533e",
     ))
 } else if cfg!(all(target_os = "windows", target_arch = "x86_64")) {
     Some((
         "windows-x64",
-        "0000000000000000000000000000000000000000000000000000000000000000",
+        "e7df88cbae5a645c557973407b003455be133209b45ecee55fa3f3508c2303e4",
     ))
 } else if cfg!(all(target_os = "linux", target_arch = "x86_64")) {
     Some((
         "linux-x64",
-        "0000000000000000000000000000000000000000000000000000000000000000",
+        "c8124079927a7dacf34837c91acf7aabb0919a551b4af08c9595a50e6d5225a7",
     ))
 } else {
     None
@@ -228,7 +228,6 @@ mod tests {
     }
 
     /// 本物の補助プログラムとモデル（約 0.6 GB）で、合成音声を文字起こしする。用語を渡す。
-    /// リリースの前は、`REAZON_TEST_DIR/1.0.0/` に手元で作った補助プログラム（`crates/sherpa`）を置いておく。
     /// ふだんは動かさない: `REAZON_TEST_DIR=… cargo test -p overlays-core reazon_writes -- --ignored --nocapture`
     #[tokio::test]
     #[ignore = "downloads jimaku-sherpa and the model"]
