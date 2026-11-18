@@ -6,7 +6,7 @@
   import heroPoster from "../assets/hero.webp?url";
   import heroVideo from "../assets/hero.mp4?url";
   import { defineCards, type Cards } from "../lib/cards";
-  import { display, enriched, LANGS, LINES, partial, RANK, spokenText } from "../lib/demo";
+  import { display, enriched, LANGS, LINES, liveTokens, partial, RANK, spokenText } from "../lib/demo";
 
   let { cards }: { cards: Cards } = $props();
 
@@ -18,7 +18,8 @@
   let width = $state(1152);
   let lang = $state<(typeof LANGS)[number]["value"]>("en");
   let index = $state(0);
-  let text = $state<string | undefined>();
+  /** 話した文字数。字幕を出していない間は undefined */
+  let spoken = $state<number | undefined>();
   let cycle = $state(0);
   let card = $state(LINES[0]!.card);
   let cardShown = $state(false);
@@ -29,11 +30,12 @@
   const narrow = $derived(width < 640);
   const line = $derived(LINES[index]!);
   const segments = $derived(
-    text === undefined
+    spoken === undefined
       ? []
       : settled
-        ? [enriched(`line-${cycle}`, line, lang)]
-        : [partial(`line-${cycle}`, text)],
+        ? // 途中から付いていた用語は、確定で出し直さない
+          [{ ...enriched(`line-${cycle}`, line, lang), tokens: liveTokens(line) }]
+        : [partial(`line-${cycle}`, line, spoken, lang)],
   );
   const scale = $derived(narrow ? width / 900 : width / SCREEN);
   const subtitle = $derived(
@@ -46,7 +48,7 @@
     void defineCards().then(() => (cardsReady = true));
 
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      text = spokenText(line);
+      spoken = spokenText(line).length;
       cardShown = true;
       return;
     }
@@ -62,9 +64,9 @@
         index = i;
         cycle += 1;
         settled = false;
-        const chars = [...spokenText(LINES[i]!)];
-        for (let n = 1; n <= chars.length && !stopped; n++) {
-          text = chars.slice(0, n).join("");
+        const length = spokenText(LINES[i]!).length;
+        for (let n = 1; n <= length && !stopped; n++) {
+          spoken = n;
           await sleep(62);
         }
         await sleep(420);
@@ -73,7 +75,7 @@
         cardShown = true;
         await sleep(5000);
         if (LINES[(i + 1) % LINES.length]!.card !== card) cardShown = false;
-        text = undefined;
+        spoken = undefined;
         await sleep(600);
       }
     })();
