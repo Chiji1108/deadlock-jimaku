@@ -107,7 +107,8 @@ const faqs = [
 ];
 
 
-const line = LINES[0]!;
+/** アイテム説明と正式名の例に使う台詞（「インドミ」と略して話す文） */
+const line = LINES[1]!;
 /** 手元の測定（M5 Pro）とリリースのファイルの大きさ */
 const lightness = [
   { value: "約 1%", label: "CPU", note: "アプリが字幕を出している間の、1 コアに対する割合" },
@@ -115,11 +116,11 @@ const lightness = [
   { value: "約 20MB", label: "インストーラー", note: "Windows 版" },
 ];
 const cards = await fetchCards();
-/** 「カート」と話しても、翻訳では正式名になる例 */
+/** 「インドミ」と略して話しても、翻訳では正式名になる例（アイテムの略称。スキルの略称は、ヒーローの名前が出ているときだけ） */
 const official = [
-  { lang: "English", name: "Luggage Cart" },
-  { lang: "Русский", name: "Багажная тележка" },
-  { lang: "中文", name: "行李车" },
+  { lang: "English", name: "Indomitable" },
+  { lang: "Русский", name: "Непреклонность" },
+  { lang: "中文", name: "不屈之志" },
 ];
 ---
 
@@ -183,7 +184,7 @@ const official = [
       <figure class="reveal">
         <div class="flex min-h-[26rem] flex-col justify-center rounded-[20px] bg-panel p-6 sm:p-8">
           <p class="text-sm font-bold text-muted">話した言葉</p>
-          <p class="display mt-1 text-4xl">「カート」</p>
+          <p class="display mt-1 text-4xl">「インドミ」</p>
           <dl class="mt-6 divide-y divide-line border-t border-line">
             {
               official.map((o) => (
