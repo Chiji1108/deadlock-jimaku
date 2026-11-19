@@ -107,8 +107,8 @@ const faqs = [
 ];
 
 
-/** アイテム説明と正式名の例に使う台詞（「インドミ」と略して話す文） */
-const line = LINES[1]!;
+/** アイテム説明と正式名の例に使う台詞（「ディスペル」と略して話す文） */
+const line = LINES[0]!;
 /** 手元の測定（M5 Pro）とリリースのファイルの大きさ */
 const lightness = [
   { value: "約 1%", label: "CPU", note: "アプリが字幕を出している間の、1 コアに対する割合" },
@@ -116,11 +116,11 @@ const lightness = [
   { value: "約 20MB", label: "インストーラー", note: "Windows 版" },
 ];
 const cards = await fetchCards();
-/** 「インドミ」と略して話しても、翻訳では正式名になる例（アイテムの略称。スキルの略称は、ヒーローの名前が出ているときだけ） */
+/** 「ディスペル」と略して話しても、翻訳では正式名になる例（アイテムの略称。スキルの略称は、ヒーローの名前が出ているときだけ） */
 const official = [
-  { lang: "English", name: "Indomitable" },
-  { lang: "Русский", name: "Непреклонность" },
-  { lang: "中文", name: "不屈之志" },
+  { lang: "English", code: "en", name: "Dispel Magic" },
+  { lang: "Русский", code: "ru", name: "Развеивание магии" },
+  { lang: "中文", code: "zh-Hans", name: "驱散魔法" },
 ];
 ---
 
@@ -184,13 +184,13 @@ const official = [
       <figure class="reveal">
         <div class="flex min-h-[26rem] flex-col justify-center rounded-[20px] bg-panel p-6 sm:p-8">
           <p class="text-sm font-bold text-muted">話した言葉</p>
-          <p class="display mt-1 text-4xl">「インドミ」</p>
+          <p class="display mt-1 text-4xl">「ディスペル」</p>
           <dl class="mt-6 divide-y divide-line border-t border-line">
             {
               official.map((o) => (
                 <div class="flex items-baseline justify-between gap-4 py-3">
                   <dt class="text-sm text-muted">{o.lang}</dt>
-                  <dd class="text-right text-lg font-bold">{o.name}</dd>
+                  <dd class="text-right text-lg font-bold" lang={o.code}>{o.name}</dd>
                 </div>
               ))
             }
