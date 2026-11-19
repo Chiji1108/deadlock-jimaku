@@ -19,6 +19,9 @@ const {
   indexable = true,
 } = Astro.props;
 const fullTitle = title ? `${title} | ${SITE}` : SITE;
+// ページの URL。ビルドの形（astro.config.mjs の build.format）で pathname は /privacy.html になるが、
+// 配信は /privacy で返し、/index.html と /privacy.html は転送するので、転送されない形にする
+const pageUrl = new URL(Astro.url.pathname.replace(/(index)?\.html$/, ""), Astro.site);
 const year = new Date().getFullYear();
 ---
 
@@ -46,8 +49,8 @@ const year = new Date().getFullYear();
     {
       indexable ? (
         <>
-          <meta property="og:url" content={new URL(Astro.url.pathname, Astro.site)} />
-          <link rel="canonical" href={new URL(Astro.url.pathname, Astro.site)} />
+          <meta property="og:url" content={pageUrl} />
+          <link rel="canonical" href={pageUrl} />
         </>
       ) : (
         <meta name="robots" content="noindex" />
