@@ -368,7 +368,7 @@ export const MODES: {
     label: "おすすめ",
     traits: ["高精度"],
     hourlyUsd: 0,
-    hint: "途中の字幕は Chrome、確定の字幕・用語・翻訳は、デドロ字幕のサーバーを通して作ります。1 日の上限に届いても、Chrome の作り方で続きます",
+    hint: "Chrome と、デドロ字幕のサーバーを使って作ります。1 日の上限に届いても、Chrome の作り方で続きます",
     engines: BETA,
     badge: "ベータ期間中は無料",
   },
