@@ -70,7 +70,7 @@
     <!-- 一番上の動画の 1 コマから、ゲームの表示（HUD）のないところを拡大して背景にする -->
     <img src={scene} alt="" class="scene absolute inset-0 size-full object-cover" loading="lazy" />
     <div class="absolute top-4 left-4" role="img" aria-label="ランクの表示（エミッサリー III）">
-      <RankBadge rank={RANK} lang="ja" content="name" look={rank} />
+      <RankBadge rank={RANK} lang="en" content="name" look={rank} />
     </div>
     <div class="plate-caption">
       <Captions segments={[segment]} display={display(21, 15)} look={subtitle} />
