@@ -106,12 +106,6 @@ const faqs = [
   },
 ];
 
-/** モードの一覧はアプリと同じもの（engines.ts）を出し、LP では「必要なもの」だけを足す */
-const needs: Record<string, string> = {
-  beta: "Google Chrome（字幕を始めると小さなウィンドウが開く）",
-  chrome: "Google Chrome（字幕を始めると小さなウィンドウが開く）",
-  chromePlus: "Google Chrome（初回に、Chrome が AI のモデル約 4 GB をダウンロードする）",
-};
 
 const line = LINES[0]!;
 /** 手元の測定（M5 Pro）とリリースのファイルの大きさ */
@@ -301,12 +295,16 @@ const official = [
             <p class="mt-2 text-sm font-bold">{e.traits.join("・")}</p>
             <p class="display mt-3 text-3xl">{price(e.hourlyUsd)}</p>
             <p class="mt-3 leading-relaxed text-muted">{e.hint}</p>
-            <p class="mt-2 text-sm text-muted">必要なもの: {needs[e.name]}</p>
           </li>
         ))
       }
     </ul>
-    <p class="reveal mt-8 leading-relaxed text-muted">
+    <!-- 3 つとも要るものは、モードごとに繰り返さず、下に 1 つだけ出す -->
+    <div class="reveal mt-10 flex flex-wrap items-baseline gap-x-6 gap-y-1 border-t-2 border-ink pt-4">
+      <p class="font-bold">3 つとも必要なもの</p>
+      <p class="text-muted">Google Chrome（字幕を始めると、小さなウィンドウが開きます）</p>
+    </div>
+    <p class="reveal mt-6 leading-relaxed text-muted">
       ほかのモードもあります。工程ごとにカスタマイズすることもできます。
     </p>
   </section>
