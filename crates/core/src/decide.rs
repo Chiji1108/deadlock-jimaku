@@ -550,14 +550,24 @@ fn lcs(a: &[char], b: &[char]) -> usize {
     row[b.len()]
 }
 
-/// 言葉の字の 3 分の 2 以上（2 字以上）が順に名前に入っている用語を、似ている順に `MAX_SIMILAR` まで
+/// 名前の似た用語を、似ている順に `MAX_SIMILAR` まで。似ているのは、次のどちらか:
+/// - 名前の一部（略称や、名前の後ろ半分。「カート」と「キャリーカート」）: 言葉がそのまま名前の中に続けて入っている
+/// - 名前全体の聞き違い（「ページ」と「ペイジ」、「エコシャ」と「エコーシャード」）: 言葉の字の 3 分の 2 以上
+///   （2 字以上）が順に名前に入っていて、それが名前の半分以上を占める
+///
+/// 長い名前のあちこちの字にたまたま当たるだけの言葉（「プレイ」と「グレイ・タロン」、「デッドロック」と
+/// 「デベロップ・クイーン」）は、どちらでもないので候補にしない
 fn similar(word: &str, index: &Index) -> Vec<String> {
     let word = kana(word);
     let mut scored: Vec<(usize, usize, &String)> = Vec::new();
     for (surface, refs) in index {
         let name = kana(surface);
-        let common = lcs(&word, &name);
-        if common >= 2 && common * 3 >= word.len() * 2 {
+        let part = name.windows(word.len()).any(|w| w == word.as_slice());
+        let common = if part { word.len() } else { lcs(&word, &name) };
+        let whole = word.first() == name.first()
+            && common * 3 >= word.len() * 2
+            && common * 2 >= name.len();
+        if common >= 2 && (part || whole) {
             // 言葉をよく説明し、名前の長さが近いものを先に
             scored.extend(
                 refs.iter()
@@ -728,6 +738,7 @@ mod tests {
                 "hero:20": { "kind": "hero", "className": "p", "names": { "ja": "ポケット", "en": "Pocket" } },
                 "hero:67": { "kind": "hero", "className": "g", "names": { "ja": "ペイジ", "en": "Paige" } },
                 "hero:86": { "kind": "hero", "className": "v", "names": { "ja": "ヴァイオレット", "en": "Violet" } },
+                "hero:17": { "kind": "hero", "className": "g", "names": { "ja": "グレイ・タロン", "en": "Grey Talon" } },
                 "ability:2": { "kind": "ability", "className": "a", "names": { "ja": "スモークボム", "en": "Smoke Bomb" }, "hero": "hero:13", "abilitySlot": 2 },
                 "ability:4": { "kind": "ability", "className": "b", "names": { "ja": "バレットダンス", "en": "Bullet Dance" }, "hero": "hero:13", "abilitySlot": 4 },
                 "ability:24": { "kind": "ability", "className": "c", "names": { "ja": "アフリクション", "en": "Affliction" }, "hero": "hero:20", "abilitySlot": 4 },
@@ -886,6 +897,19 @@ mod tests {
         );
         // 似た名前のない言葉は候補にしない
         assert_eq!(found("コメントありがとう。", &[]), []);
+        // 名前の一部は、そのまま続けて入っていれば候補にする
+        assert_eq!(
+            found("グレイが飛んでる。", &[]),
+            [("グレイ".to_owned(), refs(&["hero:17"]))]
+        );
+        assert_eq!(
+            found("タロンに撃たれた。", &[]),
+            [("タロン".to_owned(), refs(&["hero:17"]))]
+        );
+        // 長い名前のあちこちの字に当たるだけの言葉（「プレイ」と「グレイ・タロン」）は候補にしない。
+        // 名前全体の聞き違いは、初めの字が同じものだけ（「プレイ」と「ペイジ」は違う）
+        assert_eq!(found("どうやってプレイするの。", &[]), []);
+        assert_eq!(found("クレイが飛んでる。", &[]), []);
     }
 
     #[test]
