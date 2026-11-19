@@ -384,6 +384,17 @@ fn candidates(
         .filter(|(_, e)| e.kind == EntityKind::Hero)
         .map(|(r, _)| r)
         .collect();
+    // 名前が似ているだけの言葉は、スキルなら、持ち主のヒーローの名前が出ているときだけ候補にする
+    // （「ダッシュ」は動きの名前で、インファーナスの話をしているときだけ「フレイムダッシュ」かもしれない）。
+    // 「ウルト」や番号と同じ決まり。誰のスキルか分からないのに判定モデルに任せると、スキルを選ぶことがある
+    let known_owner = |r: &String| {
+        let e = &glossary.entities[r];
+        e.kind != EntityKind::Ability || e.hero.as_ref().is_some_and(|h| heroes.contains(&h))
+    };
+    for candidate in found.iter_mut().filter(|c| c.guessed) {
+        candidate.refs.retain(known_owner);
+    }
+    found.retain(|c| !c.refs.is_empty());
     let mut at = 0;
     while at < text.len() {
         if let Some(c) = found.iter().find(|c| c.start <= at && at < c.end()) {
@@ -855,8 +866,23 @@ mod tests {
         );
         // 似た名前が 2 つあれば、どちらも選べるようにする（バレットダンスも字が重なる）
         assert_eq!(
-            found("バイオレットが気になる。", &[]),
+            found("バイオレットが気になる。", &["ヘイズもいる。"]),
             [("バイオレット".to_owned(), refs(&["hero:86", "ability:4"]))]
+        );
+        // 名前が似ているだけのスキルは、持ち主のヒーローの名前が出ていなければ候補にしない
+        assert_eq!(
+            found("バイオレットが気になる。", &[]),
+            [("バイオレット".to_owned(), refs(&["hero:86"]))]
+        );
+        assert_eq!(found("スモークで逃げる。", &[]), []);
+        assert_eq!(
+            found("ヘイズのスモークで逃げる。", &[])[1],
+            ("スモーク".to_owned(), refs(&["ability:2"]))
+        );
+        // 名前そのものは、持ち主が出ていなくても候補にする
+        assert_eq!(
+            found("スモークボムで逃げる。", &[]),
+            [("スモークボム".to_owned(), refs(&["ability:2"]))]
         );
         // 似た名前のない言葉は候補にしない
         assert_eq!(found("コメントありがとう。", &[]), []);
