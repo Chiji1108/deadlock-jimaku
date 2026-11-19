@@ -64,7 +64,7 @@ const faqs = [
   },
   {
     q: "お金はかかりますか？",
-    a: "かかりません。Chrome のモードは無料で、「おすすめ」のモードもベータ期間中は無料です。API キーも要りません。「最高精度」のモードや、工程ごとに選んだ有料のモデルを使うときだけ、ご自身の API キーで各社に使った分を払います。アプリの「料金」タブに、使った分の目安がその場で出ます。",
+    a: "かかりません。Chrome のモードは無料で、「おすすめ」のモードもベータ期間中は無料です。API キーも要りません。API キーを使うモードを選んだときだけ、ご自身の API キーで各社に使った分を払います。アプリの「API キーと料金」のタブに、使った分の目安がその場で出ます。",
   },
   {
     q: "「おすすめ」のモードは、配信の途中で止まりませんか？",
@@ -72,11 +72,11 @@ const faqs = [
   },
   {
     q: "字幕はどこで作っていますか？",
-    a: "どのモードも、話している途中の字幕は Chrome で作ります（Google Chrome が必要で、字幕を始めると小さな Chrome のウィンドウが開きます）。Chrome のモードは、確定の字幕と翻訳も Chrome で作ります。翻訳のモデルは初回に Chrome がダウンロードします。「おすすめ」のモードは、話し終えた文を、デドロ字幕のサーバーを通して、文字起こし・用語・翻訳の専用のモデル（Qwen と、OpenRouter のモデル）で作り直します。「最高精度」のモードは、OpenAI のモデルで作り直します。ふりがなと用語の辞書は PC の中にあります。",
+    a: "初めに選べる 3 つのモード（おすすめ・Chrome・Chrome+）は、話している途中の字幕を Chrome で作ります（Google Chrome が必要で、字幕を始めると小さな Chrome のウィンドウが開きます）。Chrome のモードは、確定の字幕と翻訳も Chrome で作ります。翻訳のモデルは初回に Chrome がダウンロードします。「おすすめ」のモードは、話し終えた文を、デドロ字幕のサーバーを通して、文字起こし・用語・翻訳の専用のモデル（Qwen と、OpenRouter のモデル）で作り直します。API キーを使うモードは、その会社のモデルで作り直します。ふりがなと用語の辞書は PC の中にあります。アプリの「その他のモード」には、Chrome を使わないモードや、PC の中の AI だけで作る「ローカル」のモードもあります。",
   },
   {
     q: "どんな情報が送信されますか？",
-    a: "どのモードでも、字幕を出している間の話し声が、Chrome を通じて Google に送られます。Chrome のモードの字幕の文字は外に送りません。「おすすめ」のモードでは、話している間の話し声と字幕の文字が、デドロ字幕のサーバーを通って、Qwen と OpenRouter に送られます（サーバーは音声と文字を保存しません）。「最高精度」のモードでは、話し声と字幕の文字を OpenAI に送ります。ランクを出すときは、Steam のアカウント ID を deadlock-api に送ります。",
+    a: "初めに選べる 3 つのモード（おすすめ・Chrome・Chrome+）では、字幕を出している間の話し声が、Chrome を通じて Google に送られます。Chrome のモードの字幕の文字は外に送りません。「おすすめ」のモードでは、話している間の話し声と字幕の文字が、デドロ字幕のサーバーを通って、Qwen と OpenRouter に送られます（サーバーは音声と文字を保存しません）。API キーを使うモードでは、話し声と字幕の文字を、選んだ会社（OpenAI など）に送ります。「ローカル」のモードでは、話し声も字幕の文字も PC から出しません（GPU のメモリが 12 GB 以上の PC 向けです）。ランクを出すときは、Steam のアカウント ID を deadlock-api に送ります。",
     link: { href: "/privacy", label: "プライバシーポリシーを見る" },
   },
   {
@@ -107,8 +107,6 @@ const faqs = [
 ];
 
 /** モードの一覧はアプリと同じもの（engines.ts）を出し、LP では「必要なもの」だけを足す */
-/** 料金の説明に出す、有料のモード */
-const best = MODES.find((mode) => mode.name === "best")!;
 const needs: Record<string, string> = {
   beta: "Google Chrome（字幕を始めると小さなウィンドウが開く）",
   chrome: "Google Chrome（字幕を始めると小さなウィンドウが開く）",
@@ -149,7 +147,7 @@ const official = [
         聞き取りの<br /><span class="band">精度が違う。</span>
       </h2>
       <p class="reveal mt-5 text-lg leading-relaxed text-muted">
-        「おすすめ」と「最高精度」のモードでは、話し終えた文を、文字起こし専用のモデルで作り直します。略して呼んだアイテムも、「ドアマンのカート」のように略したスキルも、どれのことか見分けます。
+        「おすすめ」のモードでは、話し終えた文を、文字起こし専用のモデルで作り直します。略して呼んだアイテムも、「ドアマンのカート」のように略したスキルも、どれのことか見分けます。
       </p>
     </div>
     <div class="reveal plate relative h-64 overflow-hidden">
@@ -176,7 +174,7 @@ const official = [
       <span class="band">デッドロック特化。</span>
     </h2>
     <p class="reveal mt-5 max-w-2xl text-lg leading-relaxed text-muted">
-      ヒーロー・スキル・アイテムの名前は色とアイコンで強調します。アイテムの名前が出たら、ゲーム内と同じカードで説明も出します。「おすすめ」と「最高精度」のモードでは、略して話しても、翻訳はゲーム内の正式な名前になります。Chrome のモードでは、日本語で正式な名前を話したときだけ色とアイコンが付きます。
+      ヒーロー・スキル・アイテムの名前は色とアイコンで強調します。アイテムの名前が出たら、ゲーム内と同じカードで説明も出します。「おすすめ」のモードでは、略して話しても、翻訳はゲーム内の正式な名前になります。Chrome のモードでは、日本語で正式な名前を話したときだけ色とアイコンが付きます。
     </p>
     <div class="mt-10 grid gap-4 md:grid-cols-2">
       <figure class="reveal">
@@ -205,7 +203,7 @@ const official = [
         </div>
         <figcaption class="mt-4">
           <h3 class="text-xl font-bold">正式名への翻訳</h3>
-          <p class="mt-1 leading-relaxed text-muted">海外の視聴者にも、何の話か伝わります（「おすすめ」と「最高精度」のモード）。</p>
+          <p class="mt-1 leading-relaxed text-muted">海外の視聴者にも、何の話か伝わります（「おすすめ」のモード）。</p>
         </figcaption>
       </figure>
     </div>
@@ -323,25 +321,25 @@ const official = [
       </div>
       <div class="md:pt-9">
         <dl class="divide-y divide-paper/20 border-y border-paper/20">
-          <div class="grid gap-1 py-4 sm:grid-cols-[9.5rem_1fr] sm:gap-4">
+          <div class="grid gap-1 py-4 sm:grid-cols-[11rem_1fr] sm:gap-4">
             <dt class="font-bold">Chrome・Chrome+</dt>
             <dd class="text-paper/70">無料。API キーは要りません。</dd>
           </div>
-          <div class="grid gap-1 py-4 sm:grid-cols-[9.5rem_1fr] sm:gap-4">
+          <div class="grid gap-1 py-4 sm:grid-cols-[11rem_1fr] sm:gap-4">
             <dt class="font-bold">おすすめ</dt>
             <dd class="text-paper/70">
               ベータ期間中は無料。API キーは要りません。1 日の上限に届いても字幕は止まらず、Chrome のモードと同じ作り方で続きます。
             </dd>
           </div>
-          <div class="grid gap-1 py-4 sm:grid-cols-[9.5rem_1fr] sm:gap-4">
-            <dt class="font-bold">最高精度</dt>
+          <div class="grid gap-1 py-4 sm:grid-cols-[11rem_1fr] sm:gap-4">
+            <dt class="font-bold">API キーを使うモード</dt>
             <dd class="text-paper/70">
-              {price(best.hourlyUsd)}（{monthly(best.hourlyUsd)}）が目安。ご自身の API キーで、OpenAI に直接払います。話していない間は、かかりません。
+              ご自身の API キーで、各社に使った分だけ直接払います。アプリに、使った分の目安が出ます。
             </dd>
           </div>
         </dl>
         <p class="mt-4 text-sm leading-relaxed text-paper/50">
-          目安は、翻訳 1 言語・ふりがなありで、配信の半分くらい話したときの額で、翻訳先を増やすと増えます。ベータ期間中の無料の提供は、予告なく変えたり終えたりすることがあります。
+          ベータ期間中の無料の提供は、予告なく変えたり終えたりすることがあります。
         </p>
       </div>
     </div>
