@@ -77,7 +77,6 @@
     </div>
   </div>
   <figcaption class="mt-5 flex flex-wrap items-center justify-center gap-2">
-    <span class="mr-1 text-sm text-muted">押すと見た目が変わります</span>
     {#each LOOKS as l, i (l.label)}
       <button
         type="button"
