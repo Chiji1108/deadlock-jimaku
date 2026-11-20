@@ -47,6 +47,15 @@ pub struct ApiItem {
     pub shop_image_webp: Option<String>,
 }
 
+/// ユニット（`npc-units`）の、名前だけを読む
+#[derive(Clone, Debug, Deserialize)]
+pub struct ApiUnit {
+    pub id: u32,
+    pub class_name: String,
+    #[serde(default)]
+    pub name: Option<String>,
+}
+
 #[derive(Clone)]
 pub struct Client {
     http: reqwest::Client,
@@ -79,6 +88,13 @@ impl Client {
     pub async fn items(&self, language: &str, version: u32) -> anyhow::Result<Vec<ApiItem>> {
         self.get_json(&format!(
             "{BASE}/items?language={language}&client_version={version}"
+        ))
+        .await
+    }
+
+    pub async fn units(&self, language: &str, version: u32) -> anyhow::Result<Vec<ApiUnit>> {
+        self.get_json(&format!(
+            "{BASE}/npc-units?language={language}&client_version={version}"
         ))
         .await
     }

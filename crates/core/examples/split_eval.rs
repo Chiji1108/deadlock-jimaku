@@ -647,6 +647,7 @@ async fn translate(
                 EntityKind::Item => "item",
                 EntityKind::Ability => "ability",
                 EntityKind::Person => "person",
+                EntityKind::Term => "term",
             };
             Some((e.names.get("en")?.clone(), kind.to_owned()))
         })
