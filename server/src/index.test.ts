@@ -514,6 +514,13 @@ describe("admin", () => {
         { version: null, codes: 1 },
       ],
     });
+    // 止めたコードは数えない
+    await env.DB.prepare("UPDATE codes SET revoked = 1 WHERE app_version = '0.10.0-rc.1'").run();
+    const after = (await (await manage("/api/summary")).json()) as Record<string, any>;
+    expect(after.versions.rows).toEqual([
+      { version: "0.9.7", codes: 1 },
+      { version: null, codes: 1 },
+    ]);
     // 版の形でないものは、伝えていないのと同じ
     await call("/gift", { token: current, headers: { "User-Agent": "curl/8.0" } });
     const row = await env.DB.prepare("SELECT COUNT(*) AS n FROM codes WHERE app_version IS NULL AND seen_day = ?").bind(day(Date.now())).first<{ n: number }>();

@@ -156,7 +156,7 @@ export const page = /* html */ `<!doctype html>
 
   <section class="card">
     <h2>アプリの版</h2>
-    <p class="muted">この <span id="versionDays"></span> 日に字幕を始めたコードの数です。アプリは字幕を始めるときに版を伝えます（0.9.7 から）。古い口をやめる前に、古い版が残っていないかをここで見ます</p>
+    <p class="muted">この <span id="versionDays"></span> 日に、アプリが確かめに来たコードの数です（止めたコードは除く）。アプリは、字幕を始めるときと「おすすめ」を選ぶときにコードを確かめ、版を伝えます（0.9.7 から）。古い口をやめる前に、古い版が残っていないかをここで見ます</p>
     <table id="versions"></table>
   </section>
 

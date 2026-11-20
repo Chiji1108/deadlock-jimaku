@@ -222,6 +222,13 @@ impl Store {
         self.update_requested.notified().await;
     }
 
+    /// 待っていない間に押された「更新する」を忘れる。ダイアログで聞いている間や、入れ替えている間に押された分を
+    /// 残すと、「あとで」と答えたあとや、入れ替えに失敗したあとに、黙って入れ替えが始まる
+    pub fn forget_update_request(&self) {
+        use futures_util::FutureExt;
+        let _ = self.update_requested.notified().now_or_never();
+    }
+
     pub fn watch_settings(&self) -> watch::Receiver<Settings> {
         self.settings.subscribe()
     }
@@ -977,5 +984,26 @@ mod tests {
             Some("Hiragino Sans")
         );
         assert_eq!(rank_style.font.font.as_deref(), Some("Georgia"));
+    }
+    /// 新しい版があることは、変わったときだけ操作パネルに知らせる。待っていない間に押された「更新する」は忘れられる
+    #[tokio::test]
+    async fn an_update_is_shown_and_a_stale_request_is_forgotten() {
+        use futures_util::FutureExt;
+        let store = Store::new(Ok(Settings::default()), PathBuf::new());
+        let mut rx = store.subscribe();
+        assert_eq!(store.update(), None);
+        store.set_update(Some("0.9.8".into()));
+        store.set_update(Some("0.9.8".into()));
+        assert_eq!(store.update().as_deref(), Some("0.9.8"));
+        assert!(matches!(rx.try_recv(), Ok(ServerMsg::SettingsChanged)));
+        assert!(rx.try_recv().is_err());
+        // 押されたら、待っている側が受け取る
+        store.request_update();
+        assert!(store.update_requested().now_or_never().is_some());
+        assert!(store.update_requested().now_or_never().is_none());
+        // 聞いている間に押された分は、忘れる
+        store.request_update();
+        store.forget_update_request();
+        assert!(store.update_requested().now_or_never().is_none());
     }
 }

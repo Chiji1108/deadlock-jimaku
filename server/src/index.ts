@@ -63,7 +63,9 @@ app.get("/gift", async (c) => {
   const code = await bearerCode(c);
   if (!code) return c.json({ error: "unknown" }, 401);
   const now = Date.now();
-  await seen(c.var.db, code.id, appVersion(c.req.header("User-Agent")), now);
+  // 覚えられなくても、コードの答えは返す（アプリは、答えが来ないと字幕を始めない）
+  const noted = seen(c.var.db, code.id, appVersion(c.req.header("User-Agent")), now);
+  c.executionCtx.waitUntil(noted.catch((e: unknown) => console.error("seen", e)));
   const error = refusal(code, now);
   if (error) return c.json({ error }, 403);
   return c.json({ providers: await betaProviders(c.var.db, c.env) });

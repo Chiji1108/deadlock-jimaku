@@ -224,10 +224,12 @@ async fn watch_updates(app: AppHandle, store: Arc<Store>) {
                 Ok(true) => {}
                 Ok(false) => {
                     ask = false;
+                    store.forget_update_request();
                     continue;
                 }
                 Err(e) => {
                     tracing::warn!("update: {e}");
+                    store.forget_update_request();
                     continue;
                 }
             }
@@ -236,6 +238,7 @@ async fn watch_updates(app: AppHandle, store: Arc<Store>) {
             Ok(()) => app.restart(),
             Err(e) => {
                 tracing::warn!("update: {e}");
+                store.forget_update_request();
                 failed(&app, &e.to_string());
             }
         }

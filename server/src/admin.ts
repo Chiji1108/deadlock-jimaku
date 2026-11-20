@@ -110,11 +110,11 @@ admin.get("/api/summary", async (c) => {
       .get(),
     betaClosed(db),
     betaLimits(db),
-    // この 14 日に字幕を始めたコードの、アプリの版ごとの数（版を伝えない 0.9.6 までは null）
+    // この 14 日にアプリが確かめに来たコード（止めたものは除く）の、アプリの版ごとの数（版を伝えない 0.9.6 までは null）
     db
       .select({ version: codes.appVersion, codes: sql<number>`COUNT(*)` })
       .from(codes)
-      .where(sql`${codes.seenDay} >= ${day(now - VERSION_DAYS * DAY_MS)}`)
+      .where(and(eq(codes.revoked, false), sql`${codes.seenDay} >= ${day(now - VERSION_DAYS * DAY_MS)}`))
       .groupBy(codes.appVersion)
       .orderBy(desc(sql`COUNT(*)`), desc(codes.appVersion)),
   ]);
