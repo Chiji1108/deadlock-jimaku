@@ -13,6 +13,10 @@ import type { SubtitleStyle } from "./SubtitleStyle";
 
 export type Settings = { 
 /**
+ * 設定ファイルの形の番号。前の版のファイルを読み替えるときに、まだ読み替えていないかを見分ける（`parse`）
+ */
+format: number, 
+/**
  * マイクを字幕にするか（操作パネルの開始・停止）
  */
 transcriptionEnabled: boolean, 
