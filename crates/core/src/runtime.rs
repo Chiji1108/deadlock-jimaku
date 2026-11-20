@@ -479,7 +479,9 @@ async fn fall_back(store: &Store, refused: &TranscriptionError) -> bool {
     // ほかの理由では続けないので、鍵を読みに行かない
     let beta = matches!(
         refused,
-        TranscriptionError::BetaLimit | TranscriptionError::BetaRefused
+        TranscriptionError::BetaLimit
+            | TranscriptionError::BetaRefused
+            | TranscriptionError::BetaOutdated
     );
     if !beta {
         return false;

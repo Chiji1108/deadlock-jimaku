@@ -7,7 +7,7 @@ use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use tokio::sync::{broadcast, watch};
+use tokio::sync::{Notify, broadcast, watch};
 
 use crate::assets::Loaded;
 use crate::chrome::{self, Browser};
@@ -62,6 +62,10 @@ pub struct Store {
     transcription_error: Mutex<Option<TranscriptionError>>,
     /// ベータのコードで断られた理由と、そのあとの続け方（DESIGN.md 17.2）。保存はしない
     fallback: Mutex<Option<(TranscriptionError, Fallback)>>,
+    /// 新しい版があれば、その版（デスクトップアプリが調べて知らせる。操作パネルに出す）
+    update: Mutex<Option<String>>,
+    /// 操作パネルの「更新する」が押された（デスクトップアプリが待つ）
+    update_requested: Notify,
     /// PC の中の文字起こしを準備している
     preparing: AtomicBool,
     /// 準備の間に取っているファイルの進み具合
@@ -118,6 +122,8 @@ impl Store {
             unsaved: Mutex::new(unsaved),
             transcription_error: Mutex::new(None),
             fallback: Mutex::new(None),
+            update: Mutex::new(None),
+            update_requested: Notify::new(),
             preparing: AtomicBool::new(false),
             downloading: Mutex::new(None),
             segments: Mutex::new(VecDeque::new()),
@@ -171,7 +177,9 @@ impl Store {
     pub fn fall_back(&self, refused: &TranscriptionError, own_keys: bool) -> bool {
         let beta = matches!(
             refused,
-            TranscriptionError::BetaLimit | TranscriptionError::BetaRefused
+            TranscriptionError::BetaLimit
+                | TranscriptionError::BetaRefused
+                | TranscriptionError::BetaOutdated
         );
         let with = match own_keys {
             true => Fallback::OwnKeys,
@@ -188,6 +196,37 @@ impl Store {
         let _ = self.tx.send(ServerMsg::SettingsChanged);
         self.restart();
         true
+    }
+
+    /// 新しい版があれば、その版
+    pub fn update(&self) -> Option<String> {
+        self.update.lock().unwrap().clone()
+    }
+
+    /// 新しい版があるか（デスクトップアプリが調べるたびに知らせる）。変わったら、操作パネルに取り直させる
+    pub fn set_update(&self, version: Option<String>) {
+        let mut update = self.update.lock().unwrap();
+        if *update != version {
+            *update = version;
+            let _ = self.tx.send(ServerMsg::SettingsChanged);
+        }
+    }
+
+    /// 操作パネルの「更新する」。待っているデスクトップアプリが、入れ替えて再起動する
+    pub fn request_update(&self) {
+        self.update_requested.notify_one();
+    }
+
+    /// 操作パネルの「更新する」が押されるまで待つ
+    pub async fn update_requested(&self) {
+        self.update_requested.notified().await;
+    }
+
+    /// 待っていない間に押された「更新する」を忘れる。ダイアログで聞いている間や、入れ替えている間に押された分を
+    /// 残すと、「あとで」と答えたあとや、入れ替えに失敗したあとに、黙って入れ替えが始まる
+    pub fn forget_update_request(&self) {
+        use futures_util::FutureExt;
+        let _ = self.update_requested.notified().now_or_never();
     }
 
     pub fn watch_settings(&self) -> watch::Receiver<Settings> {
@@ -945,5 +984,26 @@ mod tests {
             Some("Hiragino Sans")
         );
         assert_eq!(rank_style.font.font.as_deref(), Some("Georgia"));
+    }
+    /// 新しい版があることは、変わったときだけ操作パネルに知らせる。待っていない間に押された「更新する」は忘れられる
+    #[tokio::test]
+    async fn an_update_is_shown_and_a_stale_request_is_forgotten() {
+        use futures_util::FutureExt;
+        let store = Store::new(Ok(Settings::default()), PathBuf::new());
+        let mut rx = store.subscribe();
+        assert_eq!(store.update(), None);
+        store.set_update(Some("0.9.8".into()));
+        store.set_update(Some("0.9.8".into()));
+        assert_eq!(store.update().as_deref(), Some("0.9.8"));
+        assert!(matches!(rx.try_recv(), Ok(ServerMsg::SettingsChanged)));
+        assert!(rx.try_recv().is_err());
+        // 押されたら、待っている側が受け取る
+        store.request_update();
+        assert!(store.update_requested().now_or_never().is_some());
+        assert!(store.update_requested().now_or_never().is_none());
+        // 聞いている間に押された分は、忘れる
+        store.request_update();
+        store.forget_update_request();
+        assert!(store.update_requested().now_or_never().is_none());
     }
 }

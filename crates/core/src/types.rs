@@ -328,6 +328,8 @@ pub enum TranscriptionError {
     BetaLimit,
     /// ベータのコードが使えない（止められた、なくなった）
     BetaRefused,
+    /// この版のアプリでは、もうベータの中継を使えない（更新が要る）
+    BetaOutdated,
     /// API キーを断られた
     InvalidKey { provider: crate::secrets::Provider },
     /// マイクの入力が途切れた
@@ -532,6 +534,10 @@ pub struct SettingsView {
     #[serde(rename = "continuesWith", skip_serializing_if = "Option::is_none")]
     pub continues_with: Option<crate::store::Fallback>,
     pub keys: crate::secrets::KeyStatus,
+    /// 新しい版があれば、その版（デスクトップアプリが調べて知らせる。DESIGN.md 13.5）
+    #[ts(optional)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub update: Option<String>,
     /// 設定ファイルを読めない理由（OS のエラー）。そのときは変更をこの起動の間だけ当て、保存しない
     #[ts(optional)]
     pub unsaved: Option<String>,

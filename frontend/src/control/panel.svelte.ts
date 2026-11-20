@@ -458,6 +458,8 @@ export function transcriptionErrorText(e: TranscriptionError): string {
       return `ベータ期間中の無料の提供の、今日の上限に達しました。${LIMIT_RESET}。ほかのモードなら、今すぐ使えます`;
     case "betaRefused":
       return "ベータのコードが使えなくなっています（無料の提供が止まっているか、終わっています）。ほかのモードを選ぶか、自分の API キーを入れてください";
+    case "betaOutdated":
+      return "この版のアプリでは、ベータ期間中の無料の提供を使えなくなりました。アプリを更新してください";
     case "invalidKey":
       return `${PROVIDER_NAMES[e.provider]} の API キーが使えません。キーを確かめてください`;
     case "inputEnded":
@@ -510,6 +512,11 @@ export function betaRefusalText(e: BetaRefusal): string {
 
 /** ベータのコードで断られて、Chrome の作り方で続けていることを知らせる文 */
 export function fallbackText(e: TranscriptionError, ownKeys: boolean): string {
+  // 古い版は、始め直しても戻らない（更新が要る）
+  if (e.code === "betaOutdated") {
+    const how = ownKeys ? "自分の API キーで" : "Chrome の作り方で";
+    return `この版のアプリでは、ベータ期間中の無料の提供を使えなくなりました。字幕は止めずに、${how}続けています。アプリを更新すると、選んだモードに戻ります`;
+  }
   const reason =
     e.code === "betaLimit"
       ? `今日の無料の分を使い切りました。${LIMIT_RESET}`

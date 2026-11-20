@@ -37,6 +37,7 @@ pub fn router(store: Arc<Store>) -> Router {
         .route("/settings", get(get_settings).patch(patch_settings))
         .route("/keys/{provider}", put(put_key))
         .route("/beta", post(join_beta))
+        .route("/update", post(update))
         .route("/devices", get(devices))
         .route("/gpus", get(gpus))
         // 人の辞書のアイコン。画像そのものを受け取る口と、Steam やチャンネルのページから取ってくる口
@@ -111,8 +112,15 @@ async fn get_settings(State(store): State<Arc<Store>>) -> Json<SettingsView> {
         fallback: store.fallback(),
         continues_with: store.continues_with(),
         keys,
+        update: store.update(),
         unsaved: store.unsaved(),
     })
+}
+
+/// 操作パネルの「更新する」。入れ替えて再起動するのは、デスクトップアプリ（`app/src/main.rs`）
+async fn update(State(store): State<Arc<Store>>) -> StatusCode {
+    store.request_update();
+    StatusCode::NO_CONTENT
 }
 
 async fn patch_settings(

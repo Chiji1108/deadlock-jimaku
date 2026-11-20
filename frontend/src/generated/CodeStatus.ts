@@ -8,4 +8,4 @@ export type CodeStatus = { "state": "none" } | { "state": "active",
 /**
  * 中継する会社
  */
-providers: Array<Provider>, } | { "state": "revoked" } | { "state": "limit" } | { "state": "unknown" } | { "state": "unreachable", detail: string, };
+providers: Array<Provider>, } | { "state": "revoked" } | { "state": "limit" } | { "state": "unknown" } | { "state": "outdated" } | { "state": "unreachable", detail: string, };
