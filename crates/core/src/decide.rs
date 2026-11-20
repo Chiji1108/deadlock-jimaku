@@ -386,13 +386,19 @@ fn candidates(
         .collect();
     // 名前が似ているだけの言葉は、スキルなら、持ち主のヒーローの名前が出ているときだけ候補にする
     // （「ダッシュ」は動きの名前で、インファーナスの話をしているときだけ「フレイムダッシュ」かもしれない）。
-    // 「ウルト」や番号と同じ決まり。誰のスキルか分からないのに判定モデルに任せると、スキルを選ぶことがある
-    let known_owner = |r: &String| {
+    // 「ウルト」や番号と同じ決まり。誰のスキルか分からないのに判定モデルに任せると、スキルを選ぶことがある。
+    // 基本用語は、似ているだけでは候補にしない。もともと一般の言葉なので、その一部はさらに一般の言葉になる
+    // （「ソウル」は別名「ソウルアーン」の一部で、判定モデルは「魂の壺」を選んだ）
+    let likely = |r: &String| {
         let e = &glossary.entities[r];
-        e.kind != EntityKind::Ability || e.hero.as_ref().is_some_and(|h| heroes.contains(&h))
+        match e.kind {
+            EntityKind::Ability => e.hero.as_ref().is_some_and(|h| heroes.contains(&h)),
+            EntityKind::Term => false,
+            _ => true,
+        }
     };
     for candidate in found.iter_mut().filter(|c| c.guessed) {
-        candidate.refs.retain(known_owner);
+        candidate.refs.retain(likely);
     }
     found.retain(|c| !c.refs.is_empty());
     let mut at = 0;
@@ -761,7 +767,11 @@ mod tests {
                 ("item:3".to_owned(), vec!["カースドレリック".to_owned()]),
                 (
                     "term:9".to_owned(),
-                    vec!["壺".to_owned(), "ウルン".to_owned()],
+                    vec![
+                        "壺".to_owned(),
+                        "ウルン".to_owned(),
+                        "ソウルアーン".to_owned(),
+                    ],
                 ),
             ])),
         }
@@ -938,6 +948,12 @@ mod tests {
         );
         // 1 字の別名は、ほかの言葉の中にも出るので候補にしない（`index`）
         assert_eq!(found("壺運んで。", &[]), []);
+        // 名前や別名に似ているだけの言葉は、基本用語の候補にしない（「ソウル」は「ソウルアーン」の一部）
+        assert_eq!(found("ソウル差が5000ある。", &[]), []);
+        assert_eq!(
+            found("ソウルアーン運んで。", &[]),
+            [("ソウルアーン".to_owned(), refs(&["term:9"]))]
+        );
     }
 
     #[test]
