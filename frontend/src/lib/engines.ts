@@ -257,7 +257,7 @@ export const ITEMS: {
         accuracy: "97% / 98%",
         speed: "約 1.5 秒",
         price: "1 時間 約 2 円",
-        note: "汎用の AI に訳させる。翻訳専門のモデルより遅い",
+        note: "汎用の AI に訳させる。用語は Hy-MT2 と同じくらい守るが、遅い",
       },
       {
         value: "gpt61Terra",
