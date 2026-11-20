@@ -15,6 +15,7 @@
 //!   `SPLIT_EVAL_ASSETS` で辞書の置き場所を替えられる（別名のキャッシュをアプリの置き場所に書かないとき）。
 //!   出力: experiments/results/split_eval.json（"MODE/MODEL" ごとに足す。同じものは置き換える）
 //!   `claude-` は Anthropic、`qwen` は QwenCloud（シンガポール）、ほかは OpenAI に送る。どれも推論は止める。
+//!   モデルの名前に `@強さ` を付けると、推論をさせる（`gpt-6-luna@low`、`claude-haiku-5-5@medium`、`qwen3.8-flash@on`）。
 //!   `qwen-mt-` は翻訳専門のモデルで、translate だけ。翻訳先ごとに 1 回ずつ同時に送る。
 //!   translate で `会社/モデル` の形（`tencent/hy-mt2-1.8b` など）は OpenRouter の翻訳専門のモデル。`+terms` を付けると用語を用語の指定で渡す
 //!   `deepl`（既定のモデル）と `deepl-latency`（速さを優先）は DeepL の翻訳 API（`DEEPL_API_KEY`）で、これも translate だけ
@@ -700,18 +701,24 @@ async fn translate(
 
 impl Client {
     /// 構造化出力で聞き、答えの JSON を返す
+    /// `モデル@強さ`（`gpt-6-luna@low`、`claude-haiku-5-5@medium`、`qwen3.8-flash@on`）なら、推論をさせる。
+    /// 付けなければ、推論は止める
     async fn ask(&self, model: &str, q: Question) -> anyhow::Result<Value> {
+        let (model, effort) = match model.split_once('@') {
+            Some((model, effort)) => (model, Some(effort)),
+            None => (model, None),
+        };
         if model.starts_with("claude-") {
-            self.ask_claude(model, q).await
+            self.ask_claude(model, effort, q).await
         } else if model.starts_with("qwen") {
-            self.ask_qwen(model, q).await
+            self.ask_qwen(model, effort.is_some(), q).await
         } else {
             llm::chat_json(
                 &self.http,
                 llm::Request {
                     access: &self.openai,
                     model,
-                    reasoning_effort: Some("none"),
+                    reasoning_effort: Some(effort.unwrap_or("none")),
                     system: &q.system,
                     user: q.user,
                     schema_name: "analysis",
@@ -730,15 +737,25 @@ impl Client {
     }
 
     /// 単価は Claude Haiku 5.5（キャッシュの読み 0.1 倍、5 分の書き込み 1.25 倍）
-    async fn ask_claude(&self, model: &str, q: Question) -> anyhow::Result<Value> {
+    /// 推論をさせるときは、考える量をモデルに任せ（adaptive）、`effort` で深さを決める
+    async fn ask_claude(
+        &self,
+        model: &str,
+        effort: Option<&str>,
+        q: Question,
+    ) -> anyhow::Result<Value> {
         anyhow::ensure!(model == "claude-haiku-5-5", "unpriced model: {model}");
+        let thinking = match effort {
+            Some(_) => "adaptive",
+            None => "disabled",
+        };
         let body = json!({
             "model": model,
             "max_tokens": 4096,
             "system": [{ "type": "text", "text": &*q.system, "cache_control": { "type": "ephemeral" } }],
             "messages": [{ "role": "user", "content": q.user }],
-            "thinking": { "type": "disabled" },
-            "output_config": { "effort": "low", "format": { "type": "json_schema", "schema": q.schema } },
+            "thinking": { "type": thinking },
+            "output_config": { "effort": effort.unwrap_or("low"), "format": { "type": "json_schema", "schema": q.schema } },
         });
         let res = self
             .http
@@ -776,7 +793,7 @@ impl Client {
     }
 
     /// 単価はシンガポールの 100 万トークンまでの段（キャッシュの読みは 0.1 倍、書き込みは 1.25 倍）
-    async fn ask_qwen(&self, model: &str, q: Question) -> anyhow::Result<Value> {
+    async fn ask_qwen(&self, model: &str, thinking: bool, q: Question) -> anyhow::Result<Value> {
         let (input, output) = qwen_price(model)?;
         let body = json!({
             "model": model,
@@ -786,7 +803,7 @@ impl Client {
                 ] },
                 { "role": "user", "content": q.user },
             ],
-            "enable_thinking": false,
+            "enable_thinking": thinking,
             "response_format": {
                 "type": "json_schema",
                 "json_schema": { "name": "analysis", "strict": true, "schema": q.schema },
