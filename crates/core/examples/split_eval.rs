@@ -7,6 +7,7 @@
 //!     terms-list      用語だけを並べて返す問い合わせ（原文をつなぎ直さなくてよい）
 //!     terms-decisions アプリと同じ処理（`decide::Decider`）。PC の中で候補を出し、OpenAI の Decisions API に確かめさせる
 //!     terms-jev       アプリと同じ候補を、TypeSafe AI の Jev に確かめさせる（MODEL は `jev-latest` など）。
+//!                     `d1.2`、`d1.2-ultra` は Liquid AI の判定モデル（`LIQUID_API_KEY`）。
 //!                     `会社/モデル` の形なら、OpenRouter の判定モデル（`perplexity/pplx-decider-v1.2` など）に送る
 //!     pipeline        アプリと同じ処理で、用語を決めてから訳す（`Decider` → `mt::Translator`）。MODEL は `用語+翻訳` の
 //!                     工程の名前（設定と同じ。`decisions+qwenMtFlash`、`jev+hyMt2`、`drexMax+hyMt2` など）
@@ -393,6 +394,12 @@ async fn terms_jev(
         // `local-` は、この PC で待たせた判定モデル（experiments/local_decider_server.py）。料金はかからない
         m if m.starts_with("local-") => ("http://127.0.0.1:8765/v1/systemone", "", (0.0, 0.0)),
         m if m.starts_with("ollaya-") => ("http://127.0.0.1:11435/v1/systemone", "", (0.0, 0.0)),
+        // `d1.` は Liquid AI の判定モデル（`LIQUID_API_KEY`）。単価は入力 100 万トークン、d1.2 が $0.02、d1.2-ultra が $0.042
+        m if m.starts_with("d1.") => (
+            "https://api.liquid.ai/decisions/v1/systemone",
+            "LIQUID_API_KEY",
+            (if m.ends_with("-ultra") { 0.042 } else { 0.02 }, 0.0),
+        ),
         m if m.starts_with("drex-") => (
             "https://console.nace.ai/v1/systemone",
             "NACE_API_KEY",
