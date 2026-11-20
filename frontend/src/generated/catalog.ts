@@ -65,6 +65,8 @@ export const ENGINE_PROVIDERS = {
     "gemma": null,
     "qwenMtFlash": "qwen",
     "hyMt2": "openrouter",
+    "qwen38Flash": "qwen",
+    "gpt6LunaMt": "openai",
     "gpt61Terra": "openai"
   },
   "furigana": {

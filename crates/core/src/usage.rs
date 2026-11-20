@@ -133,6 +133,12 @@ fn price(model: &str) -> Option<Price> {
             cached: 0.16,
             output: 0.49,
         },
+        // QwenCloud の料金ページ（シンガポール）の値
+        "qwen3.8-flash" => Price::PerMillion {
+            input: 0.15,
+            cached: 0.016,
+            output: 0.47,
+        },
         // TypeSafe AI の Jev。10 億トークン $42 で、出力は数えられない（解説の記事の値。DESIGN.md 9.7）
         "jev-latest" => Price::PerMillion {
             input: 0.042,
