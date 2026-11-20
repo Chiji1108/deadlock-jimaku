@@ -1,6 +1,6 @@
 <div align="center">
 
-<a href="https://jimaku.deadlock.jp"><img src="web/public/og.jpg" alt="デドロ字幕 — 「ドアマンのカートはディスペルで対策できます。」の字幕と英訳" width="720"></a>
+<a href="https://jimaku.deadlock.jp"><img src="web/src/assets/og.jpg" alt="デドロ字幕 — 「ドアマンのカートはディスペルで対策できます。」の字幕と英訳" width="720"></a>
 
 # デドロ配信を、世界に。
 
