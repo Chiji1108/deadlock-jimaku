@@ -406,6 +406,9 @@ pub enum EntityKind {
     Ability,
     /// 人（配信者と、よく一緒に遊ぶ人。`people.rs` が設定から足す）
     Person,
+    /// 基本用語（パリィ、ウォーカーなど。`assets/glossary.rs` の `TERMS`）。文字起こしに教え、翻訳では正式名にする。
+    /// アイコンがなく、普通の言葉も多いので、字幕では色を付けない
+    Term,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]

@@ -2,14 +2,33 @@
 
 use std::collections::{BTreeMap, HashMap};
 
-use super::api::{ApiHero, ApiItem};
+use super::api::{ApiHero, ApiItem, ApiUnit};
 use crate::types::{Entity, EntityKind, Glossary, ItemSlot, LangCode};
 
 /// 言語ごとの deadlock-api の応答。`en` は必須（どのエンティティを載せるかは英語版で決める）
+#[derive(Default)]
 pub struct Sources {
     pub heroes: BTreeMap<LangCode, Vec<ApiHero>>,
     pub items: BTreeMap<LangCode, Vec<ApiItem>>,
+    pub units: BTreeMap<LangCode, Vec<ApiUnit>>,
 }
+
+/// 基本用語にするものの class_name（DESIGN.md 8.3）。全ヒーロー共通の動き、魂の壺、パトロン（ここまで `items`）と、
+/// 建物（`npc-units`）。API に「基本用語」の印がないので名指しする。名前は、言語ごとに API から取る。
+/// 「ソウル」は、名前だけの項目が API にないので載せない（「+N ソウル」の表示の一部としてしかない）
+const TERMS: &[&str] = &[
+    "citadel_ability_melee_parry",
+    "citadel_ability_melee_genericperson",
+    "citadel_ability_dash",
+    "citadel_ability_jump",
+    "citadel_ability_slide",
+    "citadel_ability_mantle",
+    "ability_golden_idol",
+    "citadel_ability_tier3boss_aoe_wave",
+    "npc_boss_tier1",
+    "npc_barrack_boss",
+    "npc_boss_tier2",
+];
 
 /// ダウンロードするアイコン。`path` は icons ディレクトリからの相対パス
 #[derive(Debug, PartialEq)]
@@ -25,6 +44,7 @@ pub fn build(client_version: u32, sources: &Sources) -> (Glossary, Vec<Icon>) {
         (h.id, h.name.as_deref(), &h.class_name)
     });
     let item_names = names_by_lang(&sources.items, |i| (i.id, i.name.as_deref(), &i.class_name));
+    let unit_names = names_by_lang(&sources.units, |u| (u.id, u.name.as_deref(), &u.class_name));
     let base_heroes = sources
         .heroes
         .get("en")
@@ -116,6 +136,31 @@ pub fn build(client_version: u32, sources: &Sources) -> (Glossary, Vec<Icon>) {
         add(EntityKind::Item, item.id, e, icon);
     }
 
+    let base_units = sources
+        .units
+        .get("en")
+        .map(Vec::as_slice)
+        .unwrap_or_default();
+    let term_items = base_items
+        .iter()
+        .map(|i| (&i.class_name, i.id, &item_names));
+    let term_units = base_units
+        .iter()
+        .map(|u| (&u.class_name, u.id, &unit_names));
+    for (class_name, id, names) in term_items.chain(term_units) {
+        if !TERMS.contains(&class_name.as_str()) {
+            continue;
+        }
+        if let Some(names) = names_of(names, id) {
+            add(
+                EntityKind::Term,
+                id,
+                entity(EntityKind::Term, class_name, names),
+                None,
+            );
+        }
+    }
+
     // 実際に名前が取れた言語だけを載せる（空の応答の言語をキャッシュ済みと扱わない）
     let languages = sources
         .heroes
@@ -183,6 +228,7 @@ fn kind_str(kind: EntityKind) -> &'static str {
         EntityKind::Item => "item",
         EntityKind::Ability => "ability",
         EntityKind::Person => "person",
+        EntityKind::Term => "term",
     }
 }
 
@@ -258,7 +304,51 @@ mod tests {
                     ],
                 ),
             ]),
+            units: BTreeMap::new(),
         }
+    }
+
+    fn unit(id: u32, class: &str, name: &str) -> ApiUnit {
+        serde_json::from_value(json!({ "id": id, "class_name": class, "name": name })).unwrap()
+    }
+
+    #[test]
+    fn basic_terms_come_from_items_and_units_without_icons() {
+        let mut s = sources();
+        let parry = "citadel_ability_melee_parry";
+        s.items
+            .get_mut("en")
+            .unwrap()
+            .push(item(7, parry, "Parry", "ability"));
+        s.items
+            .get_mut("ja")
+            .unwrap()
+            .push(item(7, parry, "パリィ", "ability"));
+        s.units = BTreeMap::from([
+            (
+                "en".into(),
+                vec![
+                    unit(8, "npc_boss_tier2", "Walker"),
+                    unit(9, "npc_trooper", "Trooper"),
+                ],
+            ),
+            ("ja".into(), vec![unit(8, "npc_boss_tier2", "ウォーカー")]),
+        ]);
+        let (g, icons) = build(6518, &s);
+
+        let terms: Vec<_> = g
+            .entities
+            .iter()
+            .filter(|(_, e)| e.kind == EntityKind::Term)
+            .collect();
+        assert_eq!(
+            terms.iter().map(|(r, _)| r.as_str()).collect::<Vec<_>>(),
+            ["term:7", "term:8"]
+        );
+        assert_eq!(g.entities["term:7"].names["ja"], "パリィ");
+        assert_eq!(g.entities["term:8"].names["en"], "Walker");
+        assert!(terms.iter().all(|(_, e)| e.icon.is_none()));
+        assert_eq!(icons.len(), 3);
     }
 
     #[test]

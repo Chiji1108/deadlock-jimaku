@@ -2,15 +2,18 @@
 import miri from "../assets/miri.webp?url";
 import obsPoster from "../assets/obs-drag.webp?url";
 import obsVideo from "../assets/obs-drag.mp4?url";
+import { siTwitch } from "simple-icons";
 import Layout from "../layouts/Layout.astro";
 import { MODES, price } from "../../../frontend/src/lib/engines";
 import RankBadge from "../../../frontend/src/lib/RankBadge.svelte";
+import BrandIcon from "../components/BrandIcon.astro";
 import LiveDemo from "../components/LiveDemo.svelte";
 import LookDemo from "../components/LookDemo.svelte";
 import PlateCaption from "../components/PlateCaption.svelte";
 import PlateCard from "../components/PlateCard.svelte";
 import { fetchCards } from "../lib/cards";
 import { LINES, RANK } from "../lib/demo";
+import { STREAMERS } from "../lib/streamers";
 import { DISCORD, REPO, TWITCH } from "../site";
 /** 最新のリリースのファイルを直接落とす（ファイル名に版の番号を付けないので、いつも最新版になる） */
 const file = (name: string) => `${REPO}/releases/latest/download/${name}`;
@@ -128,12 +131,34 @@ const official = [
   <section class="dots px-4 pt-8 sm:pt-7">
     <div class="mx-auto max-w-6xl text-center">
       <h1 class="display text-[clamp(2.5rem,5.6vw,4.5rem)]">デドロ配信を、<wbr /><span class="band">世界に。</span></h1>
-      <p class="mt-4 text-lg text-muted">デッドロックに特化した、日本語字幕＆翻訳字幕アプリ</p>
+      <p class="mt-4 text-lg text-muted">Deadlock に特化した、日本語字幕＆翻訳字幕アプリ</p>
       <p class="mt-1 text-sm text-muted">Windows 10 / 11・macOS 11 以降・Linux</p>
     </div>
 
     <LiveDemo client:load cards={cards} />
     <p class="mt-3 text-center text-sm text-muted">見本は「おすすめ」のモードの字幕です</p>
+
+    <div class="mt-12 text-center">
+      <p class="text-sm text-muted">配信で使われています</p>
+      <ul class="mt-3 flex flex-wrap justify-center gap-3">
+        {
+          STREAMERS.map((s) => (
+            <li>
+              <a
+                href={s.url}
+                target="_blank"
+                rel="noopener"
+                class="flex items-center gap-3 rounded-full border border-line bg-panel py-1.5 pr-4 pl-1.5 transition-colors hover:border-ink"
+              >
+                <img src={s.icon} alt="" width="40" height="40" class="size-10 rounded-full" />
+                <span class="font-bold">{s.name}</span>
+                <BrandIcon icon={siTwitch} class="size-4 text-muted" />
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
   </section>
 
   <section class="mx-auto mt-24 grid max-w-6xl items-center gap-10 px-4 sm:mt-32 md:grid-cols-2">
