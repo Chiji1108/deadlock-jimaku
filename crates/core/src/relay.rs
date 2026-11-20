@@ -235,7 +235,8 @@ mod tests {
             Err(e) => assert!(format!("{e:#}").contains("upstream"), "{e:#}"),
         }
 
-        let mt = Engines::BETA.translation.mt().unwrap();
+        // 「おすすめ」の翻訳は Chrome なので、中継を通るのはクラウドのモードの翻訳（Hy-MT2）
+        let mt = Engines::CLOUD.translation.mt().unwrap();
         let translator = crate::mt::Translator::new(
             access(mt.provider),
             mt.name,
