@@ -69,6 +69,9 @@ export const api = {
   rankSample: (lang: string, signal?: AbortSignal) =>
     request<RankState>(`/api/rank/sample?lang=${encodeURIComponent(lang)}`, { signal }),
 
+  /** 新しい版に入れ替えて再起動する（デスクトップアプリが行う。終わる前に返る） */
+  updateApp: () => post("/api/update"),
+
   /** ベータのコードをもらって保存する。もらえなければ理由を返す（投げない） */
   joinBeta: async (): Promise<CodeStatus | BetaRefusal> => {
     const res = await fetch("/api/beta", { method: "POST" });

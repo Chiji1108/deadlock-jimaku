@@ -18,6 +18,7 @@
   import * as Tabs from "$lib/components/ui/tabs";
   import AboutDialog from "./parts/AboutDialog.svelte";
   import BetaDialog from "./parts/BetaDialog.svelte";
+  import UpdateNotice from "./parts/UpdateNotice.svelte";
   import WhatsNew from "./parts/WhatsNew.svelte";
   import { STATUS_DOTS, fallbackText, panel, transcriptionErrorText } from "./panel.svelte";
   import { total, unpriced, usd } from "./usage";
@@ -178,6 +179,7 @@
           <h2 class="text-lg font-semibold md:hidden">
             {TABS.find((t) => t.value === panel.tab)?.label}
           </h2>
+          <UpdateNotice />
           {#if panel.view?.fallback}
             {@const ownKeys = panel.view.continuesWith === "ownKeys"}
             <Alert.Root>

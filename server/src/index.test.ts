@@ -493,6 +493,33 @@ describe("admin", () => {
     expect((await manage("/api/summary")).status).toBe(503);
   });
 
+  it("shows which versions of the app still start captions", async () => {
+    const agent = (version: string) => ({ "User-Agent": `deadlock-jimaku/${version} (windows)` });
+    const [old, current, updated, idle] = [await joined("203.0.113.1"), await joined("203.0.113.2"), await joined("203.0.113.3"), await joined("203.0.113.4")];
+    // 0.9.6 までのアプリは、版を伝えない
+    await call("/gift", { token: old });
+    await call("/gift", { token: current, headers: agent("0.9.7") });
+    // 更新した人は、新しい版で数える
+    await call("/gift", { token: updated, headers: agent("0.9.7") });
+    await call("/gift", { token: updated, headers: agent("0.10.0-rc.1") });
+    // 2 週間より前に始めたきりのコードは数えない（字幕を始めていないコードも）
+    await env.DB.prepare("UPDATE codes SET seen_day = '2026-01-01', app_version = '0.9.7' WHERE seen_day IS NULL").run();
+    expect(idle).toBeTruthy();
+    const summary = (await (await manage("/api/summary")).json()) as Record<string, any>;
+    expect(summary.versions).toEqual({
+      days: 14,
+      rows: [
+        { version: "0.9.7", codes: 1 },
+        { version: "0.10.0-rc.1", codes: 1 },
+        { version: null, codes: 1 },
+      ],
+    });
+    // 版の形でないものは、伝えていないのと同じ
+    await call("/gift", { token: current, headers: { "User-Agent": "curl/8.0" } });
+    const row = await env.DB.prepare("SELECT COUNT(*) AS n FROM codes WHERE app_version IS NULL AND seen_day = ?").bind(day(Date.now())).first<{ n: number }>();
+    expect(row!.n).toBe(2);
+  });
+
   it("shows what the beta spent and stops a code", async () => {
     env.BETA_QWEN_KEY = undefined;
     const code = await joined();

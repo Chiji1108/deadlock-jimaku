@@ -72,23 +72,7 @@ fn main() {
 
             // 開発中は確かめない（リリースの版と比べても意味がない）
             if !cfg!(debug_assertions) {
-                let app = app.handle().clone();
-                // 常駐すると起動し直さないので、そのあとは字幕を止めている間に時々確かめる。
-                // 断られたら、次に起動するまで聞かない
-                tauri::async_runtime::spawn(async move {
-                    let mut starting = true;
-                    loop {
-                        if starting || !idle.settings().transcription_enabled {
-                            match update(app.clone()).await {
-                                Ok(Answer::Declined) => return,
-                                Ok(Answer::Latest) => {}
-                                Err(e) => tracing::warn!("update: {e}"),
-                            }
-                        }
-                        starting = false;
-                        tokio::time::sleep(UPDATE_INTERVAL).await;
-                    }
-                });
+                tauri::async_runtime::spawn(watch_updates(app.handle().clone(), idle));
             }
             Ok(())
         })
@@ -194,18 +178,75 @@ fn front_window(app: &AppHandle) -> tauri::Result<WebviewWindow> {
     Ok(window)
 }
 
-enum Answer {
-    Latest,
-    Declined,
+/// 新しい版があるかを、起動したときと、そのあと時々確かめる（DESIGN.md 13.5）。あれば操作パネルに出し続ける
+/// （`Store::set_update`。字幕を出している間も確かめる）。常駐すると起動し直さないので、ダイアログでは
+/// 起動したときか、字幕を止めている間に 1 度だけ聞く。断られたら、次に起動するまで聞かない
+/// （操作パネルの「更新する」は残る）。
+/// 更新情報は GitHub の最新のリリースの latest.json で、署名を公開鍵（tauri.conf.json）で確かめる
+async fn watch_updates(app: AppHandle, store: Arc<Store>) {
+    let mut ask = true;
+    let mut starting = true;
+    loop {
+        // 操作パネルの「更新する」は、もう聞かずに入れ替える
+        let requested = tokio::select! {
+            () = store.update_requested() => true,
+            () = tokio::time::sleep(match starting {
+                true => Duration::ZERO,
+                false => UPDATE_INTERVAL,
+            }) => false,
+        };
+        let idle = starting || !store.settings().transcription_enabled;
+        starting = false;
+        let update = match app.updater() {
+            Ok(updater) => updater.check().await,
+            Err(e) => Err(e),
+        };
+        let update = match update {
+            Ok(update) => update,
+            Err(e) => {
+                tracing::warn!("update: {e}");
+                if requested {
+                    failed(&app, &e.to_string());
+                }
+                continue;
+            }
+        };
+        store.set_update(update.as_ref().map(|update| update.version.clone()));
+        let Some(update) = update else {
+            continue;
+        };
+        tracing::info!("update available: {}", update.version);
+        if !requested {
+            if !ask || !idle {
+                continue;
+            }
+            match confirmed(&app, &update).await {
+                Ok(true) => {}
+                Ok(false) => {
+                    ask = false;
+                    continue;
+                }
+                Err(e) => {
+                    tracing::warn!("update: {e}");
+                    continue;
+                }
+            }
+        }
+        match update.download_and_install(|_, _| {}, || {}).await {
+            Ok(()) => app.restart(),
+            Err(e) => {
+                tracing::warn!("update: {e}");
+                failed(&app, &e.to_string());
+            }
+        }
+    }
 }
 
-/// 新しい版があれば聞いて、入れ替えて再起動する（DESIGN.md 13.5）。
-/// 更新情報は GitHub の最新のリリースの latest.json で、署名を公開鍵（tauri.conf.json）で確かめる
-async fn update(app: AppHandle) -> Result<Answer, Box<dyn std::error::Error>> {
-    let Some(update) = app.updater()?.check().await? else {
-        return Ok(Answer::Latest);
-    };
-    tracing::info!("update available: {}", update.version);
+/// 「更新しますか？」と聞く。「更新する」なら true
+async fn confirmed(
+    app: &AppHandle,
+    update: &tauri_plugin_updater::Update,
+) -> Result<bool, Box<dyn std::error::Error>> {
     // 操作パネルの前に出す（親がないと、Windows ではウィンドウの裏に隠れる）
     let handle = app.clone();
     let window = tauri::async_runtime::spawn_blocking(move || front_window(&handle)).await??;
@@ -222,11 +263,17 @@ async fn update(app: AppHandle) -> Result<Answer, Box<dyn std::error::Error>> {
         ))
         .parent(&window);
     // 答えを待つ間、非同期のワーカーを塞がない
-    if !tauri::async_runtime::spawn_blocking(move || dialog.blocking_show()).await? {
-        return Ok(Answer::Declined);
-    }
-    update.download_and_install(|_, _| {}, || {}).await?;
-    app.restart();
+    Ok(tauri::async_runtime::spawn_blocking(move || dialog.blocking_show()).await?)
+}
+
+/// 更新できなかったことを知らせる（操作パネルの「更新する」を押した人は、結果を待っている）
+fn failed(app: &AppHandle, detail: &str) {
+    app.dialog()
+        .message(format!(
+            "更新できませんでした。少し待って、もう一度試してください。\n{detail}"
+        ))
+        .title("デドロ字幕の更新")
+        .show(|_| {});
 }
 
 /// 操作パネルは OBS のドックと同じく localhost の画面を開く（IPC は使わない）。

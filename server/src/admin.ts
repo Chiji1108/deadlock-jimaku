@@ -81,12 +81,16 @@ admin.use("/api/*", async (c, next) => {
   await next();
 });
 
-/** 今の状態。費用（今日と今月）、コードの数、上限、閉じているか */
+/** アプリの版ごとの数を、何日前までのコードで数えるか（毎日は配信しない人も入るように、2 週間） */
+const VERSION_DAYS = 14;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** 今の状態。費用（今日と今月）、コードの数、上限、閉じているか、使われているアプリの版 */
 admin.get("/api/summary", async (c) => {
   const db = c.var.db;
   const now = Date.now();
   const today = day(now);
-  const [spend, monthUsd, total, active, granted, closed, limits] = await Promise.all([
+  const [spend, monthUsd, total, active, granted, closed, limits, versions] = await Promise.all([
     db.select({ usd: betaSpend.usd }).from(betaSpend).where(eq(betaSpend.day, today)).get(),
     db
       .select({ usd: sql<number>`COALESCE(SUM(${codeUsage.usd}), 0)` })
@@ -106,6 +110,13 @@ admin.get("/api/summary", async (c) => {
       .get(),
     betaClosed(db),
     betaLimits(db),
+    // この 14 日に字幕を始めたコードの、アプリの版ごとの数（版を伝えない 0.9.6 までは null）
+    db
+      .select({ version: codes.appVersion, codes: sql<number>`COUNT(*)` })
+      .from(codes)
+      .where(sql`${codes.seenDay} >= ${day(now - VERSION_DAYS * DAY_MS)}`)
+      .groupBy(codes.appVersion)
+      .orderBy(desc(sql`COUNT(*)`), desc(codes.appVersion)),
   ]);
   return c.json({
     email: c.var.email,
@@ -114,6 +125,7 @@ admin.get("/api/summary", async (c) => {
     month: { usd: monthUsd?.usd ?? 0 },
     codes: { total: total?.n ?? 0, activeToday: active?.n ?? 0 },
     limits: { codeDailyUsd: limits.codeDailyUsd, codesPerPlace: BETA_CODES_PER_IP, maxUsd: BETA_LIMIT_MAX_USD },
+    versions: { days: VERSION_DAYS, rows: versions },
   });
 });
 

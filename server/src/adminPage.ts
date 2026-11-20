@@ -52,6 +52,12 @@ async function load() {
       (key.enabled ? "止める" : "戻す") + '</button> <button class="danger" data-remove="' + esc(key.id) + '">消す</button></td></tr>').join("") +
     fallback.map((p) => "<tr><td>" + esc(p) + '</td><td colspan="6" class="muted">秘密の設定（wrangler）のキー。ほかのキーが断られたときに使います</td></tr>').join("");
 
+  const seen = s.versions.rows.reduce((n, v) => n + v.codes, 0);
+  $("versions").innerHTML = "<tr><th>版</th><th class=num>コード</th><th></th></tr>" +
+    s.versions.rows.map((v) => "<tr><td>" + (v.version ? esc(v.version) : "0.9.6 以前（版を伝えない）") + "</td><td class=num>" + v.codes +
+      "</td><td>" + bar(v.codes, seen) + "</td></tr>").join("");
+  $("versionDays").textContent = s.versions.days;
+
   $("codes").innerHTML = "<tr><th>作った日</th><th class=num>今日</th><th class=num>今月</th><th class=num>全部</th><th>状態</th><th></th></tr>" +
     c.codes.map((code) => "<tr><td>" + date(code.createdAt) + "</td><td class=num>" + usd(code.todayUsd) + "</td><td class=num>" + usd(code.monthUsd) + "</td><td class=num>" + usd(code.usd) + "</td><td>" +
       (code.revoked ? '<span class="tag bad">停止</span>' : "") + '</td><td><button data-code="' + esc(code.id) + '" data-revoked="' + !code.revoked + '">' + (code.revoked ? "戻す" : "止める") + "</button></td></tr>").join("");
@@ -146,6 +152,12 @@ export const page = /* html */ `<!doctype html>
       <input name="memo" placeholder="メモ" maxlength="100">
       <button class="primary">足す</button>
     </form>
+  </section>
+
+  <section class="card">
+    <h2>アプリの版</h2>
+    <p class="muted">この <span id="versionDays"></span> 日に字幕を始めたコードの数です。アプリは字幕を始めるときに版を伝えます（0.9.7 から）。古い口をやめる前に、古い版が残っていないかをここで見ます</p>
+    <table id="versions"></table>
   </section>
 
   <section class="card">

@@ -34,14 +34,16 @@ pub enum CodeStatus {
     Limit,
     /// ないコード
     Unknown,
+    /// この版のアプリでは、もう中継しない（更新が要る）
+    Outdated,
     /// サーバーにつながらない
     Unreachable { detail: String },
 }
 
 impl CodeStatus {
-    /// 持っていてよいコードか。今日の上限は日が変われば戻るので、今は使えなくても有効
+    /// 持っていてよいコードか。今日の上限は日が変われば戻り、古い版はアプリを更新すれば使えるので、今は使えなくても有効
     pub fn is_valid(&self) -> bool {
-        matches!(self, Self::Active { .. } | Self::Limit)
+        matches!(self, Self::Active { .. } | Self::Limit | Self::Outdated)
     }
 }
 
@@ -60,6 +62,20 @@ pub const LIMIT: &str = "limit";
 
 /// そのコードでは中継しない会社なので、サーバーが中継を断るときの理由
 pub const UNSUPPORTED: &str = "unsupported";
+
+/// この版のアプリでは、もう中継しないとき（古い口をやめたあと）の理由。0.9.7 から読む
+pub const OUTDATED: &str = "outdated";
+
+/// サーバーに伝える、アプリの版と OS（`deadlock-jimaku/0.9.7 (windows)`）。コードを確かめるときと、もらうときに
+/// 付ける。サーバーは、どの版がまだ使われているかをコードごとに持ち、古い口をいつやめられるかを見る（DESIGN.md 17.2）。
+/// 中継のほかの要求と、会社へ直接送る要求には付けない
+fn app() -> String {
+    format!(
+        "deadlock-jimaku/{} ({})",
+        env!("CARGO_PKG_VERSION"),
+        std::env::consts::OS
+    )
+}
 
 /// サーバーが中継を断った理由のヘッダー。WebSocket のハンドシェイクでは、断られたときの本文は
 /// 届いた分しか読めないので、これで見分ける
@@ -85,6 +101,7 @@ pub fn refusal(
         // 403 の理由は Worker のもの。xAI の `error` も文字列なので、自分のキーでは読まない
         (StatusCode::FORBIDDEN, _) if !access.is_code() => None,
         (StatusCode::FORBIDDEN, Some(LIMIT)) => Some(TranscriptionError::BetaLimit),
+        (StatusCode::FORBIDDEN, Some(OUTDATED)) => Some(TranscriptionError::BetaOutdated),
         (StatusCode::FORBIDDEN, Some("revoked" | UNSUPPORTED)) => {
             Some(TranscriptionError::BetaRefused)
         }
@@ -96,6 +113,7 @@ pub async fn code_status(api: &str, code: &str) -> CodeStatus {
     let res = crate::http()
         .get(format!("{api}/gift"))
         .bearer_auth(code)
+        .header(reqwest::header::USER_AGENT, app())
         .timeout(TIMEOUT)
         .send()
         .await;
@@ -122,6 +140,7 @@ pub async fn code_status(api: &str, code: &str) -> CodeStatus {
         },
         (_, Some("revoked")) => CodeStatus::Revoked,
         (_, Some("limit")) => CodeStatus::Limit,
+        (_, Some(OUTDATED)) => CodeStatus::Outdated,
         (StatusCode::UNAUTHORIZED, _) => CodeStatus::Unknown,
         _ => CodeStatus::Unreachable {
             detail: status.to_string(),
@@ -149,6 +168,7 @@ pub async fn join_beta(api: &str) -> Result<String, BetaRefusal> {
     let unreachable = |detail: String| BetaRefusal::Unreachable { detail };
     let res = crate::http()
         .post(format!("{api}/beta/codes"))
+        .header(reqwest::header::USER_AGENT, app())
         .timeout(TIMEOUT)
         .send()
         .await
@@ -177,6 +197,7 @@ pub async fn check_code(api: &str, code: &str) -> Result<Vec<Provider>, Transcri
     match code_status(api, code).await {
         CodeStatus::Active { providers, .. } => Ok(providers),
         CodeStatus::Limit => Err(TranscriptionError::BetaLimit),
+        CodeStatus::Outdated => Err(TranscriptionError::BetaOutdated),
         CodeStatus::Revoked | CodeStatus::Unknown | CodeStatus::None => {
             Err(TranscriptionError::BetaRefused)
         }
@@ -263,6 +284,8 @@ mod tests {
         );
         // そのコードでは中継しない会社
         assert_eq!(refused(UNSUPPORTED), Some(E::BetaRefused));
+        // 古い口をやめたあとの、この版への答え
+        assert_eq!(refused(OUTDATED), Some(E::BetaOutdated));
     }
 
     #[test]
@@ -387,5 +410,33 @@ mod tests {
             check_code(&api, "code").await,
             Err(TranscriptionError::BetaLimit)
         );
+    }
+
+    /// コードを確かめるときに、アプリの版と OS を伝える。古すぎると断られたら、その理由で止まる
+    #[tokio::test]
+    async fn the_app_tells_its_version_and_reads_an_outdated_answer() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let api = format!("http://{}", listener.local_addr().unwrap());
+        let seen = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
+        let saw = seen.clone();
+        let refuse = move |headers: axum::http::HeaderMap| async move {
+            let agent = headers[axum::http::header::USER_AGENT].to_str().unwrap();
+            *saw.lock().unwrap() = agent.to_owned();
+            (
+                axum::http::StatusCode::FORBIDDEN,
+                axum::Json(serde_json::json!({ "error": "outdated" })),
+            )
+        };
+        let router = axum::Router::new().route("/gift", axum::routing::get(refuse));
+        tokio::spawn(async move { axum::serve(listener, router).await });
+        assert_eq!(code_status(&api, "code").await, CodeStatus::Outdated);
+        assert_eq!(
+            check_code(&api, "code").await,
+            Err(TranscriptionError::BetaOutdated)
+        );
+        let agent = seen.lock().unwrap().clone();
+        let expected = format!("deadlock-jimaku/{} (", env!("CARGO_PKG_VERSION"));
+        assert!(agent.starts_with(&expected), "{agent}");
+        assert!(CodeStatus::Outdated.is_valid());
     }
 }

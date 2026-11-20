@@ -2,7 +2,7 @@
 // ベータ期間中の無料の提供: アプリが自動でもらうコードを見分けて、開発者のキーで Qwen と OpenRouter に中継する。
 // 口の名前（/gift、X-Gift-Refusal）は、人のキーで中継するギフトコード（0.7 まで）のころのもの。出ているアプリが使うので変えない
 import { Hono, type Context } from "hono";
-import { codeByValue, open, refusal, type Code, type Db } from "./db";
+import { appVersion, codeByValue, open, refusal, seen, type Code, type Db } from "./db";
 import {
   betaClosed,
   betaProviders,
@@ -62,7 +62,9 @@ const MAX_TRANSLATION_TOKENS = 512;
 app.get("/gift", async (c) => {
   const code = await bearerCode(c);
   if (!code) return c.json({ error: "unknown" }, 401);
-  const error = refusal(code, Date.now());
+  const now = Date.now();
+  await seen(c.var.db, code.id, appVersion(c.req.header("User-Agent")), now);
+  const error = refusal(code, now);
   if (error) return c.json({ error }, 403);
   return c.json({ providers: await betaProviders(c.var.db, c.env) });
 });
