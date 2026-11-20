@@ -507,6 +507,7 @@ fn system_prompt(source_lang: &str, glossary: Option<&Glossary>) -> String {
             EntityKind::Item => "item",
             EntityKind::Ability => "ability",
             EntityKind::Person => "person",
+            EntityKind::Term => "term",
         };
         // 列を揃える（名前がなければ英語名）
         let en = e.names.get("en").map_or("", String::as_str);

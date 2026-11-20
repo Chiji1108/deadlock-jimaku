@@ -39,6 +39,7 @@ fn named(glossary: &Glossary) -> impl Iterator<Item = (&String, String, String)>
             EntityKind::Hero => "hero",
             EntityKind::Item => "item",
             EntityKind::Ability => "ability",
+            EntityKind::Term => "game term",
             // 人の呼ばれ方は本人が書く。名前を LLM に送って作らせない
             EntityKind::Person => return None,
         };

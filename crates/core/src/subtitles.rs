@@ -709,12 +709,13 @@ pub async fn terms(store: &Store, settings: &Settings) -> (Vec<String>, Vec<Stri
 }
 
 /// 用語ヒント: 話す言語での名前（DESIGN.md 8.4）。
-/// 上限を超えるときは人 → ヒーロー → アイテム → スキルの順に残す
+/// 上限を超えるときは人 → ヒーロー → 基本用語 → アイテム → スキルの順に残す
 pub fn keywords(glossary: &Glossary, lang: &str) -> Vec<String> {
     // 人の名前は、文字起こしがいちばん間違えやすいので、先に入れる
     let names = [
         EntityKind::Person,
         EntityKind::Hero,
+        EntityKind::Term,
         EntityKind::Item,
         EntityKind::Ability,
     ]
@@ -1286,8 +1287,17 @@ mod tests {
             "hero:13".into(),
             serde_json::json!({ "kind": "hero", "className": "h", "names": { "ja": "ヘイズ" } }),
         );
+        entities.insert(
+            "item:1".into(),
+            serde_json::json!({ "kind": "item", "className": "i", "names": { "ja": "ベールウォーカー" } }),
+        );
+        entities.insert(
+            "term:8".into(),
+            serde_json::json!({ "kind": "term", "className": "w", "names": { "ja": "ウォーカー" } }),
+        );
         let terms = keywords(&glossary(entities.into()), "ja");
         assert_eq!(terms.len(), MAX_KEYWORDS);
-        assert_eq!(terms[0], "ヘイズ");
+        // 基本用語は数が少なく、アイテムの名前と取り違えやすいので、アイテムより先に入れる
+        assert_eq!(terms[..3], ["ヘイズ", "ウォーカー", "ベールウォーカー"]);
     }
 }

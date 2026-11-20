@@ -627,6 +627,7 @@ fn question(
             EntityKind::Hero => "hero",
             EntityKind::Item => "item",
             EntityKind::Ability => "ability",
+            EntityKind::Term => "game term",
             // ゲームの用語ではないので、別の言い方で説明する
             EntityKind::Person => {
                 return format!(
@@ -744,7 +745,10 @@ mod tests {
                 "ability:24": { "kind": "ability", "className": "c", "names": { "ja": "アフリクション", "en": "Affliction" }, "hero": "hero:20", "abilitySlot": 4 },
                 "item:1": { "kind": "item", "className": "i", "names": { "ja": "基礎拡張マガジン", "en": "Extended Magazine" } },
                 "item:2": { "kind": "item", "className": "j", "names": { "ja": "エコーシャード", "en": "Echo Shard" } },
-                "item:3": { "kind": "item", "className": "k", "names": { "ja": "呪いの遺物", "en": "Cursed Relic" } }
+                "item:3": { "kind": "item", "className": "k", "names": { "ja": "呪いの遺物", "en": "Cursed Relic" } },
+                "item:4": { "kind": "item", "className": "l", "names": { "ja": "ベールウォーカー", "en": "Veil Walker" } },
+                "term:8": { "kind": "term", "className": "w", "names": { "ja": "ウォーカー", "en": "Walker" } },
+                "term:9": { "kind": "term", "className": "u", "names": { "ja": "魂の壺", "en": "Soul Urn" } }
             }
         }))
         .unwrap();
@@ -755,6 +759,10 @@ mod tests {
             aliases: Arc::new(Aliases::from([
                 ("item:1".to_owned(), vec!["拡マガ".to_owned()]),
                 ("item:3".to_owned(), vec!["カースドレリック".to_owned()]),
+                (
+                    "term:9".to_owned(),
+                    vec!["壺".to_owned(), "ウルン".to_owned()],
+                ),
             ])),
         }
     }
@@ -910,6 +918,26 @@ mod tests {
         // 名前全体の聞き違いは、初めの字が同じものだけ（「プレイ」と「ペイジ」は違う）
         assert_eq!(found("どうやってプレイするの。", &[]), []);
         assert_eq!(found("クレイが飛んでる。", &[]), []);
+    }
+
+    #[test]
+    fn a_basic_term_is_not_taken_for_an_item_that_contains_it() {
+        // 辞書に「ウォーカー」がなかったころは、名前の一部が重なる「ベールウォーカー」が候補になった
+        assert_eq!(
+            found("ウォーカー折れた。", &[]),
+            [("ウォーカー".to_owned(), refs(&["term:8"]))]
+        );
+        assert_eq!(
+            found("ベールウォーカー買う。", &[]),
+            [("ベールウォーカー".to_owned(), refs(&["item:4"]))]
+        );
+        // 別名も、ほかの用語と同じく候補になる（本当にそのことかは、判定のモデルが決める）
+        assert_eq!(
+            found("ウルン運んで。", &[]),
+            [("ウルン".to_owned(), refs(&["term:9"]))]
+        );
+        // 1 字の別名は、ほかの言葉の中にも出るので候補にしない（`index`）
+        assert_eq!(found("壺運んで。", &[]), []);
     }
 
     #[test]

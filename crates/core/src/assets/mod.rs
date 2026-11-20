@@ -9,7 +9,6 @@ mod api;
 mod glossary;
 mod readings;
 
-use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -23,7 +22,7 @@ pub use aliases::Aliases;
 use glossary::{Icon, Sources};
 
 /// キャッシュの形式。Glossary の形やアイコンの置き方を変えたら上げる（古いキャッシュは読まない）
-const CACHE_FORMAT: &str = "v9";
+const CACHE_FORMAT: &str = "v10";
 
 /// LLM で付けた読みのキャッシュ。名前ごとなので、パッチやキャッシュ形式をまたいで使い回す
 const LLM_READINGS: &str = "readings-llm.ja.json";
@@ -227,20 +226,19 @@ async fn build_and_save(
         let api_name = lang::find(code).expect("normalized").api;
         let code = code.clone();
         async move {
-            let (heroes, items) = tokio::try_join!(
+            let (heroes, items, units) = tokio::try_join!(
                 client.heroes(api_name, version),
-                client.items(api_name, version)
+                client.items(api_name, version),
+                client.units(api_name, version)
             )?;
-            anyhow::Ok((code, heroes, items))
+            anyhow::Ok((code, heroes, items, units))
         }
     };
-    let mut sources = Sources {
-        heroes: BTreeMap::new(),
-        items: BTreeMap::new(),
-    };
-    for (code, heroes, items) in try_join_all(languages.iter().map(fetch)).await? {
+    let mut sources = Sources::default();
+    for (code, heroes, items, units) in try_join_all(languages.iter().map(fetch)).await? {
         sources.heroes.insert(code.clone(), heroes);
-        sources.items.insert(code, items);
+        sources.items.insert(code.clone(), items);
+        sources.units.insert(code, units);
     }
 
     // 名前の読みは保存せず、読み込むたびに重ねる（`load_into`）
@@ -355,7 +353,7 @@ mod tests {
             let g = Glossary {
                 client_version: v,
                 languages: vec!["en".into()],
-                entities: BTreeMap::new(),
+                entities: Default::default(),
             };
             std::fs::write(dir.join("glossary.json"), serde_json::to_vec(&g).unwrap()).unwrap();
         }

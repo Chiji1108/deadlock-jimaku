@@ -596,6 +596,7 @@ mic ─┬─▶ ローカル VAD（earshot）── 発話の開始 → Segment
 | ヒーロー | `GET /v1/assets/heroes?language=…` | `player_selectable && !disabled` で絞る。**`only_active` / `in_development` では絞らない**（最近リリースされたバイオレットは `in_development: true` のまま）。`images.icon_image_small(_webp)` |
 | アイテム | `GET /v1/assets/items?language=…` | `type=upgrade && shopable` が 173 個。すべてに `shop_image(_webp)` がある |
 | スキル | 同じエンドポイントの `type=ability` | ヒーローの `items`（signature スロット）から、実際に使われるものだけを抜き出す |
+| 基本用語 | `items` と `GET /v1/assets/npc-units?language=…` | 全ヒーロー共通の動き（パリィ・近接・ダッシュ・ジャンプ・スライディング・乗り越え）、魂の壺、パトロンは `items` に、建物（ガーディアン・ベース・ガーディアン・ウォーカー）は `npc-units` にある。API に「基本用語」の印がないので、`class_name` を名指しする（`glossary.rs` の `TERMS`）。名前は言語ごとに API から取る |
 | ランク | `GET /v1/assets/ranks?language=…` | 名前・色・バッジ画像 |
 | バージョン | `GET /v1/assets/client-versions` | 更新の検知 |
 
@@ -658,14 +659,16 @@ mic ─┬─▶ ローカル VAD（earshot）── 発話の開始 → Segment
 }
 ```
 
-- エンティティの参照は `"{kind}:{id}"`（`hero:13`, `item:…`, `ability:…`）で統一する。
+- エンティティの参照は `"{kind}:{id}"`（`hero:13`, `item:…`, `ability:…`, `term:…`）で統一する。
+- `kind: "term"` は基本用語（0.9.6）。辞書にないと、「ウォーカー」が名前の一部の重なる「ベールウォーカー」に、「パリィ」が翻訳で Paris になった。文字起こしに教え、候補では完全に一致する用語として先に当たり、翻訳では正式名になる。アイコンがなく、「ジャンプ」「ダッシュ」のような普通の言葉も多いので、字幕では色を付けない（`EntityRef.svelte`）。別名はアイテムと同じく LLM に作らせる。
+- 基本用語に載せないもの: 「ソウル」（名前だけの項目が API にない。「+N ソウル」の表示の一部としてしかない）、中立の敵と銃の名前（配信で口にしない）、ジップライン・ヘビーメレー・ファームなど（API にない。deadlock.wiki の Universal_Tech には技の一覧があり MediaWiki API で取れるが、CC BY-NC-SA 4.0 で非営利に限られる）。
 - `ruby` は日本語の名前の読み（`names.ja` 用）。漢字を含む名前だけに付ける。
 - `slot`（`weapon` / `vitality` / `spirit`）はアイテムの色分けに使う。
 - 訳文では、発話された略称ではなく公式名を出す（`拡マガ` → `Extended Magazine`）。辞書にない言語の名前は英語名で出す。
 
 ### 8.4 音声認識への用語ヒント
 
-`keywords` には、`mic.language` での公式名を入れる（上限 500 件。送りすぎない。ヒーロー → アイテム → スキルの順に残す）。略称や言い間違いは、音声認識ではなく用語の判定（9 章）の側で公式名に結びつける。
+`keywords` には、`mic.language` での公式名を入れる（上限 500 件。送りすぎない。人 → ヒーロー → 基本用語 → アイテム → スキルの順に残す。Grok の文字起こしは先頭の 100 件だけを受け取るので、数の少ない基本用語をアイテムより先にする）。略称や言い間違いは、音声認識ではなく用語の判定（9 章）の側で公式名に結びつける。
 
 ### 8.5 スキルの番号（`abilitySlot`）
 
