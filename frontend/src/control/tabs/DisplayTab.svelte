@@ -217,20 +217,20 @@
 
         <Field.Field orientation="horizontal">
           <Field.Content>
-            <Field.Label for="show-source">話した言葉を出す</Field.Label>
+            <Field.Label for="only-translation">翻訳だけを出す</Field.Label>
             <Field.Description>
               {#if noTargets}
-                翻訳先がないときは、話した言葉を出します
+                翻訳先を選ぶと使えます
               {:else}
-                オフにすると翻訳だけを出します。{#if paidLive(s.engines) || s.engines.furigana === "llm"}途中の字幕とふりがなの料金がかかりません。{/if}字幕は翻訳が終わってから出ます。切り替えると、字幕は始め直します
+                話した言葉は出しません。{#if paidLive(s.engines) || s.engines.furigana === "llm"}途中の字幕とふりがなの料金がかかりません。{/if}字幕は翻訳が終わってから出ます。切り替えると、字幕は始め直します
               {/if}
             </Field.Description>
           </Field.Content>
           <Switch
-            id="show-source"
-            checked={!onlyTranslation}
+            id="only-translation"
+            checked={onlyTranslation}
             disabled={noTargets}
-            onCheckedChange={(v) => set({ showSource: v })}
+            onCheckedChange={(v) => set({ showSource: !v })}
           />
         </Field.Field>
 
