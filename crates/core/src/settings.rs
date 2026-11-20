@@ -29,6 +29,8 @@ const MAX_FONT_NAME: usize = 256;
 #[serde(default, rename_all = "camelCase")]
 #[ts(export)]
 pub struct Settings {
+    /// 設定ファイルの形の番号。前の版のファイルを読み替えるときに、まだ読み替えていないかを見分ける（`parse`）
+    pub format: u32,
     /// マイクを字幕にするか（操作パネルの開始・停止）
     pub transcription_enabled: bool,
     /// 字幕の工程ごとに、何で作るか（モードを選ぶと決まり、詳しく選ぶと変えられる）
@@ -671,13 +673,14 @@ impl Engines {
         furigana: RubySource::Dictionary,
     };
     /// ベータのモード。ベータ期間中は無料（開発者のサーバーが、開発者のキーで中継する。DESIGN.md 17.2）。
-    /// いちばん安い組み合わせ: 途中の字幕は Chrome、確定は Qwen、用語は Perplexity Decider、翻訳は Hy-MT2、
-    /// ふりがなは辞書の候補から Perplexity Decider が選ぶ
+    /// 途中の字幕は Chrome、確定は Qwen、用語は Perplexity Decider、翻訳は Chrome、
+    /// ふりがなは辞書の候補から Perplexity Decider が選ぶ。翻訳を Chrome にしたのは 0.9.7（使う人が増えても
+    /// 詰まらない。翻訳専門のモデルは、提供元の回数の上限に届く。DESIGN.md 9.6）
     pub const BETA: Self = Self {
         live: LiveSource::Chrome,
         transcription: FinalSource::QwenAudio,
         terms: TermsEngine::PplxDecider,
-        translation: TranslationEngine::HyMt2,
+        translation: TranslationEngine::ChromeTranslator,
         furigana: RubySource::Decider,
     };
     /// ローカルのモード（0.7.0）。音声も字幕の文字も PC から出さない: 途中の字幕は Haas-ja、確定は Whisper、
@@ -695,9 +698,10 @@ impl Engines {
         ..Self::CHROME
     };
     /// クラウドのモード（0.7.0）。ベータのモードの途中の字幕も Qwen で作る。Chrome のウィンドウを開かず、
-    /// 音声を Google に送らない
+    /// 音声を Google に送らない。Chrome がないので、翻訳は Hy-MT2
     pub const CLOUD: Self = Self {
         live: LiveSource::QwenAudioStreaming,
+        translation: TranslationEngine::HyMt2,
         ..Self::BETA
     };
     /// 操作パネルに出すモード（おすすめの組み合わせ）。ほかの組み合わせは「カスタム」（`Settings::custom_engines`）。
@@ -1224,6 +1228,7 @@ impl Default for Settings {
             obs_seen: false,
             onboarding_closed: false,
             hybrid_hint_closed: false,
+            format: FORMAT,
             custom_engines: None,
             notes_seen: None,
             tray_notice_seen: false,
@@ -1670,8 +1675,24 @@ fn keep_readable(value: &mut Value, path: &mut Vec<String>) -> bool {
 fn parse(bytes: &[u8]) -> serde_json::Result<Settings> {
     let mut json: Value = serde_json::from_slice(bytes)?;
     from_modes(&mut json);
+    from_hy_mt2_beta(&mut json);
     keep_readable(&mut json, &mut Vec::new());
     serde_json::from_value(json)
+}
+
+/// 0.9.6 までの「おすすめ」は、翻訳が Hy-MT2 だった。その組み合わせのままの人は、今の「おすすめ」（翻訳は Chrome）に
+/// 移す。移すのは `format` のないファイル（0.9.6 まで）だけで、あとから自分で同じ組み合わせを組んだ人は変えない
+fn from_hy_mt2_beta(json: &mut Value) {
+    let Value::Object(fields) = json else {
+        return;
+    };
+    let old = serde_json::json!({
+        "live": "chrome", "transcription": "qwenAudio", "terms": "pplxDecider",
+        "translation": "hyMt2", "furigana": "decider",
+    });
+    if !fields.contains_key("format") && fields.get("engines") == Some(&old) {
+        fields["engines"]["translation"] = "chromeTranslator".into();
+    }
 }
 
 /// 0.4 までは 3 つのモード（`speechEngine`）から選び、OpenAI のモードだけ途中の字幕を切れた（`liveSubtitles`）。
@@ -1709,6 +1730,9 @@ fn release() -> &'static str {
         .split_once('-')
         .map_or(version, |(release, _)| release)
 }
+
+/// 今の設定ファイルの形の番号（`Settings::format`）
+const FORMAT: u32 = 1;
 
 pub fn load(path: &Path) -> std::io::Result<Settings> {
     let bytes = match std::fs::read(path) {
@@ -2094,6 +2118,28 @@ mod tests {
         assert!(!Engines::BETA.uses(Provider::OpenAi));
     }
 
+    /// 0.9.6 までの「おすすめ」（翻訳は Hy-MT2）のままの人は、今の「おすすめ」に移る
+    #[test]
+    fn the_old_beta_mode_moves_to_chrome_translation() {
+        let old = Engines {
+            translation: TranslationEngine::HyMt2,
+            ..Engines::BETA
+        };
+        let saved = json!({ "engines": old });
+        let loaded = parse(saved.to_string().as_bytes()).unwrap();
+        assert_eq!(loaded.engines, Engines::BETA);
+        // 今の版で保存したファイルは変えない（自分で Hy-MT2 を選んだ人）
+        let chosen = Settings {
+            engines: old,
+            ..Settings::default()
+        };
+        let saved = serde_json::to_vec(&chosen).unwrap();
+        assert_eq!(parse(&saved).unwrap().engines, old);
+        // クラウドは Chrome を開かないので、Hy-MT2 のまま
+        assert_eq!(Engines::CLOUD.sanitized(), Engines::CLOUD);
+        assert_eq!(Engines::CLOUD.translation, TranslationEngine::HyMt2);
+    }
+
     /// ふりがなを GPT-6 Luna にすると、読みを直すモデルだけが変わる（辞書の名前の読みは `models.readings` のまま）
     #[test]
     fn luna_furigana_changes_only_the_model_of_readings() {
@@ -2258,7 +2304,7 @@ mod tests {
         let live = |transcription| Engines {
             live: LiveSource::Whisper,
             transcription,
-            ..Engines::BETA
+            ..Engines::CLOUD
         };
         let both = live(FinalSource::WhisperLarge);
         assert_eq!(both.sanitized(), both);
