@@ -74,37 +74,99 @@ test("途中と確定の文を渡す", () => {
   ]);
 });
 
-test("文字が増えなければ区切り、確定しなかった文を確定して聞き直す", () => {
+const hears = (recognizer: FakeRecognizer, ...results: [string, boolean][]) =>
+  recognizer.onresult({
+    resultIndex: 0,
+    results: results.map(([transcript, isFinal]) => ({ isFinal, 0: { transcript } })),
+  });
+
+test("文字が増えなければ、認識を止めずに区切る", () => {
   const o = options();
   listen("ja", o);
   FakeRecognizer.last.say("ヘイズ", false);
   vi.advanceTimersByTime(749);
-  expect(FakeRecognizer.last.stop).not.toHaveBeenCalled();
-  vi.advanceTimersByTime(1000);
+  expect(o.onText).toHaveBeenCalledExactlyOnceWith("ヘイズ", false);
+  vi.advanceTimersByTime(1);
   expect(o.onText).toHaveBeenLastCalledWith("ヘイズ", true);
-  expect(FakeRecognizer.started).toBe(2);
+  expect(FakeRecognizer.last.stop).not.toHaveBeenCalled();
+  expect(FakeRecognizer.started).toBe(1);
 });
 
-test("区切りの時間を省くと、文字が増えなくても止めない", () => {
-  listen("ja", { ...options(), silenceMs: undefined });
+test("区切ったあとは、Chrome が同じ文を伸ばしても先だけを渡す", () => {
+  const o = options();
+  listen("ja", o);
+  FakeRecognizer.last.say("ヘイズが強い", false);
+  vi.advanceTimersByTime(750);
+  o.onText.mockClear();
+  FakeRecognizer.last.say("ヘイズが強い ビバップの", false);
+  FakeRecognizer.last.say("ヘイズが強い ビバップのボム", true);
+  expect(o.onText.mock.calls).toEqual([
+    [" ビバップの", false],
+    [" ビバップのボム", true],
+  ]);
+});
+
+test("区切って渡し終えた文を Chrome が確定しても、渡し直さない", () => {
+  const o = options();
+  listen("ja", o);
+  FakeRecognizer.last.say("ヘイズが強い", false);
+  vi.advanceTimersByTime(750);
+  o.onText.mockClear();
+  hears(FakeRecognizer.last, ["ヘイズが強い", true], ["次の文", false]);
+  expect(o.onText).toHaveBeenCalledExactlyOnceWith("次の文", false);
+});
+
+test("区切ったあとに空白が付け替えられても、文字で数えて先を渡す", () => {
+  const o = options();
+  listen("ja", o);
+  FakeRecognizer.last.say("ヘイズ が強い", false);
+  vi.advanceTimersByTime(750);
+  o.onText.mockClear();
+  FakeRecognizer.last.say("ヘイズが 強い次", false);
+  expect(o.onText).toHaveBeenCalledExactlyOnceWith("次", false);
+});
+
+test("区切りの時間が過ぎるまで同じ文が届き続ければ、区切らない", () => {
+  const o = options();
+  listen("ja", o);
+  for (let i = 0; i < 5; i++) {
+    FakeRecognizer.last.say("ヘイズ", false);
+    vi.advanceTimersByTime(500);
+  }
+  expect(o.onText).not.toHaveBeenCalledWith("ヘイズ", true);
+});
+
+test("区切りの時間を省くと、文字が増えなくても区切らない", () => {
+  const o = options();
+  listen("ja", { ...o, silenceMs: undefined });
   FakeRecognizer.last.say("ヘイズ", false);
   vi.advanceTimersByTime(60_000);
-  expect(FakeRecognizer.last.stop).not.toHaveBeenCalled();
+  expect(o.onText).toHaveBeenCalledExactlyOnceWith("ヘイズ", false);
 });
 
-test("区切ったら途中の文を確定せず、聞き直すまでの結果を使わない", () => {
+test("区切ったら途中の文を確定せず、認識を止めずに先だけを渡す", () => {
   const o = options();
   const { cut } = listen("ja", { ...o, silenceMs: undefined });
-  const before = FakeRecognizer.last;
-  before.say("ヘイズ", false);
+  FakeRecognizer.last.say("ヘイズ", false);
   o.onText.mockClear();
-  before.stop.mockImplementationOnce(() => undefined);
   cut();
-  before.say("遅れた文", false);
-  before.onend();
-  vi.advanceTimersByTime(1000);
+  expect(FakeRecognizer.last.stop).not.toHaveBeenCalled();
+  FakeRecognizer.last.say("ヘイズ", false);
   expect(o.onText).not.toHaveBeenCalled();
-  expect(FakeRecognizer.started).toBe(2);
+  FakeRecognizer.last.say("ヘイズ ビバップ", true);
+  expect(o.onText).toHaveBeenCalledExactlyOnceWith(" ビバップ", true);
+});
+
+test("認識が終わったら、区切った分を忘れる", () => {
+  const o = options();
+  listen("ja", o);
+  FakeRecognizer.last.say("ヘイズ", false);
+  vi.advanceTimersByTime(750);
+  FakeRecognizer.last.onend();
+  vi.advanceTimersByTime(1000);
+  o.onText.mockClear();
+  FakeRecognizer.last.say("ビバップ", false);
+  expect(o.onText).toHaveBeenCalledExactlyOnceWith("ビバップ", false);
 });
 
 test("再開のたびに作り直し、古いインスタンスの遅れた知らせを使わない", () => {
