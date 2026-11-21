@@ -324,7 +324,7 @@ export const BETA: Engines = {
   live: "chrome",
   transcription: "qwenAudio",
   terms: "pplxDecider",
-  translation: "chromeTranslator",
+  translation: "hyMt2",
   furigana: "decider",
 };
 
@@ -340,8 +340,8 @@ export const BEST: Engines = {
 /** Chrome+ のモード。Chrome のモードに、Chrome の中の Gemini Nano での用語の判定を足す */
 export const CHROME_PLUS: Engines = { ...CHROME, terms: "geminiNano" };
 
-/** クラウドのモード。「おすすめ」の途中の字幕も Qwen で作り、Chrome を使わない（翻訳は Hy-MT2） */
-export const CLOUD: Engines = { ...BETA, live: "qwenAudioStreaming", translation: "hyMt2" };
+/** クラウドのモード。「おすすめ」の途中の字幕も Qwen で作り、Chrome を使わない */
+export const CLOUD: Engines = { ...BETA, live: "qwenAudioStreaming" };
 
 /** 音声も字幕の文字も PC から出さない組み合わせ。3 つとも PC の中で動かす（DESIGN.md 9.7） */
 export const LOCAL: Engines = {

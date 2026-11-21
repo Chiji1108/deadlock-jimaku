@@ -584,9 +584,9 @@ pub(crate) fn settled(mut seg: Segment, mut enriched: Enriched, translation_only
     if draft.is_none() && translation_only {
         seg.started_at = now_ms();
     }
-    // 訳文のあとで失敗しても、出ている訳文は消さない
-    if enriched.translations.is_empty() {
-        enriched.translations = draft.unwrap_or_default();
+    // 確定の訳が届かなかった言語は、出ている途中の訳を消さない（翻訳が回数の上限で断られたときなど）
+    for (lang, tokens) in draft.unwrap_or_default() {
+        enriched.translations.entry(lang).or_insert(tokens);
     }
     seg.stage = Stage::Enriched;
     seg.enriched = Some(enriched);
@@ -763,6 +763,31 @@ mod tests {
     use tokio_tungstenite::tungstenite::Message;
     use tokio_tungstenite::tungstenite::protocol::CloseFrame;
     use tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode;
+
+    /// 確定の訳が届かなかった言語だけ、途中の訳を残す（届いた言語は、確定の訳にする）
+    #[test]
+    fn a_language_without_a_final_translation_keeps_its_draft() {
+        let text = |text: &str| {
+            vec![Token::Text {
+                text: text.into(),
+                ruby: None,
+            }]
+        };
+        let mut seg = partial_segment(1, "ja");
+        seg.draft = Some(Translations::from([
+            ("en".into(), text("draft")),
+            ("ru".into(), text("черновик")),
+        ]));
+        let enriched = Enriched {
+            source: text("強い"),
+            translations: Translations::from([("en".into(), text("final"))]),
+        };
+        let seg = settled(seg, enriched, false);
+        let translations = seg.enriched.unwrap().translations;
+        assert_eq!(translations["en"], text("final"));
+        assert_eq!(translations["ru"], text("черновик"));
+        assert_eq!(seg.draft, None);
+    }
 
     async fn hybrid_pipeline() -> (
         Pipeline,
