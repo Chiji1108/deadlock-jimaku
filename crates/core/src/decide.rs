@@ -74,6 +74,13 @@ struct Candidate {
     refs: Vec<String>,
     /// 名前が似ているだけの言葉（名前・別名・スキルの呼び方ではない）
     guessed: bool,
+    /// 名前が似ているだけの言葉で終わる名前の用語（「ビーム」と「アークティックビーム」「レスキュービーム」）。
+    /// 複合の名前は終わりが主になるので、それだけで呼ぶことがある。辞書の全部から数える（`refs` は
+    /// `MAX_SIMILAR` まで）
+    ends: Vec<String>,
+    /// その言葉が入っている名前の用語が 1 つだけで、言葉がその名前の終わりにあるとき、その用語（「タレット」と
+    /// 「ミニタレット」）。途中にたまたま入っているだけの言葉（「タワー」と「ネコマタワード」）は違う
+    sole: Option<String>,
 }
 
 impl Candidate {
@@ -389,16 +396,29 @@ fn candidates(
     // 「ウルト」や番号と同じ決まり。誰のスキルか分からないのに判定モデルに任せると、スキルを選ぶことがある。
     // 基本用語は、似ているだけでは候補にしない。もともと一般の言葉なので、その一部はさらに一般の言葉になる
     // （「ソウル」は別名「ソウルアーン」の一部で、判定モデルは「魂の壺」を選んだ）
-    let likely = |r: &String| {
-        let e = &glossary.entities[r];
-        match e.kind {
-            EntityKind::Ability => e.hero.as_ref().is_some_and(|h| heroes.contains(&h)),
-            EntityKind::Term => false,
-            _ => true,
-        }
+    //
+    // 言葉が名前の終わりにそのまま入っているときは、そういう用語がいくつあるかで決める:
+    // - その言葉が入る名前が 1 つだけなら（`Candidate::sole`）、スキルでも持ち主を求めない
+    //   （「タレット」が入る名前は「ミニタレット」だけ）
+    // - その言葉で終わる名前がいくつもあり（`Candidate::ends`）、その中のスキルの持ち主が誰も出ていなければ、
+    //   どれのことか決められないので、そのどれも候補にしない（「ビーム」は「アークティックビーム」「ハイパービーム」と
+    //   アイテムの「レスキュービーム」。持ち主で外したスキルの代わりに、残ったアイテムを選ばせることになる）。
+    //   名前の頭や聞き違いで当たった用語は残す（「ヴィン」は「ケルビン」の終わりでもあるが、「ヴィンディクタ」の頭）
+    let ability = |r: &String| glossary.entities[r].kind == EntityKind::Ability;
+    let owned = |r: &String| {
+        let hero = glossary.entities[r].hero.as_ref();
+        hero.is_some_and(|h| heroes.contains(&h))
     };
     for candidate in found.iter_mut().filter(|c| c.guessed) {
-        candidate.refs.retain(likely);
+        let (ends, sole) = (&candidate.ends, &candidate.sole);
+        let abilities = || ends.iter().filter(|r| ability(r));
+        let undecided = ends.len() > 1 && abilities().next().is_some() && !abilities().any(owned);
+        candidate.refs.retain(|r| match glossary.entities[r].kind {
+            _ if undecided && ends.contains(r) => false,
+            EntityKind::Ability => owned(r) || sole.as_ref() == Some(r),
+            EntityKind::Term => false,
+            _ => true,
+        });
     }
     found.retain(|c| !c.refs.is_empty());
     let mut at = 0;
@@ -441,6 +461,8 @@ fn candidates(
                 spoken: rest[..len].to_owned(),
                 refs,
                 guessed: false,
+                ends: Vec::new(),
+                sole: None,
             });
         }
         at += len;
@@ -463,6 +485,8 @@ fn named(text: &str, index: &Index) -> Vec<Candidate> {
                     spoken: rest[..len].to_owned(),
                     refs: refs.clone(),
                     guessed: false,
+                    ends: Vec::new(),
+                    sole: None,
                 });
                 at += len;
             }
@@ -471,8 +495,8 @@ fn named(text: &str, index: &Index) -> Vec<Candidate> {
     }
     for (start, word) in katakana_words(text, &found) {
         // 「ウルト」は `candidates` が、ヒーローのスキルから選ばせる
-        let refs = match ability_word(word) {
-            Some(_) => Vec::new(),
+        let (refs, ends, sole) = match ability_word(word) {
+            Some(_) => Default::default(),
             None => similar(word, index),
         };
         if !refs.is_empty() {
@@ -481,6 +505,8 @@ fn named(text: &str, index: &Index) -> Vec<Candidate> {
                 spoken: word.to_owned(),
                 refs,
                 guessed: true,
+                ends,
+                sole,
             });
         }
     }
@@ -563,9 +589,13 @@ fn lcs(a: &[char], b: &[char]) -> usize {
 ///
 /// 長い名前のあちこちの字にたまたま当たるだけの言葉（「プレイ」と「グレイ・タロン」、「デッドロック」と
 /// 「デベロップ・クイーン」）は、どちらでもないので候補にしない
-fn similar(word: &str, index: &Index) -> Vec<String> {
+///
+/// 2 つ目は `Candidate::ends`、3 つ目は `Candidate::sole`
+fn similar(word: &str, index: &Index) -> (Vec<String>, Vec<String>, Option<String>) {
     let word = kana(word);
     let mut scored: Vec<(usize, usize, &String)> = Vec::new();
+    let mut parts: Vec<&String> = Vec::new();
+    let mut ends: Vec<String> = Vec::new();
     for (surface, refs) in index {
         let name = kana(surface);
         let part = name.windows(word.len()).any(|w| w == word.as_slice());
@@ -573,6 +603,17 @@ fn similar(word: &str, index: &Index) -> Vec<String> {
         let whole = word.first() == name.first()
             && common * 3 >= word.len() * 2
             && common * 2 >= name.len();
+        if common >= 2 && part {
+            let ending = name.ends_with(&word);
+            for r in refs {
+                if !parts.contains(&r) {
+                    parts.push(r);
+                }
+                if ending && !ends.contains(r) {
+                    ends.push(r.clone());
+                }
+            }
+        }
         if common >= 2 && (part || whole) {
             // 言葉をよく説明し、名前の長さが近いものを先に
             scored.extend(
@@ -588,7 +629,11 @@ fn similar(word: &str, index: &Index) -> Vec<String> {
             refs.push(r.clone());
         }
     }
-    refs
+    let sole = match &parts[..] {
+        [only] if ends.contains(only) => Some((*only).clone()),
+        _ => None,
+    };
+    (refs, ends, sole)
 }
 
 /// スキルの呼び方（「ウルト」は 4 番、「2」「３番」「二番」はその番号）。何番か、話した言葉の長さ、数字で呼んだか。
@@ -753,6 +798,10 @@ mod tests {
                 "item:2": { "kind": "item", "className": "j", "names": { "ja": "エコーシャード", "en": "Echo Shard" } },
                 "item:3": { "kind": "item", "className": "k", "names": { "ja": "呪いの遺物", "en": "Cursed Relic" } },
                 "item:4": { "kind": "item", "className": "l", "names": { "ja": "ベールウォーカー", "en": "Veil Walker" } },
+                "hero:12": { "kind": "hero", "className": "k", "names": { "ja": "ケルビン", "en": "Kelvin" } },
+                "ability:8": { "kind": "ability", "className": "t", "names": { "ja": "ミニタレット", "en": "Mini Turret" }, "hero": "hero:8", "abilitySlot": 2 },
+                "ability:12": { "kind": "ability", "className": "r", "names": { "ja": "アークティックビーム", "en": "Arctic Beam" }, "hero": "hero:12", "abilitySlot": 3 },
+                "item:5": { "kind": "item", "className": "m", "names": { "ja": "レスキュービーム", "en": "Rescue Beam" } },
                 "term:8": { "kind": "term", "className": "w", "names": { "ja": "ウォーカー", "en": "Walker" } },
                 "term:9": { "kind": "term", "className": "u", "names": { "ja": "魂の壺", "en": "Soul Urn" } }
             }
@@ -928,6 +977,24 @@ mod tests {
         // 名前全体の聞き違いは、初めの字が同じものだけ（「プレイ」と「ペイジ」は違う）
         assert_eq!(found("どうやってプレイするの。", &[]), []);
         assert_eq!(found("クレイが飛んでる。", &[]), []);
+    }
+
+    #[test]
+    fn a_word_that_ends_names_is_decided_by_how_many_names_it_ends() {
+        // その言葉が入る名前が 1 つだけなら、持ち主のヒーローの名前が出ていなくても、スキルを候補にする
+        assert_eq!(
+            found("タレット置かれてる。", &[]),
+            [("タレット".to_owned(), refs(&["ability:8"]))]
+        );
+        // 名前の頭にあるだけの言葉は、今までどおり持ち主が要る（「スモーク」と「スモークボム」）
+        assert_eq!(found("スモークで逃げる。", &[]), []);
+        // その言葉で終わる名前がいくつもあり、スキルの持ち主が出ていなければ、アイテムも候補にしない
+        assert_eq!(found("ビーム当たらない。", &[]), []);
+        // 持ち主が出ていれば、そのスキルとアイテムから選ばせる
+        assert_eq!(
+            found("ケルビンのビームで止められた。", &[])[1],
+            ("ビーム".to_owned(), refs(&["item:5", "ability:12"]))
+        );
     }
 
     #[test]
