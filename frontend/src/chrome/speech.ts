@@ -389,7 +389,7 @@ export async function openMicrophone(
 }
 
 interface Listener {
-  /** 文字が増えなくなってから区切るまでの時間。省くと区切らない（`cut` で区切る） */
+  /** 文字が増えなくなってから区切るまでの時間。省くと区切らない（`cut` で区切る）。区切っても認識は止めない */
   silenceMs?: number;
   /** 途中か確定の文。確定で文が空なら、途中の文を捨てる */
   onText(text: string, final: boolean): void;
@@ -406,7 +406,23 @@ interface Listener {
   onMicLog?(line: string): void;
 }
 
-/** 止めるまで聞き続ける。`cut` は今の認識を区切り、すぐ聞き直す */
+/** 空白を除いた文字。Chrome は言葉の間の空白を付け替えるので、文字だけ比べる */
+const letters = (text: string) => text.replace(/\s/g, "");
+
+/** 先頭から、空白を除いて `count` 文字を除いた残り */
+function after(text: string, count: number) {
+  let at = 0;
+  for (let left = count; left > 0 && at < text.length; at++) if (/\S/.test(text[at]!)) left--;
+  return text.slice(at);
+}
+
+/** 止めるまで聞き続ける。`cut` は今の文を区切る。
+ *
+ * 区切っても認識は止めない。止めると、次の文を話し始めていたときにその頭を落とす
+ * （Chrome の文字は声より遅れて届くので、文字が止まったと分かるころには次の文が始まっている）。
+ * 区切った分は文字で覚え、Chrome が同じ文を伸ばしたり確定したりしたら、そこから先だけを渡す。
+ * 区切ったあとに Chrome が前の部分を書き換えても、渡した文は直さない。書き換えられると
+ * どこまで渡したかが分からなくなるので、Chrome の確定の代わりに、見せていた途中の文を確定にする */
 export function listen(lang: string, listener: Listener) {
   const { silenceMs, onText, onFatal, onTrouble, heardSound, onDefaultMic, onMicLog } = listener;
   let { track } = listener;
@@ -423,8 +439,8 @@ export function listen(lang: string, listener: Listener) {
   let failed: string | undefined;
   /** 確定していない文 */
   let pending = "";
-  /** 区切ったあと、聞き直すまでの結果は使わない */
-  let cutting = false;
+  /** Chrome がまだ確定していない文のうち、区切って渡し終えた文字 */
+  let settled = "";
   let stall: ReturnType<typeof setTimeout>;
   /** `track` で結果が届いた */
   let trackWorks = false;
@@ -459,6 +475,13 @@ export function listen(lang: string, listener: Listener) {
     silentTracks++;
     note(`音が来ているのに結果がありません（${silentTracks} 回目）`);
     if (silentTracks >= SILENT_TRACK_LIMIT) useDefaultMic({ type: "silent" });
+  };
+
+  /** 今の途中の文までを区切る */
+  const settle = () => {
+    clearTimeout(silence);
+    settled += letters(pending);
+    pending = "";
   };
 
   /** 止まった認識を捨てて始め直す。遅れて届く知らせは `current` との比較で無視される */
@@ -507,23 +530,42 @@ export function listen(lang: string, listener: Listener) {
       trackWorks ||= !!track;
       if (track) note("start(track): 結果が届きました");
       recovered();
-      if (stopped || cutting) return;
+      if (stopped) return;
       clearTimeout(silence);
-      // 確定は新しいものだけ渡す。途中の文は `resultIndex` より前の変わらない分も含めて全体を作る
+      // 確定は新しいものだけ使う。途中の文は `resultIndex` より前の変わらない分も含めて全体を作る
+      let confirmed = "";
       let interim = "";
       for (let i = 0; i < results.length; i++) {
         const result = results[i]!;
         if (!result.isFinal) interim += result[0].transcript;
-        else if (i >= resultIndex) {
-          pending = "";
-          onText(result[0].transcript, true);
-        }
+        else if (i >= resultIndex) confirmed += result[0].transcript;
       }
-      if (!interim.trim()) return;
-      pending = interim;
-      onText(interim, false);
-      // 文字が増えなくなったら止めて確定させる。終わったらすぐ聞き直す
-      if (silenceMs !== undefined) silence = setTimeout(() => current.stop(), silenceMs);
+      // 区切って渡した分が、今の文の頭にそのまま残っているか
+      const intact = letters(confirmed + interim).startsWith(settled);
+      if (confirmed) {
+        const rest = intact ? after(confirmed, settled.length) : pending;
+        // 区切って渡し終えた文を、Chrome があとから確定しただけなら渡すものがない
+        if (rest.trim() || pending) onText(rest, true);
+        pending = "";
+        // 書き換えられていたら、今見えている途中の文までを渡し終えたとみなす
+        settled = intact ? settled.slice(letters(confirmed).length) : letters(interim);
+      }
+      const rest = after(interim, settled.length);
+      if (rest.trim()) {
+        pending = rest;
+        onText(rest, false);
+        if (silenceMs !== undefined) {
+          silence = setTimeout(() => {
+            const text = pending;
+            settle();
+            onText(text, true);
+          }, silenceMs);
+        }
+      } else if (pending) {
+        // Chrome が途中の文を取り下げた
+        pending = "";
+        onText("", true);
+      }
     };
     recognizer.onerror = ({ error }) => {
       if (recognizer !== current || stopped) return;
@@ -556,7 +598,7 @@ export function listen(lang: string, listener: Listener) {
       else start();
     };
     startedAt = Date.now();
-    cutting = false;
+    settled = "";
     watch(START_MS);
     try {
       if (track) recognizer.start(track);
@@ -570,12 +612,7 @@ export function listen(lang: string, listener: Listener) {
   };
   start();
   return {
-    cut() {
-      if (cutting) return;
-      cutting = true;
-      pending = "";
-      current.stop();
-    },
+    cut: settle,
     stop() {
       stopped = true;
       clearTimeout(restart);
