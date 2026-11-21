@@ -1689,6 +1689,10 @@ fn parse(bytes: &[u8]) -> serde_json::Result<Settings> {
     let mut json: Value = serde_json::from_slice(bytes)?;
     from_modes(&mut json);
     from_chrome_beta(&mut json);
+    // 読み替えは済んだので、今の番号にする（古い番号のまま保存すると、次に読むときにもう一度読み替えてしまう）
+    if let Value::Object(fields) = &mut json {
+        fields.insert("format".into(), FORMAT.into());
+    }
     keep_readable(&mut json, &mut Vec::new());
     serde_json::from_value(json)
 }
@@ -2141,10 +2145,10 @@ mod tests {
         let saved = json!({ "format": 1, "engines": old });
         let loaded = parse(saved.to_string().as_bytes()).unwrap();
         assert_eq!(loaded.engines, Engines::BETA);
-        // 今の版で保存したファイルは変えない（自分で Chrome の翻訳を選んだ人）
+        // 移したあとに自分で Chrome の翻訳を選んだ人は、次に読むときに変えない
         let chosen = Settings {
             engines: old,
-            ..Settings::default()
+            ..loaded
         };
         let saved = serde_json::to_vec(&chosen).unwrap();
         assert_eq!(parse(&saved).unwrap().engines, old);
