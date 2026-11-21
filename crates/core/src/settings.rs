@@ -1036,11 +1036,11 @@ pub enum TranslationEngine {
     QwenMtFlash,
     /// OpenRouter の Hy-MT2-30B-A3B。Qwen-MT-Flash の半額で、少し遅い（DESIGN.md 9.7）
     HyMt2,
-    /// 汎用の LLM に、用語を決めた文を訳させる（推論なし）。翻訳専門のモデルより用語をよく守り、訳も自然だが、
-    /// 1 秒以上かかる。Qwen3.8 Flash は回数の上限に当たりにくい（DESIGN.md 9.7）
+    /// 汎用の LLM に、用語を決めた文を訳させる（推論なし）。1 秒以上かかる。Qwen3.8 Flash は回数の上限に
+    /// 当たりにくいが、ロシア語では用語の名前を訳すことが多い（DESIGN.md 9.7）
     Qwen38Flash,
-    /// 同じことを GPT-6 Luna にさせる。用語をいちばんよく守る。0.6.0-rc.6 までの `gpt6Luna`（用語も同時に判定する）
-    /// とは別のもの（`RemovedTranslation`）
+    /// 同じことを GPT-6 Luna にさせる。用語は Hy-MT2 と同じくらい守るが、いちばん遅い。0.6.0-rc.6 までの
+    /// `gpt6Luna`（用語も同時に判定する）とは別のもの（`RemovedTranslation`）
     Gpt6LunaMt,
     Gpt61Terra,
     /// PC の中の Gemma 4 E4B（llama.cpp）。無料で、文字を PC から出さない。GPU を使う（DESIGN.md 9.7）
