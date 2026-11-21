@@ -7,7 +7,7 @@ use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::access::Access;
+use crate::access::{Access, Server};
 use crate::secrets::Provider;
 use crate::types::TranscriptionError;
 
@@ -63,6 +63,9 @@ pub const LIMIT: &str = "limit";
 /// そのコードでは中継しない会社なので、サーバーが中継を断るときの理由
 pub const UNSUPPORTED: &str = "unsupported";
 
+/// サーバーが、その仕事だけを止めているとき（仕事の口。DESIGN.md 17.4）の理由。ほかの工程は続ける
+pub const STOPPED: &str = "stopped";
+
 /// この版のアプリでは、もう中継しないとき（古い口をやめたあと）の理由。0.9.7 から読む
 pub const OUTDATED: &str = "outdated";
 
@@ -93,13 +96,21 @@ pub fn refusal(
     status: StatusCode,
     reason: Option<&str>,
 ) -> Option<TranscriptionError> {
+    // 403 の理由は Worker のもの。xAI の `error` も文字列なので、自分のキーでは読まない
+    if access.is_code() {
+        return code_refusal(status, reason);
+    }
+    (status == StatusCode::UNAUTHORIZED).then_some(TranscriptionError::InvalidKey {
+        provider: access.provider(),
+    })
+}
+
+/// Worker が、コードを見て断った理由（中継でも、仕事の口でも同じ）。どの工程も同じに断られるので、字幕を止める
+/// （止めずに、サーバーを使わない作り方で続けるかは `Store::fall_back`）。その仕事だけを止めているとき
+/// （[`STOPPED`]）と、混んでいるときは、ここでは止めない
+pub fn code_refusal(status: StatusCode, reason: Option<&str>) -> Option<TranscriptionError> {
     match (status, reason) {
-        (StatusCode::UNAUTHORIZED, _) if access.is_code() => Some(TranscriptionError::BetaRefused),
-        (StatusCode::UNAUTHORIZED, _) => Some(TranscriptionError::InvalidKey {
-            provider: access.provider(),
-        }),
-        // 403 の理由は Worker のもの。xAI の `error` も文字列なので、自分のキーでは読まない
-        (StatusCode::FORBIDDEN, _) if !access.is_code() => None,
+        (StatusCode::UNAUTHORIZED, _) => Some(TranscriptionError::BetaRefused),
         (StatusCode::FORBIDDEN, Some(LIMIT)) => Some(TranscriptionError::BetaLimit),
         (StatusCode::FORBIDDEN, Some(OUTDATED)) => Some(TranscriptionError::BetaOutdated),
         (StatusCode::FORBIDDEN, Some("revoked" | UNSUPPORTED)) => {
@@ -111,7 +122,7 @@ pub fn refusal(
 
 pub async fn code_status(api: &str, code: &str) -> CodeStatus {
     let res = crate::http()
-        .get(format!("{api}/gift"))
+        .get(Server::new(api, code.to_owned()).url("/status"))
         .bearer_auth(code)
         .header(reqwest::header::USER_AGENT, app())
         .timeout(TIMEOUT)
@@ -256,16 +267,15 @@ mod tests {
             Err(e) => assert!(format!("{e:#}").contains("upstream"), "{e:#}"),
         }
 
-        let mt = Engines::BETA.translation.mt().unwrap();
-        let translator = crate::mt::Translator::new(
-            access(mt.provider),
-            mt.name,
+        assert!(Engines::BETA.server());
+        let translator = crate::mt::Translator::server(
+            Server::new(&api, code.clone()),
             "ja".into(),
             vec!["en".into()],
             meter.clone(),
         );
         let spans = [Span::Text("強い".into())];
-        // 翻訳の失敗は、その文の訳を諦めるだけ（エラーにならず、訳が空になる）。Worker が 502 を返したことは、Worker の記録で見る
+        // 翻訳の失敗は、その文の訳を諦めるだけ（エラーにならず、訳が空になる）。外が断ったことは、Worker の記録で見る
         let translated = translator.translate(crate::http(), &spans, None).await;
         println!("translation: {:?}", translated.unwrap());
     }
@@ -402,7 +412,7 @@ mod tests {
                 axum::Json(serde_json::json!({ "error": "limit" })),
             )
         };
-        let router = axum::Router::new().route("/gift", axum::routing::get(refuse));
+        let router = axum::Router::new().route("/v2/status", axum::routing::get(refuse));
         tokio::spawn(async move { axum::serve(listener, router).await });
         assert_eq!(code_status(&api, "code").await, CodeStatus::Limit);
         assert_eq!(
@@ -426,7 +436,7 @@ mod tests {
                 axum::Json(serde_json::json!({ "error": "outdated" })),
             )
         };
-        let router = axum::Router::new().route("/gift", axum::routing::get(refuse));
+        let router = axum::Router::new().route("/v2/status", axum::routing::get(refuse));
         tokio::spawn(async move { axum::serve(listener, router).await });
         assert_eq!(code_status(&api, "code").await, CodeStatus::Outdated);
         assert_eq!(

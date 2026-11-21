@@ -1,5 +1,6 @@
 //! 翻訳専門のモデル（Qwen-MT-Flash、Hy-MT2）か、汎用の LLM（Qwen3.8 Flash、GPT-6 Luna）か、PC の中の LLM
-//! （Gemma 4 E4B）で訳す（DESIGN.md 9.7）。
+//! （Gemma 4 E4B）で訳す（DESIGN.md 9.7）。開発者のサーバーに頼むときは、文と翻訳先だけを送り、モデルと頼み方は
+//! サーバーが決める（DESIGN.md 17.4。同じモデルの頼み方は、server/src/tasks.ts にもある）。
 //!
 //! 用語は先に決めてあるので、英語名に置き換えて `⟦Haze⟧` と囲んだ文を渡し、訳文に残った名前を用語に戻す。
 //! 翻訳先ごとに 1 回ずつ、同時に聞く（1 回の応答は 0.2〜0.3 秒）。括弧を外したり引用符に替えたりすることが
@@ -13,7 +14,7 @@ use anyhow::Context;
 use futures_util::future::join_all;
 use serde_json::{Value, json};
 
-use crate::access::Access;
+use crate::access::{Access, Server};
 use crate::enrich::Span;
 use crate::lang;
 use crate::llama::{self, Llama, Prompt};
@@ -45,9 +46,17 @@ const DOMAINS: &str = "Casual live commentary by a streamer playing the video ga
 /// PC の中の LLM は、GPU の遅い PC でも待てるようにする（M5 Pro で 0.3 秒ほど）
 const LOCAL_TIMEOUT: Duration = Duration::from_secs(5);
 
+/// サーバーは、翻訳先をまとめて 1 回で受け、回数の上限で断られたら中で待って送り直す（いちばん長くて 8 秒ほど）
+const SERVER_TIMEOUT: Duration = Duration::from_secs(9);
+
 /// 訳を頼む相手
 enum Backend {
-    Api { access: Access, model: &'static str },
+    Api {
+        access: Access,
+        model: &'static str,
+    },
+    /// 開発者のサーバーの、翻訳の口
+    Server(Server),
     Local(Arc<Llama>),
 }
 
@@ -68,6 +77,21 @@ impl Translator {
     ) -> Self {
         Self {
             backend: Backend::Api { access, model },
+            source_lang,
+            targets,
+            meter,
+        }
+    }
+
+    /// 開発者のサーバーに訳させる（モデルはサーバーが決める）
+    pub fn server(
+        server: Server,
+        source_lang: LangCode,
+        targets: Vec<LangCode>,
+        meter: Arc<Meter>,
+    ) -> Self {
+        Self {
+            backend: Backend::Server(server),
             source_lang,
             targets,
             meter,
@@ -98,28 +122,79 @@ impl Translator {
     ) -> anyhow::Result<Translations> {
         let (source, terms) = tagged(spans, glossary);
         let (source, terms) = (&source, &terms);
-        let asked = self.targets.iter().map(|target| async move {
-            let translated = match &self.backend {
-                Backend::Api { access, model } => {
-                    self.ask(http, access, model, source, target).await?
-                }
-                Backend::Local(llama) => self.ask_local(llama, source, target, terms).await?,
-            };
-            anyhow::Ok((target.clone(), tokens(&translated, terms)))
-        });
+        let named = |target: &LangCode, text: anyhow::Result<String>| Ok((target.clone(), text?));
+        // 会社と PC の中の LLM には、翻訳先ごとに 1 回ずつ、同時に聞く。サーバーには、まとめて 1 回
+        let translated: Vec<anyhow::Result<(LangCode, String)>> = match &self.backend {
+            Backend::Api { access, model } => {
+                let asked = self.targets.iter().map(|target| async move {
+                    named(target, self.ask(http, access, model, source, target).await)
+                });
+                join_all(asked).await
+            }
+            Backend::Local(llama) => {
+                let asked = self.targets.iter().map(|target| async move {
+                    named(target, self.ask_local(llama, source, target, terms).await)
+                });
+                join_all(asked).await
+            }
+            Backend::Server(server) => match self.ask_server(http, server, source).await {
+                Ok(translated) => translated.into_iter().map(Ok).collect(),
+                Err(e) => vec![Err(e)],
+            },
+        };
         let mut translations = Translations::new();
-        for translated in join_all(asked).await {
+        for translated in translated {
             match translated {
-                Ok((target, tokens)) if !tokens.is_empty() => {
-                    translations.insert(target, tokens);
+                Ok((target, text)) => {
+                    let tokens = tokens(&text, terms);
+                    if !tokens.is_empty() {
+                        translations.insert(target, tokens);
+                    }
                 }
-                Ok(_) => {}
                 // 断られた鍵は、どの言語でも送り直しても断られる
                 Err(e) if e.is::<TranscriptionError>() => return Err(e),
                 Err(e) => tracing::warn!("translation: {e:#}"),
             }
         }
         Ok(translations)
+    }
+
+    /// サーバーに、翻訳先をまとめて頼む。訳せなかった翻訳先は、答えに入っていない。その仕事だけを止めているときは、
+    /// 訳なしで続ける（途中の字幕が Chrome なら、Chrome の途中の訳が残る。`subtitles::settled`）。
+    /// かかった額は数えない（払うのは開発者）
+    async fn ask_server(
+        &self,
+        http: &reqwest::Client,
+        server: &Server,
+        source: &str,
+    ) -> anyhow::Result<Vec<(LangCode, String)>> {
+        let body = json!({ "text": source, "source": self.source_lang, "targets": self.targets });
+        let res = http
+            .post(server.url("/translate"))
+            .bearer_auth(server.code())
+            .timeout(SERVER_TIMEOUT)
+            .json(&body)
+            .send()
+            .await?;
+        let status = res.status();
+        if !status.is_success() {
+            let body = res.text().await.unwrap_or_default();
+            let reason = relay::refusal_reason(&body);
+            if let Some(refused) = relay::code_refusal(status, reason.as_deref()) {
+                return Err(refused.into());
+            }
+            if reason.as_deref() == Some(relay::STOPPED) {
+                tracing::warn!("translation: the server has stopped translating");
+                return Ok(Vec::new());
+            }
+            anyhow::bail!("server: {status}: {body}");
+        }
+        #[derive(serde::Deserialize)]
+        struct Answer {
+            translations: std::collections::BTreeMap<LangCode, String>,
+        }
+        let answer: Answer = res.json().await?;
+        Ok(answer.translations.into_iter().collect())
     }
 
     async fn ask_local(
@@ -588,6 +663,58 @@ mod tests {
             .translate(&http, &spans, None)
             .await;
         assert!(failed.unwrap().is_empty());
+    }
+
+    /// サーバーには、文と翻訳先だけをまとめて 1 回で送る（モデルは送らない）。届いた翻訳先だけを出す。
+    /// コードが断られたら字幕を止める理由にし、その仕事だけが止まっているなら、訳なしで続ける
+    #[tokio::test]
+    async fn the_server_translates_every_target_at_once() {
+        use axum::Json;
+        use axum::http::{HeaderMap, StatusCode};
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let api = format!("http://{}/v1", listener.local_addr().unwrap());
+        let translate = |headers: HeaderMap, Json(body): Json<Value>| async move {
+            let refuse = |error: &str| (StatusCode::FORBIDDEN, Json(json!({ "error": error })));
+            match headers["authorization"].to_str().unwrap() {
+                "Bearer good" => {
+                    let asked =
+                        json!({ "text": "⟦Haze⟧強い", "source": "ja", "targets": ["en", "ru"] });
+                    assert_eq!(body, asked);
+                    let translations = json!({ "en": "⟦Haze⟧ is strong" });
+                    (
+                        StatusCode::OK,
+                        Json(json!({ "translations": translations })),
+                    )
+                }
+                "Bearer limit" => refuse("limit"),
+                _ => refuse("stopped"),
+            }
+        };
+        let router = axum::Router::new().route("/v2/translate", axum::routing::post(translate));
+        tokio::spawn(async move { axum::serve(listener, router).await });
+        let translated = |code: &str| {
+            let meter = Arc::new(Meter::new(std::env::temp_dir().join("mt_test_usage.json")));
+            let server = Server::new(&api, code.into());
+            let targets = vec!["en".into(), "ru".into()];
+            let translator = Translator::server(server, "ja".into(), targets, meter);
+            let glossary = glossary();
+            async move {
+                let spans = [entity("hero:13", "ヘイズ"), Span::Text("強い".into())];
+                let http = reqwest::Client::new();
+                translator.translate(&http, &spans, Some(&glossary)).await
+            }
+        };
+        let good = translated("good").await.unwrap();
+        assert_eq!(
+            good,
+            Translations::from([("en".into(), vec![term("hero:13"), text(" is strong")])])
+        );
+        let refused = translated("limit").await.unwrap_err();
+        assert_eq!(
+            refused.downcast::<TranscriptionError>().unwrap(),
+            TranscriptionError::BetaLimit
+        );
+        assert!(translated("stopped").await.unwrap().is_empty());
     }
 
     #[test]

@@ -83,3 +83,15 @@ export const betaSettings = sqliteTable("beta_settings", {
   name: text().primaryKey(),
   value: text().notNull(),
 });
+
+/**
+ * 仕事の口（/v2。DESIGN.md 17.4）ごとの、どのモデルで作るかと、動かすか止めるか。管理画面から替える。
+ * 行のない仕事は、既定のモデルで動かす（tasks.ts）
+ */
+export const tasks = sqliteTable("tasks", {
+  /** "translate" など（tasks.ts の TASKS） */
+  name: text().primaryKey(),
+  /** tasks.ts が知っているモデルの名前。知らない名前（消したモデル）なら、既定のモデルで作る */
+  model: text().notNull(),
+  enabled: integer({ mode: "boolean" }).notNull().default(true),
+});

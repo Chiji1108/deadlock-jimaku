@@ -63,21 +63,64 @@ impl Access {
     }
 }
 
-/// 工程が使う会社の送り先と鍵（会社ごとに 1 つ）
+/// 開発者のサーバーの、仕事ごとの口（`/v2`。DESIGN.md 17.4）。「何をしてほしいか」を送り、モデルはサーバーが決める。
+/// 使う人は、ベータのコード（この PC の印）で見分ける
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Server {
+    /// `https://…/v2` まで
+    base: String,
+    code: String,
+}
+
+impl Server {
+    /// `api` は開発者のサーバーの根元（設定の `apiBase`。会社の形の中継 `/v1` を指す）。仕事の口は、同じ所の `/v2`
+    pub fn new(api: &str, code: String) -> Self {
+        let root = api.trim_end_matches('/');
+        let root = root.strip_suffix("/v1").unwrap_or(root);
+        Self {
+            base: format!("{root}/v2"),
+            code,
+        }
+    }
+
+    pub fn url(&self, path: &str) -> String {
+        format!("{}{path}", self.base)
+    }
+
+    pub fn code(&self) -> &str {
+        &self.code
+    }
+}
+
+/// 工程が使う送り先と鍵。会社ごとに 1 つと、サーバーの仕事の口（使う工程があるときだけ）
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct Accesses(BTreeMap<Provider, Access>);
+pub struct Accesses {
+    providers: BTreeMap<Provider, Access>,
+    server: Option<Server>,
+}
 
 impl Accesses {
     pub fn new(accesses: impl IntoIterator<Item = Access>) -> Self {
-        Self(accesses.into_iter().map(|a| (a.provider, a)).collect())
+        Self {
+            providers: accesses.into_iter().map(|a| (a.provider, a)).collect(),
+            server: None,
+        }
+    }
+
+    pub fn with_server(self, server: Option<Server>) -> Self {
+        Self { server, ..self }
     }
 
     pub fn get(&self, provider: Provider) -> Option<Access> {
-        self.0.get(&provider).cloned()
+        self.providers.get(&provider).cloned()
+    }
+
+    pub fn server(&self) -> Option<Server> {
+        self.server.clone()
     }
 
     pub fn iter(&self) -> impl Iterator<Item = &Access> {
-        self.0.values()
+        self.providers.values()
     }
 }
 
@@ -110,5 +153,16 @@ mod tests {
         let code = Access::code(Provider::Xai, "K7M2".into(), "http://127.0.0.1:8787/v1");
         assert_eq!(code.url("/stt"), "http://127.0.0.1:8787/v1/xai/stt");
         assert_eq!(code.provider(), Provider::Xai);
+    }
+
+    #[test]
+    fn the_task_doors_are_next_to_the_relay() {
+        for api in ["https://api.example/v1", "https://api.example/v1/"] {
+            let server = Server::new(api, "K7M2".into());
+            assert_eq!(server.url("/translate"), "https://api.example/v2/translate");
+        }
+        // テストの偽のサーバーは、根元をそのまま渡す
+        let server = Server::new("http://127.0.0.1:8787", "K7M2".into());
+        assert_eq!(server.url("/status"), "http://127.0.0.1:8787/v2/status");
     }
 }

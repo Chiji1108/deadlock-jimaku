@@ -214,6 +214,12 @@ export const ITEMS: {
       "正確さは、63 文のテストで、用語の英語名が訳文に正しく残った割合です（英語 / ロシア語）。料金は 1 言語あたり",
     options: [
       {
+        value: "server",
+        label: "デドロ字幕のサーバー",
+        price: "ベータ期間中は無料",
+        note: "サーバーが、そのときのおすすめのモデルで訳す。モデルは、アプリを更新しなくても替わる（2026 年 11 月は Hy-MT2。正確さと速さは、下の Hy-MT2 と同じ）",
+      },
+      {
         value: "chromeTranslator",
         label: "Chrome の翻訳",
         accuracy: "94% / 30%",
@@ -319,12 +325,12 @@ export const CHROME: Engines = {
   translation: "chromeTranslator",
   furigana: "dictionary",
 };
-/** ベータ期間中は無料の組み合わせ（開発者のサーバーが中継する。DESIGN.md 17.2） */
+/** ベータ期間中は無料の組み合わせ（開発者のサーバーが作る。DESIGN.md 17.2）。翻訳のモデルは、サーバーが決める（17.4） */
 export const BETA: Engines = {
   live: "chrome",
   transcription: "qwenAudio",
   terms: "pplxDecider",
-  translation: "hyMt2",
+  translation: "server",
   furigana: "decider",
 };
 
@@ -475,6 +481,9 @@ export const PROVIDER_NAMES = Object.fromEntries(PROVIDERS.map((p) => [p.id, p.n
   Provider,
   string
 >;
+
+/** デドロ字幕のサーバーに、仕事として頼む工程がある（DESIGN.md 17.4）。会社のキーは使わず、ベータのコードが要る */
+export const usesServer = (t: Engines) => t.translation === "server";
 
 /** その会社を、ベータのコード（開発者のキー）が中継するなら "beta"。中継がなければ null */
 export const relayOf = (p: Provider) => PROVIDERS.find((info) => info.id === p)?.relay ?? null;

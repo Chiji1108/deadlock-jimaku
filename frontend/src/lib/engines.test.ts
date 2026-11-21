@@ -8,6 +8,7 @@ import {
   modeStats,
   providers,
   unavailable,
+  usesServer,
 } from "./engines";
 
 test("モードの組み合わせは、そのモードとして見分ける", () => {
@@ -40,6 +41,16 @@ test("OpenRouter と TypeSafe AI の工程は、その会社の鍵が要る", ()
   expect(keyNames(providers(mixed))).toBe("OpenRouter と TypeSafe AI の API キー");
   // PC の中の文字起こしは鍵が要らない
   expect(providers({ ...CHROME, transcription: "haasJa" })).toEqual([]);
+});
+
+test("サーバーに頼む翻訳は、会社の鍵を使わない", () => {
+  const server = { ...CHROME, translation: "server" } as const;
+  expect(providers(server)).toEqual([]);
+  expect(usesServer(server)).toBe(true);
+  expect(usesServer(CHROME)).toBe(false);
+  // 「おすすめ」と「クラウド」は、翻訳のモデルをサーバーに任せる
+  const named = MODES.filter((m) => m.engines.translation === "server").map((m) => m.name);
+  expect(named).toEqual(["beta", "cloud"]);
 });
 
 test("要る鍵は、会社の名前を並べて案内する", () => {

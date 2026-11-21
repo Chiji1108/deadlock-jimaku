@@ -292,7 +292,8 @@ fn start_subtitles(
             tracing::info!("transcription started");
             let store = store.clone();
             Some(tokio::spawn(async move {
-                if !code_accepted(&store, input.accesses.iter(), check_code.as_deref()).await {
+                let (engines, accesses) = (&input.engines, &input.accesses);
+                if !code_accepted(&store, engines, accesses, check_code.as_deref()).await {
                     return;
                 }
                 let run = async {
@@ -309,6 +310,7 @@ fn start_subtitles(
                 return None;
             }
             let accesses = input.accesses;
+            let engines = input.engines;
             let uses_local = input.uses_speech;
             let uses_reazon = input.uses_reazon;
             let uses_llama = input.uses_llama;
@@ -323,7 +325,7 @@ fn start_subtitles(
             };
             let store = store.clone();
             Some(tokio::spawn(async move {
-                if !code_accepted(&store, accesses.iter(), check_code.as_deref()).await {
+                if !code_accepted(&store, &engines, &accesses, check_code.as_deref()).await {
                     return;
                 }
                 let run = async {
@@ -441,19 +443,34 @@ async fn local_llm(
 }
 
 /// ベータのコードを使うなら、`check` の API の根元で、使えるか・使う会社を中継するかを確かめる。
-/// 断られたら、字幕を止めずに続ける（`fall_back`）か、理由を出して、false
+/// 断られたら、字幕を止めずに続ける（`fall_back`）か、理由を出して、false。サーバーの仕事（翻訳）を今頼めるかは
+/// 見ない（止めている仕事は、その工程だけがないまま続ける。`mt::Translator::ask_server`）
 async fn code_accepted(
     store: &Store,
-    accesses: impl Iterator<Item = &Access>,
+    engines: &Engines,
+    accesses: &Accesses,
     check: Option<&str>,
 ) -> bool {
+    // サーバーに頼む工程があるのに、コードがない（画面は、選ぶ前にコードをもらう。ないのは、自分のキーで「おすすめ」と
+    // 同じ組み合わせを使っていて、0.10 で翻訳がサーバーに移った人）。黙って訳なしにせず、断られたときと同じに続ける
+    if engines.server() && accesses.server().is_none() {
+        let refused = TranscriptionError::BetaRefused;
+        if !fall_back(store, &refused).await {
+            store.set_transcription_error(Some(refused));
+        }
+        return false;
+    }
     let Some(api) = check else {
         return true;
     };
+    let server = accesses.server();
     let mut codes: BTreeMap<&str, Vec<Provider>> = BTreeMap::new();
-    for access in accesses.filter(|a| a.is_code()) {
+    for access in accesses.iter().filter(|a| a.is_code()) {
         let used = codes.entry(access.token()).or_default();
         used.push(access.provider());
+    }
+    if let Some(server) = &server {
+        codes.entry(server.code()).or_default();
     }
     for (code, used) in codes {
         let checked = relay::check_code(api, code).await.and_then(|relayed| {
@@ -474,7 +491,7 @@ async fn code_accepted(
 }
 
 /// ベータのコードで断られたら、字幕を止めずに続ける（`Store::fall_back`）。ベータのコードで使っていた会社すべてに
-/// 自分のキーがあれば、同じ作り方のまま自分のキーで。なければ Chrome の作り方で
+/// 自分のキーがあれば、同じ作り方のまま自分のキーで（サーバーに頼んでいた工程は `Engines::with_own_keys`）。なければ Chrome の作り方で
 async fn fall_back(store: &Store, refused: &TranscriptionError) -> bool {
     // ほかの理由では続けないので、鍵を読みに行かない
     let beta = matches!(
@@ -489,8 +506,11 @@ async fn fall_back(store: &Store, refused: &TranscriptionError) -> bool {
     let keys = tokio::task::spawn_blocking(secrets::load)
         .await
         .unwrap_or_default();
-    let relayed = store.saved().engines.providers().into_iter();
-    let mut relayed = relayed.filter(|p| p.info().relay == Some(Relay::Beta));
+    let relayed = store.saved().engines.with_own_keys().providers();
+    let mut relayed = relayed.into_iter();
+    let mut relayed = relayed
+        .by_ref()
+        .filter(|p| p.info().relay == Some(Relay::Beta));
     store.fall_back(refused, relayed.all(|p| keys.own.contains_key(&p)))
 }
 
@@ -554,7 +574,7 @@ mod tests {
         }))
     }
 
-    /// 偽の Worker の `/gift`。答えはコードで決まる
+    /// 偽の Worker の、コードの状態を答える口。答えはコードで決まる
     async fn gift_server() -> (String, Arc<AtomicUsize>) {
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let api = format!("http://{}", listener.local_addr().unwrap());
@@ -568,7 +588,7 @@ mod tests {
                 gift_answer(code.trim_start_matches("Bearer "))
             }
         };
-        let router = axum::Router::new().route("/gift", axum::routing::get(answer));
+        let router = axum::Router::new().route("/v2/status", axum::routing::get(answer));
         tokio::spawn(async move { axum::serve(listener, router).await });
         (api, hits)
     }
@@ -645,7 +665,7 @@ mod tests {
             update_subtitles(&mut self.slot, &self.store, input, &self.api).await;
         }
 
-        /// `/gift` がこの回数呼ばれ、答えが処理に届くまで待つ
+        /// コードの状態を答える口がこの回数呼ばれ、答えが処理に届くまで待つ
         async fn settle(&self, checks: usize) {
             for _ in 0..500 {
                 if self.checks() >= checks {
@@ -725,6 +745,25 @@ mod tests {
                 provider: Provider::OpenAi
             })
         );
+    }
+
+    /// サーバーに頼む工程だけでも（会社の鍵を使わなくても）、始める前にコードを確かめる。コードがないときの続け方
+    /// （`fall_back`）は、資格情報ストアを読むので、ここでは確かめない
+    #[tokio::test]
+    async fn the_code_is_checked_for_the_server_alone() {
+        use crate::settings::TranslationEngine;
+        let mut app = App::new().await;
+        let SubtitlesInput::Chrome(mut input) = chrome() else {
+            unreachable!()
+        };
+        input.engines.translation = TranslationEngine::Server;
+        let door = crate::access::Server::new(&app.api, "good".into());
+        input.accesses = Accesses::default().with_server(Some(door));
+        app.update(SubtitlesInput::Chrome(input)).await;
+        app.settle(1).await;
+        assert_eq!(app.checks(), 1);
+        assert_eq!(app.error(), None);
+        assert!(app.slot.is_running());
     }
 
     /// Grok の確定には xAI のキーが、ほかの工程が OpenAI ならその鍵も要る

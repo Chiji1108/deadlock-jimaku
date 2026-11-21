@@ -672,15 +672,15 @@ impl Engines {
         translation: TranslationEngine::ChromeTranslator,
         furigana: RubySource::Dictionary,
     };
-    /// ベータのモード。ベータ期間中は無料（開発者のサーバーが、開発者のキーで中継する。DESIGN.md 17.2）。
-    /// 途中の字幕は Chrome、確定は Qwen、用語は Perplexity Decider、翻訳は Hy-MT2、
-    /// ふりがなは辞書の候補から Perplexity Decider が選ぶ。翻訳は 0.9.7 だけ Chrome だった。Hy-MT2 が回数の上限で
-    /// 断られても、Chrome の途中の訳が確定に残るので、訳は抜けない（`subtitles::settled`。DESIGN.md 9.6）
+    /// ベータのモード。ベータ期間中は無料（開発者のサーバーが、開発者のキーで作る。DESIGN.md 17.2）。
+    /// 途中の字幕は Chrome、確定は Qwen、用語は Perplexity Decider、翻訳はサーバーが決めたモデル（0.9.9 までは
+    /// Hy-MT2 を名指ししていた。0.9.7 だけ Chrome）、ふりがなは辞書の候補から Perplexity Decider が選ぶ。
+    /// サーバーの翻訳が届かなくても、Chrome の途中の訳が確定に残るので、訳は抜けない（`subtitles::settled`。DESIGN.md 9.6）
     pub const BETA: Self = Self {
         live: LiveSource::Chrome,
         transcription: FinalSource::QwenAudio,
         terms: TermsEngine::PplxDecider,
-        translation: TranslationEngine::HyMt2,
+        translation: TranslationEngine::Server,
         furigana: RubySource::Decider,
     };
     /// ローカルのモード（0.7.0）。音声も字幕の文字も PC から出さない: 途中の字幕は Haas-ja、確定は Whisper、
@@ -729,10 +729,10 @@ impl Engines {
         ..Self::STANDARD
     };
 
-    /// 有料の工程があり、鍵が要る。表示の設定（翻訳先、ふりがな）では変わらないので、
+    /// 有料の工程があり、鍵（か、サーバーの仕事に要るコード）が要る。表示の設定（翻訳先、ふりがな）では変わらないので、
     /// 表示を切り替えても字幕の処理を始め直さない
     pub fn paid(&self) -> bool {
-        !self.providers().is_empty()
+        !self.providers().is_empty() || self.server()
     }
 
     /// 工程が使う会社（鍵が要る）。`Provider::ALL` の順。どの選択肢がどの会社を使うかは、工程ごとの `provider`
@@ -747,6 +747,20 @@ impl Engines {
         let all = Provider::ALL.into_iter();
         all.filter(|provider| used.contains(&Some(*provider)))
             .collect()
+    }
+
+    /// 開発者のサーバーの仕事の口（DESIGN.md 17.4）に頼む工程がある。ベータのコードが要る
+    pub fn server(&self) -> bool {
+        self.translation == TranslationEngine::Server
+    }
+
+    /// サーバーに頼む工程を、自分のキーで頼むものに替える（コードが断られて、自分のキーで続けるとき。
+    /// `Store::fall_back`）。翻訳は、サーバーの初めのモデルと同じ Hy-MT2（OpenRouter のキーが要る）
+    pub fn with_own_keys(mut self) -> Self {
+        if self.translation == TranslationEngine::Server {
+            self.translation = TranslationEngine::HyMt2;
+        }
+        self
     }
 
     /// その会社を使う工程があり、鍵が要る
@@ -1031,6 +1045,9 @@ impl TermsEngine {
 #[ts(export)]
 pub enum TranslationEngine {
     ChromeTranslator,
+    /// 開発者のサーバーに訳させる（DESIGN.md 17.4）。どのモデルで訳すかはサーバーが決め、アプリを更新しなくても
+    /// 替わる。ベータのコードが要る（ベータ期間中は無料）
+    Server,
     /// 翻訳専門のモデル。速くて安い（DESIGN.md 9.7）
     QwenMtFlash,
     /// OpenRouter の Hy-MT2-30B-A3B。Qwen-MT-Flash の半額で、少し遅い（DESIGN.md 9.7）
@@ -1047,9 +1064,10 @@ pub enum TranslationEngine {
 }
 
 impl TranslationEngine {
-    pub const ALL: [Self; 7] = [
+    pub const ALL: [Self; 8] = [
         Self::ChromeTranslator,
         Self::Gemma,
+        Self::Server,
         Self::QwenMtFlash,
         Self::HyMt2,
         Self::Qwen38Flash,
@@ -1060,7 +1078,8 @@ impl TranslationEngine {
     pub fn source(self) -> TranslationSource {
         match self {
             Self::ChromeTranslator => TranslationSource::ChromeTranslator,
-            Self::QwenMtFlash
+            Self::Server
+            | Self::QwenMtFlash
             | Self::HyMt2
             | Self::Qwen38Flash
             | Self::Gpt6LunaMt
@@ -1078,14 +1097,14 @@ impl TranslationEngine {
         }
     }
 
-    /// 翻訳専門のモデル
+    /// 自分のキー（か、中継するコード）で、会社に直接頼む翻訳のモデル
     pub fn mt(self) -> Option<Model> {
         let (provider, name) = match self {
             Self::QwenMtFlash => (Provider::Qwen, "qwen-mt-flash"),
             Self::HyMt2 => (Provider::OpenRouter, "tencent/hy-mt2-30b-a3b"),
             Self::Qwen38Flash => (Provider::Qwen, "qwen3.8-flash"),
             Self::Gpt6LunaMt => (Provider::OpenAi, "gpt-6-luna"),
-            Self::ChromeTranslator | Self::Gpt61Terra | Self::Gemma => return None,
+            Self::ChromeTranslator | Self::Server | Self::Gpt61Terra | Self::Gemma => return None,
         };
         Some(Model { provider, name })
     }
@@ -1689,6 +1708,7 @@ fn parse(bytes: &[u8]) -> serde_json::Result<Settings> {
     let mut json: Value = serde_json::from_slice(bytes)?;
     from_modes(&mut json);
     from_chrome_beta(&mut json);
+    from_hy_mt2_beta(&mut json);
     // 読み替えは済んだので、今の番号にする（古い番号のまま保存すると、次に読むときにもう一度読み替えてしまう）
     if let Value::Object(fields) = &mut json {
         fields.insert("format".into(), FORMAT.into());
@@ -1709,6 +1729,27 @@ fn from_chrome_beta(json: &mut Value) {
     });
     if fields.get("format") == Some(&1.into()) && fields.get("engines") == Some(&old) {
         fields["engines"]["translation"] = "hyMt2".into();
+    }
+}
+
+/// 0.9.9 までの「おすすめ」と「クラウド」は、翻訳に Hy-MT2 を名指ししていた。その組み合わせのままの人は、
+/// 今の組み合わせ（翻訳はサーバーが決める。DESIGN.md 17.4）に移す。移すのは 0.9.9 までが保存したファイル
+/// （`format` が 2 以下か、ない）だけで、あとから自分で同じ組み合わせを組んだ人は変えない
+fn from_hy_mt2_beta(json: &mut Value) {
+    let Value::Object(fields) = json else {
+        return;
+    };
+    let old = |live: &str| {
+        serde_json::json!({
+            "live": live, "transcription": "qwenAudio", "terms": "pplxDecider",
+            "translation": "hyMt2", "furigana": "decider",
+        })
+    };
+    let saved_before = fields.get("format").and_then(Value::as_u64).unwrap_or(0) < 3;
+    let engines = fields.get("engines");
+    let moved = [old("chrome"), old("qwenAudioStreaming")];
+    if saved_before && moved.iter().any(|old| engines == Some(old)) {
+        fields["engines"]["translation"] = "server".into();
     }
 }
 
@@ -1749,7 +1790,7 @@ fn release() -> &'static str {
 }
 
 /// 今の設定ファイルの形の番号（`Settings::format`）
-const FORMAT: u32 = 2;
+const FORMAT: u32 = 3;
 
 pub fn load(path: &Path) -> std::io::Result<Settings> {
     let bytes = match std::fs::read(path) {
@@ -2158,6 +2199,41 @@ mod tests {
         let saved = json!({ "engines": Engines::BETA });
         let loaded = parse(saved.to_string().as_bytes()).unwrap();
         assert_eq!(loaded.engines, Engines::BETA);
+    }
+
+    /// 0.9.9 までの「おすすめ」と「クラウド」（翻訳は Hy-MT2）は、翻訳をサーバーに任せる今の組み合わせに移る
+    #[test]
+    fn the_modes_that_named_hy_mt2_leave_the_model_to_the_server() {
+        let named = |mode: Engines| Engines {
+            translation: TranslationEngine::HyMt2,
+            ..mode
+        };
+        for mode in [Engines::BETA, Engines::CLOUD] {
+            assert_eq!(mode.translation, TranslationEngine::Server);
+            for saved in [
+                json!({ "format": 2, "engines": named(mode) }),
+                json!({ "engines": named(mode) }),
+            ] {
+                let loaded = parse(saved.to_string().as_bytes()).unwrap();
+                assert_eq!(loaded.engines, mode);
+            }
+        }
+        // ほかの工程を変えていた人と、移したあとに自分で Hy-MT2 を選んだ人は、変えない
+        let custom = Engines {
+            terms: TermsEngine::Jev,
+            ..named(Engines::BETA)
+        };
+        let saved = json!({ "format": 2, "engines": custom });
+        assert_eq!(parse(saved.to_string().as_bytes()).unwrap().engines, custom);
+        let chosen = Settings {
+            engines: named(Engines::BETA),
+            ..Settings::default()
+        };
+        let saved = serde_json::to_vec(&chosen).unwrap();
+        assert_eq!(parse(&saved).unwrap().engines, named(Engines::BETA));
+        // サーバーの翻訳は、会社のキーを使わない
+        assert_eq!(TranslationEngine::Server.provider(), None);
+        assert_eq!(TranslationEngine::Server.source(), TranslationSource::Mt);
     }
 
     /// ふりがなを GPT-6 Luna にすると、読みを直すモデルだけが変わる（辞書の名前の読みは `models.readings` のまま）

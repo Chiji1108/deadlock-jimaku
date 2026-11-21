@@ -104,6 +104,9 @@ impl Finisher {
                 targets,
                 store.meter(),
             )),
+            None if engines.server() => accesses
+                .server()
+                .map(|server| Translator::server(server, lang.clone(), targets, store.meter())),
             None => engines.translation.mt().and_then(|mt| {
                 Some(Translator::new(
                     accesses.get(mt.provider)?,
