@@ -1,4 +1,5 @@
-//! 翻訳専門のモデル（Qwen-MT-Flash、Hy-MT2）か、PC の中の LLM（Gemma 4 E4B）で訳す（DESIGN.md 9.7）。
+//! 翻訳専門のモデル（Qwen-MT-Flash、Hy-MT2）か、汎用の LLM（Qwen3.8 Flash、GPT-6 Luna）か、PC の中の LLM
+//! （Gemma 4 E4B）で訳す（DESIGN.md 9.7）。
 //!
 //! 用語は先に決めてあるので、英語名に置き換えて `⟦Haze⟧` と囲んだ文を渡し、訳文に残った名前を用語に戻す。
 //! 翻訳先ごとに 1 回ずつ、同時に聞く（1 回の応答は 0.2〜0.3 秒）。括弧を外したり引用符に替えたりすることが
@@ -23,6 +24,14 @@ use crate::usage::{Meter, Tokens, Use};
 
 /// 応答は 0.3 秒ほど（OpenRouter の Hy-MT2 は 0.8 秒ほど）。送り直しを入れても、確定の字幕を 10 秒より長くは待たせない
 const TIMEOUT: Duration = Duration::from_secs(2);
+
+/// 汎用の LLM は 1〜2 秒かかる（遅いときは 3 秒ほど）
+const LLM_TIMEOUT: Duration = Duration::from_secs(4);
+
+/// 翻訳専門のモデルか（そうでなければ、汎用の LLM に指示文を付けて訳させる）
+fn dedicated(model: &str) -> bool {
+    model.starts_with("qwen-mt-") || model.contains("hy-mt")
+}
 
 /// 回数の上限（429）で断られたら、待って送り直す（訳が遅れても、抜けるよりよい）。上限の値は公開されておらず、
 /// 続けて送ると 1 分に 100 回ほどで断られた（実測）
@@ -158,6 +167,27 @@ impl Translator {
                 "top_p": 1.0,
                 "max_tokens": 512,
             }),
+            // 汎用の LLM。PC の中の LLM と同じ指示で、推論はさせない（させると 2 秒を超える）
+            provider if !dedicated(model) => {
+                let system = format!(
+                    "Translate the {} text into {}. {DOMAINS} Reply with the translation only.",
+                    lang::english_name(&self.source_lang),
+                    lang::english_name(target),
+                );
+                let mut body = json!({
+                    "model": model,
+                    "messages": [
+                        { "role": "system", "content": system },
+                        { "role": "user", "content": source },
+                    ],
+                });
+                let (key, value) = match provider {
+                    Provider::Qwen => ("enable_thinking", json!(false)),
+                    _ => ("reasoning_effort", json!("none")),
+                };
+                body[key] = value;
+                body
+            }
             _ => json!({
                 "model": model,
                 "messages": [{ "role": "user", "content": source }],
@@ -171,7 +201,10 @@ impl Translator {
         let send = || {
             http.post(access.url("/chat/completions"))
                 .bearer_auth(access.token())
-                .timeout(TIMEOUT)
+                .timeout(match dedicated(model) {
+                    true => TIMEOUT,
+                    false => LLM_TIMEOUT,
+                })
                 .json(&body)
                 .send()
         };
@@ -450,6 +483,67 @@ mod tests {
             tokens("⟦Хейз⟧ с ⟦Bullet Dance⟧.", &terms()),
             [text("Хейз с "), term("ability:4"), text(".")]
         );
+    }
+
+    /// 汎用の LLM には、指示文を付けて、推論をさせずに訳させる。翻訳専門のモデルには、今までの形で送る
+    #[tokio::test]
+    async fn a_general_model_gets_an_instruction_and_no_reasoning() {
+        use crate::secrets::Provider;
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let api = format!("http://{}", listener.local_addr().unwrap());
+        let seen = Arc::new(std::sync::Mutex::new(Vec::<Value>::new()));
+        let saw = seen.clone();
+        let answer = move |axum::Json(body): axum::Json<Value>| {
+            saw.lock().unwrap().push(body);
+            async {
+                axum::Json(json!({
+                    "choices": [{ "message": { "content": "⟦Haze⟧ is strong." } }],
+                    "usage": { "prompt_tokens": 90, "completion_tokens": 8 },
+                }))
+            }
+        };
+        let router = axum::Router::new()
+            .route(
+                "/qwen/chat/completions",
+                axum::routing::post(answer.clone()),
+            )
+            .route("/openai/chat/completions", axum::routing::post(answer));
+        tokio::spawn(async move { axum::serve(listener, router).await });
+        let spans = [Span::Text("強い".into())];
+        let http = reqwest::Client::new();
+        for (provider, model) in [
+            (Provider::Qwen, "qwen3.8-flash"),
+            (Provider::OpenAi, "gpt-6-luna"),
+            (Provider::Qwen, "qwen-mt-flash"),
+        ] {
+            let meter = Arc::new(Meter::new(std::env::temp_dir().join("mt_test_usage.json")));
+            let access = Access::code(provider, "code".into(), &api);
+            let translator = Translator::new(access, model, "ja".into(), vec!["ru".into()], meter);
+            let translated = translator.translate(&http, &spans, None).await.unwrap();
+            assert_eq!(translated["ru"], [text("Haze is strong.")], "{model}");
+        }
+        let seen = seen.lock().unwrap();
+        let [qwen, luna, mt] = &seen[..] else {
+            panic!("{seen:?}");
+        };
+        let system = qwen["messages"][0]["content"].as_str().unwrap();
+        assert!(
+            system.starts_with("Translate the Japanese text into Russian."),
+            "{system}"
+        );
+        assert!(system.contains("⟦ ⟧"));
+        assert_eq!(
+            qwen["messages"][1],
+            json!({ "role": "user", "content": "強い" })
+        );
+        assert_eq!(qwen["enable_thinking"], false);
+        assert_eq!(luna["reasoning_effort"], "none");
+        assert_eq!(luna["messages"][0]["content"], system);
+        assert_eq!(luna.get("enable_thinking"), None);
+        // 翻訳専門のモデルは、指示文ではなく翻訳の設定で渡す
+        assert_eq!(mt["messages"].as_array().unwrap().len(), 1);
+        assert_eq!(mt["translation_options"]["target_lang"], "ru");
+        assert!(dedicated("tencent/hy-mt2-30b-a3b"));
     }
 
     /// 断られた鍵は字幕を止める理由にし、ほかの失敗はその言語だけ諦める

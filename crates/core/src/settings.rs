@@ -1036,24 +1036,36 @@ pub enum TranslationEngine {
     QwenMtFlash,
     /// OpenRouter の Hy-MT2-30B-A3B。Qwen-MT-Flash の半額で、少し遅い（DESIGN.md 9.7）
     HyMt2,
+    /// 汎用の LLM に、用語を決めた文を訳させる（推論なし）。1 秒以上かかる。Qwen3.8 Flash は回数の上限に
+    /// 当たりにくいが、ロシア語では用語の名前を訳すことが多い（DESIGN.md 9.7）
+    Qwen38Flash,
+    /// 同じことを GPT-6 Luna にさせる。用語は Hy-MT2 と同じくらい守るが、いちばん遅い。0.6.0-rc.6 までの
+    /// `gpt6Luna`（用語も同時に判定する）とは別のもの（`RemovedTranslation`）
+    Gpt6LunaMt,
     Gpt61Terra,
     /// PC の中の Gemma 4 E4B（llama.cpp）。無料で、文字を PC から出さない。GPU を使う（DESIGN.md 9.7）
     Gemma,
 }
 
 impl TranslationEngine {
-    pub const ALL: [Self; 5] = [
+    pub const ALL: [Self; 7] = [
         Self::ChromeTranslator,
         Self::Gemma,
         Self::QwenMtFlash,
         Self::HyMt2,
+        Self::Qwen38Flash,
+        Self::Gpt6LunaMt,
         Self::Gpt61Terra,
     ];
 
     pub fn source(self) -> TranslationSource {
         match self {
             Self::ChromeTranslator => TranslationSource::ChromeTranslator,
-            Self::QwenMtFlash | Self::HyMt2 | Self::Gemma => TranslationSource::Mt,
+            Self::QwenMtFlash
+            | Self::HyMt2
+            | Self::Qwen38Flash
+            | Self::Gpt6LunaMt
+            | Self::Gemma => TranslationSource::Mt,
             Self::Gpt61Terra => TranslationSource::Llm,
         }
     }
@@ -1072,6 +1084,8 @@ impl TranslationEngine {
         let (provider, name) = match self {
             Self::QwenMtFlash => (Provider::Qwen, "qwen-mt-flash"),
             Self::HyMt2 => (Provider::OpenRouter, "tencent/hy-mt2-30b-a3b"),
+            Self::Qwen38Flash => (Provider::Qwen, "qwen3.8-flash"),
+            Self::Gpt6LunaMt => (Provider::OpenAi, "gpt-6-luna"),
             Self::ChromeTranslator | Self::Gpt61Terra | Self::Gemma => return None,
         };
         Some(Model { provider, name })
@@ -1082,7 +1096,7 @@ impl TranslationEngine {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TranslationSource {
     ChromeTranslator,
-    /// 用語を決めた文を訳すだけのモデル（Qwen-MT-Flash、Hy-MT2、PC の中の Gemma）
+    /// 用語を決めた文を訳すだけのモデル（Qwen-MT-Flash、Hy-MT2、汎用の LLM、PC の中の Gemma）
     Mt,
     Llm,
 }

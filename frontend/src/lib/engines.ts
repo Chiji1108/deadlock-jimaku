@@ -244,6 +244,22 @@ export const ITEMS: {
         price: "1 時間 約 1 円",
       },
       {
+        value: "qwen38Flash",
+        label: "Qwen3.8 Flash",
+        accuracy: "96% / 90%",
+        speed: "約 1 秒",
+        price: "1 時間 約 2 円",
+        note: "汎用の AI に訳させる。回数の上限に当たりにくい。ロシア語では、用語の名前を訳すことがある",
+      },
+      {
+        value: "gpt6LunaMt",
+        label: "GPT-6 Luna",
+        accuracy: "97% / 98%",
+        speed: "約 1.5 秒",
+        price: "1 時間 約 2 円",
+        note: "汎用の AI に訳させる。用語は Hy-MT2 と同じくらい守るが、遅い",
+      },
+      {
         value: "gpt61Terra",
         label: "GPT-6.1 Terra（用語も）",
         accuracy: "99% / 99%",
