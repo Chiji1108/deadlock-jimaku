@@ -99,7 +99,11 @@ v2.post("/translate", async (c) => {
 
   const asked = await Promise.all(
     targets.map(async (target) => {
-      const send = (key: string) => chat(model.provider, key, model.body({ text, source, target }));
+      let reached = false;
+      const send = (key: string) => {
+        reached = true;
+        return chat(model.provider, key, model.body({ text, source, target }), model.timeoutMs);
+      };
       let res = await sent(c, keys, send);
       for (const ms of RETRY_AFTER_MS) {
         if (res?.status !== 429) break;
@@ -111,8 +115,9 @@ v2.post("/translate", async (c) => {
       return {
         target,
         translated: typeof translated === "string" ? translated.trim() : "",
-        // 答えが来なかった分は数えない。額の分からない答えは、見積もりのまま数える
-        usd: answer ? (chatUsd(answer.usage, model) ?? one) : 0,
+        // 外が断った分と、送れなかった分（キーを読めない）は数えない。送ったのに答えを読めなかった分（待ちきれなかった、
+        // 本文が壊れていた）は、外が作って請求しているかもしれないので、見積もりのまま数える
+        usd: (res && !res.ok) || !reached ? 0 : ((answer && chatUsd(answer.usage, model)) ?? one),
       };
     }),
   );

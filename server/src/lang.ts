@@ -34,4 +34,5 @@ const LANGUAGES: Record<string, { name: string; qwen: string }> = {
 };
 
 /** 知っている言語なら、その名前とコード */
-export const language = (code: unknown) => (typeof code === "string" ? LANGUAGES[code] : undefined);
+export const language = (code: unknown) =>
+  typeof code === "string" && Object.hasOwn(LANGUAGES, code) ? LANGUAGES[code] : undefined;

@@ -285,14 +285,15 @@ fn start_subtitles(
     match input {
         SubtitlesInput::Stopped => None,
         SubtitlesInput::Chrome(input) => {
-            if let Some(missing) = missing(&input.engines, &input.accesses) {
-                store.set_transcription_error(Some(missing));
+            if let Some(provider) = missing_key(&input.engines, &input.accesses) {
+                store.set_transcription_error(Some(TranscriptionError::MissingKey { provider }));
                 return None;
             }
             tracing::info!("transcription started");
             let store = store.clone();
             Some(tokio::spawn(async move {
-                if !code_accepted(&store, &input.accesses, check_code.as_deref()).await {
+                let (engines, accesses) = (&input.engines, &input.accesses);
+                if !code_accepted(&store, engines, accesses, check_code.as_deref()).await {
                     return;
                 }
                 let run = async {
@@ -304,11 +305,12 @@ fn start_subtitles(
             }))
         }
         SubtitlesInput::Audio(input) => {
-            if let Some(missing) = missing(&input.engines, &input.accesses) {
-                store.set_transcription_error(Some(missing));
+            if let Some(provider) = missing_key(&input.engines, &input.accesses) {
+                store.set_transcription_error(Some(TranscriptionError::MissingKey { provider }));
                 return None;
             }
             let accesses = input.accesses;
+            let engines = input.engines;
             let uses_local = input.uses_speech;
             let uses_reazon = input.uses_reazon;
             let uses_llama = input.uses_llama;
@@ -323,7 +325,7 @@ fn start_subtitles(
             };
             let store = store.clone();
             Some(tokio::spawn(async move {
-                if !code_accepted(&store, &accesses, check_code.as_deref()).await {
+                if !code_accepted(&store, &engines, &accesses, check_code.as_deref()).await {
                     return;
                 }
                 let run = async {
@@ -352,16 +354,10 @@ fn start_subtitles(
     }
 }
 
-/// 工程に要るのに、送り先と鍵のない会社（OpenAI を先に知らせる）。なければ、サーバーの仕事に要るコードがないこと
-/// （画面は、選ぶ前にコードをもらう。ないのは、自分のキーで「おすすめ」と同じ組み合わせを使っていて、0.10 で翻訳が
-/// サーバーに移った人）。`Keys::ready` と同じ決まり
-fn missing(engines: &Engines, accesses: &Accesses) -> Option<TranscriptionError> {
+/// 工程に要るのに、送り先と鍵のない会社（OpenAI を先に知らせる）
+fn missing_key(engines: &Engines, accesses: &Accesses) -> Option<Provider> {
     let mut needed = engines.providers().into_iter();
-    if let Some(provider) = needed.find(|provider| accesses.get(*provider).is_none()) {
-        return Some(TranscriptionError::MissingKey { provider });
-    }
-    let no_code = engines.server() && accesses.server().is_none();
-    no_code.then_some(TranscriptionError::BetaRefused)
+    needed.find(|provider| accesses.get(*provider).is_none())
 }
 
 /// PC の中の AI に使わせる GPU（PC の中の AI を立てるとき）。GPU が 2 つ以上あれば、設定で選んだものか、
@@ -449,7 +445,21 @@ async fn local_llm(
 /// ベータのコードを使うなら、`check` の API の根元で、使えるか・使う会社を中継するかを確かめる。
 /// 断られたら、字幕を止めずに続ける（`fall_back`）か、理由を出して、false。サーバーの仕事（翻訳）を今頼めるかは
 /// 見ない（止めている仕事は、その工程だけがないまま続ける。`mt::Translator::ask_server`）
-async fn code_accepted(store: &Store, accesses: &Accesses, check: Option<&str>) -> bool {
+async fn code_accepted(
+    store: &Store,
+    engines: &Engines,
+    accesses: &Accesses,
+    check: Option<&str>,
+) -> bool {
+    // サーバーに頼む工程があるのに、コードがない（画面は、選ぶ前にコードをもらう。ないのは、自分のキーで「おすすめ」と
+    // 同じ組み合わせを使っていて、0.10 で翻訳がサーバーに移った人）。黙って訳なしにせず、断られたときと同じに続ける
+    if engines.server() && accesses.server().is_none() {
+        let refused = TranscriptionError::BetaRefused;
+        if !fall_back(store, &refused).await {
+            store.set_transcription_error(Some(refused));
+        }
+        return false;
+    }
     let Some(api) = check else {
         return true;
     };
@@ -481,7 +491,7 @@ async fn code_accepted(store: &Store, accesses: &Accesses, check: Option<&str>) 
 }
 
 /// ベータのコードで断られたら、字幕を止めずに続ける（`Store::fall_back`）。ベータのコードで使っていた会社すべてに
-/// 自分のキーがあれば、同じ作り方のまま自分のキーで。なければ（サーバーの仕事は、自分のキーでは代われない）Chrome の作り方で
+/// 自分のキーがあれば、同じ作り方のまま自分のキーで（サーバーに頼んでいた工程は `Engines::with_own_keys`）。なければ Chrome の作り方で
 async fn fall_back(store: &Store, refused: &TranscriptionError) -> bool {
     // ほかの理由では続けないので、鍵を読みに行かない
     let beta = matches!(
@@ -496,11 +506,12 @@ async fn fall_back(store: &Store, refused: &TranscriptionError) -> bool {
     let keys = tokio::task::spawn_blocking(secrets::load)
         .await
         .unwrap_or_default();
-    let engines = store.saved().engines;
-    let relayed = engines.providers().into_iter();
-    let mut relayed = relayed.filter(|p| p.info().relay == Some(Relay::Beta));
-    let own_keys = !engines.server() && relayed.all(|p| keys.own.contains_key(&p));
-    store.fall_back(refused, own_keys)
+    let relayed = store.saved().engines.with_own_keys().providers();
+    let mut relayed = relayed.into_iter();
+    let mut relayed = relayed
+        .by_ref()
+        .filter(|p| p.info().relay == Some(Relay::Beta));
+    store.fall_back(refused, relayed.all(|p| keys.own.contains_key(&p)))
 }
 
 /// 止まったら理由を出す（開始・停止を押し直すと始め直す）。想定外のエラー（panic）でも
@@ -736,27 +747,21 @@ mod tests {
         );
     }
 
-    /// サーバーに頼む工程があるのにコードがなければ、黙って訳なしで始めない
+    /// サーバーに頼む工程だけでも（会社の鍵を使わなくても）、始める前にコードを確かめる。コードがないときの続け方
+    /// （`fall_back`）は、資格情報ストアを読むので、ここでは確かめない
     #[tokio::test]
-    async fn the_server_needs_a_code() {
+    async fn the_code_is_checked_for_the_server_alone() {
         use crate::settings::TranslationEngine;
         let mut app = App::new().await;
-        let api = app.api.clone();
-        let server = |code: Option<&str>| {
-            let SubtitlesInput::Chrome(mut input) = chrome() else {
-                unreachable!()
-            };
-            input.engines.translation = TranslationEngine::Server;
-            let door = code.map(|code| crate::access::Server::new(&api, code.into()));
-            input.accesses = Accesses::default().with_server(door);
-            SubtitlesInput::Chrome(input)
+        let SubtitlesInput::Chrome(mut input) = chrome() else {
+            unreachable!()
         };
-        app.update(server(None)).await;
-        assert_eq!(app.error(), Some(TranscriptionError::BetaRefused));
-        assert!(!app.slot.is_running());
-        // コードがあれば、始める前に確かめる
-        app.update(server(Some("good"))).await;
+        input.engines.translation = TranslationEngine::Server;
+        let door = crate::access::Server::new(&app.api, "good".into());
+        input.accesses = Accesses::default().with_server(Some(door));
+        app.update(SubtitlesInput::Chrome(input)).await;
         app.settle(1).await;
+        assert_eq!(app.checks(), 1);
         assert_eq!(app.error(), None);
         assert!(app.slot.is_running());
     }

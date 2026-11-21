@@ -24,6 +24,8 @@ export interface Model {
   body: (asked: Translation) => unknown;
   /** 答えに料金が入っていないときに数える単価（100 万トークンあたり） */
   price: { input: number; output: number };
+  /** 答えを待つ時間（ミリ秒）。待たせすぎると、確定の字幕が遅れる */
+  timeoutMs: number;
 }
 
 /** 訳し方の指示。これがないと、括弧を外すことが多い（実測。mt.rs の `DOMAINS`） */
@@ -57,6 +59,8 @@ const TRANSLATORS = {
       max_tokens: MAX_TRANSLATION_TOKENS,
     }),
     price: OPENROUTER_FALLBACK,
+    // 応答は 0.8 秒ほど
+    timeoutMs: 2000,
   },
   "qwen-mt-flash": {
     label: "Qwen-MT-Flash",
@@ -71,6 +75,8 @@ const TRANSLATORS = {
       },
     }),
     price: { input: 0.16, output: 0.49 },
+    // 応答は 0.3 秒ほど
+    timeoutMs: 2000,
   },
   // 汎用の LLM。推論はさせない（させると 2 秒を超える）
   "qwen3.8-flash": {
@@ -89,6 +95,8 @@ const TRANSLATORS = {
       max_tokens: MAX_TRANSLATION_TOKENS,
     }),
     price: { input: 0.15, output: 0.47 },
+    // 1〜2 秒かかる（遅いときは 3 秒ほど）
+    timeoutMs: 4000,
   },
 } satisfies Record<string, Model>;
 
@@ -99,7 +107,10 @@ export const TASKS = {
 
 export type TaskName = keyof typeof TASKS;
 
-export const isTask = (name: string): name is TaskName => name in TASKS;
+export const isTask = (name: string): name is TaskName => Object.hasOwn(TASKS, name);
+
+/** その仕事を頼めるモデルの名前か */
+export const isModel = (task: TaskName, model: string) => Object.hasOwn(TASKS[task].models, model);
 
 /** その仕事の今の設定: モデルの名前と中身、動かしているか。管理画面で変えていなければ、初めのモデルで動かす */
 export async function taskOf(db: Db, task: TaskName): Promise<{ id: string; model: Model; enabled: boolean }> {
@@ -110,7 +121,7 @@ export async function taskOf(db: Db, task: TaskName): Promise<{ id: string; mode
 function chosen(task: TaskName, row: { model: string; enabled: boolean } | undefined) {
   const { models, standard } = TASKS[task];
   // 消したモデルの名前が残っていたら、初めのモデルで作る
-  const id = row && row.model in models ? row.model : standard;
+  const id = row && isModel(task, row.model) ? row.model : standard;
   return { id, model: models[id]!, enabled: row?.enabled ?? true };
 }
 

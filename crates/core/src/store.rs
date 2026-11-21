@@ -144,12 +144,15 @@ impl Store {
         })
     }
 
-    /// 今の字幕の作り方。ベータのコードで断られて Chrome で続けている間は、工程だけ Chrome のモードにしたもの
+    /// 今の字幕の作り方。ベータのコードで断られて Chrome で続けている間は、工程だけ Chrome のモードにしたもの。
+    /// 自分のキーで続けている間は、サーバーに頼む工程だけ、自分のキーで頼むものにしたもの
     pub fn settings(&self) -> Settings {
         let mut settings = self.saved();
-        if self.continues_with() == Some(Fallback::Chrome) {
-            settings.engines = Engines::CHROME;
-        }
+        settings.engines = match self.continues_with() {
+            Some(Fallback::Chrome) => Engines::CHROME,
+            Some(Fallback::OwnKeys) => settings.engines.with_own_keys(),
+            None => settings.engines,
+        };
         settings
     }
 
@@ -752,7 +755,11 @@ mod tests {
         // 自分のキーがあれば、Chrome を使っていなくても、同じ作り方のまま続ける
         assert!(store.fall_back(&TranscriptionError::BetaLimit, true));
         assert_eq!(store.continues_with(), Some(Fallback::OwnKeys));
-        assert_eq!(store.settings().engines, store.saved().engines);
+        // サーバーに頼んでいた翻訳だけ、自分のキーで頼むモデルにする
+        let own = store.saved().engines.with_own_keys();
+        assert_eq!(store.settings().engines, own);
+        assert_eq!(own.translation, crate::settings::TranslationEngine::HyMt2);
+        assert!(!own.server());
         // 自分のキーでも断られたら、もう続けない（エラーで止める）
         assert!(!store.fall_back(&TranscriptionError::BetaRefused, true));
     }

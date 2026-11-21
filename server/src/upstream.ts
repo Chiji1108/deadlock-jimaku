@@ -13,13 +13,10 @@ function send(url: string, key: string, body: unknown, signal?: AbortSignal): Pr
   });
 }
 
-/** 文字のやりとり（OpenAI 互換の口）の待ち時間。翻訳の応答は 0.3〜0.8 秒ほど。待たせすぎると、確定の字幕が遅れる */
-const CHAT_TIMEOUT_MS = 2000;
-
-/** 文字のやりとりを頼む（/v2 の仕事。モデルと頼み方は tasks.ts が決める） */
-export function chat(provider: "qwen" | "openrouter", key: string, body: unknown): Promise<Response> {
+/** 文字のやりとりを頼む（/v2 の仕事。モデルと頼み方、待つ時間は tasks.ts が決める） */
+export function chat(provider: "qwen" | "openrouter", key: string, body: unknown, timeoutMs: number): Promise<Response> {
   const base = provider === "qwen" ? `${QWEN}/compatible-mode/v1` : OPENROUTER;
-  return send(`${base}/chat/completions`, key, body, AbortSignal.timeout(CHAT_TIMEOUT_MS));
+  return send(`${base}/chat/completions`, key, body, AbortSignal.timeout(timeoutMs));
 }
 
 /** 送り直す前に待つ */

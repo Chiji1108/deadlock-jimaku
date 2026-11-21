@@ -729,10 +729,10 @@ impl Engines {
         ..Self::STANDARD
     };
 
-    /// 有料の工程があり、鍵が要る。表示の設定（翻訳先、ふりがな）では変わらないので、
+    /// 有料の工程があり、鍵（か、サーバーの仕事に要るコード）が要る。表示の設定（翻訳先、ふりがな）では変わらないので、
     /// 表示を切り替えても字幕の処理を始め直さない
     pub fn paid(&self) -> bool {
-        !self.providers().is_empty()
+        !self.providers().is_empty() || self.server()
     }
 
     /// 工程が使う会社（鍵が要る）。`Provider::ALL` の順。どの選択肢がどの会社を使うかは、工程ごとの `provider`
@@ -752,6 +752,15 @@ impl Engines {
     /// 開発者のサーバーの仕事の口（DESIGN.md 17.4）に頼む工程がある。ベータのコードが要る
     pub fn server(&self) -> bool {
         self.translation == TranslationEngine::Server
+    }
+
+    /// サーバーに頼む工程を、自分のキーで頼むものに替える（コードが断られて、自分のキーで続けるとき。
+    /// `Store::fall_back`）。翻訳は、サーバーの初めのモデルと同じ Hy-MT2（OpenRouter のキーが要る）
+    pub fn with_own_keys(mut self) -> Self {
+        if self.translation == TranslationEngine::Server {
+            self.translation = TranslationEngine::HyMt2;
+        }
+        self
     }
 
     /// その会社を使う工程があり、鍵が要る
