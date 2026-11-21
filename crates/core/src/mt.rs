@@ -122,33 +122,35 @@ impl Translator {
     ) -> anyhow::Result<Translations> {
         let (source, terms) = tagged(spans, glossary);
         let (source, terms) = (&source, &terms);
-        let asked = self.targets.iter().map(|target| async move {
-            let translated = match &self.backend {
-                Backend::Api { access, model } => {
-                    self.ask(http, access, model, source, target).await?
-                }
-                Backend::Local(llama) => self.ask_local(llama, source, target, terms).await?,
-                Backend::Server(_) => unreachable!("the server takes every target at once"),
-            };
-            anyhow::Ok((target.clone(), tokens(&translated, terms)))
-        });
-        let asked = match &self.backend {
-            Backend::Server(server) => {
-                let translated = self.ask_server(http, server, source).await?;
-                let translated = translated.into_iter();
-                translated
-                    .map(|(target, text)| Ok((target, tokens(&text, terms))))
-                    .collect()
+        let named = |target: &LangCode, text: anyhow::Result<String>| Ok((target.clone(), text?));
+        // 会社と PC の中の LLM には、翻訳先ごとに 1 回ずつ、同時に聞く。サーバーには、まとめて 1 回
+        let translated: Vec<anyhow::Result<(LangCode, String)>> = match &self.backend {
+            Backend::Api { access, model } => {
+                let asked = self.targets.iter().map(|target| async move {
+                    named(target, self.ask(http, access, model, source, target).await)
+                });
+                join_all(asked).await
             }
-            _ => join_all(asked).await,
+            Backend::Local(llama) => {
+                let asked = self.targets.iter().map(|target| async move {
+                    named(target, self.ask_local(llama, source, target, terms).await)
+                });
+                join_all(asked).await
+            }
+            Backend::Server(server) => match self.ask_server(http, server, source).await {
+                Ok(translated) => translated.into_iter().map(Ok).collect(),
+                Err(e) => vec![Err(e)],
+            },
         };
         let mut translations = Translations::new();
-        for translated in asked {
+        for translated in translated {
             match translated {
-                Ok((target, tokens)) if !tokens.is_empty() => {
-                    translations.insert(target, tokens);
+                Ok((target, text)) => {
+                    let tokens = tokens(&text, terms);
+                    if !tokens.is_empty() {
+                        translations.insert(target, tokens);
+                    }
                 }
-                Ok(_) => {}
                 // 断られた鍵は、どの言語でも送り直しても断られる
                 Err(e) if e.is::<TranscriptionError>() => return Err(e),
                 Err(e) => tracing::warn!("translation: {e:#}"),
