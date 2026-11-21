@@ -343,6 +343,23 @@ test("ベータのコードをもらえなければ、モードを変えない",
   expect(fresh.betaOffer).toEqual(BETA);
 });
 
+test("翻訳だけをサーバーに頼むときも、同意してからコードをもらう（会社のキーでは代わりにならない）", async () => {
+  const fresh = freshPanel();
+  const server = { ...CHROME, translation: "server" } as const;
+  // 自分のキーが全部あっても、サーバーの仕事にはコードが要る
+  const keys = Object.fromEntries(
+    Object.keys(betaKeys("missing")).map((k) => [k, { state: "saved" }]),
+  );
+  fresh.view = {
+    settings: { engines: CHROME },
+    keys: { ...keys, beta: { state: "missing" } },
+  } as never;
+  const update = vi.spyOn(fresh, "update").mockResolvedValue(true);
+  await fresh.chooseMode(server);
+  expect(fresh.betaOffer).toEqual(server);
+  expect(update).not.toHaveBeenCalled();
+});
+
 test("ベータのコードがあるか、要らないモードは、聞かずに変える", async () => {
   const fresh = freshPanel();
   const update = vi.spyOn(fresh, "update").mockResolvedValue(true);

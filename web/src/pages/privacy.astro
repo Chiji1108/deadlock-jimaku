@@ -2,7 +2,7 @@
 import Layout from "../layouts/Layout.astro";
 import { DISCORD } from "../site";
 
-const UPDATED = "2026 年 11 月 11 日";
+const UPDATED = "2026 年 11 月 21 日";
 ---
 
 <Layout title="プライバシーポリシー" description="デドロ字幕が扱う情報と、その送り先について。">
@@ -161,6 +161,9 @@ const UPDATED = "2026 年 11 月 11 日";
     <ul>
       <li>
         字幕を出している間、話している間のマイクの音声が、サーバーを通って QwenCloud（Alibaba Cloud、シンガポール）に送られます。確定した字幕の文字と用語の候補が、サーバーを通って OpenRouter に送られ、OpenRouter からモデルの会社（Perplexity、Tencent）に送られます。黙っている間の音声は送りません。
+      </li>
+      <li>
+        翻訳に使うモデルは、サーバーが決めます（0.10 から。今は Tencent の Hy-MT2 で、OpenRouter を通します）。アプリを更新しなくても替わることがありますが、確定した字幕の文字の送り先は、この節に書いた会社（QwenCloud か、OpenRouter とその先のモデルの会社）のどれかです。ほかの会社に送るようにするときは、先にこのページを書き換えます。「モード」のタブで工程ごとに選んで、翻訳を「デドロ字幕のサーバー」にしたときも同じです。
       </li>
       <li>
         送るときは、開発者の API キーを使います。送った内容の扱いは、それぞれの会社のポリシーに従います（上の「Qwen に送るもの」「OpenRouter に送るもの」）。

@@ -61,7 +61,7 @@ export function refusal(code: Code, now: number): "revoked" | "limit" | undefine
 }
 
 /** 今日（UTC）使われた額。`dayUsd` が前の日のものなら 0 */
-function todayUsd(code: Pick<Code, "day" | "dayUsd">, now: number): number {
+export function todayUsd(code: Pick<Code, "day" | "dayUsd">, now: number): number {
   return code.day === day(now) ? code.dayUsd : 0;
 }
 

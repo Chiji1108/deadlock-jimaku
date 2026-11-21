@@ -22,7 +22,7 @@ async function act(run) {
 }
 
 async function load() {
-  const [s, k, c] = await Promise.all([api("/summary"), api("/keys"), api("/codes")]);
+  const [s, k, c, t] = await Promise.all([api("/summary"), api("/keys"), api("/codes"), api("/tasks")]);
   $("who").textContent = s.email;
   $("state").textContent = s.closed ? "閉じています" : "開いています";
   $("state").className = "tag " + (s.closed ? "bad" : "ok");
@@ -52,6 +52,13 @@ async function load() {
       (key.enabled ? "止める" : "戻す") + '</button> <button class="danger" data-remove="' + esc(key.id) + '">消す</button></td></tr>').join("") +
     fallback.map((p) => "<tr><td>" + esc(p) + '</td><td colspan="6" class="muted">秘密の設定（wrangler）のキー。ほかのキーが断られたときに使います</td></tr>').join("");
 
+  // 選んでいる途中の欄は書き換えない（1 分ごとに読み直すため）
+  if (!document.activeElement?.dataset?.model) $("tasks").innerHTML = "<tr><th>仕事</th><th>モデル</th><th>状態</th><th></th></tr>" +
+    t.tasks.map((task) => "<tr><td>" + esc(task.label) + '</td><td><select data-model="' + esc(task.name) + '">' +
+      task.models.map((m) => '<option value="' + esc(m.id) + '"' + (m.id === task.model ? " selected" : "") + ">" + esc(m.label) + "</option>").join("") +
+      "</select></td><td>" + (task.enabled ? '<span class="tag ok">動かしている</span>' : '<span class="tag bad">止めている</span>') +
+      '</td><td><button data-task="' + esc(task.name) + '" data-enabled="' + !task.enabled + '">' + (task.enabled ? "止める" : "動かす") + "</button></td></tr>").join("");
+
   const seen = s.versions.rows.reduce((n, v) => n + v.codes, 0);
   $("versions").innerHTML = "<tr><th>版</th><th class=num>コード</th><th></th></tr>" +
     s.versions.rows.map((v) => "<tr><td>" + (v.version ? esc(v.version) : "0.9.6 以前（版を伝えない）") + "</td><td class=num>" + v.codes +
@@ -68,6 +75,11 @@ document.addEventListener("click", (e) => {
   if (d.key) act(() => api("/keys/" + d.key, "PATCH", { enabled: d.enabled === "true" }));
   if (d.remove && confirm("このキーを消しますか？")) act(() => api("/keys/" + d.remove, "DELETE"));
   if (d.code) act(() => api("/codes/" + d.code, "PATCH", { revoked: d.revoked === "true" }));
+  if (d.task) act(() => api("/tasks/" + d.task, "PATCH", { enabled: d.enabled === "true" }));
+});
+document.addEventListener("change", (e) => {
+  const task = e.target.dataset?.model;
+  if (task) { e.target.blur(); act(() => api("/tasks/" + task, "PATCH", { model: e.target.value })); }
 });
 $("limits").addEventListener("submit", (e) => {
   e.preventDefault();
@@ -140,6 +152,12 @@ export const page = /* html */ `<!doctype html>
       <button>上限を変える</button>
     </form>
     <p class="muted">上限に届くと、その日は中継を断ります（アプリは Chrome の作り方で字幕を続けます）。1 つのコードの上限は、出してあるコードにも当てます。</p>
+  </section>
+
+  <section class="card">
+    <h2>仕事</h2>
+    <p class="muted">アプリは「何をしてほしいか」だけを送り、モデルはここで決めます。替えると、次の要求から効きます（アプリの更新は要りません）。止めた仕事は、その工程だけ断ります（アプリは、ほかの工程を続けます）</p>
+    <table id="tasks"></table>
   </section>
 
   <section class="card">

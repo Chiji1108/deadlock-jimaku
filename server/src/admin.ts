@@ -13,8 +13,9 @@ import {
   betaLimits,
 } from "./beta";
 import { day, month, open, type Db } from "./db";
-import { betaGrants, betaKeys, betaSettings, betaSpend, codes, codeUsage } from "./schema";
+import { betaGrants, betaKeys, betaSettings, betaSpend, codes, codeUsage, tasks } from "./schema";
 import { newId } from "./secrets";
+import { allTasks, isTask, TASKS } from "./tasks";
 
 /** API の Worker の `Vault`（worker.ts）。キーの暗号化を頼む */
 export interface Vault {
@@ -218,6 +219,34 @@ admin.patch("/api/keys/:id", async (c) => {
 
 admin.delete("/api/keys/:id", async (c) => {
   await c.var.db.delete(betaKeys).where(eq(betaKeys.id, c.req.param("id")));
+  return c.body(null, 204);
+});
+
+/** 仕事の口（/v2。DESIGN.md 17.4）ごとの、今のモデルと、選べるモデル、動かしているか */
+admin.get("/api/tasks", async (c) => {
+  const all = await allTasks(c.var.db);
+  const listed = all.map(({ task, id, enabled }) => {
+    const { label, models } = TASKS[task];
+    const options = Object.entries(models).map(([model, { label }]) => ({ id: model, label }));
+    return { name: task, label, model: id, enabled, models: options };
+  });
+  return c.json({ tasks: listed });
+});
+
+/** 仕事のモデルを替える、止める・動かす。送った項目だけを変える。次の要求から効く（アプリのリリースは要らない） */
+admin.patch("/api/tasks/:name", async (c) => {
+  const name = c.req.param("name");
+  if (!isTask(name)) return c.json({ error: "notFound" }, 404);
+  const body = await c.req.json<Record<string, unknown>>().catch(() => ({}) as Record<string, unknown>);
+  const model = typeof body.model === "string" && body.model in TASKS[name].models ? body.model : undefined;
+  const enabled = typeof body.enabled === "boolean" ? body.enabled : undefined;
+  const sent = Object.keys(body).length;
+  if (sent === 0 || sent !== [model, enabled].filter((value) => value !== undefined).length) {
+    return c.json({ error: "invalid" }, 400);
+  }
+  const now = (await allTasks(c.var.db)).find((t) => t.task === name)!;
+  const row = { name, model: model ?? now.id, enabled: enabled ?? now.enabled };
+  await c.var.db.insert(tasks).values(row).onConflictDoUpdate({ target: tasks.name, set: row });
   return c.body(null, 204);
 });
 

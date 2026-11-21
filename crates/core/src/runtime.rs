@@ -285,14 +285,14 @@ fn start_subtitles(
     match input {
         SubtitlesInput::Stopped => None,
         SubtitlesInput::Chrome(input) => {
-            if let Some(provider) = missing_key(&input.engines, &input.accesses) {
-                store.set_transcription_error(Some(TranscriptionError::MissingKey { provider }));
+            if let Some(missing) = missing(&input.engines, &input.accesses) {
+                store.set_transcription_error(Some(missing));
                 return None;
             }
             tracing::info!("transcription started");
             let store = store.clone();
             Some(tokio::spawn(async move {
-                if !code_accepted(&store, input.accesses.iter(), check_code.as_deref()).await {
+                if !code_accepted(&store, &input.accesses, check_code.as_deref()).await {
                     return;
                 }
                 let run = async {
@@ -304,8 +304,8 @@ fn start_subtitles(
             }))
         }
         SubtitlesInput::Audio(input) => {
-            if let Some(provider) = missing_key(&input.engines, &input.accesses) {
-                store.set_transcription_error(Some(TranscriptionError::MissingKey { provider }));
+            if let Some(missing) = missing(&input.engines, &input.accesses) {
+                store.set_transcription_error(Some(missing));
                 return None;
             }
             let accesses = input.accesses;
@@ -323,7 +323,7 @@ fn start_subtitles(
             };
             let store = store.clone();
             Some(tokio::spawn(async move {
-                if !code_accepted(&store, accesses.iter(), check_code.as_deref()).await {
+                if !code_accepted(&store, &accesses, check_code.as_deref()).await {
                     return;
                 }
                 let run = async {
@@ -352,10 +352,16 @@ fn start_subtitles(
     }
 }
 
-/// 工程に要るのに、送り先と鍵のない会社（OpenAI を先に知らせる）
-fn missing_key(engines: &Engines, accesses: &Accesses) -> Option<Provider> {
+/// 工程に要るのに、送り先と鍵のない会社（OpenAI を先に知らせる）。なければ、サーバーの仕事に要るコードがないこと
+/// （画面は、選ぶ前にコードをもらう。ないのは、自分のキーで「おすすめ」と同じ組み合わせを使っていて、0.10 で翻訳が
+/// サーバーに移った人）。`Keys::ready` と同じ決まり
+fn missing(engines: &Engines, accesses: &Accesses) -> Option<TranscriptionError> {
     let mut needed = engines.providers().into_iter();
-    needed.find(|provider| accesses.get(*provider).is_none())
+    if let Some(provider) = needed.find(|provider| accesses.get(*provider).is_none()) {
+        return Some(TranscriptionError::MissingKey { provider });
+    }
+    let no_code = engines.server() && accesses.server().is_none();
+    no_code.then_some(TranscriptionError::BetaRefused)
 }
 
 /// PC の中の AI に使わせる GPU（PC の中の AI を立てるとき）。GPU が 2 つ以上あれば、設定で選んだものか、
@@ -441,19 +447,20 @@ async fn local_llm(
 }
 
 /// ベータのコードを使うなら、`check` の API の根元で、使えるか・使う会社を中継するかを確かめる。
-/// 断られたら、字幕を止めずに続ける（`fall_back`）か、理由を出して、false
-async fn code_accepted(
-    store: &Store,
-    accesses: impl Iterator<Item = &Access>,
-    check: Option<&str>,
-) -> bool {
+/// 断られたら、字幕を止めずに続ける（`fall_back`）か、理由を出して、false。サーバーの仕事（翻訳）を今頼めるかは
+/// 見ない（止めている仕事は、その工程だけがないまま続ける。`mt::Translator::ask_server`）
+async fn code_accepted(store: &Store, accesses: &Accesses, check: Option<&str>) -> bool {
     let Some(api) = check else {
         return true;
     };
+    let server = accesses.server();
     let mut codes: BTreeMap<&str, Vec<Provider>> = BTreeMap::new();
-    for access in accesses.filter(|a| a.is_code()) {
+    for access in accesses.iter().filter(|a| a.is_code()) {
         let used = codes.entry(access.token()).or_default();
         used.push(access.provider());
+    }
+    if let Some(server) = &server {
+        codes.entry(server.code()).or_default();
     }
     for (code, used) in codes {
         let checked = relay::check_code(api, code).await.and_then(|relayed| {
@@ -474,7 +481,7 @@ async fn code_accepted(
 }
 
 /// ベータのコードで断られたら、字幕を止めずに続ける（`Store::fall_back`）。ベータのコードで使っていた会社すべてに
-/// 自分のキーがあれば、同じ作り方のまま自分のキーで。なければ Chrome の作り方で
+/// 自分のキーがあれば、同じ作り方のまま自分のキーで。なければ（サーバーの仕事は、自分のキーでは代われない）Chrome の作り方で
 async fn fall_back(store: &Store, refused: &TranscriptionError) -> bool {
     // ほかの理由では続けないので、鍵を読みに行かない
     let beta = matches!(
@@ -489,9 +496,11 @@ async fn fall_back(store: &Store, refused: &TranscriptionError) -> bool {
     let keys = tokio::task::spawn_blocking(secrets::load)
         .await
         .unwrap_or_default();
-    let relayed = store.saved().engines.providers().into_iter();
+    let engines = store.saved().engines;
+    let relayed = engines.providers().into_iter();
     let mut relayed = relayed.filter(|p| p.info().relay == Some(Relay::Beta));
-    store.fall_back(refused, relayed.all(|p| keys.own.contains_key(&p)))
+    let own_keys = !engines.server() && relayed.all(|p| keys.own.contains_key(&p));
+    store.fall_back(refused, own_keys)
 }
 
 /// 止まったら理由を出す（開始・停止を押し直すと始め直す）。想定外のエラー（panic）でも
@@ -554,7 +563,7 @@ mod tests {
         }))
     }
 
-    /// 偽の Worker の `/gift`。答えはコードで決まる
+    /// 偽の Worker の、コードの状態を答える口。答えはコードで決まる
     async fn gift_server() -> (String, Arc<AtomicUsize>) {
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let api = format!("http://{}", listener.local_addr().unwrap());
@@ -568,7 +577,7 @@ mod tests {
                 gift_answer(code.trim_start_matches("Bearer "))
             }
         };
-        let router = axum::Router::new().route("/gift", axum::routing::get(answer));
+        let router = axum::Router::new().route("/v2/status", axum::routing::get(answer));
         tokio::spawn(async move { axum::serve(listener, router).await });
         (api, hits)
     }
@@ -645,7 +654,7 @@ mod tests {
             update_subtitles(&mut self.slot, &self.store, input, &self.api).await;
         }
 
-        /// `/gift` がこの回数呼ばれ、答えが処理に届くまで待つ
+        /// コードの状態を答える口がこの回数呼ばれ、答えが処理に届くまで待つ
         async fn settle(&self, checks: usize) {
             for _ in 0..500 {
                 if self.checks() >= checks {
@@ -725,6 +734,31 @@ mod tests {
                 provider: Provider::OpenAi
             })
         );
+    }
+
+    /// サーバーに頼む工程があるのにコードがなければ、黙って訳なしで始めない
+    #[tokio::test]
+    async fn the_server_needs_a_code() {
+        use crate::settings::TranslationEngine;
+        let mut app = App::new().await;
+        let api = app.api.clone();
+        let server = |code: Option<&str>| {
+            let SubtitlesInput::Chrome(mut input) = chrome() else {
+                unreachable!()
+            };
+            input.engines.translation = TranslationEngine::Server;
+            let door = code.map(|code| crate::access::Server::new(&api, code.into()));
+            input.accesses = Accesses::default().with_server(door);
+            SubtitlesInput::Chrome(input)
+        };
+        app.update(server(None)).await;
+        assert_eq!(app.error(), Some(TranscriptionError::BetaRefused));
+        assert!(!app.slot.is_running());
+        // コードがあれば、始める前に確かめる
+        app.update(server(Some("good"))).await;
+        app.settle(1).await;
+        assert_eq!(app.error(), None);
+        assert!(app.slot.is_running());
     }
 
     /// Grok の確定には xAI のキーが、ほかの工程が OpenAI ならその鍵も要る

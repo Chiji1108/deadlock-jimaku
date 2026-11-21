@@ -91,7 +91,7 @@ macOS 版は Apple の署名と公証を済ませています。Windows 版は�
 | 途中の字幕 | Chrome | Chrome | Chrome | Chrome | Qwen-Audio-3.1-ASR-Flash-Streaming | Haas-ja |
 | 確定の文字起こし | Qwen-Audio-3.1-ASR-Flash | Chrome | Chrome | GPT-Transcribe | Qwen-Audio-3.1-ASR-Flash | Whisper large-v3-turbo |
 | 用語 | Perplexity Decider | 辞書の一致 | Gemini Nano | GPT-6.1 Terra | Perplexity Decider | Gemma 4 E4B |
-| 翻訳 | Hy-MT2 | Chrome Translator | Chrome Translator | GPT-6.1 Terra | Hy-MT2 | Gemma 4 E4B |
+| 翻訳 | サーバーが決める（今は Hy-MT2） | Chrome Translator | Chrome Translator | GPT-6.1 Terra | サーバーが決める（今は Hy-MT2） | Gemma 4 E4B |
 | ふりがな | 辞書 + Perplexity Decider | 辞書 | 辞書 | 辞書 + GPT-6.1 Terra | 辞書 + Perplexity Decider | 辞書 |
 | 要るもの | なし（ベータ期間中） | なし | なし | OpenAI の API キー | なし（ベータ期間中） | なし |
 | 声と文字の送り先 | Google、開発者のサーバー | Google | Google | Google、OpenAI | 開発者のサーバー | PC から出ない |
@@ -104,7 +104,7 @@ macOS 版は Apple の署名と公証を済ませています。Windows 版は�
 
 - **途中の字幕と確定の文字起こし**（`stt/`、`local.rs`、`whisper.rs`、`reazon.rs`）: Chrome、OpenAI（GPT-Live-Transcribe、GPT-Transcribe）、xAI の Grok Voice Transcribe、Qwen-Audio-3.1-ASR-Flash（DESIGN.md 3.4）、OpenRouter の MAI-Transcribe 2、PC の中の Haas-ja（speech.cpp）と Whisper（whisper.cpp。ヒーローの名前を教える）。確定だけなら、PC の中の ReazonSpeech k2（補助プログラム `crates/sherpa`。辞書の用語をホットワードで教える。DESIGN.md 9.14）も選べます。
 - **用語**（`terms.rs`、`decide.rs`）: 辞書の一致か、PC の中で出した候補を判定モデルに確かめさせます。判定モデルは、Chrome の中の Gemini Nano、PC の中の Gemma 4 E4B、OpenAI の Decisions API、TypeSafe AI の Jev、OpenRouter の Drex Max・Microsoft Decision 1・Perplexity Decider（DESIGN.md 9.7）。
-- **翻訳**（`mt.rs`、`enrich.rs`）: 用語を英語名に置き換えた文を、Chrome Translator、PC の中の Gemma 4 E4B、翻訳専門のモデル（Qwen-MT-Flash、OpenRouter の Hy-MT2）に渡します。GPT-6.1 Terra は、用語と翻訳を 1 回の問い合わせで作ります。
+- **翻訳**（`mt.rs`、`enrich.rs`）: 用語を英語名に置き換えた文を、Chrome Translator、PC の中の Gemma 4 E4B、翻訳専門のモデル（Qwen-MT-Flash、OpenRouter の Hy-MT2）に渡します。「おすすめ」では、文と翻訳先だけをデドロ字幕のサーバーに送り、モデルはサーバーが決めます（`server/src/tasks.ts`）。GPT-6.1 Terra は、用語と翻訳を 1 回の問い合わせで作ります。
 - **ふりがな**（`reading.rs`、`furigana.rs`）: 辞書の読み（vibrato と話し言葉の UniDic）をそのまま使うか、判定モデルか GPT に直させます。
 
 確定の文には、どの組み合わせでも `finish.rs` が工程ごとに用語・ふりがな・翻訳を付け、1 つの字幕にまとめます。その前に、日本語の文は `tidy.rs` が数字と句読点を整えます（DESIGN.md 9.15）。数のすぐ後ろに数える言葉があれば算用数字にし（「三十五秒」→「35秒」）、句読点を書かない文字起こし（Chrome、ReazonSpeech k2）の文には、話の間の空白から「、」と「。」を付けます。ふりがなと同じ形態素解析の辞書を使い、モデルは使いません。

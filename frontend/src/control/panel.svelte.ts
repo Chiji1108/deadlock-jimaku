@@ -13,7 +13,15 @@ import type { MicError } from "../generated/MicError";
 import type { TranscriptionError } from "../generated/TranscriptionError";
 import type { UsageView } from "../generated/UsageView";
 import { api } from "../lib/api";
-import { CHROME, PROVIDER_NAMES, chromeFinals, keyNames, providers, relayOf } from "../lib/engines";
+import {
+  CHROME,
+  PROVIDER_NAMES,
+  chromeFinals,
+  keyNames,
+  providers,
+  relayOf,
+  usesServer,
+} from "../lib/engines";
 import { addFontFaces, fontWeights } from "../lib/overlay-fonts";
 import type { MergePatch } from "../lib/text-style";
 import type { FontEntry } from "../generated/FontEntry";
@@ -408,7 +416,7 @@ class Panel {
   chooseMode = async (engines: Engines) => {
     const needsCode =
       this.view?.keys.beta.state !== "saved" &&
-      this.keyless(engines).some((p) => relayOf(p) === "beta");
+      (usesServer(engines) || this.keyless(engines).some((p) => relayOf(p) === "beta"));
     if (needsCode) this.betaOffer = engines;
     else await this.update({ engines });
   };

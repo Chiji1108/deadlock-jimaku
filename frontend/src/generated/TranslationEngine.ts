@@ -3,4 +3,4 @@
 /**
  * 翻訳を何で作るか。LLM（Terra）は用語も同時に判定する
  */
-export type TranslationEngine = "chromeTranslator" | "qwenMtFlash" | "hyMt2" | "qwen38Flash" | "gpt6LunaMt" | "gpt61Terra" | "gemma";
+export type TranslationEngine = "chromeTranslator" | "server" | "qwenMtFlash" | "hyMt2" | "qwen38Flash" | "gpt6LunaMt" | "gpt61Terra" | "gemma";

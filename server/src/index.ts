@@ -1,44 +1,37 @@
-// API（api.jimaku.deadlock.jp。DESIGN.md 17 章）。パスは版（/v1）で区切る。
+// API（api.jimaku.deadlock.jp。DESIGN.md 17 章）。パスは版で区切る。/v1 は会社の形の要求をそのまま通す中継（このファイル）、
+// /v2 は仕事ごとの口（v2.ts。DESIGN.md 17.4）。/v1 は、仕事の口に移し終えて、古い版のアプリがいなくなったら消す。
 // ベータ期間中の無料の提供: アプリが自動でもらうコードを見分けて、開発者のキーで Qwen と OpenRouter に中継する。
 // 口の名前（/gift、X-Gift-Refusal）は、人のキーで中継するギフトコード（0.7 まで）のころのもの。出ているアプリが使うので変えない
-import { Hono, type Context } from "hono";
-import { appVersion, codeByValue, open, refusal, seen, type Code, type Db } from "./db";
+import { Hono } from "hono";
+import { open, refusal, type Code } from "./db";
 import {
   betaClosed,
   betaProviders,
   betaRelayKeys,
   grantBetaCode,
-  keyFailed,
   network,
-  reasonOf,
   reserveBeta,
   settleBeta,
-  type BetaEnv,
   type BetaProvider,
   type RelayKey,
 } from "./beta";
 import { OPENROUTER_FALLBACK, QWEN_AUDIO, tokensOf } from "./price";
 import { relayQwenLive } from "./qwenLive";
+import { bearerCode, openrouterUsd, parsed, sent, usdOf, type App, type Ctx, type Env } from "./relay";
 import { sha256 } from "./secrets";
 import { openrouter, qwen } from "./upstream";
+import { status, v2 } from "./v2";
 
-export interface Env extends BetaEnv {
-  DB: D1Database;
-  /** 開発者のキーを暗号化する鍵（32 バイトの base64）。`wrangler secret put SHARE_KEY` */
-  SHARE_KEY: string;
-  /** コードごとの 1 分あたりの要求数の上限（値は wrangler.jsonc。DESIGN.md 17.2） */
-  CODE_RATE: RateLimit;
-}
+export type { Env };
 
-type App = { Bindings: Env; Variables: { db: Db } };
-type Ctx = Context<App>;
-
-export const app = new Hono<App>().basePath("/v1");
+export const app = new Hono<App>();
 
 app.use(async (c, next) => {
   c.set("db", open(c.env.DB));
   await next();
 });
+
+const v1 = new Hono<App>();
 
 /** 用語の判定の問いの数の上限。アプリは 1 発話で候補の数だけ問い（多くて 10 ほど）を送る */
 const MAX_QUESTIONS = 40;
@@ -58,24 +51,14 @@ const MAX_TRANSLATION_BODY = 8_000;
 /** 翻訳の出力の上限（アプリが送る値） */
 const MAX_TRANSLATION_TOKENS = 512;
 
-/** コードの状態。アプリは動いていない字幕を始めるときに、これで確かめる */
-app.get("/gift", async (c) => {
-  const code = await bearerCode(c);
-  if (!code) return c.json({ error: "unknown" }, 401);
-  const now = Date.now();
-  // 覚えられなくても、コードの答えは返す（アプリは、答えが来ないと字幕を始めない）
-  const noted = seen(c.var.db, code.id, appVersion(c.req.header("User-Agent")), now);
-  c.executionCtx.waitUntil(noted.catch((e: unknown) => console.error("seen", e)));
-  const error = refusal(code, now);
-  if (error) return c.json({ error }, 403);
-  return c.json({ providers: await betaProviders(c.var.db, c.env) });
-});
+/** 口の名前（/gift）は、人のキーで中継するギフトコード（0.7 まで）のころのもの。0.9.9 までのアプリが使う */
+v1.get("/gift", status);
 
 /**
  * ベータのコードを 1 つ出す（DESIGN.md 17.2）。アプリが、ベータのモードを選んだときに 1 度だけ頼む。
  * 誰でも頼めるので、同じ所に出す数と、1 日に出す数を限る。開発者がキーを入れていなければ閉じている
  */
-app.post("/beta/codes", async (c) => {
+v1.post("/beta/codes", async (c) => {
   if ((await betaProviders(c.var.db, c.env)).length === 0) return c.json({ error: "closed" }, 503);
   const now = Date.now();
   const ip = network(c.req.header("CF-Connecting-IP") ?? "");
@@ -85,12 +68,6 @@ app.post("/beta/codes", async (c) => {
 });
 
 // ---- 中継（開発者のキー） ----
-
-/** OpenRouter の応答の料金。答えに入っていなければ undefined（見積もりで数える） */
-function openrouterUsd(usage: unknown): number | undefined {
-  const cost = (usage as { cost?: unknown } | undefined)?.cost;
-  return typeof cost === "number" ? cost : undefined;
-}
 
 /**
  * ベータのコードで外に送る。送る前に、かかりそうな額（多めの見積もり）を先に足し（上限に届いていたら送らない）、
@@ -111,20 +88,7 @@ async function relayed(
     return c.json({ error: "limit" }, 403, { "X-Gift-Refusal": "limit" });
   }
   const settle = (actual: number) => c.executionCtx.waitUntil(settleBeta(c.var.db, codeId, estimate, actual, now));
-  // キーが断られたら（使えない、残高がない、回数の上限）、次のキーに回す。キーを読めないとき（暗号化の鍵を
-  // 替えた、行が壊れた）も同じ。断られたキーは覚えて、次からは後回しにする
-  let res: Response | undefined;
-  for (const key of gift.keys) {
-    const secret = await key.key().catch(() => undefined);
-    res = secret === undefined ? undefined : await send(secret).catch(() => undefined);
-    // 読めなかったキーと、キーのせいで断られたとき（その番号）だけ、次に回す
-    const refused = res && KEY_TROUBLE.includes(res.status) ? res.status : undefined;
-    const trouble = secret === undefined ? KEY_UNREADABLE : refused;
-    if (trouble === undefined) break;
-    // 断られた応答は本文を読み切る（理由として覚える）。利用者には返さない
-    const reason = await reasonOf(res);
-    if (key.id) c.executionCtx.waitUntil(keyFailed(c.var.db, key.id, trouble, reason, now));
-  }
+  const res = await sent(c, gift.keys, send);
   if (!res?.ok) {
     settle(0);
     const status = res?.status === 429 ? 429 : 502;
@@ -135,16 +99,8 @@ async function relayed(
   return new Response(answer, { headers: { "Content-Type": "application/json" } });
 }
 
-/** キーのせいで断られたときの番号（ほかのキーなら通るかもしれない）。403 は入れない（本文が断られたときにも返る） */
-const KEY_TROUBLE = [401, 402, 429];
-/** キーを読めなかったときに覚える番号 */
-const KEY_UNREADABLE = 0;
-
-/** 100 万トークンあたりの単価から、額を出す */
-const usdOf = (tokens: number, perMillion: number) => (tokens * perMillion) / 1e6;
-
 /** 確定の文字起こし（Qwen-Audio-3.1-ASR-Flash）。アプリが送る形だけを通す: 用語の文と、WAV が 1 つ */
-app.post("/qwen/api/v1/services/aigc/multimodal-generation/generation", async (c) => {
+v1.post("/qwen/api/v1/services/aigc/multimodal-generation/generation", async (c) => {
   const gift = await relayCode(c, "qwen");
   if (gift instanceof Response) return gift;
   const text = await c.req.text();
@@ -197,7 +153,7 @@ app.post("/qwen/api/v1/services/aigc/multimodal-generation/generation", async (c
 });
 
 /** 途中の字幕（Qwen-Audio-3.1-ASR-Flash-Streaming）。WebSocket をつないで中継する（`qwenLive.ts`） */
-app.get("/qwen/api-ws/v1/inference", async (c) => {
+v1.get("/qwen/api-ws/v1/inference", async (c) => {
   if (c.req.header("Upgrade") !== "websocket") return c.json({ error: "websocket" }, 426);
   const gift = await relayCode(c, "qwen");
   if (gift instanceof Response) return gift;
@@ -209,7 +165,7 @@ app.get("/qwen/api-ws/v1/inference", async (c) => {
 });
 
 /** 用語の判定（Perplexity Decider）。アプリが送る形だけを通す: 文字の state と、文字だけの選択の問い */
-app.post("/openrouter/systemone", async (c) => {
+v1.post("/openrouter/systemone", async (c) => {
   const gift = await relayCode(c, "openrouter");
   if (gift instanceof Response) return gift;
   const text = await c.req.text();
@@ -250,7 +206,7 @@ app.post("/openrouter/systemone", async (c) => {
 });
 
 /** 翻訳（Hy-MT2）。アプリが送る形だけを通す: user の文字の 1 通 */
-app.post("/openrouter/chat/completions", async (c) => {
+v1.post("/openrouter/chat/completions", async (c) => {
   const gift = await relayCode(c, "openrouter");
   if (gift instanceof Response) return gift;
   const text = await c.req.text();
@@ -286,20 +242,10 @@ app.post("/openrouter/chat/completions", async (c) => {
 });
 
 /** Qwen と OpenRouter のほかの口（途中の字幕、ほかのモデル）は中継しない。アプリは「このコードでは使えない」と出す */
-app.all("/qwen/*", (c) => c.json({ error: "unsupported" }, 403, { "X-Gift-Refusal": "unsupported" }));
-app.all("/openrouter/*", (c) => c.json({ error: "unsupported" }, 403, { "X-Gift-Refusal": "unsupported" }));
+v1.all("/qwen/*", (c) => c.json({ error: "unsupported" }, 403, { "X-Gift-Refusal": "unsupported" }));
+v1.all("/openrouter/*", (c) => c.json({ error: "unsupported" }, 403, { "X-Gift-Refusal": "unsupported" }));
 
 // ---- 共通 ----
-
-function bearer(c: Ctx): string | undefined {
-  // 認証の方式の名前は、大文字と小文字を区別しない（アプリは Qwen の途中の字幕だけ小文字で送る）
-  return c.req.header("Authorization")?.match(/^Bearer (.+)$/i)?.[1];
-}
-
-async function bearerCode(c: Ctx): Promise<Code | null> {
-  const code = bearer(c);
-  return code ? codeByValue(c.var.db, code) : null;
-}
 
 /**
  * 中継に使えるコードと、開発者のその会社のキー（使う順）。使えなければ返す応答。理由はヘッダーにも載せる
@@ -320,13 +266,7 @@ async function relayCode(c: Ctx, provider: BetaProvider): Promise<{ code: Code; 
   return { code, keys };
 }
 
-function parsed<T>(text: string): T | undefined {
-  try {
-    const body: unknown = JSON.parse(text);
-    return body !== null && typeof body === "object" ? (body as T) : undefined;
-  } catch {
-    return undefined;
-  }
-}
+app.route("/v1", v1);
+app.route("/v2", v2);
 
 export default app;

@@ -9,7 +9,7 @@ use ts_rs::TS;
 
 use std::collections::BTreeMap;
 
-use crate::access::{Access, Accesses};
+use crate::access::{Access, Accesses, Server};
 use crate::settings::Engines;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, TS)]
@@ -158,10 +158,25 @@ impl Keys {
         }
     }
 
-    /// 工程が使う会社の送り先と鍵。使わない会社には何も送らない
+    /// サーバーの仕事の口（DESIGN.md 17.4）。ベータのコードが要る。会社のキーとは別の道なので、
+    /// 自分のキーがあっても取り違えない
+    pub fn server(&self, api: &str) -> Option<Server> {
+        Some(Server::new(api, self.beta.clone()?))
+    }
+
+    /// 工程が使う送り先と鍵。使わない会社にも、使わないサーバーにも何も送らない
     pub fn accesses(&self, engines: &Engines, api: &str) -> Accesses {
         let providers = engines.providers().into_iter();
+        let server = engines.server().then(|| self.server(api)).flatten();
         Accesses::new(providers.filter_map(|provider| self.access(provider, api)))
+            .with_server(server)
+    }
+
+    /// 字幕を始めるのに足りないもの（自分のキーも中継するコードもない会社か、サーバーの仕事に要るコード）がない
+    pub fn ready(&self, engines: &Engines, api: &str) -> bool {
+        let mut needed = engines.providers().into_iter();
+        needed.all(|provider| self.access(provider, api).is_some())
+            && (!engines.server() || self.beta.is_some())
     }
 }
 
@@ -306,7 +321,19 @@ mod tests {
             ..keys
         };
         assert_eq!(own.access(Provider::Qwen, api).unwrap().token(), "B3TA");
+        // サーバーの仕事の口は、使う工程があるときだけ。自分のキーでは代わりにならない
+        let chrome = Engines::CHROME;
+        let server = Engines {
+            translation: crate::settings::TranslationEngine::Server,
+            ..chrome
+        };
+        assert_eq!(own.accesses(&chrome, api).server(), None);
+        let door = own.accesses(&server, api).server().unwrap();
+        assert_eq!(door.url("/translate"), "http://worker/v2/translate");
+        assert!(own.ready(&server, api));
         let without_code = Keys { beta: None, ..own };
         assert!(!without_code.access(Provider::Qwen, api).unwrap().is_code());
+        assert_eq!(without_code.accesses(&server, api).server(), None);
+        assert!(without_code.ready(&chrome, api) && !without_code.ready(&server, api));
     }
 }

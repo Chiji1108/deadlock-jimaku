@@ -63,6 +63,7 @@ export const ENGINE_PROVIDERS = {
   "translation": {
     "chromeTranslator": null,
     "gemma": null,
+    "server": null,
     "qwenMtFlash": "qwen",
     "hyMt2": "openrouter",
     "qwen38Flash": "qwen",
