@@ -406,8 +406,8 @@ interface Listener {
   onMicLog?(line: string): void;
 }
 
-/** 空白を除いた文字数。Chrome は言葉の間の空白を付け替えるので、文字だけ数える */
-const letters = (text: string) => text.replace(/\s/g, "").length;
+/** 空白を除いた文字。Chrome は言葉の間の空白を付け替えるので、文字だけ比べる */
+const letters = (text: string) => text.replace(/\s/g, "");
 
 /** 先頭から、空白を除いて `count` 文字を除いた残り */
 function after(text: string, count: number) {
@@ -420,8 +420,9 @@ function after(text: string, count: number) {
  *
  * 区切っても認識は止めない。止めると、次の文を話し始めていたときにその頭を落とす
  * （Chrome の文字は声より遅れて届くので、文字が止まったと分かるころには次の文が始まっている）。
- * 区切った分は文字数で覚え、Chrome が同じ文を伸ばしたり確定したりしたら、そこから先だけを渡す。
- * 区切ったあとに Chrome が前の部分を書き換えても、渡した文は直さない */
+ * 区切った分は文字で覚え、Chrome が同じ文を伸ばしたり確定したりしたら、そこから先だけを渡す。
+ * 区切ったあとに Chrome が前の部分を書き換えても、渡した文は直さない。書き換えられると
+ * どこまで渡したかが分からなくなるので、Chrome の確定の代わりに、見せていた途中の文を確定にする */
 export function listen(lang: string, listener: Listener) {
   const { silenceMs, onText, onFatal, onTrouble, heardSound, onDefaultMic, onMicLog } = listener;
   let { track } = listener;
@@ -438,8 +439,8 @@ export function listen(lang: string, listener: Listener) {
   let failed: string | undefined;
   /** 確定していない文 */
   let pending = "";
-  /** Chrome がまだ確定していない文のうち、区切って渡し終えた文字数 */
-  let settled = 0;
+  /** Chrome がまだ確定していない文のうち、区切って渡し終えた文字 */
+  let settled = "";
   let stall: ReturnType<typeof setTimeout>;
   /** `track` で結果が届いた */
   let trackWorks = false;
@@ -539,24 +540,31 @@ export function listen(lang: string, listener: Listener) {
         if (!result.isFinal) interim += result[0].transcript;
         else if (i >= resultIndex) confirmed += result[0].transcript;
       }
+      // 区切って渡した分が、今の文の頭にそのまま残っているか
+      const intact = letters(confirmed + interim).startsWith(settled);
       if (confirmed) {
-        const rest = after(confirmed, settled);
-        settled = Math.max(0, settled - letters(confirmed));
+        const rest = intact ? after(confirmed, settled.length) : pending;
         // 区切って渡し終えた文を、Chrome があとから確定しただけなら渡すものがない
         if (rest.trim() || pending) onText(rest, true);
         pending = "";
+        // 書き換えられていたら、今見えている途中の文までを渡し終えたとみなす
+        settled = intact ? settled.slice(letters(confirmed).length) : letters(interim);
       }
-      const rest = after(interim, settled);
+      const rest = after(interim, settled.length);
       if (rest.trim()) {
         pending = rest;
         onText(rest, false);
-      }
-      if (pending && silenceMs !== undefined) {
-        silence = setTimeout(() => {
-          const text = pending;
-          settle();
-          onText(text, true);
-        }, silenceMs);
+        if (silenceMs !== undefined) {
+          silence = setTimeout(() => {
+            const text = pending;
+            settle();
+            onText(text, true);
+          }, silenceMs);
+        }
+      } else if (pending) {
+        // Chrome が途中の文を取り下げた
+        pending = "";
+        onText("", true);
       }
     };
     recognizer.onerror = ({ error }) => {
@@ -590,7 +598,7 @@ export function listen(lang: string, listener: Listener) {
       else start();
     };
     startedAt = Date.now();
-    settled = 0;
+    settled = "";
     watch(START_MS);
     try {
       if (track) recognizer.start(track);

@@ -126,6 +126,57 @@ test("区切ったあとに空白が付け替えられても、文字で数え�
   expect(o.onText).toHaveBeenCalledExactlyOnceWith("次", false);
 });
 
+test("区切った文を Chrome が書き換えて確定しても、次の文の頭を落とさない", () => {
+  const o = options();
+  listen("ja", o);
+  FakeRecognizer.last.say("にじゅうにん", false);
+  vi.advanceTimersByTime(750);
+  o.onText.mockClear();
+  FakeRecognizer.last.say("20人", true);
+  expect(o.onText).not.toHaveBeenCalled();
+  FakeRecognizer.last.onresult({
+    resultIndex: 1,
+    results: [
+      { isFinal: true, 0: { transcript: "20人" } },
+      { isFinal: false, 0: { transcript: "ヘイズが強い" } },
+    ],
+  });
+  expect(o.onText).toHaveBeenCalledExactlyOnceWith("ヘイズが強い", false);
+});
+
+test("区切った文を Chrome が伸ばして確定しても、切れ端を渡さない", () => {
+  const o = options();
+  listen("ja", o);
+  FakeRecognizer.last.say("ヘイズ強い", false);
+  vi.advanceTimersByTime(750);
+  o.onText.mockClear();
+  FakeRecognizer.last.say("ヘイズが強い", true);
+  expect(o.onText).not.toHaveBeenCalled();
+});
+
+test("区切った文が書き換えられたら、見せていた途中の文を確定にする", () => {
+  const o = options();
+  listen("ja", o);
+  FakeRecognizer.last.say("にじゅうにん", false);
+  vi.advanceTimersByTime(750);
+  FakeRecognizer.last.say("にじゅうにん ヘイズ", false);
+  o.onText.mockClear();
+  FakeRecognizer.last.say("20人ヘイズ", true);
+  expect(o.onText).toHaveBeenCalledExactlyOnceWith(" ヘイズ", true);
+});
+
+test("Chrome が途中の文を取り下げたら捨て、区切った分に数えない", () => {
+  const o = options();
+  listen("ja", o);
+  FakeRecognizer.last.say("あ", false);
+  hears(FakeRecognizer.last);
+  expect(o.onText).toHaveBeenLastCalledWith("", true);
+  vi.advanceTimersByTime(750);
+  o.onText.mockClear();
+  FakeRecognizer.last.say("ヘイズ", false);
+  expect(o.onText).toHaveBeenCalledExactlyOnceWith("ヘイズ", false);
+});
+
 test("区切りの時間が過ぎるまで同じ文が届き続ければ、区切らない", () => {
   const o = options();
   listen("ja", o);
