@@ -9,6 +9,7 @@ import {
   BETA_CODES_PER_DAY,
   BETA_CODES_PER_IP,
   BETA_LIMIT_MAX_USD,
+  BETA_PROVIDERS,
   betaClosed,
   betaLimits,
 } from "./beta";
@@ -34,7 +35,6 @@ type App = { Bindings: AdminEnv; Variables: { db: Db; email: string } };
 
 export const admin = new Hono<App>();
 
-const PROVIDERS = ["qwen", "openrouter"] as const;
 /** 一覧に出すコードの数（今日よく使った順） */
 const LISTED_CODES = 100;
 /** キーの長さ。短すぎるもの（打ち間違い）は、終わりの 4 文字を出すと中身が分かってしまう */
@@ -185,7 +185,7 @@ admin.get("/api/keys", async (c) => {
 
 admin.post("/api/keys", async (c) => {
   const body = await c.req.json<Record<string, unknown>>().catch(() => ({}) as Record<string, unknown>);
-  const provider = PROVIDERS.find((p) => p === body.provider);
+  const provider = BETA_PROVIDERS.find((p) => p === body.provider);
   const key = typeof body.key === "string" ? body.key.trim() : "";
   const memo = typeof body.memo === "string" ? body.memo.trim() : "";
   if (!provider || key.length < MIN_KEY || key.length > MAX_KEY || memo.length > MAX_MEMO) {

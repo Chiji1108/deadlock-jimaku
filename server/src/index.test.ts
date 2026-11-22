@@ -6,9 +6,16 @@ import { network } from "./beta";
 import { codeByValue, day, open, type Db } from "./db";
 import { app, type Env } from "./index";
 import { encrypt } from "./secrets";
-import { chat, openrouter, qwen, qwenLive, wait } from "./upstream";
+import { chat, openrouter, perplexity, qwen, qwenLive, wait } from "./upstream";
 
-vi.mock("./upstream", () => ({ chat: vi.fn(), openrouter: vi.fn(), qwen: vi.fn(), qwenLive: vi.fn(), wait: vi.fn() }));
+vi.mock("./upstream", () => ({
+  chat: vi.fn(),
+  openrouter: vi.fn(),
+  perplexity: vi.fn(),
+  qwen: vi.fn(),
+  qwenLive: vi.fn(),
+  wait: vi.fn(),
+}));
 vi.mock("./access", () => ({ accessEmail: vi.fn() }));
 
 let proxy: Awaited<ReturnType<typeof getPlatformProxy<{ DB: D1Database }>>>;
@@ -66,6 +73,7 @@ beforeEach(async () => {
   vi.mocked(qwen).mockReset();
   vi.mocked(qwenLive).mockReset();
   vi.mocked(openrouter).mockReset();
+  vi.mocked(perplexity).mockReset();
   vi.mocked(chat).mockReset();
   vi.mocked(wait).mockReset();
   env.BETA_QWEN_KEY = "sk-beta-qwen";
@@ -684,6 +692,27 @@ describe("tasks (/v2)", () => {
       (vi.mocked(qwen).mock.calls[call]![2] as { input: { messages: { content: { text?: string }[] }[] } }).input.messages[0]!.content;
     expect(content(1)[0]!.text).toHaveLength(303);
     expect(content(2)).toHaveLength(1);
+  });
+
+  it("asks Perplexity itself, once the developer adds its key and picks it", async () => {
+    const code = await joined();
+    const status = async () => (await ask("/status", code)).json();
+    expect((await manage("/api/tasks/decide", "PATCH", { model: "pplx-decider-direct" })).status).toBe(204);
+    // Perplexity のキーがない間は、選ぶ仕事は頼めない
+    expect(await status()).toMatchObject({ tasks: ["translate", "transcribe", "live"] });
+    expect((await ask("/decide", code, decision)).status).toBe(403);
+    expect((await manage("/api/keys", "POST", { provider: "perplexity", key: "pplx-test-key-000000000001" })).status).toBe(200);
+    // 古い版のアプリは、知らない会社の名前があると答えを読めないので、中継する会社には入れない
+    expect(await status()).toMatchObject({ tasks: ["translate", "decide", "transcribe", "live"], providers: ["qwen", "openrouter"] });
+
+    // 料金は答えに入っていないので、トークンの数と単価（入力 100 万あたり $0.02）から数える
+    vi.mocked(perplexity).mockResolvedValue(
+      Response.json({ answers: { c0: { type: "choice", choice: "hero:13" } }, usage: { input_tokens: 1_000_000, output_tokens: 1 } }),
+    );
+    expect(await (await ask("/decide", code, decision)).json()).toEqual({ choices: { c0: "hero:13" } });
+    expect(vi.mocked(perplexity).mock.calls[0]).toMatchObject(["/v1/decisions", "pplx-test-key-000000000001", { model: "pplx-decider-v1.2", state: "ヘイズ強い" }, 15_000]);
+    expect(vi.mocked(openrouter)).not.toHaveBeenCalled();
+    expect(await dayUsd(code)).toBeCloseTo(0.02, 8);
   });
 
   it("takes only what a task needs, and hides the upstream's trouble", async () => {

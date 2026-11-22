@@ -6,8 +6,9 @@ import { CODE_DAILY_USD, day, month, type Db } from "./db";
 import { betaGrants, betaKeys, betaSettings, betaSpend, codes, codeUsage } from "./schema";
 import { decrypt, newCode, newId, normalizeCode, sha256 } from "./secrets";
 
-/** ベータで中継する会社 */
-export type BetaProvider = "qwen" | "openrouter";
+/** 開発者のキーを持つ会社。Perplexity は、仕事の口（/v2）からだけ頼む */
+export const BETA_PROVIDERS = ["qwen", "openrouter", "perplexity"] as const;
+export type BetaProvider = (typeof BETA_PROVIDERS)[number];
 
 export interface BetaEnv {
   /** 開発者のキー（管理画面ができる前の入れ方。`wrangler secret put`）。管理画面で足したキーがあれば、そちらを先に使う */
@@ -63,10 +64,14 @@ export async function betaRelayKeys(db: Db, env: BetaEnv, provider: BetaProvider
     .map((row) => ({ row, order: Math.random() }))
     .sort((a, b) => (a.row.failedAt ?? 0) - (b.row.failedAt ?? 0) || a.order - b.order);
   const keys: RelayKey[] = shuffled.map(({ row }) => ({ id: row.id, key: () => decrypt(row.sealed, secret) }));
-  const fallback = provider === "qwen" ? env.BETA_QWEN_KEY : env.BETA_OPENROUTER_KEY;
+  const fallback = fallbackKey(env, provider);
   if (fallback) keys.push({ key: async () => fallback });
   return keys;
 }
+
+/** 秘密の設定のキー。あるのは、管理画面ができる前からの 2 社だけ */
+const fallbackKey = (env: BetaEnv, provider: BetaProvider) =>
+  ({ qwen: env.BETA_QWEN_KEY, openrouter: env.BETA_OPENROUTER_KEY, perplexity: undefined })[provider];
 
 /** 開発者のキーがある会社。閉じていれば、どの会社もない */
 export async function betaProviders(db: Db, env: BetaEnv): Promise<BetaProvider[]> {
@@ -75,9 +80,7 @@ export async function betaProviders(db: Db, env: BetaEnv): Promise<BetaProvider[
     .selectDistinct({ provider: betaKeys.provider })
     .from(betaKeys)
     .where(eq(betaKeys.enabled, true));
-  const has = (p: BetaProvider) =>
-    rows.some((r) => r.provider === p) || !!(p === "qwen" ? env.BETA_QWEN_KEY : env.BETA_OPENROUTER_KEY);
-  return (["qwen", "openrouter"] as const).filter(has);
+  return BETA_PROVIDERS.filter((p) => rows.some((r) => r.provider === p) || !!fallbackKey(env, p));
 }
 
 /** 断られた理由として覚える、外が返した本文の長さ（文字数）。何の上限に当たったかが分かれば足りる */

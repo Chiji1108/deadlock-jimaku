@@ -1,8 +1,9 @@
-// QwenCloud と OpenRouter への通信（テストではこのモジュールを差し替える）。ベータ期間中、開発者のキーで中継する（DESIGN.md 17.2）
+// QwenCloud と OpenRouter、Perplexity への通信（テストではこのモジュールを差し替える）。ベータ期間中、開発者のキーで中継する（DESIGN.md 17.2）
 
 /** QwenCloud のシンガポールの口 */
 const QWEN = "https://ap-southeast-1.maas.qwencloudapi.com";
 const OPENROUTER = "https://openrouter.ai/api/v1";
+const PERPLEXITY = "https://api.perplexity.ai";
 
 function send(url: string, key: string, body: unknown, signal?: AbortSignal): Promise<Response> {
   return fetch(url, {
@@ -36,4 +37,8 @@ export function qwenLive(key: string): Promise<Response> {
 
 export function openrouter(path: string, key: string, body: unknown, timeoutMs?: number): Promise<Response> {
   return send(`${OPENROUTER}${path}`, key, body, until(timeoutMs));
+}
+
+export function perplexity(path: string, key: string, body: unknown, timeoutMs?: number): Promise<Response> {
+  return send(`${PERPLEXITY}${path}`, key, body, until(timeoutMs));
 }
