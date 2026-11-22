@@ -124,7 +124,8 @@ pub async fn realtime(
             qwen::live(cfg, access, hints, speaking, input, deltas).await
         }
         Transcriber::Api(_) => openai::live(cfg, hints, speaking, input, deltas).await,
-        Transcriber::Server(server) => server::live(server, hints, speaking, input, deltas).await,
+        // 途中の字幕は、サーバーに頼めない（`LiveSource` にない。無料で頼めるのは「おすすめ」の中身だけ）
+        Transcriber::Server(_) => bail!("the server does not write live subtitles"),
         Transcriber::Local(speech) => {
             local::live(&local::Recognizer::Speech(speech), speaking, input, deltas).await
         }
@@ -553,27 +554,12 @@ mod tests {
 
     /// 本物の QwenCloud に、録音を 2 つの発話として実時間で流し、途中の文字がどの発話に届くかを見る:
     /// `cargo test -p overlays-core qwen_streaming -- --ignored --nocapture`
-    /// `BETA_TEST_API`（開発者のサーバーの根元。`http://127.0.0.1:8799/v1` など）があれば、ベータのコードをもらって、
-    /// サーバーの途中の文字起こし（`/v2/live`）に流す
     #[tokio::test]
     #[ignore = "calls QwenCloud"]
     async fn qwen_streaming_writes_each_utterance_as_it_is_said() {
         let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
-        let transcriber = match std::env::var("BETA_TEST_API") {
-            Ok(api) => {
-                // コードは 1 日に同じ所から 3 つまでなので、持っていれば `BETA_TEST_CODE` で渡す
-                let code = match std::env::var("BETA_TEST_CODE") {
-                    Ok(code) => code,
-                    Err(_) => crate::relay::join_beta(&api).await.unwrap(),
-                };
-                Transcriber::Server(crate::access::Server::new(&api, code))
-            }
-            Err(_) => {
-                let key = std::env::var("QWEN_SOUTH_API_KEY").unwrap();
-                Transcriber::Api(Access::key(Provider::Qwen, key))
-            }
-        };
-        let own_key = matches!(transcriber, Transcriber::Api(_));
+        let key = std::env::var("QWEN_SOUTH_API_KEY").unwrap();
+        let transcriber = Transcriber::Api(Access::key(Provider::Qwen, key));
         let meter = Arc::new(Meter::new(
             std::env::temp_dir().join("overlays-qwen-live-test-usage.json"),
         ));
@@ -593,13 +579,9 @@ mod tests {
         let spans = &[("a", 0, 4300, 30), ("b", 4300, 60_000, 4)];
         let last = said_live(&cfg, &hints, spans).await;
         assert!(last["a"].contains("デッドロック") && last["b"].contains("バイオレット"));
-        // サーバーに頼んだ分は、料金に数えない（払うのは開発者）
-        let live = meter.watch().borrow().session.get(&Use::Realtime).cloned();
+        let live = meter.watch().borrow().session[&Use::Realtime].clone();
         println!("{live:?}");
-        assert_eq!(
-            live.is_some_and(|live| live.usd > 0.0 && !live.unpriced),
-            own_key
-        );
+        assert!(live.usd > 0.0 && !live.unpriced);
     }
 
     #[test]

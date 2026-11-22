@@ -121,7 +121,6 @@ pub async fn run(
     let live = plan.partial.text.filter(|text| *text != TextSource::Chrome);
     let live = live.and_then(|_| {
         whisper(engines.live == LiveSource::Whisper)
-            .or_else(|| server(engines.live == LiveSource::Server))
             .or_else(|| Transcriber::of(engines.live.provider(), &accesses, &local))
     });
     let realtime = if let Some(transcriber) = live {
@@ -756,17 +755,12 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     use crate::access::Access;
-    use crate::relay;
     use crate::secrets::Provider;
     use crate::segment::{FRAME, FRAME_MS};
     use crate::usage::Meter;
     use axum::http::StatusCode;
-    use futures_util::SinkExt;
     use serde_json::json;
     use tokio::net::TcpListener;
-    use tokio_tungstenite::tungstenite::Message;
-    use tokio_tungstenite::tungstenite::protocol::CloseFrame;
-    use tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode;
 
     /// 確定の訳が届かなかった言語だけ、途中の訳を残す（届いた言語は、確定の訳にする）
     #[test]
@@ -1244,56 +1238,6 @@ mod tests {
             .await
             .unwrap()
             .unwrap();
-    }
-
-    /// サーバーは、つないでいる間に上限に届くと切る（server/src/qwenLive.ts）。張り直すと、つなぐ前に断られる
-    #[tokio::test]
-    async fn a_live_session_closed_at_the_daily_limit_stops_when_it_reconnects() {
-        use tokio::io::AsyncWriteExt;
-        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let api = format!("http://{}", listener.local_addr().unwrap());
-        tokio::spawn(async move {
-            let (socket, _) = listener.accept().await.unwrap();
-            let mut ws = tokio_tungstenite::accept_async(socket).await.unwrap();
-            let ready = Message::text(json!({ "type": "ready" }).to_string());
-            ws.send(ready).await.unwrap();
-            let frame = CloseFrame {
-                code: CloseCode::Policy,
-                reason: relay::LIMIT.into(),
-            };
-            ws.close(Some(frame)).await.unwrap();
-            let (mut socket, _) = listener.accept().await.unwrap();
-            let refused = "HTTP/1.1 403 Forbidden\r\nx-refusal: limit\r\ncontent-length: 0\r\n\r\n";
-            socket.write_all(refused.as_bytes()).await.unwrap();
-        });
-        stops_on_refusal(server(&api), TranscriptionError::BetaLimit).await;
-    }
-
-    /// サーバーが、つなぐ前に断ったとき。理由はヘッダーで読む（401 にはヘッダーがなくても、コードが使えない）
-    #[tokio::test]
-    async fn a_live_handshake_refused_by_the_server_does_not_reconnect() {
-        for (status, reason, expected) in [
-            (
-                StatusCode::FORBIDDEN,
-                Some(relay::LIMIT),
-                TranscriptionError::BetaLimit,
-            ),
-            (
-                StatusCode::UNAUTHORIZED,
-                None,
-                TranscriptionError::BetaRefused,
-            ),
-        ] {
-            let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-            let api = format!("http://{}", listener.local_addr().unwrap());
-            let refuse = move || async move {
-                let header = reason.map(|reason| (relay::REFUSAL_HEADER, reason));
-                (status, axum::response::AppendHeaders(header))
-            };
-            let router = axum::Router::new().route("/v2/live", axum::routing::get(refuse));
-            tokio::spawn(async move { axum::serve(listener, router).await });
-            stops_on_refusal(server(&api), expected).await;
-        }
     }
 
     /// 会社が、つなぐ前に鍵を断ったとき

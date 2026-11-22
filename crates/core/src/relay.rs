@@ -52,8 +52,7 @@ struct CodeAnswer {
     error: Option<String>,
 }
 
-/// サーバーが今日の上限で断るときの理由。JSON の `error`、Realtime の close の reason、
-/// [`REFUSAL_HEADER`] で同じ値を使う
+/// サーバーが今日の上限で断るときの理由（JSON の `error`）
 pub const LIMIT: &str = "limit";
 
 /// サーバーが、その仕事だけを止めているとき（仕事の口。DESIGN.md 17.4）の理由。ほかの工程は続ける
@@ -72,10 +71,6 @@ fn app() -> String {
         std::env::consts::OS
     )
 }
-
-/// サーバーが断った理由のヘッダー。WebSocket のハンドシェイクでは、断られたときの本文は
-/// 届いた分しか読めないので、これで見分ける
-pub const REFUSAL_HEADER: &str = "x-refusal";
 
 /// 失敗した応答の本文から、Worker が断った理由を読む。OpenAI の `error` はオブジェクトなので読まない
 pub fn refusal_reason(body: &str) -> Option<String> {
