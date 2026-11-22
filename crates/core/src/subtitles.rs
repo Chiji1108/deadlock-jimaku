@@ -979,6 +979,11 @@ mod tests {
             );
             assert!(matches!(done[1], Done::Transcribed { text: None, .. }));
         }
+        // サーバーが文字起こしを止めているときも、黙って字幕なしにせず、サーバーを使わない作り方に替える
+        let api = answering(StatusCode::FORBIDDEN, json!({ "error": "stopped" })).await;
+        let done = transcribe_through(server(&api)).await;
+        let expected = TranscriptionError::BetaRefused;
+        assert!(matches!(&done[0], Done::Refused(refused) if *refused == expected));
         // 会社が鍵を断ったとき。会社の 403 は、サーバーの理由としては読まない
         let api = answering(StatusCode::UNAUTHORIZED, json!({ "error": {} })).await;
         let done = transcribe_through(company(Provider::OpenAi, &api)).await;
@@ -994,12 +999,9 @@ mod tests {
     #[tokio::test]
     async fn a_failure_that_may_pass_does_not_stop_the_subtitles() {
         let busy = json!({ "error": "busy" });
-        let stopped = json!({ "error": "stopped" });
         let unavailable = json!({ "error": { "message": "try again" } });
         for api in [
             answering(StatusCode::TOO_MANY_REQUESTS, busy).await,
-            // サーバーが、確定の文字起こしだけを止めている
-            answering(StatusCode::FORBIDDEN, stopped).await,
             answering(StatusCode::INTERNAL_SERVER_ERROR, unavailable).await,
             "http://127.0.0.1:9".to_owned(),
         ] {

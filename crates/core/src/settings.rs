@@ -751,9 +751,10 @@ impl Engines {
 
     /// 開発者のサーバーの仕事の口（DESIGN.md 17.4）に頼む工程がある。ベータのコードが要る
     pub fn server(&self) -> bool {
+        // 翻訳が会社の LLM なら、用語はそちらが判定するので、サーバーには頼まない
         self.live == LiveSource::Server
             || self.transcription == FinalSource::Server
-            || self.terms == TermsEngine::Server
+            || self.judges_on_server()
             || self.translation == TranslationEngine::Server
             || self.furigana == RubySource::Server
     }
@@ -2332,6 +2333,12 @@ mod tests {
         assert_eq!(untouched.unwrap().engines, Engines::STANDARD);
         // サーバーに頼む工程は、会社のキーを使わない
         assert!(Engines::CLOUD.providers().is_empty() && Engines::CLOUD.server());
+        // 使わない工程（翻訳が GPT のときの用語）がサーバーでも、コードは要らない
+        let unused = Engines {
+            terms: TermsEngine::Server,
+            ..Engines::STANDARD
+        };
+        assert!(!unused.server());
         assert_eq!(TranslationEngine::Server.source(), TranslationSource::Mt);
         let own = Engines::CLOUD.with_own_keys();
         assert!(!own.server());

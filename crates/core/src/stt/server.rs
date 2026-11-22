@@ -16,8 +16,13 @@ const MAX_HINTS: usize = 200;
 const MAX_HINT_CHARS: usize = 100;
 
 /// サーバーが断った応答なら、その理由。どの工程も同じに断られるもの（コードが使えない、今日の上限、古い版）は、
-/// 字幕を止める理由にする。その仕事だけを止めているときと、混んでいるときは、ふつうの失敗
+/// 字幕を止める理由にする。サーバーが文字起こしを止めているとき（その仕事だけを止めた、ベータを閉じた）も同じ:
+/// 翻訳や用語と違って、文字起こしがないと字幕そのものが出ないので、黙って続けず、サーバーを使わない作り方に
+/// 替える（`Store::fall_back`）。混んでいるときと外の不調は、その 1 回の失敗
 fn refused(status: StatusCode, reason: Option<&str>) -> anyhow::Error {
+    if reason == Some(relay::STOPPED) {
+        return TranscriptionError::BetaRefused.into();
+    }
     match relay::code_refusal(status, reason) {
         Some(refused) => refused.into(),
         None => anyhow::anyhow!("server: {status}: {}", reason.unwrap_or_default()),
@@ -67,7 +72,8 @@ pub(super) async fn live(
         .context("realtime handshake timed out")??;
     let finish = json!({ "type": "finish" });
     let read = |event: &Value| match event["type"].as_str() {
-        Some("sentence") => Ok(Some(serde_json::from_value(event.clone())?)),
+        // 読めない文は飛ばす（1 つのために、つなぎ直さない）
+        Some("sentence") => Ok(serde_json::from_value(event.clone()).ok()),
         _ => Ok(None),
     };
     timed::stream(socket, finish.to_string(), read, speaking, input, deltas).await

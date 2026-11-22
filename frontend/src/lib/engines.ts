@@ -483,8 +483,9 @@ const same = (a: Engines, b: Engines) =>
 /** 今の選び方に合うモード。詳しく選んで変えたなら undefined */
 export const modeOf = (t: Engines) => MODES.find((m) => same(m.engines, t));
 
-/** 途中の字幕をアプリが作る（有料の音声認識につなぐ） */
-export const paidLive = (t: Engines) => providerOfOption("live", t.live) !== null;
+/** 途中の字幕をアプリが作る（会社か、デドロ字幕のサーバーの音声認識につなぐ） */
+export const paidLive = (t: Engines) =>
+  t.live === "server" || providerOfOption("live", t.live) !== null;
 
 /** Chrome のウィンドウを使う（途中の字幕が Chrome） */
 export const usesChrome = (t: Engines) => t.live === "chrome";
