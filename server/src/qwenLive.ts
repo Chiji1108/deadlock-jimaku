@@ -213,8 +213,9 @@ export async function relayQwenLive(
         return close(1000, "finished");
     }
   });
+  // /v2 では、Qwen が書いた理由を渡さない（外の不調の中身は、利用者に関係がない）
   const passClose = (event: CloseEvent) =>
-    close(event.code === 1005 || event.code === 1006 ? 1000 : event.code, event.reason);
+    close(event.code === 1005 || event.code === 1006 ? 1000 : event.code, language === undefined ? event.reason : "closed");
   server.addEventListener("close", passClose);
   upstream.addEventListener("close", passClose);
   server.addEventListener("error", () => close(1011, "client error"));

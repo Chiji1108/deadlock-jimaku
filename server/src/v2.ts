@@ -83,7 +83,8 @@ async function asked(
     settle(0);
     return res?.status === 429 ? refuse(c, "busy") : c.json({ error: "upstream" }, 502);
   }
-  const answer = parsed<Record<string, unknown>>(await res.text()) ?? {};
+  // 本文を読めなくても（途中で切れた）、外は作って請求しているので、見積もりのまま数える
+  const answer = parsed<Record<string, unknown>>(await res.text().catch(() => "")) ?? {};
   settle(usd(answer) ?? estimate);
   return answer;
 }
@@ -160,6 +161,9 @@ v2.post("/translate", async (c) => {
   return c.json({ translations });
 });
 
+/** 選ばせる・文字起こしの答えを待つ時間（ミリ秒）。アプリは、これより長くは待たない */
+const ANSWER_TIMEOUT_MS = 15_000;
+
 /** 選ばせる本文の上限（文字数）。アプリは 1 発話で、多くて 10 ほどの問い（1 問 1,000 文字ほど）を送る */
 const MAX_DECISION_BODY = 32_000;
 /** 問いの数の上限 */
@@ -203,14 +207,16 @@ v2.post("/decide", async (c) => {
     c,
     code,
     estimate,
-    () => sent(c, keys, (key) => openrouter(model.path, key, body)),
+    () => sent(c, keys, (key) => openrouter(model.path, key, body, ANSWER_TIMEOUT_MS)),
     (answer) => openrouterUsd(answer.usage),
   );
   if (answer instanceof Response) return answer;
   const answers = (answer.answers ?? {}) as Record<string, { choice?: unknown } | null>;
+  // 頼んだ値のどれかだけを返す
   const chosen = listed.flatMap((q) => {
     const choice = answers[q.name as string]?.choice;
-    return text(choice) ? [[q.name, choice]] : [];
+    const offered = (q.choices as { value: string }[]).some((c) => c.value === choice);
+    return offered ? [[q.name, choice]] : [];
   });
   return c.json({ choices: Object.fromEntries(chosen) });
 });
@@ -252,7 +258,7 @@ v2.post("/transcribe", async (c) => {
     c,
     code,
     estimate,
-    () => sent(c, keys, (key) => qwen(model.path, key, body)),
+    () => sent(c, keys, (key) => qwen(model.path, key, body, ANSWER_TIMEOUT_MS)),
     (answer) => {
       if (answer.usage === undefined) return undefined;
       const { input, output } = tokensOf(answer.usage);

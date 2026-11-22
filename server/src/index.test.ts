@@ -618,10 +618,10 @@ describe("tasks (/v2)", () => {
   it("picks among the app's candidates and transcribes, with the models the server chose", async () => {
     const code = await joined();
     vi.mocked(openrouter).mockResolvedValue(
-      Response.json({ answers: { c0: { choice: "hero:13" }, c1: {}, c9: { choice: "x" } }, usage: { cost: 0.001 } }),
+      Response.json({ answers: { c0: { choice: "hero:13" }, c1: { choice: "hero:99" }, c9: { choice: "x" } }, usage: { cost: 0.001 } }),
     );
     const decided = await ask("/decide", code, { ...decision, model: "gpt-9" });
-    // 答えのない問いと、聞いていない問いは返さない
+    // 頼んでいない値と、聞いていない問いは返さない
     expect(await decided.json()).toEqual({ choices: { c0: "hero:13" } });
     expect(vi.mocked(openrouter).mock.calls[0]).toEqual([
       "/systemone",
@@ -638,6 +638,7 @@ describe("tasks (/v2)", () => {
           c1: { type: "choice", instructions: "Which one?", criteria: { none: "not a game term" } },
         },
       },
+      15_000,
     ]);
     expect(await dayUsd(code)).toBeCloseTo(0.001, 8);
 
@@ -663,6 +664,7 @@ describe("tasks (/v2)", () => {
         },
         parameters: { format: "wav", sample_rate: "16000", language_hints: ["ja"] },
       },
+      15_000,
     ]);
     // 200,000 × $0.15 + 100,000 × $0.47（100 万トークンあたり）
     expect(await dayUsd(code)).toBeCloseTo(0.001 + 0.077, 8);
