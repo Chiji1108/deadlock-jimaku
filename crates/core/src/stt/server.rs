@@ -10,6 +10,11 @@ use crate::access::Server;
 /// 確定の答えを待つ時間。サーバーは 15 秒で諦める
 const TIMEOUT: Duration = Duration::from_secs(20);
 
+/// サーバーが受け取る言葉の数と、1 つの長さ（UTF-16 の単位。server/src/v2.ts の `MAX_HINTS`、`MAX_HINT_CHARS`）。
+/// 越えると要求ごと断られるので、先のものから入るだけ送る（先に大事な言葉が並んでいる。`subtitles::keywords`）
+const MAX_HINTS: usize = 200;
+const MAX_HINT_CHARS: usize = 100;
+
 /// サーバーが断った応答なら、その理由。どの工程も同じに断られるもの（コードが使えない、今日の上限、古い版）は、
 /// 字幕を止める理由にする。その仕事だけを止めているときと、混んでいるときは、ふつうの失敗
 fn refused(status: StatusCode, reason: Option<&str>) -> anyhow::Error {
@@ -25,10 +30,14 @@ pub(super) async fn transcribe(
     server: &Server,
     req: BatchRequest<'_>,
 ) -> anyhow::Result<String> {
+    let fits = |hint: &&String| hint.encode_utf16().count() <= MAX_HINT_CHARS;
+    let hints: Vec<&String> = (req.hints.keywords.iter().filter(fits))
+        .take(MAX_HINTS)
+        .collect();
     let body = json!({
         "audio": base64::engine::general_purpose::STANDARD.encode(&req.wav),
         "language": req.hints.language,
-        "hints": req.hints.keywords,
+        "hints": hints,
     });
     let res = http
         .post(server.url("/transcribe"))
@@ -102,10 +111,13 @@ mod tests {
     use tokio::net::TcpListener;
 
     fn hints() -> Hints {
+        // サーバーが受け取らない長さの言葉と、数を越えた分は送らない
+        let mut keywords = vec!["x".repeat(101), "ヘイズ".into()];
+        keywords.extend((0..300).map(|i| format!("用語{i}")));
         Hints {
             language: "ja".into(),
             prompt: "x".into(),
-            keywords: vec!["ヘイズ".into()],
+            keywords,
             heroes: Vec::new(),
         }
     }
@@ -118,8 +130,16 @@ mod tests {
         let answer = |headers: axum::http::HeaderMap, axum::Json(asked): axum::Json<Value>| async move {
             assert_eq!(headers["authorization"], "Bearer code");
             let wav = base64::engine::general_purpose::STANDARD.encode([1, 2, 3]);
-            let expected = json!({ "audio": wav, "language": "ja", "hints": ["ヘイズ"] });
-            assert_eq!(asked, expected);
+            let hints = asked["hints"].as_array().unwrap();
+            assert_eq!(
+                (hints.len(), &hints[0], &hints[199]),
+                (200, &json!("ヘイズ"), &json!("用語198"))
+            );
+            assert_eq!(
+                (&asked["audio"], &asked["language"]),
+                (&json!(wav), &json!("ja"))
+            );
+            assert_eq!(asked.as_object().unwrap().len(), 3);
             axum::Json(json!({ "text": " ヘイズ強い " }))
         };
         let router = axum::Router::new().route("/v2/transcribe", axum::routing::post(answer));
