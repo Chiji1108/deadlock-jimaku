@@ -9,7 +9,7 @@ import { tokensOf } from "./price";
 import { relayQwenLive } from "./qwenLive";
 import { bearerCode, openrouterUsd, parsed, sent, usdOf, type App, type Ctx } from "./relay";
 import { allTasks, MAX_TRANSLATION_TOKENS, openTasks, taskOf, type Model, type TaskName } from "./tasks";
-import { chat, openrouter, qwen, wait } from "./upstream";
+import { chat, openrouter, perplexity, qwen, wait } from "./upstream";
 
 export const v2 = new Hono<App>();
 
@@ -39,9 +39,11 @@ export async function status(c: Ctx) {
   c.executionCtx.waitUntil(noted.catch((e: unknown) => console.error("seen", e)));
   const error = refusal(code, now);
   if (error) return refuse(c, error);
-  const providers = await betaProviders(c.var.db, c.env);
+  const all = await betaProviders(c.var.db, c.env);
+  // 中継する会社として答えるのは、/v1 にある 2 社だけ（古い版のアプリは、知らない名前があると答えを読めない）
+  const providers = all.filter((p) => p !== "perplexity");
   const remaining = Math.max(1 - todayUsd(code, now) / (code.dailyLimitUsd ?? CODE_DAILY_USD), 0);
-  return c.json({ tasks: await openTasks(c.var.db, providers), providers, remaining });
+  return c.json({ tasks: await openTasks(c.var.db, all), providers, remaining });
 }
 
 v2.get("/status", status);
@@ -96,6 +98,12 @@ async function asked(
   const answer = parsed<Record<string, unknown>>(await res.text().catch(() => "")) ?? {};
   settle(usd(answer) ?? estimate);
   return answer;
+}
+
+/** 応答のトークンの数と、モデルの単価から出した額 */
+function priced(usage: unknown, model: Model) {
+  const { input, output } = tokensOf(usage);
+  return usdOf(input, model.price.input) + usdOf(output, model.price.output);
 }
 
 /** 1 回に訳す文の長さの上限（文字数）。1 発話は長くても 13 秒ほどで、200 文字に届かない */
@@ -216,8 +224,9 @@ v2.post("/decide", async (c) => {
     c,
     code,
     estimate,
-    () => sent(c, keys, (key) => openrouter(model.path, key, body, ANSWER_TIMEOUT_MS)),
-    (answer) => openrouterUsd(answer.usage),
+    () => sent(c, keys, (key) => (model.provider === "perplexity" ? perplexity : openrouter)(model.path, key, body, ANSWER_TIMEOUT_MS)),
+    // OpenRouter は料金を答えに入れる。Perplexity は入れないので、トークンの数と単価から数える
+    (answer) => openrouterUsd(answer.usage) ?? (answer.usage === undefined ? undefined : priced(answer.usage, model)),
   );
   if (answer instanceof Response) return answer;
   const answers = (answer.answers ?? {}) as Record<string, { choice?: unknown } | null>;
@@ -268,11 +277,7 @@ v2.post("/transcribe", async (c) => {
     code,
     estimate,
     () => sent(c, keys, (key) => qwen(model.path, key, body, ANSWER_TIMEOUT_MS)),
-    (answer) => {
-      if (answer.usage === undefined) return undefined;
-      const { input, output } = tokensOf(answer.usage);
-      return usdOf(input, model.price.input) + usdOf(output, model.price.output);
-    },
+    (answer) => (answer.usage === undefined ? undefined : priced(answer.usage, model)),
   );
   if (answer instanceof Response) return answer;
   const output = (answer.output ?? {}) as {

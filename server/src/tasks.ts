@@ -39,6 +39,7 @@ export interface Model {
 
 /** 翻訳のモデル（OpenAI 互換の口） */
 export interface Translator extends Model {
+  provider: "qwen" | "openrouter";
   body: (asked: Translation) => unknown;
   /** 答えを待つ時間（ミリ秒）。待たせすぎると、確定の字幕が遅れる */
   timeoutMs: number;
@@ -46,6 +47,7 @@ export interface Translator extends Model {
 
 /** 選ばせるモデル。`path` は、その会社の口 */
 export interface Judge extends Model {
+  provider: "openrouter" | "perplexity";
   path: string;
   body: (asked: Decision) => unknown;
 }
@@ -131,23 +133,35 @@ const TRANSLATORS = {
   },
 } satisfies Record<string, Translator>;
 
+/** Jev と同じ形の問い（OpenRouter の口も、Perplexity の口も同じ）。問いは名前ごとの表で、選べる値ごとに説明を書く */
+const decision =
+  (model: string): Judge["body"] =>
+  ({ state, questions }) => ({
+    model,
+    state,
+    questions: Object.fromEntries(
+      questions.map(({ name, instructions, choices }) => [
+        name,
+        { type: "choice", instructions, criteria: Object.fromEntries(choices.map((c) => [c.value, c.description])) },
+      ]),
+    ),
+  });
+
 const JUDGES = {
-  // Jev と同じ形の口。問いは名前ごとの表で、選べる値ごとに説明を書く
   "pplx-decider": {
     label: "Perplexity Decider（OpenRouter）",
     provider: "openrouter",
     path: "/systemone",
-    body: ({ state, questions }) => ({
-      model: "perplexity/pplx-decider-v1.2",
-      state,
-      questions: Object.fromEntries(
-        questions.map(({ name, instructions, choices }) => [
-          name,
-          { type: "choice", instructions, criteria: Object.fromEntries(choices.map((c) => [c.value, c.description])) },
-        ]),
-      ),
-    }),
+    body: decision("perplexity/pplx-decider-v1.2"),
     price: OPENROUTER_FALLBACK,
+  },
+  // 同じモデルを、Perplexity に直接頼む。応答が 0.17 秒ほど速い（DESIGN.md 9.3）。料金は答えに入らないので、トークンから数える
+  "pplx-decider-direct": {
+    label: "Perplexity Decider（Perplexity）",
+    provider: "perplexity",
+    path: "/v1/decisions",
+    body: decision("pplx-decider-v1.2"),
+    price: { input: 0.02, output: 0 },
   },
 } satisfies Record<string, Judge>;
 

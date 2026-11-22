@@ -511,12 +511,18 @@ export type ServerModels = Record<string, ServerModel>;
  * モデルの名前は `server/src/tasks.ts` のもの */
 const SERVER_TASKS: { [K in Item]?: { task: string; same: Record<string, Engines[K]> } } = {
   transcription: { task: "transcribe", same: { "qwen-audio": "qwenAudio" } },
-  terms: { task: "decide", same: { "pplx-decider": "pplxDecider" } },
+  terms: {
+    task: "decide",
+    same: { "pplx-decider": "pplxDecider", "pplx-decider-direct": "pplxDecider" },
+  },
   translation: {
     task: "translate",
     same: { "hy-mt2": "hyMt2", "qwen-mt-flash": "qwenMtFlash", "qwen3.8-flash": "qwen38Flash" },
   },
-  furigana: { task: "decide", same: { "pplx-decider": "decider" } },
+  furigana: {
+    task: "decide",
+    same: { "pplx-decider": "decider", "pplx-decider-direct": "decider" },
+  },
 };
 
 /** 画面に出す選択肢。「デドロ字幕のサーバー」には、サーバーが今使っているモデルの名前と、同じモデルの選択肢の正確さと速さを足す。

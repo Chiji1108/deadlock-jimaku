@@ -165,7 +165,7 @@ export const page = /* html */ `<!doctype html>
     <p class="muted">会社ごとに複数置けます。断られたキー（使えない、残高がない、回数の上限）は後回しにして、ほかのキーに回します。キーそのものは表示しません</p>
     <table id="keys"></table>
     <form id="add">
-      <select name="provider"><option value="qwen">Qwen（シンガポール）</option><option value="openrouter">OpenRouter</option></select>
+      <select name="provider"><option value="qwen">Qwen（シンガポール）</option><option value="openrouter">OpenRouter</option><option value="perplexity">Perplexity</option></select>
       <input name="key" type="password" placeholder="API キー" autocomplete="off" required>
       <input name="memo" placeholder="メモ" maxlength="100">
       <button class="primary">足す</button>
