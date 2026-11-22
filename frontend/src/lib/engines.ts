@@ -91,7 +91,7 @@ export const ITEMS: {
         accuracy: "95〜98%",
         speed: "1.3〜3.1 秒",
         price: "ベータ期間中は無料",
-        note: "サーバーが、そのときのおすすめのモデルで作る。モデルは、アプリを更新しなくても替わる",
+        note: "サーバーが、そのときのおすすめのモデルで作る",
       },
       {
         value: "grokVoiceTranscribe",
@@ -219,7 +219,7 @@ export const ITEMS: {
         accuracy: "94%",
         speed: "約 0.5 秒",
         price: "ベータ期間中は無料",
-        note: "サーバーが、そのときのおすすめのモデルで判定する。モデルは、アプリを更新しなくても替わる",
+        note: "サーバーが、そのときのおすすめのモデルで判定する",
       },
     ],
   },
@@ -233,7 +233,7 @@ export const ITEMS: {
         value: "server",
         label: "デドロ字幕のサーバー",
         price: "ベータ期間中は無料",
-        note: "サーバーが、そのときのおすすめのモデルで訳す。モデルは、アプリを更新しなくても替わる",
+        note: "サーバーが、そのときのおすすめのモデルで訳す",
       },
       {
         value: "chromeTranslator",
@@ -311,7 +311,7 @@ export const ITEMS: {
         accuracy: "95%",
         speed: "約 0.5 秒",
         price: "ベータ期間中は無料",
-        note: "読みが分かれる語を、辞書の候補からサーバーが選ぶ。モデルは、アプリを更新しなくても替わる",
+        note: "読みが分かれる語を、辞書の候補からサーバーが選ぶ",
       },
       {
         value: "decider",
