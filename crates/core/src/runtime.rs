@@ -3,7 +3,6 @@
 //! 設定や API キーが変わったら、**入力が変わった処理だけ**を張り直す（ランクの ID を変えても
 //! 字幕は止めない）。字幕を止めたときは、確定していない字幕を画面から消す。
 
-use std::collections::BTreeMap;
 use std::panic::AssertUnwindSafe;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -16,7 +15,7 @@ use crate::llama::Llama;
 use crate::local::{self, Gpu, Speech};
 use crate::people::Person;
 use crate::reazon::Reazon;
-use crate::secrets::{Keys, Provider, Relay};
+use crate::secrets::{Keys, Provider};
 use crate::settings::{Engines, FinalSource, Models, Region, Segmentation, Settings, TextSource};
 use crate::store::{Fallback, Store};
 use crate::types::{LangCode, TranscriptionError};
@@ -442,56 +441,36 @@ async fn local_llm(
     Ok(Some(Arc::new(llama)))
 }
 
-/// ベータのコードを使うなら、`check` の API の根元で、使えるか・使う会社を中継するかを確かめる。
-/// 断られたら、字幕を止めずに続ける（`fall_back`）か、理由を出して、false。サーバーの仕事（翻訳）を今頼めるかは
-/// 見ない（止めている仕事は、その工程だけがないまま続ける。`mt::Translator::ask_server`）
+/// サーバーに頼む工程があるなら、`check` の API の根元で、ベータのコードがまだ使えるかを確かめる。
+/// 断られたら、字幕を止めずに続ける（`fall_back`）か、理由を出して、false。その仕事を今頼めるかは見ない
+/// （止めている仕事は、その工程だけがないまま続ける）
 async fn code_accepted(
     store: &Store,
     engines: &Engines,
     accesses: &Accesses,
     check: Option<&str>,
 ) -> bool {
-    // サーバーに頼む工程があるのに、コードがない（画面は、選ぶ前にコードをもらう。ないのは、自分のキーで「おすすめ」と
-    // 同じ組み合わせを使っていて、0.10 で翻訳がサーバーに移った人）。黙って訳なしにせず、断られたときと同じに続ける
-    if engines.server() && accesses.server().is_none() {
-        let refused = TranscriptionError::BetaRefused;
-        if !fall_back(store, &refused).await {
-            store.set_transcription_error(Some(refused));
-        }
-        return false;
+    if !engines.server() {
+        return true;
     }
-    let Some(api) = check else {
+    // サーバーに頼む工程があるのに、コードがない（画面は、選ぶ前にコードをもらう。ないのは、資格情報ストアから
+    // コードが消えたとき）。黙って字幕なしにせず、断られたときと同じに続ける
+    let checked = match (accesses.server(), check) {
+        (None, _) => Err(TranscriptionError::BetaRefused),
+        (Some(server), Some(api)) => relay::check_code(api, server.code()).await,
+        (Some(_), None) => Ok(()),
+    };
+    let Err(refused) = checked else {
         return true;
     };
-    let server = accesses.server();
-    let mut codes: BTreeMap<&str, Vec<Provider>> = BTreeMap::new();
-    for access in accesses.iter().filter(|a| a.is_code()) {
-        let used = codes.entry(access.token()).or_default();
-        used.push(access.provider());
+    if !fall_back(store, &refused).await {
+        store.set_transcription_error(Some(refused));
     }
-    if let Some(server) = &server {
-        codes.entry(server.code()).or_default();
-    }
-    for (code, used) in codes {
-        let checked = relay::check_code(api, code).await.and_then(|relayed| {
-            match used.iter().find(|p| !relayed.contains(p)) {
-                // そのコードでは中継しない会社
-                Some(_) => Err(TranscriptionError::BetaRefused),
-                None => Ok(()),
-            }
-        });
-        if let Err(refused) = checked {
-            if !fall_back(store, &refused).await {
-                store.set_transcription_error(Some(refused));
-            }
-            return false;
-        }
-    }
-    true
+    false
 }
 
-/// ベータのコードで断られたら、字幕を止めずに続ける（`Store::fall_back`）。ベータのコードで使っていた会社すべてに
-/// 自分のキーがあれば、同じ作り方のまま自分のキーで（サーバーに頼んでいた工程は `Engines::with_own_keys`）。なければ Chrome の作り方で
+/// ベータのコードで断られたら、字幕を止めずに続ける（`Store::fall_back`）。サーバーに頼んでいた工程を自分のキーで
+/// 頼むのに要る会社（`Engines::with_own_keys`）すべてに自分のキーがあれば、同じ作り方のまま自分のキーで。なければ Chrome の作り方で
 async fn fall_back(store: &Store, refused: &TranscriptionError) -> bool {
     // ほかの理由では続けないので、鍵を読みに行かない
     let beta = matches!(
@@ -506,12 +485,9 @@ async fn fall_back(store: &Store, refused: &TranscriptionError) -> bool {
     let keys = tokio::task::spawn_blocking(secrets::load)
         .await
         .unwrap_or_default();
-    let relayed = store.saved().engines.with_own_keys().providers();
-    let mut relayed = relayed.into_iter();
-    let mut relayed = relayed
-        .by_ref()
-        .filter(|p| p.info().relay == Some(Relay::Beta));
-    store.fall_back(refused, relayed.all(|p| keys.own.contains_key(&p)))
+    let own = store.saved().engines.with_own_keys();
+    let own_keys = own.providers().iter().all(|p| keys.own.contains_key(p));
+    store.fall_back(refused, own_keys)
 }
 
 /// 止まったら理由を出す（開始・停止を押し直すと始め直す）。想定外のエラー（panic）でも
@@ -601,12 +577,7 @@ mod tests {
         match code {
             "revoked" => refused.into_response(),
             "down" => StatusCode::BAD_GATEWAY.into_response(),
-            // 2 つの会社を中継するコード
-            "both" => {
-                axum::Json(serde_json::json!({ "providers": ["openai", "xai"] })).into_response()
-            }
-            // 前のサーバーは中継する会社を返さない（OpenAI だけ）
-            _ => axum::Json(serde_json::json!({})).into_response(),
+            _ => axum::Json(serde_json::json!({ "tasks": ["translate"] })).into_response(),
         }
     }
 
@@ -640,20 +611,30 @@ mod tests {
             }
         }
 
+        /// `code` があれば、OpenAI の鍵があり、翻訳をそのコードでサーバーに頼む。なければ、鍵もコードもない
         fn audio(&self, code: Option<&str>, language: &str) -> SubtitlesInput {
+            let server = code.map(|code| crate::access::Server::new(&self.api, code.into()));
+            let engines = match code {
+                Some(_) => Engines {
+                    translation: crate::settings::TranslationEngine::Server,
+                    ..Engines::STANDARD
+                },
+                None => Engines::STANDARD,
+            };
             SubtitlesInput::Audio(Box::new(AudioInput {
                 source: Source::File(self.dir.path().join("silence.wav")),
                 mic_language: language.into(),
                 translate_to: Vec::new(),
                 deadlock_mode: false,
                 partial_text: Some(TextSource::Chrome),
-                engines: Engines::STANDARD,
+                engines,
                 models: Settings::default().models,
                 realtime_delay: "low".into(),
                 segmentation: Settings::default().segmentation,
                 accesses: Accesses::new(
-                    code.map(|code| Access::code(Provider::OpenAi, code.into(), &self.api)),
-                ),
+                    code.map(|_| Access::at(Provider::OpenAi, "key", &self.api)),
+                )
+                .with_server(server),
                 local_gpu: None,
                 uses_speech: false,
                 uses_reazon: false,

@@ -294,8 +294,7 @@ impl Translator {
         let status = res.status();
         if !status.is_success() {
             let body = res.text().await.unwrap_or_default();
-            let reason = relay::refusal_reason(&body);
-            if let Some(refused) = relay::refusal(access, status, reason.as_deref()) {
+            if let Some(refused) = relay::refusal(access, status) {
                 return Err(refused.into());
             }
             anyhow::bail!("{target}: {status}: {body}");
@@ -592,7 +591,7 @@ mod tests {
             (Provider::Qwen, "qwen-mt-flash"),
         ] {
             let meter = Arc::new(Meter::new(std::env::temp_dir().join("mt_test_usage.json")));
-            let access = Access::code(provider, "code".into(), &api);
+            let access = Access::at(provider, "code", &api);
             let translator = Translator::new(access, model, "ja".into(), vec!["ru".into()], meter);
             let translated = translator.translate(&http, &spans, None).await.unwrap();
             assert_eq!(translated["ru"], [text("Haze is strong.")], "{model}");
@@ -640,7 +639,7 @@ mod tests {
         tokio::spawn(async move { axum::serve(listener, router).await });
         let translator = |provider| {
             let meter = Arc::new(Meter::new(std::env::temp_dir().join("mt_test_usage.json")));
-            let access = Access::code(provider, "code".into(), &api);
+            let access = Access::at(provider, "code", &api);
             Translator::new(
                 access,
                 "qwen-mt-flash",
@@ -655,9 +654,10 @@ mod tests {
             .translate(&http, &spans, None)
             .await
             .unwrap_err();
+        let provider = Provider::Qwen;
         assert_eq!(
             refused.downcast::<TranscriptionError>().unwrap(),
-            TranscriptionError::BetaRefused
+            TranscriptionError::InvalidKey { provider }
         );
         let failed = translator(Provider::OpenAi)
             .translate(&http, &spans, None)

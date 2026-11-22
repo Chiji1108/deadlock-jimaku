@@ -10,7 +10,7 @@ use std::time::Instant;
 
 use tokio::sync::{broadcast, mpsc};
 
-use crate::access::{Access, Accesses};
+use crate::access::Accesses;
 use crate::annotate::mark_first_person;
 use crate::chrome;
 use crate::decide::{Asker, Decider};
@@ -46,8 +46,7 @@ pub struct Finisher {
 
 /// ふりがなの読みを、辞書の候補から選ぶ判定モデル
 struct Chooser {
-    access: Access,
-    model: &'static str,
+    door: furigana::Door,
     deadlock: bool,
 }
 
@@ -86,6 +85,9 @@ impl Finisher {
         let local = |engine: bool| llama.clone().filter(|_| engine);
         let decider = match local(engines.terms == TermsEngine::Gemma) {
             Some(llama) => Some(Decider::local(llama, lang.clone(), store.meter())),
+            None if engines.judges_on_server() => accesses
+                .server()
+                .map(|server| Decider::server(server, lang.clone(), store.meter())),
             None => engines.judge().and_then(|judge| {
                 let access = accesses.get(judge.provider)?;
                 Some(Decider::new(
@@ -104,7 +106,7 @@ impl Finisher {
                 targets,
                 store.meter(),
             )),
-            None if engines.server() => accesses
+            None if engines.translation == TranslationEngine::Server => accesses
                 .server()
                 .map(|server| Translator::server(server, lang.clone(), targets, store.meter())),
             None => engines.translation.mt().and_then(|mt| {
@@ -127,12 +129,18 @@ impl Finisher {
                 store.meter(),
             )
         });
-        let chooser = settings.engines.furigana.judge().and_then(|judge| {
-            Some(Chooser {
-                access: accesses.get(judge.provider)?,
-                model: judge.name,
-                deadlock: settings.deadlock_mode,
-            })
+        let door = match engines.furigana {
+            RubySource::Server => accesses.server().map(furigana::Door::Server),
+            furigana => furigana.judge().and_then(|judge| {
+                Some(furigana::Door::Api {
+                    access: accesses.get(judge.provider)?,
+                    model: judge.name.into(),
+                })
+            }),
+        };
+        let chooser = door.map(|door| Chooser {
+            door,
+            deadlock: settings.deadlock_mode,
         });
         Self {
             store,
@@ -213,7 +221,7 @@ impl Finisher {
             async {
                 // 読みの辞書は、判定モデルに選ばせるときだけ取る（日本語でなければ、広げない）
                 let chooser = self.chooser.as_ref().zip(
-                    (phase.ruby == Some(RubySource::Decider))
+                    matches!(phase.ruby, Some(RubySource::Decider | RubySource::Server))
                         .then(Furigana::shared)
                         .flatten(),
                 );
@@ -223,8 +231,7 @@ impl Finisher {
                         let meter = self.store.meter();
                         let judge = furigana::Judge {
                             deadlock: chooser.deadlock,
-                            access: &chooser.access,
-                            model: chooser.model,
+                            door: &chooser.door,
                             meter: &meter,
                         };
                         furigana::choose(crate::http(), &judge, dictionary, &text, &context)
@@ -706,7 +713,7 @@ mod tests {
             root: std::path::PathBuf::new(),
             aliases: Arc::new([("item:1".to_owned(), vec!["拡マガ".to_owned()])].into()),
         });
-        let code = |provider| crate::access::Access::code(provider, "code".into(), &api);
+        let code = |provider| crate::access::Access::at(provider, "code", &api);
         let accesses = Accesses::new(settings.engines.providers().into_iter().map(code));
         let finisher = Finisher::new(store.clone(), &settings, &accesses, None);
         let heard = Heard {

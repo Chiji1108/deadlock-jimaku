@@ -673,15 +673,15 @@ impl Engines {
         furigana: RubySource::Dictionary,
     };
     /// ベータのモード。ベータ期間中は無料（開発者のサーバーが、開発者のキーで作る。DESIGN.md 17.2）。
-    /// 途中の字幕は Chrome、確定は Qwen、用語は Perplexity Decider、翻訳はサーバーが決めたモデル（0.9.9 までは
-    /// Hy-MT2 を名指ししていた。0.9.7 だけ Chrome）、ふりがなは辞書の候補から Perplexity Decider が選ぶ。
+    /// 途中の字幕は Chrome、ほかの工程は開発者のサーバーに頼む（DESIGN.md 17.4）。どのモデルで作るかはサーバーが決める
+    /// （0.10.0 までは、アプリが Qwen、Perplexity Decider、Hy-MT2 を名指しして、サーバーは中継していた）。
     /// サーバーの翻訳が届かなくても、Chrome の途中の訳が確定に残るので、訳は抜けない（`subtitles::settled`。DESIGN.md 9.6）
     pub const BETA: Self = Self {
         live: LiveSource::Chrome,
-        transcription: FinalSource::QwenAudio,
-        terms: TermsEngine::PplxDecider,
+        transcription: FinalSource::Server,
+        terms: TermsEngine::Server,
         translation: TranslationEngine::Server,
-        furigana: RubySource::Decider,
+        furigana: RubySource::Server,
     };
     /// ローカルのモード（0.7.0）。音声も字幕の文字も PC から出さない: 途中の字幕は Haas-ja、確定は Whisper、
     /// 用語と翻訳は Gemma。GPU に余裕のある PC 向け（DESIGN.md 9.7）
@@ -697,10 +697,10 @@ impl Engines {
         terms: TermsEngine::GeminiNano,
         ..Self::CHROME
     };
-    /// クラウドのモード（0.7.0）。ベータのモードの途中の字幕も Qwen で作る。Chrome のウィンドウを開かず、
+    /// クラウドのモード（0.7.0）。ベータのモードの途中の字幕も、サーバーに頼む。Chrome のウィンドウを開かず、
     /// 音声を Google に送らない
     pub const CLOUD: Self = Self {
-        live: LiveSource::QwenAudioStreaming,
+        live: LiveSource::Server,
         ..Self::BETA
     };
     /// 操作パネルに出すモード（おすすめの組み合わせ）。ほかの組み合わせは「カスタム」（`Settings::custom_engines`）。
@@ -751,14 +751,30 @@ impl Engines {
 
     /// 開発者のサーバーの仕事の口（DESIGN.md 17.4）に頼む工程がある。ベータのコードが要る
     pub fn server(&self) -> bool {
-        self.translation == TranslationEngine::Server
+        self.live == LiveSource::Server
+            || self.transcription == FinalSource::Server
+            || self.terms == TermsEngine::Server
+            || self.translation == TranslationEngine::Server
+            || self.furigana == RubySource::Server
     }
 
     /// サーバーに頼む工程を、自分のキーで頼むものに替える（コードが断られて、自分のキーで続けるとき。
-    /// `Store::fall_back`）。翻訳は、サーバーの初めのモデルと同じ Hy-MT2（OpenRouter のキーが要る）
+    /// `Store::fall_back`）。サーバーの初めのモデルと同じものにする（Qwen と OpenRouter のキーが要る）
     pub fn with_own_keys(mut self) -> Self {
+        if self.live == LiveSource::Server {
+            self.live = LiveSource::QwenAudioStreaming;
+        }
+        if self.transcription == FinalSource::Server {
+            self.transcription = FinalSource::QwenAudio;
+        }
+        if self.terms == TermsEngine::Server {
+            self.terms = TermsEngine::PplxDecider;
+        }
         if self.translation == TranslationEngine::Server {
             self.translation = TranslationEngine::HyMt2;
+        }
+        if self.furigana == RubySource::Server {
+            self.furigana = RubySource::Decider;
         }
         self
     }
@@ -787,9 +803,14 @@ impl Engines {
         self.terms == TermsEngine::Gemma && self.translation.source() != TranslationSource::Llm
     }
 
-    /// 用語を判定モデル（会社のものか、PC の中の LLM）で確かめる
+    /// 用語の候補を、開発者のサーバーに確かめさせる（翻訳が会社の LLM なら、そちらが判定する）
+    pub fn judges_on_server(&self) -> bool {
+        self.terms == TermsEngine::Server && self.translation.source() != TranslationSource::Llm
+    }
+
+    /// 用語を判定モデル（会社のものか、開発者のサーバー、PC の中の LLM）で確かめる
     pub fn decides_terms(&self) -> bool {
-        self.judge().is_some() || self.judges_locally()
+        self.judge().is_some() || self.judges_on_server() || self.judges_locally()
     }
 
     /// 確定の文を Chrome が作るなら、発話の区切りも Chrome が決めるので、途中の字幕も Chrome。
@@ -826,7 +847,7 @@ pub fn catalog() -> String {
         .into_iter()
         .map(|provider| {
             let info = provider.info();
-            serde_json::json!({ "id": info.id, "name": info.name, "relay": info.relay })
+            serde_json::json!({ "id": info.id, "name": info.name })
         })
         .collect();
     let engines = serde_json::json!({
@@ -860,6 +881,8 @@ impl Default for Engines {
 #[ts(export)]
 pub enum LiveSource {
     Chrome,
+    /// 開発者のサーバーに作らせる（DESIGN.md 17.4）。どのモデルで作るかはサーバーが決める。ベータのコードが要る
+    Server,
     GptLiveTranscribe,
     /// QwenCloud の Qwen-Audio-3.1-ASR-Flash-Streaming。GPT-Live-Transcribe の約 20 分の 1 の料金（DESIGN.md 3.4）
     QwenAudioStreaming,
@@ -873,8 +896,9 @@ pub enum LiveSource {
 }
 
 impl LiveSource {
-    pub const ALL: [Self; 6] = [
+    pub const ALL: [Self; 7] = [
         Self::Chrome,
+        Self::Server,
         Self::GptLiveTranscribe,
         Self::QwenAudioStreaming,
         Self::HaasJa,
@@ -884,7 +908,7 @@ impl LiveSource {
 
     pub fn provider(self) -> Option<Provider> {
         match self {
-            Self::Chrome | Self::HaasJa | Self::Whisper | Self::Off => None,
+            Self::Chrome | Self::Server | Self::HaasJa | Self::Whisper | Self::Off => None,
             Self::GptLiveTranscribe => Some(Provider::OpenAi),
             Self::QwenAudioStreaming => Some(Provider::Qwen),
         }
@@ -897,6 +921,8 @@ impl LiveSource {
 #[ts(export)]
 pub enum FinalSource {
     Chrome,
+    /// 開発者のサーバーに作らせる（DESIGN.md 17.4）。どのモデルで作るかはサーバーが決める。ベータのコードが要る
+    Server,
     GptTranscribe,
     /// GPT-Transcribe より安い。精度は同じか少し下（DESIGN.md 3）
     GrokVoiceTranscribe,
@@ -916,8 +942,9 @@ pub enum FinalSource {
 }
 
 impl FinalSource {
-    pub const ALL: [Self; 9] = [
+    pub const ALL: [Self; 10] = [
         Self::Chrome,
+        Self::Server,
         Self::GptTranscribe,
         Self::GrokVoiceTranscribe,
         Self::QwenAudio,
@@ -932,6 +959,7 @@ impl FinalSource {
     pub fn provider(self) -> Option<Provider> {
         match self {
             Self::Chrome
+            | Self::Server
             | Self::HaasJa
             | Self::ReazonSpeech
             | Self::WhisperTurbo
@@ -946,7 +974,7 @@ impl FinalSource {
     /// 文字起こしのモデル。GPT-Transcribe は詳細設定の `models.batch`
     fn model(self) -> Option<&'static str> {
         match self {
-            Self::Chrome | Self::GptTranscribe => None,
+            Self::Chrome | Self::Server | Self::GptTranscribe => None,
             Self::GrokVoiceTranscribe => Some("grok-voice-transcribe-2.0"),
             Self::QwenAudio => Some("qwen-audio-3.1-asr-flash"),
             Self::MaiTranscribe2 => Some("microsoft/mai-transcribe-2"),
@@ -977,6 +1005,7 @@ pub struct Model {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TextSource {
     Chrome,
+    Server,
     GptLiveTranscribe,
     GptTranscribe,
     GrokVoiceTranscribe,
@@ -995,6 +1024,9 @@ pub enum TextSource {
 pub enum TermsEngine {
     /// 辞書の名前との一致（PC の中）
     Dictionary,
+    /// PC の中で候補を出し、開発者のサーバーに確かめさせる（DESIGN.md 17.4）。どのモデルで確かめるかはサーバーが決める。
+    /// ベータのコードが要る
+    Server,
     /// PC の中で候補を出し（名前、別名、似た名前、「ウルト」と番号）、OpenAI の Decisions API に確かめさせる
     Decisions,
     /// 同じ候補を、ほかの判定モデルに確かめさせる（DESIGN.md 9.7 の実測）。TypeSafe AI の Jev はいちばん速い
@@ -1014,8 +1046,9 @@ pub enum TermsEngine {
 }
 
 impl TermsEngine {
-    pub const ALL: [Self; 8] = [
+    pub const ALL: [Self; 9] = [
         Self::Dictionary,
+        Self::Server,
         Self::GeminiNano,
         Self::Gemma,
         Self::Decisions,
@@ -1028,7 +1061,7 @@ impl TermsEngine {
     /// 候補を確かめさせるモデル（辞書の一致なら None）
     pub fn judge(self) -> Option<Model> {
         let (provider, name) = match self {
-            Self::Dictionary | Self::GeminiNano | Self::Gemma => return None,
+            Self::Dictionary | Self::Server | Self::GeminiNano | Self::Gemma => return None,
             Self::Decisions => (Provider::OpenAi, "gpt-6-luna"),
             Self::Jev => (Provider::TypeSafe, "jev-latest"),
             Self::DrexMax => (Provider::OpenRouter, "nace-ai/drex-max"),
@@ -1132,12 +1165,21 @@ pub enum RubySource {
     /// 同じことを GPT-6 Luna にさせる。Terra の約 7 分の 1 の料金で、直せる読みは少し減る（DESIGN.md 6.4）
     Luna,
     /// 読みが分かれるところを、辞書の候補から判定モデル（OpenRouter の Perplexity Decider）に選ばせる。
-    /// 速くて安く、ベータの中継で使える。直せる読みは Luna より少し減る（DESIGN.md 6.4）
+    /// 速くて安い。直せる読みは Luna より少し減る（DESIGN.md 6.4）
     Decider,
+    /// 同じことを、開発者のサーバーに選ばせる（DESIGN.md 17.4）。どのモデルで選ぶかはサーバーが決める。
+    /// ベータのコードが要る
+    Server,
 }
 
 impl RubySource {
-    pub const ALL: [Self; 4] = [Self::Dictionary, Self::Decider, Self::Luna, Self::Llm];
+    pub const ALL: [Self; 5] = [
+        Self::Dictionary,
+        Self::Server,
+        Self::Decider,
+        Self::Luna,
+        Self::Llm,
+    ];
 
     /// 辞書の読みを LLM に直させる
     pub fn llm(self) -> bool {
@@ -1346,7 +1388,8 @@ impl Settings {
             },
             // 翻訳だけなら途中の字幕は見えないので、料金をかけない
             // アプリが作る途中の字幕（会社か、PC の中）
-            LiveSource::GptLiveTranscribe
+            LiveSource::Server
+            | LiveSource::GptLiveTranscribe
             | LiveSource::QwenAudioStreaming
             | LiveSource::HaasJa
             | LiveSource::Whisper
@@ -1354,6 +1397,7 @@ impl Settings {
             {
                 Phase {
                     text: Some(match engines.live {
+                        LiveSource::Server => Text::Server,
                         LiveSource::QwenAudioStreaming => Text::QwenAudioStreaming,
                         LiveSource::HaasJa => Text::HaasJa,
                         LiveSource::Whisper => Text::Whisper,
@@ -1364,7 +1408,8 @@ impl Settings {
                     emphasis: terms,
                 }
             }
-            LiveSource::GptLiveTranscribe
+            LiveSource::Server
+            | LiveSource::GptLiveTranscribe
             | LiveSource::QwenAudioStreaming
             | LiveSource::HaasJa
             | LiveSource::Whisper
@@ -1373,6 +1418,7 @@ impl Settings {
         let finals = Phase {
             text: Some(match engines.transcription {
                 FinalSource::Chrome => Text::Chrome,
+                FinalSource::Server => Text::Server,
                 FinalSource::GptTranscribe => Text::GptTranscribe,
                 FinalSource::GrokVoiceTranscribe => Text::GrokVoiceTranscribe,
                 FinalSource::QwenAudio => Text::QwenAudio,
@@ -1385,7 +1431,9 @@ impl Settings {
             ruby: match engines.furigana {
                 Ruby::Dictionary => dictionary,
                 // 直すもとの辞書の読みは日本語だけ
-                Ruby::Llm | Ruby::Luna | Ruby::Decider => dictionary.map(|_| engines.furigana),
+                Ruby::Llm | Ruby::Luna | Ruby::Decider | Ruby::Server => {
+                    dictionary.map(|_| engines.furigana)
+                }
             },
             emphasis: match (engines.translation.source(), engines.terms) {
                 (Translation::Llm, _) => self.deadlock_mode.then_some(Emphasis::Llm),
@@ -1439,7 +1487,10 @@ impl Settings {
                 let size = self.engines.whisper().expect("live Whisper");
                 models.realtime = size.name().into();
             }
-            LiveSource::Chrome | LiveSource::GptLiveTranscribe | LiveSource::Off => {}
+            LiveSource::Chrome
+            | LiveSource::Server
+            | LiveSource::GptLiveTranscribe
+            | LiveSource::Off => {}
         }
         if self.engines.furigana == RubySource::Luna {
             models.readings = "gpt-6-luna".into();
@@ -1704,11 +1755,11 @@ fn keep_readable(value: &mut Value, path: &mut Vec<String>) -> bool {
 /// 読めない（ほかのアプリが掴んでいるなど）ときは Err: 既定値で上書き保存しないため
 /// 手で書き換えて読めなくなった項目があっても、ほかの設定まで失わないよう、その項目だけ既定値にする。
 /// JSON として読めなければ Err
-fn parse(bytes: &[u8]) -> serde_json::Result<Settings> {
+fn parse(bytes: &[u8], has_code: &dyn Fn() -> bool) -> serde_json::Result<Settings> {
     let mut json: Value = serde_json::from_slice(bytes)?;
     from_modes(&mut json);
     from_chrome_beta(&mut json);
-    from_hy_mt2_beta(&mut json);
+    from_relay(&mut json, has_code);
     // 読み替えは済んだので、今の番号にする（古い番号のまま保存すると、次に読むときにもう一度読み替えてしまう）
     if let Value::Object(fields) = &mut json {
         fields.insert("format".into(), FORMAT.into());
@@ -1717,8 +1768,8 @@ fn parse(bytes: &[u8]) -> serde_json::Result<Settings> {
     serde_json::from_value(json)
 }
 
-/// 0.9.7 の「おすすめ」は、翻訳が Chrome だった。その組み合わせのままの人は、今の「おすすめ」（翻訳は Hy-MT2）に
-/// 移す。移すのは 0.9.7 が保存したファイル（`format` が 1）だけで、あとから自分で同じ組み合わせを組んだ人は変えない
+/// 0.9.7 の「おすすめ」は、翻訳が Chrome だった。その組み合わせのままの人は、0.9.8 の「おすすめ」（翻訳は Hy-MT2）に
+/// 移す（コードがあれば、このあと `from_relay` がサーバーに移す）。移すのは 0.9.7 が保存したファイル（`format` が 1）だけで、あとから自分で同じ組み合わせを組んだ人は変えない
 fn from_chrome_beta(json: &mut Value) {
     let Value::Object(fields) = json else {
         return;
@@ -1732,24 +1783,44 @@ fn from_chrome_beta(json: &mut Value) {
     }
 }
 
-/// 0.9.9 までの「おすすめ」と「クラウド」は、翻訳に Hy-MT2 を名指ししていた。その組み合わせのままの人は、
-/// 今の組み合わせ（翻訳はサーバーが決める。DESIGN.md 17.4）に移す。移すのは 0.9.9 までが保存したファイル
-/// （`format` が 2 以下か、ない）だけで、あとから自分で同じ組み合わせを組んだ人は変えない
-fn from_hy_mt2_beta(json: &mut Value) {
+/// 0.10.0 までは、ベータのコードがあれば、Qwen と OpenRouter の一部のモデルを、サーバーが会社の形のまま中継していた
+/// （コードが、会社のキーの代わりになった）。今は、サーバーに頼む工程を「サーバー」と選ぶ（DESIGN.md 17.4）。
+/// コードを持っている人は、中継されていた選択肢を「サーバー」に移す（今までどおり、コードで動く）。コードのない人は、
+/// 自分のキーで使っているので変えない。移すのは 0.10.0 までが保存したファイル（`format` が 3 以下か、ない）だけ
+fn from_relay(json: &mut Value, has_code: &dyn Fn() -> bool) {
+    const RELAYED: [(&str, &str); 5] = [
+        ("live", "qwenAudioStreaming"),
+        ("transcription", "qwenAudio"),
+        ("terms", "pplxDecider"),
+        ("translation", "hyMt2"),
+        ("furigana", "decider"),
+    ];
     let Value::Object(fields) = json else {
         return;
     };
-    let old = |live: &str| {
-        serde_json::json!({
-            "live": live, "transcription": "qwenAudio", "terms": "pplxDecider",
-            "translation": "hyMt2", "furigana": "decider",
-        })
-    };
-    let saved_before = fields.get("format").and_then(Value::as_u64).unwrap_or(0) < 3;
-    let engines = fields.get("engines");
-    let moved = [old("chrome"), old("qwenAudioStreaming")];
-    if saved_before && moved.iter().any(|old| engines == Some(old)) {
-        fields["engines"]["translation"] = "server".into();
+    if fields.get("format").and_then(Value::as_u64).unwrap_or(0) >= 4 {
+        return;
+    }
+    // 選んでいる組み合わせと、覚えているカスタムの組み合わせ
+    let saved = ["engines", "customEngines"];
+    let relayed = |engines: &Value| RELAYED.iter().any(|(step, old)| engines[step] == *old);
+    // 資格情報ストアは、移すものがあるときだけ読む
+    if !saved
+        .iter()
+        .any(|key| fields.get(*key).is_some_and(relayed))
+        || !has_code()
+    {
+        return;
+    }
+    for key in saved {
+        let Some(Value::Object(engines)) = fields.get_mut(key) else {
+            continue;
+        };
+        for (step, old) in RELAYED {
+            if engines.get(step).is_some_and(|chosen| chosen == old) {
+                engines.insert(step.into(), "server".into());
+            }
+        }
     }
 }
 
@@ -1790,9 +1861,10 @@ fn release() -> &'static str {
 }
 
 /// 今の設定ファイルの形の番号（`Settings::format`）
-const FORMAT: u32 = 3;
+const FORMAT: u32 = 4;
 
-pub fn load(path: &Path) -> std::io::Result<Settings> {
+/// `has_code` は、ベータのコードを持っているか（古い設定を読み替えるときだけ聞く。`from_relay`）
+pub fn load(path: &Path, has_code: impl Fn() -> bool) -> std::io::Result<Settings> {
     let bytes = match std::fs::read(path) {
         Ok(bytes) => bytes,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
@@ -1805,7 +1877,7 @@ pub fn load(path: &Path) -> std::io::Result<Settings> {
         }
         Err(e) => return Err(e),
     };
-    match parse(&bytes) {
+    match parse(&bytes, &has_code) {
         Ok(settings) => Ok(settings.sanitized()),
         Err(e) => {
             let aside = path.with_extension("json.broken");
@@ -1840,6 +1912,15 @@ mod tests {
     use serde_json::json;
 
     use super::*;
+
+    /// ベータのコードを持っている人の設定として読む
+    fn parse(bytes: &[u8]) -> serde_json::Result<Settings> {
+        super::parse(bytes, &|| true)
+    }
+
+    fn load(path: &Path) -> std::io::Result<Settings> {
+        super::load(path, || true)
+    }
 
     #[test]
     fn account_id_accepts_steam_id64_and_account_id() {
@@ -1951,8 +2032,7 @@ mod tests {
             .into_iter()
             .filter(|mode| *mode != Engines::STANDARD)
         {
-            let needs_own_key = |p: &Provider| p.info().relay != Some(crate::secrets::Relay::Beta);
-            assert!(!mode.providers().iter().any(needs_own_key), "{mode:?}");
+            assert!(mode.providers().is_empty(), "{mode:?}");
         }
     }
 
@@ -2158,7 +2238,7 @@ mod tests {
         assert_eq!(llm_words.partial, plan_of(Engines::CHROME).partial);
     }
 
-    /// ふりがなを判定モデルに選ばせるなら、OpenRouter を使う（ベータの中継で足りる）。OpenAI は要らない
+    /// ふりがなを判定モデルに選ばせるなら、OpenRouter を使う。サーバーに選ばせるなら、会社の鍵は要らない
     #[test]
     fn decider_furigana_uses_openrouter_and_starts_from_the_dictionary() {
         let chosen = Settings {
@@ -2172,68 +2252,90 @@ mod tests {
         // 確定の文にも、まず辞書の読みを付ける
         assert!(chosen.plan().finals.marks());
         assert_eq!(chosen.engines.providers(), [Provider::OpenRouter]);
-        assert_eq!(Engines::BETA.furigana, RubySource::Decider);
-        assert!(!Engines::BETA.uses(Provider::OpenAi));
+        let server = Settings {
+            engines: Engines::BETA,
+            ..Default::default()
+        };
+        assert_eq!(server.plan().finals.ruby, Some(RubySource::Server));
+        assert!(server.plan().finals.marks() && server.engines.providers().is_empty());
+        // 用語も、サーバーに確かめさせる
+        assert!(Engines::BETA.judges_on_server() && Engines::BETA.decides_terms());
+        assert_eq!(
+            server.plan().finals.emphasis,
+            Some(EmphasisSource::Decisions)
+        );
     }
 
-    /// 0.9.6 までの「おすすめ」（翻訳は Hy-MT2）のままの人は、今の「おすすめ」に移る
+    /// 0.10.0 までの「おすすめ」と「クラウド」（モデルを名指しして、コードで中継していた）は、コードがあれば、
+    /// サーバーに頼む今の組み合わせに移る
     #[test]
-    fn the_beta_mode_of_0_9_7_moves_back_to_hy_mt2() {
-        let old = Engines {
-            translation: TranslationEngine::ChromeTranslator,
-            ..Engines::BETA
+    fn the_steps_a_code_used_to_relay_move_to_the_server() {
+        let old = |live: &str, translation: &str| {
+            json!({
+                "live": live, "transcription": "qwenAudio", "terms": "pplxDecider",
+                "translation": translation, "furigana": "decider",
+            })
         };
-        let saved = json!({ "format": 1, "engines": old });
-        let loaded = parse(saved.to_string().as_bytes()).unwrap();
-        assert_eq!(loaded.engines, Engines::BETA);
-        // 移したあとに自分で Chrome の翻訳を選んだ人は、次に読むときに変えない
-        let chosen = Settings {
-            engines: old,
-            ..loaded
-        };
-        let saved = serde_json::to_vec(&chosen).unwrap();
-        assert_eq!(parse(&saved).unwrap().engines, old);
-        // 0.9.6 までのファイル（`format` がない）も変えない
-        let saved = json!({ "engines": old });
-        assert_eq!(parse(saved.to_string().as_bytes()).unwrap().engines, old);
-        let saved = json!({ "engines": Engines::BETA });
-        let loaded = parse(saved.to_string().as_bytes()).unwrap();
-        assert_eq!(loaded.engines, Engines::BETA);
-    }
-
-    /// 0.9.9 までの「おすすめ」と「クラウド」（翻訳は Hy-MT2）は、翻訳をサーバーに任せる今の組み合わせに移る
-    #[test]
-    fn the_modes_that_named_hy_mt2_leave_the_model_to_the_server() {
-        let named = |mode: Engines| Engines {
-            translation: TranslationEngine::HyMt2,
-            ..mode
-        };
-        for mode in [Engines::BETA, Engines::CLOUD] {
-            assert_eq!(mode.translation, TranslationEngine::Server);
+        let without_code = |saved: &Value| super::parse(saved.to_string().as_bytes(), &|| false);
+        for (live, mode) in [
+            ("chrome", Engines::BETA),
+            ("qwenAudioStreaming", Engines::CLOUD),
+        ] {
             for saved in [
-                json!({ "format": 2, "engines": named(mode) }),
-                json!({ "engines": named(mode) }),
+                // 0.9.9 まで（翻訳は Hy-MT2）と、0.10.0 の rc（翻訳だけサーバー）
+                json!({ "engines": old(live, "hyMt2") }),
+                json!({ "format": 2, "engines": old(live, "hyMt2") }),
+                json!({ "format": 3, "engines": old(live, "server") }),
             ] {
                 let loaded = parse(saved.to_string().as_bytes()).unwrap();
-                assert_eq!(loaded.engines, mode);
+                assert_eq!((loaded.engines, loaded.format), (mode, FORMAT));
+                // コードのない人は、自分のキーで使っているので変えない
+                let own = without_code(&saved).unwrap().engines;
+                assert_eq!(own.transcription, FinalSource::QwenAudio);
+                assert!(own.uses(Provider::Qwen) && own.uses(Provider::OpenRouter));
             }
         }
-        // ほかの工程を変えていた人と、移したあとに自分で Hy-MT2 を選んだ人は、変えない
-        let custom = Engines {
+        // 0.9.7 の「おすすめ」（翻訳は Chrome）も同じ所に着く。コードがなければ、0.9.8 の組み合わせ
+        let saved = json!({ "format": 1, "engines": old("chrome", "chromeTranslator") });
+        let loaded = parse(saved.to_string().as_bytes()).unwrap();
+        assert_eq!(loaded.engines, Engines::BETA);
+        let own = without_code(&saved).unwrap().engines;
+        assert_eq!(own.translation, TranslationEngine::HyMt2);
+        // 自分で組んだ組み合わせも、中継されていた工程だけを移す。覚えているカスタムの組み合わせも
+        let custom = json!({
+            "live": "chrome", "transcription": "qwenAudio", "terms": "jev",
+            "translation": "qwenMtFlash", "furigana": "luna",
+        });
+        let saved = json!({ "format": 3, "engines": Engines::CHROME, "customEngines": custom });
+        let loaded = parse(saved.to_string().as_bytes()).unwrap();
+        let moved = Engines {
+            live: LiveSource::Chrome,
+            transcription: FinalSource::Server,
             terms: TermsEngine::Jev,
-            ..named(Engines::BETA)
+            translation: TranslationEngine::QwenMtFlash,
+            furigana: RubySource::Luna,
         };
-        let saved = json!({ "format": 2, "engines": custom });
-        assert_eq!(parse(saved.to_string().as_bytes()).unwrap().engines, custom);
+        assert_eq!(
+            (loaded.engines, loaded.custom_engines),
+            (Engines::CHROME, Some(moved))
+        );
+        // 移したあとに自分で Qwen を選んだ人（自分のキー）は、次に読むときに変えない
         let chosen = Settings {
-            engines: named(Engines::BETA),
+            engines: Engines::BETA.with_own_keys(),
             ..Settings::default()
         };
         let saved = serde_json::to_vec(&chosen).unwrap();
-        assert_eq!(parse(&saved).unwrap().engines, named(Engines::BETA));
-        // サーバーの翻訳は、会社のキーを使わない
-        assert_eq!(TranslationEngine::Server.provider(), None);
+        assert_eq!(parse(&saved).unwrap().engines, chosen.engines);
+        // 移すものがなければ、資格情報ストアを読まない
+        let saved = json!({ "engines": Engines::STANDARD }).to_string();
+        let untouched = super::parse(saved.as_bytes(), &|| panic!("read the keyring"));
+        assert_eq!(untouched.unwrap().engines, Engines::STANDARD);
+        // サーバーに頼む工程は、会社のキーを使わない
+        assert!(Engines::CLOUD.providers().is_empty() && Engines::CLOUD.server());
         assert_eq!(TranslationEngine::Server.source(), TranslationSource::Mt);
+        let own = Engines::CLOUD.with_own_keys();
+        assert!(!own.server());
+        assert_eq!(own.providers(), [Provider::Qwen, Provider::OpenRouter]);
     }
 
     /// ふりがなを GPT-6 Luna にすると、読みを直すモデルだけが変わる（辞書の名前の読みは `models.readings` のまま）

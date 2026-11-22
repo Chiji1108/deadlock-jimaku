@@ -30,6 +30,8 @@ use crate::whisper::Whisper;
 mod local;
 mod openai;
 mod qwen;
+mod server;
+mod timed;
 
 /// 発話を開く前の音声も少し送る（VAD が開くのは話し始めより少し遅い）
 const PREROLL_SAMPLES: usize = SAMPLE_RATE as usize * 3 / 10;
@@ -122,6 +124,7 @@ pub async fn realtime(
             qwen::live(cfg, access, hints, speaking, input, deltas).await
         }
         Transcriber::Api(_) => openai::live(cfg, hints, speaking, input, deltas).await,
+        Transcriber::Server(server) => server::live(server, hints, speaking, input, deltas).await,
         Transcriber::Local(speech) => {
             local::live(&local::Recognizer::Speech(speech), speaking, input, deltas).await
         }
@@ -162,6 +165,8 @@ fn xai_refused(status: StatusCode, body: &str) -> bool {
 pub enum Transcriber {
     /// 会社の API（OpenAI、xAI、Qwen、OpenRouter）
     Api(Access),
+    /// 開発者のサーバーの仕事の口（DESIGN.md 17.4）
+    Server(crate::access::Server),
     /// PC の中で動く speech.cpp（Haas-ja）。途中の字幕と確定で、同じ 1 つを使う
     Local(Arc<Speech>),
     /// PC の中で動く whisper.cpp。途中の字幕と確定で、同じ 1 つを使う
@@ -201,6 +206,9 @@ pub async fn transcribe(http: &reqwest::Client, req: BatchRequest<'_>) -> anyhow
     {
         return qwen::transcribe(http, access, req).await;
     }
+    if let Transcriber::Server(server) = req.transcriber {
+        return server::transcribe(http, server, req).await;
+    }
     // 音声をそのまま渡す。用語は、立てるときにホットワードとして渡してある
     if let Transcriber::Reazon(reazon) = req.transcriber {
         let text = reazon.transcribe(&audio::samples(&req.wav)?).await?;
@@ -224,6 +232,7 @@ pub async fn transcribe(http: &reqwest::Client, req: BatchRequest<'_>) -> anyhow
             return text(&res.json().await?);
         }
         // 上で頼んでいる
+        Transcriber::Server(_) => bail!("the server is asked above"),
         Transcriber::Reazon(_) => bail!("ReazonSpeech is asked above"),
         Transcriber::Whisper(whisper) => {
             let form = whisper_form(req.hints).part("file", file);
@@ -282,8 +291,7 @@ pub async fn transcribe(http: &reqwest::Client, req: BatchRequest<'_>) -> anyhow
             Provider::Xai if xai_refused(status, &body) => StatusCode::UNAUTHORIZED,
             _ => status,
         };
-        let reason = relay::refusal_reason(&body);
-        if let Some(refused) = relay::refusal(access, status, reason.as_deref()) {
+        if let Some(refused) = relay::refusal(access, status) {
             return Err(refused.into());
         }
         bail!("{status}: {body}");
@@ -545,27 +553,32 @@ mod tests {
 
     /// 本物の QwenCloud に、録音を 2 つの発話として実時間で流し、途中の文字がどの発話に届くかを見る:
     /// `cargo test -p overlays-core qwen_streaming -- --ignored --nocapture`
-    /// `BETA_TEST_API`（開発者のサーバーの根元。`http://127.0.0.1:8799/v1` など）があれば、ベータのコードをもらって中継を通す
+    /// `BETA_TEST_API`（開発者のサーバーの根元。`http://127.0.0.1:8799/v1` など）があれば、ベータのコードをもらって、
+    /// サーバーの途中の文字起こし（`/v2/live`）に流す
     #[tokio::test]
     #[ignore = "calls QwenCloud"]
     async fn qwen_streaming_writes_each_utterance_as_it_is_said() {
         let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
-        let access = match std::env::var("BETA_TEST_API") {
+        let transcriber = match std::env::var("BETA_TEST_API") {
             Ok(api) => {
                 // コードは 1 日に同じ所から 3 つまでなので、持っていれば `BETA_TEST_CODE` で渡す
                 let code = match std::env::var("BETA_TEST_CODE") {
                     Ok(code) => code,
                     Err(_) => crate::relay::join_beta(&api).await.unwrap(),
                 };
-                Access::code(Provider::Qwen, code, &api)
+                Transcriber::Server(crate::access::Server::new(&api, code))
             }
-            Err(_) => Access::key(Provider::Qwen, std::env::var("QWEN_SOUTH_API_KEY").unwrap()),
+            Err(_) => {
+                let key = std::env::var("QWEN_SOUTH_API_KEY").unwrap();
+                Transcriber::Api(Access::key(Provider::Qwen, key))
+            }
         };
+        let own_key = matches!(transcriber, Transcriber::Api(_));
         let meter = Arc::new(Meter::new(
             std::env::temp_dir().join("overlays-qwen-live-test-usage.json"),
         ));
         let cfg = RealtimeConfig {
-            transcriber: Transcriber::Api(access),
+            transcriber,
             model: "qwen-audio-3.1-asr-flash-streaming".into(),
             delay: "low".into(),
             meter: meter.clone(),
@@ -580,9 +593,13 @@ mod tests {
         let spans = &[("a", 0, 4300, 30), ("b", 4300, 60_000, 4)];
         let last = said_live(&cfg, &hints, spans).await;
         assert!(last["a"].contains("デッドロック") && last["b"].contains("バイオレット"));
-        let live = meter.watch().borrow().session[&Use::Realtime].clone();
+        // サーバーに頼んだ分は、料金に数えない（払うのは開発者）
+        let live = meter.watch().borrow().session.get(&Use::Realtime).cloned();
         println!("{live:?}");
-        assert!(live.usd > 0.0 && !live.unpriced);
+        assert_eq!(
+            live.is_some_and(|live| live.usd > 0.0 && !live.unpriced),
+            own_key
+        );
     }
 
     #[test]

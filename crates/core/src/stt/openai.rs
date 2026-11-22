@@ -104,9 +104,6 @@ pub(super) async fn live(
             msg = stream.next() => {
                 let event = match msg {
                     Some(Ok(Message::Text(text))) => serde_json::from_str::<Value>(&text)?,
-                    Some(Ok(Message::Close(Some(frame)))) if frame.reason == relay::LIMIT => {
-                        return Err(TranscriptionError::BetaLimit.into());
-                    }
                     Some(Ok(Message::Close(frame))) => bail!("realtime closed: {frame:?}"),
                     Some(Ok(_)) => continue,
                     Some(Err(e)) => return Err(e.into()),
@@ -159,12 +156,10 @@ async fn connect(cfg: &RealtimeConfig, hints: &Hints) -> anyhow::Result<(Sink, S
     let (ws, _) = match tokio_tungstenite::connect_async(request).await {
         Ok(connected) => connected,
         Err(e) => {
-            if let tungstenite::Error::Http(res) = &e {
-                let reason = res.headers().get(relay::REFUSAL_HEADER);
-                let reason = reason.and_then(|value| value.to_str().ok());
-                if let Some(refused) = relay::refusal(access, res.status(), reason) {
-                    return Err(refused.into());
-                }
+            if let tungstenite::Error::Http(res) = &e
+                && let Some(refused) = relay::refusal(access, res.status())
+            {
+                return Err(refused.into());
             }
             return Err(e).context("connect realtime");
         }

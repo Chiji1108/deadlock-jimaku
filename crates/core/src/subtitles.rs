@@ -27,7 +27,7 @@ use crate::local::Speech;
 use crate::now_ms;
 use crate::reazon::Reazon;
 use crate::segment::{Close, Event, Segmenter};
-use crate::settings::{LiveSource, Settings, TextSource};
+use crate::settings::{FinalSource, LiveSource, Settings, TextSource};
 use crate::store::{ChromeEvent, Store};
 use crate::stt::{self, BatchRequest, Hints, RealtimeConfig, Transcriber};
 use crate::types::{
@@ -82,8 +82,11 @@ pub async fn run(
     // PC の中の Whisper は、途中の字幕だけに立ててあることもある
     let whisper = |used: bool| whisper.clone().filter(|_| used).map(Transcriber::Whisper);
     // ReazonSpeech は確定だけなので、途中の字幕の Haas-ja（`local`）より先に見る
+    // 開発者のサーバーに頼む工程
+    let server = |used: bool| (accesses.server().filter(|_| used)).map(Transcriber::Server);
     let transcriber = whisper(engines.transcription.whisper().is_some())
         .or_else(|| reazon.map(Transcriber::Reazon))
+        .or_else(|| server(engines.transcription == FinalSource::Server))
         .or_else(|| Transcriber::of(engines.transcription.provider(), &accesses, &local));
     let transcriber = transcriber.expect("finals without a transcriber");
 
@@ -118,6 +121,7 @@ pub async fn run(
     let live = plan.partial.text.filter(|text| *text != TextSource::Chrome);
     let live = live.and_then(|_| {
         whisper(engines.live == LiveSource::Whisper)
+            .or_else(|| server(engines.live == LiveSource::Server))
             .or_else(|| Transcriber::of(engines.live.provider(), &accesses, &local))
     });
     let realtime = if let Some(transcriber) = live {
@@ -757,7 +761,7 @@ mod tests {
     use crate::segment::{FRAME, FRAME_MS};
     use crate::usage::Meter;
     use axum::http::StatusCode;
-    use futures_util::{SinkExt, StreamExt};
+    use futures_util::SinkExt;
     use serde_json::json;
     use tokio::net::TcpListener;
     use tokio_tungstenite::tungstenite::Message;
@@ -794,7 +798,7 @@ mod tests {
         tokio::sync::broadcast::Receiver<crate::types::ServerMsg>,
     ) {
         let (done_tx, _done) = mpsc::channel(1);
-        let access = Access::code(Provider::OpenAi, "code".into(), "http://127.0.0.1:9");
+        let access = Access::at(Provider::OpenAi, "code", "http://127.0.0.1:9");
         let (pipeline, _finished) = hybrid_pipeline_to(access, done_tx).await;
         let messages = pipeline.store.subscribe();
         (pipeline, messages)
@@ -900,15 +904,25 @@ mod tests {
     }
 
     /// 確定の文字起こしを 1 回送り、起きたことを返す
-    async fn transcribe_through(access: Access) -> Vec<Done> {
-        transcribe_with(access, Vec::new()).await
+    async fn transcribe_through(transcriber: Transcriber) -> Vec<Done> {
+        transcribe_with(transcriber, Vec::new()).await
     }
 
-    async fn transcribe_with(transcriber: Access, keywords: Vec<String>) -> Vec<Done> {
+    /// 開発者のサーバーに頼む（コードは `code`）
+    fn server(api: &str) -> Transcriber {
+        Transcriber::Server(crate::access::Server::new(api, "code".into()))
+    }
+
+    /// 会社に、自分のキーで頼む
+    fn company(provider: Provider, api: &str) -> Transcriber {
+        Transcriber::Api(Access::at(provider, "key", api))
+    }
+
+    async fn transcribe_with(transcriber: Transcriber, keywords: Vec<String>) -> Vec<Done> {
         let dir = tempfile::tempdir().unwrap();
         let ctx = Arc::new(BatchContext {
             http: crate::http().clone(),
-            transcriber: Transcriber::Api(transcriber),
+            transcriber,
             model: "gpt-transcribe".into(),
             hints: Arc::new(Hints {
                 language: "ja".into(),
@@ -923,13 +937,17 @@ mod tests {
         std::iter::from_fn(|| done_rx.try_recv().ok()).collect()
     }
 
-    /// 文字起こしの要求にいつも同じ答えを返すサーバー
+    /// 文字起こしの要求にいつも同じ答えを返すサーバー（会社の口と、開発者のサーバーの仕事の口）
     async fn answering(status: StatusCode, body: serde_json::Value) -> String {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let api = format!("http://{}", listener.local_addr().unwrap());
         let answer = move || async move { (status, axum::Json(body)) };
-        let router =
-            axum::Router::new().route("/openai/audio/transcriptions", axum::routing::post(answer));
+        let router = axum::Router::new()
+            .route(
+                "/openai/audio/transcriptions",
+                axum::routing::post(answer.clone()),
+            )
+            .route("/v2/transcribe", axum::routing::post(answer));
         tokio::spawn(async move { axum::serve(listener, router).await });
         api
     }
@@ -954,29 +972,41 @@ mod tests {
             ),
         ] {
             let api = answering(status, json!({ "error": error })).await;
-            let done =
-                transcribe_through(Access::code(Provider::OpenAi, "code".into(), &api)).await;
+            let done = transcribe_through(server(&api)).await;
             assert!(
                 matches!(&done[0], Done::Refused(refused) if *refused == expected),
                 "{error}"
             );
             assert!(matches!(done[1], Done::Transcribed { text: None, .. }));
         }
+        // 会社が鍵を断ったとき。会社の 403 は、サーバーの理由としては読まない
+        let api = answering(StatusCode::UNAUTHORIZED, json!({ "error": {} })).await;
+        let done = transcribe_through(company(Provider::OpenAi, &api)).await;
+        let provider = Provider::OpenAi;
+        let expected = TranscriptionError::InvalidKey { provider };
+        assert!(matches!(&done[0], Done::Refused(refused) if *refused == expected));
+        let api = answering(StatusCode::FORBIDDEN, json!({ "error": "limit" })).await;
+        let done = transcribe_through(company(Provider::OpenAi, &api)).await;
+        assert!(matches!(done[..], [Done::Transcribed { text: None, .. }]));
     }
 
     /// 1 つの発話の確定の文が抜けるだけで、字幕は続く
     #[tokio::test]
     async fn a_failure_that_may_pass_does_not_stop_the_subtitles() {
-        let rate = json!({ "error": "rate" });
+        let busy = json!({ "error": "busy" });
+        let stopped = json!({ "error": "stopped" });
         let unavailable = json!({ "error": { "message": "try again" } });
         for api in [
-            answering(StatusCode::TOO_MANY_REQUESTS, rate).await,
+            answering(StatusCode::TOO_MANY_REQUESTS, busy).await,
+            // サーバーが、確定の文字起こしだけを止めている
+            answering(StatusCode::FORBIDDEN, stopped).await,
             answering(StatusCode::INTERNAL_SERVER_ERROR, unavailable).await,
             "http://127.0.0.1:9".to_owned(),
         ] {
-            let done =
-                transcribe_through(Access::code(Provider::OpenAi, "code".into(), &api)).await;
-            assert!(matches!(done[..], [Done::Transcribed { text: None, .. }]));
+            for transcriber in [server(&api), company(Provider::OpenAi, &api)] {
+                let done = transcribe_through(transcriber).await;
+                assert!(matches!(done[..], [Done::Transcribed { text: None, .. }]));
+            }
         }
     }
 
@@ -1010,9 +1040,7 @@ mod tests {
 
         let mut keywords = vec!["x".repeat(51)];
         keywords.extend((0..150).map(|i| format!("用語{i}")));
-        // コードでも自分のキーでも、同じ欄を送る（コードは開発者のサーバーが中継する）
-        let transcriber = Access::code(Provider::Xai, "code".into(), &api);
-        let done = transcribe_with(transcriber, keywords).await;
+        let done = transcribe_with(company(Provider::Xai, &api), keywords).await;
         assert!(
             matches!(&done[..], [Done::Transcribed { text: Some(t), .. }] if t == "ヘイズ強い")
         );
@@ -1048,9 +1076,9 @@ mod tests {
             let answer = move || async move { (status, body) };
             let router = axum::Router::new().route("/xai/stt", axum::routing::post(answer));
             tokio::spawn(async move { axum::serve(listener, router).await });
-            let transcriber = Access::code(Provider::Xai, "code".into(), &api);
-            let done = transcribe_with(transcriber, Vec::new()).await;
-            let expected = TranscriptionError::BetaRefused;
+            let done = transcribe_with(company(Provider::Xai, &api), Vec::new()).await;
+            let provider = Provider::Xai;
+            let expected = TranscriptionError::InvalidKey { provider };
             assert_eq!(
                 matches!(&done[0], Done::Refused(r) if *r == expected),
                 refused,
@@ -1078,10 +1106,7 @@ mod tests {
                 if requests.fetch_add(1, Ordering::SeqCst) == 0 {
                     std::future::pending::<()>().await;
                 }
-                (
-                    StatusCode::FORBIDDEN,
-                    axum::Json(json!({ "error": "revoked" })),
-                )
+                StatusCode::UNAUTHORIZED
             }
         };
         let router =
@@ -1135,7 +1160,7 @@ mod tests {
         let (api, requests) = refusing_after_one_silent_request().await;
         let (done_tx, done_rx) = mpsc::channel(64);
         let (mut pipeline, finished_rx) =
-            hybrid_pipeline_to(Access::code(Provider::OpenAi, "code".into(), &api), done_tx).await;
+            hybrid_pipeline_to(Access::at(Provider::OpenAi, "code", &api), done_tx).await;
         let store = pipeline.store.clone();
         let mut messages = store.subscribe();
         let open = open_utterance(&mut pipeline);
@@ -1150,9 +1175,10 @@ mod tests {
             .await
             .expect("the refusal does not wait for the silent request")
             .unwrap_err();
+        let provider = Provider::OpenAi;
         assert_eq!(
             TranscriptionError::from_error(&refused),
-            TranscriptionError::BetaRefused
+            TranscriptionError::InvalidKey { provider }
         );
 
         tokio::time::sleep(Duration::from_millis(100)).await;
@@ -1170,7 +1196,7 @@ mod tests {
         let (api, _requests) = refusing_after_one_silent_request().await;
         let (done_tx, done_rx) = mpsc::channel(64);
         let (mut pipeline, finished_rx) =
-            hybrid_pipeline_to(Access::code(Provider::OpenAi, "code".into(), &api), done_tx).await;
+            hybrid_pipeline_to(Access::at(Provider::OpenAi, "code", &api), done_tx).await;
         let events = pipeline.store.subscribe_chrome();
         utterance(&mut pipeline);
         utterance(&mut pipeline);
@@ -1182,17 +1208,18 @@ mod tests {
             .await
             .expect("the refusal does not wait for the silent request")
             .unwrap_err();
+        let provider = Provider::OpenAi;
         assert_eq!(
             TranscriptionError::from_error(&refused),
-            TranscriptionError::BetaRefused
+            TranscriptionError::InvalidKey { provider }
         );
     }
 
     /// 字幕の途中で断られたら張り直さず、`Done::Refused` を送って終わる
-    async fn stops_on_refusal(access: Access, expected: TranscriptionError) {
+    async fn stops_on_refusal(transcriber: Transcriber, expected: TranscriptionError) {
         let dir = tempfile::tempdir().unwrap();
         let config = RealtimeConfig {
-            transcriber: Transcriber::Api(access),
+            transcriber,
             model: "gpt-live-transcribe".into(),
             delay: "low".into(),
             meter: Arc::new(Meter::new(dir.path().join("usage.json"))),
@@ -1217,56 +1244,67 @@ mod tests {
             .unwrap();
     }
 
+    /// サーバーは、つないでいる間に上限に届くと切る（server/src/qwenLive.ts）。張り直すと、つなぐ前に断られる
     #[tokio::test]
-    async fn a_realtime_session_closed_at_the_daily_limit_does_not_reconnect() {
+    async fn a_live_session_closed_at_the_daily_limit_stops_when_it_reconnects() {
+        use tokio::io::AsyncWriteExt;
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let api = format!("http://{}", listener.local_addr().unwrap());
         tokio::spawn(async move {
             let (socket, _) = listener.accept().await.unwrap();
             let mut ws = tokio_tungstenite::accept_async(socket).await.unwrap();
-            let event = |name: &str| Message::text(json!({ "type": name }).to_string());
-            ws.send(event("session.created")).await.unwrap();
-            ws.next().await.unwrap().unwrap();
-            ws.send(event("session.updated")).await.unwrap();
-            // Worker の close（server/src/realtime.ts）
+            let ready = Message::text(json!({ "type": "ready" }).to_string());
+            ws.send(ready).await.unwrap();
             let frame = CloseFrame {
                 code: CloseCode::Policy,
                 reason: relay::LIMIT.into(),
             };
             ws.close(Some(frame)).await.unwrap();
+            let (mut socket, _) = listener.accept().await.unwrap();
+            let refused = "HTTP/1.1 403 Forbidden\r\nx-refusal: limit\r\ncontent-length: 0\r\n\r\n";
+            socket.write_all(refused.as_bytes()).await.unwrap();
         });
-        let access = Access::code(Provider::OpenAi, "code".into(), &api);
-        stops_on_refusal(access, TranscriptionError::BetaLimit).await;
+        stops_on_refusal(server(&api), TranscriptionError::BetaLimit).await;
     }
 
+    /// サーバーが、つなぐ前に断ったとき。理由はヘッダーで読む（401 にはヘッダーがなくても、コードが使えない）
     #[tokio::test]
-    async fn a_realtime_handshake_refused_at_the_daily_limit_does_not_reconnect() {
-        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let api = format!("http://{}", listener.local_addr().unwrap());
-        // Worker の、コードを確かめる所の答え
-        let refuse = || async {
+    async fn a_live_handshake_refused_by_the_server_does_not_reconnect() {
+        for (status, reason, expected) in [
             (
                 StatusCode::FORBIDDEN,
-                [(relay::REFUSAL_HEADER, relay::LIMIT)],
-                axum::Json(json!({ "error": "limit" })),
-            )
-        };
-        let router = axum::Router::new().route("/openai/realtime", axum::routing::get(refuse));
-        tokio::spawn(async move { axum::serve(listener, router).await });
-        let access = Access::code(Provider::OpenAi, "code".into(), &api);
-        stops_on_refusal(access, TranscriptionError::BetaLimit).await;
+                Some(relay::LIMIT),
+                TranscriptionError::BetaLimit,
+            ),
+            (
+                StatusCode::UNAUTHORIZED,
+                None,
+                TranscriptionError::BetaRefused,
+            ),
+        ] {
+            let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let api = format!("http://{}", listener.local_addr().unwrap());
+            let refuse = move || async move {
+                let header = reason.map(|reason| (relay::REFUSAL_HEADER, reason));
+                (status, axum::response::AppendHeaders(header))
+            };
+            let router = axum::Router::new().route("/v2/live", axum::routing::get(refuse));
+            tokio::spawn(async move { axum::serve(listener, router).await });
+            stops_on_refusal(server(&api), expected).await;
+        }
     }
 
-    /// Worker の 401 にはヘッダーがない
+    /// 会社が、つなぐ前に鍵を断ったとき
     #[tokio::test]
-    async fn a_realtime_handshake_refused_for_an_unknown_code_does_not_reconnect() {
+    async fn a_realtime_handshake_refused_for_a_wrong_key_does_not_reconnect() {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let api = format!("http://{}", listener.local_addr().unwrap());
         let refuse = || async { StatusCode::UNAUTHORIZED };
         let router = axum::Router::new().route("/openai/realtime", axum::routing::get(refuse));
         tokio::spawn(async move { axum::serve(listener, router).await });
-        let access = Access::code(Provider::OpenAi, "code".into(), &api);
-        stops_on_refusal(access, TranscriptionError::BetaRefused).await;
+        let provider = Provider::OpenAi;
+        let expected = TranscriptionError::InvalidKey { provider };
+        stops_on_refusal(company(provider, &api), expected).await;
     }
 
     #[test]

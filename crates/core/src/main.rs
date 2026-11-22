@@ -34,7 +34,10 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let data_dir = default_data_dir();
-    let settings = settings::load(&data_dir.join(settings::FILE));
+    let settings = settings::load(
+        &data_dir.join(settings::FILE),
+        overlays_core::secrets::has_beta,
+    );
     let store = Store::new(settings, data_dir);
     tokio::spawn(runtime::run(
         store.clone(),
