@@ -58,6 +58,8 @@ const year = new Date().getFullYear();
         <meta name="robots" content="noindex" />
       )
     }
+    <!-- ページごとに head に足すもの（トップの構造化データなど） -->
+    <slot name="head" />
   </head>
   <body class="min-h-screen font-sans antialiased">
     <header class="sticky top-0 z-20 bg-paper/85 backdrop-blur">
