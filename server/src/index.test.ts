@@ -155,7 +155,7 @@ describe("beta", () => {
   it("gives a code that relays Qwen and OpenRouter with the developer's keys, under a small daily limit", async () => {
     const code = await joined();
     const gift = await call("/gift", { token: code });
-    expect(await gift.json()).toEqual({ tasks: ["translate"], providers: ["qwen", "openrouter"], remaining: 1 });
+    expect(await gift.json()).toEqual({ tasks: ["translate", "decide", "transcribe", "live"], providers: ["qwen", "openrouter"], remaining: 1 });
     expect((await codeByValue(db, code))!.dailyLimitUsd).toBe(0.5);
     // 0.7 までのギフトコードの口は、もうない
     for (const path of ["/openai/responses", "/xai/stt", "/share/codes"]) {
@@ -502,13 +502,19 @@ describe("tasks (/v2)", () => {
     expect(JSON.stringify(body)).toContain("[Source Text]\\n⟦Haze⟧強い");
     expect(await dayUsd(code)).toBeCloseTo(0.002, 8);
     const state = await ask("/status", code);
-    expect(await state.json()).toEqual({ tasks: ["translate"], providers: ["qwen", "openrouter"], remaining: 0.996 });
+    const tasks = ["translate", "decide", "transcribe", "live"];
+    expect(await state.json()).toEqual({ tasks, providers: ["qwen", "openrouter"], remaining: 0.996 });
   });
 
   it("changes the model from the admin page, without a new app", async () => {
     const code = await joined();
     const listed = (await (await manage("/api/tasks")).json()) as { tasks: { name: string; model: string; models: unknown[] }[] };
-    expect(listed.tasks).toMatchObject([{ name: "translate", label: "翻訳", model: "hy-mt2", enabled: true }]);
+    expect(listed.tasks).toMatchObject([
+      { name: "translate", label: "翻訳", model: "hy-mt2", enabled: true },
+      { name: "decide", model: "pplx-decider", enabled: true },
+      { name: "transcribe", model: "qwen-audio", enabled: true },
+      { name: "live", model: "qwen-audio-streaming", enabled: true },
+    ]);
     expect(listed.tasks[0]!.models).toContainEqual({ id: "qwen-mt-flash", label: "Qwen-MT-Flash" });
     expect((await manage("/api/tasks/translate", "PATCH", { model: "qwen-mt-flash" })).status).toBe(204);
     for (const [path, body] of [
@@ -549,9 +555,13 @@ describe("tasks (/v2)", () => {
     expect(chat).not.toHaveBeenCalled();
     expect(await dayUsd(code)).toBe(0);
     // アプリには、頼める仕事から外して伝える。コードは使えるまま（ほかの工程は続く）
-    expect(await (await ask("/status", code)).json()).toMatchObject({ tasks: [], providers: ["qwen", "openrouter"] });
+    expect(await (await ask("/status", code)).json()).toMatchObject({
+      tasks: ["decide", "transcribe", "live"],
+      providers: ["qwen", "openrouter"],
+    });
     // 止めても、選んでいたモデルは変わらない
-    expect(await (await manage("/api/tasks")).json()).toMatchObject({ tasks: [{ model: "hy-mt2", enabled: false }] });
+    const { tasks } = (await (await manage("/api/tasks")).json()) as { tasks: unknown[] };
+    expect(tasks[0]).toMatchObject({ model: "hy-mt2", enabled: false });
     expect((await manage("/api/tasks/translate", "PATCH", { enabled: true })).status).toBe(204);
     expect((await translate(code)).status).toBe(200);
     // そのモデルの会社のキーがなくても、止めているのと同じ。ベータを閉じたときも
@@ -589,6 +599,239 @@ describe("tasks (/v2)", () => {
     await env.DB.prepare("UPDATE codes SET revoked = 1 WHERE id = ?").bind(id).run();
     expect(await refused(await translate(code))).toEqual([403, "revoked"]);
     expect(chat).not.toHaveBeenCalled();
+  });
+
+  const questions = [
+    {
+      name: "c0",
+      instructions: "Which one is meant by ヘイズ?",
+      choices: [
+        { value: "hero:13", description: "Haze: Deadlock hero" },
+        { value: "none", description: "not a game term" },
+      ],
+    },
+    { name: "c1", instructions: "Which one?", choices: [{ value: "none", description: "not a game term" }] },
+  ];
+  const decision = { state: "ヘイズ強い", questions };
+  const sound = { audio: "AAAA", language: "ja", hints: ["ヘイズ", "ビバップ"] };
+
+  it("picks among the app's candidates and transcribes, with the models the server chose", async () => {
+    const code = await joined();
+    vi.mocked(openrouter).mockResolvedValue(
+      Response.json({ answers: { c0: { choice: "hero:13" }, c1: {}, c9: { choice: "x" } }, usage: { cost: 0.001 } }),
+    );
+    const decided = await ask("/decide", code, { ...decision, model: "gpt-9" });
+    // 答えのない問いと、聞いていない問いは返さない
+    expect(await decided.json()).toEqual({ choices: { c0: "hero:13" } });
+    expect(vi.mocked(openrouter).mock.calls[0]).toEqual([
+      "/systemone",
+      "sk-beta-openrouter",
+      {
+        model: "perplexity/pplx-decider-v1.2",
+        state: "ヘイズ強い",
+        questions: {
+          c0: {
+            type: "choice",
+            instructions: "Which one is meant by ヘイズ?",
+            criteria: { "hero:13": "Haze: Deadlock hero", none: "not a game term" },
+          },
+          c1: { type: "choice", instructions: "Which one?", criteria: { none: "not a game term" } },
+        },
+      },
+    ]);
+    expect(await dayUsd(code)).toBeCloseTo(0.001, 8);
+
+    vi.mocked(qwen).mockResolvedValue(
+      Response.json({ output: { text: " ヘイズ強い\n" }, usage: { input_tokens: 200_000, output_tokens: 100_000 } }),
+    );
+    expect(await (await ask("/transcribe", code, sound)).json()).toEqual({ text: "ヘイズ強い" });
+    expect(vi.mocked(qwen).mock.calls[0]).toEqual([
+      "/api/v1/services/aigc/multimodal-generation/generation",
+      "sk-beta-qwen",
+      {
+        model: "qwen-audio-3.1-asr-flash",
+        input: {
+          messages: [
+            {
+              role: "user",
+              content: [
+                { type: "input_text", text: "ヘイズ、ビバップ、" },
+                { type: "input_audio", input_audio: { data: "data:audio/wav;base64,AAAA" } },
+              ],
+            },
+          ],
+        },
+        parameters: { format: "wav", sample_rate: "16000", language_hints: ["ja"] },
+      },
+    ]);
+    // 200,000 × $0.15 + 100,000 × $0.47（100 万トークンあたり）
+    expect(await dayUsd(code)).toBeCloseTo(0.001 + 0.077, 8);
+    // 言葉は 400 文字まで。なければ音声だけを送る
+    await ask("/transcribe", code, { ...sound, hints: ["あ".repeat(100), "い".repeat(100), "う".repeat(100), "え".repeat(100)] });
+    await ask("/transcribe", code, { audio: "AAAA", language: "ja" });
+    const content = (call: number) =>
+      (vi.mocked(qwen).mock.calls[call]![2] as { input: { messages: { content: { text?: string }[] }[] } }).input.messages[0]!.content;
+    expect(content(1)[0]!.text).toHaveLength(303);
+    expect(content(2)).toHaveLength(1);
+  });
+
+  it("takes only what a task needs, and hides the upstream's trouble", async () => {
+    const code = await joined();
+    for (const bad of [
+      { ...decision, state: 1 },
+      { ...decision, questions: [] },
+      { ...decision, questions: { c0: questions[0] } },
+      { ...decision, questions: [questions[0], questions[0]] },
+      { ...decision, questions: [{ ...questions[0], choices: [] }] },
+      { ...decision, questions: [{ ...questions[0], choices: [{ value: "a" }] }] },
+      { ...decision, questions: [null] },
+      { ...decision, questions: Array.from({ length: 41 }, (_, i) => ({ ...questions[0], name: `c${i}` })) },
+      { ...decision, state: "あ".repeat(32_000) },
+    ]) {
+      expect([(await ask("/decide", code, bad)).status, bad]).toEqual([400, bad]);
+    }
+    for (const bad of [
+      { ...sound, audio: "data:audio/wav;base64,AAAA" },
+      { ...sound, audio: "" },
+      { ...sound, language: "Japanese" },
+      { ...sound, hints: "ヘイズ" },
+      { ...sound, hints: ["あ".repeat(101)] },
+      { ...sound, hints: Array.from({ length: 201 }, () => "あ") },
+    ]) {
+      expect([(await ask("/transcribe", code, bad)).status, bad]).toEqual([400, bad]);
+    }
+    expect(openrouter).not.toHaveBeenCalled();
+    expect(qwen).not.toHaveBeenCalled();
+
+    const refused = async (res: Response) => [res.status, ((await res.json()) as { error: string }).error];
+    vi.mocked(openrouter).mockResolvedValue(new Response("the developer's key is out of credit", { status: 402 }));
+    expect(await refused(await ask("/decide", code, decision))).toEqual([502, "upstream"]);
+    vi.mocked(qwen).mockResolvedValue(new Response("slow down", { status: 429 }));
+    const busy = await ask("/transcribe", code, sound);
+    expect(busy.headers.get("X-Refusal")).toBe("busy");
+    expect(await refused(busy)).toEqual([429, "busy"]);
+    // 文のない答え
+    vi.mocked(qwen).mockResolvedValue(Response.json({ output: {}, usage: { input_tokens: 0, output_tokens: 0 } }));
+    expect(await refused(await ask("/transcribe", code, sound))).toEqual([502, "upstream"]);
+    expect(await dayUsd(code)).toBe(0);
+
+    await manage("/api/tasks/decide", "PATCH", { enabled: false });
+    expect(await refused(await ask("/decide", code, decision))).toEqual([403, "stopped"]);
+    const state = (await (await ask("/status", code)).json()) as { tasks: string[] };
+    expect(state.tasks).toEqual(["translate", "transcribe", "live"]);
+  });
+
+  describe("live", () => {
+    const audio = (seconds: number) => new ArrayBuffer(seconds * 32_000);
+    const event = (name: string, payload: unknown = {}) => JSON.stringify({ header: { event: name }, payload });
+    const SECOND = (2 * (11 * 0.93 + 3 * 0.7)) / 1e6;
+    let client: FakeSocket;
+    let upstream: FakeSocket;
+    const connect = (code: string, language = "ja") =>
+      call(`/live?language=${language}`, { version: "v2", token: code, headers: { Upgrade: "websocket" } });
+    async function settled() {
+      await Promise.allSettled(pending);
+      pending = [];
+    }
+
+    beforeEach(() => {
+      client = new FakeSocket();
+      upstream = new FakeSocket();
+      stubSockets(() => client);
+      vi.mocked(qwenLive).mockResolvedValue({ webSocket: upstream } as unknown as Response);
+    });
+    afterEach(() => vi.unstubAllGlobals());
+
+    it("talks to Qwen for the app: the app only streams audio and reads sentences", async () => {
+      const code = await joined();
+      await connect(code);
+      const [started] = upstream.sent.map((sent) => JSON.parse(sent as string));
+      expect(started).toMatchObject({
+        header: { action: "run-task", task_id: expect.stringMatching(/^[0-9a-f]{32}$/), streaming: "duplex" },
+        payload: {
+          model: "qwen-audio-3.1-asr-flash-streaming",
+          parameters: { format: "pcm", sample_rate: 16_000, language_hints: ["ja"] },
+        },
+      });
+      upstream.message(event("task-started"));
+      client.message(audio(1));
+      const words = [
+        { begin_time: 400, text: "さあ", punctuation: "" },
+        { begin_time: 900, text: "始まりました", punctuation: "。" },
+      ];
+      const usage = { input_tokens: 11, output_tokens: 3 };
+      upstream.message(event("result-generated", { usage, output: { sentence: { sentence_id: 1, begin_time: 400, text: "さあ始まりました。", words } } }));
+      // 文のない知らせ（使用量だけ）と、知らない知らせは渡さない
+      upstream.message(event("result-generated", { usage }));
+      upstream.message(event("something-new", { secret: true }));
+      client.message(JSON.stringify({ type: "finish" }));
+      expect(client.sent.map((sent) => JSON.parse(sent as string))).toEqual([
+        { type: "ready" },
+        {
+          type: "sentence",
+          id: 1,
+          begin: 400,
+          text: "さあ始まりました。",
+          words: [
+            { at: 400, text: "さあ" },
+            { at: 900, text: "始まりました。" },
+          ],
+        },
+      ]);
+      expect(upstream.sent.slice(1)).toEqual([
+        audio(1),
+        JSON.stringify({ header: { action: "finish-task", task_id: started.header.task_id, streaming: "duplex" }, payload: { input: {} } }),
+      ]);
+      upstream.message(event("task-finished"));
+      await settled();
+      expect(client.closed).toEqual({ code: 1000, reason: "finished" });
+      expect(await dayUsd(code)).toBeCloseTo((11 * 0.93 + 3 * 0.7) / 1e6, 10);
+    });
+
+    it.each([
+      ["audio before Qwen listens", () => client.message(audio(1)), "wait for ready"],
+      ["Qwen's own messages", () => client.message(JSON.stringify({ header: { action: "run-task" } })), "message not allowed"],
+    ])("closes on %s", async (_, send, reason) => {
+      const code = await joined();
+      await connect(code);
+      send();
+      await settled();
+      expect(client.closed).toEqual({ code: 1008, reason });
+      expect(upstream.sent).toHaveLength(1);
+      expect(await dayUsd(code)).toBe(0);
+    });
+
+    it("refuses before connecting in the same words as the other doors, and stops at the daily limit", async () => {
+      const code = await joined();
+      const refused = async (res: Response) => [res.status, res.headers.get("X-Refusal"), ((await res.json()) as { error: string }).error];
+      expect(await refused(await connect("NOPE-NOPE-NOPE"))).toEqual([401, "unknown", "unknown"]);
+      expect((await connect(code, "Japanese")).status).toBe(400);
+      expect((await call("/live?language=ja", { version: "v2", token: code })).status).toBe(426);
+      await manage("/api/tasks/live", "PATCH", { enabled: false });
+      expect(await refused(await connect(code))).toEqual([403, "stopped", "stopped"]);
+      await manage("/api/tasks/live", "PATCH", { enabled: true });
+      expect(qwenLive).not.toHaveBeenCalled();
+
+      const { id } = (await codeByValue(db, code))!;
+      await env.DB.prepare("UPDATE codes SET daily_limit_usd = ? WHERE id = ?").bind(20 * SECOND, id).run();
+      await connect(code);
+      upstream.message(event("task-started"));
+      client.message(audio(30));
+      await settled();
+      expect(client.closed).toEqual({ code: 1008, reason: "limit" });
+      expect(await refused(await connect(code))).toEqual([403, "limit", "limit"]);
+
+      // Qwen が断ったら、中身を渡さずに切る
+      await env.DB.prepare("UPDATE codes SET daily_limit_usd = NULL, day_usd = 0 WHERE id = ?").bind(id).run();
+      client = new FakeSocket();
+      upstream = new FakeSocket();
+      vi.mocked(qwenLive).mockResolvedValue({ webSocket: upstream } as unknown as Response);
+      await connect(code);
+      upstream.message(JSON.stringify({ header: { event: "task-failed", error_code: "BadRequest", error_message: "secret" } }));
+      await settled();
+      expect(client.sent).toEqual([]);
+      expect(client.closed).toEqual({ code: 1011, reason: "failed" });
+    });
   });
 
   it("waits and asks again when the model is busy, and leaves out what it could not translate", async () => {
