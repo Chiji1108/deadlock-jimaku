@@ -10,7 +10,7 @@
 use std::collections::BTreeMap;
 
 use overlays_core::access::Access;
-use overlays_core::furigana::{self, Judge, Model, to_hiragana};
+use overlays_core::furigana::{self, Door, Judge, Model, to_hiragana};
 use overlays_core::reading::Furigana;
 use overlays_core::secrets::Provider;
 use overlays_core::types::RubySegment;
@@ -62,16 +62,19 @@ async fn main() -> anyhow::Result<()> {
     // `FURIGANA_EVAL_API` があれば、判定は PC の中のモデルに聞く（experiments/llama_decider_server.py。
     // `{API}/openrouter/systemone` に、同じ形の問いを送る）
     let openrouter = match std::env::var("FURIGANA_EVAL_API") {
-        Ok(api) => Access::code(Provider::OpenRouter, "local".into(), &api),
+        Ok(api) => Access::at(Provider::OpenRouter, "local", &api),
         Err(_) => Access::key(Provider::OpenRouter, env("OPENROUTER_API_KEY")),
     };
     let openai = Access::key(Provider::OpenAi, env("OPENAI_API_KEY"));
     let meter = Meter::new(std::env::temp_dir().join("overlays-furigana-eval-usage.json"));
     let judge_model = std::env::var("FURIGANA_EVAL_JUDGE").unwrap_or_else(|_| JUDGE.into());
+    let door = Door::Api {
+        access: openrouter,
+        model: judge_model,
+    };
     let judge = Judge {
         deadlock: true,
-        access: &openrouter,
-        model: &judge_model,
+        door: &door,
         meter: &meter,
     };
     let model = |model| Model {

@@ -107,8 +107,7 @@ async fn send(
     if !status.is_success() {
         // 鍵やコードが断られたら、確定の文字起こしと同じく字幕を止める理由にする（DESIGN.md 17.2）
         let body = res.text().await.unwrap_or_default();
-        let reason = relay::refusal_reason(&body);
-        if let Some(refused) = relay::refusal(req.access, status, reason.as_deref()) {
+        if let Some(refused) = relay::refusal(req.access, status) {
             return Err(refused.into());
         }
         anyhow::bail!("{status}: {body}");

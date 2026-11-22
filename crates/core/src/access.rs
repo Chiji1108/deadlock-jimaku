@@ -1,5 +1,5 @@
-//! API の送り先と鍵（DESIGN.md 17.2）。会社へ直接送る（自分のキー）か、開発者のサーバーを通す（ベータのコード）。
-//! サーバーは会社ごとに同じパスで中継するので、使う側は送り先を替えるだけ
+//! API の送り先と鍵。会社へ直接送る（自分のキー。`Access`）か、開発者のサーバーに仕事を頼む（ベータのコード。`Server`。
+//! DESIGN.md 17.4）。0.10.0 までは、サーバーが会社ごとに同じパスで中継していて、コードを会社のキーの代わりに使えた
 
 use std::collections::BTreeMap;
 
@@ -10,9 +10,8 @@ pub struct Access {
     provider: Provider,
     /// `https://…/v1` まで（このあとに `/responses` などを付ける）
     base: String,
-    /// `Authorization: Bearer` に付けるもの（API キーか、中継するコード）
+    /// `Authorization: Bearer` に付ける API キー
     token: String,
-    code: bool,
 }
 
 impl Access {
@@ -22,18 +21,16 @@ impl Access {
             provider,
             base: base.to_owned(),
             token: key,
-            code: false,
         }
     }
 
-    /// `api` は開発者のサーバーの根元（設定の `apiBase`）。会社ごとに `/openai`、`/xai` の下で中継する
-    /// （中継のない会社には `Keys::access` がコードを使わない）
-    pub fn code(provider: Provider, code: String, api: &str) -> Self {
+    /// 会社と同じ形の口が別の所にあるとき（テストの偽の会社、測定で使う PC の中のモデル）。
+    /// `root` の下の、会社の名前（`/openai`、`/xai`）の所に送る
+    pub fn at(provider: Provider, key: &str, root: &str) -> Self {
         Self {
             provider,
-            base: format!("{}/{}", api.trim_end_matches('/'), provider.info().id),
-            token: code,
-            code: true,
+            base: format!("{}/{}", root.trim_end_matches('/'), provider.info().id),
+            token: key.to_owned(),
         }
     }
 
@@ -57,10 +54,6 @@ impl Access {
     pub fn token(&self) -> &str {
         &self.token
     }
-
-    pub fn is_code(&self) -> bool {
-        self.code
-    }
 }
 
 /// 開発者のサーバーの、仕事ごとの口（`/v2`。DESIGN.md 17.4）。「何をしてほしいか」を送り、モデルはサーバーが決める。
@@ -73,7 +66,7 @@ pub struct Server {
 }
 
 impl Server {
-    /// `api` は開発者のサーバーの根元（設定の `apiBase`。会社の形の中継 `/v1` を指す）。仕事の口は、同じ所の `/v2`
+    /// `api` は開発者のサーバーの根元（設定の `apiBase`。コードをもらう口のある `/v1` を指す）。仕事の口は、同じ所の `/v2`
     pub fn new(api: &str, code: String) -> Self {
         let root = api.trim_end_matches('/');
         let root = root.strip_suffix("/v1").unwrap_or(root);
@@ -129,34 +122,20 @@ mod tests {
     use super::*;
 
     #[test]
-    fn a_code_goes_through_the_server_on_the_same_paths() {
+    fn a_key_goes_straight_to_the_company() {
         let key = Access::key(Provider::OpenAi, "sk".into());
         assert_eq!(key.url("/responses"), "https://api.openai.com/v1/responses");
         assert_eq!(
             key.realtime_url(),
             "wss://api.openai.com/v1/realtime?intent=transcription"
         );
-        assert!(!key.is_code());
-        let code = Access::code(Provider::OpenAi, "K7M2".into(), "http://127.0.0.1:8787/v1/");
-        assert_eq!(
-            code.url("/audio/transcriptions"),
-            "http://127.0.0.1:8787/v1/openai/audio/transcriptions"
-        );
-        assert_eq!(
-            code.realtime_url(),
-            "ws://127.0.0.1:8787/v1/openai/realtime?intent=transcription"
-        );
-        assert!(code.is_code());
-
         let xai = Access::key(Provider::Xai, "xai".into());
         assert_eq!(xai.url("/stt"), "https://api.x.ai/v1/stt");
-        let code = Access::code(Provider::Xai, "K7M2".into(), "http://127.0.0.1:8787/v1");
-        assert_eq!(code.url("/stt"), "http://127.0.0.1:8787/v1/xai/stt");
-        assert_eq!(code.provider(), Provider::Xai);
+        assert_eq!(xai.provider(), Provider::Xai);
     }
 
     #[test]
-    fn the_task_doors_are_next_to_the_relay() {
+    fn the_task_doors_are_next_to_where_codes_are_given() {
         for api in ["https://api.example/v1", "https://api.example/v1/"] {
             let server = Server::new(api, "K7M2".into());
             assert_eq!(server.url("/translate"), "https://api.example/v2/translate");

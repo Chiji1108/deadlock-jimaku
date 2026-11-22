@@ -33,24 +33,12 @@ pub enum Provider {
 
 /// 会社ごとの決まり。会社を足すときは、ここと `Provider` に足す（画面の一覧は `settings::catalog` から作る）
 pub struct ProviderInfo {
-    /// 資格情報ストアでの名前。設定や画面とのやりとりの名前（`Provider` の serde の名前）も、
-    /// 開発者のサーバーが中継するパスも同じ
+    /// 資格情報ストアでの名前。設定や画面とのやりとりの名前（`Provider` の serde の名前）も同じ
     pub id: &'static str,
     /// 画面に出す名前
     pub name: &'static str,
     /// 自分のキーで送る先。`https://…/v1` まで
     pub base: &'static str,
-    /// 開発者のサーバーが中継するなら、どのコードで使えるか。None の会社は自分のキーが要る。
-    /// そのコードがその会社を中継するかは、字幕を始めるときにサーバーに確かめる
-    pub relay: Option<Relay>,
-}
-
-/// 開発者のサーバーが中継するコードの種類。0.7 までは、人からもらうギフトコード（おすそ分け）もあった
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub enum Relay {
-    /// ベータのコード（開発者のキー。ベータ期間中は無料。DESIGN.md 17.2）
-    Beta,
 }
 
 impl Provider {
@@ -64,35 +52,19 @@ impl Provider {
     ];
 
     pub const fn info(self) -> ProviderInfo {
-        let (id, name, base, relay) = match self {
-            Self::OpenAi => ("openai", "OpenAI", "https://api.openai.com/v1", None),
-            Self::Xai => ("xai", "xAI", "https://api.x.ai/v1", None),
+        let (id, name, base) = match self {
+            Self::OpenAi => ("openai", "OpenAI", "https://api.openai.com/v1"),
+            Self::Xai => ("xai", "xAI", "https://api.x.ai/v1"),
             // QwenCloud のシンガポールの口（OpenAI 互換）。鍵は地域ごとに別で、ほかの地域の鍵は 401 になる
             Self::Qwen => (
                 "qwen",
                 "Qwen",
                 "https://ap-southeast-1.maas.qwencloudapi.com/compatible-mode/v1",
-                Some(Relay::Beta),
             ),
-            Self::OpenRouter => (
-                "openrouter",
-                "OpenRouter",
-                "https://openrouter.ai/api/v1",
-                Some(Relay::Beta),
-            ),
-            Self::TypeSafe => (
-                "typesafe",
-                "TypeSafe AI",
-                "https://api.typesafe.ai/v1",
-                None,
-            ),
+            Self::OpenRouter => ("openrouter", "OpenRouter", "https://openrouter.ai/api/v1"),
+            Self::TypeSafe => ("typesafe", "TypeSafe AI", "https://api.typesafe.ai/v1"),
         };
-        ProviderInfo {
-            id,
-            name,
-            base,
-            relay,
-        }
+        ProviderInfo { id, name, base }
     }
 }
 
@@ -145,17 +117,10 @@ pub struct Keys {
 }
 
 impl Keys {
-    /// その会社の送り先と鍵（`api` は開発者のサーバーの根元）。
-    /// - ベータのコードが中継する会社（Qwen、OpenRouter）は、コードがあればコードを先に使う。ベータ期間中は無料なので、
-    ///   自分のキーを入れている人にも請求しない。コードがなければ自分のキー
-    /// - 中継のない会社（OpenAI、xAI、TypeSafe AI）は、自分のキーが要る（なければ、鍵がないとして始めない）
-    pub fn access(&self, provider: Provider, api: &str) -> Option<Access> {
-        let own = || Some(Access::key(provider, self.own.get(&provider)?.clone()));
-        let code = || Some(Access::code(provider, self.beta.clone()?, api));
-        match provider.info().relay {
-            Some(Relay::Beta) => code().or_else(own),
-            None => own(),
-        }
+    /// その会社の送り先と鍵。自分のキーが要る（なければ、鍵がないとして始めない）。ベータのコードは、会社のキーの
+    /// 代わりにはならない（コードで頼めるのは、サーバーの仕事だけ。`server`）
+    pub fn access(&self, provider: Provider) -> Option<Access> {
+        Some(Access::key(provider, self.own.get(&provider)?.clone()))
     }
 
     /// サーバーの仕事の口（DESIGN.md 17.4）。ベータのコードが要る。会社のキーとは別の道なので、
@@ -168,14 +133,13 @@ impl Keys {
     pub fn accesses(&self, engines: &Engines, api: &str) -> Accesses {
         let providers = engines.providers().into_iter();
         let server = engines.server().then(|| self.server(api)).flatten();
-        Accesses::new(providers.filter_map(|provider| self.access(provider, api)))
-            .with_server(server)
+        Accesses::new(providers.filter_map(|provider| self.access(provider))).with_server(server)
     }
 
-    /// 字幕を始めるのに足りないもの（自分のキーも中継するコードもない会社か、サーバーの仕事に要るコード）がない
-    pub fn ready(&self, engines: &Engines, api: &str) -> bool {
+    /// 字幕を始めるのに足りないもの（自分のキーがない会社か、サーバーの仕事に要るコード）がない
+    pub fn ready(&self, engines: &Engines) -> bool {
         let mut needed = engines.providers().into_iter();
-        needed.all(|provider| self.access(provider, api).is_some())
+        needed.all(|provider| self.own.contains_key(&provider))
             && (!engines.server() || self.beta.is_some())
     }
 }
@@ -227,6 +191,11 @@ fn state(slot: Slot) -> KeyState {
             reason: e.to_string(),
         },
     }
+}
+
+/// ベータのコードを持っている
+pub fn has_beta() -> bool {
+    get_or_warn(Slot::Beta).is_some()
 }
 
 pub fn load() -> Keys {
@@ -294,46 +263,30 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_beta_code_stands_in_for_a_key_only_where_the_server_relays() {
+    fn the_beta_code_asks_the_server_and_never_stands_in_for_a_key() {
         let keys = Keys {
             own: BTreeMap::from([(Provider::Xai, "xai".to_owned())]),
-            beta: None,
+            beta: Some("B3TA".into()),
         };
         let api = "http://worker/v1";
-        // 中継のない会社は、自分のキーだけ
-        assert_eq!(keys.access(Provider::OpenAi, api), None);
-        assert!(!keys.access(Provider::Xai, api).unwrap().is_code());
-        assert_eq!(keys.access(Provider::Qwen, api), None);
-        let keys = Keys {
-            beta: Some("B3TA".into()),
-            ..keys
-        };
-        assert_eq!(keys.access(Provider::Qwen, api).unwrap().token(), "B3TA");
-        assert_eq!(keys.access(Provider::OpenAi, api), None);
-        assert_eq!(keys.access(Provider::TypeSafe, api), None);
+        assert_eq!(keys.access(Provider::Xai).unwrap().token(), "xai");
+        for provider in [Provider::OpenAi, Provider::Qwen, Provider::OpenRouter] {
+            assert_eq!(keys.access(provider), None);
+        }
         // 設定や画面とやりとりする名前は、表の名前と同じ
         for provider in Provider::ALL {
             assert_eq!(serde_json::json!(provider), provider.info().id);
         }
-        // ベータのコードがあれば、自分のキーより先に使う（無料の分を先に）。なければ自分のキー
-        let own = Keys {
-            own: BTreeMap::from([(Provider::Qwen, "sk".to_owned())]),
-            ..keys
-        };
-        assert_eq!(own.access(Provider::Qwen, api).unwrap().token(), "B3TA");
-        // サーバーの仕事の口は、使う工程があるときだけ。自分のキーでは代わりにならない
+        // サーバーの仕事の口は、使う工程があるときだけ
         let chrome = Engines::CHROME;
-        let server = Engines {
-            translation: crate::settings::TranslationEngine::Server,
-            ..chrome
-        };
-        assert_eq!(own.accesses(&chrome, api).server(), None);
-        let door = own.accesses(&server, api).server().unwrap();
+        assert_eq!(keys.accesses(&chrome, api).server(), None);
+        let door = keys.accesses(&Engines::BETA, api).server().unwrap();
         assert_eq!(door.url("/translate"), "http://worker/v2/translate");
-        assert!(own.ready(&server, api));
-        let without_code = Keys { beta: None, ..own };
-        assert!(!without_code.access(Provider::Qwen, api).unwrap().is_code());
-        assert_eq!(without_code.accesses(&server, api).server(), None);
-        assert!(without_code.ready(&chrome, api) && !without_code.ready(&server, api));
+        assert!(keys.ready(&Engines::BETA));
+        // 同じモデルを自分のキーで選んだら、コードではなく自分のキーが要る
+        let own = Engines::BETA.with_own_keys();
+        assert!(!keys.ready(&own) && keys.accesses(&own, api).server().is_none());
+        let without_code = Keys { beta: None, ..keys };
+        assert!(without_code.ready(&chrome) && !without_code.ready(&Engines::BETA));
     }
 }

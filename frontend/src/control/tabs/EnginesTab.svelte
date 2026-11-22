@@ -17,7 +17,6 @@
     modeOf,
     paidLive,
     providerOfOption,
-    relayOf,
     unavailable,
     usesChrome,
   } from "../../lib/engines";
@@ -41,8 +40,7 @@
   function key<K extends keyof Engines>(item: K, value: Engines[K]) {
     const provider = providerOfOption(item, value);
     if (!provider) return undefined;
-    const name = `${PROVIDER_NAMES[provider]} のキー`;
-    return relayOf(provider) === "beta" ? `${name}（ベータ期間中は不要）` : name;
+    return `${PROVIDER_NAMES[provider]} のキー`;
   }
 
   /** 選べない理由、または今の決まり方の説明 */

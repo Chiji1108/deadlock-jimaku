@@ -45,7 +45,7 @@ fn main() {
                 Some(dir) => dir,
                 None => app.path().app_data_dir()?,
             };
-            let settings = settings::load(&data_dir.join(settings::FILE));
+            let settings = settings::load(&data_dir.join(settings::FILE), secrets::has_beta);
             let store = Store::new(settings, data_dir);
             let idle = store.clone();
             app.manage(store.clone());
@@ -138,7 +138,7 @@ fn toggle_subtitles(app: AppHandle, store: Arc<Store>, notify: bool) {
         let settings = store.settings();
         let start = !settings.transcription_enabled;
         // 工程が使う会社ごとに自分のキーか中継するコードが、サーバーの仕事にはコードが要る
-        if start && !secrets::load().ready(&settings.engines, &settings.api_base) {
+        if start && !secrets::load().ready(&settings.engines) {
             show_window(&app);
             return;
         }

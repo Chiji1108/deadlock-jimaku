@@ -9,7 +9,7 @@ use std::time::Duration;
 use serde::Deserialize;
 use serde_json::json;
 
-use crate::access::Access;
+use crate::access::{Access, Server};
 use crate::decide;
 use crate::llm;
 use crate::reading::{self, Furigana, Morpheme};
@@ -94,11 +94,17 @@ pub async fn ask(
 /// 読みの候補に付けて見せる、続くかなの数
 const TAIL_CHARS: usize = 4;
 
-/// 判定モデル（Jev と同じ形の口。OpenRouter の Perplexity Decider）
+/// 読みを選ばせる相手
+pub enum Door {
+    /// 会社の判定モデル（Jev と同じ形の口。OpenRouter の Perplexity Decider）
+    Api { access: Access, model: String },
+    /// 開発者のサーバーの仕事の口（DESIGN.md 17.4）
+    Server(Server),
+}
+
 pub struct Judge<'a> {
     pub deadlock: bool,
-    pub access: &'a Access,
-    pub model: &'a str,
+    pub door: &'a Door,
     pub meter: &'a Meter,
 }
 
@@ -116,7 +122,7 @@ pub async fn choose(
         return Ok(reading::annotate(text, &morphemes, 0, text.len()));
     }
     let name = |i: usize| format!("r{i}");
-    let questions: serde_json::Map<String, serde_json::Value> = alternatives
+    let questions: Vec<serde_json::Value> = alternatives
         .iter()
         .enumerate()
         .map(|(i, a)| {
@@ -126,13 +132,13 @@ pub async fn choose(
                 .take_while(|c| is_kana(*c))
                 .take(TAIL_CHARS)
                 .collect();
-            let criteria: serde_json::Map<String, serde_json::Value> = a
+            let choices: Vec<serde_json::Value> = a
                 .options
                 .iter()
                 .enumerate()
                 .map(|(o, option)| {
                     let read = format!("{}{}", reading::read(text, option), to_hiragana(&tail));
-                    (format!("o{o}"), read.into())
+                    json!({ "value": format!("o{o}"), "description": read })
                 })
                 .collect();
             let instructions = format!(
@@ -141,8 +147,7 @@ pub async fn choose(
                 &text[..a.start],
                 &text[a.start..a.end + tail.len()]
             );
-            let question = json!({ "type": "choice", "instructions": instructions, "criteria": criteria });
-            (name(i), question)
+            json!({ "name": name(i), "instructions": instructions, "choices": choices })
         })
         .collect();
     let speaker = if judge.deadlock {
@@ -150,26 +155,34 @@ pub async fn choose(
     } else {
         "a Japanese streamer"
     };
-    let body = json!({
-        "model": judge.model,
-        "state": format!(
-            "Live commentary from {speaker}, written by speech recognition.\n\
-             Previous utterances (context only): {}\nTranscript: {text}",
-            json!(context)
-        ),
-        "questions": questions,
-    });
-    let asking = decide::Asking {
-        access: judge.access,
-        model: judge.model,
-        meter: judge.meter,
-        purpose: Use::Furigana,
+    let state = json!(format!(
+        "Live commentary from {speaker}, written by speech recognition.\n\
+         Previous utterances (context only): {}\nTranscript: {text}",
+        json!(context)
+    ));
+    let questions = json!(questions);
+    let chosen = match judge.door {
+        Door::Server(server) => decide::ask_server(http, server, &state, &questions).await?,
+        Door::Api { access, model } => {
+            let asking = decide::Asking {
+                access,
+                model,
+                meter: judge.meter,
+                purpose: Use::Furigana,
+            };
+            let body = decide::systemone(model, &state, &questions);
+            let request = http.post(access.url("/systemone")).json(&body);
+            let answers = decide::answers(request, &asking).await?;
+            let chosen = (0..alternatives.len()).map(name);
+            chosen
+                .filter_map(|name| Some((decide::choice(&answers, &name)?, name)))
+                .map(|(choice, name)| (name, choice))
+                .collect()
+        }
     };
-    let request = http.post(judge.access.url("/systemone")).json(&body);
-    let answers = decide::answers(request, &asking).await?;
     // 後ろから入れ替える（前の語の位置がずれない）
     for (i, a) in alternatives.iter().enumerate().rev() {
-        let chosen = decide::choice(&answers, &name(i));
+        let chosen = chosen.get(&name(i));
         let chosen =
             chosen.and_then(|c| a.options.get(c.strip_prefix('o')?.parse::<usize>().ok()?));
         if let Some(option) = chosen {
@@ -356,21 +369,23 @@ mod tests {
     }
 
     /// 本物の判定モデルに選ばせる: `OPENROUTER_API_KEY=… cargo test -p overlays-core furigana_chooses -- --ignored --nocapture`
-    /// `BETA_TEST_API`（開発者のサーバーの根元）と `BETA_TEST_CODE`（ベータのコード）があれば、ベータの中継を通す
+    /// `BETA_TEST_API`（開発者のサーバーの根元）と `BETA_TEST_CODE`（ベータのコード）があれば、サーバーに頼む
     #[tokio::test]
     #[ignore = "calls OpenRouter"]
     async fn furigana_chooses_among_the_readings_of_the_dictionary() {
         let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
         let provider = crate::secrets::Provider::OpenRouter;
-        let access = match std::env::var("BETA_TEST_API") {
-            Ok(api) => Access::code(provider, std::env::var("BETA_TEST_CODE").unwrap(), &api),
-            Err(_) => Access::key(provider, std::env::var("OPENROUTER_API_KEY").unwrap()),
+        let door = match std::env::var("BETA_TEST_API") {
+            Ok(api) => Door::Server(Server::new(&api, std::env::var("BETA_TEST_CODE").unwrap())),
+            Err(_) => Door::Api {
+                access: Access::key(provider, std::env::var("OPENROUTER_API_KEY").unwrap()),
+                model: "perplexity/pplx-decider-v1.2".into(),
+            },
         };
         let meter = Meter::new(std::env::temp_dir().join("overlays-furigana-test-usage.json"));
         let judge = Judge {
             deadlock: true,
-            access: &access,
-            model: "perplexity/pplx-decider-v1.2",
+            door: &door,
             meter: &meter,
         };
         for (text, expected) in [

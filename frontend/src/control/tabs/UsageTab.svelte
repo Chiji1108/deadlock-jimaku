@@ -22,8 +22,6 @@
     n < 10_000 ? `${n} トークン` : `${(n / 10_000).toFixed(1)} 万トークン`;
 
   const unpriced = $derived(columns.some((c) => hasUnpriced(panel.usage?.[c.key])));
-
-  const codePaid = $derived(panel.codePaid.map((p) => PROVIDER_NAMES[p]).join(" と "));
 </script>
 
 <Card.Root>
@@ -59,9 +57,9 @@
         </div>
       {/each}
     </div>
-    {#if codePaid}
+    {#if panel.viaServer}
       <p class="mt-4 text-xs text-muted-foreground">
-        ベータのコードで使っているので、{codePaid} の料金はあなたには請求されません（ベータ期間中は無料です）
+        デドロ字幕のサーバーに頼んで作った分は、ここには入りません。あなたには請求されません（ベータ期間中は無料です）
       </p>
     {/if}
     {#if unpriced}

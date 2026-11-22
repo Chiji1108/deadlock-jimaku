@@ -14,7 +14,7 @@ use anyhow::Context;
 use futures_util::future::try_join_all;
 use serde_json::{Value, json};
 
-use crate::access::Access;
+use crate::access::{Access, Server};
 use crate::assets::Loaded;
 use crate::enrich::Span;
 use crate::llama::{self, Llama, Prompt};
@@ -46,6 +46,8 @@ enum Judge {
         access: Access,
         model: &'static str,
     },
+    /// 開発者のサーバーの仕事の口（DESIGN.md 17.4）。どのモデルで確かめるかはサーバーが決める
+    Server(Server),
     Local(Arc<Llama>),
 }
 
@@ -103,6 +105,15 @@ impl Decider {
         }
     }
 
+    /// 開発者のサーバーに確かめさせる
+    pub fn server(server: Server, source_lang: LangCode, meter: Arc<Meter>) -> Self {
+        Self {
+            judge: Judge::Server(server),
+            meter,
+            asker: Asker::new(source_lang),
+        }
+    }
+
     /// PC の中の LLM に確かめさせる
     pub fn local(llama: Arc<Llama>, source_lang: LangCode, meter: Arc<Meter>) -> Self {
         Self {
@@ -125,6 +136,11 @@ impl Decider {
         };
         let (access, model) = match &self.judge {
             Judge::Api { access, model } => (access, *model),
+            Judge::Server(server) => {
+                let (state, questions) = (&asked.request["input"], &asked.request["questions"]);
+                let chosen = ask_server(http, server, state, questions).await?;
+                return Ok(asked.spans(|name| chosen.get(name).cloned()));
+            }
             Judge::Local(llama) => {
                 let chosen = asked.ask_local(llama, &self.meter).await?;
                 return Ok(asked.spans(|name| chosen.get(name).cloned()));
@@ -152,6 +168,8 @@ impl Decider {
     pub fn ask(&self, text: &str, context: &[String], loaded: &Loaded) -> Option<Asked> {
         let model = match &self.judge {
             Judge::Api { model, .. } => model,
+            // モデルはサーバーが決める
+            Judge::Server(_) => "",
             Judge::Local(_) => llama::GEMMA,
         };
         self.asker.ask(model, text, context, loaded)
@@ -222,8 +240,7 @@ pub(crate) async fn answers(
     let status = res.status();
     if !status.is_success() {
         let body = res.text().await.unwrap_or_default();
-        let reason = relay::refusal_reason(&body);
-        if let Some(refused) = relay::refusal(asking.access, status, reason.as_deref()) {
+        if let Some(refused) = relay::refusal(asking.access, status) {
             return Err(refused.into());
         }
         anyhow::bail!("{status}: {body}");
@@ -236,6 +253,54 @@ pub(crate) async fn answers(
         None => asking.meter.tokens(asking.purpose, asking.model, tokens),
     }
     Ok(res["answers"].take())
+}
+
+/// Jev と同じ形の口（OpenRouter も同じ形で中継する）への問い合わせ。`questions` は、問いの配列（OpenAI の形）
+pub(crate) fn systemone(model: &str, state: &Value, questions: &Value) -> Value {
+    let questions = questions.as_array().into_iter().flatten();
+    let questions: serde_json::Map<String, Value> = questions
+        .filter_map(|q| {
+            let choices = q["choices"].as_array().into_iter().flatten();
+            let criteria: serde_json::Map<String, Value> = choices
+                .filter_map(|c| Some((c["value"].as_str()?.to_owned(), c["description"].clone())))
+                .collect();
+            let question = json!({ "type": "choice", "instructions": q["instructions"], "criteria": criteria });
+            Some((q["name"].as_str()?.to_owned(), question))
+        })
+        .collect();
+    json!({ "model": model, "state": state, "questions": questions })
+}
+
+/// 開発者のサーバーに選ばせる。`questions` は、問いの配列（名前、指示、選べる値とその説明。OpenAI の形と同じ）。
+/// 問いの名前 → 選ばれた値（答えのない問いは入っていない）。コードが断られたら `TranscriptionError`。
+/// かかった額は数えない（払うのは開発者）
+pub(crate) async fn ask_server(
+    http: &reqwest::Client,
+    server: &Server,
+    state: &Value,
+    questions: &Value,
+) -> anyhow::Result<BTreeMap<String, String>> {
+    let res = http
+        .post(server.url("/decide"))
+        .bearer_auth(server.code())
+        .timeout(TIMEOUT)
+        .json(&json!({ "state": state, "questions": questions }))
+        .send()
+        .await?;
+    let status = res.status();
+    if !status.is_success() {
+        let body = res.text().await.unwrap_or_default();
+        let reason = relay::refusal_reason(&body);
+        if let Some(refused) = relay::code_refusal(status, reason.as_deref()) {
+            return Err(refused.into());
+        }
+        anyhow::bail!("server: {status}: {body}");
+    }
+    #[derive(serde::Deserialize)]
+    struct Answer {
+        choices: BTreeMap<String, String>,
+    }
+    Ok(res.json::<Answer>().await?.choices)
 }
 
 /// `name` の問いで選ばれた値。答えは、問いの配列（OpenAI）か、名前ごとの表（Jev の形）
@@ -318,18 +383,7 @@ impl Asked {
 
     /// Jev の形の問い合わせ（`state` と、名前ごとの `questions`、選択肢は `criteria`）
     pub fn systemone(&self, model: &str) -> Value {
-        let questions = self.request["questions"].as_array().into_iter().flatten();
-        let questions: serde_json::Map<String, Value> = questions
-            .filter_map(|q| {
-                let choices = q["choices"].as_array().into_iter().flatten();
-                let criteria: serde_json::Map<String, Value> = choices
-                    .filter_map(|c| Some((c["value"].as_str()?.to_owned(), c["description"].clone())))
-                    .collect();
-                let question = json!({ "type": "choice", "instructions": q["instructions"], "criteria": criteria });
-                Some((q["name"].as_str()?.to_owned(), question))
-            })
-            .collect();
-        json!({ "model": model, "state": self.request["input"], "questions": questions })
+        systemone(model, &self.request["input"], &self.request["questions"])
     }
 
     /// 答えを当てはめた、文の区切り。`choice` は問いの名前から、選ばれた値を返す
@@ -837,6 +891,59 @@ mod tests {
 
     fn refs(list: &[&str]) -> Vec<String> {
         list.iter().map(|r| (*r).to_owned()).collect()
+    }
+
+    /// 開発者のサーバーに同じ問いを送り、選ばれた値で用語が決まる。モデルは送らない（サーバーが決める）
+    #[tokio::test]
+    async fn the_server_picks_among_the_candidates() {
+        use axum::http::StatusCode;
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let api = format!("http://{}", listener.local_addr().unwrap());
+        let answer = |headers: axum::http::HeaderMap, axum::Json(asked): axum::Json<Value>| async move {
+            let code = headers["authorization"].to_str().unwrap().to_owned();
+            if code != "Bearer good" {
+                let error = code.trim_start_matches("Bearer ");
+                return (StatusCode::FORBIDDEN, axum::Json(json!({ "error": error })));
+            }
+            assert!(asked["state"].as_str().unwrap().contains("拡マガを取る"));
+            assert!(asked.get("model").is_none());
+            // どの問いにも、最初の値を答える
+            let questions = asked["questions"].as_array().unwrap().iter();
+            let choices: serde_json::Map<String, Value> = questions
+                .map(|q| {
+                    (
+                        q["name"].as_str().unwrap().to_owned(),
+                        q["choices"][0]["value"].clone(),
+                    )
+                })
+                .collect();
+            (StatusCode::OK, axum::Json(json!({ "choices": choices })))
+        };
+        let router = axum::Router::new().route("/v2/decide", axum::routing::post(answer));
+        tokio::spawn(async move { axum::serve(listener, router).await });
+        let meter = Arc::new(Meter::new(
+            std::env::temp_dir().join("decide_server_test.json"),
+        ));
+        let decider = |code: &str| {
+            Decider::server(Server::new(&api, code.into()), "ja".into(), meter.clone())
+        };
+        let http = reqwest::Client::new();
+        let loaded = loaded();
+        let good = decider("good");
+        let spans = good.terms(&http, "拡マガを取る", &[], &loaded).await;
+        let spans = spans.unwrap();
+        assert!(
+            matches!(&spans[0], Span::Entity { reference, .. } if reference == "item:1"),
+            "{spans:?}"
+        );
+        // コードが断られたら、字幕を止める理由にする。その仕事だけを止めているときは、その文だけ諦める
+        for (code, stops) in [("revoked", true), ("limit", true), ("stopped", false)] {
+            let refused = decider(code);
+            let failed = refused.terms(&http, "拡マガを取る", &[], &loaded).await;
+            let failed = failed.unwrap_err();
+            let stopped = failed.is::<crate::types::TranscriptionError>();
+            assert_eq!(stopped, stops, "{code}");
+        }
     }
 
     /// Chrome のページ（Gemini Nano）に同じ問いを送り、選ばれた選択肢で用語が決まる

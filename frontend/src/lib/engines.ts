@@ -38,6 +38,13 @@ export const ITEMS: {
         note: "音声は Google に送られる",
       },
       {
+        value: "server",
+        label: "デドロ字幕のサーバー",
+        accuracy: "95〜98%",
+        price: "ベータ期間中は無料",
+        note: "Chrome を使わない。サーバーが、そのときのおすすめのモデルで作る。モデルは、アプリを更新しなくても替わる（2026 年 11 月は Qwen-Audio-3.1-ASR-Flash-Streaming。正確さと速さは、下の Qwen-Audio-3.1-ASR-Flash-Streaming と同じ）",
+      },
+      {
         value: "gptLiveTranscribe",
         label: "GPT-Live-Transcribe",
         accuracy: "95〜96%",
@@ -84,6 +91,14 @@ export const ITEMS: {
         accuracy: "96〜99%",
         speed: "1.6〜2.3 秒",
         price: "1 時間 約 40 円",
+      },
+      {
+        value: "server",
+        label: "デドロ字幕のサーバー",
+        accuracy: "95〜98%",
+        speed: "1.3〜3.1 秒",
+        price: "ベータ期間中は無料",
+        note: "サーバーが、そのときのおすすめのモデルで作る。モデルは、アプリを更新しなくても替わる（2026 年 11 月は Qwen-Audio-3.1-ASR-Flash。正確さと速さは、下の Qwen-Audio-3.1-ASR-Flash と同じ）",
       },
       {
         value: "grokVoiceTranscribe",
@@ -205,6 +220,14 @@ export const ITEMS: {
         speed: "約 0.5 秒",
         price: "1 時間 1 円未満",
       },
+      {
+        value: "server",
+        label: "デドロ字幕のサーバー",
+        accuracy: "94%",
+        speed: "約 0.5 秒",
+        price: "ベータ期間中は無料",
+        note: "サーバーが、そのときのおすすめのモデルで判定する。モデルは、アプリを更新しなくても替わる（2026 年 11 月は Perplexity Decider。正確さと速さは、上の Perplexity Decider と同じ）",
+      },
     ],
   },
   translation: {
@@ -290,6 +313,14 @@ export const ITEMS: {
         note: "文の意味で読みが変わる語（辛い、人気）は間違えることがある",
       },
       {
+        value: "server",
+        label: "辞書 + デドロ字幕のサーバー",
+        accuracy: "95%",
+        speed: "約 0.5 秒",
+        price: "ベータ期間中は無料",
+        note: "読みが分かれる語を、辞書の候補からサーバーが選ぶ。モデルは、アプリを更新しなくても替わる（2026 年 11 月は Perplexity Decider。正確さと速さは、下の Perplexity Decider と同じ）",
+      },
+      {
         value: "decider",
         label: "辞書 + Perplexity Decider",
         accuracy: "95%",
@@ -325,13 +356,13 @@ export const CHROME: Engines = {
   translation: "chromeTranslator",
   furigana: "dictionary",
 };
-/** ベータ期間中は無料の組み合わせ（開発者のサーバーが作る。DESIGN.md 17.2）。翻訳のモデルは、サーバーが決める（17.4） */
+/** ベータ期間中は無料の組み合わせ。途中の字幕は Chrome、ほかは開発者のサーバーに頼む。モデルは、サーバーが決める（DESIGN.md 17.4） */
 export const BETA: Engines = {
   live: "chrome",
-  transcription: "qwenAudio",
-  terms: "pplxDecider",
+  transcription: "server",
+  terms: "server",
   translation: "server",
-  furigana: "decider",
+  furigana: "server",
 };
 
 /** 最高精度の組み合わせ（0.5 までの「スタンダード」）。確定の文字起こし・翻訳と用語・ふりがなを GPT で作る */
@@ -346,8 +377,8 @@ export const BEST: Engines = {
 /** Chrome+ のモード。Chrome のモードに、Chrome の中の Gemini Nano での用語の判定を足す */
 export const CHROME_PLUS: Engines = { ...CHROME, terms: "geminiNano" };
 
-/** クラウドのモード。「おすすめ」の途中の字幕も Qwen で作り、Chrome を使わない */
-export const CLOUD: Engines = { ...BETA, live: "qwenAudioStreaming" };
+/** クラウドのモード。「おすすめ」の途中の字幕もサーバーに頼み、Chrome を使わない */
+export const CLOUD: Engines = { ...BETA, live: "server" };
 
 /** 音声も字幕の文字も PC から出さない組み合わせ。3 つとも PC の中で動かす（DESIGN.md 9.7） */
 export const LOCAL: Engines = {
@@ -452,8 +483,9 @@ const same = (a: Engines, b: Engines) =>
 /** 今の選び方に合うモード。詳しく選んで変えたなら undefined */
 export const modeOf = (t: Engines) => MODES.find((m) => same(m.engines, t));
 
-/** 途中の字幕をアプリが作る（有料の音声認識につなぐ） */
-export const paidLive = (t: Engines) => providerOfOption("live", t.live) !== null;
+/** 途中の字幕をアプリが作る（会社か、デドロ字幕のサーバーの音声認識につなぐ） */
+export const paidLive = (t: Engines) =>
+  t.live === "server" || providerOfOption("live", t.live) !== null;
 
 /** Chrome のウィンドウを使う（途中の字幕が Chrome） */
 export const usesChrome = (t: Engines) => t.live === "chrome";
@@ -483,10 +515,8 @@ export const PROVIDER_NAMES = Object.fromEntries(PROVIDERS.map((p) => [p.id, p.n
 >;
 
 /** デドロ字幕のサーバーに、仕事として頼む工程がある（DESIGN.md 17.4）。会社のキーは使わず、ベータのコードが要る */
-export const usesServer = (t: Engines) => t.translation === "server";
-
-/** その会社を、ベータのコード（開発者のキー）が中継するなら "beta"。中継がなければ null */
-export const relayOf = (p: Provider) => PROVIDERS.find((info) => info.id === p)?.relay ?? null;
+export const usesServer = (t: Engines) =>
+  (Object.keys(ITEMS) as Item[]).some((item) => effective(t)[item] === "server");
 
 /** 足りない鍵を入れに行くボタンの文 */
 export const ENTER_KEYS = "API キーを入れる";

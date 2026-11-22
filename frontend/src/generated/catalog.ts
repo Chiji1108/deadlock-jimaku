@@ -4,28 +4,23 @@
 export const PROVIDERS = [
   {
     "id": "openai",
-    "name": "OpenAI",
-    "relay": null
+    "name": "OpenAI"
   },
   {
     "id": "xai",
-    "name": "xAI",
-    "relay": null
+    "name": "xAI"
   },
   {
     "id": "qwen",
-    "name": "Qwen",
-    "relay": "beta"
+    "name": "Qwen"
   },
   {
     "id": "openrouter",
-    "name": "OpenRouter",
-    "relay": "beta"
+    "name": "OpenRouter"
   },
   {
     "id": "typesafe",
-    "name": "TypeSafe AI",
-    "relay": null
+    "name": "TypeSafe AI"
   }
 ] as const;
 
@@ -33,6 +28,7 @@ export const PROVIDERS = [
 export const ENGINE_PROVIDERS = {
   "live": {
     "chrome": null,
+    "server": null,
     "gptLiveTranscribe": "openai",
     "qwenAudioStreaming": "qwen",
     "haasJa": null,
@@ -41,6 +37,7 @@ export const ENGINE_PROVIDERS = {
   },
   "transcription": {
     "chrome": null,
+    "server": null,
     "gptTranscribe": "openai",
     "grokVoiceTranscribe": "xai",
     "qwenAudio": "qwen",
@@ -52,6 +49,7 @@ export const ENGINE_PROVIDERS = {
   },
   "terms": {
     "dictionary": null,
+    "server": null,
     "geminiNano": null,
     "gemma": null,
     "decisions": "openai",
@@ -72,6 +70,7 @@ export const ENGINE_PROVIDERS = {
   },
   "furigana": {
     "dictionary": null,
+    "server": null,
     "decider": "openrouter",
     "luna": "openai",
     "llm": "openai"
