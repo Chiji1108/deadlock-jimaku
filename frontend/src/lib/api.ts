@@ -5,6 +5,7 @@ import type { FontEntry } from "../generated/FontEntry";
 import type { Gpus } from "../generated/Gpus";
 import type { Provider } from "../generated/Provider";
 import type { RankState } from "../generated/RankState";
+import type { ServerModel } from "../generated/ServerModel";
 import type { SettingsPatch } from "../generated/SettingsPatch";
 import type { SettingsView } from "../generated/SettingsView";
 
@@ -71,6 +72,9 @@ export const api = {
 
   /** 新しい版に入れ替えて再起動する（デスクトップアプリが行う。終わる前に返る） */
   updateApp: () => post("/api/update"),
+
+  /** デドロ字幕のサーバーが、仕事ごとに今使っているモデル */
+  serverModels: () => request<Record<string, ServerModel>>("/api/server/models"),
 
   /** ベータのコードをもらって保存する。もらえなければ理由を返す（投げない） */
   joinBeta: async (): Promise<CodeStatus | BetaRefusal> => {
