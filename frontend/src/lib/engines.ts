@@ -4,6 +4,7 @@
 import { ENGINE_PROVIDERS, PROVIDERS } from "../generated/catalog";
 import type { Engines } from "../generated/Engines";
 import type { Provider } from "../generated/Provider";
+import type { ServerModel } from "../generated/ServerModel";
 
 type Item = keyof Engines;
 
@@ -88,8 +89,6 @@ export const ITEMS: {
       {
         value: "server",
         label: "デドロ字幕のサーバー",
-        accuracy: "95〜98%",
-        speed: "1.3〜3.1 秒",
         price: "ベータ期間中は無料",
         note: "サーバーが、そのときのおすすめのモデルで作る",
       },
@@ -216,8 +215,6 @@ export const ITEMS: {
       {
         value: "server",
         label: "デドロ字幕のサーバー",
-        accuracy: "94%",
-        speed: "約 0.5 秒",
         price: "ベータ期間中は無料",
         note: "サーバーが、そのときのおすすめのモデルで判定する",
       },
@@ -308,8 +305,6 @@ export const ITEMS: {
       {
         value: "server",
         label: "辞書 + デドロ字幕のサーバー",
-        accuracy: "95%",
-        speed: "約 0.5 秒",
         price: "ベータ期間中は無料",
         note: "読みが分かれる語を、辞書の候補からサーバーが選ぶ",
       },
@@ -509,6 +504,35 @@ export const PROVIDER_NAMES = Object.fromEntries(PROVIDERS.map((p) => [p.id, p.n
 export const usesServer = (t: Engines) =>
   (Object.keys(ITEMS) as Item[]).some((item) => effective(t)[item] === "server");
 
+/** サーバーが仕事ごとに今使っているモデル（`GET /v2/models`） */
+export type ServerModels = Record<string, ServerModel>;
+
+/** サーバーに頼める工程: サーバーの仕事の名前と、サーバーのモデルを自分のキーで使う選択肢。
+ * モデルの名前は `server/src/tasks.ts` のもの */
+const SERVER_TASKS: { [K in Item]?: { task: string; same: Record<string, Engines[K]> } } = {
+  transcription: { task: "transcribe", same: { "qwen-audio": "qwenAudio" } },
+  terms: { task: "decide", same: { "pplx-decider": "pplxDecider" } },
+  translation: {
+    task: "translate",
+    same: { "hy-mt2": "hyMt2", "qwen-mt-flash": "qwenMtFlash", "qwen3.8-flash": "qwen38Flash" },
+  },
+  furigana: { task: "decide", same: { "pplx-decider": "decider" } },
+};
+
+/** 画面に出す選択肢。「デドロ字幕のサーバー」には、サーバーが今使っているモデルの名前と、同じモデルの選択肢の正確さと速さを足す。
+ * モデルはサーバーが替えるので、数字はここに書かない。モデルが分からない間と、知らないモデルのときは、数字を出さない */
+export function shown<K extends Item>(
+  item: K,
+  option: Option<K>,
+  models: ServerModels | undefined,
+): Option<K> & { model?: string } {
+  const spec = SERVER_TASKS[item];
+  const model = option.value === "server" && spec ? models?.[spec.task] : undefined;
+  if (!spec || !model) return option;
+  const same = ITEMS[item].options.find((o) => o.value === spec.same[model.id]);
+  return { ...option, accuracy: same?.accuracy, speed: same?.speed, model: model.label };
+}
+
 /** 足りない鍵を入れに行くボタンの文 */
 export const ENTER_KEYS = "API キーを入れる";
 
@@ -539,11 +563,17 @@ function grade(accuracy: string) {
 
 /**
  * モードを見比べるための、工程ごとの正確さ（その工程で選んだ選択肢の、測った値。物差しは工程ごとに違う）。
- * 翻訳を GPT にしたモードは、用語を GPT が翻訳と同時に判定するので、用語の値はない
+ * 翻訳を GPT にしたモードは、用語を GPT が翻訳と同時に判定するので、用語の値はない。
+ * サーバーに頼む工程は、サーバーが今使っているモデル（`models`）の値。分からなければ、その工程は出さない
  */
-export function modeStats(t: Engines): { label: string; value: string; grade: string }[] {
-  const accuracy = <K extends Item>(item: K) =>
-    ITEMS[item].options.find((o) => o.value === t[item])?.accuracy;
+export function modeStats(
+  t: Engines,
+  models?: ServerModels,
+): { label: string; value: string; grade: string }[] {
+  const accuracy = <K extends Item>(item: K) => {
+    const option = ITEMS[item].options.find((o) => o.value === t[item]);
+    return option && shown(item, option, models).accuracy;
+  };
   const terms = llmTranslation(t) ? "GPT が判定" : accuracy("terms");
   return [
     { label: "文字起こし", value: accuracy("transcription") },

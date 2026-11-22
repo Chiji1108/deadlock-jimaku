@@ -10,6 +10,7 @@ import {
   modeOf,
   modeStats,
   providers,
+  shown,
   unavailable,
   usesServer,
 } from "./engines";
@@ -70,8 +71,14 @@ test("要る鍵は、会社の名前を並べて案内する", () => {
 });
 
 test("モードを見比べる正確さは、どのモードも同じ並びで出る", () => {
+  const models = {
+    transcribe: { id: "qwen-audio", label: "" },
+    decide: { id: "pplx-decider", label: "" },
+  };
+  // サーバーの今のモデルが分からない間は、サーバーに頼む工程を出さない
+  expect(modeStats(BETA)).toEqual([]);
   for (const mode of MODES) {
-    expect(modeStats(mode.engines).map((stat) => stat.label)).toEqual([
+    expect(modeStats(mode.engines, models).map((stat) => stat.label)).toEqual([
       "文字起こし",
       "用語",
       "ふりがな",
@@ -80,6 +87,35 @@ test("モードを見比べる正確さは、どのモードも同じ並びで�
   // 翻訳を GPT にしたモードは、用語を GPT が翻訳と同時に判定する（辞書の一致の値を出さない）
   expect(modeStats(BEST)[1]).toEqual({ label: "用語", value: "GPT が判定", grade: "◎" });
   // 辞書の一致だけの Chrome は △、Chrome 内蔵の AI で確かめる Chrome+ は ○
-  const terms = (name: string) => modeStats(MODES.find((m) => m.name === name)!.engines)[1]!.grade;
+  const terms = (name: string) =>
+    modeStats(MODES.find((m) => m.name === name)!.engines, models)[1]!.grade;
   expect([terms("beta"), terms("chrome"), terms("chromePlus")]).toEqual(["◎", "△", "○"]);
+});
+
+test("サーバーの選択肢は、サーバーが今使っているモデルの名前と数字を出す", () => {
+  const server = <K extends "transcription" | "translation">(item: K) =>
+    ITEMS[item].options.find((o) => o.value === "server")!;
+  const models = {
+    transcribe: { id: "qwen-audio", label: "Qwen-Audio-3.1-ASR-Flash" },
+    translate: { id: "new-model", label: "新しいモデル" },
+  };
+  // 同じモデルの選択肢があれば、その数字
+  const qwen = ITEMS.transcription.options.find((o) => o.value === "qwenAudio")!;
+  expect(shown("transcription", server("transcription"), models)).toMatchObject({
+    model: "Qwen-Audio-3.1-ASR-Flash",
+    accuracy: qwen.accuracy,
+    speed: qwen.speed,
+  });
+  // アプリの知らないモデルは、名前だけ
+  const unknown = shown("translation", server("translation"), models);
+  expect(unknown).toMatchObject({ model: "新しいモデル" });
+  expect(unknown.accuracy).toBeUndefined();
+  // 分からない間は、何も足さない。サーバーでない選択肢は、そのまま
+  expect(shown("transcription", server("transcription"), undefined)).toBe(server("transcription"));
+  expect(shown("transcription", qwen, models)).toBe(qwen);
+  // サーバーの選択肢に、数字は書かない（サーバーがモデルを替えると合わなくなる）
+  for (const item of ["transcription", "terms", "translation", "furigana"] as const) {
+    const option = ITEMS[item].options.find((o) => o.value === "server")!;
+    expect([option.accuracy, option.speed]).toEqual([undefined, undefined]);
+  }
 });

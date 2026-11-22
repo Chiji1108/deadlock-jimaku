@@ -20,6 +20,7 @@ import {
   keyNames,
   providers,
   usesServer,
+  type ServerModels,
 } from "../lib/engines";
 import { addFontFaces, fontWeights } from "../lib/overlay-fonts";
 import type { MergePatch } from "../lib/text-style";
@@ -62,6 +63,8 @@ class Panel {
   view = $state<SettingsView | undefined>();
   /** 対応している言語のコード */
   languages = $state<string[]>([]);
+  /** デドロ字幕のサーバーが仕事ごとに今使っているモデル。取れるまでと、つながらないときは undefined */
+  serverModels = $state<ServerModels | undefined>();
   /** 取れるまでは undefined */
   devices = $state<string[] | undefined>();
   /** 選べるフォント */
@@ -258,6 +261,10 @@ class Panel {
 
   async refreshDevices() {
     this.devices = await api.devices().catch(() => []);
+  }
+
+  async refreshServerModels() {
+    this.serverModels = await api.serverModels().catch(() => undefined);
   }
 
   /** 続けて変えたとき、古い応答で新しい設定を上書きしない */

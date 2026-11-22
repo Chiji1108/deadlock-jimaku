@@ -516,7 +516,16 @@ describe("tasks (/v2)", () => {
       { name: "live", model: "qwen-audio-streaming", enabled: true },
     ]);
     expect(listed.tasks[0]!.models).toContainEqual({ id: "qwen-mt-flash", label: "Qwen-MT-Flash" });
+    // 今のモデルは、コードがなくても読める
+    const models = async () => (await call("/models", { version: "v2" })).json();
+    expect(await models()).toEqual({
+      translate: { id: "hy-mt2", label: "Hy-MT2（OpenRouter）" },
+      decide: { id: "pplx-decider", label: "Perplexity Decider（OpenRouter）" },
+      transcribe: { id: "qwen-audio", label: "Qwen-Audio-3.1-ASR-Flash" },
+      live: { id: "qwen-audio-streaming", label: "Qwen-Audio-3.1-ASR-Flash-Streaming" },
+    });
     expect((await manage("/api/tasks/translate", "PATCH", { model: "qwen-mt-flash" })).status).toBe(204);
+    expect(await models()).toMatchObject({ translate: { id: "qwen-mt-flash", label: "Qwen-MT-Flash" } });
     for (const [path, body] of [
       ["/api/tasks/translate", { model: "gpt-9" }],
       ["/api/tasks/translate", { model: "toString" }],

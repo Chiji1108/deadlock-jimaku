@@ -37,6 +37,7 @@ pub fn router(store: Arc<Store>) -> Router {
         .route("/settings", get(get_settings).patch(patch_settings))
         .route("/keys/{provider}", put(put_key))
         .route("/beta", post(join_beta))
+        .route("/server/models", get(server_models))
         .route("/update", post(update))
         .route("/devices", get(devices))
         .route("/gpus", get(gpus))
@@ -188,6 +189,14 @@ async fn join_beta(State(store): State<Arc<Store>>) -> Response {
     }
     store.restart();
     Json(relay::code_status(&api, &code).await).into_response()
+}
+
+/// サーバーが仕事ごとに今使っているモデル。つながらなければ 502（操作パネルは、モデルの名前と数字を出さない）
+async fn server_models(State(store): State<Arc<Store>>) -> Response {
+    match relay::models(&store.settings().api_base).await {
+        Ok(models) => Json(models).into_response(),
+        Err(e) => (StatusCode::BAD_GATEWAY, format!("{e:#}")).into_response(),
+    }
 }
 
 // ---- Chrome のモード（DESIGN.md 9.6） ----
