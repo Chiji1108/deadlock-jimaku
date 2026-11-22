@@ -38,13 +38,6 @@ export const ITEMS: {
         note: "音声は Google に送られる",
       },
       {
-        value: "server",
-        label: "デドロ字幕のサーバー",
-        accuracy: "95〜98%",
-        price: "ベータ期間中は無料",
-        note: "Chrome を使わない。サーバーが、そのときのおすすめのモデルで作る。モデルは、アプリを更新しなくても替わる（2026 年 11 月は Qwen-Audio-3.1-ASR-Flash-Streaming。正確さと速さは、下の Qwen-Audio-3.1-ASR-Flash-Streaming と同じ）",
-      },
-      {
         value: "gptLiveTranscribe",
         label: "GPT-Live-Transcribe",
         accuracy: "95〜96%",
@@ -98,7 +91,7 @@ export const ITEMS: {
         accuracy: "95〜98%",
         speed: "1.3〜3.1 秒",
         price: "ベータ期間中は無料",
-        note: "サーバーが、そのときのおすすめのモデルで作る。モデルは、アプリを更新しなくても替わる（2026 年 11 月は Qwen-Audio-3.1-ASR-Flash。正確さと速さは、下の Qwen-Audio-3.1-ASR-Flash と同じ）",
+        note: "サーバーが、そのときのおすすめのモデルで作る。モデルは、アプリを更新しなくても替わる",
       },
       {
         value: "grokVoiceTranscribe",
@@ -226,7 +219,7 @@ export const ITEMS: {
         accuracy: "94%",
         speed: "約 0.5 秒",
         price: "ベータ期間中は無料",
-        note: "サーバーが、そのときのおすすめのモデルで判定する。モデルは、アプリを更新しなくても替わる（2026 年 11 月は Perplexity Decider。正確さと速さは、上の Perplexity Decider と同じ）",
+        note: "サーバーが、そのときのおすすめのモデルで判定する。モデルは、アプリを更新しなくても替わる",
       },
     ],
   },
@@ -240,7 +233,7 @@ export const ITEMS: {
         value: "server",
         label: "デドロ字幕のサーバー",
         price: "ベータ期間中は無料",
-        note: "サーバーが、そのときのおすすめのモデルで訳す。モデルは、アプリを更新しなくても替わる（2026 年 11 月は Hy-MT2。正確さと速さは、下の Hy-MT2 と同じ）",
+        note: "サーバーが、そのときのおすすめのモデルで訳す。モデルは、アプリを更新しなくても替わる",
       },
       {
         value: "chromeTranslator",
@@ -318,7 +311,7 @@ export const ITEMS: {
         accuracy: "95%",
         speed: "約 0.5 秒",
         price: "ベータ期間中は無料",
-        note: "読みが分かれる語を、辞書の候補からサーバーが選ぶ。モデルは、アプリを更新しなくても替わる（2026 年 11 月は Perplexity Decider。正確さと速さは、下の Perplexity Decider と同じ）",
+        note: "読みが分かれる語を、辞書の候補からサーバーが選ぶ。モデルは、アプリを更新しなくても替わる",
       },
       {
         value: "decider",
@@ -377,8 +370,8 @@ export const BEST: Engines = {
 /** Chrome+ のモード。Chrome のモードに、Chrome の中の Gemini Nano での用語の判定を足す */
 export const CHROME_PLUS: Engines = { ...CHROME, terms: "geminiNano" };
 
-/** クラウドのモード。「おすすめ」の途中の字幕もサーバーに頼み、Chrome を使わない */
-export const CLOUD: Engines = { ...BETA, live: "server" };
+/** クラウドのモード。「おすすめ」の途中の字幕を Qwen で作り、Chrome を使わない。途中の字幕には、Qwen の自分のキーが要る */
+export const CLOUD: Engines = { ...BETA, live: "qwenAudioStreaming" };
 
 /** 音声も字幕の文字も PC から出さない組み合わせ。3 つとも PC の中で動かす（DESIGN.md 9.7） */
 export const LOCAL: Engines = {
@@ -453,11 +446,10 @@ export const MODES: {
   {
     name: "cloud",
     label: "クラウド",
-    traits: ["使用メモリ最小"],
-    hourlyUsd: 0,
-    hint: "Chrome を開かず、途中の字幕も、デドロ字幕のサーバーを通して作ります。音声を Google に送りません",
+    traits: ["使用メモリ最小", "Qwen のキーが要る"],
+    hourlyUsd: 0.05,
+    hint: "Chrome を開かず、途中の字幕を Qwen で作ります（Qwen の API キーが要ります）。ほかは「おすすめ」と同じで、デドロ字幕のサーバーに頼みます。音声を Google に送りません",
     engines: CLOUD,
-    badge: "ベータ期間中は無料",
     more: true,
   },
   {
@@ -483,9 +475,8 @@ const same = (a: Engines, b: Engines) =>
 /** 今の選び方に合うモード。詳しく選んで変えたなら undefined */
 export const modeOf = (t: Engines) => MODES.find((m) => same(m.engines, t));
 
-/** 途中の字幕をアプリが作る（会社か、デドロ字幕のサーバーの音声認識につなぐ） */
-export const paidLive = (t: Engines) =>
-  t.live === "server" || providerOfOption("live", t.live) !== null;
+/** 途中の字幕をアプリが作る（有料の音声認識につなぐ） */
+export const paidLive = (t: Engines) => providerOfOption("live", t.live) !== null;
 
 /** Chrome のウィンドウを使う（途中の字幕が Chrome） */
 export const usesChrome = (t: Engines) => t.live === "chrome";

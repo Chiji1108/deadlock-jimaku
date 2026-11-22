@@ -1,8 +1,10 @@
 import { expect, test } from "vitest";
 import {
   BEST,
+  BETA,
   CHROME,
   CLOUD,
+  ITEMS,
   MODES,
   keyNames,
   modeOf,
@@ -45,24 +47,21 @@ test("OpenRouter と TypeSafe AI の工程は、その会社の鍵が要る", ()
 });
 
 test("サーバーに頼む工程は、会社の鍵を使わない", () => {
-  for (const item of ["live", "transcription", "terms", "translation", "furigana"] as const) {
-    // 途中の字幕をサーバーに頼むなら、Chrome の翻訳は使えない
-    const base = item === "live" ? { ...CHROME, translation: "server" as const } : CHROME;
-    const server = { ...base, [item]: "server" };
+  for (const item of ["transcription", "terms", "translation", "furigana"] as const) {
+    const server = { ...CHROME, [item]: "server" };
     expect(providers(server)).toEqual([]);
     expect(usesServer(server)).toBe(true);
   }
   expect(usesServer(CHROME)).toBe(false);
   // GPT が翻訳と同時に用語を判定するなら、用語はサーバーに頼まない
   expect(usesServer({ ...CHROME, terms: "server", translation: "gpt61Terra" })).toBe(false);
-  // 「おすすめ」と「クラウド」は、モデルをサーバーに任せる。同じモデルを名指しすると、自分のキーが要る
+  // 無料でサーバーに頼めるのは「おすすめ」の中身だけ。途中の字幕には、サーバーの選択肢がない
+  expect(ITEMS.live.options.map((o) => o.value)).not.toContain("server");
+  // 「クラウド」は、途中の字幕だけ Qwen の自分のキーが要る。ほかは「おすすめ」と同じで、サーバーに頼む
   const named = MODES.filter((m) => usesServer(m.engines)).map((m) => m.name);
   expect(named).toEqual(["beta", "cloud"]);
-  expect(providers(CLOUD)).toEqual([]);
-  expect(providers({ ...CLOUD, transcription: "qwenAudio", terms: "pplxDecider" })).toEqual([
-    "qwen",
-    "openrouter",
-  ]);
+  expect(providers(BETA)).toEqual([]);
+  expect(providers(CLOUD)).toEqual(["qwen"]);
 });
 
 test("要る鍵は、会社の名前を並べて案内する", () => {

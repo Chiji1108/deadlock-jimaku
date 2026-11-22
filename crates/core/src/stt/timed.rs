@@ -1,9 +1,8 @@
-//! 音声を流し続け、時刻の付いた文を受け取る途中の字幕（Qwen の Streaming と、開発者のサーバーの `/v2/live`）。
-//! 文の区切りは相手が決めるので、文字に付いてくる時刻（流した音声の先頭からのミリ秒）で、アプリの発話に割り当てる
+//! 音声を流し続け、時刻の付いた文を受け取る途中の字幕（今は Qwen の Streaming だけ。開発者のサーバーの `/v2/live` も
+//! 同じ形の文を送るので、アプリから頼むようにするときは、ここにつなぐ）。文の区切りは相手が決めるので、文字に付いてくる時刻（流した音声の先頭からのミリ秒）で、アプリの発話に割り当てる
 
 use std::collections::BTreeMap;
 
-use serde::Deserialize;
 use tokio::time::Instant;
 
 use super::*;
@@ -18,25 +17,20 @@ const MAX_SPANS: usize = 16;
 /// 文の始まりが発話を開いた位置より少し前でも、その発話のものとみなす（時刻は 1 文字ごとに付き、少しずれる）
 const EARLY: usize = SAMPLE_RATE as usize * 2 / 10;
 
-/// 相手の文。書きかけのうちから何度も届き、届くたびに文字が置き換わる。サーバーの `/v2/live` はこの形で送る
-#[derive(Debug, Default, Deserialize)]
+/// 相手の文。書きかけのうちから何度も届き、届くたびに文字が置き換わる
+#[derive(Debug, Default)]
 pub(super) struct Sentence {
     pub id: u64,
     /// 文の始まりの時刻
-    #[serde(default)]
     pub begin: Option<u64>,
-    #[serde(default)]
     pub text: String,
     /// 文字ごとの時刻（ないこともある）
-    #[serde(default)]
     pub words: Vec<Word>,
 }
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default)]
 pub(super) struct Word {
-    #[serde(default)]
     pub at: Option<u64>,
-    #[serde(default)]
     pub text: String,
 }
 
@@ -259,10 +253,12 @@ mod tests {
     fn a_sentence_without_word_times_goes_by_its_beginning() {
         let mut session = Session::default();
         session.open("a".into());
-        // サーバーの `/v2/live` の形
-        let whole =
-            json!({ "type": "sentence", "id": 1, "begin": 500, "text": "さあ", "words": [] });
-        let whole: Sentence = serde_json::from_value(whole).unwrap();
+        let whole = Sentence {
+            id: 1,
+            begin: Some(500),
+            text: "さあ".into(),
+            words: Vec::new(),
+        };
         assert_eq!(said(&mut session, whole), [of("a", "さあ")]);
     }
 }

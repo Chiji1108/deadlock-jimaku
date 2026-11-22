@@ -697,10 +697,11 @@ impl Engines {
         terms: TermsEngine::GeminiNano,
         ..Self::CHROME
     };
-    /// クラウドのモード（0.7.0）。ベータのモードの途中の字幕も、サーバーに頼む。Chrome のウィンドウを開かず、
-    /// 音声を Google に送らない
+    /// クラウドのモード（0.7.0）。ベータのモードの途中の字幕を、Qwen で作る。Chrome のウィンドウを開かず、
+    /// 音声を Google に送らない。途中の字幕には、Qwen の自分のキーが要る（無料でサーバーに頼めるのは、
+    /// 「おすすめ」の中身だけ。0.10.0 の rc.3 までは、途中の字幕もベータのコードで無料だった）
     pub const CLOUD: Self = Self {
-        live: LiveSource::Server,
+        live: LiveSource::QwenAudioStreaming,
         ..Self::BETA
     };
     /// 操作パネルに出すモード（おすすめの組み合わせ）。ほかの組み合わせは「カスタム」（`Settings::custom_engines`）。
@@ -752,8 +753,7 @@ impl Engines {
     /// 開発者のサーバーの仕事の口（DESIGN.md 17.4）に頼む工程がある。ベータのコードが要る
     pub fn server(&self) -> bool {
         // 翻訳が会社の LLM なら、用語はそちらが判定するので、サーバーには頼まない
-        self.live == LiveSource::Server
-            || self.transcription == FinalSource::Server
+        self.transcription == FinalSource::Server
             || self.judges_on_server()
             || self.translation == TranslationEngine::Server
             || self.furigana == RubySource::Server
@@ -762,9 +762,6 @@ impl Engines {
     /// サーバーに頼む工程を、自分のキーで頼むものに替える（コードが断られて、自分のキーで続けるとき。
     /// `Store::fall_back`）。サーバーの初めのモデルと同じものにする（Qwen と OpenRouter のキーが要る）
     pub fn with_own_keys(mut self) -> Self {
-        if self.live == LiveSource::Server {
-            self.live = LiveSource::QwenAudioStreaming;
-        }
         if self.transcription == FinalSource::Server {
             self.transcription = FinalSource::QwenAudio;
         }
@@ -882,8 +879,6 @@ impl Default for Engines {
 #[ts(export)]
 pub enum LiveSource {
     Chrome,
-    /// 開発者のサーバーに作らせる（DESIGN.md 17.4）。どのモデルで作るかはサーバーが決める。ベータのコードが要る
-    Server,
     GptLiveTranscribe,
     /// QwenCloud の Qwen-Audio-3.1-ASR-Flash-Streaming。GPT-Live-Transcribe の約 20 分の 1 の料金（DESIGN.md 3.4）
     QwenAudioStreaming,
@@ -897,9 +892,8 @@ pub enum LiveSource {
 }
 
 impl LiveSource {
-    pub const ALL: [Self; 7] = [
+    pub const ALL: [Self; 6] = [
         Self::Chrome,
-        Self::Server,
         Self::GptLiveTranscribe,
         Self::QwenAudioStreaming,
         Self::HaasJa,
@@ -909,7 +903,7 @@ impl LiveSource {
 
     pub fn provider(self) -> Option<Provider> {
         match self {
-            Self::Chrome | Self::Server | Self::HaasJa | Self::Whisper | Self::Off => None,
+            Self::Chrome | Self::HaasJa | Self::Whisper | Self::Off => None,
             Self::GptLiveTranscribe => Some(Provider::OpenAi),
             Self::QwenAudioStreaming => Some(Provider::Qwen),
         }
@@ -1389,8 +1383,7 @@ impl Settings {
             },
             // 翻訳だけなら途中の字幕は見えないので、料金をかけない
             // アプリが作る途中の字幕（会社か、PC の中）
-            LiveSource::Server
-            | LiveSource::GptLiveTranscribe
+            LiveSource::GptLiveTranscribe
             | LiveSource::QwenAudioStreaming
             | LiveSource::HaasJa
             | LiveSource::Whisper
@@ -1398,7 +1391,6 @@ impl Settings {
             {
                 Phase {
                     text: Some(match engines.live {
-                        LiveSource::Server => Text::Server,
                         LiveSource::QwenAudioStreaming => Text::QwenAudioStreaming,
                         LiveSource::HaasJa => Text::HaasJa,
                         LiveSource::Whisper => Text::Whisper,
@@ -1409,8 +1401,7 @@ impl Settings {
                     emphasis: terms,
                 }
             }
-            LiveSource::Server
-            | LiveSource::GptLiveTranscribe
+            LiveSource::GptLiveTranscribe
             | LiveSource::QwenAudioStreaming
             | LiveSource::HaasJa
             | LiveSource::Whisper
@@ -1488,10 +1479,7 @@ impl Settings {
                 let size = self.engines.whisper().expect("live Whisper");
                 models.realtime = size.name().into();
             }
-            LiveSource::Chrome
-            | LiveSource::Server
-            | LiveSource::GptLiveTranscribe
-            | LiveSource::Off => {}
+            LiveSource::Chrome | LiveSource::GptLiveTranscribe | LiveSource::Off => {}
         }
         if self.engines.furigana == RubySource::Luna {
             models.readings = "gpt-6-luna".into();
@@ -1761,6 +1749,7 @@ fn parse(bytes: &[u8], has_code: &dyn Fn() -> bool) -> serde_json::Result<Settin
     from_modes(&mut json);
     from_chrome_beta(&mut json);
     from_relay(&mut json, has_code);
+    from_server_live(&mut json);
     // 読み替えは済んだので、今の番号にする（古い番号のまま保存すると、次に読むときにもう一度読み替えてしまう）
     if let Value::Object(fields) = &mut json {
         fields.insert("format".into(), FORMAT.into());
@@ -1784,13 +1773,27 @@ fn from_chrome_beta(json: &mut Value) {
     }
 }
 
+/// 0.10.0 の rc.3 だけ、途中の字幕にも「サーバー」の選択肢があった（「クラウド」の途中の字幕）。
+/// 無料でサーバーに頼めるのは「おすすめ」の中身だけにしたので、同じモデルを自分のキーで使う選択肢に読み替える
+fn from_server_live(json: &mut Value) {
+    for key in ["engines", "customEngines"] {
+        if let Some(live) = json
+            .get_mut(key)
+            .and_then(|engines| engines.get_mut("live"))
+            && live == "server"
+        {
+            *live = "qwenAudioStreaming".into();
+        }
+    }
+}
+
 /// 0.10.0 までは、ベータのコードがあれば、Qwen と OpenRouter の一部のモデルを、サーバーが会社の形のまま中継していた
-/// （コードが、会社のキーの代わりになった）。今は、サーバーに頼む工程を「サーバー」と選ぶ（DESIGN.md 17.4）。
+/// （コードが、会社のキーの代わりになった）。途中の字幕（Qwen-Audio-Streaming）も中継していたが、これは移さない
+/// （無料でサーバーに頼めるのは「おすすめ」の中身だけ。途中の字幕には、Qwen の自分のキーが要る）。今は、サーバーに頼む工程を「サーバー」と選ぶ（DESIGN.md 17.4）。
 /// コードを持っている人は、中継されていた選択肢を「サーバー」に移す（今までどおり、コードで動く）。コードのない人は、
 /// 自分のキーで使っているので変えない。移すのは 0.10.0 までが保存したファイル（`format` が 3 以下か、ない）だけ
 fn from_relay(json: &mut Value, has_code: &dyn Fn() -> bool) {
-    const RELAYED: [(&str, &str); 5] = [
-        ("live", "qwenAudioStreaming"),
+    const RELAYED: [(&str, &str); 4] = [
         ("transcription", "qwenAudio"),
         ("terms", "pplxDecider"),
         ("translation", "hyMt2"),
@@ -2027,11 +2030,12 @@ mod tests {
         let saved = serde_json::to_string(&tried).unwrap();
         let loaded: Settings = serde_json::from_str(&saved).unwrap();
         assert_eq!(loaded.custom_engines, Some(mine));
-        // 最高精度のほかは、鍵なしで始められる組み合わせ（ベータのコードか、Chrome）
+        // 最高精度（OpenAI）とクラウド（途中の字幕の Qwen）のほかは、鍵なしで始められる組み合わせ
         assert_eq!(Engines::STANDARD.providers(), [Provider::OpenAi]);
+        assert_eq!(Engines::CLOUD.providers(), [Provider::Qwen]);
         for mode in Engines::MODES
             .into_iter()
-            .filter(|mode| *mode != Engines::STANDARD)
+            .filter(|mode| ![Engines::STANDARD, Engines::CLOUD].contains(mode))
         {
             assert!(mode.providers().is_empty(), "{mode:?}");
         }
@@ -2331,8 +2335,18 @@ mod tests {
         let saved = json!({ "engines": Engines::STANDARD }).to_string();
         let untouched = super::parse(saved.as_bytes(), &|| panic!("read the keyring"));
         assert_eq!(untouched.unwrap().engines, Engines::STANDARD);
+        // 途中の字幕は、中継されていたものも移さない（無料でサーバーに頼めるのは「おすすめ」の中身だけ）。
+        // rc.3 が「サーバー」で保存した途中の字幕は、同じモデルを自分のキーで使う選択肢に読み替える
+        let saved = json!({ "format": 4, "engines": {
+            "live": "server", "transcription": "server", "terms": "server",
+            "translation": "server", "furigana": "server",
+        }});
+        let loaded = parse(saved.to_string().as_bytes()).unwrap();
+        assert_eq!(loaded.engines, Engines::CLOUD);
+        assert_eq!(loaded.engines.live, LiveSource::QwenAudioStreaming);
         // サーバーに頼む工程は、会社のキーを使わない
-        assert!(Engines::CLOUD.providers().is_empty() && Engines::CLOUD.server());
+        assert!(Engines::BETA.providers().is_empty() && Engines::BETA.server());
+        assert!(Engines::CLOUD.server());
         // 使わない工程（翻訳が GPT のときの用語）がサーバーでも、コードは要らない
         let unused = Engines {
             terms: TermsEngine::Server,

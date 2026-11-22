@@ -28,7 +28,6 @@ export const PROVIDERS = [
 export const ENGINE_PROVIDERS = {
   "live": {
     "chrome": null,
-    "server": null,
     "gptLiveTranscribe": "openai",
     "qwenAudioStreaming": "qwen",
     "haasJa": null,
