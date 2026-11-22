@@ -217,7 +217,11 @@ mod tests {
         use std::sync::Arc;
 
         let api = std::env::var("BETA_TEST_API").unwrap();
-        let code = join_beta(&api).await.unwrap();
+        // コードは 1 日に同じ所から 3 つまでなので、持っていれば `BETA_TEST_CODE` で渡す
+        let code = match std::env::var("BETA_TEST_CODE") {
+            Ok(code) => code,
+            Err(_) => join_beta(&api).await.unwrap(),
+        };
         check_code(&api, &code).await.unwrap();
         let server = Server::new(&api, code);
         let meter = Arc::new(Meter::new(

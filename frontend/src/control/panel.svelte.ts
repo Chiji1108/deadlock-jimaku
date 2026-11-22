@@ -19,7 +19,6 @@ import {
   chromeFinals,
   keyNames,
   providers,
-  relayOf,
   usesServer,
 } from "../lib/engines";
 import { addFontFaces, fontWeights } from "../lib/overlay-fonts";
@@ -122,37 +121,22 @@ class Panel {
     return this.view ? this.keyless(this.view.settings.engines) : [];
   }
 
-  /** 選んだ作り方に要るのに、自分のキーも、中継するコードもない会社 */
+  /** 選んだ作り方に要るのに、自分のキーがない会社（ベータのコードは、会社のキーの代わりにならない） */
   get missingKeys(): Provider[] {
-    return this.withoutKey.filter((p) => !this.hasCode(p));
+    return this.withoutKey;
   }
 
-  /** その会社を中継するコード（ベータのコード）を持っている */
-  private hasCode(p: Provider) {
-    return relayOf(p) === "beta" && this.view?.keys.beta.state === "saved";
+  /** 今の字幕を、デドロ字幕のサーバーに頼んで作っている工程がある（開発者に請求される）。コードで断られて、
+   * 自分のキーや Chrome の作り方で続けている間は、頼んでいない */
+  get viaServer() {
+    return !!this.view && usesServer(this.view.running);
   }
 
-  /** その会社を、コードで使う。ベータのコードは、自分のキーがあっても先に使う（無料の分を先に。断られて自分のキーで
-   * 続けている間は使わない）。core の `Keys::access` と同じ決まり */
-  private viaCode(p: Provider) {
-    const view = this.view;
-    if (!view || relayOf(p) !== "beta") return false;
-    return view.keys.beta.state === "saved" && view.continuesWith !== "ownKeys";
-  }
-
-  /** ベータのコードで使う（開発者に請求される）会社 */
-  get codePaid(): Provider[] {
-    const view = this.view;
-    if (!view) return [];
-    return providers(view.settings.engines).filter((p) => this.viaCode(p));
-  }
-
-  /** 自分の API キーで払う分がある（コードで使う会社だけなら、本人には請求されない） */
+  /** 自分の API キーで払う分がある（サーバーに頼む工程だけなら、本人には請求されない）。コードで断られて
+   * 自分のキーで続けている間は、自分で払う */
   get pays() {
     const view = this.view;
-    if (!view) return false;
-    const own = (p: Provider) => view.keys[p].state === "saved" && !this.viaCode(p);
-    return providers(view.settings.engines).some(own);
+    return !!view && providers(view.running).some((p) => view.keys[p].state === "saved");
   }
 
   /** 字幕を始められる鍵がそろっている。有料の工程がなければ鍵は要らない */
@@ -414,9 +398,7 @@ class Panel {
 
   /** モードを選ぶ。ベータのコードが要るなら、変える前に同意を聞く（DESIGN.md 17.2） */
   chooseMode = async (engines: Engines) => {
-    const needsCode =
-      this.view?.keys.beta.state !== "saved" &&
-      (usesServer(engines) || this.keyless(engines).some((p) => relayOf(p) === "beta"));
+    const needsCode = this.view?.keys.beta.state !== "saved" && usesServer(engines);
     if (needsCode) this.betaOffer = engines;
     else await this.update({ engines });
   };

@@ -141,6 +141,7 @@ mod tests {
 
     /// サーバーが聞き始めてから音声を流し、届いた文を、時刻で発話に割り当てる。入力が尽きたら、終わりを知らせる
     #[tokio::test]
+    #[allow(clippy::result_large_err)]
     async fn the_server_writes_while_it_listens() {
         use tokio_tungstenite::tungstenite::handshake::server::{Request, Response};
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();

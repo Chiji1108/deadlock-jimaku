@@ -242,64 +242,74 @@ test("Grok と Terra なら、xAI と OpenAI の鍵が要る", () => {
   expect(fresh.missingKeys).toEqual(["openai", "xai"]);
 });
 
-test("中継のない会社（TypeSafe AI）は、コードがあっても自分のキーが要る", () => {
+test("ベータのコードは、会社のキーの代わりにならない", () => {
   const fresh = freshPanel();
-  const keys = (typesafe: string) => ({
+  const keys = (qwen: string) => ({
     openai: { state: "missing" },
     beta: { state: "saved" },
     xai: { state: "missing" },
-    qwen: { state: "missing" },
+    qwen: { state: qwen },
     openrouter: { state: "missing" },
-    typesafe: { state: typesafe },
+    typesafe: { state: "missing" },
   });
-  // 用語は Jev（中継なし）、翻訳は Qwen（ベータのコードで中継する。中継するかは、始めるときに中核が確かめる）
+  // 用語は Jev、翻訳は Qwen を名指し（自分のキーで使う）
   const engines = { ...CHROME, terms: "jev", translation: "qwenMtFlash" };
-  fresh.view = { settings: { engines }, keys: keys("missing") } as unknown as SettingsView;
+  const view = (qwen: string) =>
+    ({ settings: { engines }, running: engines, keys: keys(qwen) }) as unknown as SettingsView;
+  fresh.view = view("missing");
+  expect(fresh.missingKeys).toEqual(["qwen", "typesafe"]);
+  expect(fresh.viaServer).toBe(false);
+  fresh.view = view("saved");
   expect(fresh.missingKeys).toEqual(["typesafe"]);
-  expect(fresh.codePaid).toEqual(["qwen"]);
-  fresh.view = { settings: { engines }, keys: keys("saved") } as unknown as SettingsView;
-  expect(fresh.missingKeys).toEqual([]);
 });
 
-test("ベータのモードは、ベータのコードがあれば鍵が要らない", () => {
+test("サーバーに頼むモードは、会社のキーが要らない", () => {
   const fresh = freshPanel();
-  const view = (beta: string) =>
-    ({ settings: { engines: BETA }, keys: betaKeys(beta) }) as unknown as SettingsView;
-  fresh.view = view("missing");
-  expect(fresh.missingKeys).toEqual(["qwen", "openrouter"]);
-  fresh.view = view("saved");
-  expect(fresh.missingKeys).toEqual([]);
-  expect(fresh.codePaid).toEqual(["qwen", "openrouter"]);
+  for (const beta of ["missing", "saved"]) {
+    fresh.view = {
+      settings: { engines: BETA },
+      running: BETA,
+      keys: betaKeys(beta),
+    } as unknown as SettingsView;
+    expect(fresh.missingKeys).toEqual([]);
+    expect(fresh.viaServer).toBe(true);
+  }
 });
 
 test("起動してからの料金は、自分のキーで払う分があるときだけ出す", () => {
   const fresh = freshPanel();
-  const view = (engines: unknown, saved: string[], continuesWith?: string) => {
+  /** `running` は、今の字幕を作っている工程（断られている間は、設定と違う） */
+  const view = (engines: unknown, saved: string[], running: unknown = engines) => {
     const state = (name: string) => ({ state: saved.includes(name) ? "saved" : "missing" });
     const names = ["openai", "beta", "xai", "qwen", "openrouter", "typesafe"];
     const keys = Object.fromEntries(names.map((name) => [name, state(name)]));
-    return { settings: { engines }, keys, continuesWith } as unknown as SettingsView;
+    return { settings: { engines }, running, keys } as unknown as SettingsView;
   };
-  // 無料のモードと、コードで使うだけのモードは出さない
+  // 無料のモードと、サーバーに頼むだけのモードは出さない。自分のキーを入れていても、使わない
   fresh.view = view(CHROME, ["beta"]);
   expect(fresh.pays).toBe(false);
   fresh.view = view(BETA, ["beta"]);
   expect(fresh.pays).toBe(false);
-  // ベータのコードがあれば、自分のキーを入れていても、無料の分を先に使う
   fresh.view = view(BETA, ["beta", "qwen", "openrouter"]);
   expect(fresh.pays).toBe(false);
-  expect(fresh.codePaid).toEqual(["qwen", "openrouter"]);
-  // コードがなければ、自分のキーで払う
-  fresh.view = view(BETA, ["qwen", "openrouter"]);
+  expect(fresh.viaServer).toBe(true);
+  // コードで断られて、自分のキーで続けている間は、自分で払う。Chrome の作り方で続けている間は、払わない
+  const own = {
+    ...BETA,
+    transcription: "qwenAudio",
+    terms: "pplxDecider",
+    translation: "hyMt2",
+    furigana: "decider",
+  };
+  fresh.view = view(BETA, ["beta", "qwen", "openrouter"], own);
   expect(fresh.pays).toBe(true);
-  expect(fresh.codePaid).toEqual([]);
-  // コードで断られて、自分のキーで続けている間も、自分で払う
-  fresh.view = view(BETA, ["beta", "qwen", "openrouter"], "ownKeys");
-  expect(fresh.pays).toBe(true);
-  // 中継のない会社（Jev）は、いつも自分のキー
+  expect(fresh.viaServer).toBe(false);
+  fresh.view = view(BETA, ["beta"], CHROME);
+  expect(fresh.pays).toBe(false);
+  expect(fresh.viaServer).toBe(false);
+  // 会社を名指しした工程（Jev）は、自分のキー
   fresh.view = view({ ...BETA, terms: "jev" }, ["beta", "typesafe"]);
   expect(fresh.pays).toBe(true);
-  // 中継のない会社（OpenAI）も、自分のキー
   fresh.view = view(BEST, ["beta", "openai"]);
   expect(fresh.pays).toBe(true);
 });
