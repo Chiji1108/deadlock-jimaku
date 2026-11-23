@@ -4,7 +4,7 @@ import wawawawarabi from "../assets/streamers/wawawawarabi.webp?url";
 
 /** デドロ字幕を使っている配信者（載せる許可をもらった人だけ。足すときは、アイコンを `assets/streamers/` に置いて 1 行足す）。`voice` は本人からもらったコメントで、言葉は変えない */
 export const STREAMERS = [
-  { name: "わっわらび", url: "https://www.twitch.tv/wawawawarabi", icon: wawawawarabi, voice: "かわいい！！！！！！！！！！！" },
+  { name: "わっわらび", url: "https://www.twitch.tv/wawawawarabi", icon: wawawawarabi, voice: "キャラのアイコンが出てきて超かわいい！" },
   {
     name: "三毛森ギン",
     url: "https://www.twitch.tv/mikemorigin",
