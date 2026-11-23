@@ -334,11 +334,9 @@ const jsonLd = {
     ></video>
   </section>
 
-  <section class="mx-auto mt-28 grid max-w-6xl items-center gap-10 px-4 sm:mt-40 md:grid-cols-2">
-    <h2 class="display reveal text-[clamp(2.1rem,4.5vw,3.6rem)]">
-      使ってくれている<br /><span class="band">配信者のコメント</span>
-    </h2>
-    <ul class="reveal flex flex-col gap-4">
+  <!-- 使っている配信者から、本人にもらったコメント。見出しは付けない（名前とバブルで分かる） -->
+  <section class="mt-28 px-4 sm:mt-40">
+    <ul class="reveal mx-auto flex w-fit max-w-md flex-col gap-4">
       {
         STREAMERS.map((s) => (
           <li class="flex items-start gap-3">
