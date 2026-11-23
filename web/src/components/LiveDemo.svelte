@@ -114,7 +114,6 @@
     <div class="stream-captions"><Captions {segments} display={subtitle} /></div>
   </div>
   <figcaption class="mt-5 flex flex-wrap items-center justify-center gap-2">
-    <span class="mr-1 text-sm text-muted">押すと翻訳が変わります</span>
     {#each LANGS as l (l.value)}
       <button
         type="button"
