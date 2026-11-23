@@ -334,36 +334,6 @@ const jsonLd = {
     ></video>
   </section>
 
-  <!-- 使っている配信者から、本人にもらったコメント。大きい見出しは付けず、上の「配信で使われています」と同じ小さい字を添える -->
-  <section class="mt-28 px-4 sm:mt-40">
-    <h2 class="reveal text-center text-sm text-muted">配信者の声</h2>
-    <ul class="reveal mx-auto mt-4 flex w-fit max-w-md flex-col gap-4">
-      {
-        STREAMERS.map((s) => (
-          <li class="flex items-start gap-3">
-            <a href={s.url} target="_blank" rel="noopener" class="shrink-0">
-              <img src={s.icon} alt="" width="40" height="40" loading="lazy" class="size-10 rounded-full" />
-            </a>
-            <div>
-              <a
-                href={s.url}
-                target="_blank"
-                rel="noopener"
-                class="flex items-center gap-1.5 text-sm text-muted hover:text-ink"
-              >
-                <span class="font-bold">{s.name}</span>
-                <BrandIcon icon={siTwitch} class="size-3.5" />
-              </a>
-              <p class="mt-1 w-fit rounded-2xl rounded-tl-sm border border-line bg-panel px-4 py-2 leading-relaxed font-bold">
-                {s.voice}
-              </p>
-            </div>
-          </li>
-        ))
-      }
-    </ul>
-  </section>
-
   <section id="modes" class="mx-auto mt-28 max-w-6xl px-4 sm:mt-40">
     <h2 class="display reveal text-[clamp(2.1rem,5.4vw,4.25rem)]">
       3 つの<span class="band">モード</span>から選べる。
@@ -421,6 +391,36 @@ const jsonLd = {
         </p>
       </div>
     </div>
+  </section>
+
+  <!-- 使っている配信者から、本人にもらったコメント。大きい見出しは付けず、上の「配信で使われています」と同じ小さい字を添える -->
+  <section class="mt-28 px-4 sm:mt-40">
+    <h2 class="reveal text-center text-sm text-muted">配信者の声</h2>
+    <ul class="reveal mx-auto mt-4 flex w-fit max-w-md flex-col gap-4">
+      {
+        STREAMERS.map((s) => (
+          <li class="flex items-start gap-3">
+            <a href={s.url} target="_blank" rel="noopener" class="shrink-0">
+              <img src={s.icon} alt="" width="40" height="40" loading="lazy" class="size-10 rounded-full" />
+            </a>
+            <div>
+              <a
+                href={s.url}
+                target="_blank"
+                rel="noopener"
+                class="flex items-center gap-1.5 text-sm text-muted hover:text-ink"
+              >
+                <span class="font-bold">{s.name}</span>
+                <BrandIcon icon={siTwitch} class="size-3.5" />
+              </a>
+              <p class="mt-1 w-fit rounded-2xl rounded-tl-sm border border-line bg-panel px-4 py-2 leading-relaxed font-bold">
+                {s.voice}
+              </p>
+            </div>
+          </li>
+        ))
+      }
+    </ul>
   </section>
 
   <section class="mx-auto mt-28 max-w-6xl px-4 sm:mt-40">
