@@ -3,7 +3,7 @@
 // `run-task` は作り直して送る（モデルやパラメータを足させない）。
 // 料金は、音声 30 秒分ごとに見積もりを先に足し（上限に届いていたら切る）、Qwen が知らせる使用量で実際の額に直す。
 
-import { betaClosed, keyFailed, reasonOf, reserveBeta, settleBeta, type RelayKey } from "./beta";
+import { betaClosed, keyFailed, reasonOf, reserveBeta, settleBeta, type RelayKey, type Work } from "./beta";
 import { codeById, refusal, type Db } from "./db";
 import { QWEN_LIVE } from "./price";
 import { qwenLive } from "./upstream";
@@ -17,6 +17,9 @@ const SECOND_USD = (2 * (11 * QWEN_LIVE.input + 3 * QWEN_LIVE.output)) / 1e6;
 const WINDOW_USD = WINDOW_SECONDS * SECOND_USD;
 /** キーのせいで断られたときの番号（ほかのキーなら通るかもしれない） */
 const KEY_TROUBLE = [401, 402, 403, 429];
+/** 費用の内訳に数える名前 */
+const LIVE = { task: "live", model: "qwen-audio-live" } satisfies Work;
+
 /** `task-failed` のうち、キーのせいのもの（使えない、残高がない、回数の上限） */
 const KEY_FAILURE = /ApiKey|Unauthorized|AccessDenied|Arrearage|Throttling|Quota/i;
 
@@ -29,7 +32,7 @@ export type Refused = { error: "limit" | "upstream" };
 
 export async function relayQwenLive(db: Db, codeId: string, keys: RelayKey[], ctx: Ctx): Promise<Response | Refused> {
   if (!(await reserveBeta(db, codeId, WINDOW_USD, Date.now()))) return { error: "limit" };
-  const release = () => ctx.waitUntil(settleBeta(db, codeId, WINDOW_USD, 0, Date.now()));
+  const release = () => ctx.waitUntil(settleBeta(db, codeId, LIVE, WINDOW_USD, 0, Date.now()));
   // キーが断られたら、次のキーに回す（`relayed` と同じ決まり）
   let upstream: WebSocket | null = null;
   let used: RelayKey | undefined;
@@ -93,7 +96,7 @@ export async function relayQwenLive(db: Db, codeId: string, keys: RelayKey[], ct
   const settle = () => {
     const [estimate, usd] = [reserved, actual()];
     reserved = 0;
-    return settleBeta(db, codeId, estimate, usd, Date.now());
+    return settleBeta(db, codeId, LIVE, estimate, usd, Date.now());
   };
   const close = (status: number, reason: string) => {
     if (closed) return;

@@ -54,6 +54,24 @@ export const betaSpend = sqliteTable("beta_spend", {
 });
 
 /**
+ * 仕事とモデルごとの、その日（UTC）に使った額と、料金のかかった回数（DESIGN.md 17.3）。費用の内訳を見るためのもので、
+ * コードとは結びつけない。途中の文字起こし（0.9.9 までのアプリ）は、30 秒ごとの見積もりを 1 回と数える
+ */
+export const taskSpend = sqliteTable(
+  "task_spend",
+  {
+    day: text().notNull(),
+    /** "translate" など（tasks.ts の TASKS）と、0.9.9 までのアプリだけが使う "live" */
+    task: text().notNull(),
+    /** tasks.ts でのモデルの名前 */
+    model: text().notNull(),
+    usd: real().notNull().default(0),
+    count: integer().notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.day, t.task, t.model] })],
+);
+
+/**
  * ベータで使う開発者のキー（DESIGN.md 17.3）。会社ごとに複数置ける（回数の上限に当たったら、次のキーに回す）。
  * 管理画面から足す。キーそのものは保存しない（暗号化）
  */

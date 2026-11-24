@@ -14,6 +14,7 @@ import {
   settleBeta,
   type BetaProvider,
   type RelayKey,
+  type Work,
 } from "./beta";
 import { OPENROUTER_FALLBACK, QWEN_AUDIO, tokensOf } from "./price";
 import { relayQwenLive } from "./qwenLive";
@@ -36,7 +37,7 @@ const v1 = new Hono<App>();
 /** 用語の判定の問いの数の上限。アプリは 1 発話で候補の数だけ問い（多くて 10 ほど）を送る */
 const MAX_QUESTIONS = 40;
 
-/** ベータで中継するモデル（これだけ。いちばん安い組み合わせ。DESIGN.md 17.2） */
+/** ベータで中継するモデル（これだけ。いちばん安い組み合わせ。DESIGN.md 17.2）。費用の内訳には、tasks.ts での同じモデルの名前で数える */
 const BETA_JUDGE = "perplexity/pplx-decider-v1.2";
 const BETA_TRANSLATOR = "tencent/hy-mt2-30b-a3b";
 
@@ -78,6 +79,7 @@ v1.post("/beta/codes", async (c) => {
 async function relayed(
   c: Ctx,
   gift: { code: Code; keys: RelayKey[] },
+  work: Work,
   estimate: number,
   send: (key: string) => Promise<Response>,
   usd: (answer: Record<string, unknown>) => number | undefined,
@@ -87,7 +89,7 @@ async function relayed(
   if (!(await reserveBeta(c.var.db, codeId, estimate, now))) {
     return c.json({ error: "limit" }, 403, { "X-Gift-Refusal": "limit" });
   }
-  const settle = (actual: number) => c.executionCtx.waitUntil(settleBeta(c.var.db, codeId, estimate, actual, now));
+  const settle = (actual: number) => c.executionCtx.waitUntil(settleBeta(c.var.db, codeId, work, estimate, actual, now));
   const res = await sent(c, gift.keys, send);
   if (!res?.ok) {
     settle(0);
@@ -145,7 +147,7 @@ v1.post("/qwen/api/v1/services/aigc/multimodal-generation/generation", async (c)
   const seconds = (sounds[0]!.length * 0.75) / 32_000;
   const estimate = 2 * (usdOf(seconds * 11 + MAX_QWEN_CONTEXT, QWEN_AUDIO.input) + usdOf(300, QWEN_AUDIO.output));
   const path = "/api/v1/services/aigc/multimodal-generation/generation";
-  return relayed(c, gift, estimate, (key) => qwen(path, key, forwarded), (answer) => {
+  return relayed(c, gift, { task: "transcribe", model: "qwen-audio" }, estimate, (key) => qwen(path, key, forwarded), (answer) => {
     if (answer.usage === undefined) return undefined;
     const { input, output } = tokensOf(answer.usage);
     return usdOf(input, QWEN_AUDIO.input) + usdOf(output, QWEN_AUDIO.output);
@@ -199,6 +201,7 @@ v1.post("/openrouter/systemone", async (c) => {
   return relayed(
     c,
     gift,
+    { task: "decide", model: "pplx-decider" },
     estimate,
     (key) => openrouter("/systemone", key, forwarded),
     (answer) => openrouterUsd(answer.usage),
@@ -235,6 +238,7 @@ v1.post("/openrouter/chat/completions", async (c) => {
   return relayed(
     c,
     gift,
+    { task: "translate", model: "hy-mt2" },
     estimate,
     (key) => openrouter("/chat/completions", key, forwarded),
     (answer) => openrouterUsd(answer.usage),
