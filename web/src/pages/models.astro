@@ -1,0 +1,129 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { RUNS, TERMS, TRANSLATE, type Row } from "../lib/models";
+
+const date = (day: string) => {
+  const [y, m, d] = day.split("-").map(Number);
+  return `${y} 年 ${m} 月 ${d} 日`;
+};
+const seconds = (ms: number) => `${(ms / 1000).toFixed(2)} 秒`;
+const dollars = (usd: number) => `$${usd.toFixed(4)}`;
+/** 表の上に出す、測った日（行ごとに違えば並べる） */
+const days = (rows: Row[]) => [...new Set(rows.map((r) => r.measured))].sort().map(date).join("、");
+
+const tables = [
+  {
+    id: "translate",
+    title: "翻訳",
+    rows: TRANSLATE,
+    /** 言語ごとの回数を出す */
+    languages: true,
+    how: [
+      `配信で話しそうな 63 の文を 3 回ずつ、合わせて ${RUNS} 回、日本語から英語とロシア語に訳させました。文の中のゲームの用語（ヒーロー・アイテム・スキル）は、先に英語の正式名に置き換え、⟦Haze⟧ のように括弧で囲んで渡します。`,
+      "英語とロシア語のどちらの訳にも、括弧の付いた名前がそのまま残っていた回を「合っていた」と数えます。名前が抜けた、名前を訳した、名前に語尾を付けた、日本語が残った、のどれかがあれば、合っていません。訳の自然さは数えていません。",
+      "翻訳専門のモデル（Hy-MT2、Qwen-MT-Flash）には言語ごとに 1 回ずつ同時に送り、ほかのモデルには 2 言語をまとめて 1 回で訳させています。推論は止めています。アプリは、訳文の名前の崩れを直してから字幕にするので、字幕での結果はこの数字より良くなります。",
+    ],
+  },
+  {
+    id: "terms",
+    title: "用語の判定",
+    rows: TERMS,
+    languages: false,
+    how: [
+      `同じ 63 の文を 3 回ずつ、合わせて ${RUNS} 回。アプリが PC の中の辞書から出した用語の候補を、判定モデルに確かめさせました。`,
+      "その文の用語をすべて見つけ、ふつうの言葉（「シルバー帯」のシルバーなど）を用語にしなかった回を「合っていた」と数えます。",
+    ],
+  },
+];
+
+/** 狭い画面では、行を 1 つの箱にして、数字の上に欄の名前を出す */
+const cell =
+  "py-3 tabular-nums md:px-3 md:text-right max-md:py-0 max-md:before:block max-md:before:text-xs max-md:before:text-muted max-md:before:content-[attr(data-label)]";
+---
+
+<Layout
+  title="モデルの測定結果"
+  description="デドロ字幕が翻訳と用語の判定に使うモデルを、同じ文で測って比べた結果。合っていた回数、応答の速さ、料金。"
+>
+  <div class="mx-auto max-w-6xl px-4 pt-16">
+    <h1 class="display text-[clamp(2.1rem,5.4vw,4.25rem)]">
+      モデルは、<span class="band">測って選ぶ。</span>
+    </h1>
+    <p class="mt-5 max-w-2xl text-lg leading-relaxed text-muted">
+      デドロ字幕が使うモデルは、Deadlock の配信の文で測って決めています。その結果を載せます。料金と速さは変わっていくので、測った日を添えています。
+    </p>
+
+    {
+      tables.map((t) => (
+        <section id={t.id} class="mt-20">
+          <h2 class="display text-[clamp(1.75rem,3.6vw,2.6rem)]">{t.title}</h2>
+          <div class="mt-5 max-w-3xl leading-relaxed text-muted [&_p]:mt-3">
+            {t.how.map((p) => (
+              <p>{p}</p>
+            ))}
+          </div>
+          <p class="mt-8 text-sm font-bold">測った日: {days(t.rows)}</p>
+          <table class="mt-3 w-full border-t-2 border-ink text-left max-md:block">
+            <thead class="text-sm text-muted max-md:hidden">
+              <tr>
+                <th class="py-3 font-normal">モデル</th>
+                <th class="px-3 py-3 text-right font-normal">合っていた回数</th>
+                {t.languages && <th class="px-3 py-3 text-right font-normal">英語</th>}
+                {t.languages && <th class="px-3 py-3 text-right font-normal">ロシア語</th>}
+                <th class="px-3 py-3 text-right font-normal">失敗</th>
+                <th class="px-3 py-3 text-right font-normal">応答（中央値）</th>
+                <th class="px-3 py-3 text-right font-normal">遅いとき</th>
+                <th class="py-3 pl-3 text-right font-normal">{RUNS} 回の料金</th>
+              </tr>
+            </thead>
+            <tbody class="max-md:block">
+              {t.rows.map((r) => (
+                <tr class="border-t border-line align-top max-md:grid max-md:grid-cols-3 max-md:gap-x-4 max-md:gap-y-3 max-md:py-5">
+                  <th scope="row" class="py-3 pr-3 font-normal max-md:col-span-3 max-md:py-0">
+                    <span class="flex flex-wrap items-center gap-x-2 gap-y-1 font-bold">
+                      {r.name}
+                      {r.recommended && <span class="bg-ink px-2 py-0.5 text-xs text-paper">「おすすめ」で使用中</span>}
+                    </span>
+                    <span class="mt-0.5 block text-sm text-muted">{r.via}</span>
+                    {r.note && <span class="mt-1 block max-w-md text-sm leading-relaxed text-muted">{r.note}</span>}
+                  </th>
+                  <td class={`${cell} font-bold`} data-label="合っていた回数">
+                    {r.ok}
+                    <span class="text-sm font-normal text-muted"> / {RUNS}</span>
+                  </td>
+                  {t.languages && (
+                    <td class={cell} data-label="英語">
+                      {r.okBy?.en ?? "—"}
+                    </td>
+                  )}
+                  {t.languages && (
+                    <td class={cell} data-label="ロシア語">
+                      {r.okBy?.ru ?? "—"}
+                    </td>
+                  )}
+                  <td class={cell} data-label="失敗">
+                    {r.failed}
+                  </td>
+                  <td class={cell} data-label="応答（中央値）">
+                    {seconds(r.medianMs)}
+                  </td>
+                  <td class={cell} data-label="遅いとき">
+                    {seconds(r.p90Ms)}
+                  </td>
+                  <td class={`${cell} md:pr-0`} data-label={`${RUNS} 回の料金`}>
+                    {dollars(r.usd)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      ))
+    }
+
+    <p class="mt-12 max-w-3xl text-sm leading-relaxed text-muted">
+      「失敗」は、時間切れ（8 秒）や、送り先に断られて答えが返らなかった回数です（合っていた回数には入りません）。「遅いとき」は、10 回に 1
+      回はこれより遅い、という時間です。応答は日本から測っています。同じ条件で測った結果だけを並べていて、前の条件で測ったものは載せていません。
+    </p>
+  </div>
+</Layout>

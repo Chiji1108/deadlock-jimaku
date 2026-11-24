@@ -1,0 +1,23 @@
+{
+  "translate": [
+    { "key": "translate/tencent/hy-mt2-30b-a3b", "name": "Hy-MT2 30B-A3B", "via": "Tencent（OpenRouter）", "recommended": true, "note": "翻訳専門のモデル。括弧を閉じ忘れることがある" },
+    { "key": "translate/qwen-mt-flash", "name": "Qwen-MT-Flash", "via": "QwenCloud", "note": "翻訳専門のモデル。失敗の 10 回は、回数の上限（429）" },
+    { "key": "translate/qwen3.8-flash", "name": "Qwen3.8 Flash", "via": "QwenCloud", "note": "括弧を外して名前だけを書くことがある" },
+    { "key": "translate/claude-haiku-5-5", "name": "Claude Haiku 5.5", "via": "Anthropic", "note": "ロシア語で、名前に語尾を付けることがある" },
+    { "key": "translate/openrouter:qwen/qwen3.7-flash", "name": "Qwen3.7 Flash", "via": "OpenRouter" },
+    { "key": "translate/openrouter:deepseek/deepseek-v4.1-flash", "name": "DeepSeek V4.1 Flash", "via": "OpenRouter", "note": "ロシア語の訳に、日本語が残ることがある" },
+    { "key": "translate/openrouter:deepseek/deepseek-v4.1-flash-1017", "name": "DeepSeek V4.1 Flash 1017", "via": "OpenRouter" },
+    { "key": "translate/openrouter:tencent/hy4-flash", "name": "Hy4 Flash", "via": "Tencent（OpenRouter）", "note": "失敗は時間切れ。ロシア語の訳に、日本語が残ることが多い" },
+    { "key": "translate/openrouter:z-ai/glm-5.3-flash@low", "name": "GLM 5.3 Flash", "via": "Z.ai（OpenRouter）", "note": "推論を止められないので、いちばん弱い指定（low）で測った" },
+    { "key": "translate/openrouter:google/gemma-4-26b-a4b-it", "name": "Gemma 4 26B A4B", "via": "OpenRouter" },
+    { "key": "translate/openrouter:inclusionai/ling-3.0-flash", "name": "Ling 3.0 Flash", "via": "inclusionAI（OpenRouter）", "note": "失敗は、答えが 8 秒で終わらない時間切れ" },
+    { "key": "translate/openrouter:mistralai/ministral-8b-2512", "name": "Ministral 3 8B", "via": "Mistral（OpenRouter）", "note": "ロシア語で、名前に語尾を付けたり、名前を訳したりする" }
+  ],
+  "terms": [
+    { "key": "terms-jev/perplexity/pplx-decider-v1.2", "name": "Perplexity Decider V1.2", "via": "Perplexity（OpenRouter）", "measured": "2026-11-20", "recommended": true },
+    { "key": "terms-jev/nace-ai/drex-max", "name": "Drex Max", "via": "Nace（OpenRouter）", "measured": "2026-11-20" },
+    { "key": "terms-jev/drex-max-v1.1", "name": "Drex Max v1.1", "via": "Nace", "measured": "2026-11-20" },
+    { "key": "terms-jev/d1.2-ultra", "name": "d1.2-ultra", "via": "Liquid AI", "measured": "2026-11-20" },
+    { "key": "terms-jev/d1.2", "name": "d1.2", "via": "Liquid AI", "measured": "2026-11-20" }
+  ]
+}
