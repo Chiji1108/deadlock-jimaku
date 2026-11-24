@@ -809,6 +809,36 @@ describe("admin", () => {
     expect((await manage("/api/summary")).status).toBe(503);
   });
 
+  it("refuses apps older than the version the developer sets, when they start captions", async () => {
+    const agent = (version: string) => ({ "User-Agent": `deadlock-jimaku/${version} (windows)` });
+    const code = await joined();
+    const started = async (door: "v1" | "v2", headers: Record<string, string> = {}) => {
+      const res = await call(door === "v1" ? "/gift" : "/status", { version: door, token: code, headers });
+      return [res.status, ((await res.json()) as { error?: string }).error];
+    };
+    const set = (minVersion: unknown) => manage("/api/settings", "PUT", { minVersion });
+    // 決めていなければ、どの版も断らない（版を伝えない 0.9.6 以前も）
+    expect(await started("v1")).toEqual([200, undefined]);
+    expect((await set("0.10")).status).toBe(400);
+    expect((await set("0.10.0")).status).toBe(204);
+    // 0.9.7 からのアプリは、この答えで「アプリを更新してください」と出す
+    expect(await started("v1", agent("0.9.9"))).toEqual([403, "outdated"]);
+    expect(await started("v1")).toEqual([403, "outdated"]);
+    // rc は、同じ番号の正式版より古い
+    expect(await started("v2", agent("0.10.0-rc.5"))).toEqual([403, "outdated"]);
+    expect(await started("v2", agent("0.10.0"))).toEqual([200, undefined]);
+    expect(await started("v2", agent("0.11.0-rc.1"))).toEqual([200, undefined]);
+    // 管理画面には、決めた版と、断っている版を出す
+    const summary = (await (await manage("/api/summary")).json()) as { minVersion: string; versions: { version: string; refused: boolean }[] };
+    expect(summary.minVersion).toBe("0.10.0");
+    await call("/gift", { token: await joined("203.0.113.9"), headers: agent("0.9.9") });
+    const after = (await (await manage("/api/summary")).json()) as typeof summary;
+    expect(after.versions.map((v) => [v.version, v.refused]).toSorted()).toEqual([["0.11.0-rc.1", false], ["0.9.9", true]]);
+    // 空にすると、また断らなくなる
+    expect((await set("")).status).toBe(204);
+    expect(await started("v1", agent("0.9.9"))).toEqual([200, undefined]);
+  });
+
   it("shows which versions of the app still start captions", async () => {
     const agent = (version: string) => ({ "User-Agent": `deadlock-jimaku/${version} (windows)` });
     const [old, current, updated, idle] = [await joined("203.0.113.1"), await joined("203.0.113.2"), await joined("203.0.113.3"), await joined("203.0.113.4")];
@@ -825,9 +855,9 @@ describe("admin", () => {
     const today = day(Date.now());
     const summary = (await (await manage("/api/summary")).json()) as Record<string, any>;
     expect(summary.versions).toEqual([
-      { version: "0.10.0-rc.1", codes: 1, lastDay: today },
-      { version: null, codes: 1, lastDay: today },
-      { version: "0.9.7", codes: 1, lastDay: "2026-01-01" },
+      { version: "0.10.0-rc.1", codes: 1, lastDay: today, refused: false },
+      { version: null, codes: 1, lastDay: today, refused: false },
+      { version: "0.9.7", codes: 1, lastDay: "2026-01-01", refused: false },
     ]);
     // コードごとにも、版と最後に来た日を出す
     const listed = (await (await manage("/api/codes")).json()) as { codes: { version: string | null; seenDay: string | null }[] };
@@ -838,8 +868,8 @@ describe("admin", () => {
     await env.DB.prepare("UPDATE codes SET revoked = 1 WHERE app_version = '0.10.0-rc.1'").run();
     const after = (await (await manage("/api/summary")).json()) as Record<string, any>;
     expect(after.versions).toEqual([
-      { version: null, codes: 1, lastDay: today },
-      { version: "0.9.7", codes: 1, lastDay: "2026-01-01" },
+      { version: null, codes: 1, lastDay: today, refused: false },
+      { version: "0.9.7", codes: 1, lastDay: "2026-01-01", refused: false },
     ]);
     // 版の形でないものは、伝えていないのと同じ
     await call("/gift", { token: current, headers: { "User-Agent": "curl/8.0" } });

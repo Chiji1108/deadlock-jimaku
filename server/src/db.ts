@@ -39,6 +39,32 @@ export function appVersion(agent: string | undefined): string | null {
   return agent?.match(/^deadlock-jimaku\/(\d+\.\d+\.\d+(?:-[0-9A-Za-z.]+)?) /)?.[1] ?? null;
 }
 
+/** 版の形（"0.9.7"、"0.10.0-rc.1"） */
+export const VERSION = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.]+)?$/;
+
+/**
+ * `version` が `min` より古いか（SemVer の順。"0.10.0-rc.1" は "0.10.0" より古い）。
+ * どちらも `VERSION` の形のものを渡す
+ */
+export function olderThan(version: string, min: string): boolean {
+  const parts = (v: string) => {
+    const [core, pre] = v.split(/-(.*)/s);
+    return { core: core!.split(".").map(Number), pre: pre?.split(".") };
+  };
+  const [a, b] = [parts(version), parts(min)];
+  for (let i = 0; i < 3; i++) if (a.core[i] !== b.core[i]) return a.core[i]! < b.core[i]!;
+  // 番号が同じなら、rc などの付いたほうが古い
+  if (!a.pre || !b.pre) return !!a.pre && !b.pre;
+  for (let i = 0; i < Math.max(a.pre.length, b.pre.length); i++) {
+    const [x, y] = [a.pre[i], b.pre[i]];
+    if (x === y) continue;
+    if (x === undefined || y === undefined) return x === undefined;
+    const [n, m] = [Number(x), Number(y)];
+    return Number.isNaN(n) || Number.isNaN(m) ? x < y : n < m;
+  }
+  return false;
+}
+
 /** コードを確かめに来た（字幕を始めた）日と、アプリの版を覚える。同じ日に同じ版なら書かない */
 export async function seen(db: Db, id: string, version: string | null, now: number) {
   const today = day(now);
