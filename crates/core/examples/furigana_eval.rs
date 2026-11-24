@@ -88,7 +88,13 @@ async fn main() -> anyhow::Result<()> {
         reasoning_effort: Some("none"),
         meter: &meter,
     };
-    let terra = model("gpt-6.1-terra");
+    // 正しい読みのない文の基準を作る分は、測るモデルの料金に入れない
+    let reference_meter =
+        Meter::new(std::env::temp_dir().join("overlays-furigana-eval-reference.json"));
+    let terra = Model {
+        meter: &reference_meter,
+        ..model("gpt-6.1-terra")
+    };
     let fixer = model(&how);
     let dictionary = Furigana::shared().expect("dictionary");
     let http = overlays_core::http();
