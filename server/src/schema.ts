@@ -61,7 +61,7 @@ export const betaKeys = sqliteTable(
   "beta_keys",
   {
     id: text().primaryKey(),
-    provider: text({ enum: ["qwen", "openrouter", "perplexity"] }).notNull(),
+    provider: text({ enum: ["qwen", "openrouter", "perplexity", "openai"] }).notNull(),
     /** base64(iv || AES-GCM の暗号文) */
     encryptedKey: text().notNull(),
     /** 見分けるための、キーの終わりの 4 文字 */

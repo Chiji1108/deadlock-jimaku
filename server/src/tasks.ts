@@ -39,7 +39,7 @@ export interface Model {
 
 /** 翻訳のモデル（OpenAI 互換の口） */
 export interface Translator extends Model {
-  provider: "qwen" | "openrouter";
+  provider: "qwen" | "openrouter" | "openai";
   body: (asked: Translation) => unknown;
   /** 答えを待つ時間（ミリ秒）。待たせすぎると、確定の字幕が遅れる */
   timeoutMs: number;
@@ -126,6 +126,28 @@ const TRANSLATORS = {
     }),
     price: { input: 0.15, output: 0.47 },
     // 1〜2 秒かかる（遅いときは 3 秒ほど）
+    timeoutMs: 4000,
+  },
+  // OpenAI に直接頼む。指示文は Qwen3.8 Flash と同じ（アプリが自分のキーで頼むときとも同じ。mt.rs）
+  "gpt-6-luna": {
+    label: "GPT-6 Luna",
+    provider: "openai",
+    body: ({ text, source, target }) => ({
+      model: "gpt-6-luna",
+      messages: [
+        {
+          role: "system",
+          content: `Translate the ${name(source)} text into ${name(target)}. ${DOMAINS} Reply with the translation only.`,
+        },
+        { role: "user", content: text },
+      ],
+      reasoning_effort: "none",
+      max_completion_tokens: MAX_TRANSLATION_TOKENS,
+      // 応答を OpenAI に保存させない
+      store: false,
+    }),
+    price: { input: 0.1, output: 0.5 },
+    // 1.5〜2 秒かかる（遅いときは 3 秒ほど）
     timeoutMs: 4000,
   },
 } satisfies Record<string, Translator>;
