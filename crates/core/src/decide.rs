@@ -138,7 +138,7 @@ impl Decider {
             Judge::Api { access, model } => (access, *model),
             Judge::Server(server) => {
                 let (state, questions) = (&asked.request["input"], &asked.request["questions"]);
-                let chosen = ask_server(http, server, state, questions).await?;
+                let chosen = ask_server(http, server, "/decide", state, questions).await?;
                 return Ok(asked.spans(|name| chosen.get(name).cloned()));
             }
             Judge::Local(llama) => {
@@ -271,17 +271,19 @@ pub(crate) fn systemone(model: &str, state: &Value, questions: &Value) -> Value 
     json!({ "model": model, "state": state, "questions": questions })
 }
 
-/// 開発者のサーバーに選ばせる。`questions` は、問いの配列（名前、指示、選べる値とその説明。OpenAI の形と同じ）。
+/// 開発者のサーバーに選ばせる。`door` は仕事の口（用語は `/decide`、読みは `/read`。サーバーは、仕事ごとにモデルを決める）。
+/// `questions` は、問いの配列（名前、指示、選べる値とその説明。OpenAI の形と同じ）。
 /// 問いの名前 → 選ばれた値（答えのない問いは入っていない）。コードが断られたら `TranscriptionError`。
 /// かかった額は数えない（払うのは開発者）
 pub(crate) async fn ask_server(
     http: &reqwest::Client,
     server: &Server,
+    door: &str,
     state: &Value,
     questions: &Value,
 ) -> anyhow::Result<BTreeMap<String, String>> {
     let res = http
-        .post(server.url("/decide"))
+        .post(server.url(door))
         .bearer_auth(server.code())
         .timeout(TIMEOUT)
         .json(&json!({ "state": state, "questions": questions }))

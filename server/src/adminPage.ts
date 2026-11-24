@@ -248,7 +248,7 @@ export const page = /* html */ `<!doctype html>
   </section>
 
   <section id="tab-models" hidden>
-    <p class="muted">アプリは「何をしてほしいか」だけを送り、モデルはここで決めます。替えると、次の要求から効きます（アプリの更新は要りません）。止めた仕事は、その工程だけ断ります（アプリは、ほかの工程を続けます）。古い口を使う版（0.9.9 まで）には効きません</p>
+    <p class="muted">アプリは「何をしてほしいか」だけを送り、モデルはここで決めます。替えると、次の要求から効きます（アプリの更新は要りません）。止めた仕事は、その工程だけ断ります（アプリは、ほかの工程を続けます）。古い口を使う版（0.9.9 まで）には効きません。0.10.0 のアプリは、読みも「用語を選ぶ」のモデルに頼みます</p>
     <div class="tasks" id="tasks"></div>
   </section>
 
@@ -289,7 +289,7 @@ export const page = /* html */ `<!doctype html>
       <p id="oldCodes"></p>
       <dl>
         <dt>翻訳</dt><dd>Hy-MT2（OpenRouter）</dd>
-        <dt>用語と読みを選ぶ</dt><dd>Perplexity Decider（OpenRouter）</dd>
+        <dt>用語と読みを選ぶ</dt><dd>Perplexity Decider V1.2（OpenRouter）</dd>
         <dt>確定の文字起こし</dt><dd>Qwen-Audio-3.1-ASR-Flash</dd>
         <dt>途中の文字起こし</dt><dd>Qwen-Audio-3.1-ASR-Flash-Streaming</dd>
       </dl>

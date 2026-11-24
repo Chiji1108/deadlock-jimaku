@@ -163,7 +163,7 @@ describe("beta", () => {
   it("gives a code that relays Qwen and OpenRouter with the developer's keys, under a small daily limit", async () => {
     const code = await joined();
     const gift = await call("/gift", { token: code });
-    expect(await gift.json()).toEqual({ tasks: ["translate", "decide", "transcribe"], providers: ["qwen", "openrouter"], remaining: 1 });
+    expect(await gift.json()).toEqual({ tasks: ["translate", "decide", "read", "transcribe"], providers: ["qwen", "openrouter"], remaining: 1 });
     expect((await codeByValue(db, code))!.dailyLimitUsd).toBe(0.5);
     // 0.7 までのギフトコードの口は、もうない
     for (const path of ["/openai/responses", "/xai/stt", "/share/codes"]) {
@@ -510,7 +510,7 @@ describe("tasks (/v2)", () => {
     expect(JSON.stringify(body)).toContain("[Source Text]\\n⟦Haze⟧強い");
     expect(await dayUsd(code)).toBeCloseTo(0.002, 8);
     const state = await ask("/status", code);
-    const tasks = ["translate", "decide", "transcribe"];
+    const tasks = ["translate", "decide", "read", "transcribe"];
     expect(await state.json()).toEqual({ tasks, providers: ["qwen", "openrouter"], remaining: 0.996 });
   });
 
@@ -528,7 +528,8 @@ describe("tasks (/v2)", () => {
     const listed = (await (await manage("/api/tasks")).json()) as { tasks: { name: string; model: string; models: unknown[] }[] };
     expect(listed.tasks).toMatchObject([
       { name: "translate", label: "翻訳", model: "hy-mt2", enabled: true },
-      { name: "decide", model: "pplx-decider", enabled: true },
+      { name: "decide", label: "用語を選ぶ", model: "pplx-decider", enabled: true },
+      { name: "read", label: "読みを選ぶ", model: "pplx-decider", enabled: true },
       { name: "transcribe", model: "qwen-audio", enabled: true },
     ]);
     expect(listed.tasks[0]!.models).toContainEqual({ id: "qwen-mt-flash", label: "Qwen-MT-Flash", keyed: true });
@@ -536,7 +537,8 @@ describe("tasks (/v2)", () => {
     const models = async () => (await call("/models", { version: "v2" })).json();
     expect(await models()).toEqual({
       translate: { id: "hy-mt2", label: "Hy-MT2（OpenRouter）" },
-      decide: { id: "pplx-decider", label: "Perplexity Decider（OpenRouter）" },
+      decide: { id: "pplx-decider", label: "Perplexity Decider V1.2（OpenRouter）" },
+      read: { id: "pplx-decider", label: "Perplexity Decider V1.2（OpenRouter）" },
       transcribe: { id: "qwen-audio", label: "Qwen-Audio-3.1-ASR-Flash" },
     });
     expect((await manage("/api/tasks/translate", "PATCH", { model: "qwen-mt-flash" })).status).toBe(204);
@@ -580,7 +582,7 @@ describe("tasks (/v2)", () => {
     expect(await dayUsd(code)).toBe(0);
     // アプリには、頼める仕事から外して伝える。コードは使えるまま（ほかの工程は続く）
     expect(await (await ask("/status", code)).json()).toMatchObject({
-      tasks: ["decide", "transcribe"],
+      tasks: ["decide", "read", "transcribe"],
       providers: ["qwen", "openrouter"],
     });
     // 止めても、選んでいたモデルは変わらない
@@ -728,7 +730,7 @@ describe("tasks (/v2)", () => {
     expect((await manage("/api/keys", "POST", { provider: "openai", key: "sk-test-openai-0000000001" })).status).toBe(200);
     expect((await manage("/api/tasks/translate", "PATCH", { model: "gpt-6-luna" })).status).toBe(204);
     // 古い版のアプリは、知らない会社の名前があると答えを読めないので、中継する会社には入れない
-    expect(await (await ask("/status", code)).json()).toMatchObject({ tasks: ["translate", "decide", "transcribe"], providers: ["qwen", "openrouter"] });
+    expect(await (await ask("/status", code)).json()).toMatchObject({ tasks: ["translate", "decide", "read", "transcribe"], providers: ["qwen", "openrouter"] });
 
     // 料金は答えに入っていないので、トークンの数と単価（100 万あたり入力 $0.10、出力 $0.50）から数える
     vi.mocked(chat).mockImplementation(async () => answered("strong", { prompt_tokens: 1_000_000, completion_tokens: 1_000_000 }));
@@ -757,16 +759,16 @@ describe("tasks (/v2)", () => {
     type Listed = { tasks: { name: string; keyed: boolean; models: { id: string; keyed: boolean }[] }[] };
     const decide = async () => ((await (await manage("/api/tasks")).json()) as Listed).tasks.find((t) => t.name === "decide")!;
     // Perplexity のキーがない間は、そのモデルに替えさせない（替えると、選ぶ仕事が丸ごと断られる）
-    expect((await decide()).models).toContainEqual({ id: "pplx-decider-direct", label: "Perplexity Decider（Perplexity）", keyed: false });
+    expect((await decide()).models).toContainEqual({ id: "pplx-decider-direct", label: "Perplexity Decider V1.2（Perplexity）", keyed: false });
     const refused = await manage("/api/tasks/decide", "PATCH", { model: "pplx-decider-direct" });
     expect([refused.status, await refused.json()]).toEqual([409, { error: "noKey" }]);
-    expect(await status()).toMatchObject({ tasks: ["translate", "decide", "transcribe"] });
+    expect(await status()).toMatchObject({ tasks: ["translate", "decide", "read", "transcribe"] });
     const added = await manage("/api/keys", "POST", { provider: "perplexity", key: "pplx-test-key-000000000001" });
     expect(added.status).toBe(200);
     expect((await manage("/api/tasks/decide", "PATCH", { model: "pplx-decider-direct" })).status).toBe(204);
     expect(await decide()).toMatchObject({ model: "pplx-decider-direct", keyed: true });
     // 古い版のアプリは、知らない会社の名前があると答えを読めないので、中継する会社には入れない
-    expect(await status()).toMatchObject({ tasks: ["translate", "decide", "transcribe"], providers: ["qwen", "openrouter"] });
+    expect(await status()).toMatchObject({ tasks: ["translate", "decide", "read", "transcribe"], providers: ["qwen", "openrouter"] });
 
     // 料金は答えに入っていないので、トークンの数と単価（入力 100 万あたり $0.02）から数える
     vi.mocked(perplexity).mockResolvedValue(
@@ -781,7 +783,30 @@ describe("tasks (/v2)", () => {
     const { id } = (await added.json()) as { id: string };
     expect((await manage(`/api/keys/${id}`, "PATCH", { enabled: false })).status).toBe(204);
     expect(await decide()).toMatchObject({ model: "pplx-decider-direct", keyed: false });
-    expect(await status()).toMatchObject({ tasks: ["translate", "transcribe"] });
+    expect(await status()).toMatchObject({ tasks: ["translate", "read", "transcribe"] });
+  });
+
+  it("picks readings on a door of their own, so terms and readings can use different models", async () => {
+    const code = await joined();
+    await manage("/api/keys", "POST", { provider: "perplexity", key: "pplx-test-key-000000000001" });
+    // 用語は V1.3 に、読みは初めのモデル（V1.2）のままにする
+    expect((await manage("/api/tasks/decide", "PATCH", { model: "pplx-decider-1.3-direct" })).status).toBe(204);
+    const answered = () => Response.json({ answers: { c0: { choice: "hero:13" } }, usage: { cost: 0.001, prompt_tokens: 100 } });
+    vi.mocked(perplexity).mockImplementation(async () => answered());
+    vi.mocked(openrouter).mockImplementation(async () => answered());
+    expect(await (await ask("/decide", code, decision)).json()).toEqual({ choices: { c0: "hero:13" } });
+    expect(await (await ask("/read", code, decision)).json()).toEqual({ choices: { c0: "hero:13" } });
+    expect(vi.mocked(perplexity).mock.calls[0]![2]).toMatchObject({ model: "pplx-decider-v1.3" });
+    expect(vi.mocked(openrouter).mock.calls[0]![2]).toMatchObject({ model: "perplexity/pplx-decider-v1.2" });
+    // 仕事ごとに止められて、費用の内訳も別の行になる
+    expect((await manage("/api/tasks/read", "PATCH", { enabled: false })).status).toBe(204);
+    expect(await (await ask("/read", code, decision)).json()).toEqual({ error: "stopped" });
+    expect((await ask("/decide", code, decision)).status).toBe(200);
+    const { work } = (await (await manage("/api/summary")).json()) as { work: { rows: { label: string; model: string }[] } };
+    expect(work.rows.map((w) => [w.label, w.model]).sort()).toEqual([
+      ["用語を選ぶ", "pplx-decider-1.3-direct"],
+      ["読みを選ぶ", "pplx-decider"],
+    ]);
   });
 
   it("takes only what a task needs, and hides the upstream's trouble", async () => {
@@ -827,7 +852,7 @@ describe("tasks (/v2)", () => {
     await manage("/api/tasks/decide", "PATCH", { enabled: false });
     expect(await refused(await ask("/decide", code, decision))).toEqual([403, "stopped"]);
     const state = (await (await ask("/status", code)).json()) as { tasks: string[] };
-    expect(state.tasks).toEqual(["translate", "transcribe"]);
+    expect(state.tasks).toEqual(["translate", "read", "transcribe"]);
   });
 
   it("waits and asks again when the model is busy, and leaves out what it could not translate", async () => {

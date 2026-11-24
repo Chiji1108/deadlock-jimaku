@@ -24,7 +24,7 @@
   "terms": [
     { "key": "terms-jev/pplx-decider-v1.2", "name": "Perplexity Decider V1.2", "via": "Perplexity", "server": ["pplx-decider-direct"] },
     { "key": "terms-jev/perplexity/pplx-decider-v1.2", "name": "Perplexity Decider V1.2", "via": "OpenRouter", "server": ["pplx-decider"] },
-    { "key": "terms-jev/pplx-decider-v1.3", "name": "Perplexity Decider V1.3", "via": "Perplexity" },
+    { "key": "terms-jev/pplx-decider-v1.3", "name": "Perplexity Decider V1.3", "via": "Perplexity", "server": ["pplx-decider-1.3-direct"] },
     { "key": "terms-jev/pplx-decider-flash-v1.2", "name": "Perplexity Decider Flash V1.2", "via": "Perplexity" },
     { "key": "terms-jev/pplx-decider-flash-v1.3", "name": "Perplexity Decider Flash V1.3", "via": "Perplexity" },
     { "key": "terms-jev/nace-ai/drex-max", "name": "Drex Max", "via": "Nace（OpenRouter）" },

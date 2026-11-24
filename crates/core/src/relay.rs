@@ -279,7 +279,8 @@ mod tests {
                 { "value": "none", "description": "not a game term" },
             ],
         }]);
-        match crate::decide::ask_server(crate::http(), &server, &state, &questions).await {
+        match crate::decide::ask_server(crate::http(), &server, "/decide", &state, &questions).await
+        {
             Ok(chosen) => println!("decision: {chosen:?}"),
             Err(e) => upstream(&e),
         }

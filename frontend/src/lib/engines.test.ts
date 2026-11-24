@@ -74,6 +74,7 @@ test("モードを見比べる正確さは、どのモードも同じ並びで�
   const models = {
     transcribe: { id: "qwen-audio", label: "" },
     decide: { id: "pplx-decider", label: "" },
+    read: { id: "pplx-decider", label: "" },
   };
   // サーバーの今のモデルが分からない間は、サーバーに頼む工程を出さない
   expect(modeStats(BETA)).toEqual([]);

@@ -190,7 +190,7 @@ const decision =
 
 const JUDGES = {
   "pplx-decider": {
-    label: "Perplexity Decider（OpenRouter）",
+    label: "Perplexity Decider V1.2（OpenRouter）",
     provider: "openrouter",
     path: "/systemone",
     body: decision("perplexity/pplx-decider-v1.2"),
@@ -198,10 +198,18 @@ const JUDGES = {
   },
   // 同じモデルを、Perplexity に直接頼む。応答が 0.17 秒ほど速い（DESIGN.md 9.3）。料金は答えに入らないので、トークンから数える
   "pplx-decider-direct": {
-    label: "Perplexity Decider（Perplexity）",
+    label: "Perplexity Decider V1.2（Perplexity）",
     provider: "perplexity",
     path: "/v1/decisions",
     body: decision("pplx-decider-v1.2"),
+    price: { input: 0.02, output: 0 },
+  },
+  // V1.3 は、用語では V1.2 と並ぶかわずかに上、読みでは辞書の正しい読みを壊すことが増える（DESIGN.md 9.3）
+  "pplx-decider-1.3-direct": {
+    label: "Perplexity Decider V1.3（Perplexity）",
+    provider: "perplexity",
+    path: "/v1/decisions",
+    body: decision("pplx-decider-v1.3"),
     price: { input: 0.02, output: 0 },
   },
 } satisfies Record<string, Judge>;
@@ -234,7 +242,9 @@ const TRANSCRIBERS = {
 /** 仕事と、頼めるモデル、初めのモデル。仕事を足すときは、ここと v2.ts に口を足す */
 export const TASKS = {
   translate: { label: "翻訳", models: TRANSLATORS as Record<string, Translator>, standard: "hy-mt2" },
-  decide: { label: "用語と読みを選ぶ", models: JUDGES as Record<string, Judge>, standard: "pplx-decider" },
+  // 0.10.0 までのアプリは、読みもこの口に頼む
+  decide: { label: "用語を選ぶ", models: JUDGES as Record<string, Judge>, standard: "pplx-decider" },
+  read: { label: "読みを選ぶ", models: JUDGES as Record<string, Judge>, standard: "pplx-decider" },
   transcribe: { label: "確定の文字起こし", models: TRANSCRIBERS as Record<string, Transcriber>, standard: "qwen-audio" },
 } as const;
 
