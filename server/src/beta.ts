@@ -7,7 +7,7 @@ import { betaGrants, betaKeys, betaSettings, betaSpend, codes, codeUsage } from 
 import { decrypt, newCode, newId, normalizeCode, sha256 } from "./secrets";
 
 /** 開発者のキーを持つ会社。Perplexity は、仕事の口（/v2）からだけ頼む */
-export const BETA_PROVIDERS = ["qwen", "openrouter", "perplexity"] as const;
+export const BETA_PROVIDERS = ["qwen", "openrouter", "perplexity", "openai"] as const;
 export type BetaProvider = (typeof BETA_PROVIDERS)[number];
 
 export interface BetaEnv {
@@ -80,7 +80,7 @@ export async function betaRelayKeys(db: Db, env: BetaEnv, provider: BetaProvider
 
 /** 秘密の設定のキー。あるのは、管理画面ができる前からの 2 社だけ */
 const fallbackKey = (env: BetaEnv, provider: BetaProvider) =>
-  ({ qwen: env.BETA_QWEN_KEY, openrouter: env.BETA_OPENROUTER_KEY, perplexity: undefined })[provider];
+  ({ qwen: env.BETA_QWEN_KEY, openrouter: env.BETA_OPENROUTER_KEY, perplexity: undefined, openai: undefined })[provider];
 
 /** 開発者のキーがある会社。閉じていれば、どの会社もない */
 export async function betaProviders(db: Db, env: BetaEnv): Promise<BetaProvider[]> {

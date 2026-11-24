@@ -44,7 +44,7 @@ export async function status(c: Ctx) {
   if (min && (version === null || olderThan(version, min))) return refuse(c, "outdated");
   const all = await betaProviders(c.var.db, c.env);
   // 中継する会社として答えるのは、/v1 にある 2 社だけ（古い版のアプリは、知らない名前があると答えを読めない）
-  const providers = all.filter((p) => p !== "perplexity");
+  const providers = all.filter((p) => p === "qwen" || p === "openrouter");
   const remaining = Math.max(1 - todayUsd(code, now) / (code.dailyLimitUsd ?? CODE_DAILY_USD), 0);
   return c.json({ tasks: await openTasks(c.var.db, all), providers, remaining });
 }
