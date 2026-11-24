@@ -28,8 +28,8 @@ interface Chosen {
   via: string;
   /** 測った日（生の結果に時刻がないものだけ。その結果がリポジトリに入った日） */
   measured?: string;
-  /** 今のアプリの「おすすめ」のモードが使っている */
-  recommended?: boolean;
+  /** サーバー（`server/src/tasks.ts`）でのこのモデルの名前。ページが、「おすすめ」のモードが今使っているモデルに印を付けるのに使う */
+  server?: string[];
   note?: string;
 }
 
@@ -43,6 +43,8 @@ const score = (row: Row) => row.shown?.both ?? row.ok;
 
 const summaries = JSON.parse(results) as Record<string, { summary: Summary }>;
 
+const day = (time: Date) => time.toLocaleDateString("sv-SE", { timeZone: "Asia/Tokyo" });
+
 function rows(entries: Chosen[]): Row[] {
   return entries
     .map(({ key, measured, ...listed }) => {
@@ -50,9 +52,9 @@ function rows(entries: Chosen[]): Row[] {
       if (!summary) throw new Error(`${key}: 測定の結果がない`);
       const { at, runs, ...numbers } = summary;
       if (runs !== RUNS) throw new Error(`${key}: ${runs} 回の結果は、${RUNS} 回の結果と並べられない`);
-      const day = at ? new Date(at * 1000).toLocaleDateString("sv-SE", { timeZone: "Asia/Tokyo" }) : measured;
-      if (!day) throw new Error(`${key}: 測った日がない`);
-      return { ...listed, ...numbers, measured: day };
+      const measuredDay = at ? day(new Date(at * 1000)) : measured;
+      if (!measuredDay) throw new Error(`${key}: 測った日がない`);
+      return { ...listed, ...numbers, measured: measuredDay };
     })
     .sort((a, b) => score(b) - score(a) || a.medianMs - b.medianMs);
 }

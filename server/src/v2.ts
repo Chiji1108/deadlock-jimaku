@@ -53,11 +53,13 @@ v2.get("/status", status);
 
 /**
  * 仕事ごとの、今のモデル（名前と、画面に出す言い方）。コードは要らない: どのモデルに送るかは、サーバーを使うと決める前の人にも見せる。
- * アプリは、同じモデルを知っていれば、その正確さと速さを出す
+ * アプリは、同じモデルを知っていれば、その正確さと速さを出す。LP の測定結果のページも、ブラウザから読んで印を付けるので、
+ * この口だけ、どのサイトからも読めるようにする（誰でも読める中身で、コードを使わない）
  */
 v2.get("/models", async (c) => {
   const all = await allTasks(c.var.db);
-  return c.json(Object.fromEntries(all.map((t) => [t.task, { id: t.id, label: t.model.label }])));
+  const models = Object.fromEntries(all.map((t) => [t.task, { id: t.id, label: t.model.label }]));
+  return c.json(models, 200, { "Access-Control-Allow-Origin": "*" });
 });
 
 /** 仕事を頼めるコード。頼めなければ、断る答え。上限は、送る直前に額を先に足して確かめる（`reserveBeta`） */
