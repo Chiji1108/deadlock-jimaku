@@ -6,7 +6,7 @@ import { eq } from "drizzle-orm";
 import type { BetaProvider } from "./beta";
 import type { Db } from "./db";
 import { language } from "./lang";
-import { OPENROUTER_FALLBACK, QWEN_AUDIO, QWEN_LIVE } from "./price";
+import { OPENROUTER_FALLBACK, QWEN_AUDIO } from "./price";
 import { tasks } from "./schema";
 
 /** 翻訳の頼みごと。`text` は、用語を `⟦英語名⟧` で囲んだ文。言語は lang.ts が知っているもの */
@@ -57,9 +57,6 @@ export interface Transcriber extends Model {
   path: string;
   body: (asked: Transcription) => unknown;
 }
-
-/** 途中の文字起こしのモデル（やりとりは qwenLive.ts が持つ） */
-export type Listener = Model;
 
 /** 訳し方の指示。これがないと、括弧を外すことが多い（実測。mt.rs の `DOMAINS`） */
 const DOMAINS =
@@ -190,20 +187,11 @@ const TRANSCRIBERS = {
   },
 } satisfies Record<string, Transcriber>;
 
-const LISTENERS = {
-  "qwen-audio-streaming": {
-    label: "Qwen-Audio-3.1-ASR-Flash-Streaming",
-    provider: "qwen",
-    price: QWEN_LIVE,
-  },
-} satisfies Record<string, Listener>;
-
 /** 仕事と、頼めるモデル、初めのモデル。仕事を足すときは、ここと v2.ts に口を足す */
 export const TASKS = {
   translate: { label: "翻訳", models: TRANSLATORS as Record<string, Translator>, standard: "hy-mt2" },
   decide: { label: "用語と読みを選ぶ", models: JUDGES as Record<string, Judge>, standard: "pplx-decider" },
   transcribe: { label: "確定の文字起こし", models: TRANSCRIBERS as Record<string, Transcriber>, standard: "qwen-audio" },
-  live: { label: "途中の文字起こし", models: LISTENERS as Record<string, Listener>, standard: "qwen-audio-streaming" },
 } as const;
 
 export type TaskName = keyof typeof TASKS;

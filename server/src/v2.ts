@@ -6,7 +6,6 @@ import { betaClosed, betaProviders, betaRelayKeys, reserveBeta, settleBeta } fro
 import { appVersion, CODE_DAILY_USD, refusal, seen, todayUsd, type Code } from "./db";
 import { language } from "./lang";
 import { tokensOf } from "./price";
-import { relayQwenLive } from "./qwenLive";
 import { bearerCode, openrouterUsd, parsed, sent, usdOf, type App, type Ctx } from "./relay";
 import { allTasks, MAX_TRANSLATION_TOKENS, openTasks, taskOf, type Model, type TaskName } from "./tasks";
 import { chat, openrouter, perplexity, qwen, wait } from "./upstream";
@@ -287,23 +286,6 @@ v2.post("/transcribe", async (c) => {
   };
   const said = [output.text, output.sentence?.text, output.choices?.[0]?.message?.content?.[0]?.text].find(text);
   return said === undefined ? c.json({ error: "upstream" }, 502) : c.json({ text: said.trim() });
-});
-
-/**
- * 途中の文字起こし（WebSocket）。話す言語を `language` で受けて、音声（16kHz・16bit の PCM）を流してもらい、
- * 書きかけの文と確定した文を送る（やりとりは qwenLive.ts）
- */
-v2.get("/live", async (c) => {
-  if (c.req.header("Upgrade") !== "websocket") return c.json({ error: "invalid" }, 426);
-  const code = await asker(c);
-  if (code instanceof Response) return code;
-  const language = c.req.query("language");
-  if (!language || !SPOKEN.test(language)) return c.json({ error: "invalid" }, 400);
-  const task = await worker(c, "live");
-  if (!task) return refuse(c, "stopped");
-  const relayed = await relayQwenLive(c.var.db, code.id, task.keys, c.executionCtx, language);
-  if (relayed instanceof Response) return relayed;
-  return relayed.error === "limit" ? refuse(c, "limit") : c.json(relayed, 502);
 });
 
 /** 文字のやりとりの答え（OpenAI 互換） */

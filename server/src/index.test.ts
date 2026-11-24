@@ -163,7 +163,7 @@ describe("beta", () => {
   it("gives a code that relays Qwen and OpenRouter with the developer's keys, under a small daily limit", async () => {
     const code = await joined();
     const gift = await call("/gift", { token: code });
-    expect(await gift.json()).toEqual({ tasks: ["translate", "decide", "transcribe", "live"], providers: ["qwen", "openrouter"], remaining: 1 });
+    expect(await gift.json()).toEqual({ tasks: ["translate", "decide", "transcribe"], providers: ["qwen", "openrouter"], remaining: 1 });
     expect((await codeByValue(db, code))!.dailyLimitUsd).toBe(0.5);
     // 0.7 までのギフトコードの口は、もうない
     for (const path of ["/openai/responses", "/xai/stt", "/share/codes"]) {
@@ -510,7 +510,7 @@ describe("tasks (/v2)", () => {
     expect(JSON.stringify(body)).toContain("[Source Text]\\n⟦Haze⟧強い");
     expect(await dayUsd(code)).toBeCloseTo(0.002, 8);
     const state = await ask("/status", code);
-    const tasks = ["translate", "decide", "transcribe", "live"];
+    const tasks = ["translate", "decide", "transcribe"];
     expect(await state.json()).toEqual({ tasks, providers: ["qwen", "openrouter"], remaining: 0.996 });
   });
 
@@ -521,7 +521,6 @@ describe("tasks (/v2)", () => {
       { name: "translate", label: "翻訳", model: "hy-mt2", enabled: true },
       { name: "decide", model: "pplx-decider", enabled: true },
       { name: "transcribe", model: "qwen-audio", enabled: true },
-      { name: "live", model: "qwen-audio-streaming", enabled: true },
     ]);
     expect(listed.tasks[0]!.models).toContainEqual({ id: "qwen-mt-flash", label: "Qwen-MT-Flash" });
     // 今のモデルは、コードがなくても読める
@@ -530,7 +529,6 @@ describe("tasks (/v2)", () => {
       translate: { id: "hy-mt2", label: "Hy-MT2（OpenRouter）" },
       decide: { id: "pplx-decider", label: "Perplexity Decider（OpenRouter）" },
       transcribe: { id: "qwen-audio", label: "Qwen-Audio-3.1-ASR-Flash" },
-      live: { id: "qwen-audio-streaming", label: "Qwen-Audio-3.1-ASR-Flash-Streaming" },
     });
     expect((await manage("/api/tasks/translate", "PATCH", { model: "qwen-mt-flash" })).status).toBe(204);
     expect(await models()).toMatchObject({ translate: { id: "qwen-mt-flash", label: "Qwen-MT-Flash" } });
@@ -573,7 +571,7 @@ describe("tasks (/v2)", () => {
     expect(await dayUsd(code)).toBe(0);
     // アプリには、頼める仕事から外して伝える。コードは使えるまま（ほかの工程は続く）
     expect(await (await ask("/status", code)).json()).toMatchObject({
-      tasks: ["decide", "transcribe", "live"],
+      tasks: ["decide", "transcribe"],
       providers: ["qwen", "openrouter"],
     });
     // 止めても、選んでいたモデルは変わらない
@@ -699,11 +697,11 @@ describe("tasks (/v2)", () => {
     const status = async () => (await ask("/status", code)).json();
     expect((await manage("/api/tasks/decide", "PATCH", { model: "pplx-decider-direct" })).status).toBe(204);
     // Perplexity のキーがない間は、選ぶ仕事は頼めない
-    expect(await status()).toMatchObject({ tasks: ["translate", "transcribe", "live"] });
+    expect(await status()).toMatchObject({ tasks: ["translate", "transcribe"] });
     expect((await ask("/decide", code, decision)).status).toBe(403);
     expect((await manage("/api/keys", "POST", { provider: "perplexity", key: "pplx-test-key-000000000001" })).status).toBe(200);
     // 古い版のアプリは、知らない会社の名前があると答えを読めないので、中継する会社には入れない
-    expect(await status()).toMatchObject({ tasks: ["translate", "decide", "transcribe", "live"], providers: ["qwen", "openrouter"] });
+    expect(await status()).toMatchObject({ tasks: ["translate", "decide", "transcribe"], providers: ["qwen", "openrouter"] });
 
     // 料金は答えに入っていないので、トークンの数と単価（入力 100 万あたり $0.02）から数える
     vi.mocked(perplexity).mockResolvedValue(
@@ -758,120 +756,7 @@ describe("tasks (/v2)", () => {
     await manage("/api/tasks/decide", "PATCH", { enabled: false });
     expect(await refused(await ask("/decide", code, decision))).toEqual([403, "stopped"]);
     const state = (await (await ask("/status", code)).json()) as { tasks: string[] };
-    expect(state.tasks).toEqual(["translate", "transcribe", "live"]);
-  });
-
-  describe("live", () => {
-    const audio = (seconds: number) => new ArrayBuffer(seconds * 32_000);
-    const event = (name: string, payload: unknown = {}) => JSON.stringify({ header: { event: name }, payload });
-    const SECOND = (2 * (11 * 0.93 + 3 * 0.7)) / 1e6;
-    let client: FakeSocket;
-    let upstream: FakeSocket;
-    const connect = (code: string, language = "ja") =>
-      call(`/live?language=${language}`, { version: "v2", token: code, headers: { Upgrade: "websocket" } });
-    async function settled() {
-      await Promise.allSettled(pending);
-      pending = [];
-    }
-
-    beforeEach(() => {
-      client = new FakeSocket();
-      upstream = new FakeSocket();
-      stubSockets(() => client);
-      vi.mocked(qwenLive).mockResolvedValue({ webSocket: upstream } as unknown as Response);
-    });
-    afterEach(() => vi.unstubAllGlobals());
-
-    it("talks to Qwen for the app: the app only streams audio and reads sentences", async () => {
-      const code = await joined();
-      await connect(code);
-      const [started] = upstream.sent.map((sent) => JSON.parse(sent as string));
-      expect(started).toMatchObject({
-        header: { action: "run-task", task_id: expect.stringMatching(/^[0-9a-f]{32}$/), streaming: "duplex" },
-        payload: {
-          model: "qwen-audio-3.1-asr-flash-streaming",
-          parameters: { format: "pcm", sample_rate: 16_000, language_hints: ["ja"] },
-        },
-      });
-      upstream.message(event("task-started"));
-      client.message(audio(1));
-      const words = [
-        { begin_time: 400, text: "さあ", punctuation: "" },
-        { begin_time: 900, text: "始まりました", punctuation: "。" },
-      ];
-      const usage = { input_tokens: 11, output_tokens: 3 };
-      upstream.message(event("result-generated", { usage, output: { sentence: { sentence_id: 1, begin_time: 400, text: "さあ始まりました。", words } } }));
-      // 文のない知らせ（使用量だけ）と、知らない知らせは渡さない
-      upstream.message(event("result-generated", { usage }));
-      upstream.message(event("something-new", { secret: true }));
-      client.message(JSON.stringify({ type: "finish" }));
-      expect(client.sent.map((sent) => JSON.parse(sent as string))).toEqual([
-        { type: "ready" },
-        {
-          type: "sentence",
-          id: 1,
-          begin: 400,
-          text: "さあ始まりました。",
-          words: [
-            { at: 400, text: "さあ" },
-            { at: 900, text: "始まりました。" },
-          ],
-        },
-      ]);
-      expect(upstream.sent.slice(1)).toEqual([
-        audio(1),
-        JSON.stringify({ header: { action: "finish-task", task_id: started.header.task_id, streaming: "duplex" }, payload: { input: {} } }),
-      ]);
-      upstream.message(event("task-finished"));
-      await settled();
-      expect(client.closed).toEqual({ code: 1000, reason: "finished" });
-      expect(await dayUsd(code)).toBeCloseTo((11 * 0.93 + 3 * 0.7) / 1e6, 10);
-    });
-
-    it.each([
-      ["audio before Qwen listens", () => client.message(audio(1)), "wait for ready"],
-      ["Qwen's own messages", () => client.message(JSON.stringify({ header: { action: "run-task" } })), "message not allowed"],
-    ])("closes on %s", async (_, send, reason) => {
-      const code = await joined();
-      await connect(code);
-      send();
-      await settled();
-      expect(client.closed).toEqual({ code: 1008, reason });
-      expect(upstream.sent).toHaveLength(1);
-      expect(await dayUsd(code)).toBe(0);
-    });
-
-    it("refuses before connecting in the same words as the other doors, and stops at the daily limit", async () => {
-      const code = await joined();
-      const refused = async (res: Response) => [res.status, res.headers.get("X-Refusal"), ((await res.json()) as { error: string }).error];
-      expect(await refused(await connect("NOPE-NOPE-NOPE"))).toEqual([401, "unknown", "unknown"]);
-      expect((await connect(code, "Japanese")).status).toBe(400);
-      expect((await call("/live?language=ja", { version: "v2", token: code })).status).toBe(426);
-      await manage("/api/tasks/live", "PATCH", { enabled: false });
-      expect(await refused(await connect(code))).toEqual([403, "stopped", "stopped"]);
-      await manage("/api/tasks/live", "PATCH", { enabled: true });
-      expect(qwenLive).not.toHaveBeenCalled();
-
-      const { id } = (await codeByValue(db, code))!;
-      await env.DB.prepare("UPDATE codes SET daily_limit_usd = ? WHERE id = ?").bind(20 * SECOND, id).run();
-      await connect(code);
-      upstream.message(event("task-started"));
-      client.message(audio(30));
-      await settled();
-      expect(client.closed).toEqual({ code: 1008, reason: "limit" });
-      expect(await refused(await connect(code))).toEqual([403, "limit", "limit"]);
-
-      // Qwen が断ったら、中身を渡さずに切る
-      await env.DB.prepare("UPDATE codes SET daily_limit_usd = NULL, day_usd = 0 WHERE id = ?").bind(id).run();
-      client = new FakeSocket();
-      upstream = new FakeSocket();
-      vi.mocked(qwenLive).mockResolvedValue({ webSocket: upstream } as unknown as Response);
-      await connect(code);
-      upstream.message(JSON.stringify({ header: { event: "task-failed", error_code: "BadRequest", error_message: "secret" } }));
-      await settled();
-      expect(client.sent).toEqual([]);
-      expect(client.closed).toEqual({ code: 1011, reason: "failed" });
-    });
+    expect(state.tasks).toEqual(["translate", "transcribe"]);
   });
 
   it("waits and asks again when the model is busy, and leaves out what it could not translate", async () => {
@@ -921,24 +806,28 @@ describe("admin", () => {
     // 更新した人は、新しい版で数える
     await call("/gift", { token: updated, headers: agent("0.9.7") });
     await call("/gift", { token: updated, headers: agent("0.10.0-rc.1") });
-    // 2 週間より前に始めたきりのコードは数えない（字幕を始めていないコードも）
-    await env.DB.prepare("UPDATE codes SET seen_day = '2026-01-01', app_version = '0.9.7' WHERE seen_day IS NULL").run();
+    // 字幕を始めていないコードは数えない
     expect(idle).toBeTruthy();
+    // 前に来たきりの版も、最後に来た日と一緒に出す（新しく来た版から）
+    await env.DB.prepare("UPDATE codes SET seen_day = '2026-01-01' WHERE app_version = '0.9.7'").run();
+    const today = day(Date.now());
     const summary = (await (await manage("/api/summary")).json()) as Record<string, any>;
-    expect(summary.versions).toEqual({
-      days: 14,
-      rows: [
-        { version: "0.9.7", codes: 1 },
-        { version: "0.10.0-rc.1", codes: 1 },
-        { version: null, codes: 1 },
-      ],
-    });
+    expect(summary.versions).toEqual([
+      { version: "0.10.0-rc.1", codes: 1, lastDay: today },
+      { version: null, codes: 1, lastDay: today },
+      { version: "0.9.7", codes: 1, lastDay: "2026-01-01" },
+    ]);
+    // コードごとにも、版と最後に来た日を出す
+    const listed = (await (await manage("/api/codes")).json()) as { codes: { version: string | null; seenDay: string | null }[] };
+    expect(listed.codes.map((c) => [c.version, c.seenDay]).toSorted()).toEqual(
+      [["0.10.0-rc.1", today], ["0.9.7", "2026-01-01"], [null, today], [null, null]].toSorted(),
+    );
     // 止めたコードは数えない
     await env.DB.prepare("UPDATE codes SET revoked = 1 WHERE app_version = '0.10.0-rc.1'").run();
     const after = (await (await manage("/api/summary")).json()) as Record<string, any>;
-    expect(after.versions.rows).toEqual([
-      { version: "0.9.7", codes: 1 },
-      { version: null, codes: 1 },
+    expect(after.versions).toEqual([
+      { version: null, codes: 1, lastDay: today },
+      { version: "0.9.7", codes: 1, lastDay: "2026-01-01" },
     ]);
     // 版の形でないものは、伝えていないのと同じ
     await call("/gift", { token: current, headers: { "User-Agent": "curl/8.0" } });
