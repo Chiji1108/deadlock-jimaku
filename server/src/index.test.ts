@@ -692,6 +692,36 @@ describe("tasks (/v2)", () => {
     expect(content(2)).toHaveLength(1);
   });
 
+  it("asks OpenAI itself to translate, once the developer adds its key and picks GPT-6 Luna", async () => {
+    const code = await joined();
+    // キーがない間は替えられない
+    expect((await manage("/api/tasks/translate", "PATCH", { model: "gpt-6-luna" })).status).toBe(409);
+    expect((await manage("/api/keys", "POST", { provider: "openai", key: "sk-test-openai-0000000001" })).status).toBe(200);
+    expect((await manage("/api/tasks/translate", "PATCH", { model: "gpt-6-luna" })).status).toBe(204);
+    // 古い版のアプリは、知らない会社の名前があると答えを読めないので、中継する会社には入れない
+    expect(await (await ask("/status", code)).json()).toMatchObject({ tasks: ["translate", "decide", "transcribe"], providers: ["qwen", "openrouter"] });
+
+    // 料金は答えに入っていないので、トークンの数と単価（100 万あたり入力 $0.10、出力 $0.50）から数える
+    vi.mocked(chat).mockImplementation(async () => answered("strong", { prompt_tokens: 1_000_000, completion_tokens: 1_000_000 }));
+    expect(await (await translate(code, { ...request, targets: ["en"] })).json()).toEqual({ translations: { en: "strong" } });
+    expect(vi.mocked(chat).mock.calls[0]).toEqual([
+      "openai",
+      "sk-test-openai-0000000001",
+      {
+        model: "gpt-6-luna",
+        messages: [
+          { role: "system", content: expect.stringMatching(/^Translate the Japanese text into English\. .*Reply with the translation only\.$/) },
+          { role: "user", content: "⟦Haze⟧強い" },
+        ],
+        reasoning_effort: "none",
+        max_completion_tokens: 512,
+        store: false,
+      },
+      4000,
+    ]);
+    expect(await dayUsd(code)).toBeCloseTo(0.1 + 0.5, 8);
+  });
+
   it("asks Perplexity itself, once the developer adds its key and picks it", async () => {
     const code = await joined();
     const status = async () => (await ask("/status", code)).json();

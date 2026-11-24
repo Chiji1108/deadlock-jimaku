@@ -517,7 +517,12 @@ const SERVER_TASKS: { [K in Item]?: { task: string; same: Record<string, Engines
   },
   translation: {
     task: "translate",
-    same: { "hy-mt2": "hyMt2", "qwen-mt-flash": "qwenMtFlash", "qwen3.8-flash": "qwen38Flash" },
+    same: {
+      "hy-mt2": "hyMt2",
+      "qwen-mt-flash": "qwenMtFlash",
+      "qwen3.8-flash": "qwen38Flash",
+      "gpt-6-luna": "gpt6LunaMt",
+    },
   },
   furigana: {
     task: "decide",

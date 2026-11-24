@@ -1,9 +1,11 @@
-// QwenCloud と OpenRouter、Perplexity への通信（テストではこのモジュールを差し替える）。ベータ期間中、開発者のキーで中継する（DESIGN.md 17.2）
+// QwenCloud と OpenRouter、Perplexity、OpenAI への通信（テストではこのモジュールを差し替える）。ベータ期間中、開発者のキーで中継する（DESIGN.md 17.2）
 
 /** QwenCloud のシンガポールの口 */
 const QWEN = "https://ap-southeast-1.maas.qwencloudapi.com";
 const OPENROUTER = "https://openrouter.ai/api/v1";
 const PERPLEXITY = "https://api.perplexity.ai";
+/** OpenAI 互換の口（`/chat/completions` の手前まで） */
+const CHAT = { qwen: `${QWEN}/compatible-mode/v1`, openrouter: OPENROUTER, openai: "https://api.openai.com/v1" };
 
 function send(url: string, key: string, body: unknown, signal?: AbortSignal): Promise<Response> {
   return fetch(url, {
@@ -15,9 +17,8 @@ function send(url: string, key: string, body: unknown, signal?: AbortSignal): Pr
 }
 
 /** 文字のやりとりを頼む（/v2 の仕事。モデルと頼み方、待つ時間は tasks.ts が決める） */
-export function chat(provider: "qwen" | "openrouter", key: string, body: unknown, timeoutMs: number): Promise<Response> {
-  const base = provider === "qwen" ? `${QWEN}/compatible-mode/v1` : OPENROUTER;
-  return send(`${base}/chat/completions`, key, body, AbortSignal.timeout(timeoutMs));
+export function chat(provider: keyof typeof CHAT, key: string, body: unknown, timeoutMs: number): Promise<Response> {
+  return send(`${CHAT[provider]}/chat/completions`, key, body, AbortSignal.timeout(timeoutMs));
 }
 
 /** 送り直す前に待つ */
