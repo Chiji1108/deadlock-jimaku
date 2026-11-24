@@ -61,7 +61,9 @@ async function load() {
       '</td><td><button data-task="' + esc(task.name) + '" data-enabled="' + !task.enabled + '">' + (task.enabled ? "止める" : "動かす") + "</button></td></tr>").join("");
 
   $("versions").innerHTML = "<tr><th>版</th><th>最後に来た日</th><th class=num>コード</th></tr>" +
-    s.versions.map((v) => "<tr><td>" + version(v.version) + "</td><td>" + esc(v.lastDay) + "</td><td class=num>" + v.codes + "</td></tr>").join("");
+    s.versions.map((v) => "<tr><td>" + version(v.version) + (v.refused ? ' <span class="tag bad">断っている</span>' : "") + "</td><td>" + esc(v.lastDay) + "</td><td class=num>" + v.codes + "</td></tr>").join("");
+  // 打っている途中の欄は書き換えない
+  if (document.activeElement !== $("minVersion")) $("minVersion").value = s.minVersion;
 
   $("codes").innerHTML = "<tr><th>作った日</th><th>最後に来た日</th><th>版</th><th class=num>今日</th><th class=num>今月</th><th class=num>全部</th><th>状態</th><th></th></tr>" +
     c.codes.map((code) => "<tr><td>" + date(code.createdAt) + "</td><td>" + (code.seenDay ? esc(code.seenDay) : "") + "</td><td>" + (code.seenDay ? version(code.version) : "") + "</td><td class=num>" + usd(code.todayUsd) + "</td><td class=num>" + usd(code.monthUsd) + "</td><td class=num>" + usd(code.usd) + "</td><td>" +
@@ -82,6 +84,12 @@ document.addEventListener("change", (e) => {
 $("limits").addEventListener("submit", (e) => {
   e.preventDefault();
   act(() => api("/settings", "PUT", { dailyUsd: Number($("dailyUsd").value), codeDailyUsd: Number($("codeDailyUsd").value) }));
+});
+$("oldest").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const min = $("minVersion").value.trim();
+  const ask = min ? min + " より前の版を断ります（版を伝えない 0.9.6 以前も断ります）。よいですか？" : "どの版も断らないようにします。よいですか？";
+  if (confirm(ask)) act(() => api("/settings", "PUT", { minVersion: min }));
 });
 $("add").addEventListener("submit", (e) => {
   e.preventDefault();
@@ -174,6 +182,11 @@ export const page = /* html */ `<!doctype html>
     <h2>アプリの版</h2>
     <p class="muted">アプリが確かめに来たコードの数と、その版が最後に来た日（UTC）です（止めたコードは除く）。コードごとの版と日は、下の「コード」に出ます。アプリは、字幕を始めるときと「おすすめ」を選ぶときにコードを確かめ、版を伝えます（0.9.7 から）。古い口をやめる前に、古い版が残っていないかをここで見ます</p>
     <table id="versions"></table>
+    <form id="oldest">
+      <label>この版より前は断る <input id="minVersion" placeholder="0.9.7" pattern="\\d+\\.\\d+\\.\\d+(-[0-9A-Za-z.]+)?" size="12"></label>
+      <button>決める</button>
+    </form>
+    <p class="muted">空にすると、どの版も断りません。断るのは、字幕を始めるときの確かめです。0.9.7 からのアプリは「アプリを更新してください」と出して、サーバーを使わない作り方で字幕を続けます。0.9.6 以前は更新が要ることを伝えられないので、使う人がいなくなってから決めます。</p>
   </section>
 
   <section class="card">

@@ -12,9 +12,10 @@ import {
   BETA_PROVIDERS,
   betaClosed,
   betaLimits,
+  betaMinVersion,
   type BetaProvider,
 } from "./beta";
-import { day, month, open, type Db } from "./db";
+import { day, month, olderThan, open, VERSION, type Db } from "./db";
 import { betaGrants, betaKeys, betaSettings, betaSpend, codes, codeUsage, tasks } from "./schema";
 import { newId } from "./secrets";
 import { allTasks, isModel, isTask, TASKS } from "./tasks";
@@ -88,7 +89,7 @@ admin.get("/api/summary", async (c) => {
   const db = c.var.db;
   const now = Date.now();
   const today = day(now);
-  const [spend, monthUsd, total, active, granted, closed, limits, versions] = await Promise.all([
+  const [spend, monthUsd, total, active, granted, closed, limits, min, versions] = await Promise.all([
     db.select({ usd: betaSpend.usd }).from(betaSpend).where(eq(betaSpend.day, today)).get(),
     db
       .select({ usd: sql<number>`COALESCE(SUM(${codeUsage.usd}), 0)` })
@@ -108,6 +109,7 @@ admin.get("/api/summary", async (c) => {
       .get(),
     betaClosed(db),
     betaLimits(db),
+    betaMinVersion(db),
     // アプリの版ごとの、確かめに来たコード（止めたものは除く）の数と、最後に来た日。新しく来た版から（版を伝えない 0.9.6 までは null）
     db
       .select({ version: codes.appVersion, codes: sql<number>`COUNT(*)`, lastDay: sql<string>`MAX(${codes.seenDay})` })
@@ -123,7 +125,9 @@ admin.get("/api/summary", async (c) => {
     month: { usd: monthUsd?.usd ?? 0 },
     codes: { total: total?.n ?? 0, activeToday: active?.n ?? 0 },
     limits: { codeDailyUsd: limits.codeDailyUsd, codesPerPlace: BETA_CODES_PER_IP, maxUsd: BETA_LIMIT_MAX_USD },
-    versions,
+    // 「この版より前は断る」と、今それで断られている版（版を伝えない 0.9.6 までは、どの版より古い）
+    minVersion: min ?? "",
+    versions: versions.map((v) => ({ ...v, refused: !!min && (v.version === null || olderThan(v.version, min)) })),
   });
 });
 
@@ -272,7 +276,7 @@ admin.patch("/api/tasks/:name", async (c) => {
  * `dailyUsd` はベータ全体の 1 日の上限、`codeDailyUsd` は 1 つのコードの 1 日の上限（出してあるコードにも当てる）
  */
 admin.put("/api/settings", async (c) => {
-  type Body = { closed?: unknown; dailyUsd?: unknown; codeDailyUsd?: unknown };
+  type Body = { closed?: unknown; dailyUsd?: unknown; codeDailyUsd?: unknown; minVersion?: unknown };
   const body = await c.req.json<Body>().catch(() => ({}) as Body);
   const usd = (value: unknown) =>
     typeof value === "number" && value > 0 && value <= BETA_LIMIT_MAX_USD ? String(value) : undefined;
@@ -280,6 +284,8 @@ admin.put("/api/settings", async (c) => {
     closed: typeof body.closed === "boolean" ? (body.closed ? "1" : "0") : undefined,
     dailyUsd: usd(body.dailyUsd),
     codeDailyUsd: usd(body.codeDailyUsd),
+    // 空なら、どの版も断らない
+    minVersion: body.minVersion === "" || (typeof body.minVersion === "string" && VERSION.test(body.minVersion)) ? body.minVersion : undefined,
   };
   const sent = Object.entries(body).filter(([, value]) => value !== undefined);
   const known = Object.entries(values).filter(([, value]) => value !== undefined) as [string, string][];

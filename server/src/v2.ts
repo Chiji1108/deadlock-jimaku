@@ -2,8 +2,8 @@
 // 断り方は、どの口も同じ（`refuse`）。使う人は、ベータのコード（この PC の印）で見分ける
 
 import { Hono } from "hono";
-import { betaClosed, betaProviders, betaRelayKeys, reserveBeta, settleBeta } from "./beta";
-import { appVersion, CODE_DAILY_USD, refusal, seen, todayUsd, type Code } from "./db";
+import { betaClosed, betaMinVersion, betaProviders, betaRelayKeys, reserveBeta, settleBeta } from "./beta";
+import { appVersion, CODE_DAILY_USD, olderThan, refusal, seen, todayUsd, type Code } from "./db";
 import { language } from "./lang";
 import { tokensOf } from "./price";
 import { bearerCode, openrouterUsd, parsed, sent, usdOf, type App, type Ctx } from "./relay";
@@ -34,10 +34,14 @@ export async function status(c: Ctx) {
   if (!code) return refuse(c, "unknown");
   const now = Date.now();
   // 覚えられなくても、コードの答えは返す（アプリは、答えが来ないと字幕を始めない）
-  const noted = seen(c.var.db, code.id, appVersion(c.req.header("User-Agent")), now);
+  const version = appVersion(c.req.header("User-Agent"));
+  const noted = seen(c.var.db, code.id, version, now);
   c.executionCtx.waitUntil(noted.catch((e: unknown) => console.error("seen", e)));
   const error = refusal(code, now);
   if (error) return refuse(c, error);
+  // 古い版は、字幕を始めるときのこの確かめで断る（版を伝えない 0.9.6 までは、どの版より古い）
+  const min = await betaMinVersion(c.var.db);
+  if (min && (version === null || olderThan(version, min))) return refuse(c, "outdated");
   const all = await betaProviders(c.var.db, c.env);
   // 中継する会社として答えるのは、/v1 にある 2 社だけ（古い版のアプリは、知らない名前があると答えを読めない）
   const providers = all.filter((p) => p !== "perplexity");

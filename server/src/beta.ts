@@ -2,7 +2,7 @@
 // 使う人はアプリが自動でもらうコードで見分ける。コードには 1 日の上限があり、管理画面から止められる
 
 import { and, eq, inArray, sql } from "drizzle-orm";
-import { CODE_DAILY_USD, day, month, type Db } from "./db";
+import { CODE_DAILY_USD, day, month, VERSION, type Db } from "./db";
 import { betaGrants, betaKeys, betaSettings, betaSpend, codes, codeUsage } from "./schema";
 import { decrypt, newCode, newId, normalizeCode, sha256 } from "./secrets";
 
@@ -36,6 +36,15 @@ export interface RelayKey {
 export async function betaClosed(db: Db): Promise<boolean> {
   const row = await db.select().from(betaSettings).where(eq(betaSettings.name, "closed")).get();
   return row?.value === "1";
+}
+
+/**
+ * この版より前のアプリには、もう答えない（管理画面で決める。決めていなければ undefined）。
+ * アプリは 0.9.7 から、断られると「アプリを更新してください」と出して、サーバーを使わない作り方で続ける
+ */
+export async function betaMinVersion(db: Db): Promise<string | undefined> {
+  const row = await db.select().from(betaSettings).where(eq(betaSettings.name, "minVersion")).get();
+  return row && VERSION.test(row.value) ? row.value : undefined;
 }
 
 /** 1 日の上限（ドル）。管理画面で変えていなければ、既定の値（DESIGN.md 17.3） */
