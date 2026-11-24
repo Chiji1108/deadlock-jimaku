@@ -25,6 +25,7 @@
 //!   `openrouter:会社/モデル`（`openrouter:qwen/qwen3.7-flash` など）は OpenRouter の汎用のモデル。ほかの汎用のモデルと同じ指示文で聞く
 //!   `groq:モデル`（`groq:openai/gpt-oss-20b@low` など）は Groq に直接送る汎用のモデル（`GROQ_API_KEY`）。
 //!   GPT-OSS は推論を止められないので、`@low` を付ける
+//!   `gemini-`（`gemini-3.5-flash-lite`）は Google に直接送る（`GEMINI_API_KEY`）。推論は指定しない（`none` は断られる）
 //!   `deepl`（既定のモデル）と `deepl-latency`（速さを優先）は DeepL の翻訳 API（`DEEPL_API_KEY`）で、これも translate だけ
 
 use std::collections::BTreeMap;
@@ -803,6 +804,8 @@ impl Client {
             self.ask_openrouter(model, effort, q).await
         } else if let Some(model) = model.strip_prefix(GROQ) {
             self.ask_groq(model, effort, q).await
+        } else if model.starts_with("gemini-") {
+            self.ask_gemini(model, effort, q).await
         } else if model.starts_with("claude-") {
             self.ask_claude(model, effort, q).await
         } else if model.starts_with("qwen") {
@@ -1031,6 +1034,52 @@ impl Client {
                 + n(&u["completion_tokens"]) * output)
                 / 1e6,
         );
+        let reason = &res["choices"][0]["finish_reason"];
+        anyhow::ensure!(reason == "stop", "stopped: {reason}");
+        let text = res["choices"][0]["message"]["content"]
+            .as_str()
+            .context("no text")?;
+        Ok(serde_json::from_str(text)?)
+    }
+
+    /// Google の Gemini（OpenAI と同じ形の口）。推論は、`@強さ` を付けたときだけ指定する（`none` は断られるので、
+    /// 付けなければモデルの既定）。単価は料金表の値（2026-11-24）で、出力には推論の分を含む
+    async fn ask_gemini(
+        &self,
+        model: &str,
+        effort: Option<&str>,
+        q: Question,
+    ) -> anyhow::Result<Value> {
+        anyhow::ensure!(model == "gemini-3.5-flash-lite", "unpriced model: {model}");
+        let mut body = json!({
+            "model": model,
+            "messages": [
+                { "role": "system", "content": &*q.system },
+                { "role": "user", "content": q.user },
+            ],
+            "response_format": {
+                "type": "json_schema",
+                "json_schema": { "name": "analysis", "strict": true, "schema": q.schema },
+            },
+        });
+        if let Some(effort) = effort {
+            body["reasoning_effort"] = json!(effort);
+        }
+        let res = self
+            .http
+            .post("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions")
+            .bearer_auth(std::env::var("GEMINI_API_KEY").unwrap_or_default())
+            .timeout(TIMEOUT)
+            .json(&body)
+            .send()
+            .await?;
+        let status = res.status();
+        let res: Value = res.json().await?;
+        anyhow::ensure!(status.is_success(), "{status}: {res}");
+        // 推論の分は `completion_tokens` に入らないことがあるので、出力は合計から入力を引いて数える
+        let n = |k: &str| res["usage"][k].as_f64().unwrap_or(0.0);
+        let input = n("prompt_tokens");
+        self.spent((input * 0.30 + (n("total_tokens") - input) * 2.50) / 1e6);
         let reason = &res["choices"][0]["finish_reason"];
         anyhow::ensure!(reason == "stop", "stopped: {reason}");
         let text = res["choices"][0]["message"]["content"]

@@ -28,12 +28,14 @@ interface Chosen {
   via: string;
   /** 測った日（生の結果に時刻がないものだけ。その結果がリポジトリに入った日） */
   measured?: string;
-  /** 今のアプリの「おすすめ」のモードが使っている */
-  recommended?: boolean;
+  /** サーバー（`server/src/tasks.ts`）でのこのモデルの名前。「おすすめ」のモードが今どれを使っているかを見分ける */
+  server?: string[];
   note?: string;
 }
 
-export interface Row extends Omit<Chosen, "key" | "measured">, Omit<Summary, "at" | "runs"> {
+export interface Row extends Omit<Chosen, "key" | "measured" | "server">, Omit<Summary, "at" | "runs"> {
+  /** ビルドのときに、「おすすめ」のモードが使っていた */
+  recommended: boolean;
   /** 測った日（日本時間。`2026-11-24`） */
   measured: string;
 }
@@ -43,19 +45,35 @@ const score = (row: Row) => row.shown?.both ?? row.ok;
 
 const summaries = JSON.parse(results) as Record<string, { summary: Summary }>;
 
-function rows(entries: Chosen[]): Row[] {
+/**
+ * 「おすすめ」のモードが今使っているモデル。サーバーに聞く（管理画面で替えられるので、手で書くとすぐ古くなる）。
+ * ページには、ビルドした日を添える
+ */
+async function live(): Promise<Record<"translate" | "decide", { id: string }>> {
+  const res = await fetch("https://api.jimaku.deadlock.jp/v2/models", { signal: AbortSignal.timeout(30_000) });
+  if (!res.ok) throw new Error(`failed to fetch the models in use: ${res.status}`);
+  return res.json();
+}
+
+const day = (time: Date) => time.toLocaleDateString("sv-SE", { timeZone: "Asia/Tokyo" });
+
+function rows(entries: Chosen[], inUse: string): Row[] {
+  if (!entries.some((e) => e.server?.includes(inUse))) throw new Error(`${inUse}: 「おすすめ」が使っているモデルが表にない`);
   return entries
-    .map(({ key, measured, ...listed }) => {
+    .map(({ key, measured, server, ...listed }) => {
       const summary = summaries[key]?.summary;
       if (!summary) throw new Error(`${key}: 測定の結果がない`);
       const { at, runs, ...numbers } = summary;
       if (runs !== RUNS) throw new Error(`${key}: ${runs} 回の結果は、${RUNS} 回の結果と並べられない`);
-      const day = at ? new Date(at * 1000).toLocaleDateString("sv-SE", { timeZone: "Asia/Tokyo" }) : measured;
-      if (!day) throw new Error(`${key}: 測った日がない`);
-      return { ...listed, ...numbers, measured: day };
+      const measuredDay = at ? day(new Date(at * 1000)) : measured;
+      if (!measuredDay) throw new Error(`${key}: 測った日がない`);
+      return { ...listed, ...numbers, measured: measuredDay, recommended: server?.includes(inUse) ?? false };
     })
     .sort((a, b) => score(b) - score(a) || a.medianMs - b.medianMs);
 }
 
-export const TRANSLATE = rows(chosen.translate);
-export const TERMS = rows(chosen.terms);
+const inUse = await live();
+/** 「おすすめ」の印を確かめた日（ビルドした日） */
+export const CHECKED = day(new Date());
+export const TRANSLATE = rows(chosen.translate, inUse.translate.id);
+export const TERMS = rows(chosen.terms, inUse.decide.id);

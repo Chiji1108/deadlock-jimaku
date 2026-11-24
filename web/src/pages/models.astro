@@ -1,6 +1,6 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import { RUNS, TERMS, TRANSLATE, type Row } from "../lib/models";
+import { CHECKED, RUNS, TERMS, TRANSLATE, type Row } from "../lib/models";
 
 const date = (day: string) => {
   const [y, m, d] = day.split("-").map(Number);
@@ -133,7 +133,7 @@ const cell =
 
     <p class="mt-12 max-w-3xl text-sm leading-relaxed text-muted">
       「失敗」は、時間切れ（8 秒）や、送り先に断られて答えが返らなかった回数です（出せた回数や合っていた回数には入りません。時間切れの回は、料金にも入っていません）。「遅いとき」は、10 回に 1
-      回はこれより遅い、という時間です。応答は日本から測っています。同じ文と同じ数え方で測った結果だけを並べています。応答と料金は測った日のものなので、日が違う行は目安として見てください。
+      回はこれより遅い、という時間です。応答は日本から測っています。同じ文と同じ数え方で測った結果だけを並べています。応答と料金は測った日のものなので、日が違う行は目安として見てください。「おすすめ」のモードが使うモデルは、アプリを更新しなくても替わることがあります。印は {date(CHECKED)}に確かめたものです。
     </p>
   </div>
 </Layout>
