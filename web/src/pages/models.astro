@@ -1,6 +1,6 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import { CHECKED, RUNS, TERMS, TRANSLATE, type Row } from "../lib/models";
+import { RUNS, TERMS, TRANSLATE, type Row } from "../lib/models";
 
 const date = (day: string) => {
   const [y, m, d] = day.split("-").map(Number);
@@ -16,6 +16,8 @@ const mixed = (rows: Row[]) => new Set(rows.map((r) => r.measured)).size > 1;
 const tables = [
   {
     id: "translate",
+    /** サーバーでの仕事の名前（`/v2/models` の答えのキー） */
+    task: "translate",
     title: "翻訳",
     rows: TRANSLATE,
     /** 言語ごとの回数を出す */
@@ -29,6 +31,7 @@ const tables = [
   },
   {
     id: "terms",
+    task: "decide",
     title: "用語の判定",
     rows: TERMS,
     languages: false,
@@ -66,7 +69,7 @@ const cell =
             ))}
           </div>
           <p class="mt-8 text-sm font-bold">測った日: {days(t.rows)}</p>
-          <table class="mt-3 w-full border-t-2 border-ink text-left max-md:block">
+          <table data-task={t.task} class="mt-3 w-full border-t-2 border-ink text-left max-md:block">
             <thead class="text-sm whitespace-nowrap text-muted max-md:hidden">
               <tr>
                 <th class="py-3 font-normal">モデル</th>
@@ -82,11 +85,11 @@ const cell =
             </thead>
             <tbody class="max-md:block">
               {t.rows.map((r) => (
-                <tr class="border-t border-line align-top max-md:grid max-md:grid-cols-3 max-md:gap-x-4 max-md:gap-y-3 max-md:py-5">
+                <tr data-server={r.server?.join(" ")} class="border-t border-line align-top max-md:grid max-md:grid-cols-3 max-md:gap-x-4 max-md:gap-y-3 max-md:py-5">
                   <th scope="row" class="py-3 pr-3 font-normal max-md:col-span-3 max-md:py-0">
                     <span class="flex flex-wrap items-center gap-x-2 gap-y-1 font-bold">
                       {r.name}
-                      {r.recommended && <span class="bg-ink px-2 py-0.5 text-xs text-paper">「おすすめ」で使用中</span>}
+                      {r.server && <span data-in-use hidden class="bg-ink px-2 py-0.5 text-xs text-paper">「おすすめ」で使用中</span>}
                     </span>
                     <span class="mt-0.5 block text-sm text-muted">
                       {r.via}
@@ -127,13 +130,39 @@ const cell =
               ))}
             </tbody>
           </table>
+          <p data-other hidden class="mt-4 text-sm text-muted">
+            今の「おすすめ」のモードは、この表にない <span data-label class="font-bold text-ink" /> を使っています。
+          </p>
         </section>
       ))
     }
 
     <p class="mt-12 max-w-3xl text-sm leading-relaxed text-muted">
       「失敗」は、時間切れ（8 秒）や、送り先に断られて答えが返らなかった回数です（出せた回数や合っていた回数には入りません。時間切れの回は、料金にも入っていません）。「遅いとき」は、10 回に 1
-      回はこれより遅い、という時間です。応答は日本から測っています。同じ文と同じ数え方で測った結果だけを並べています。応答と料金は測った日のものなので、日が違う行は目安として見てください。「おすすめ」のモードが使うモデルは、アプリを更新しなくても替わることがあります。印は {date(CHECKED)}に確かめたものです。
+      回はこれより遅い、という時間です。応答は日本から測っています。同じ文と同じ数え方で測った結果だけを並べています。応答と料金は測った日のものなので、日が違う行は目安として見てください。「おすすめ」のモードが使うモデルは、アプリを更新しなくても替わることがあります。印は、ページを開いたときにサーバーに聞いて付けています。
     </p>
   </div>
+
+  <script>
+    // 「おすすめ」のモードが今使っているモデルに印を付ける。管理画面で替えられるので、ビルドのときではなく、ページを開くたびに
+    // サーバーに聞く。読めなければ、印なしのまま（表はそのまま読める）
+    try {
+      const res = await fetch("https://api.jimaku.deadlock.jp/v2/models", { signal: AbortSignal.timeout(5000) });
+      const inUse = (res.ok ? await res.json() : {}) as Record<string, { id: string; label: string } | undefined>;
+      for (const table of document.querySelectorAll<HTMLElement>("[data-task]")) {
+        const model = inUse[table.dataset.task!];
+        if (!model) continue;
+        const rows = [...table.querySelectorAll<HTMLElement>("[data-server]")];
+        const row = rows.find((r) => r.dataset.server!.split(" ").includes(model.id));
+        const other = table.parentElement!.querySelector<HTMLElement>("[data-other]")!;
+        if (row) row.querySelector<HTMLElement>("[data-in-use]")!.hidden = false;
+        else {
+          other.querySelector("[data-label]")!.textContent = model.label;
+          other.hidden = false;
+        }
+      }
+    } catch {
+      // サーバーに届かない、答えが読めない
+    }
+  </script>
 </Layout>

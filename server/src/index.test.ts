@@ -514,6 +514,15 @@ describe("tasks (/v2)", () => {
     expect(await state.json()).toEqual({ tasks, providers: ["qwen", "openrouter"], remaining: 0.996 });
   });
 
+  it("lets any site read the models in use, and nothing else", async () => {
+    const origin = { headers: { Origin: "https://jimaku.deadlock.jp" } };
+    const models = await call("/models", { version: "v2", ...origin });
+    expect(models.headers.get("Access-Control-Allow-Origin")).toBe("*");
+    const state = await call("/status", { version: "v2", token: await joined(), ...origin });
+    expect(state.status).toBe(200);
+    expect(state.headers.get("Access-Control-Allow-Origin")).toBeNull();
+  });
+
   it("changes the model from the admin page, without a new app", async () => {
     const code = await joined();
     const listed = (await (await manage("/api/tasks")).json()) as { tasks: { name: string; model: string; models: unknown[] }[] };
