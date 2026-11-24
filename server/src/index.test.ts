@@ -692,6 +692,26 @@ describe("tasks (/v2)", () => {
     expect(content(2)).toHaveLength(1);
   });
 
+  it("asks Gemma through OpenRouter, only at companies that keep nothing", async () => {
+    const code = await joined();
+    expect((await manage("/api/tasks/translate", "PATCH", { model: "gemma-4-26b" })).status).toBe(204);
+    vi.mocked(chat).mockImplementation(async () => answered("strong"));
+    expect(await (await translate(code, { ...request, targets: ["en"] })).json()).toEqual({ translations: { en: "strong" } });
+    expect(vi.mocked(chat).mock.calls[0]).toEqual([
+      "openrouter",
+      "sk-beta-openrouter",
+      expect.objectContaining({
+        model: "google/gemma-4-26b-a4b-it",
+        reasoning: { enabled: false },
+        provider: { data_collection: "deny" },
+        max_tokens: 512,
+      }),
+      3000,
+    ]);
+    // 料金は、OpenRouter が答えに入れた額
+    expect(await dayUsd(code)).toBeCloseTo(0.001, 8);
+  });
+
   it("asks OpenAI itself to translate, once the developer adds its key and picks GPT-6 Luna", async () => {
     const code = await joined();
     // キーがない間は替えられない
