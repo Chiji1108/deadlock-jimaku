@@ -1,4 +1,4 @@
-//! 翻訳専門のモデル（Qwen-MT-Flash、Hy-MT2）か、汎用の LLM（Qwen3.8 Flash、GPT-6 Luna）か、PC の中の LLM
+//! 翻訳専門のモデル（Qwen-MT-Flash、Hy-MT2）か、汎用の LLM（Qwen3.8 Flash、GPT-6 Luna、Gemma 4 26B）か、PC の中の LLM
 //! （Gemma 4 E4B）で訳す（DESIGN.md 9.7）。開発者のサーバーに頼むときは、文と翻訳先だけを送り、モデルと頼み方は
 //! サーバーが決める（DESIGN.md 17.4。同じモデルの頼み方は、server/src/tasks.ts にもある）。
 //!
@@ -230,18 +230,6 @@ impl Translator {
         target: &str,
     ) -> anyhow::Result<String> {
         let body = match access.provider() {
-            // Hy-MT2。system はなく、モデルの説明にある「背景を添えて訳す」指示文で送る。設定は説明の勧める値
-            Provider::OpenRouter => json!({
-                "model": model,
-                "messages": [{ "role": "user", "content": format!(
-                    "[Background Information]\n{DOMAINS}\n\nPlease translate the following text into {}, \
-                     taking the provided background information into consideration.\n\n[Source Text]\n{source}",
-                    lang::english_name(target),
-                ) }],
-                "temperature": 0.7,
-                "top_p": 1.0,
-                "max_tokens": 512,
-            }),
             // 汎用の LLM。PC の中の LLM と同じ指示で、推論はさせない（させると 2 秒を超える）
             provider if !dedicated(model) => {
                 let system = format!(
@@ -256,13 +244,30 @@ impl Translator {
                         { "role": "user", "content": source },
                     ],
                 });
-                let (key, value) = match provider {
-                    Provider::Qwen => ("enable_thinking", json!(false)),
-                    _ => ("reasoning_effort", json!("none")),
-                };
-                body[key] = value;
+                match provider {
+                    Provider::Qwen => body["enable_thinking"] = json!(false),
+                    // OpenRouter は、同じモデルをいくつかの会社に回す。送った文を残さない会社だけに回させる
+                    Provider::OpenRouter => {
+                        body["reasoning"] = json!({ "enabled": false });
+                        body["provider"] = json!({ "data_collection": "deny" });
+                        body["max_tokens"] = json!(512);
+                    }
+                    _ => body["reasoning_effort"] = json!("none"),
+                }
                 body
             }
+            // Hy-MT2。system はなく、モデルの説明にある「背景を添えて訳す」指示文で送る。設定は説明の勧める値
+            Provider::OpenRouter => json!({
+                "model": model,
+                "messages": [{ "role": "user", "content": format!(
+                    "[Background Information]\n{DOMAINS}\n\nPlease translate the following text into {}, \
+                     taking the provided background information into consideration.\n\n[Source Text]\n{source}",
+                    lang::english_name(target),
+                ) }],
+                "temperature": 0.7,
+                "top_p": 1.0,
+                "max_tokens": 512,
+            }),
             _ => json!({
                 "model": model,
                 "messages": [{ "role": "user", "content": source }],
@@ -607,7 +612,11 @@ mod tests {
                 "/qwen/chat/completions",
                 axum::routing::post(answer.clone()),
             )
-            .route("/openai/chat/completions", axum::routing::post(answer));
+            .route(
+                "/openai/chat/completions",
+                axum::routing::post(answer.clone()),
+            )
+            .route("/openrouter/chat/completions", axum::routing::post(answer));
         tokio::spawn(async move { axum::serve(listener, router).await });
         let spans = [Span::Text("強い".into())];
         let http = reqwest::Client::new();
@@ -615,6 +624,8 @@ mod tests {
             (Provider::Qwen, "qwen3.8-flash"),
             (Provider::OpenAi, "gpt-6-luna"),
             (Provider::Qwen, "qwen-mt-flash"),
+            (Provider::OpenRouter, "google/gemma-4-26b-a4b-it"),
+            (Provider::OpenRouter, "tencent/hy-mt2-30b-a3b"),
         ] {
             let meter = Arc::new(Meter::new(std::env::temp_dir().join("mt_test_usage.json")));
             let access = Access::at(provider, "code", &api);
@@ -623,7 +634,7 @@ mod tests {
             assert_eq!(translated["ru"], [text("Haze is strong.")], "{model}");
         }
         let seen = seen.lock().unwrap();
-        let [qwen, luna, mt] = &seen[..] else {
+        let [qwen, luna, mt, gemma, hy] = &seen[..] else {
             panic!("{seen:?}");
         };
         let system = qwen["messages"][0]["content"].as_str().unwrap();
@@ -643,7 +654,13 @@ mod tests {
         // 翻訳専門のモデルは、指示文ではなく翻訳の設定で渡す
         assert_eq!(mt["messages"].as_array().unwrap().len(), 1);
         assert_eq!(mt["translation_options"]["target_lang"], "ru");
-        assert!(dedicated("tencent/hy-mt2-30b-a3b"));
+        // OpenRouter の汎用の LLM は、推論を止め、送った文を残さない会社だけに回させる
+        assert_eq!(gemma["messages"][0]["content"], system);
+        assert_eq!(gemma["reasoning"], json!({ "enabled": false }));
+        assert_eq!(gemma["provider"], json!({ "data_collection": "deny" }));
+        // OpenRouter の翻訳専門のモデル（Hy-MT2）は、モデルの説明にある指示文で送る
+        assert_eq!(hy["messages"].as_array().unwrap().len(), 1);
+        assert_eq!(hy.get("provider"), None);
     }
 
     /// 断られた鍵は字幕を止める理由にし、ほかの失敗はその言語だけ諦める

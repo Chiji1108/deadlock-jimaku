@@ -65,6 +65,7 @@ export const ENGINE_PROVIDERS = {
     "hyMt2": "openrouter",
     "qwen38Flash": "qwen",
     "gpt6LunaMt": "openai",
+    "gemma26b": "openrouter",
     "gpt61Terra": "openai"
   },
   "furigana": {
