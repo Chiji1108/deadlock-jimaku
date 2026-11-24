@@ -416,6 +416,23 @@ fn tokens(translation: &str, terms: &[(String, String)]) -> Vec<Token> {
     tokens
 }
 
+/// 訳文から、アプリが用語として出せる名前（`names` のうち訳文で見つかったもの。出てきた順で、出た回数だけ）。
+/// 評価（`examples/split_eval.rs`）が、字幕と同じ拾い方で数えるのに使う
+pub fn shown_names(translation: &str, names: &[String]) -> Vec<String> {
+    let mut terms: Vec<(String, String)> = names.iter().map(|n| (n.clone(), n.clone())).collect();
+    terms.sort();
+    terms.dedup();
+    // 長い名前を先に探す（`tagged` と同じ）
+    terms.sort_by_key(|(name, _)| std::cmp::Reverse(name.len()));
+    tokens(translation, &terms)
+        .into_iter()
+        .filter_map(|token| match token {
+            Token::Entity { reference, .. } => Some(reference),
+            Token::Text { .. } => None,
+        })
+        .collect()
+}
+
 const QUOTES: [(char, char); 6] = [
     ('⟦', '⟧'),
     ('«', '»'),
@@ -534,6 +551,15 @@ mod tests {
                 term("ability:4"),
                 text(" is strong.")
             ]
+        );
+    }
+
+    #[test]
+    fn shown_names_are_the_names_the_app_finds() {
+        let names = ["Haze".to_owned(), "Sleep Dagger".to_owned()];
+        assert_eq!(
+            shown_names("haze's «Sleep Dagger», then ⟦Haze⟧ again. Hazel.", &names),
+            ["Haze", "Sleep Dagger", "Haze"]
         );
     }
 
