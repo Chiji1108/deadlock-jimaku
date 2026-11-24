@@ -14,7 +14,10 @@
 //!     translate       正解の用語を `⟦英語名⟧` に置き換えた原文を訳すだけの問い合わせ（辞書の一覧は送らない）
 //!   `SPLIT_EVAL_ASSETS` で辞書の置き場所を替えられる（別名のキャッシュをアプリの置き場所に書かないとき）。
 //!   出力: experiments/results/split_eval.json（"MODE/MODEL" ごとに足す。同じものは置き換える）。
-//!   `summary.at` は測り終えた時刻（UNIX 秒）。translate の `summary.okBy` は、言語ごとの崩れなかった回数
+//!   `summary.at` は測り終えた時刻（UNIX 秒）。translate の `summary.okBy` は、言語ごとの崩れなかった回数。
+//!   translate の `summary.shown` は、アプリが訳文から、渡した用語を全部出せた回数（`mt::shown_names`。括弧がなくても、
+//!   引用符で囲まれていても、大文字と小文字が違っても拾う。`both` は 2 言語とも）。`ok` と `okBy` は、括弧ごと残ったかを見る厳しい数え方
+//!   MODE に `recount` を渡すと（MODEL なし）、もうある translate の結果の `shown` を、API を呼ばずに数え直す
 //!   `claude-` は Anthropic、`qwen` は QwenCloud（シンガポール）、ほかは OpenAI に送る。どれも推論は止める。
 //!   モデルの名前に `@強さ` を付けると、推論をさせる（`gpt-6-luna@low`、`claude-haiku-5-5@medium`、`qwen3.8-flash@on`）。
 //!   `qwen-mt-` は翻訳専門のモデルで、translate だけ。翻訳先ごとに 1 回ずつ同時に送る。
@@ -37,7 +40,7 @@ use overlays_core::decide::Decider;
 use overlays_core::enrich::{Enricher, Question, Span};
 use overlays_core::llama::Llama;
 use overlays_core::llm;
-use overlays_core::mt::Translator;
+use overlays_core::mt::{self, Translator};
 use overlays_core::secrets::Provider;
 use overlays_core::settings::Models;
 use overlays_core::settings::{Engines, Settings, TermsEngine, TranslationEngine};
@@ -98,7 +101,6 @@ async fn main() -> anyhow::Result<()> {
             model => models.push(model.to_owned()),
         }
     }
-    anyhow::ensure!(!models.is_empty(), "no models");
     let env = |name: &str| std::env::var(name).unwrap_or_default();
 
     let cases: Vec<Value> = serde_json::from_slice(&std::fs::read(&cases_path)?)?;
@@ -112,6 +114,10 @@ async fn main() -> anyhow::Result<()> {
             OUT.replace(".json", &format!(".{stem}.json"))
         }
     };
+    if mode == "recount" {
+        return recount(Path::new(&out));
+    }
+    anyhow::ensure!(!models.is_empty(), "no models");
     let languages: Vec<String> = ["ja", "en", "ru"].map(Into::into).to_vec();
     let glossary = assets::load(
         &overlays_core::default_data_dir().join("assets"),
@@ -157,6 +163,7 @@ async fn main() -> anyhow::Result<()> {
         let (mut ok_count, mut failed) = (0, 0);
         // 言語ごとの、訳文が崩れなかった回数（translate だけ）
         let mut ok_by: BTreeMap<&str, usize> = BTreeMap::new();
+        let mut shown_runs = Vec::new();
         let mut times = Vec::new();
         for case in &cases {
             let text = case["text"].as_str().context("text")?;
@@ -219,10 +226,12 @@ async fn main() -> anyhow::Result<()> {
                         for (lang, found) in &problems {
                             *ok_by.entry(lang).or_default() += usize::from(found.is_empty());
                         }
+                        let shown = shown(&names, &translations);
                         runs.push(json!({
-                            "text": text, "ms": ms, "ok": ok,
+                            "text": text, "ms": ms, "ok": ok, "shown": shown,
                             "source": tagged(case, &glossary), "translations": translations, "problems": problems,
                         }));
+                        shown_runs.push(shown);
                     }
                     Err(e) => {
                         failed += 1;
@@ -250,6 +259,7 @@ async fn main() -> anyhow::Result<()> {
         });
         if mode == "translate" {
             summary["okBy"] = json!(ok_by);
+            summary["shown"] = shown_summary(&shown_runs);
         }
         println!("{mode}/{model}: {summary}");
         // モデルごとに別々に走らせても消し合わないよう、書く直前に読み直す
@@ -263,6 +273,67 @@ async fn main() -> anyhow::Result<()> {
         );
         std::fs::write(Path::new(&out), serde_json::to_vec_pretty(&report)?)?;
     }
+    Ok(())
+}
+
+/// 言語ごとに、アプリが訳文から、渡した用語を全部出せたか（名前と数が合う）
+fn shown<S: AsRef<str>>(
+    names: &[String],
+    translations: &BTreeMap<S, String>,
+) -> BTreeMap<String, bool> {
+    let mut expected = names.to_vec();
+    expected.sort();
+    translations
+        .iter()
+        .map(|(lang, translation)| {
+            let mut found = mt::shown_names(translation, names);
+            found.sort();
+            (lang.as_ref().to_owned(), found == expected)
+        })
+        .collect()
+}
+
+/// 用語を全部出せた回数。言語ごとと、2 言語とも
+fn shown_summary(runs: &[BTreeMap<String, bool>]) -> Value {
+    let count = |lang: &str| runs.iter().filter(|r| r.get(lang) == Some(&true)).count();
+    let both = runs.iter().filter(|r| r.values().all(|ok| *ok)).count();
+    json!({ "en": count("en"), "ru": count("ru"), "both": both })
+}
+
+/// もうある translate の結果を、アプリの拾い方で数え直す。渡した用語は、記録してある原文（`source`）の `⟦ ⟧` の中。
+/// `source` のない古い形の結果は、そのままにする
+fn recount(out: &Path) -> anyhow::Result<()> {
+    let mut report: BTreeMap<String, Value> = serde_json::from_slice(&std::fs::read(out)?)?;
+    for (key, entry) in report
+        .iter_mut()
+        .filter(|(k, _)| k.starts_with("translate/"))
+    {
+        let runs = entry["runs"].as_array_mut().context("runs")?;
+        if !runs
+            .iter()
+            .all(|r| r["source"].is_string() || r["error"].is_string())
+        {
+            continue;
+        }
+        let mut shown_runs = Vec::new();
+        for run in runs.iter_mut().filter(|r| r["error"].is_null()) {
+            let names: Vec<String> = run["source"]
+                .as_str()
+                .context("source")?
+                .split('⟦')
+                .skip(1)
+                .filter_map(|part| Some(part.split_once('⟧')?.0.to_owned()))
+                .collect();
+            let translations: BTreeMap<String, String> =
+                serde_json::from_value(run["translations"].clone())?;
+            let shown = shown(&names, &translations);
+            run["shown"] = json!(shown);
+            shown_runs.push(shown);
+        }
+        entry["summary"]["shown"] = shown_summary(&shown_runs);
+        println!("{key}: {}", entry["summary"]);
+    }
+    std::fs::write(out, serde_json::to_vec_pretty(&report)?)?;
     Ok(())
 }
 

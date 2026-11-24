@@ -16,8 +16,8 @@ interface Summary {
   medianMs: number;
   p90Ms: number;
   usd: number;
-  /** 言語ごとの、訳文が崩れなかった回数（翻訳だけ） */
-  okBy?: Record<string, number>;
+  /** アプリが訳文から、渡した用語を全部出せた回数（翻訳だけ。`both` は 2 言語とも）。`ok` は、括弧ごと残ったかを見る厳しい数え方 */
+  shown?: { en: number; ru: number; both: number };
 }
 
 interface Chosen {
@@ -38,20 +38,23 @@ export interface Row extends Omit<Chosen, "key" | "measured">, Omit<Summary, "at
   measured: string;
 }
 
+/** 並べる順を決める数字。翻訳はアプリが用語を出せた回数、用語の判定は合っていた回数 */
+const score = (row: Row) => row.shown?.both ?? row.ok;
+
 const summaries = JSON.parse(results) as Record<string, { summary: Summary }>;
 
 function rows(entries: Chosen[]): Row[] {
   return entries
-    .map(({ key, measured, ...shown }) => {
+    .map(({ key, measured, ...listed }) => {
       const summary = summaries[key]?.summary;
       if (!summary) throw new Error(`${key}: 測定の結果がない`);
       const { at, runs, ...numbers } = summary;
       if (runs !== RUNS) throw new Error(`${key}: ${runs} 回の結果は、${RUNS} 回の結果と並べられない`);
       const day = at ? new Date(at * 1000).toLocaleDateString("sv-SE", { timeZone: "Asia/Tokyo" }) : measured;
       if (!day) throw new Error(`${key}: 測った日がない`);
-      return { ...shown, ...numbers, measured: day };
+      return { ...listed, ...numbers, measured: day };
     })
-    .sort((a, b) => b.ok - a.ok || a.medianMs - b.medianMs);
+    .sort((a, b) => score(b) - score(a) || a.medianMs - b.medianMs);
 }
 
 export const TRANSLATE = rows(chosen.translate);

@@ -1,17 +1,24 @@
 {
   "translate": [
-    { "key": "translate/tencent/hy-mt2-30b-a3b", "name": "Hy-MT2 30B-A3B", "via": "Tencent（OpenRouter）", "recommended": true, "note": "翻訳専門のモデル。括弧を閉じ忘れることがある" },
-    { "key": "translate/qwen-mt-flash", "name": "Qwen-MT-Flash", "via": "QwenCloud", "note": "翻訳専門のモデル。失敗の 10 回は、回数の上限（429）" },
-    { "key": "translate/qwen3.8-flash", "name": "Qwen3.8 Flash", "via": "QwenCloud", "note": "括弧を外して名前だけを書くことがある" },
-    { "key": "translate/claude-haiku-5-5", "name": "Claude Haiku 5.5", "via": "Anthropic", "note": "ロシア語で、名前に語尾を付けることがある" },
+    { "key": "translate/tencent/hy-mt2-30b-a3b", "name": "Hy-MT2 30B-A3B", "via": "Tencent（OpenRouter）", "recommended": true, "note": "翻訳専門のモデル。括弧を閉じ忘れることがあるが、名前は残る" },
+    { "key": "translate/qwen-mt-flash", "name": "Qwen-MT-Flash", "via": "QwenCloud", "note": "翻訳専門のモデル。失敗の 10 回は、回数の上限（429）。ロシア語で名前を訳すことがある" },
+    { "key": "translate/qwen3.8-flash", "name": "Qwen3.8 Flash", "via": "QwenCloud", "note": "ロシア語で、名前を訳したり抜かしたりすることがある" },
+    { "key": "translate/claude-haiku-5-5", "name": "Claude Haiku 5.5", "via": "Anthropic" },
+    { "key": "translate/gpt-6-luna", "name": "GPT-6 Luna", "via": "OpenAI", "measured": "2026-11-24" },
+    { "key": "translate/groq:openai/gpt-oss-120b@low", "name": "GPT-OSS 120B", "via": "Groq", "note": "推論を止められないので、いちばん弱い指定（low）で測った" },
+    { "key": "translate/groq:openai/gpt-oss-20b@low", "name": "GPT-OSS 20B", "via": "Groq", "note": "推論はいちばん弱い指定（low）。失敗のほとんどは、答えが決めた形（JSON）にならず、Groq に断られた回" },
     { "key": "translate/openrouter:qwen/qwen3.7-flash", "name": "Qwen3.7 Flash", "via": "OpenRouter" },
-    { "key": "translate/openrouter:deepseek/deepseek-v4.1-flash", "name": "DeepSeek V4.1 Flash", "via": "OpenRouter", "note": "ロシア語の訳に、日本語が残ることがある" },
+    { "key": "translate/openrouter:deepseek/deepseek-v4.1-flash", "name": "DeepSeek V4.1 Flash", "via": "OpenRouter", "note": "ロシア語の訳に、考えている途中の文や別の案を書き足すことがある" },
     { "key": "translate/openrouter:deepseek/deepseek-v4.1-flash-1017", "name": "DeepSeek V4.1 Flash 1017", "via": "OpenRouter" },
-    { "key": "translate/openrouter:tencent/hy4-flash", "name": "Hy4 Flash", "via": "Tencent（OpenRouter）", "note": "失敗は時間切れ。ロシア語の訳に、日本語が残ることが多い" },
+    { "key": "translate/openrouter:tencent/hy4-flash", "name": "Hy4 Flash", "via": "Tencent（OpenRouter）", "note": "失敗は、答えが 8 秒で終わらない時間切れ" },
     { "key": "translate/openrouter:z-ai/glm-5.3-flash@low", "name": "GLM 5.3 Flash", "via": "Z.ai（OpenRouter）", "note": "推論を止められないので、いちばん弱い指定（low）で測った" },
     { "key": "translate/openrouter:google/gemma-4-26b-a4b-it", "name": "Gemma 4 26B A4B", "via": "OpenRouter" },
     { "key": "translate/openrouter:inclusionai/ling-3.0-flash", "name": "Ling 3.0 Flash", "via": "inclusionAI（OpenRouter）", "note": "失敗は、答えが 8 秒で終わらない時間切れ" },
-    { "key": "translate/openrouter:mistralai/ministral-8b-2512", "name": "Ministral 3 8B", "via": "Mistral（OpenRouter）", "note": "ロシア語で、名前に語尾を付けたり、名前を訳したりする" }
+    { "key": "translate/openrouter:mistralai/ministral-8b-2512", "name": "Ministral 3 8B", "via": "Mistral（OpenRouter）", "note": "ロシア語で名前に語尾を付けるが、名前は拾える" },
+    { "key": "translate/qwen-mt-plus", "name": "Qwen-MT-Plus", "via": "QwenCloud", "measured": "2026-11-12", "note": "翻訳専門のモデル。ロシア語で、括弧の中の名前を訳す" },
+    { "key": "translate/qwen-mt-lite", "name": "Qwen-MT-Lite", "via": "QwenCloud", "measured": "2026-11-12", "note": "翻訳専門のモデル。括弧は外すが、英語では名前が残る。ロシア語では名前を訳す" },
+    { "key": "translate/tencent/hy-mt2-7b", "name": "Hy-MT2 7B", "via": "Tencent（OpenRouter）", "measured": "2026-11-12", "note": "翻訳専門のモデル。ロシア語で、括弧の中まで訳すことがある" },
+    { "key": "translate/tencent/hy-mt2-1.8b", "name": "Hy-MT2 1.8B", "via": "Tencent（OpenRouter）", "measured": "2026-11-12", "note": "翻訳専門のモデル。ロシア語で、括弧の中まで訳すことがある" }
   ],
   "terms": [
     { "key": "terms-jev/perplexity/pplx-decider-v1.2", "name": "Perplexity Decider V1.2", "via": "Perplexity（OpenRouter）", "measured": "2026-11-20", "recommended": true },
