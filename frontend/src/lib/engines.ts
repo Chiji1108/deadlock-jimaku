@@ -525,7 +525,7 @@ const SERVER_TASKS: { [K in Item]?: { task: string; same: Record<string, Engines
     },
   },
   furigana: {
-    task: "decide",
+    task: "read",
     same: { "pplx-decider": "decider", "pplx-decider-direct": "decider" },
   },
 };

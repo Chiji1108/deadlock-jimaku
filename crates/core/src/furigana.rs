@@ -162,7 +162,9 @@ pub async fn choose(
     ));
     let questions = json!(questions);
     let chosen = match judge.door {
-        Door::Server(server) => decide::ask_server(http, server, &state, &questions).await?,
+        Door::Server(server) => {
+            decide::ask_server(http, server, "/read", &state, &questions).await?
+        }
         Door::Api { access, model } => {
             let asking = decide::Asking {
                 access,
@@ -366,6 +368,44 @@ mod tests {
             corrected("攻撃を避けて", &["こうげき", "ヨケ"])[2],
             seg("避", Some("よ"))
         );
+    }
+
+    /// サーバーには、読みの口（`/v2/read`）に頼む。用語の口（`/v2/decide`）とは、サーバーがモデルを別に決める
+    #[tokio::test]
+    async fn the_server_is_asked_on_the_door_for_readings() {
+        use axum::http::StatusCode;
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let api = format!("http://{}", listener.local_addr().unwrap());
+        let answer = |axum::Json(asked): axum::Json<serde_json::Value>| async move {
+            assert!(asked["state"].as_str().unwrap().contains("このカレー辛い"));
+            // 「から」で始まる読みを選ぶ
+            let questions = asked["questions"].as_array().unwrap().iter();
+            let choices: serde_json::Map<String, serde_json::Value> = questions
+                .filter_map(|q| {
+                    let mut choices = q["choices"].as_array().unwrap().iter();
+                    let spicy =
+                        choices.find(|c| c["description"].as_str().unwrap().starts_with("から"))?;
+                    Some((
+                        q["name"].as_str().unwrap().to_owned(),
+                        spicy["value"].clone(),
+                    ))
+                })
+                .collect();
+            (StatusCode::OK, axum::Json(json!({ "choices": choices })))
+        };
+        let router = axum::Router::new().route("/v2/read", axum::routing::post(answer));
+        tokio::spawn(async move { axum::serve(listener, router).await });
+        let door = Door::Server(Server::new(&api, "good".into()));
+        let meter = Meter::new(std::env::temp_dir().join("furigana_server_test.json"));
+        let judge = Judge {
+            deadlock: true,
+            door: &door,
+            meter: &meter,
+        };
+        let dictionary = Furigana::shared().unwrap();
+        let http = reqwest::Client::new();
+        let segments = choose(&http, &judge, dictionary, "このカレー辛い", &[]).await;
+        assert_eq!(segments.unwrap()[1], seg("辛", Some("から")));
     }
 
     /// 本物の判定モデルに選ばせる: `OPENROUTER_API_KEY=… cargo test -p overlays-core furigana_chooses -- --ignored --nocapture`

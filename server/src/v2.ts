@@ -195,10 +195,12 @@ const MAX_QUESTIONS = 40;
 const text = (value: unknown): value is string => typeof value === "string";
 
 /**
- * 選ばせる（用語と読み）。文と前の文（`state`）と、候補つきの問いを受けて、問いごとに選んだ値を返す。
- * 候補を出すのはアプリ（辞書はアプリの中にある）。答えのない問いは、返さない
+ * 選ばせる。文と前の文（`state`）と、候補つきの問いを受けて、問いごとに選んだ値を返す。
+ * 候補を出すのはアプリ（辞書はアプリの中にある）。答えのない問いは、返さない。
+ * 用語（`/decide`）と読み（`/read`）は、同じ形の問いで、仕事が別（合うモデルが違う。DESIGN.md 9.3）。
+ * 0.10.0 までのアプリは、読みも `/decide` に頼む
  */
-v2.post("/decide", async (c) => {
+const choose = (name: "decide" | "read") => async (c: Ctx) => {
   const code = await asker(c);
   if (code instanceof Response) return code;
   const received = await c.req.text();
@@ -220,7 +222,7 @@ v2.post("/decide", async (c) => {
   ) {
     return c.json({ error: "invalid" }, 400);
   }
-  const task = await worker(c, "decide");
+  const task = await worker(c, name);
   if (!task) return refuse(c, "stopped");
   const { model, keys, work } = task;
   const body = model.body({ state, questions: listed as never });
@@ -244,7 +246,10 @@ v2.post("/decide", async (c) => {
     return offered ? [[q.name, choice]] : [];
   });
   return c.json({ choices: Object.fromEntries(chosen) });
-});
+};
+
+v2.post("/decide", choose("decide"));
+v2.post("/read", choose("read"));
 
 /** 文字起こしの本文の上限（文字数）。発話はいちばん長くて 13 秒ほど（WAV で 0.4 MB、base64 で 0.6 MB） */
 const MAX_AUDIO_BODY = 2_000_000;
