@@ -128,6 +128,28 @@ const TRANSLATORS = {
     // 1〜2 秒かかる（遅いときは 3 秒ほど）
     timeoutMs: 4000,
   },
+  // OpenRouter が、Gemma を動かしている会社のどれかに回す。送った文を学習や保存に使わない会社だけに限る
+  "gemma-4-26b": {
+    label: "Gemma 4 26B（OpenRouter）",
+    provider: "openrouter",
+    body: ({ text, source, target }) => ({
+      model: "google/gemma-4-26b-a4b-it",
+      messages: [
+        {
+          role: "system",
+          content: `Translate the ${name(source)} text into ${name(target)}. ${DOMAINS} Reply with the translation only.`,
+        },
+        { role: "user", content: text },
+      ],
+      reasoning: { enabled: false },
+      provider: { data_collection: "deny" },
+      max_tokens: MAX_TRANSLATION_TOKENS,
+    }),
+    // OpenRouter は料金を答えに入れる。入っていないときの単価
+    price: { input: 0.09, output: 0.3 },
+    // 0.6〜1.2 秒かかる（回される会社で変わる）
+    timeoutMs: 3000,
+  },
   // OpenAI に直接頼む。指示文は Qwen3.8 Flash と同じ（アプリが自分のキーで頼むときとも同じ。mt.rs）
   "gpt-6-luna": {
     label: "GPT-6 Luna",
