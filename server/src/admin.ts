@@ -1,7 +1,7 @@
 // 管理画面（別の Worker。DESIGN.md 17.3）。ベータの費用とコードを見て、開発者のキーを管理する。
 // 入口は Cloudflare Access（access.ts）。ここに届く要求は、Access を通った人のものだけを受ける
 
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { accessEmail, type AccessEnv } from "./access";
 import { page, script } from "./adminPage";
@@ -82,10 +82,6 @@ admin.use("/api/*", async (c, next) => {
   await next();
 });
 
-/** アプリの版ごとの数を、何日前までのコードで数えるか（毎日は配信しない人も入るように、2 週間） */
-const VERSION_DAYS = 14;
-const DAY_MS = 24 * 60 * 60 * 1000;
-
 /** 今の状態。費用（今日と今月）、コードの数、上限、閉じているか、使われているアプリの版 */
 admin.get("/api/summary", async (c) => {
   const db = c.var.db;
@@ -111,13 +107,13 @@ admin.get("/api/summary", async (c) => {
       .get(),
     betaClosed(db),
     betaLimits(db),
-    // この 14 日にアプリが確かめに来たコード（止めたものは除く）の、アプリの版ごとの数（版を伝えない 0.9.6 までは null）
+    // アプリの版ごとの、確かめに来たコード（止めたものは除く）の数と、最後に来た日。新しく来た版から（版を伝えない 0.9.6 までは null）
     db
-      .select({ version: codes.appVersion, codes: sql<number>`COUNT(*)` })
+      .select({ version: codes.appVersion, codes: sql<number>`COUNT(*)`, lastDay: sql<string>`MAX(${codes.seenDay})` })
       .from(codes)
-      .where(and(eq(codes.revoked, false), sql`${codes.seenDay} >= ${day(now - VERSION_DAYS * DAY_MS)}`))
+      .where(and(eq(codes.revoked, false), isNotNull(codes.seenDay)))
       .groupBy(codes.appVersion)
-      .orderBy(desc(sql`COUNT(*)`), desc(codes.appVersion)),
+      .orderBy(desc(sql`MAX(${codes.seenDay})`), desc(sql`COUNT(*)`), desc(codes.appVersion)),
   ]);
   return c.json({
     email: c.var.email,
@@ -126,7 +122,7 @@ admin.get("/api/summary", async (c) => {
     month: { usd: monthUsd?.usd ?? 0 },
     codes: { total: total?.n ?? 0, activeToday: active?.n ?? 0 },
     limits: { codeDailyUsd: limits.codeDailyUsd, codesPerPlace: BETA_CODES_PER_IP, maxUsd: BETA_LIMIT_MAX_USD },
-    versions: { days: VERSION_DAYS, rows: versions },
+    versions,
   });
 });
 
@@ -139,6 +135,8 @@ admin.get("/api/codes", async (c) => {
     .select({
       id: codes.id,
       createdAt: codes.createdAt,
+      seenDay: codes.seenDay,
+      version: codes.appVersion,
       revoked: codes.revoked,
       todayUsd,
       monthUsd: sql<number>`COALESCE(SUM(CASE WHEN ${codeUsage.month} = ${month(now)} THEN ${codeUsage.usd} END), 0)`,

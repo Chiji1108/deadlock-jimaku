@@ -4,6 +4,7 @@
 export const script = `const $ = (id) => document.getElementById(id);
 const usd = (n) => "$" + n.toFixed(n < 1 ? 4 : 2);
 const date = (ms) => new Date(ms).toLocaleString("ja-JP", { dateStyle: "short", timeStyle: "short" });
+const version = (v) => (v ? esc(v) : "0.9.6 以前（版を伝えない）");
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => "&#" + c.charCodeAt(0) + ";");
 
 async function api(path, method = "GET", body) {
@@ -59,14 +60,11 @@ async function load() {
       "</select></td><td>" + (task.enabled ? '<span class="tag ok">動かしている</span>' : '<span class="tag bad">止めている</span>') +
       '</td><td><button data-task="' + esc(task.name) + '" data-enabled="' + !task.enabled + '">' + (task.enabled ? "止める" : "動かす") + "</button></td></tr>").join("");
 
-  const seen = s.versions.rows.reduce((n, v) => n + v.codes, 0);
-  $("versions").innerHTML = "<tr><th>版</th><th class=num>コード</th><th></th></tr>" +
-    s.versions.rows.map((v) => "<tr><td>" + (v.version ? esc(v.version) : "0.9.6 以前（版を伝えない）") + "</td><td class=num>" + v.codes +
-      "</td><td>" + bar(v.codes, seen) + "</td></tr>").join("");
-  $("versionDays").textContent = s.versions.days;
+  $("versions").innerHTML = "<tr><th>版</th><th>最後に来た日</th><th class=num>コード</th></tr>" +
+    s.versions.map((v) => "<tr><td>" + version(v.version) + "</td><td>" + esc(v.lastDay) + "</td><td class=num>" + v.codes + "</td></tr>").join("");
 
-  $("codes").innerHTML = "<tr><th>作った日</th><th class=num>今日</th><th class=num>今月</th><th class=num>全部</th><th>状態</th><th></th></tr>" +
-    c.codes.map((code) => "<tr><td>" + date(code.createdAt) + "</td><td class=num>" + usd(code.todayUsd) + "</td><td class=num>" + usd(code.monthUsd) + "</td><td class=num>" + usd(code.usd) + "</td><td>" +
+  $("codes").innerHTML = "<tr><th>作った日</th><th>最後に来た日</th><th>版</th><th class=num>今日</th><th class=num>今月</th><th class=num>全部</th><th>状態</th><th></th></tr>" +
+    c.codes.map((code) => "<tr><td>" + date(code.createdAt) + "</td><td>" + (code.seenDay ? esc(code.seenDay) : "") + "</td><td>" + (code.seenDay ? version(code.version) : "") + "</td><td class=num>" + usd(code.todayUsd) + "</td><td class=num>" + usd(code.monthUsd) + "</td><td class=num>" + usd(code.usd) + "</td><td>" +
       (code.revoked ? '<span class="tag bad">停止</span>' : "") + '</td><td><button data-code="' + esc(code.id) + '" data-revoked="' + !code.revoked + '">' + (code.revoked ? "戻す" : "止める") + "</button></td></tr>").join("");
 }
 
@@ -174,7 +172,7 @@ export const page = /* html */ `<!doctype html>
 
   <section class="card">
     <h2>アプリの版</h2>
-    <p class="muted">この <span id="versionDays"></span> 日に、アプリが確かめに来たコードの数です（止めたコードは除く）。アプリは、字幕を始めるときと「おすすめ」を選ぶときにコードを確かめ、版を伝えます（0.9.7 から）。古い口をやめる前に、古い版が残っていないかをここで見ます</p>
+    <p class="muted">アプリが確かめに来たコードの数と、その版が最後に来た日（UTC）です（止めたコードは除く）。コードごとの版と日は、下の「コード」に出ます。アプリは、字幕を始めるときと「おすすめ」を選ぶときにコードを確かめ、版を伝えます（0.9.7 から）。古い口をやめる前に、古い版が残っていないかをここで見ます</p>
     <table id="versions"></table>
   </section>
 
