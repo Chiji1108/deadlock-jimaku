@@ -224,7 +224,7 @@ export const ITEMS: {
     label: "翻訳",
     hint: "訳文。GPT は用語も同時に判定します（訳文の名前を用語から作るので、1 回で聞きます）",
     scale:
-      "正確さは、63 文のテストで、用語の英語名が訳文に正しく残った割合です（英語 / ロシア語）。料金は 1 言語あたり",
+      "正確さは、63 文のテストで、アプリが訳文から用語を出せた割合です（英語 / ロシア語）。料金は 1 言語あたり",
     options: [
       {
         value: "server",
@@ -251,21 +251,21 @@ export const ITEMS: {
       {
         value: "qwenMtFlash",
         label: "Qwen-MT-Flash",
-        accuracy: "93% / 90%",
+        accuracy: "94% / 88%",
         speed: "約 0.25 秒",
         price: "1 時間 約 3 円",
       },
       {
         value: "hyMt2",
         label: "Hy-MT2",
-        accuracy: "99% / 85%",
+        accuracy: "99% / 99%",
         speed: "約 0.8 秒",
         price: "1 時間 約 1 円",
       },
       {
         value: "qwen38Flash",
         label: "Qwen3.8 Flash",
-        accuracy: "96% / 90%",
+        accuracy: "100% / 95%",
         speed: "約 1 秒",
         price: "1 時間 約 2 円",
         note: "汎用の AI に訳させる。回数の上限に当たりにくい。ロシア語では、用語の名前を訳すことがある",
@@ -273,10 +273,18 @@ export const ITEMS: {
       {
         value: "gpt6LunaMt",
         label: "GPT-6 Luna",
-        accuracy: "97% / 98%",
+        accuracy: "98% / 98%",
         speed: "約 1.5 秒",
         price: "1 時間 約 2 円",
         note: "汎用の AI に訳させる。用語は Hy-MT2 と同じくらい守るが、遅い",
+      },
+      {
+        value: "gemma26b",
+        label: "Gemma 4 26B",
+        accuracy: "99% / 99%",
+        speed: "約 0.7 秒",
+        price: "1 時間 約 1 円",
+        note: "汎用の AI に訳させる。用語は Hy-MT2 と同じくらい守り、回数の上限に当たりにくい。OpenRouter が、送った文を残さない会社だけに回す",
       },
       {
         value: "gpt61Terra",
@@ -522,6 +530,7 @@ const SERVER_TASKS: { [K in Item]?: { task: string; same: Record<string, Engines
       "qwen-mt-flash": "qwenMtFlash",
       "qwen3.8-flash": "qwen38Flash",
       "gpt-6-luna": "gpt6LunaMt",
+      "gemma-4-26b": "gemma26b",
     },
   },
   furigana: {

@@ -1086,13 +1086,16 @@ pub enum TranslationEngine {
     /// 同じことを GPT-6 Luna にさせる。用語は Hy-MT2 と同じくらい守るが、いちばん遅い。0.6.0-rc.6 までの
     /// `gpt6Luna`（用語も同時に判定する）とは別のもの（`RemovedTranslation`）
     Gpt6LunaMt,
+    /// 同じことを、OpenRouter の Gemma 4 26B にさせる。Hy-MT2 と同じくらい用語を守り、速さも近い。回数の上限に
+    /// 当たりにくい（DESIGN.md 9.7）。PC の中の `Gemma`（E4B）とは別のもの
+    Gemma26b,
     Gpt61Terra,
     /// PC の中の Gemma 4 E4B（llama.cpp）。無料で、文字を PC から出さない。GPU を使う（DESIGN.md 9.7）
     Gemma,
 }
 
 impl TranslationEngine {
-    pub const ALL: [Self; 8] = [
+    pub const ALL: [Self; 9] = [
         Self::ChromeTranslator,
         Self::Gemma,
         Self::Server,
@@ -1100,6 +1103,7 @@ impl TranslationEngine {
         Self::HyMt2,
         Self::Qwen38Flash,
         Self::Gpt6LunaMt,
+        Self::Gemma26b,
         Self::Gpt61Terra,
     ];
 
@@ -1111,6 +1115,7 @@ impl TranslationEngine {
             | Self::HyMt2
             | Self::Qwen38Flash
             | Self::Gpt6LunaMt
+            | Self::Gemma26b
             | Self::Gemma => TranslationSource::Mt,
             Self::Gpt61Terra => TranslationSource::Llm,
         }
@@ -1132,6 +1137,7 @@ impl TranslationEngine {
             Self::HyMt2 => (Provider::OpenRouter, "tencent/hy-mt2-30b-a3b"),
             Self::Qwen38Flash => (Provider::Qwen, "qwen3.8-flash"),
             Self::Gpt6LunaMt => (Provider::OpenAi, "gpt-6-luna"),
+            Self::Gemma26b => (Provider::OpenRouter, "google/gemma-4-26b-a4b-it"),
             Self::ChromeTranslator | Self::Server | Self::Gpt61Terra | Self::Gemma => return None,
         };
         Some(Model { provider, name })
