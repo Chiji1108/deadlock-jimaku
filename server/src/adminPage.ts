@@ -56,8 +56,8 @@ async function load() {
   // 選んでいる途中の欄は書き換えない（1 分ごとに読み直すため）
   if (!document.activeElement?.dataset?.model) $("tasks").innerHTML = "<tr><th>仕事</th><th>モデル</th><th>状態</th><th></th></tr>" +
     t.tasks.map((task) => "<tr><td>" + esc(task.label) + '</td><td><select data-model="' + esc(task.name) + '">' +
-      task.models.map((m) => '<option value="' + esc(m.id) + '"' + (m.id === task.model ? " selected" : "") + ">" + esc(m.label) + "</option>").join("") +
-      "</select></td><td>" + (task.enabled ? '<span class="tag ok">動かしている</span>' : '<span class="tag bad">止めている</span>') +
+      task.models.map((m) => '<option value="' + esc(m.id) + '"' + (m.id === task.model ? " selected" : m.keyed ? "" : " disabled") + ">" + esc(m.label) + (m.keyed ? "" : "（キーがない）") + "</option>").join("") +
+      "</select></td><td>" + (!task.enabled ? '<span class="tag bad">止めている</span>' : task.keyed ? '<span class="tag ok">動かしている</span>' : '<span class="tag bad">キーがないので頼めない</span>') +
       '</td><td><button data-task="' + esc(task.name) + '" data-enabled="' + !task.enabled + '">' + (task.enabled ? "止める" : "動かす") + "</button></td></tr>").join("");
 
   $("versions").innerHTML = "<tr><th>版</th><th>最後に来た日</th><th class=num>コード</th></tr>" +
