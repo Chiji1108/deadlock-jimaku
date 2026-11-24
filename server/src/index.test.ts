@@ -522,7 +522,7 @@ describe("tasks (/v2)", () => {
       { name: "decide", model: "pplx-decider", enabled: true },
       { name: "transcribe", model: "qwen-audio", enabled: true },
     ]);
-    expect(listed.tasks[0]!.models).toContainEqual({ id: "qwen-mt-flash", label: "Qwen-MT-Flash" });
+    expect(listed.tasks[0]!.models).toContainEqual({ id: "qwen-mt-flash", label: "Qwen-MT-Flash", keyed: true });
     // 今のモデルは、コードがなくても読める
     const models = async () => (await call("/models", { version: "v2" })).json();
     expect(await models()).toEqual({
@@ -695,11 +695,17 @@ describe("tasks (/v2)", () => {
   it("asks Perplexity itself, once the developer adds its key and picks it", async () => {
     const code = await joined();
     const status = async () => (await ask("/status", code)).json();
+    type Listed = { tasks: { name: string; keyed: boolean; models: { id: string; keyed: boolean }[] }[] };
+    const decide = async () => ((await (await manage("/api/tasks")).json()) as Listed).tasks.find((t) => t.name === "decide")!;
+    // Perplexity のキーがない間は、そのモデルに替えさせない（替えると、選ぶ仕事が丸ごと断られる）
+    expect((await decide()).models).toContainEqual({ id: "pplx-decider-direct", label: "Perplexity Decider（Perplexity）", keyed: false });
+    const refused = await manage("/api/tasks/decide", "PATCH", { model: "pplx-decider-direct" });
+    expect([refused.status, await refused.json()]).toEqual([409, { error: "noKey" }]);
+    expect(await status()).toMatchObject({ tasks: ["translate", "decide", "transcribe"] });
+    const added = await manage("/api/keys", "POST", { provider: "perplexity", key: "pplx-test-key-000000000001" });
+    expect(added.status).toBe(200);
     expect((await manage("/api/tasks/decide", "PATCH", { model: "pplx-decider-direct" })).status).toBe(204);
-    // Perplexity のキーがない間は、選ぶ仕事は頼めない
-    expect(await status()).toMatchObject({ tasks: ["translate", "transcribe"] });
-    expect((await ask("/decide", code, decision)).status).toBe(403);
-    expect((await manage("/api/keys", "POST", { provider: "perplexity", key: "pplx-test-key-000000000001" })).status).toBe(200);
+    expect(await decide()).toMatchObject({ model: "pplx-decider-direct", keyed: true });
     // 古い版のアプリは、知らない会社の名前があると答えを読めないので、中継する会社には入れない
     expect(await status()).toMatchObject({ tasks: ["translate", "decide", "transcribe"], providers: ["qwen", "openrouter"] });
 
@@ -711,6 +717,12 @@ describe("tasks (/v2)", () => {
     expect(vi.mocked(perplexity).mock.calls[0]).toMatchObject(["/v1/decisions", "pplx-test-key-000000000001", { model: "pplx-decider-v1.2", state: "ヘイズ強い" }, 15_000]);
     expect(vi.mocked(openrouter)).not.toHaveBeenCalled();
     expect(await dayUsd(code)).toBeCloseTo(0.02, 8);
+
+    // 選んだあとでキーを止めると、頼めなくなる。管理画面には、キーがないと出す
+    const { id } = (await added.json()) as { id: string };
+    expect((await manage(`/api/keys/${id}`, "PATCH", { enabled: false })).status).toBe(204);
+    expect(await decide()).toMatchObject({ model: "pplx-decider-direct", keyed: false });
+    expect(await status()).toMatchObject({ tasks: ["translate", "transcribe"] });
   });
 
   it("takes only what a task needs, and hides the upstream's trouble", async () => {

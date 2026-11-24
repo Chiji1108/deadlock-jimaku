@@ -12,6 +12,7 @@ import {
   BETA_PROVIDERS,
   betaClosed,
   betaLimits,
+  type BetaProvider,
 } from "./beta";
 import { day, month, open, type Db } from "./db";
 import { betaGrants, betaKeys, betaSettings, betaSpend, codes, codeUsage, tasks } from "./schema";
@@ -222,14 +223,28 @@ admin.delete("/api/keys/:id", async (c) => {
 
 /** 仕事の口（/v2。DESIGN.md 17.4）ごとの、今のモデルと、選べるモデル、動かしているか */
 admin.get("/api/tasks", async (c) => {
-  const all = await allTasks(c.var.db);
-  const listed = all.map(({ task, id, enabled }) => {
+  const [all, providers] = await Promise.all([allTasks(c.var.db), keyed(c.var.db, c.env.VAULT)]);
+  const listed = all.map(({ task, id, model, enabled }) => {
     const { label, models } = TASKS[task];
-    const options = Object.entries(models).map(([model, { label }]) => ({ id: model, label }));
-    return { name: task, label, model: id, enabled, models: options };
+    const options = Object.entries(models).map(([name, { label, provider }]) => ({
+      id: name,
+      label,
+      keyed: providers.includes(provider),
+    }));
+    return { name: task, label, model: id, enabled, keyed: providers.includes(model.provider), models: options };
   });
   return c.json({ tasks: listed });
 });
+
+/** キーがあって頼める会社（動かしているキーか、秘密の設定の予備のキーがある） */
+async function keyed(db: Db, vault: Vault): Promise<BetaProvider[]> {
+  const [rows, fallback] = await Promise.all([
+    db.selectDistinct({ provider: betaKeys.provider }).from(betaKeys).where(eq(betaKeys.enabled, true)),
+    vault.fallbacks(),
+  ]);
+  const spare: Partial<Record<BetaProvider, boolean>> = fallback;
+  return BETA_PROVIDERS.filter((p) => rows.some((row) => row.provider === p) || !!spare[p]);
+}
 
 /** 仕事のモデルを替える、止める・動かす。送った項目だけを変える。次の要求から効く（アプリのリリースは要らない） */
 admin.patch("/api/tasks/:name", async (c) => {
@@ -241,6 +256,10 @@ admin.patch("/api/tasks/:name", async (c) => {
   const sent = Object.keys(body).length;
   if (sent === 0 || sent !== [model, enabled].filter((value) => value !== undefined).length) {
     return c.json({ error: "invalid" }, 400);
+  }
+  // キーのない会社のモデルには替えさせない（替えると、その仕事が丸ごと断られる）
+  if (model !== undefined && !(await keyed(c.var.db, c.env.VAULT)).includes(TASKS[name].models[model]!.provider)) {
+    return c.json({ error: "noKey" }, 409);
   }
   const now = (await allTasks(c.var.db)).find((t) => t.task === name)!;
   const row = { name, model: model ?? now.id, enabled: enabled ?? now.enabled };
