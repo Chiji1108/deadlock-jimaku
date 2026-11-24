@@ -7,7 +7,8 @@
 //!   鍵は OPENAI_API_KEY、XAI_API_KEY、QWEN_SOUTH_API_KEY（シンガポールの鍵）、OPENROUTER_API_KEY。
 //!   断られたら（回数の上限など）、2 秒待って 3 回までやり直す。haasJa は `STT_EVAL_SPEECH`（speech.cpp と
 //!   モデルを置くフォルダ。なければ取る）
-//!   出力: OUT.json（エンジンごとに足す。同じものは置き換える）
+//!   出力: OUT.json（エンジンごとに足す。同じものは置き換える）。`summary.runs` は聞かせた発話の数、`usd` はその料金、
+//!   `at` は測り終えた時刻（UNIX 秒）
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -77,7 +78,17 @@ async fn main() -> anyhow::Result<()> {
         .ok()
         .and_then(|text| serde_json::from_str(&text).ok())
         .unwrap_or_else(|| json!({}));
+    // ここまでに使った額（ドル）。エンジンごとの料金は、前後の差
+    let spent = || -> anyhow::Result<f64> {
+        let session = serde_json::to_value(meter.watch().borrow().session.clone())?;
+        let uses = session
+            .as_object()
+            .into_iter()
+            .flat_map(|uses| uses.values());
+        Ok(uses.filter_map(|amount| amount["usd"].as_f64()).sum())
+    };
     for engine in args {
+        let before = spent()?;
         let source: FinalSource = serde_json::from_value(json!(engine))?;
         let engines = Engines {
             transcription: source,
@@ -168,7 +179,13 @@ async fn main() -> anyhow::Result<()> {
             }
         }
         times.sort_unstable();
+        let at = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)?
+            .as_secs();
         let summary = json!({
+            "at": at,
+            "runs": runs.len(),
+            "usd": spent()? - before,
             "model": model,
             "terms": terms,
             "termsWritten": hit,

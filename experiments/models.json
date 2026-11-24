@@ -34,5 +34,21 @@
     { "key": "terms-jev/jev-latest", "name": "Jev", "via": "TypeSafe AI" },
     { "key": "terms-jev/d1.2-ultra", "name": "d1.2-ultra", "via": "Liquid AI" },
     { "key": "terms-jev/d1.2", "name": "d1.2", "via": "Liquid AI" }
+  ],
+  "furigana": [
+    { "key": "fix/gpt-6.1-terra", "name": "GPT-6.1 Terra", "via": "OpenAI", "note": "文の読みを直させる" },
+    { "key": "fix/gpt-6-luna", "name": "GPT-6 Luna", "via": "OpenAI", "note": "文の読みを直させる" },
+    { "key": "choose/perplexity/pplx-decider-v1.2", "name": "Perplexity Decider V1.2", "via": "OpenRouter", "server": ["pplx-decider", "pplx-decider-direct"], "note": "辞書の候補から選ばせる。サーバーは、同じモデルを Perplexity に直接頼むこともある" },
+    { "key": "dictionary", "name": "辞書だけ", "via": "PC の中", "note": "何も送らない。ほかの行は、この読みをもとにする" }
+  ],
+  "transcribe": [
+    { "key": "gptTranscribe", "name": "GPT-Transcribe", "via": "OpenAI" },
+    { "key": "grokVoiceTranscribe", "name": "Grok Voice Transcribe 2.0", "via": "xAI" },
+    { "key": "qwenAudio", "name": "Qwen-Audio-3.1-ASR-Flash", "via": "QwenCloud", "server": ["qwen-audio"] },
+    { "key": "maiTranscribe2", "name": "MAI-Transcribe 2", "via": "Microsoft（OpenRouter）" },
+    { "key": "local/ggml-large-v3-q5_0+heroes", "name": "Whisper large-v3", "via": "PC の中", "measured": "2026-11-13", "note": "この PC（M5 Pro）で動かした時間" },
+    { "key": "local/ggml-large-v3-turbo-q5_0+heroes", "name": "Whisper large-v3-turbo", "via": "PC の中", "measured": "2026-11-13", "note": "この PC（M5 Pro）で動かした時間" },
+    { "key": "local/jimaku-sherpa-k2-v2+all", "name": "ReazonSpeech k2 v2", "via": "PC の中", "measured": "2026-11-19", "note": "この PC（M5 Pro）で動かした時間" },
+    { "key": "local/haas-ja-v1.0:q4_k", "name": "Haas-ja v1.0", "via": "PC の中", "measured": "2026-11-13", "note": "この PC（M5 Pro）で動かした時間" }
   ]
 }

@@ -1,17 +1,33 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import { RUNS, TERMS, TRANSLATE, type Row } from "../lib/models";
+import { FURIGANA, TERMS, TRANSCRIBE, TRANSLATE, type Row } from "../lib/models";
 
 const date = (day: string) => {
   const [y, m, d] = day.split("-").map(Number);
   return `${y} 年 ${m} 月 ${d} 日`;
 };
-const seconds = (ms: number) => `${(ms / 1000).toFixed(2)} 秒`;
-const dollars = (usd: number) => `$${usd.toFixed(4)}`;
+/** 何も聞かない行（辞書だけ）は、時間がない。PC の中で動くものは、料金がない */
+const seconds = (ms: number | null) => (ms === null ? "—" : `${(ms / 1000).toFixed(2)} 秒`);
+const percent = (part: number, whole: number) => `${((part * 100) / whole).toFixed(1)}%`;
+const dollars = (r: Row) => (r.usd ? `$${r.usd.toFixed(4)}` : "—");
 /** 表の上に出す、測った日（行ごとに違えば並べる） */
 const days = (rows: Row[]) => [...new Set(rows.map((r) => r.measured))].sort().map(date).join("、");
 /** 測った日が行ごとに違う表は、行にも日を出す */
 const mixed = (rows: Row[]) => new Set(rows.map((r) => r.measured)).size > 1;
+
+interface Column {
+  label: string;
+  value: (row: Row) => string | number;
+  /** 最初の列の数字の、分母（「188 / 189」の 189）。なければ表の回数 */
+  outOf?: number;
+}
+/** どの表にもある列。前に、その工程で数えたものの列を置く（最初の列がいちばん見てほしい数字） */
+const common = (runs: number): Column[] => [
+  { label: "失敗", value: (r) => r.failed },
+  { label: "応答（中央値）", value: (r) => seconds(r.medianMs) },
+  { label: "遅いとき", value: (r) => seconds(r.p90Ms) },
+  { label: `${runs} 回の料金`, value: dollars },
+];
 
 const tables = [
   {
@@ -19,11 +35,15 @@ const tables = [
     /** サーバーでの仕事の名前（`/v2/models` の答えのキー） */
     task: "translate",
     title: "翻訳",
-    rows: TRANSLATE,
-    /** 言語ごとの回数を出す */
-    languages: true,
+    ...TRANSLATE,
+    columns: [
+      { label: "用語を出せた回数", value: (r) => r.shown!.both },
+      { label: "英語", value: (r) => r.shown!.en },
+      { label: "ロシア語", value: (r) => r.shown!.ru },
+      { label: "括弧ごと", value: (r) => r.ok! },
+    ] as Column[],
     how: [
-      `配信で話しそうな 63 の文を 3 回ずつ、合わせて ${RUNS} 回、日本語から英語とロシア語に訳させました。文の中のゲームの用語（ヒーロー・アイテム・スキル）は、先に英語の正式名に置き換え、⟦Haze⟧ のように括弧で囲んで渡します。`,
+      `配信で話しそうな 63 の文を 3 回ずつ、合わせて ${TRANSLATE.runs} 回、日本語から英語とロシア語に訳させました。文の中のゲームの用語（ヒーロー・アイテム・スキル）は、先に英語の正式名に置き換え、⟦Haze⟧ のように括弧で囲んで渡します。`,
       "数えたのは、渡した名前を全部、アプリが訳文から用語として出せた回です（英語とロシア語の両方で出せた回数と、言語ごとの回数）。アプリは、括弧が外れていても、引用符で囲まれていても、大文字と小文字が違っても、名前を見つけて用語にします。名前を訳した、抜かした、余計に書いた回は、出せていません。訳の自然さは数えていません。",
       "「括弧ごと」の列は、もっと厳しい数え方です。2 言語とも、名前が括弧の付いたまま残り、語尾が付かず、日本語も残らなかった回を数えます。",
       "翻訳専門のモデルには言語ごとに 1 回ずつ同時に送り、ほかのモデルには 2 言語をまとめて 1 回で訳させています。推論は止めています（止められないモデルは、いちばん弱い指定にしました）。",
@@ -33,11 +53,42 @@ const tables = [
     id: "terms",
     task: "decide",
     title: "用語の判定",
-    rows: TERMS,
-    languages: false,
+    ...TERMS,
+    columns: [{ label: "合っていた回数", value: (r) => r.ok! }] as Column[],
     how: [
-      `同じ 63 の文を 3 回ずつ、合わせて ${RUNS} 回。アプリが PC の中の辞書から出した用語の候補を、判定モデルに確かめさせました。`,
+      `同じ 63 の文を 3 回ずつ、合わせて ${TERMS.runs} 回。アプリが PC の中の辞書から出した用語の候補を、判定モデルに確かめさせました。`,
       "その文の用語をすべて見つけ、ふつうの言葉（「シルバー帯」のシルバーなど）を用語にしなかった回を「合っていた」と数えます。",
+    ],
+  },
+  {
+    id: "furigana",
+    // ふりがなは、用語の判定と同じモデルに頼む
+    task: "decide",
+    title: "ふりがな",
+    ...FURIGANA,
+    columns: [
+      { label: "正しく読めた回数", value: (r) => r.right! },
+      { label: "直した", value: (r) => r.fixed! },
+      { label: "壊した", value: (r) => r.broken! },
+    ] as Column[],
+    how: [
+      `読みが分かれる漢字（「辛い」「人気」など）を含む 60 の文を 3 回ずつ、合わせて ${FURIGANA.runs} 回。文の漢字の読みがすべて正しかった回を「正しく読めた」と数えます。`,
+      "ふりがなは、まず PC の中の辞書が付けます。「直した」は、辞書では違っていた読みを正しくした回。「壊した」は、辞書では合っていた読みを変えて、違えた回です。判定モデルには辞書の出した候補から選ばせ、GPT には文の読みを直させています。",
+    ],
+  },
+  {
+    id: "transcribe",
+    task: "transcribe",
+    title: "確定の文字起こし",
+    ...TRANSCRIBE,
+    columns: [
+      { label: "書けた用語", value: (r) => r.termsWritten!, outOf: TRANSCRIBE.rows[0]!.terms },
+      { label: "文字の誤り", value: (r) => percent(r.characterErrors!, r.characters!) },
+    ] as Column[],
+    how: [
+      `ゲームの用語を入れた 42 の台詞を、3 人の合成音声に読ませた ${TRANSCRIBE.runs} 本の録音を、1 本ずつ文字にさせました。アプリと同じく、辞書の名前をヒントとして渡しています。`,
+      "「書けた用語」は、台詞に出てくる用語 207 個のうち、正しい書き方で文字になった数です。「文字の誤り」は、正解の文と違っていた文字の割合（句読点と空白は数えない）で、小さいほど正確です。",
+      "合成音声は、本物の話し声より聞き取りやすいので、配信での数字はこれより悪くなります。PC の中で動くものの応答は、測った PC での時間です。",
     ],
   },
 ];
@@ -59,6 +110,16 @@ const cell =
       デドロ字幕が使うモデルは、Deadlock の配信の文で測って決めています。その結果を載せます。料金と速さは変わっていくので、測った日を添えています。
     </p>
 
+    <nav aria-label="工程" class="mt-6 flex flex-wrap gap-x-5 gap-y-2 font-bold">
+      {
+        tables.map((t) => (
+          <a href={`#${t.id}`} class="underline underline-offset-4 hover:text-muted">
+            {t.title}
+          </a>
+        ))
+      }
+    </nav>
+
     {
       tables.map((t) => (
         <section id={t.id} class="mt-20">
@@ -73,14 +134,9 @@ const cell =
             <thead class="text-sm whitespace-nowrap text-muted max-md:hidden">
               <tr>
                 <th class="py-3 font-normal">モデル</th>
-                <th class="px-3 py-3 text-right font-normal">{t.languages ? "用語を出せた回数" : "合っていた回数"}</th>
-                {t.languages && <th class="px-3 py-3 text-right font-normal">英語</th>}
-                {t.languages && <th class="px-3 py-3 text-right font-normal">ロシア語</th>}
-                {t.languages && <th class="px-3 py-3 text-right font-normal">括弧ごと</th>}
-                <th class="px-3 py-3 text-right font-normal">失敗</th>
-                <th class="px-3 py-3 text-right font-normal">応答（中央値）</th>
-                <th class="px-3 py-3 text-right font-normal">遅いとき</th>
-                <th class="py-3 pl-3 text-right font-normal">{RUNS} 回の料金</th>
+                {[...t.columns, ...common(t.runs)].map((c) => (
+                  <th class="px-3 py-3 text-right font-normal last:pr-0">{c.label}</th>
+                ))}
               </tr>
             </thead>
             <tbody class="max-md:block">
@@ -97,35 +153,12 @@ const cell =
                     </span>
                     {r.note && <span class="mt-1 block max-w-md text-sm leading-relaxed text-muted">{r.note}</span>}
                   </th>
-                  <td class={`${cell} font-bold`} data-label={t.languages ? "用語を出せた回数" : "合っていた回数"}>
-                    {r.shown?.both ?? r.ok}
-                    <span class="text-sm font-normal text-muted"> / {RUNS}</span>
-                  </td>
-                  {r.shown && (
-                    <>
-                      <td class={cell} data-label="英語">
-                        {r.shown.en}
-                      </td>
-                      <td class={cell} data-label="ロシア語">
-                        {r.shown.ru}
-                      </td>
-                      <td class={cell} data-label="括弧ごと">
-                        {r.ok}
-                      </td>
-                    </>
-                  )}
-                  <td class={cell} data-label="失敗">
-                    {r.failed}
-                  </td>
-                  <td class={cell} data-label="応答（中央値）">
-                    {seconds(r.medianMs)}
-                  </td>
-                  <td class={cell} data-label="遅いとき">
-                    {seconds(r.p90Ms)}
-                  </td>
-                  <td class={`${cell} md:pr-0`} data-label={`${RUNS} 回の料金`}>
-                    {dollars(r.usd)}
-                  </td>
+                  {[...t.columns, ...common(t.runs)].map((c, i) => (
+                    <td class={`${cell} last:md:pr-0 ${i === 0 ? "font-bold" : ""}`} data-label={c.label}>
+                      {c.value(r)}
+                      {i === 0 && <span class="text-sm font-normal text-muted"> / {c.outOf ?? t.runs}</span>}
+                    </td>
+                  ))}
                 </tr>
               ))}
             </tbody>
