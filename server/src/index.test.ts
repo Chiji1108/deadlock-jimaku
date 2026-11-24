@@ -65,7 +65,7 @@ beforeAll(async () => {
 afterAll(() => proxy.dispose());
 
 beforeEach(async () => {
-  for (const table of ["code_usage", "codes", "beta_grants", "beta_spend", "beta_keys", "beta_settings", "tasks"]) {
+  for (const table of ["code_usage", "codes", "beta_grants", "beta_spend", "beta_keys", "beta_settings", "tasks", "task_spend"]) {
     await env.DB.prepare(`DELETE FROM ${table}`).run();
   }
   vi.mocked(accessEmail).mockReset();
@@ -955,6 +955,24 @@ describe("admin", () => {
     expect((await manage(`/api/codes/${listed[0]!.id}`, "PATCH", { revoked: true })).status).toBe(204);
     const stopped = await translate(code);
     expect([stopped.status, stopped.headers.get("X-Gift-Refusal")]).toEqual([403, "revoked"]);
+  });
+
+  it("shows what each task and model cost, for old and new apps together, without the requests that cost nothing", async () => {
+    const code = await joined();
+    vi.mocked(openrouter).mockImplementation(async () => answered());
+    expect((await translate(code)).status).toBe(200);
+    // 新しいアプリ（/v2）の翻訳は、同じモデルなので同じ行に足す。翻訳先が 2 つでも 1 回
+    vi.mocked(chat).mockImplementation(async () => answered());
+    const asked = { text: "強い", source: "ja", targets: ["en", "ru"] };
+    expect((await call("/translate", { version: "v2", token: code, method: "POST", ...json(asked) })).status).toBe(200);
+    // 外に断られた要求は、料金がかからないので数えない
+    vi.mocked(openrouter).mockImplementation(async () => new Response("", { status: 500 }));
+    expect((await translate(code)).status).toBe(502);
+    const { work } = (await (await manage("/api/summary")).json()) as { work: { days: number; rows: Record<string, unknown>[] } };
+    expect(work.days).toBe(30);
+    expect(work.rows).toEqual([
+      { task: "translate", model: "hy-mt2", label: "翻訳", modelLabel: "Hy-MT2（OpenRouter）", usd: expect.closeTo(0.03), count: 2 },
+    ]);
   });
 
   it("keeps several keys, never shows them, and moves on to the next when one is refused", async () => {

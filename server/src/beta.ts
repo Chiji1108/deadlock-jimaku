@@ -3,7 +3,8 @@
 
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { CODE_DAILY_USD, day, month, VERSION, type Db } from "./db";
-import { betaGrants, betaKeys, betaSettings, betaSpend, codes, codeUsage } from "./schema";
+import { betaGrants, betaKeys, betaSettings, betaSpend, codes, codeUsage, taskSpend } from "./schema";
+import type { TaskName } from "./tasks";
 import { decrypt, newCode, newId, normalizeCode, sha256 } from "./secrets";
 
 /** 開発者のキーを持つ会社。Perplexity は、仕事の口（/v2）からだけ頼む */
@@ -191,11 +192,27 @@ export async function reserveBeta(db: Db, codeId: string, estimate: number, now:
   return false;
 }
 
-/** 先に足した見積もりを、実際の額に直す。月の集計には実際の額を足す。日が変わっていたら、今日の分は直さない */
-export async function settleBeta(db: Db, codeId: string, estimate: number, actual: number, now: number) {
+/** 何の仕事を、どのモデルに頼んだか（tasks.ts での名前）。費用の内訳に数える */
+export interface Work {
+  task: TaskName | "live";
+  model: string;
+}
+
+/**
+ * 先に足した見積もりを、実際の額に直す。月の集計と、仕事ごとの内訳には実際の額を足す。
+ * 日が変わっていたら、今日の分は直さない
+ */
+export async function settleBeta(db: Db, codeId: string, work: Work, estimate: number, actual: number, now: number) {
   const today = day(now);
   const diff = actual - estimate;
   await db.batch([
+    db
+      .insert(taskSpend)
+      .values({ day: today, ...work, usd: actual, count: actual > 0 ? 1 : 0 })
+      .onConflictDoUpdate({
+        target: [taskSpend.day, taskSpend.task, taskSpend.model],
+        set: { usd: sql`${taskSpend.usd} + excluded.usd`, count: sql`${taskSpend.count} + excluded.count` },
+      }),
     db
       .insert(codeUsage)
       .values({ codeId, month: month(now), usd: actual })

@@ -1,7 +1,7 @@
 // 管理画面（別の Worker。DESIGN.md 17.3）。ベータの費用とコードを見て、開発者のキーを管理する。
 // 入口は Cloudflare Access（access.ts）。ここに届く要求は、Access を通った人のものだけを受ける
 
-import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
+import { and, desc, eq, gte, isNotNull, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { accessEmail, type AccessEnv } from "./access";
 import { page, script } from "./adminPage";
@@ -16,7 +16,7 @@ import {
   type BetaProvider,
 } from "./beta";
 import { day, month, olderThan, open, VERSION, type Db } from "./db";
-import { betaGrants, betaKeys, betaSettings, betaSpend, codes, codeUsage, tasks } from "./schema";
+import { betaGrants, betaKeys, betaSettings, betaSpend, codes, codeUsage, tasks, taskSpend } from "./schema";
 import { newId } from "./secrets";
 import { allTasks, isModel, isTask, TASKS } from "./tasks";
 
@@ -39,6 +39,8 @@ export const admin = new Hono<App>();
 
 /** 一覧に出すコードの数（今日よく使った順） */
 const LISTED_CODES = 100;
+/** 費用の内訳に入れる日数（今日を含む） */
+const WORK_DAYS = 30;
 /** キーの長さ。短すぎるもの（打ち間違い）は、終わりの 4 文字を出すと中身が分かってしまう */
 const MIN_KEY = 20;
 const MAX_KEY = 400;
@@ -89,7 +91,7 @@ admin.get("/api/summary", async (c) => {
   const db = c.var.db;
   const now = Date.now();
   const today = day(now);
-  const [spend, monthUsd, total, active, granted, closed, limits, min, versions] = await Promise.all([
+  const [spend, monthUsd, total, active, granted, closed, limits, min, versions, work] = await Promise.all([
     db.select({ usd: betaSpend.usd }).from(betaSpend).where(eq(betaSpend.day, today)).get(),
     db
       .select({ usd: sql<number>`COALESCE(SUM(${codeUsage.usd}), 0)` })
@@ -117,6 +119,18 @@ admin.get("/api/summary", async (c) => {
       .where(and(eq(codes.revoked, false), isNotNull(codes.seenDay)))
       .groupBy(codes.appVersion)
       .orderBy(desc(sql`MAX(${codes.seenDay})`), desc(sql`COUNT(*)`), desc(codes.appVersion)),
+    // 仕事とモデルごとの額と、料金のかかった回数。額の大きい順
+    db
+      .select({
+        task: taskSpend.task,
+        model: taskSpend.model,
+        usd: sql<number>`SUM(${taskSpend.usd})`,
+        count: sql<number>`SUM(${taskSpend.count})`,
+      })
+      .from(taskSpend)
+      .where(and(gte(taskSpend.day, day(now - (WORK_DAYS - 1) * 86_400_000)), sql`${taskSpend.usd} > 0`))
+      .groupBy(taskSpend.task, taskSpend.model)
+      .orderBy(desc(sql`SUM(${taskSpend.usd})`)),
   ]);
   return c.json({
     email: c.var.email,
@@ -127,9 +141,16 @@ admin.get("/api/summary", async (c) => {
     limits: { codeDailyUsd: limits.codeDailyUsd, codesPerPlace: BETA_CODES_PER_IP, maxUsd: BETA_LIMIT_MAX_USD },
     // 「この版より前は断る」と、今それで断られている版（版を伝えない 0.9.6 までは、どの版より古い）
     minVersion: min ?? "",
+    work: { days: WORK_DAYS, rows: work.map((w) => ({ ...w, ...named(w.task, w.model) })) },
     versions: versions.map((v) => ({ ...v, refused: !!min && (v.version === null || olderThan(v.version, min)) })),
   });
 });
+
+/** 内訳に出す、仕事とモデルの名前。なくしたモデルは、記録した名前のまま出す */
+function named(task: string, model: string) {
+  if (!isTask(task)) return { label: "途中の文字起こし（0.9.9 以前）", modelLabel: "Qwen-Audio-3.1-ASR-Flash-Streaming" };
+  return { label: TASKS[task].label, modelLabel: TASKS[task].models[model]?.label ?? model };
+}
 
 /** ベータのコード。今日よく使った順 */
 admin.get("/api/codes", async (c) => {

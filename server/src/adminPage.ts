@@ -60,6 +60,11 @@ async function load() {
       "</select></td><td>" + (!task.enabled ? '<span class="tag bad">止めている</span>' : task.keyed ? '<span class="tag ok">動かしている</span>' : '<span class="tag bad">キーがないので頼めない</span>') +
       '</td><td><button data-task="' + esc(task.name) + '" data-enabled="' + !task.enabled + '">' + (task.enabled ? "止める" : "動かす") + "</button></td></tr>").join("");
 
+  const spent = s.work.rows.reduce((sum, w) => sum + w.usd, 0);
+  $("work").innerHTML = "<tr><th>仕事</th><th>モデル</th><th class=num>額</th><th class=num>割合</th><th class=num>回数</th><th class=num>1 回あたり</th></tr>" +
+    s.work.rows.map((w) => "<tr><td>" + esc(w.label) + "</td><td>" + esc(w.modelLabel) + "</td><td class=num>" + usd(w.usd) + "</td><td class=num>" + Math.round((w.usd / spent) * 100) + "%</td><td class=num>" + w.count + "</td><td class=num>$" + (w.usd / w.count).toFixed(6) + "</td></tr>").join("");
+  $("workDays").textContent = s.work.days;
+
   $("versions").innerHTML = "<tr><th>版</th><th>最後に来た日</th><th class=num>コード</th></tr>" +
     s.versions.map((v) => "<tr><td>" + version(v.version) + (v.refused ? ' <span class="tag bad">断っている</span>' : "") + "</td><td>" + esc(v.lastDay) + "</td><td class=num>" + v.codes + "</td></tr>").join("");
   // 打っている途中の欄は書き換えない
@@ -164,6 +169,12 @@ export const page = /* html */ `<!doctype html>
     <h2>仕事</h2>
     <p class="muted">アプリは「何をしてほしいか」だけを送り、モデルはここで決めます。替えると、次の要求から効きます（アプリの更新は要りません）。止めた仕事は、その工程だけ断ります（アプリは、ほかの工程を続けます）</p>
     <table id="tasks"></table>
+  </section>
+
+  <section class="card">
+    <h2>費用の内訳（この <span id="workDays"></span> 日）</h2>
+    <p class="muted">仕事とモデルごとの額（UTC の日で数えます）。回数は、料金のかかった要求の数です。翻訳は、翻訳先がいくつでも 1 回。途中の文字起こしは、30 秒ごとを 1 回と数えます。コードごとには分けません</p>
+    <table id="work"></table>
   </section>
 
   <section class="card">
