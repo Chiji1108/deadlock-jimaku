@@ -1,15 +1,15 @@
 ---
 import Layout from "../layouts/Layout.astro";
+import ModelTable from "../components/ModelTable.svelte";
 import { FURIGANA, TERMS, TRANSCRIBE, TRANSLATE, type Row } from "../lib/models";
 
 const date = (day: string) => {
   const [y, m, d] = day.split("-").map(Number);
   return `${y} 年 ${m} 月 ${d} 日`;
 };
-/** 何も聞かない行（辞書だけ）は、時間がない。PC の中で動くものは、料金がない */
-const seconds = (ms: number | null) => (ms === null ? "—" : `${(ms / 1000).toFixed(2)} 秒`);
-const percent = (part: number, whole: number) => `${((part * 100) / whole).toFixed(1)}%`;
-const dollars = (r: Row) => (r.usd ? `$${r.usd.toFixed(4)}` : "—");
+// 式の中で「!」のあとに「/」を書くと、Astro が正規表現と読み違える
+const ratio = (part: number, whole: number) => part / whole;
+const seconds = (ms: number) => `${(ms / 1000).toFixed(2)} 秒`;
 /** 表の上に出す、測った日（行ごとに違えば並べる） */
 const days = (rows: Row[]) => [...new Set(rows.map((r) => r.measured))].sort().map(date).join("、");
 /** 測った日が行ごとに違う表は、行にも日を出す */
@@ -17,16 +17,19 @@ const mixed = (rows: Row[]) => new Set(rows.map((r) => r.measured)).size > 1;
 
 interface Column {
   label: string;
-  value: (row: Row) => string | number;
-  /** 最初の列の数字の、分母（「188 / 189」の 189）。なければ表の回数 */
-  outOf?: number;
+  /** 並べ替えに使う数字。ない欄（何も聞かない行の時間、PC の中で動くものの料金）は「—」 */
+  value: (row: Row) => number | undefined;
+  /** 数字の見せ方。なければ、そのまま */
+  show?: (value: number) => string;
+  /** 小さいほど良い数字 */
+  ascending?: boolean;
 }
 /** どの表にもある列。前に、その工程で数えたものの列を置く（最初の列がいちばん見てほしい数字） */
 const common = (runs: number): Column[] => [
-  { label: "失敗", value: (r) => r.failed },
-  { label: "応答（中央値）", value: (r) => seconds(r.medianMs) },
-  { label: "遅いとき", value: (r) => seconds(r.p90Ms) },
-  { label: `${runs} 回の料金`, value: dollars },
+  { label: "失敗", value: (r) => r.failed, ascending: true },
+  { label: "応答（中央値）", value: (r) => r.medianMs ?? undefined, show: seconds, ascending: true },
+  { label: "遅いとき", value: (r) => r.p90Ms ?? undefined, show: seconds, ascending: true },
+  { label: `${runs} 回の料金`, value: (r) => r.usd || undefined, show: (usd) => `$${usd.toFixed(4)}`, ascending: true },
 ];
 
 const tables = [
@@ -69,7 +72,7 @@ const tables = [
     columns: [
       { label: "正しく読めた回数", value: (r) => r.right! },
       { label: "直した", value: (r) => r.fixed! },
-      { label: "壊した", value: (r) => r.broken! },
+      { label: "壊した", value: (r) => r.broken!, ascending: true },
     ] as Column[],
     how: [
       `読みが分かれる漢字（「辛い」「人気」など）を含む 60 の文を 3 回ずつ、合わせて ${FURIGANA.runs} 回。文の漢字の読みがすべて正しかった回を「正しく読めた」と数えます。`,
@@ -81,9 +84,16 @@ const tables = [
     task: "transcribe",
     title: "確定の文字起こし",
     ...TRANSCRIBE,
+    // 回数ではなく、台詞に出てくる用語の数のうちいくつ書けたか
+    outOf: TRANSCRIBE.rows[0]!.terms,
     columns: [
-      { label: "書けた用語", value: (r) => r.termsWritten!, outOf: TRANSCRIBE.rows[0]!.terms },
-      { label: "文字の誤り", value: (r) => percent(r.characterErrors!, r.characters!) },
+      { label: "書けた用語", value: (r) => r.termsWritten! },
+      {
+        label: "文字の誤り",
+        value: (r) => ratio(r.characterErrors!, r.characters!),
+        show: (part) => `${(part * 100).toFixed(1)}%`,
+        ascending: true,
+      },
     ] as Column[],
     how: [
       `ゲームの用語を入れた 42 の台詞を、3 人の合成音声に読ませた ${TRANSCRIBE.runs} 本の録音を、1 本ずつ文字にさせました。アプリと同じく、辞書の名前をヒントとして渡しています。`,
@@ -93,9 +103,25 @@ const tables = [
   },
 ];
 
-/** 狭い画面では、行を 1 つの箱にして、数字の上に欄の名前を出す */
-const cell =
-  "py-3 tabular-nums whitespace-nowrap md:px-3 md:text-right max-md:py-0 max-md:before:block max-md:before:text-xs max-md:before:text-muted max-md:before:content-[attr(data-label)]";
+/** 表の部品に渡す形（ページを開いたあとも並べ替えに使うので、関数ではなく、数字と文字にしておく） */
+const sheets = tables.map(({ columns, rows, runs, outOf, ...t }: (typeof tables)[number] & { outOf?: number }) => {
+  const all = [...columns, ...common(runs)];
+  return {
+    ...t,
+    days: days(rows),
+    columns: all.map(({ label, ascending }, i) => ({ label, ascending, outOf: i === 0 ? (outOf ?? runs) : undefined })),
+    rows: rows.map((r) => ({
+      name: r.name,
+      via: mixed(rows) ? `${r.via}・${date(r.measured)}` : r.via,
+      note: r.note,
+      server: r.server,
+      cells: all.map((c) => {
+        const value = c.value(r);
+        return { text: value === undefined ? "—" : (c.show?.(value) ?? String(value)), value };
+      }),
+    })),
+  };
+});
 ---
 
 <Layout
@@ -112,7 +138,7 @@ const cell =
 
     <nav aria-label="工程" class="mt-6 flex flex-wrap gap-x-5 gap-y-2 font-bold">
       {
-        tables.map((t) => (
+        sheets.map((t) => (
           <a href={`#${t.id}`} class="underline underline-offset-4 hover:text-muted">
             {t.title}
           </a>
@@ -121,7 +147,7 @@ const cell =
     </nav>
 
     {
-      tables.map((t) => (
+      sheets.map((t) => (
         <section id={t.id} class="mt-20">
           <h2 class="display text-[clamp(1.75rem,3.6vw,2.6rem)]">{t.title}</h2>
           <div class="mt-5 max-w-3xl leading-relaxed text-muted [&_p]:mt-3">
@@ -129,73 +155,16 @@ const cell =
               <p>{p}</p>
             ))}
           </div>
-          <p class="mt-8 text-sm font-bold">測った日: {days(t.rows)}</p>
-          <table data-task={t.task} class="mt-3 w-full border-t-2 border-ink text-left max-md:block">
-            <thead class="text-sm whitespace-nowrap text-muted max-md:hidden">
-              <tr>
-                <th class="py-3 font-normal">モデル</th>
-                {[...t.columns, ...common(t.runs)].map((c) => (
-                  <th class="px-3 py-3 text-right font-normal last:pr-0">{c.label}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody class="max-md:block">
-              {t.rows.map((r) => (
-                <tr data-server={r.server?.join(" ")} class="border-t border-line align-top max-md:grid max-md:grid-cols-3 max-md:gap-x-4 max-md:gap-y-3 max-md:py-5">
-                  <th scope="row" class="py-3 pr-3 font-normal max-md:col-span-3 max-md:py-0">
-                    <span class="flex flex-wrap items-center gap-x-2 gap-y-1 font-bold">
-                      {r.name}
-                      {r.server && <span data-in-use hidden class="bg-ink px-2 py-0.5 text-xs text-paper">「おすすめ」で使用中</span>}
-                    </span>
-                    <span class="mt-0.5 block text-sm text-muted">
-                      {r.via}
-                      {mixed(t.rows) && `・${date(r.measured)}`}
-                    </span>
-                    {r.note && <span class="mt-1 block max-w-md text-sm leading-relaxed text-muted">{r.note}</span>}
-                  </th>
-                  {[...t.columns, ...common(t.runs)].map((c, i) => (
-                    <td class={`${cell} last:md:pr-0 ${i === 0 ? "font-bold" : ""}`} data-label={c.label}>
-                      {c.value(r)}
-                      {i === 0 && <span class="text-sm font-normal text-muted"> / {c.outOf ?? t.runs}</span>}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <p data-other hidden class="mt-4 text-sm text-muted">
-            今の「おすすめ」のモードは、この表にない <span data-label class="font-bold text-ink" /> を使っています。
-          </p>
+          <p class="mt-8 mb-3 text-sm font-bold">測った日: {t.days}</p>
+          <ModelTable client:load task={t.task} columns={t.columns} rows={t.rows} />
         </section>
       ))
     }
 
     <p class="mt-12 max-w-3xl text-sm leading-relaxed text-muted">
       「失敗」は、時間切れ（8 秒）や、送り先に断られて答えが返らなかった回数です（出せた回数や合っていた回数には入りません。時間切れの回は、料金にも入っていません）。「遅いとき」は、10 回に 1
-      回はこれより遅い、という時間です。応答は日本から測っています。同じ文と同じ数え方で測った結果だけを並べています。応答と料金は測った日のものなので、日が違う行は目安として見てください。「おすすめ」のモードが使うモデルは、アプリを更新しなくても替わることがあります。印は、ページを開いたときにサーバーに聞いて付けています。
+      回はこれより遅い、という時間です。応答は日本から測っています。同じ文と同じ数え方で測った結果だけを並べています。応答と料金は測った日のものなので、日が違う行は目安として見てください。表は、見出しを押すと並べ替えられます。「おすすめ」のモードが使うモデルは、アプリを更新しなくても替わることがあります。印は、ページを開いたときにサーバーに聞いて付けています。
     </p>
   </div>
 
-  <script>
-    // 「おすすめ」のモードが今使っているモデルに印を付ける。管理画面で替えられるので、ビルドのときではなく、ページを開くたびに
-    // サーバーに聞く。読めなければ、印なしのまま（表はそのまま読める）
-    try {
-      const res = await fetch("https://api.jimaku.deadlock.jp/v2/models", { signal: AbortSignal.timeout(5000) });
-      const inUse = (res.ok ? await res.json() : {}) as Record<string, { id: string; label: string } | undefined>;
-      for (const table of document.querySelectorAll<HTMLElement>("[data-task]")) {
-        const model = inUse[table.dataset.task!];
-        if (!model) continue;
-        const rows = [...table.querySelectorAll<HTMLElement>("[data-server]")];
-        const row = rows.find((r) => r.dataset.server!.split(" ").includes(model.id));
-        const other = table.parentElement!.querySelector<HTMLElement>("[data-other]")!;
-        if (row) row.querySelector<HTMLElement>("[data-in-use]")!.hidden = false;
-        else {
-          other.querySelector("[data-label]")!.textContent = model.label;
-          other.hidden = false;
-        }
-      }
-    } catch {
-      // サーバーに届かない、答えが読めない
-    }
-  </script>
 </Layout>
