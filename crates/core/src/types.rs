@@ -108,6 +108,8 @@ pub enum Topic {
     Level,
     /// OpenAI の使用量と概算の料金（操作パネル用）
     Usage,
+    /// 字幕の統計（操作パネル用）
+    Stats,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
@@ -160,6 +162,8 @@ pub enum ServerMsg {
     AudioLevel { db: f32 },
     #[serde(rename = "usage")]
     Usage { usage: crate::usage::UsageView },
+    #[serde(rename = "stats")]
+    Stats { stats: crate::stats::StatsView },
     /// 字幕の処理が文を受け取れるか。None は動いていない
     #[serde(rename = "live.status")]
     LiveStatus { status: Option<LiveStatus> },
@@ -405,6 +409,7 @@ impl ServerMsg {
             Self::Display { .. } => Topic::Display,
             Self::AudioLevel { .. } => Topic::Level,
             Self::Usage { .. } => Topic::Usage,
+            Self::Stats { .. } => Topic::Stats,
         }
     }
 }

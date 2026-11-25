@@ -148,6 +148,8 @@ pub async fn run(store: Arc<Store>, options: Options) {
     tokio::task::spawn_blocking(secrets::forget_share);
     let meter = store.meter();
     tokio::spawn(async move { meter.persist().await });
+    let tally = store.tally();
+    tokio::spawn(async move { tally.persist().await });
     tokio::spawn(assets::watch_versions(store.clone()));
     let mut settings_rx = store.watch_settings();
     let mut assets_slot = Slot::new();

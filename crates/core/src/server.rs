@@ -570,6 +570,9 @@ async fn session(mut socket: WebSocket, store: Arc<Store>) {
     let wants_usage = topics.contains(&Topic::Usage);
     let mut usage = store.meter().watch();
     usage.mark_unchanged();
+    let wants_stats = topics.contains(&Topic::Stats);
+    let mut stats = store.tally().watch();
+    stats.mark_unchanged();
     if send_all(&mut socket, &topics, store.current_state())
         .await
         .is_err()
@@ -598,6 +601,12 @@ async fn session(mut socket: WebSocket, store: Arc<Store>) {
             Ok(()) = usage.changed(), if wants_usage => {
                 let usage = usage.borrow_and_update().clone();
                 if send_all(&mut socket, &topics, vec![ServerMsg::Usage { usage }]).await.is_err() {
+                    return;
+                }
+            }
+            Ok(()) = stats.changed(), if wants_stats => {
+                let stats = stats.borrow_and_update().clone();
+                if send_all(&mut socket, &topics, vec![ServerMsg::Stats { stats }]).await.is_err() {
                     return;
                 }
             }

@@ -1,5 +1,6 @@
 <script lang="ts">
   import CaptionsIcon from "@lucide/svelte/icons/captions";
+  import ChartColumnIcon from "@lucide/svelte/icons/chart-column";
   import CheckIcon from "@lucide/svelte/icons/check";
   import CircleAlertIcon from "@lucide/svelte/icons/circle-alert";
   import HouseIcon from "@lucide/svelte/icons/house";
@@ -31,6 +32,7 @@
   import ItemsTab from "./tabs/ItemsTab.svelte";
   import KeysTab from "./tabs/KeysTab.svelte";
   import RankTab from "./tabs/RankTab.svelte";
+  import StatsTab from "./tabs/StatsTab.svelte";
   import { ENTER_KEYS, keyNames } from "../lib/engines";
 
   onMount(() => panel.start());
@@ -60,8 +62,9 @@
     },
     { value: "items", label: "アイテム説明", icon: PackageIcon, page: ItemsTab, wide: true },
     { value: "rank", label: "ランク", icon: TrophyIcon, page: RankTab, wide: true },
+    { value: "stats", label: "統計", icon: ChartColumnIcon, page: StatsTab, heading: "" },
     // 自分の API キーを使う人だけが開く。料金も同じタブに置く
-    { value: "keys", label: "API キーと料金", icon: KeyRoundIcon, page: KeysTab, heading: "" },
+    { value: "keys", label: "API キーと料金", icon: KeyRoundIcon, page: KeysTab },
   ];
   /** 見本のあるタブ（ホーム、プロフィール、オーバーレイ）は 2 列に並べるので広く取る。ほかは読みやすい幅に留める */
   const pageWidth = $derived(

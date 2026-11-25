@@ -1,18 +1,18 @@
 //! OpenAI の使用量と概算の料金（DESIGN.md 13 章）。
 //!
 //! 音声は送った長さ、LLM は応答の `usage` のトークン数を数え、モデルの単価を掛ける。
-//! 今回（アプリを起動してから）と月ごと（UTC）に足し、月ごとの分は `usage.json` に保存する。
+//! 今回（アプリを起動してから）と月ごと（UTC）に足し、月ごとの分は `usage.json` に保存する（`monthly`）。
 //! 届かなかった応答（タイムアウトなど）の分は数えられないので、請求より少なめに出ることがある。
 //! 単価は OpenAI の料金ページ（2026-11）の値で、請求額とは少しずれる（概算）。
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
-use std::sync::Mutex;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
 use tokio::sync::watch;
 use ts_rs::TS;
+
+use crate::monthly::{Monthly, Periods};
 
 /// 何に使ったか
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, TS)]
@@ -44,18 +44,7 @@ pub struct Amount {
 
 pub type Usage = BTreeMap<Use, Amount>;
 
-/// 変わってから保存するまで
-const SAVE_DELAY: Duration = Duration::from_secs(5);
-
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, TS)]
-#[serde(rename_all = "camelCase")]
-#[ts(export)]
-pub struct UsageView {
-    /// アプリを起動してから
-    pub session: Usage,
-    /// 今月（UTC）
-    pub month: Usage,
-}
+pub type UsageView = Periods<Usage>;
 
 /// LLM の応答の `usage`
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -149,41 +138,12 @@ fn price(model: &str) -> Option<Price> {
     })
 }
 
-/// 月ごとの分（保存する形）
-#[derive(Default, Serialize, Deserialize)]
-struct Months {
-    /// "2026-11" → 使用量
-    months: BTreeMap<String, Usage>,
-}
-
-pub struct Meter {
-    path: PathBuf,
-    /// 今回の分と、月ごとの分
-    state: Mutex<(Usage, Months)>,
-    /// 画面に出す最新の値。音声を送るたびに変わるので、字幕などと同じ broadcast には流さない
-    view: watch::Sender<UsageView>,
-}
+pub struct Meter(Monthly<Usage>);
 
 impl Meter {
     /// `path` が読めなければ今月の分を 0 から数える（壊れていても止めない）
     pub fn new(path: PathBuf) -> Self {
-        let months: Months = std::fs::read(&path)
-            .ok()
-            .and_then(|bytes| serde_json::from_slice(&bytes).ok())
-            .unwrap_or_default();
-        let view = UsageView {
-            session: Usage::new(),
-            month: months
-                .months
-                .get(&month_key(SystemTime::now()))
-                .cloned()
-                .unwrap_or_default(),
-        };
-        Self {
-            path,
-            state: Mutex::new((Usage::new(), months)),
-            view: watch::Sender::new(view),
-        }
+        Self(Monthly::new(path))
     }
 
     pub fn audio(&self, what: Use, model: &str, seconds: f64) {
@@ -243,38 +203,16 @@ impl Meter {
     }
 
     pub fn watch(&self) -> watch::Receiver<UsageView> {
-        self.view.subscribe()
+        self.0.watch()
     }
 
-    /// 変わったら、少し待ってまとめて保存する（音声を送るたびに書かない）
     pub async fn persist(&self) {
-        let mut changed = self.view.subscribe();
-        while changed.changed().await.is_ok() {
-            tokio::time::sleep(SAVE_DELAY).await;
-            changed.mark_unchanged();
-            if let Err(e) = self.save().await {
-                tracing::warn!("cannot save usage: {e:#}");
-            }
-        }
-    }
-
-    async fn save(&self) -> anyhow::Result<()> {
-        let json = serde_json::to_vec_pretty(&self.state.lock().unwrap().1)?;
-        crate::write_atomic(&self.path, &json).await
+        self.0.persist().await;
     }
 
     fn add(&self, what: Use, amount: Amount) {
-        let (session, months) = &mut *self.state.lock().unwrap();
-        add(session.entry(what).or_default(), &amount);
-        let month = months
-            .months
-            .entry(month_key(SystemTime::now()))
-            .or_default();
-        add(month.entry(what).or_default(), &amount);
-        self.view.send_replace(UsageView {
-            session: session.clone(),
-            month: month.clone(),
-        });
+        self.0
+            .add(|usage| add(usage.entry(what).or_default(), &amount));
     }
 }
 
@@ -285,40 +223,12 @@ fn add(total: &mut Amount, amount: &Amount) {
     total.unpriced |= amount.unpriced;
 }
 
-/// UTC の年月（"2026-11"）。OpenAI の請求も UTC の月ごと
-fn month_key(now: SystemTime) -> String {
-    let days = now.duration_since(UNIX_EPOCH).unwrap_or_default().as_secs() / 86_400;
-    // 1970-01-01 からの日数を暦に直す（Howard Hinnant の civil_from_days）
-    let z = days as i64 + 719_468;
-    let era = z.div_euclid(146_097);
-    let doe = z - era * 146_097;
-    let yoe = (doe - doe / 1_460 + doe / 36_524 - doe / 146_096) / 365;
-    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
-    let mp = (5 * doy + 2) / 153;
-    let month = if mp < 10 { mp + 3 } else { mp - 9 };
-    let year = yoe + era * 400 + i64::from(month <= 2);
-    format!("{year}-{month:02}")
-}
-
 #[cfg(test)]
 mod tests {
-    use std::time::Duration;
-
     use super::*;
 
     fn meter(dir: &tempfile::TempDir) -> Meter {
         Meter::new(dir.path().join("usage.json"))
-    }
-
-    #[test]
-    fn month_key_is_utc_year_and_month() {
-        let at = |secs| month_key(UNIX_EPOCH + Duration::from_secs(secs));
-        assert_eq!(at(0), "1970-01");
-        // 2026-11-03T00:00:00Z
-        assert_eq!(at(1_793_664_000), "2026-11");
-        // 2024-02-29T23:59:59Z（うるう日）と、その次の秒
-        assert_eq!(at(1_709_251_199), "2024-02");
-        assert_eq!(at(1_709_251_200), "2024-03");
     }
 
     #[test]
@@ -356,17 +266,6 @@ mod tests {
         assert!(batch.unpriced);
         assert_eq!(batch.usd, 0.0);
         assert_eq!(batch.seconds, 30.0);
-    }
-
-    #[tokio::test]
-    async fn month_survives_restart_but_session_does_not() {
-        let dir = tempfile::tempdir().unwrap();
-        let m = meter(&dir);
-        m.audio(Use::Batch, "gpt-transcribe", 60.0);
-        m.save().await.unwrap();
-        let view = meter(&dir).watch().borrow().clone();
-        assert!(view.session.is_empty());
-        assert_eq!(view.month[&Use::Batch].seconds, 60.0);
     }
 
     #[test]

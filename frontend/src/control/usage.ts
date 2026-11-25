@@ -1,6 +1,7 @@
 // 料金の見せ方（上の帯と「料金」タブで同じにする）
-import type { UsageView } from "../generated/UsageView";
+import type { ServerMsg } from "../generated/ServerMsg";
 
+export type UsageView = Extract<ServerMsg, { type: "usage" }>["usage"];
 type Usage = UsageView["session"];
 
 /** 1 ドル未満は 3 桁（丸めてから決める。0.9996 を $1.000 にしない） */
