@@ -41,7 +41,7 @@
   </Alert.Root>
 {/if}
 
-<!-- 字幕を出しているのに、マイクの音が届いていない -->
+<!-- 字幕を始めてから、マイクの音が一度も届いていない -->
 {#if panel.silent}
   <Alert.Root variant="destructive">
     <TriangleAlertIcon />

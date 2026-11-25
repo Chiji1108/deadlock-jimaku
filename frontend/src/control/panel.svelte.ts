@@ -46,7 +46,7 @@ const languageNames = new Intl.DisplayNames("ja", { type: "language" });
 /** Intl の名前が不自然なもの（「ポルトガル語 (イベリア半島)」）は地域を外す */
 const NAME_CODE: Record<string, string> = { "pt-PT": "pt" };
 
-/** これより小さい入力が続いたら「音が届いていない」 */
+/** 字幕を始めてからこの間、これより大きい入力が一度も来なければ「音が届いていない」 */
 const SILENT_DB = -60;
 const SILENT_MS = 5000;
 
@@ -99,8 +99,10 @@ class Panel {
   betaOffer = $state<Engines>();
   /** 送った設定の変更の数 */
   private updates = 0;
-  /** 最後に SILENT_DB を超えた時刻 */
-  private heardAt = 0;
+  /** 音が来たかを数え始めた時刻（レベルが届き始めた、張り直しで届き直した、始め直した、マイクを替えた） */
+  private startedAt = 0;
+  /** 数え始めてから、SILENT_DB を超える音が来た */
+  private heard = false;
 
   /** 最後にレベルが届いた時刻 */
   private levelAt = 0;
@@ -162,14 +164,18 @@ class Panel {
     return !!this.settings?.transcriptionEnabled && !this.transcriptionError;
   }
 
-  /** 動いているのに、しばらく音が来ていない。確定の文を Chrome が作るなら、マイクはページが開く */
+  /**
+   * 動いているのに、始めてから一度も音が来ていない（マイクの選び間違いやつなぎ忘れ）。確定の文を Chrome が作るなら、マイクはページが開く。
+   * 一度でも音が来たあとの無音は、黙っているだけ（ノイズを消すマイクは、黙ると完全な無音になる）なので数えない
+   */
   get silent() {
     return (
       this.running &&
       !!this.settings &&
       !chromeFinals(this.view!.running) &&
       this.level !== undefined &&
-      this.now - this.heardAt > SILENT_MS
+      !this.heard &&
+      this.now - this.startedAt > SILENT_MS
     );
   }
 
@@ -262,9 +268,13 @@ class Panel {
     } else if (msg.type === "segment.upsert") {
       if (this.running) this.subtitled = true;
     } else if (msg.type === "audio.level") {
-      // 届き始めた（張り直しで途切れた後も）時点を「聞こえた」とみなし、そこから数える
+      // 届き始めた（張り直しで途切れた後も）時点から数える
       const now = Date.now();
-      if (now - this.levelAt > 1000 || msg.db > SILENT_DB) this.heardAt = now;
+      if (now - this.levelAt > 1000) {
+        this.startedAt = now;
+        this.heard = false;
+      }
+      if (msg.db > SILENT_DB) this.heard = true;
       this.levelAt = now;
       this.level = msg.db;
     }
@@ -315,6 +325,11 @@ class Panel {
       const id = ++this.updates;
       const view = await api.updateSettings(patch);
       if (id === this.updates) this.view = view;
+      // 始め直したときと、マイクを替えたときは、音が来たかを数え直す（前のマイクの音で、新しいマイクの無音を隠さない）
+      if ("micDevice" in patch || patch.transcriptionEnabled !== undefined) {
+        this.startedAt = Date.now();
+        this.heard = false;
+      }
       // 字幕を始める・止めるのは設定の変更ではないので、知らせない
       if (patch.transcriptionEnabled === undefined) this.savedAt = Date.now();
     });

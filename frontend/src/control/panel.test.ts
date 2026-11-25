@@ -441,3 +441,47 @@ test("Chrome が開いたマイクは、Chrome のラベルから見つける。
   expect(next.bluetoothMic).toBe(false);
   expect(next.chromeMissed).toBeUndefined();
 });
+
+test("「音が届いていません」は、始めてから一度も音が来ていないときだけ。音が来たあとの無音は数えない", async () => {
+  vi.useFakeTimers();
+  try {
+    const next = freshPanel();
+    next.view = {
+      settings: { transcriptionEnabled: true },
+      running: BEST,
+    } as unknown as SettingsView;
+    // 0.5 秒おきにレベルが届く
+    const hear = (db: number, seconds: number) => {
+      for (let i = 0; i < seconds * 2; i++) {
+        vi.advanceTimersByTime(500);
+        next["onMessage"]({ type: "audio.level", db });
+        next.now = Date.now();
+      }
+    };
+    hear(-90, 4);
+    expect(next.silent).toBe(false);
+    hear(-90, 2);
+    expect(next.silent).toBe(true);
+
+    hear(-30, 1);
+    expect(next.silent).toBe(false);
+    // ノイズを消すマイクで黙っている
+    hear(-90, 30);
+    expect(next.silent).toBe(false);
+
+    // 張り直しで途切れたあとは、届き直してから数え直す
+    vi.advanceTimersByTime(3000);
+    hear(-90, 6);
+    expect(next.silent).toBe(true);
+
+    // マイクを替えたら、間が空かなくても数え直す
+    hear(-30, 1);
+    const view = next.view;
+    vi.spyOn(api, "updateSettings").mockResolvedValue(view!);
+    await next.update({ micDevice: "音の来ないマイク" });
+    hear(-90, 6);
+    expect(next.silent).toBe(true);
+  } finally {
+    vi.useRealTimers();
+  }
+});
