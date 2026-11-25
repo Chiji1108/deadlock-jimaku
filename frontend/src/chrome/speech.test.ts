@@ -559,6 +559,7 @@ function fakeDevices(
     const id = (audio as { deviceId?: { exact: string } }).deviceId?.exact;
     if (error && id && (!refused || refused.includes(id))) throw new DOMException("", error);
     const stream = new FakeStream();
+    stream.track.label = inputs.find((d) => d.deviceId === id)?.label ?? "Chrome の既定";
     streams.push({ audio, stream });
     return stream;
   });
@@ -652,6 +653,7 @@ test("ラベルが読めるなら、既定のマイクを開かずに選んだ�
   expect(microphone.trouble).toBeUndefined();
   expect(microphone.track).toBe(streams[0]!.stream.track);
   expect(microphone.opened?.deviceId).toBe("u");
+  expect(microphone.label()).toBe("マイク (Yeti Stereo) (b58e:9e84)");
   microphone.release();
   expect(streams[0]!.stream.stopped).toBe(true);
 });
@@ -734,6 +736,7 @@ test("どのマイクも開けなければ、アプリのマイクの理由を�
   expect(microphone.trouble?.name).toBe("マイク (Yeti Stereo) (b58e:9e84)");
   expect(microphone.chosen?.deviceId).toBe("r");
   expect(microphone.opened).toBeUndefined();
+  expect(microphone.label()).toBe("Chrome の既定");
   expect(streams.map((s) => s.audio)).toEqual([true]);
 });
 

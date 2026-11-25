@@ -1,6 +1,7 @@
 // 操作パネルの状態。各タブはこれを読み、変更は api 経由でサーバーに送る（サーバーの返す設定で置き換える）
 import { toast } from "svelte-sonner";
 import { SvelteMap, SvelteSet } from "svelte/reactivity";
+import type { ChromeMic } from "../generated/ChromeMic";
 import type { LiveStatus } from "../generated/LiveStatus";
 import type { BetaRefusal } from "../generated/BetaRefusal";
 import type { Downloading } from "../generated/Downloading";
@@ -14,6 +15,7 @@ import type { MicError } from "../generated/MicError";
 import type { TranscriptionError } from "../generated/TranscriptionError";
 import type { UsageView } from "../generated/UsageView";
 import { api } from "../lib/api";
+import { namedAlike } from "../lib/mic-names";
 import {
   CHROME,
   PROVIDER_NAMES,
@@ -105,6 +107,8 @@ class Panel {
   now = $state(Date.now());
   /** Chrome のページの状態。ページが開いていなければ undefined */
   chromeStatus = $state<LiveStatus>();
+  /** Chrome のウィンドウが開いているマイク */
+  chromeMic = $state<ChromeMic>();
   /** OBS の中で、字幕オーバーレイがつながっている（字幕が OBS に出ている） */
   obsSubtitles = $state(false);
   /** 最後に設定を保存できた時刻。上の帯に、少しの間「保存しました」と出す */
@@ -247,6 +251,8 @@ class Panel {
       this.downloading = msg.downloading ?? undefined;
     } else if (msg.type === "chrome.status") {
       this.chromeStatus = msg.status ?? undefined;
+    } else if (msg.type === "chrome.mic") {
+      this.chromeMic = msg.mic ?? undefined;
     } else if (msg.type === "obs.status") {
       this.obsSubtitles = msg.subtitles;
     } else if (msg.type === "usage") {
@@ -264,10 +270,28 @@ class Panel {
     }
   }
 
-  /** 字幕に使うマイク（選んでいなければ、OS の既定のマイク） */
+  /** アプリのマイク（選んでいなければ、OS の既定のマイク） */
   get mic() {
     const chosen = this.settings?.micDevice;
     return this.devices?.find((d) => (chosen ? d.name === chosen : d.default));
+  }
+
+  /** Chrome のウィンドウが開いているマイク。Chrome のラベルから見つからなければ、分からないままにする */
+  get chromeHears() {
+    const label = this.chromeMic?.label;
+    return label ? namedAlike(this.devices ?? [], (d) => [label, d.name])[0] : undefined;
+  }
+
+  /** Chrome が、アプリのマイクを使えずに別のマイクで聞いているなら、使えなかったアプリのマイク。
+   * 戻った先の Chrome の既定が同じマイクなら、ずれていない */
+  get chromeMissed() {
+    const wanted = this.chromeMic?.insteadOf;
+    return wanted && this.chromeHears?.name !== wanted ? wanted : undefined;
+  }
+
+  /** 字幕に使うマイクのどれかが Bluetooth。Chrome は、アプリのマイクと違うマイクを開いていることがある */
+  get bluetoothMic() {
+    return !!(this.mic?.bluetooth || this.chromeHears?.bluetooth);
   }
 
   async refreshDevices() {
