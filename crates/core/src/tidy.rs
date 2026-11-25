@@ -298,10 +298,19 @@ fn pos(feature: &str) -> &str {
     feature.split(',').next().unwrap_or_default()
 }
 
+/// かな、漢字
+fn is_japanese(c: char) -> bool {
+    matches!(c, '\u{3040}'..='\u{30ff}' | '\u{3400}'..='\u{4dbf}' | '\u{4e00}'..='\u{9fff}' | '々')
+}
+
 /// 句読点のない文に、句読点を付ける。句読点がもうある文（会社の文字起こし、Haas-ja、Whisper）は変えない
 fn punctuate(furigana: &Furigana, text: &str) -> String {
     let text = text.trim();
     if text.is_empty() || text.contains(['、', '。', '！', '？', '!', '?', '，', '．']) {
+        return text.to_owned();
+    }
+    // 日本語の文字がない文（英語で話した文）には、日本語の句読点を付けない
+    if !text.chars().any(is_japanese) {
         return text.to_owned();
     }
     // 空白（話の間）の位置を覚えて、空白を除いた文を語に分ける
@@ -457,6 +466,8 @@ mod tests {
         assert_eq!(punctuate(f, "うわ痛い"), "うわ、痛い。");
         // 英字の語の間の空白は残す
         assert_eq!(punctuate(f, "Bullet Dance 強い"), "Bullet Dance、強い。");
+        // 日本語の文字がない文（英語で話した文）は変えない
+        assert_eq!(punctuate(f, "hello how are you"), "hello how are you");
         // 句読点のある文は変えない
         assert_eq!(
             punctuate(f, "もう書いてある、これ。"),
