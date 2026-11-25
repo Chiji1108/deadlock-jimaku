@@ -414,3 +414,30 @@ test("字幕に使うマイクは、選んだもの。選んでいなければ O
   choose("もうないマイク");
   expect(next.mic).toBeUndefined();
 });
+
+test("Chrome が開いたマイクは、Chrome のラベルから見つける。Bluetooth なら、アプリのマイクが違っても拾う", () => {
+  const next = freshPanel();
+  next.view = { settings: { micDevice: "Yeti" } } as unknown as SettingsView;
+  next.devices = [
+    { name: "AirPods", bluetooth: true, default: true },
+    { name: "Yeti", bluetooth: false, default: false },
+  ];
+  expect(next.bluetoothMic).toBe(false);
+
+  next.chromeMic = { label: "AirPods (Bluetooth)", insteadOf: "Yeti" };
+  expect(next.chromeHears?.name).toBe("AirPods");
+  expect(next.bluetoothMic).toBe(true);
+  expect(next.chromeMissed).toBe("Yeti");
+
+  // 戻った先の Chrome の既定が、同じマイクだった
+  next.chromeMic = { label: "Yeti (b58e:9e84)", insteadOf: "Yeti" };
+  expect(next.chromeMissed).toBeUndefined();
+
+  next.chromeMic = { label: "Yeti (b58e:9e84)", insteadOf: null };
+  expect(next.bluetoothMic).toBe(false);
+
+  next.chromeMic = { label: "知らないマイク", insteadOf: null };
+  expect(next.chromeHears).toBeUndefined();
+  expect(next.bluetoothMic).toBe(false);
+  expect(next.chromeMissed).toBeUndefined();
+});

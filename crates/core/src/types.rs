@@ -166,6 +166,9 @@ pub enum ServerMsg {
     /// Chrome のページの状態。None はタブが開いていない
     #[serde(rename = "chrome.status")]
     ChromeStatus { status: Option<LiveStatus> },
+    /// Chrome のページが開いているマイク。None は開いていない
+    #[serde(rename = "chrome.mic")]
+    ChromeMic { mic: Option<ChromeMic> },
     /// OBS の中で、字幕オーバーレイがつながっているか（字幕が OBS に出ているか）
     #[serde(rename = "obs.status")]
     ObsStatus { subtitles: bool },
@@ -208,9 +211,27 @@ pub struct LiveStatus {
 #[ts(export)]
 pub enum ChromeMsg {
     Text(Heard),
-    Status { status: LiveStatus },
+    Status {
+        status: LiveStatus,
+    },
+    /// 開いているマイクが変わった。None は閉じた
+    Mic {
+        mic: Option<ChromeMic>,
+    },
     Translated(Translated),
     Decided(Decided),
+}
+
+/// Chrome のページが開いているマイク。操作パネルが、Bluetooth か、アプリのマイクと違うかを見る
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ChromeMic {
+    /// Chrome でのラベル（OS の名前に、接続の種類や機器の ID が付くことがある）
+    pub label: String,
+    /// アプリのマイクを使えずに Chrome の既定のマイクへ戻ったなら、使えなかったアプリのマイク。
+    /// ウィンドウで選んだマイクは、アプリのマイクと同じものとして扱う（ここには入れない）
+    pub instead_of: Option<String>,
 }
 
 /// Chrome が認識した文。確定で文が空なら、開いている発話を捨てる
@@ -379,6 +400,7 @@ impl ServerMsg {
             | Self::SettingsChanged
             | Self::LiveStatus { .. }
             | Self::ChromeStatus { .. }
+            | Self::ChromeMic { .. }
             | Self::ObsStatus { .. } => Topic::Status,
             Self::Display { .. } => Topic::Display,
             Self::AudioLevel { .. } => Topic::Level,
