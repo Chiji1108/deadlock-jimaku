@@ -87,6 +87,12 @@ struct Db {
 impl Tally {
     /// `path` を開けなければ、メモリの中だけで数える（壊れていても止めない）
     pub fn open(path: &Path) -> Self {
+        // 初めて起動したときは、データの置き場所がまだない（設定を保存するまで作られない）
+        if let Some(dir) = path.parent()
+            && let Err(e) = std::fs::create_dir_all(dir)
+        {
+            tracing::warn!("cannot create {}: {e:#}", dir.display());
+        }
         let conn = Connection::open(path)
             .and_then(migrate)
             .unwrap_or_else(|e| {
@@ -416,7 +422,8 @@ mod tests {
     #[test]
     fn sessions_survive_restart() {
         let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("stats.db");
+        // 初めて起動したときは、データの置き場所がまだない
+        let path = dir.path().join("first-run").join("stats.db");
         let tally = Tally::open(&path);
         tally.set_running(true);
         tally.count(&haze());
