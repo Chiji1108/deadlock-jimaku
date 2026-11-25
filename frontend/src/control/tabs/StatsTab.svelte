@@ -34,7 +34,7 @@
   function ranking(kind: EntityKind) {
     return Object.entries(stats?.names ?? {})
       .filter(([ref]) => ref.startsWith(`${kind}:`))
-      .sort(([, a], [, b]) => b - a)
+      .toSorted(([, a], [, b]) => b - a)
       .slice(0, TOP)
       .map(([ref, count]) => ({ ref, count, entity: glossary.entity(ref) }));
   }
