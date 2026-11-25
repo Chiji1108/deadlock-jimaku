@@ -624,7 +624,7 @@ impl Subtitles {
             Finished::Done { id, enriched } => {
                 if let Some(seg) = self.live.remove(&id) {
                     self.store
-                        .upsert_segment(subtitles::settled(seg, enriched, translation_only));
+                        .settle_segment(subtitles::settled(seg, enriched, translation_only));
                 }
             }
             Finished::Refused(refused) => return Some(refused),

@@ -15,6 +15,7 @@ use crate::fonts::Library;
 use crate::settings::{
     self, Engines, FinalSource, LiveSource, Settings, SettingsPatch, SubtitleDisplay,
 };
+use crate::stats::Tally;
 use crate::types::{
     ChromeCommand, Decided, Downloading, Heard, ItemCardsView, LiveState, LiveStatus, RankState,
     Segment, ServerMsg, Stage, TranscriptionError, Translated,
@@ -90,6 +91,7 @@ pub struct Store {
     /// OBS の中で開いている字幕オーバーレイの数
     obs_subtitles: AtomicU32,
     meter: Arc<Meter>,
+    tally: Arc<Tally>,
     fonts: Arc<Library>,
 }
 
@@ -115,6 +117,7 @@ impl Store {
             }
         };
         let meter = Arc::new(Meter::new(data_dir.join("usage.json")));
+        let tally = Arc::new(Tally::new(data_dir.join("stats.json")));
         let fonts = Arc::new(Library::new(&data_dir));
         Arc::new(Self {
             settings: watch::Sender::new(settings),
@@ -140,6 +143,7 @@ impl Store {
             chrome_cuts: AtomicU32::new(0),
             obs_subtitles: AtomicU32::new(0),
             meter,
+            tally,
             fonts,
         })
     }
@@ -341,6 +345,12 @@ impl Store {
         self.settings.send_modify(|_| {});
     }
 
+    /// 確定した字幕を流し、統計に数える
+    pub fn settle_segment(&self, segment: Segment) {
+        self.tally.count(&segment);
+        self.upsert_segment(segment);
+    }
+
     pub fn upsert_segment(&self, segment: Segment) {
         {
             let mut segments = self.segments.lock().unwrap();
@@ -382,6 +392,9 @@ impl Store {
         msgs.push(display(&self.settings()));
         msgs.push(ServerMsg::Usage {
             usage: self.meter.watch().borrow().clone(),
+        });
+        msgs.push(ServerMsg::Stats {
+            stats: self.tally.watch().borrow().clone(),
         });
         msgs
     }
@@ -562,6 +575,10 @@ impl Store {
     /// OpenAI の使用量を数える
     pub fn meter(&self) -> Arc<Meter> {
         self.meter.clone()
+    }
+
+    pub fn tally(&self) -> Arc<Tally> {
+        self.tally.clone()
     }
 
     pub fn send_level(&self, db: f32) {

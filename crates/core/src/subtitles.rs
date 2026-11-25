@@ -504,7 +504,7 @@ impl Pipeline {
         if let Some(seg) = self.live.remove(id) {
             let translation_only = self.store.settings().plan().translation_only;
             self.store
-                .upsert_segment(settled(seg, enriched, translation_only));
+                .settle_segment(settled(seg, enriched, translation_only));
         }
     }
 }
