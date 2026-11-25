@@ -353,7 +353,8 @@
         showListening();
         microphone
           .useDefault()
-          .then(() => reportMic(true))
+          // 待っている間に止められたら、閉じたマイクを知らせない
+          .then(() => started === runs && reportMic(true))
           .catch((e: Error) => logMic(`既定のマイクを開けません: ${e.name}`));
       },
       onMicLog: logMic,
