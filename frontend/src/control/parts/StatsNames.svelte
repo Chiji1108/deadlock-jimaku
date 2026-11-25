@@ -2,6 +2,7 @@
   // 呼んだヒーロー・アイテム・スキルの、種類ごとの上位（統計のタブの今月と、回ごと）
   import type { EntityKind } from "../../generated/EntityKind";
   import { entityName, glossary } from "../../lib/glossary.svelte";
+  import { count } from "./stats";
 
   let { names, lang }: { names: Record<string, number>; lang: string } = $props();
 
@@ -18,7 +19,7 @@
       .filter(([ref]) => ref.startsWith(`${kind}:`))
       .toSorted(([, a], [, b]) => b - a)
       .slice(0, TOP)
-      .map(([ref, count]) => ({ ref, count, entity: glossary.entity(ref) }));
+      .map(([ref, times]) => ({ ref, times, entity: glossary.entity(ref) }));
   }
 </script>
 
@@ -39,7 +40,7 @@
               <span class="min-w-0 flex-1 truncate">
                 {r.entity ? entityName(r.entity, lang) : r.ref}
               </span>
-              <span class="tabular-nums text-muted-foreground">{r.count} 回</span>
+              <span class="shrink-0 tabular-nums text-muted-foreground">{count(r.times)} 回</span>
             </li>
           {/each}
         </ol>
