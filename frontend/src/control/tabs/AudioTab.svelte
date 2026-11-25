@@ -8,8 +8,6 @@
   import * as ToggleGroup from "$lib/components/ui/toggle-group";
   import DeadlockModeDialog from "../parts/DeadlockModeDialog.svelte";
   import LevelMeter from "../parts/LevelMeter.svelte";
-  import BluetoothMicAlert from "../parts/BluetoothMicAlert.svelte";
-  import SilentAlert from "../parts/SilentAlert.svelte";
   import PauseDialog from "../parts/PauseDialog.svelte";
   import { panel } from "../panel.svelte";
   import { chromeFinals, llmTranslation } from "../../lib/engines";
@@ -82,8 +80,6 @@
         {/if}
       </Field.Field>
 
-      <BluetoothMicAlert />
-
       {#if !chromeFinals(t)}
         <Field.Field>
           <Field.Label>入力レベル</Field.Label>
@@ -94,8 +90,6 @@
             >
           {/if}
         </Field.Field>
-
-        <SilentAlert />
       {/if}
     </Card.Content>
   </Card.Root>
