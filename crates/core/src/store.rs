@@ -119,7 +119,7 @@ impl Store {
             }
         };
         let meter = Arc::new(Meter::new(data_dir.join("usage.json")));
-        let tally = Arc::new(Tally::new(data_dir.join("stats.json")));
+        let tally = Arc::new(Tally::open(&data_dir.join("stats.db")));
         let fonts = Arc::new(Library::new(&data_dir));
         Arc::new(Self {
             settings: watch::Sender::new(settings),
@@ -399,7 +399,7 @@ impl Store {
             usage: self.meter.watch().borrow().clone(),
         });
         msgs.push(ServerMsg::Stats {
-            stats: self.tally.watch().borrow().clone(),
+            stats: self.tally.view(),
         });
         msgs
     }

@@ -1,5 +1,5 @@
 //! 「アプリを起動してから」と「今月（UTC）」に足していく記録。月ごとの分はファイルに保存する。
-//! 使用量（`usage`）と統計（`stats`）が使う。
+//! 使用量（`usage`）が使う。
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;

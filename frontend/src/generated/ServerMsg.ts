@@ -10,7 +10,7 @@ import type { RankContent } from "./RankContent";
 import type { RankState } from "./RankState";
 import type { RankStyle } from "./RankStyle";
 import type { Segment } from "./Segment";
-import type { Stats } from "./Stats";
+import type { StatsView } from "./StatsView";
 import type { SubtitleDisplay } from "./SubtitleDisplay";
 import type { SubtitleStyle } from "./SubtitleStyle";
 import type { TranscriptionError } from "./TranscriptionError";
@@ -24,4 +24,4 @@ preparing: boolean,
 /**
  * 準備の間に取っている大きいファイルの進み具合（分かるときだけ）
  */
-downloading: Downloading | null, } | { "type": "display", subtitles: SubtitleDisplay, subtitleStyle: SubtitleStyle, rankLanguage: string, rankContent: RankContent, rankAnchor: Anchor, rankStyle: RankStyle, itemCards: ItemCardsView, } | { "type": "audio.level", db: number, } | { "type": "usage", usage: Periods<{ [key in Use]?: Amount }>, } | { "type": "stats", stats: Periods<Stats>, } | { "type": "live.status", status: LiveStatus | null, } | { "type": "chrome.status", status: LiveStatus | null, } | { "type": "chrome.mic", mic: ChromeMic | null, } | { "type": "obs.status", subtitles: boolean, } | { "type": "settings.changed" };
+downloading: Downloading | null, } | { "type": "display", subtitles: SubtitleDisplay, subtitleStyle: SubtitleStyle, rankLanguage: string, rankContent: RankContent, rankAnchor: Anchor, rankStyle: RankStyle, itemCards: ItemCardsView, } | { "type": "audio.level", db: number, } | { "type": "usage", usage: Periods<{ [key in Use]?: Amount }>, } | { "type": "stats", stats: StatsView, } | { "type": "live.status", status: LiveStatus | null, } | { "type": "chrome.status", status: LiveStatus | null, } | { "type": "chrome.mic", mic: ChromeMic | null, } | { "type": "obs.status", subtitles: boolean, } | { "type": "settings.changed" };

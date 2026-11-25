@@ -64,7 +64,7 @@ torph 0.1.3  MIT [1]
 tw-animate-css 1.4.0  MIT [1]
   Copyright (c) 2025 Wombosvideo
 
-=== Rust の crate（439 件）===
+=== Rust の crate（444 件）===
 
 adler2 2.0.1  0BSD OR MIT OR Apache-2.0 [46][21][1]
   Copyright (C) Jonas Schievink <jonasschievink@gmail.com>
@@ -305,6 +305,10 @@ event-listener 5.4.2  Apache-2.0 OR MIT [2][1]
   Author: John Nunley <dev@notgull.net>
 event-listener-strategy 0.5.4  Apache-2.0 OR MIT [2][1]
   Author: John Nunley <dev@notgull.net>
+fallible-iterator 0.3.0  MIT/Apache-2.0 [2][1]
+  Copyright (c) 2015 The rust-openssl-verify Developers
+fallible-streaming-iterator 0.1.9  MIT/Apache-2.0 [2][1]
+  Copyright (c) 2016 The fallible-streaming-iterator Developers
 fastrand 2.5.0  Apache-2.0 OR MIT [2][1]
   Author: Stjepan Glavina <stjepang@gmail.com>
 fdeflate 0.3.7  MIT OR Apache-2.0 [2][1]
@@ -321,7 +325,7 @@ foldhash 0.2.0  Zlib [5]
   Copyright (c) 2024 Orson Peters
 fontconfig-parser 0.5.8  MIT [1]
   Copyright (c) 2021 Riey
-fontdb 0.24.0  MIT [1][59]
+fontdb 0.24.0  MIT [1][60]
   Copyright (c) 2020 Yevhenii Reizner
 foreign-types 0.5.0  MIT/Apache-2.0 [2][1]
   Copyright (c) 2017 The foreign-types Developers
@@ -406,6 +410,7 @@ hashbrown 0.12.3  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2016 Amanieu d'Antras
 hashbrown 0.17.1  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2016 Amanieu d'Antras
+hashlink 0.12.2  MIT OR Apache-2.0 [2][57]
 heck 0.5.0  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2015 The Rust Project Developers
 hex 0.4.3  MIT OR Apache-2.0 [2][1]
@@ -510,6 +515,8 @@ libc 0.2.191  MIT OR Apache-2.0 [2][1]
 libdbus-sys 0.2.7  Apache-2.0/MIT [2][1]
   Copyright 2014-2018 David Henningsson <diwic@ubuntu.com> and other contributors
   Copyright (c) 2014-2018 David Henningsson <diwic@ubuntu.com> and other contributors
+libsqlite3-sys 0.40.0  MIT [1]
+  Copyright (c) 2014 The rusqlite developers
 linux-raw-sys 0.12.1  Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT [51][2][14][1]
   Author: Dan Gohman <dev@sunfishcode.online>
 litemap 0.8.3  Unicode-3.0 [3]
@@ -679,7 +686,7 @@ regex 1.13.1  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2014 The Rust Project Developers
 regex-automata 0.4.18  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2014 The Rust Project Developers
-regex-syntax 0.8.11  MIT OR Apache-2.0 [2][1][57]
+regex-syntax 0.8.11  MIT OR Apache-2.0 [2][1][58]
   Copyright (c) 2014 The Rust Project Developers
   Copyright © 1991-2018 Unicode, Inc. All rights reserved.
 reqwest 0.13.5  MIT OR Apache-2.0 [2][1]
@@ -697,6 +704,8 @@ roxmltree 0.20.0  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2018 Yevhenii Reizner
 rubato 5.0.1  MIT OR Apache-2.0 [2][1][56]
   Copyright (c) 2020 Henrik Enquist
+rusqlite 0.43.0  MIT [1]
+  Copyright (c) 2014 The rusqlite developers
 rust-embed 8.13.0  MIT [1]
   Copyright (c) 2018 pyros2097
 rust-embed-utils 8.13.0  MIT [1]
@@ -918,7 +927,7 @@ typenum 1.20.1  MIT OR Apache-2.0 [39][2][1]
   Copyright (c) 2014 Paho Lurie-Gregg
 unicase 2.10.0  MIT OR Apache-2.0 [2][1]
   Copyright (c) 2014-2026 Sean McArthur
-unicode-ident 1.0.27  (MIT OR Apache-2.0) AND Unicode-3.0 [2][1][58]
+unicode-ident 1.0.27  (MIT OR Apache-2.0) AND Unicode-3.0 [2][1][59]
   Copyright © 1991-2023 Unicode, Inc.
 unicode-segmentation 1.13.3  MIT OR Apache-2.0 [12][2][1]
   Copyright (c) 2015 The Rust Project Developers
@@ -5619,6 +5628,35 @@ You may choose either license, at your option.
 
 --- [57]
 
+This work is derived in part from the `linked-hash-map` crate, Copyright (c)
+2015 The Rust Project Developers
+
+Permission is hereby granted, free of charge, to any
+person obtaining a copy of this software and associated
+documentation files (the "Software"), to deal in the
+Software without restriction, including without
+limitation the rights to use, copy, modify, merge,
+publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following
+conditions:
+
+The above copyright notice and this permission notice
+shall be included in all copies or substantial portions
+of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF
+ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
+TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
+SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
+IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+
+--- [58]
+
 UNICODE, INC. LICENSE AGREEMENT - DATA FILES AND SOFTWARE
 
 Unicode Data Files include all data files under the directories
@@ -5677,7 +5715,7 @@ shall not be used in advertising or otherwise to promote the sale,
 use or other dealings in these Data Files or Software without prior
 written authorization of the copyright holder.
 
---- [58]
+--- [59]
 
 UNICODE LICENSE V3
 
@@ -5719,7 +5757,7 @@ not be used in advertising or otherwise to promote the sale, use or other
 dealings in these Data Files or Software without prior written
 authorization of the copyright holder.
 
---- [59]
+--- [60]
 
 We, the copyright holders of this work, hereby release it into the
 public domain. This applies worldwide.
