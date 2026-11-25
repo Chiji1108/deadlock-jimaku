@@ -38,7 +38,9 @@
   "furigana": [
     { "key": "fix/gpt-6.1-terra", "name": "GPT-6.1 Terra", "via": "OpenAI", "note": "文の読みを直させる" },
     { "key": "fix/gpt-6-luna", "name": "GPT-6 Luna", "via": "OpenAI", "note": "文の読みを直させる" },
-    { "key": "choose/perplexity/pplx-decider-v1.2", "name": "Perplexity Decider V1.2", "via": "OpenRouter", "server": ["pplx-decider", "pplx-decider-direct"], "note": "辞書の候補から選ばせる。サーバーは、同じモデルを Perplexity に直接頼むこともある" },
+    { "key": "choose/pplx-decider-v1.2", "name": "Perplexity Decider V1.2", "via": "Perplexity", "server": ["pplx-decider-direct"], "note": "辞書の候補から選ばせる" },
+    { "key": "choose/perplexity/pplx-decider-v1.2", "name": "Perplexity Decider V1.2", "via": "OpenRouter", "server": ["pplx-decider"], "note": "辞書の候補から選ばせる" },
+    { "key": "choose/pplx-decider-v1.3", "name": "Perplexity Decider V1.3", "via": "Perplexity", "server": ["pplx-decider-1.3-direct"], "note": "辞書の候補から選ばせる。辞書で合っていた読みを、選び替えて壊すことが多い" },
     { "key": "dictionary", "name": "辞書だけ", "via": "PC の中", "note": "何も送らない。ほかの行は、この読みをもとにする" }
   ],
   "transcribe": [
