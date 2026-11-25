@@ -442,7 +442,7 @@ test("Chrome が開いたマイクは、Chrome のラベルから見つける。
   expect(next.chromeMissed).toBeUndefined();
 });
 
-test("「音が届いていません」は、始めてから一度も音が来ていないときだけ。音が来たあとの無音は数えない", () => {
+test("「音が届いていません」は、始めてから一度も音が来ていないときだけ。音が来たあとの無音は数えない", async () => {
   vi.useFakeTimers();
   try {
     const next = freshPanel();
@@ -471,6 +471,14 @@ test("「音が届いていません」は、始めてから一度も音が来�
 
     // 張り直しで途切れたあとは、届き直してから数え直す
     vi.advanceTimersByTime(3000);
+    hear(-90, 6);
+    expect(next.silent).toBe(true);
+
+    // マイクを替えたら、間が空かなくても数え直す
+    hear(-30, 1);
+    const view = next.view;
+    vi.spyOn(api, "updateSettings").mockResolvedValue(view!);
+    await next.update({ micDevice: "音の来ないマイク" });
     hear(-90, 6);
     expect(next.silent).toBe(true);
   } finally {

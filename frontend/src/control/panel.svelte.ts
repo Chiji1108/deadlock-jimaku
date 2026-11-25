@@ -99,9 +99,9 @@ class Panel {
   betaOffer = $state<Engines>();
   /** 送った設定の変更の数 */
   private updates = 0;
-  /** レベルが届き始めた時刻（張り直しで途切れた後は、届き直した時刻） */
+  /** 音が来たかを数え始めた時刻（レベルが届き始めた、張り直しで届き直した、始め直した、マイクを替えた） */
   private startedAt = 0;
-  /** 届き始めてから、SILENT_DB を超える音が来た */
+  /** 数え始めてから、SILENT_DB を超える音が来た */
   private heard = false;
 
   /** 最後にレベルが届いた時刻 */
@@ -325,6 +325,11 @@ class Panel {
       const id = ++this.updates;
       const view = await api.updateSettings(patch);
       if (id === this.updates) this.view = view;
+      // 始め直したときと、マイクを替えたときは、音が来たかを数え直す（前のマイクの音で、新しいマイクの無音を隠さない）
+      if ("micDevice" in patch || patch.transcriptionEnabled !== undefined) {
+        this.startedAt = Date.now();
+        this.heard = false;
+      }
       // 字幕を始める・止めるのは設定の変更ではないので、知らせない
       if (patch.transcriptionEnabled === undefined) this.savedAt = Date.now();
     });
