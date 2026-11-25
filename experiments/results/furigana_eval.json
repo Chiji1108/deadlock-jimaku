@@ -14,6 +14,36 @@
       "usd": 0.0005049800000000005
     }
   },
+  "choose/pplx-decider-v1.2": {
+    "summary": {
+      "at": 1795569554,
+      "runs": 180,
+      "right": 171,
+      "dictionaryRight": 153,
+      "fixed": 21,
+      "broken": 3,
+      "failed": 0,
+      "asked": 135,
+      "medianMs": 322,
+      "p90Ms": 415,
+      "usd": 0.0005083800000000004
+    }
+  },
+  "choose/pplx-decider-v1.3": {
+    "summary": {
+      "at": 1795569492,
+      "runs": 180,
+      "right": 159,
+      "dictionaryRight": 153,
+      "fixed": 18,
+      "broken": 12,
+      "failed": 0,
+      "asked": 135,
+      "medianMs": 396,
+      "p90Ms": 473,
+      "usd": 0.00047016
+    }
+  },
   "dictionary": {
     "summary": {
       "asked": 0,

@@ -289,7 +289,7 @@ export const ITEMS: {
       {
         value: "gpt61Terra",
         label: "GPT-6.1 Terra（用語も）",
-        accuracy: "99% / 99%",
+        accuracy: "98% / 98%",
         speed: "約 2.5 秒",
         price: "1 時間 約 45 円",
         note: "訳がいちばん自然。用語も同時に判定する（用語の正確さは 98%）",
