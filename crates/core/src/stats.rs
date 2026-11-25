@@ -286,6 +286,8 @@ impl Db {
 
 fn migrate(conn: Connection) -> rusqlite::Result<Connection> {
     conn.pragma_update(None, "journal_mode", "WAL")?;
+    // WAL なら、落ちても壊れない。書くたびにディスクを待たない
+    conn.pragma_update(None, "synchronous", "NORMAL")?;
     conn.pragma_update(None, "foreign_keys", true)?;
     let version: i32 = conn.pragma_query_value(None, "user_version", |row| row.get(0))?;
     if version < 1 {
@@ -307,7 +309,10 @@ fn migrate(conn: Connection) -> rusqlite::Result<Connection> {
             );",
         )?;
     }
-    conn.pragma_update(None, "user_version", SCHEMA)?;
+    // 新しい版で作った DB を古い版で開いても、版の印は戻さない（戻すと、また新しい版で移し直して失敗する）
+    if version < SCHEMA {
+        conn.pragma_update(None, "user_version", SCHEMA)?;
+    }
     Ok(conn)
 }
 

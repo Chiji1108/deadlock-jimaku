@@ -37,7 +37,7 @@
     <Card.Header>
       <Card.Title>今月</Card.Title>
       <Card.Description>
-        確定した字幕から数えます。数だけをこの PC
+        今月始めた回の合計です。確定した字幕から数えます。数だけをこの PC
         に保存し、文そのものは残しません。名前は、字幕で用語を強調しているときだけ数えます（略称で呼んでも同じものとして数えます）
       </Card.Description>
     </Card.Header>
