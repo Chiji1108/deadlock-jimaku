@@ -3511,6 +3511,8 @@ dependencies = [
  "jiter",
  "keyring",
  "mime_guess",
+ "objc2-core-audio",
+ "objc2-core-foundation",
  "percent-encoding",
  "reqwest",
  "rubato",
@@ -3527,6 +3529,7 @@ dependencies = [
  "tracing-subscriber",
  "ts-rs",
  "vibrato",
+ "windows",
  "zip",
 ]
 

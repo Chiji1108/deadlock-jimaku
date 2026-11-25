@@ -9,6 +9,7 @@ import type { Provider } from "../generated/Provider";
 import type { ServerMsg } from "../generated/ServerMsg";
 import type { SettingsPatch } from "../generated/SettingsPatch";
 import type { SettingsView } from "../generated/SettingsView";
+import type { Mic } from "../generated/Mic";
 import type { MicError } from "../generated/MicError";
 import type { TranscriptionError } from "../generated/TranscriptionError";
 import type { UsageView } from "../generated/UsageView";
@@ -66,7 +67,7 @@ class Panel {
   /** デドロ字幕のサーバーが仕事ごとに今使っているモデル。取れるまでと、つながらないときは undefined */
   serverModels = $state<ServerModels | undefined>();
   /** 取れるまでは undefined */
-  devices = $state<string[] | undefined>();
+  devices = $state<Mic[] | undefined>();
   /** 選べるフォント */
   fonts = $state<FontList>("loading");
   /** ダウンロード中のファミリー。タブを移っても続くので、ここで持つ */
@@ -216,6 +217,9 @@ class Panel {
       [this.view, this.languages] = await Promise.all([api.settings(), api.languages()]);
     });
     void this.refreshDevices();
+    // あとからつないだイヤホンも、操作パネルに戻ったときに拾う（OS の既定のマイクが替わる）
+    const refreshDevices = () => void this.refreshDevices();
+    window.addEventListener("focus", refreshDevices);
     // WebView が名前で描ける PC のフォントは、起動したときにあったもの。その一覧をここで覚える
     void this.loadFonts();
     const disconnect = connect(
@@ -229,6 +233,7 @@ class Panel {
     );
     return () => {
       clearInterval(tick);
+      window.removeEventListener("focus", refreshDevices);
       disconnect();
     };
   }
@@ -257,6 +262,12 @@ class Panel {
       this.levelAt = now;
       this.level = msg.db;
     }
+  }
+
+  /** 字幕に使うマイク（選んでいなければ、OS の既定のマイク） */
+  get mic() {
+    const chosen = this.settings?.micDevice;
+    return this.devices?.find((d) => (chosen ? d.name === chosen : d.default));
   }
 
   async refreshDevices() {

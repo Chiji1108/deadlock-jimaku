@@ -3,6 +3,7 @@ import type { CodeStatus } from "../generated/CodeStatus";
 import type { Fetched } from "../generated/Fetched";
 import type { FontEntry } from "../generated/FontEntry";
 import type { Gpus } from "../generated/Gpus";
+import type { Mic } from "../generated/Mic";
 import type { Provider } from "../generated/Provider";
 import type { RankState } from "../generated/RankState";
 import type { ServerModel } from "../generated/ServerModel";
@@ -34,7 +35,7 @@ export const api = {
       method: "PUT",
       body: JSON.stringify({ key }),
     }),
-  devices: () => request<string[]>("/api/devices"),
+  devices: () => request<Mic[]>("/api/devices"),
   /** 人の辞書のアイコンに、選んだ画像を保存する */
   savePersonIcon: async (image: Blob) => {
     const res = await fetch("/api/people/icon", { method: "POST", body: image });

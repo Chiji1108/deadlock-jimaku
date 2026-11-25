@@ -8,6 +8,7 @@
   import * as ToggleGroup from "$lib/components/ui/toggle-group";
   import DeadlockModeDialog from "../parts/DeadlockModeDialog.svelte";
   import LevelMeter from "../parts/LevelMeter.svelte";
+  import BluetoothMicAlert from "../parts/BluetoothMicAlert.svelte";
   import SilentAlert from "../parts/SilentAlert.svelte";
   import PauseDialog from "../parts/PauseDialog.svelte";
   import { panel } from "../panel.svelte";
@@ -60,7 +61,7 @@
             <Select.Trigger class="flex-1">{s.micDevice ?? "OS の既定のマイク"}</Select.Trigger>
             <Select.Content>
               <Select.Item value={DEFAULT_DEVICE}>OS の既定のマイク</Select.Item>
-              {#each panel.devices ?? [] as name (name)}
+              {#each panel.devices ?? [] as { name } (name)}
                 <Select.Item value={name}>{name}</Select.Item>
               {/each}
             </Select.Content>
@@ -80,6 +81,8 @@
           </Field.Description>
         {/if}
       </Field.Field>
+
+      <BluetoothMicAlert />
 
       {#if !chromeFinals(t)}
         <Field.Field>
