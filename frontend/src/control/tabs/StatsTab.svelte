@@ -1,6 +1,7 @@
 <script lang="ts">
   // 「統計」のタブ。字幕を始めてから止めるまでを 1 回として、確定した字幕から数えた、
-  // 喋った量と、よく呼んだヒーロー・アイテム・スキル。上に今日・今週・今月・ぜんぶの合計、下に回ごとの一覧。
+  // 字幕を出していた時間、喋った量と、よく呼んだヒーロー・アイテム・スキル。
+  // 上から、今日・今週・今月・ぜんぶの合計、日ごとの草、時間帯の表、回ごとの一覧。
   // 数だけをこの PC に保存する（文そのものは残さない）
   import Help from "../parts/Help.svelte";
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
@@ -8,7 +9,10 @@
   import * as Card from "$lib/components/ui/card";
   import * as ToggleGroup from "$lib/components/ui/toggle-group";
   import type { Totals } from "../../generated/Totals";
+  import StatsGrass from "../parts/StatsGrass.svelte";
+  import StatsHours from "../parts/StatsHours.svelte";
   import StatsNames from "../parts/StatsNames.svelte";
+  import { count, hoursAndMinutes } from "../parts/stats";
   import { panel } from "../panel.svelte";
 
   const stats = $derived(panel.stats);
@@ -22,13 +26,27 @@
   type Period = (typeof PERIODS)[number]["value"];
   let period = $state<Period>("today");
   const totals = $derived(stats?.[period]);
+  const live = $derived(stats?.sessions.find((s) => s.live));
+  /** 今出している回は、最後に字幕が確定したところまでしか数えていないので、今までを足す */
+  const duration = $derived(
+    totals
+      ? totals.durationMs +
+          (live && live.startedAt >= totals.since ? Math.max(0, panel.now - live.endedAt) : 0)
+      : 0,
+  );
+  /** 草は、今週の月曜から 52 週前の月曜から */
+  const grassSince = $derived.by(() => {
+    if (!stats) return 0;
+    const monday = new Date(stats.week.since);
+    return new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() - 364).getTime();
+  });
   const lang = $derived(panel.settings?.micLanguage ?? "ja");
   // 空白で区切らない言語は文字数、ほかは語の数で見せる
   const byCharacter = $derived(
     ["ja", "zh", "th", "lo", "my", "km"].some((l) => lang === l || lang.startsWith(`${l}-`)),
   );
   const amount = (t: Totals) =>
-    byCharacter ? `${t.characters.toLocaleString()} 文字` : `${t.words.toLocaleString()} 語`;
+    byCharacter ? `${count(t.characters)} 文字` : `${count(t.words)} 語`;
 
   const when = new Intl.DateTimeFormat("ja-JP", {
     month: "numeric",
@@ -67,21 +85,46 @@
           <ToggleGroup.Item value={p.value} class="flex-1">{p.label}</ToggleGroup.Item>
         {/each}
       </ToggleGroup.Root>
-      <div class="grid grid-cols-2 gap-4">
-        <div>
-          <div class="text-xs text-muted-foreground">字幕の数</div>
-          <div class="text-2xl font-medium tabular-nums">
-            {(totals?.utterances ?? 0).toLocaleString()}
+      <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        {#snippet tile(label: string, value: string)}
+          <div class="min-w-0">
+            <div class="text-xs text-muted-foreground">{label}</div>
+            <div class="truncate text-2xl font-medium tabular-nums" title={value}>{value}</div>
           </div>
-        </div>
-        <div>
-          <div class="text-xs text-muted-foreground">喋った量</div>
-          <div class="text-2xl font-medium tabular-nums">
-            {totals ? amount(totals) : "—"}
-          </div>
-        </div>
+        {/snippet}
+        {@render tile("字幕を出していた時間", hoursAndMinutes(duration))}
+        {@render tile("喋った量", totals ? amount(totals) : "—")}
+        {@render tile("字幕の数", count(totals?.utterances ?? 0))}
+        {#if period !== "today"}
+          {@render tile("字幕を出した日", `${count(totals?.activeDays ?? 0)} 日`)}
+        {/if}
       </div>
       <StatsNames names={totals?.names ?? {}} {lang} />
+    </Card.Content>
+  </Card.Root>
+
+  <Card.Root>
+    <Card.Header>
+      <Card.Title class="flex items-center gap-1.5"
+        >日ごと<Help
+          >直近 1 年の、日ごとの喋った量です。多い日ほど濃くなります。回は始めた日に数えます</Help
+        ></Card.Title
+      >
+    </Card.Header>
+    <Card.Content>
+      <StatsGrass days={stats?.days ?? []} since={grassSince} now={panel.now} {byCharacter} />
+    </Card.Content>
+  </Card.Root>
+
+  <Card.Root>
+    <Card.Header>
+      <Card.Title class="flex items-center gap-1.5"
+        >時間帯<Help>直近 90 日に、字幕を出していた時間です。長い曜日と時間ほど濃くなります</Help
+        ></Card.Title
+      >
+    </Card.Header>
+    <Card.Content>
+      <StatsHours hours={stats?.hours ?? []} />
     </Card.Content>
   </Card.Root>
 
@@ -122,7 +165,7 @@
                   <div class="text-right tabular-nums">
                     <div>{amount(s)}</div>
                     <div class="text-xs text-muted-foreground">
-                      字幕 {s.utterances.toLocaleString()}
+                      字幕 {count(s.utterances)}
                     </div>
                   </div>
                 </summary>

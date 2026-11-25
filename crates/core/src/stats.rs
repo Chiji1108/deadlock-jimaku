@@ -58,18 +58,57 @@ pub struct Session {
     pub totals: Totals,
 }
 
+/// 今日・今週・今月・ぜんぶの、1 つの期間
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct StatsPeriod {
+    /// この時刻（epoch ms）以降に始めた回を足す。ぜんぶは 0
+    #[ts(type = "number")]
+    pub since: u64,
+    /// 字幕を出していた時間の合計（ms。今出している回は、最後に字幕が確定したところまで）
+    #[ts(type = "number")]
+    pub duration_ms: u64,
+    /// 字幕を出した日の数（PC の時刻で、回を始めた日）
+    #[ts(type = "number")]
+    pub active_days: u64,
+    #[serde(flatten)]
+    pub totals: Totals,
+}
+
+/// 1 日の数（その日に始めた回の合計）
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct StatsDay {
+    /// その日の 0 時（PC の時刻。epoch ms）
+    #[ts(type = "number")]
+    pub start: u64,
+    #[ts(type = "number")]
+    pub utterances: u64,
+    #[ts(type = "number")]
+    pub characters: u64,
+    #[ts(type = "number")]
+    pub words: u64,
+}
+
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct StatsView {
-    /// 今日（PC の時刻で 0 時から）に始めた回の合計
-    pub today: Totals,
-    /// 今週（月曜の 0 時から）に始めた回の合計
-    pub week: Totals,
-    /// 今月（1 日の 0 時から）に始めた回の合計
-    pub month: Totals,
-    /// すべての回の合計
-    pub all: Totals,
+    /// 今日（PC の時刻で 0 時から）
+    pub today: StatsPeriod,
+    /// 今週（月曜の 0 時から）
+    pub week: StatsPeriod,
+    /// 今月（1 日の 0 時から）
+    pub month: StatsPeriod,
+    /// すべての回
+    pub all: StatsPeriod,
+    /// 52 週前の月曜から、回のあった日だけ、古い順に（日ごとの草）
+    pub days: Vec<StatsDay>,
+    /// 直近 90 日に字幕を出していた時間（ms）。月曜 0 時から 1 時間ごとに 7 × 24 個（時間帯の表）
+    #[ts(type = "number[]")]
+    pub hours: Vec<u64>,
     /// 新しい順に、最近の回
     pub sessions: Vec<Session>,
 }
@@ -234,18 +273,24 @@ impl Db {
     }
 
     /// `since`（epoch ms）以降に始めた回の合計
-    fn totals(&self, since: i64) -> rusqlite::Result<Totals> {
-        let mut totals = self.conn.query_row(
+    fn period(&self, since: i64) -> rusqlite::Result<StatsPeriod> {
+        let mut period = self.conn.query_row(
             "SELECT COALESCE(SUM(utterances), 0), COALESCE(SUM(characters), 0),
-                COALESCE(SUM(words), 0)
+                COALESCE(SUM(words), 0), COALESCE(SUM(ended_at - started_at), 0),
+                COUNT(DISTINCT date(started_at / 1000, 'unixepoch', 'localtime'))
              FROM sessions WHERE started_at >= ?1",
             params![since],
             |row| {
-                Ok(Totals {
-                    utterances: row.get(0)?,
-                    characters: row.get(1)?,
-                    words: row.get(2)?,
-                    names: BTreeMap::new(),
+                Ok(StatsPeriod {
+                    since: since as u64,
+                    duration_ms: row.get(3)?,
+                    active_days: row.get(4)?,
+                    totals: Totals {
+                        utterances: row.get(0)?,
+                        characters: row.get(1)?,
+                        words: row.get(2)?,
+                        names: BTreeMap::new(),
+                    },
                 })
             },
         )?;
@@ -253,27 +298,84 @@ impl Db {
             "SELECT n.ref, SUM(n.count) FROM session_names n JOIN sessions s ON s.id = n.session_id
              WHERE s.started_at >= ?1 GROUP BY n.ref",
         )?;
-        totals.names = names
+        period.totals.names = names
             .query_map(params![since], |row| Ok((row.get(0)?, row.get(1)?)))?
             .collect::<rusqlite::Result<_>>()?;
-        Ok(totals)
+        Ok(period)
+    }
+
+    /// `since` 以降の、日ごとの数（PC の時刻で、回を始めた日に数える）
+    fn days(&self, since: i64) -> rusqlite::Result<Vec<StatsDay>> {
+        let mut days = self.conn.prepare_cached(
+            "SELECT unixepoch(started_at / 1000, 'unixepoch', 'localtime', 'start of day', 'utc') * 1000
+                    AS day,
+                SUM(utterances), SUM(characters), SUM(words)
+             FROM sessions WHERE started_at >= ?1 GROUP BY day ORDER BY day",
+        )?;
+        days.query_map(params![since], |row| {
+            Ok(StatsDay {
+                start: row.get(0)?,
+                utterances: row.get(1)?,
+                characters: row.get(2)?,
+                words: row.get(3)?,
+            })
+        })?
+        .collect()
+    }
+
+    /// `since` 以降に始めた回の時間を、PC の時刻の曜日と時に分ける（月曜 0 時から 7 × 24 個）。
+    /// 回を 1 時間の区切りで切って、切れ端の長さを足す
+    fn hours(&self, since: i64) -> rusqlite::Result<Vec<u64>> {
+        let mut hours = vec![0; 7 * 24];
+        let mut slices = self.conn.prepare_cached(
+            "WITH RECURSIVE slices (start, stop) AS (
+                SELECT started_at, ended_at FROM sessions
+                WHERE started_at >= ?1 AND ended_at > started_at
+                UNION ALL
+                SELECT (start / 3600000 + 1) * 3600000, stop FROM slices
+                WHERE (start / 3600000 + 1) * 3600000 < stop
+            )
+            SELECT (CAST(strftime('%w', start / 1000, 'unixepoch', 'localtime') AS INTEGER) + 6) % 7,
+                CAST(strftime('%H', start / 1000, 'unixepoch', 'localtime') AS INTEGER),
+                SUM(MIN(stop, (start / 3600000 + 1) * 3600000) - start)
+            FROM slices GROUP BY 1, 2",
+        )?;
+        let rows = slices.query_map(params![since], |row| {
+            Ok((
+                row.get::<_, usize>(0)?,
+                row.get::<_, usize>(1)?,
+                row.get::<_, u64>(2)?,
+            ))
+        })?;
+        for row in rows {
+            let (weekday, hour, ms) = row?;
+            if let Some(slot) = hours.get_mut(weekday * 24 + hour) {
+                *slot = ms;
+            }
+        }
+        Ok(hours)
     }
 
     fn view(&self) -> rusqlite::Result<StatsView> {
         // PC の時刻で、今日・今週（月曜）・今月の初め（epoch ms）。
         // 週は、6 日戻ってから次の月曜（その日が月曜ならその日）へ進める
-        let (today, week, month): (i64, i64, i64) = self.conn.query_row(
+        // 草は 52 週前の月曜から、時間帯は 90 日前の 0 時から
+        let (today, week, month, year, recent): (i64, i64, i64, i64, i64) = self.conn.query_row(
             "SELECT unixepoch('now', 'localtime', 'start of day', 'utc') * 1000,
                 unixepoch('now', 'localtime', 'start of day', '-6 days', 'weekday 1', 'utc') * 1000,
-                unixepoch('now', 'localtime', 'start of month', 'utc') * 1000",
+                unixepoch('now', 'localtime', 'start of month', 'utc') * 1000,
+                unixepoch('now', 'localtime', 'start of day', '-6 days', 'weekday 1', '-364 days', 'utc')
+                    * 1000,
+                unixepoch('now', 'localtime', 'start of day', '-89 days', 'utc') * 1000",
             [],
-            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?)),
         )?;
+        let (days, hours) = (self.days(year)?, self.hours(recent)?);
         let (today, week, month, all) = (
-            self.totals(today)?,
-            self.totals(week)?,
-            self.totals(month)?,
-            self.totals(0)?,
+            self.period(today)?,
+            self.period(week)?,
+            self.period(month)?,
+            self.period(0)?,
         );
 
         let live = self.current.filter(|_| self.running);
@@ -311,6 +413,8 @@ impl Db {
             week,
             month,
             all,
+            days,
+            hours,
             sessions,
         })
     }
@@ -416,10 +520,14 @@ mod tests {
                 ("hero:13".to_owned(), 2)
             ])
         );
-        assert_eq!(view.today, *s);
-        assert_eq!(view.week, *s);
-        assert_eq!(view.month, *s);
-        assert_eq!(view.all, *s);
+        for period in [&view.today, &view.week, &view.month, &view.all] {
+            assert_eq!(period.totals, *s);
+        }
+        let [day] = view.days.as_slice() else {
+            panic!("one day: {:?}", view.days);
+        };
+        assert!(day.start <= session.started_at && session.started_at - day.start < 86_400_000);
+        assert_eq!((day.utterances, day.characters), (1, 13));
     }
 
     #[test]
@@ -444,8 +552,14 @@ mod tests {
             .map(|s| (s.totals.utterances, s.live))
             .collect();
         assert_eq!(counts, [(1, true), (2, false)]);
-        assert_eq!(view.month.utterances, 3);
-        assert_eq!(view.month.names["hero:13"], 6);
+        assert_eq!(view.month.totals.utterances, 3);
+        assert_eq!(view.month.totals.names["hero:13"], 6);
+        let length: u64 = view
+            .sessions
+            .iter()
+            .map(|s| s.ended_at - s.started_at)
+            .sum();
+        assert_eq!(view.all.duration_ms, length);
     }
 
     #[test]
@@ -460,6 +574,32 @@ mod tests {
         let view = Tally::open(&path).view();
         assert_eq!(view.sessions.len(), 1);
         assert!(!view.sessions[0].live);
-        assert_eq!(view.month.utterances, 1);
+        assert_eq!(view.month.totals.utterances, 1);
+    }
+
+    #[test]
+    fn time_is_split_into_hours() {
+        let dir = tempfile::tempdir().unwrap();
+        let tally = Tally::open(&dir.path().join("stats.db"));
+        const HOUR: u64 = 3_600_000;
+        // 3 時間前の、ある時の 30 分から 90 分（その時に 30 分、次の時に 60 分）
+        let start = (now_ms() / HOUR - 3) * HOUR + HOUR / 2;
+        tally
+            .db
+            .lock()
+            .unwrap()
+            .conn
+            .execute(
+                "INSERT INTO sessions (started_at, ended_at, utterances) VALUES (?1, ?2, 1)",
+                params![start, start + HOUR * 3 / 2],
+            )
+            .unwrap();
+        let view = tally.view();
+        let filled: Vec<u64> = view.hours.iter().copied().filter(|&ms| ms > 0).collect();
+        assert_eq!(view.hours.len(), 7 * 24);
+        assert_eq!(filled.iter().sum::<u64>(), HOUR * 3 / 2);
+        assert_eq!(filled.len(), 2);
+        assert_eq!(view.all.duration_ms, HOUR * 3 / 2);
+        assert_eq!(view.all.active_days, 1);
     }
 }
