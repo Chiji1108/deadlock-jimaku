@@ -24,7 +24,7 @@
   import TextStyleFields from "../parts/TextStyleFields.svelte";
   import { SUBTITLE_SIZE } from "../../lib/overlay-size";
   import { overlayUrl, panel } from "../panel.svelte";
-  import { paidLive } from "../../lib/engines";
+  import { paidLive, usesChrome } from "../../lib/engines";
   import { translationOnly } from "../../lib/subtitle-lines";
 
   const ALIGNS: { value: Align; label: string; icon: typeof AlignStartIcon }[] = [
@@ -222,7 +222,18 @@
               {#if noTargets}
                 翻訳先を選ぶと使えます
               {:else}
-                話した言葉は出しません。{#if paidLive(s.engines) || s.engines.furigana === "llm"}途中の字幕とふりがなの料金がかかりません。{/if}字幕は翻訳が終わってから出ます。切り替えると、字幕は始め直します
+                話した言葉は出しません。{#if paidLive(s.engines) || s.engines.furigana === "llm"}途中の字幕とふりがなの料金がかかりません。{/if}{#if usesChrome(s.engines)}訳は、話している途中から出ます。{:else}今のモードでは、訳は話し終えてから出ます（話している途中の訳は、途中の字幕が
+                  Chrome のときだけ出ます）。{/if}切り替えると、字幕は始め直します
+                {#if !usesChrome(s.engines)}
+                  <Button
+                    variant="link"
+                    size="sm"
+                    class="h-auto p-0 text-xs"
+                    onclick={() => (panel.tab = "engines")}
+                  >
+                    モードを変える
+                  </Button>
+                {/if}
               {/if}
             </Field.Description>
           </Field.Content>
