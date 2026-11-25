@@ -14,6 +14,7 @@
     { "key": "translate/openrouter:tencent/hy4-flash", "name": "Hy4 Flash", "via": "Tencent（OpenRouter）", "note": "失敗は、答えが 8 秒で終わらない時間切れ" },
     { "key": "translate/openrouter:z-ai/glm-5.3-flash@low", "name": "GLM 5.3 Flash", "via": "Z.ai（OpenRouter）", "note": "推論を止められないので、いちばん弱い指定（low）で測った" },
     { "key": "translate/openrouter:google/gemma-4-26b-a4b-it", "name": "Gemma 4 26B A4B", "via": "OpenRouter", "server": ["gemma-4-26b"] },
+    { "key": "translate/openrouter:thinkingmachines/inkling-2-mini", "name": "Inkling 2 Mini", "via": "Thinking Machines（OpenRouter）", "note": "英語で括弧を外すことがあるが、名前は残る" },
     { "key": "translate/openrouter:inclusionai/ling-3.0-flash", "name": "Ling 3.0 Flash", "via": "inclusionAI（OpenRouter）", "note": "失敗は、答えが 8 秒で終わらない時間切れ" },
     { "key": "translate/openrouter:mistralai/ministral-8b-2512", "name": "Ministral 3 8B", "via": "Mistral（OpenRouter）", "note": "ロシア語で名前に語尾を付けるが、名前は拾える" },
     { "key": "translate/qwen-mt-plus", "name": "Qwen-MT-Plus", "via": "QwenCloud", "measured": "2026-11-12", "note": "翻訳専門のモデル。ロシア語で、括弧の中の名前を訳す" },
