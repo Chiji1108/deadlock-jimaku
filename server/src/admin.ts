@@ -1,7 +1,7 @@
 // 管理画面（別の Worker。DESIGN.md 17.3）。ベータの費用とコードを見て、開発者のキーを管理する。
 // 入口は Cloudflare Access（access.ts）。ここに届く要求は、Access を通った人のものだけを受ける
 
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, gte, isNotNull, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { accessEmail, type AccessEnv } from "./access";
 import { page, script } from "./adminPage";
@@ -9,11 +9,14 @@ import {
   BETA_CODES_PER_DAY,
   BETA_CODES_PER_IP,
   BETA_LIMIT_MAX_USD,
+  BETA_PROVIDERS,
   betaClosed,
   betaLimits,
+  betaMinVersion,
+  type BetaProvider,
 } from "./beta";
-import { day, month, open, type Db } from "./db";
-import { betaGrants, betaKeys, betaSettings, betaSpend, codes, codeUsage, tasks } from "./schema";
+import { day, month, olderThan, open, VERSION, type Db } from "./db";
+import { betaGrants, betaKeys, betaSettings, betaSpend, codes, codeUsage, tasks, taskSpend } from "./schema";
 import { newId } from "./secrets";
 import { allTasks, isModel, isTask, TASKS } from "./tasks";
 
@@ -34,9 +37,10 @@ type App = { Bindings: AdminEnv; Variables: { db: Db; email: string } };
 
 export const admin = new Hono<App>();
 
-const PROVIDERS = ["qwen", "openrouter"] as const;
 /** 一覧に出すコードの数（今日よく使った順） */
 const LISTED_CODES = 100;
+/** 費用の内訳に入れる日数（今日を含む） */
+const WORK_DAYS = 30;
 /** キーの長さ。短すぎるもの（打ち間違い）は、終わりの 4 文字を出すと中身が分かってしまう */
 const MIN_KEY = 20;
 const MAX_KEY = 400;
@@ -82,16 +86,12 @@ admin.use("/api/*", async (c, next) => {
   await next();
 });
 
-/** アプリの版ごとの数を、何日前までのコードで数えるか（毎日は配信しない人も入るように、2 週間） */
-const VERSION_DAYS = 14;
-const DAY_MS = 24 * 60 * 60 * 1000;
-
 /** 今の状態。費用（今日と今月）、コードの数、上限、閉じているか、使われているアプリの版 */
 admin.get("/api/summary", async (c) => {
   const db = c.var.db;
   const now = Date.now();
   const today = day(now);
-  const [spend, monthUsd, total, active, granted, closed, limits, versions] = await Promise.all([
+  const [spend, monthUsd, total, active, granted, closed, limits, min, versions, work] = await Promise.all([
     db.select({ usd: betaSpend.usd }).from(betaSpend).where(eq(betaSpend.day, today)).get(),
     db
       .select({ usd: sql<number>`COALESCE(SUM(${codeUsage.usd}), 0)` })
@@ -111,13 +111,26 @@ admin.get("/api/summary", async (c) => {
       .get(),
     betaClosed(db),
     betaLimits(db),
-    // この 14 日にアプリが確かめに来たコード（止めたものは除く）の、アプリの版ごとの数（版を伝えない 0.9.6 までは null）
+    betaMinVersion(db),
+    // アプリの版ごとの、確かめに来たコード（止めたものは除く）の数と、最後に来た日。新しく来た版から（版を伝えない 0.9.6 までは null）
     db
-      .select({ version: codes.appVersion, codes: sql<number>`COUNT(*)` })
+      .select({ version: codes.appVersion, codes: sql<number>`COUNT(*)`, lastDay: sql<string>`MAX(${codes.seenDay})` })
       .from(codes)
-      .where(and(eq(codes.revoked, false), sql`${codes.seenDay} >= ${day(now - VERSION_DAYS * DAY_MS)}`))
+      .where(and(eq(codes.revoked, false), isNotNull(codes.seenDay)))
       .groupBy(codes.appVersion)
-      .orderBy(desc(sql`COUNT(*)`), desc(codes.appVersion)),
+      .orderBy(desc(sql`MAX(${codes.seenDay})`), desc(sql`COUNT(*)`), desc(codes.appVersion)),
+    // 仕事とモデルごとの額と、料金のかかった回数。額の大きい順
+    db
+      .select({
+        task: taskSpend.task,
+        model: taskSpend.model,
+        usd: sql<number>`SUM(${taskSpend.usd})`,
+        count: sql<number>`SUM(${taskSpend.count})`,
+      })
+      .from(taskSpend)
+      .where(and(gte(taskSpend.day, day(now - (WORK_DAYS - 1) * 86_400_000)), sql`${taskSpend.usd} > 0`))
+      .groupBy(taskSpend.task, taskSpend.model)
+      .orderBy(desc(sql`SUM(${taskSpend.usd})`)),
   ]);
   return c.json({
     email: c.var.email,
@@ -126,9 +139,18 @@ admin.get("/api/summary", async (c) => {
     month: { usd: monthUsd?.usd ?? 0 },
     codes: { total: total?.n ?? 0, activeToday: active?.n ?? 0 },
     limits: { codeDailyUsd: limits.codeDailyUsd, codesPerPlace: BETA_CODES_PER_IP, maxUsd: BETA_LIMIT_MAX_USD },
-    versions: { days: VERSION_DAYS, rows: versions },
+    // 「この版より前は断る」と、今それで断られている版（版を伝えない 0.9.6 までは、どの版より古い）
+    minVersion: min ?? "",
+    work: { days: WORK_DAYS, rows: work.map((w) => ({ ...w, ...named(w.task, w.model) })) },
+    versions: versions.map((v) => ({ ...v, refused: !!min && (v.version === null || olderThan(v.version, min)) })),
   });
 });
+
+/** 内訳に出す、仕事とモデルの名前。なくしたモデルは、記録した名前のまま出す */
+function named(task: string, model: string) {
+  if (!isTask(task)) return { label: "途中の文字起こし（0.9.9 以前）", modelLabel: "Qwen-Audio-3.1-ASR-Flash-Streaming" };
+  return { label: TASKS[task].label, modelLabel: TASKS[task].models[model]?.label ?? model };
+}
 
 /** ベータのコード。今日よく使った順 */
 admin.get("/api/codes", async (c) => {
@@ -139,6 +161,8 @@ admin.get("/api/codes", async (c) => {
     .select({
       id: codes.id,
       createdAt: codes.createdAt,
+      seenDay: codes.seenDay,
+      version: codes.appVersion,
       revoked: codes.revoked,
       todayUsd,
       monthUsd: sql<number>`COALESCE(SUM(CASE WHEN ${codeUsage.month} = ${month(now)} THEN ${codeUsage.usd} END), 0)`,
@@ -185,7 +209,7 @@ admin.get("/api/keys", async (c) => {
 
 admin.post("/api/keys", async (c) => {
   const body = await c.req.json<Record<string, unknown>>().catch(() => ({}) as Record<string, unknown>);
-  const provider = PROVIDERS.find((p) => p === body.provider);
+  const provider = BETA_PROVIDERS.find((p) => p === body.provider);
   const key = typeof body.key === "string" ? body.key.trim() : "";
   const memo = typeof body.memo === "string" ? body.memo.trim() : "";
   if (!provider || key.length < MIN_KEY || key.length > MAX_KEY || memo.length > MAX_MEMO) {
@@ -224,14 +248,28 @@ admin.delete("/api/keys/:id", async (c) => {
 
 /** 仕事の口（/v2。DESIGN.md 17.4）ごとの、今のモデルと、選べるモデル、動かしているか */
 admin.get("/api/tasks", async (c) => {
-  const all = await allTasks(c.var.db);
-  const listed = all.map(({ task, id, enabled }) => {
+  const [all, providers] = await Promise.all([allTasks(c.var.db), keyed(c.var.db, c.env.VAULT)]);
+  const listed = all.map(({ task, id, model, enabled }) => {
     const { label, models } = TASKS[task];
-    const options = Object.entries(models).map(([model, { label }]) => ({ id: model, label }));
-    return { name: task, label, model: id, enabled, models: options };
+    const options = Object.entries(models).map(([name, { label, provider }]) => ({
+      id: name,
+      label,
+      keyed: providers.includes(provider),
+    }));
+    return { name: task, label, model: id, enabled, keyed: providers.includes(model.provider), models: options };
   });
   return c.json({ tasks: listed });
 });
+
+/** キーがあって頼める会社（動かしているキーか、秘密の設定の予備のキーがある） */
+async function keyed(db: Db, vault: Vault): Promise<BetaProvider[]> {
+  const [rows, fallback] = await Promise.all([
+    db.selectDistinct({ provider: betaKeys.provider }).from(betaKeys).where(eq(betaKeys.enabled, true)),
+    vault.fallbacks(),
+  ]);
+  const spare: Partial<Record<BetaProvider, boolean>> = fallback;
+  return BETA_PROVIDERS.filter((p) => rows.some((row) => row.provider === p) || !!spare[p]);
+}
 
 /** 仕事のモデルを替える、止める・動かす。送った項目だけを変える。次の要求から効く（アプリのリリースは要らない） */
 admin.patch("/api/tasks/:name", async (c) => {
@@ -244,6 +282,10 @@ admin.patch("/api/tasks/:name", async (c) => {
   if (sent === 0 || sent !== [model, enabled].filter((value) => value !== undefined).length) {
     return c.json({ error: "invalid" }, 400);
   }
+  // キーのない会社のモデルには替えさせない（替えると、その仕事が丸ごと断られる）
+  if (model !== undefined && !(await keyed(c.var.db, c.env.VAULT)).includes(TASKS[name].models[model]!.provider)) {
+    return c.json({ error: "noKey" }, 409);
+  }
   const now = (await allTasks(c.var.db)).find((t) => t.task === name)!;
   const row = { name, model: model ?? now.id, enabled: enabled ?? now.enabled };
   await c.var.db.insert(tasks).values(row).onConflictDoUpdate({ target: tasks.name, set: row });
@@ -255,7 +297,7 @@ admin.patch("/api/tasks/:name", async (c) => {
  * `dailyUsd` はベータ全体の 1 日の上限、`codeDailyUsd` は 1 つのコードの 1 日の上限（出してあるコードにも当てる）
  */
 admin.put("/api/settings", async (c) => {
-  type Body = { closed?: unknown; dailyUsd?: unknown; codeDailyUsd?: unknown };
+  type Body = { closed?: unknown; dailyUsd?: unknown; codeDailyUsd?: unknown; minVersion?: unknown };
   const body = await c.req.json<Body>().catch(() => ({}) as Body);
   const usd = (value: unknown) =>
     typeof value === "number" && value > 0 && value <= BETA_LIMIT_MAX_USD ? String(value) : undefined;
@@ -263,6 +305,8 @@ admin.put("/api/settings", async (c) => {
     closed: typeof body.closed === "boolean" ? (body.closed ? "1" : "0") : undefined,
     dailyUsd: usd(body.dailyUsd),
     codeDailyUsd: usd(body.codeDailyUsd),
+    // 空なら、どの版も断らない
+    minVersion: body.minVersion === "" || (typeof body.minVersion === "string" && VERSION.test(body.minVersion)) ? body.minVersion : undefined,
   };
   const sent = Object.entries(body).filter(([, value]) => value !== undefined);
   const known = Object.entries(values).filter(([, value]) => value !== undefined) as [string, string][];

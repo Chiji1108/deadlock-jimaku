@@ -2,12 +2,8 @@
 // アプリと Qwen の間でメッセージを渡す。アプリが送る形（`run-task`、音声のバイナリ、`finish-task`）だけを通し、
 // `run-task` は作り直して送る（モデルやパラメータを足させない）。
 // 料金は、音声 30 秒分ごとに見積もりを先に足し（上限に届いていたら切る）、Qwen が知らせる使用量で実際の額に直す。
-//
-// 仕事の口（/v2/live。DESIGN.md 17.4）では、Qwen とのやりとりを Worker が持つ（`language` を渡す）。アプリは音声を流し、
-// `{"type":"finish"}` で終える。Worker は、聞き始めたら `{"type":"ready"}`、文が届くたびに
-// `{"type":"sentence","id","begin","text","words":[{"at","text"}]}`（時刻は、流した音声の先頭からのミリ秒）を送る
 
-import { betaClosed, keyFailed, reasonOf, reserveBeta, settleBeta, type RelayKey } from "./beta";
+import { betaClosed, keyFailed, reasonOf, reserveBeta, settleBeta, type RelayKey, type Work } from "./beta";
 import { codeById, refusal, type Db } from "./db";
 import { QWEN_LIVE } from "./price";
 import { qwenLive } from "./upstream";
@@ -21,6 +17,9 @@ const SECOND_USD = (2 * (11 * QWEN_LIVE.input + 3 * QWEN_LIVE.output)) / 1e6;
 const WINDOW_USD = WINDOW_SECONDS * SECOND_USD;
 /** キーのせいで断られたときの番号（ほかのキーなら通るかもしれない） */
 const KEY_TROUBLE = [401, 402, 403, 429];
+/** 費用の内訳に数える名前 */
+const LIVE = { task: "live", model: "qwen-audio-live" } satisfies Work;
+
 /** `task-failed` のうち、キーのせいのもの（使えない、残高がない、回数の上限） */
 const KEY_FAILURE = /ApiKey|Unauthorized|AccessDenied|Arrearage|Throttling|Quota/i;
 
@@ -31,15 +30,9 @@ interface Ctx {
 /** 断るときの応答。`limit` は今日の上限、`upstream` は開発者のキーや Qwen の不調 */
 export type Refused = { error: "limit" | "upstream" };
 
-export async function relayQwenLive(
-  db: Db,
-  codeId: string,
-  keys: RelayKey[],
-  ctx: Ctx,
-  language?: string,
-): Promise<Response | Refused> {
+export async function relayQwenLive(db: Db, codeId: string, keys: RelayKey[], ctx: Ctx): Promise<Response | Refused> {
   if (!(await reserveBeta(db, codeId, WINDOW_USD, Date.now()))) return { error: "limit" };
-  const release = () => ctx.waitUntil(settleBeta(db, codeId, WINDOW_USD, 0, Date.now()));
+  const release = () => ctx.waitUntil(settleBeta(db, codeId, LIVE, WINDOW_USD, 0, Date.now()));
   // キーが断られたら、次のキーに回す（`relayed` と同じ決まり）
   let upstream: WebSocket | null = null;
   let used: RelayKey | undefined;
@@ -68,9 +61,9 @@ export async function relayQwenLive(
   server.binaryType = "arraybuffer";
   upstream.binaryType = "arraybuffer";
 
-  /** Qwen に頼んだ仕事の名前。/v2 では Worker が付けて、すぐに頼む */
+  /** Qwen に頼んだ仕事の名前（アプリが付ける） */
   let task: string | undefined;
-  /** 音声を流してよい。/v1 では `run-task` を通したら、/v2 では Qwen が聞き始めたら */
+  /** 音声を流してよい（`run-task` を通したら） */
   let ready = false;
   /** 今の見積もりの間に送られた音声（秒） */
   let seconds = 0;
@@ -103,7 +96,7 @@ export async function relayQwenLive(
   const settle = () => {
     const [estimate, usd] = [reserved, actual()];
     reserved = 0;
-    return settleBeta(db, codeId, estimate, usd, Date.now());
+    return settleBeta(db, codeId, LIVE, estimate, usd, Date.now());
   };
   const close = (status: number, reason: string) => {
     if (closed) return;
@@ -151,20 +144,15 @@ export async function relayQwenLive(
     send(upstream, JSON.stringify({ header: header("run-task"), payload }));
   };
   const finish = () => send(upstream, JSON.stringify({ header: header("finish-task"), payload: { input: {} } }));
-  if (language !== undefined) {
-    task = crypto.randomUUID().replaceAll("-", "");
-    run(language);
-  }
 
   server.addEventListener("message", (event) => {
     if (typeof event.data !== "string") {
-      if (!ready) return close(1008, language === undefined ? "run-task comes first" : "wait for ready");
+      if (!ready) return close(1008, "run-task comes first");
       seconds += (event.data as ArrayBuffer).byteLength / BYTES_PER_SECOND;
       if (seconds >= WINDOW_SECONDS) renew();
       return send(upstream, event.data);
     }
     const msg = parse(event.data);
-    if (language !== undefined) return msg?.type === "finish" ? finish() : close(1008, "message not allowed");
     const action = msg?.header?.action;
     if (action === "run-task" && !task) {
       const id = msg?.header?.task_id;
@@ -197,25 +185,10 @@ export async function relayQwenLive(
       if (used?.id) ctx.waitUntil(keyFailed(db, used.id, status, [code, message].filter(Boolean).join(": "), Date.now()));
       return close(1011, "upstream");
     }
-    if (language === undefined) return send(server, event.data);
-    // Qwen の形を、仕事の口の形に直す。知らない知らせは渡さない
-    switch (msg?.header?.event) {
-      case "task-started":
-        ready = true;
-        return send(server, JSON.stringify({ type: "ready" }));
-      case "result-generated": {
-        const sentence = spoken(msg.payload?.output?.sentence);
-        return sentence && send(server, JSON.stringify(sentence));
-      }
-      case "task-failed":
-        return close(1011, "failed");
-      case "task-finished":
-        return close(1000, "finished");
-    }
+    send(server, event.data);
   });
-  // /v2 では、Qwen が書いた理由を渡さない（外の不調の中身は、利用者に関係がない）
   const passClose = (event: CloseEvent) =>
-    close(event.code === 1005 || event.code === 1006 ? 1000 : event.code, language === undefined ? event.reason : "closed");
+    close(event.code === 1005 || event.code === 1006 ? 1000 : event.code, event.reason);
   server.addEventListener("close", passClose);
   upstream.addEventListener("close", passClose);
   server.addEventListener("error", () => close(1011, "client error"));
@@ -224,37 +197,12 @@ export async function relayQwenLive(
   return new Response(null, { status: 101, webSocket: client });
 }
 
-/** Qwen の文を、仕事の口の形にする。句読点は、その文字の後ろにつなげる */
-function spoken(sentence: Sentence | undefined) {
-  if (typeof sentence?.sentence_id !== "number") return undefined;
-  const text = (value: unknown) => (typeof value === "string" ? value : "");
-  const ms = (value: unknown) => (typeof value === "number" ? value : undefined);
-  const words = Array.isArray(sentence.words) ? sentence.words : [];
-  return {
-    type: "sentence",
-    id: sentence.sentence_id,
-    begin: ms(sentence.begin_time),
-    text: text(sentence.text),
-    words: words.map((w) => ({ at: ms(w?.begin_time), text: text(w?.text) + text(w?.punctuation) })),
-  };
-}
-
-interface Sentence {
-  sentence_id?: unknown;
-  begin_time?: unknown;
-  text?: unknown;
-  words?: { begin_time?: unknown; text?: unknown; punctuation?: unknown }[];
-}
-
 interface Message {
-  /** /v2 のアプリが送る */
-  type?: unknown;
   header?: { action?: unknown; event?: unknown; task_id?: unknown; error_code?: unknown; error_message?: unknown };
   payload?: {
     model?: unknown;
     parameters?: { language_hints?: unknown };
     usage?: { input_tokens?: unknown; output_tokens?: unknown };
-    output?: { sentence?: Sentence };
   };
 }
 

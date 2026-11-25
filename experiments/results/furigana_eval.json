@@ -1,0 +1,92 @@
+{
+  "choose/perplexity/pplx-decider-v1.2": {
+    "summary": {
+      "asked": 135,
+      "at": 1795513449,
+      "broken": 3,
+      "dictionaryRight": 153,
+      "failed": 1,
+      "fixed": 21,
+      "medianMs": 472,
+      "p90Ms": 547,
+      "right": 171,
+      "runs": 180,
+      "usd": 0.0005049800000000005
+    }
+  },
+  "choose/pplx-decider-v1.2": {
+    "summary": {
+      "at": 1795569554,
+      "runs": 180,
+      "right": 171,
+      "dictionaryRight": 153,
+      "fixed": 21,
+      "broken": 3,
+      "failed": 0,
+      "asked": 135,
+      "medianMs": 322,
+      "p90Ms": 415,
+      "usd": 0.0005083800000000004
+    }
+  },
+  "choose/pplx-decider-v1.3": {
+    "summary": {
+      "at": 1795569492,
+      "runs": 180,
+      "right": 159,
+      "dictionaryRight": 153,
+      "fixed": 18,
+      "broken": 12,
+      "failed": 0,
+      "asked": 135,
+      "medianMs": 396,
+      "p90Ms": 473,
+      "usd": 0.00047016
+    }
+  },
+  "dictionary": {
+    "summary": {
+      "asked": 0,
+      "at": 1795513378,
+      "broken": 0,
+      "dictionaryRight": 153,
+      "failed": 0,
+      "fixed": 0,
+      "medianMs": null,
+      "p90Ms": null,
+      "right": 153,
+      "runs": 180,
+      "usd": -0.0
+    }
+  },
+  "fix/gpt-6-luna": {
+    "summary": {
+      "asked": 180,
+      "at": 1795513598,
+      "broken": 0,
+      "dictionaryRight": 153,
+      "failed": 1,
+      "fixed": 27,
+      "medianMs": 1113,
+      "p90Ms": 1537,
+      "right": 180,
+      "runs": 180,
+      "usd": 0.007130300000000003
+    }
+  },
+  "fix/gpt-6.1-terra": {
+    "summary": {
+      "asked": 180,
+      "at": 1795513761,
+      "broken": 0,
+      "dictionaryRight": 153,
+      "failed": 2,
+      "fixed": 27,
+      "medianMs": 1975,
+      "p90Ms": 2612,
+      "right": 180,
+      "runs": 180,
+      "usd": 0.07091300000000003
+    }
+  }
+}

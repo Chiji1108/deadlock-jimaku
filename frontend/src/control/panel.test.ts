@@ -73,9 +73,27 @@ test("操作パネルを開いたときに一覧を読む（あとで入れた�
   for (const name of ["settings", "languages", "devices"] as const)
     vi.spyOn(api, name).mockImplementation(never);
   const fonts = vi.spyOn(api, "fonts").mockImplementation(never);
+  vi.stubGlobal("window", new EventTarget());
   const stop = fresh.start();
   expect(fonts).toHaveBeenCalledTimes(1);
   stop();
+  vi.unstubAllGlobals();
+});
+
+test("操作パネルに戻ったら、マイクの一覧を読み直す（あとからつないだイヤホンを拾う）", () => {
+  const fresh = freshPanel();
+  for (const name of ["settings", "languages", "fonts"] as const)
+    vi.spyOn(api, name).mockImplementation(never);
+  const devices = vi.spyOn(api, "devices").mockImplementation(never);
+  const window = new EventTarget();
+  vi.stubGlobal("window", window);
+  const stop = fresh.start();
+  window.dispatchEvent(new Event("focus"));
+  expect(devices).toHaveBeenCalledTimes(2);
+  stop();
+  window.dispatchEvent(new Event("focus"));
+  expect(devices).toHaveBeenCalledTimes(2);
+  vi.unstubAllGlobals();
 });
 
 test("最初の一覧では、PC にないダウンロード済みのフォントだけ読み込む", async () => {
@@ -379,4 +397,91 @@ test("ベータのコードがあるか、要らないモードは、聞かず�
   await fresh.chooseMode(CHROME);
   expect(update.mock.calls).toEqual([[{ engines: BETA }], [{ engines: CHROME }]]);
   expect(fresh.betaOffer).toBeUndefined();
+});
+
+test("字幕に使うマイクは、選んだもの。選んでいなければ OS の既定のマイク", () => {
+  const next = freshPanel();
+  next.devices = [
+    { name: "AirPods", bluetooth: true, default: true },
+    { name: "Yeti", bluetooth: false, default: false },
+  ];
+  const choose = (micDevice: string | null) =>
+    (next.view = { settings: { micDevice } } as unknown as SettingsView);
+  choose(null);
+  expect(next.mic?.bluetooth).toBe(true);
+  choose("Yeti");
+  expect(next.mic?.bluetooth).toBe(false);
+  choose("もうないマイク");
+  expect(next.mic).toBeUndefined();
+});
+
+test("Chrome が開いたマイクは、Chrome のラベルから見つける。Bluetooth なら、アプリのマイクが違っても拾う", () => {
+  const next = freshPanel();
+  next.view = { settings: { micDevice: "Yeti" } } as unknown as SettingsView;
+  next.devices = [
+    { name: "AirPods", bluetooth: true, default: true },
+    { name: "Yeti", bluetooth: false, default: false },
+  ];
+  expect(next.bluetoothMic).toBe(false);
+
+  next.chromeMic = { label: "AirPods (Bluetooth)", insteadOf: "Yeti" };
+  expect(next.chromeHears?.name).toBe("AirPods");
+  expect(next.bluetoothMic).toBe(true);
+  expect(next.chromeMissed).toBe("Yeti");
+
+  // 戻った先の Chrome の既定が、同じマイクだった
+  next.chromeMic = { label: "Yeti (b58e:9e84)", insteadOf: "Yeti" };
+  expect(next.chromeMissed).toBeUndefined();
+
+  next.chromeMic = { label: "Yeti (b58e:9e84)", insteadOf: null };
+  expect(next.bluetoothMic).toBe(false);
+
+  next.chromeMic = { label: "知らないマイク", insteadOf: null };
+  expect(next.chromeHears).toBeUndefined();
+  expect(next.bluetoothMic).toBe(false);
+  expect(next.chromeMissed).toBeUndefined();
+});
+
+test("「音が届いていません」は、始めてから一度も音が来ていないときだけ。音が来たあとの無音は数えない", async () => {
+  vi.useFakeTimers();
+  try {
+    const next = freshPanel();
+    next.view = {
+      settings: { transcriptionEnabled: true },
+      running: BEST,
+    } as unknown as SettingsView;
+    // 0.5 秒おきにレベルが届く
+    const hear = (db: number, seconds: number) => {
+      for (let i = 0; i < seconds * 2; i++) {
+        vi.advanceTimersByTime(500);
+        next["onMessage"]({ type: "audio.level", db });
+        next.now = Date.now();
+      }
+    };
+    hear(-90, 4);
+    expect(next.silent).toBe(false);
+    hear(-90, 2);
+    expect(next.silent).toBe(true);
+
+    hear(-30, 1);
+    expect(next.silent).toBe(false);
+    // ノイズを消すマイクで黙っている
+    hear(-90, 30);
+    expect(next.silent).toBe(false);
+
+    // 張り直しで途切れたあとは、届き直してから数え直す
+    vi.advanceTimersByTime(3000);
+    hear(-90, 6);
+    expect(next.silent).toBe(true);
+
+    // マイクを替えたら、間が空かなくても数え直す
+    hear(-30, 1);
+    const view = next.view;
+    vi.spyOn(api, "updateSettings").mockResolvedValue(view!);
+    await next.update({ micDevice: "音の来ないマイク" });
+    hear(-90, 6);
+    expect(next.silent).toBe(true);
+  } finally {
+    vi.useRealTimers();
+  }
 });

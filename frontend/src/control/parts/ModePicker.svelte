@@ -43,7 +43,7 @@
     </span>
     <!-- どのモードも同じ並びで、工程ごとの正確さを 3 段階で出す（見比べられるように。数字は title と、工程ごとの選択肢に出る） -->
     <span class="flex flex-wrap gap-x-4 pl-5 text-xs tabular-nums">
-      {#each modeStats(m.engines) as stat (stat.label)}
+      {#each modeStats(m.engines, panel.serverModels) as stat (stat.label)}
         <span title="{stat.label}: {stat.value}">
           <span class="text-muted-foreground">{stat.label}</span>
           {stat.grade}

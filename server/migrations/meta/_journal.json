@@ -71,6 +71,13 @@
       "when": 1795242008822,
       "tag": "0010_tasks",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1795522426380,
+      "tag": "0011_task_spend",
+      "breakpoints": true
     }
   ]
 }

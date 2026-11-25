@@ -1,11 +1,14 @@
 //! ふりがなを、辞書・判定モデルに候補から選ばせる形・LLM に直させる形で比べる（DESIGN.md 6.4）。
 //!
 //! usage: OPENROUTER_API_KEY=… OPENAI_API_KEY=… cargo run -p overlays-core --example furigana_eval -- CASES.json REPEAT [HOW]
-//!   HOW は choose（既定。判定モデルに候補から選ばせる）か、直させるモデルの名前（gpt-6.1-terra、gpt-6-luna）
+//!   HOW は choose（既定。判定モデルに候補から選ばせる）、dictionary（辞書の読みのまま。何も聞かない）、
+//!   直させるモデルの名前（gpt-6.1-terra、gpt-6-luna）のどれか
 //!   `FURIGANA_EVAL_API=http://127.0.0.1:8765/v1` を付けると、choose は PC の中のモデルに聞く
 //!   `FURIGANA_EVAL_JUDGE=会社/モデル` を付けると、choose は OpenRouter のその判定モデルに聞く（既定はアプリと同じ）
 //!   CASES.json は `experiments/data/furigana_cases.json`（語ごとの正しい読みがある）か、`text` のある文の配列
 //!   （正しい読みがないので、GPT-6.1 Terra に直させた読みを基準にして、違うところを出す）
+//!   出力: experiments/results/furigana_eval.json（聞き方とモデルごとに足す。同じものは置き換える）。`summary.right` は
+//!   正しく読めた回数（`kept` + `fixed`）、`dictionaryRight` は辞書だけで正しかった回数、`at` は測り終えた時刻（UNIX 秒）
 
 use std::collections::BTreeMap;
 
@@ -15,9 +18,10 @@ use overlays_core::reading::Furigana;
 use overlays_core::secrets::Provider;
 use overlays_core::types::RubySegment;
 use overlays_core::usage::Meter;
-use serde_json::Value;
+use serde_json::{Value, json};
 
 const JUDGE: &str = "perplexity/pplx-decider-v1.2";
+const OUT: &str = "experiments/results/furigana_eval.json";
 
 fn reading(segments: &[RubySegment]) -> String {
     let read = segments
@@ -84,7 +88,13 @@ async fn main() -> anyhow::Result<()> {
         reasoning_effort: Some("none"),
         meter: &meter,
     };
-    let terra = model("gpt-6.1-terra");
+    // 正しい読みのない文の基準を作る分は、測るモデルの料金に入れない
+    let reference_meter =
+        Meter::new(std::env::temp_dir().join("overlays-furigana-eval-reference.json"));
+    let terra = Model {
+        meter: &reference_meter,
+        ..model("gpt-6.1-terra")
+    };
     let fixer = model(&how);
     let dictionary = Furigana::shared().expect("dictionary");
     let http = overlays_core::http();
@@ -119,6 +129,12 @@ async fn main() -> anyhow::Result<()> {
             // 聞けなかったら、アプリと同じく辞書の読みのまま
             let answer = match how.as_str() {
                 "choose" => furigana::choose(http, &judge, dictionary, text, &[]).await,
+                "dictionary" => Ok(overlays_core::reading::annotate(
+                    text,
+                    &morphemes,
+                    0,
+                    text.len(),
+                )),
                 _ => furigana::ask(http, &fixer, dictionary, text, &[]).await,
             };
             let chosen = match answer {
@@ -130,7 +146,7 @@ async fn main() -> anyhow::Result<()> {
                 }
             };
             // 選ばせる形は、読みが分かれる語がなければ聞かない
-            if how != "choose" || !alternatives.is_empty() {
+            if how != "dictionary" && (how != "choose" || !alternatives.is_empty()) {
                 times.push(started.elapsed().as_millis());
             }
             let outcome = match (gold.contains(&own), gold.contains(&chosen)) {
@@ -154,5 +170,48 @@ async fn main() -> anyhow::Result<()> {
         println!("asked {} times, median {median} ms", times.len());
     }
     println!("{:?}", meter.watch().borrow().session);
+    let session = serde_json::to_value(meter.watch().borrow().session.clone())?;
+    let usd: f64 = session
+        .as_object()
+        .into_iter()
+        .flat_map(|uses| uses.values())
+        .filter_map(|amount| amount["usd"].as_f64())
+        .sum();
+    let count = |name: &str| counts.get(name).copied().unwrap_or(0);
+    let at = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)?
+        .as_secs();
+    let summary = json!({
+        "at": at,
+        "runs": cases.len() * repeat,
+        "right": count("kept") + count("fixed"),
+        "dictionaryRight": count("kept") + count("broken"),
+        "fixed": count("fixed"),
+        "broken": count("broken"),
+        "failed": count("failed"),
+        "asked": times.len(),
+        "medianMs": times.get(times.len() / 2),
+        "p90Ms": times.get(times.len() * 9 / 10),
+        "usd": usd,
+    });
+    let key = match how.as_str() {
+        "choose" => format!(
+            "choose/{}",
+            match &door {
+                Door::Api { model, .. } => model,
+                Door::Server(_) => unreachable!("made above"),
+            }
+        ),
+        "dictionary" => how.clone(),
+        model => format!("fix/{model}"),
+    };
+    println!("{key}: {summary}");
+    // 別々に走らせても消し合わないよう、書く直前に読み直す
+    let mut report: BTreeMap<String, Value> = std::fs::read(OUT)
+        .ok()
+        .and_then(|b| serde_json::from_slice(&b).ok())
+        .unwrap_or_default();
+    report.insert(key, json!({ "summary": summary }));
+    std::fs::write(OUT, serde_json::to_vec_pretty(&report)?)?;
     Ok(())
 }

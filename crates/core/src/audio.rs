@@ -15,6 +15,8 @@ use tokio::sync::mpsc::error::TrySendError;
 use tokio::time::MissedTickBehavior;
 use ts_rs::TS;
 
+use crate::bluetooth;
+
 pub const SAMPLE_RATE: u32 = 16_000;
 
 /// マイクを開けない理由。そのまま操作パネルに送り、操作パネルが文にする（`TranscriptionError`）
@@ -63,15 +65,42 @@ pub async fn open(input: Input) -> anyhow::Result<mpsc::Receiver<Vec<f32>>> {
     Ok(rx)
 }
 
-/// 入力デバイスの名前（操作パネルの選択肢）
-pub fn input_devices() -> anyhow::Result<Vec<String>> {
-    let mut names: Vec<String> = cpal::default_host()
+/// 入力デバイス（操作パネルの選択肢）。同じ名前のものは 1 つにまとめる
+#[derive(Clone, Debug, PartialEq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct Mic {
+    pub name: String,
+    /// Bluetooth でつながっている。開くとイヤホンが通話用の接続に替わり、聞こえる音が悪くなる
+    pub bluetooth: bool,
+    /// OS の既定のマイク
+    pub default: bool,
+}
+
+pub fn input_devices() -> anyhow::Result<Vec<Mic>> {
+    let host = cpal::default_host();
+    let default = host.default_input_device().and_then(|d| d.id().ok());
+    let mut mics: Vec<Mic> = host
         .input_devices()?
-        .filter_map(|d| Some(d.description().ok()?.name().to_owned()))
+        .filter_map(|d| {
+            let id = d.id().ok();
+            Some(Mic {
+                name: d.description().ok()?.name().to_owned(),
+                bluetooth: id.as_ref().is_some_and(|id| bluetooth::connected(id.id())),
+                default: id.is_some() && id == default,
+            })
+        })
         .collect();
-    names.sort();
-    names.dedup();
-    Ok(names)
+    mics.sort_by(|a, b| a.name.cmp(&b.name));
+    mics.dedup_by(|same, kept| {
+        let duplicate = same.name == kept.name;
+        if duplicate {
+            kept.bluetooth |= same.bluetooth;
+            kept.default |= same.default;
+        }
+        duplicate
+    });
+    Ok(mics)
 }
 
 fn open_mic(device: Option<String>, tx: mpsc::Sender<Vec<f32>>) -> anyhow::Result<()> {

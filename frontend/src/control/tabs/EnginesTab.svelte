@@ -17,12 +17,17 @@
     modeOf,
     paidLive,
     providerOfOption,
+    shown,
     unavailable,
     usesChrome,
   } from "../../lib/engines";
   import { translationOnly } from "../../lib/subtitle-lines";
   import type { Engines } from "../../generated/Engines";
 
+  // タブの中身は開いたままなので、このタブに来るたびに読む（サーバーは、アプリが動いている間にもモデルを替える）
+  $effect(() => {
+    if (panel.tab === "engines") void panel.refreshServerModels();
+  });
   const s = $derived(panel.settings!);
   const t = $derived(s.engines);
   /** 工程ごとの選択は、開いたときだけ出す。自分で組んだ組み合わせ（カスタム）を使っている間は、開いたまま */
@@ -111,7 +116,8 @@
           role="radiogroup"
           aria-label={spec.label}
         >
-          {#each spec.options as o (o.value)}
+          {#each spec.options as option (option.value)}
+            {@const o = shown(item, option, panel.serverModels)}
             {@const needs = key(item, o.value)}
             <button
               type="button"
@@ -136,7 +142,11 @@
                 {#if o.speed}<span>速さ {o.speed}</span>{/if}
                 <span>{o.price}</span>
               </span>
-              {#if o.note}<span class="pl-5 text-xs text-muted-foreground">{o.note}</span>{/if}
+              {#if o.note || o.model}
+                <span class="pl-5 text-xs text-muted-foreground"
+                  >{o.note}{#if o.model}{o.note ? "。" : ""}今のモデルは {o.model}{/if}</span
+                >
+              {/if}
             </button>
           {/each}
         </div>

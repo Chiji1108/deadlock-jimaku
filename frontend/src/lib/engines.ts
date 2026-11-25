@@ -4,6 +4,7 @@
 import { ENGINE_PROVIDERS, PROVIDERS } from "../generated/catalog";
 import type { Engines } from "../generated/Engines";
 import type { Provider } from "../generated/Provider";
+import type { ServerModel } from "../generated/ServerModel";
 
 type Item = keyof Engines;
 
@@ -88,8 +89,6 @@ export const ITEMS: {
       {
         value: "server",
         label: "デドロ字幕のサーバー",
-        accuracy: "95〜98%",
-        speed: "1.3〜3.1 秒",
         price: "ベータ期間中は無料",
         note: "サーバーが、そのときのおすすめのモデルで作る",
       },
@@ -216,8 +215,6 @@ export const ITEMS: {
       {
         value: "server",
         label: "デドロ字幕のサーバー",
-        accuracy: "94%",
-        speed: "約 0.5 秒",
         price: "ベータ期間中は無料",
         note: "サーバーが、そのときのおすすめのモデルで判定する",
       },
@@ -227,7 +224,7 @@ export const ITEMS: {
     label: "翻訳",
     hint: "訳文。GPT は用語も同時に判定します（訳文の名前を用語から作るので、1 回で聞きます）",
     scale:
-      "正確さは、63 文のテストで、用語の英語名が訳文に正しく残った割合です（英語 / ロシア語）。料金は 1 言語あたり",
+      "正確さは、63 文のテストで、アプリが訳文から用語を出せた割合です（英語 / ロシア語）。料金は 1 言語あたり",
     options: [
       {
         value: "server",
@@ -254,21 +251,21 @@ export const ITEMS: {
       {
         value: "qwenMtFlash",
         label: "Qwen-MT-Flash",
-        accuracy: "93% / 90%",
+        accuracy: "94% / 88%",
         speed: "約 0.25 秒",
         price: "1 時間 約 3 円",
       },
       {
         value: "hyMt2",
         label: "Hy-MT2",
-        accuracy: "99% / 85%",
+        accuracy: "99% / 99%",
         speed: "約 0.8 秒",
         price: "1 時間 約 1 円",
       },
       {
         value: "qwen38Flash",
         label: "Qwen3.8 Flash",
-        accuracy: "96% / 90%",
+        accuracy: "100% / 95%",
         speed: "約 1 秒",
         price: "1 時間 約 2 円",
         note: "汎用の AI に訳させる。回数の上限に当たりにくい。ロシア語では、用語の名前を訳すことがある",
@@ -276,15 +273,23 @@ export const ITEMS: {
       {
         value: "gpt6LunaMt",
         label: "GPT-6 Luna",
-        accuracy: "97% / 98%",
+        accuracy: "98% / 98%",
         speed: "約 1.5 秒",
         price: "1 時間 約 2 円",
         note: "汎用の AI に訳させる。用語は Hy-MT2 と同じくらい守るが、遅い",
       },
       {
+        value: "gemma26b",
+        label: "Gemma 4 26B",
+        accuracy: "99% / 99%",
+        speed: "約 0.7 秒",
+        price: "1 時間 約 1 円",
+        note: "汎用の AI に訳させる。用語は Hy-MT2 と同じくらい守り、回数の上限に当たりにくい。OpenRouter が、送った文を残さない会社だけに回す",
+      },
+      {
         value: "gpt61Terra",
         label: "GPT-6.1 Terra（用語も）",
-        accuracy: "99% / 99%",
+        accuracy: "98% / 98%",
         speed: "約 2.5 秒",
         price: "1 時間 約 45 円",
         note: "訳がいちばん自然。用語も同時に判定する（用語の正確さは 98%）",
@@ -308,8 +313,6 @@ export const ITEMS: {
       {
         value: "server",
         label: "辞書 + デドロ字幕のサーバー",
-        accuracy: "95%",
-        speed: "約 0.5 秒",
         price: "ベータ期間中は無料",
         note: "読みが分かれる語を、辞書の候補からサーバーが選ぶ",
       },
@@ -509,6 +512,47 @@ export const PROVIDER_NAMES = Object.fromEntries(PROVIDERS.map((p) => [p.id, p.n
 export const usesServer = (t: Engines) =>
   (Object.keys(ITEMS) as Item[]).some((item) => effective(t)[item] === "server");
 
+/** サーバーが仕事ごとに今使っているモデル（`GET /v2/models`） */
+export type ServerModels = Record<string, ServerModel>;
+
+/** サーバーに頼める工程: サーバーの仕事の名前と、サーバーのモデルを自分のキーで使う選択肢。
+ * モデルの名前は `server/src/tasks.ts` のもの */
+const SERVER_TASKS: { [K in Item]?: { task: string; same: Record<string, Engines[K]> } } = {
+  transcription: { task: "transcribe", same: { "qwen-audio": "qwenAudio" } },
+  terms: {
+    task: "decide",
+    same: { "pplx-decider": "pplxDecider", "pplx-decider-direct": "pplxDecider" },
+  },
+  translation: {
+    task: "translate",
+    same: {
+      "hy-mt2": "hyMt2",
+      "qwen-mt-flash": "qwenMtFlash",
+      "qwen3.8-flash": "qwen38Flash",
+      "gpt-6-luna": "gpt6LunaMt",
+      "gemma-4-26b": "gemma26b",
+    },
+  },
+  furigana: {
+    task: "read",
+    same: { "pplx-decider": "decider", "pplx-decider-direct": "decider" },
+  },
+};
+
+/** 画面に出す選択肢。「デドロ字幕のサーバー」には、サーバーが今使っているモデルの名前と、同じモデルの選択肢の正確さと速さを足す。
+ * モデルはサーバーが替えるので、数字はここに書かない。モデルが分からない間と、知らないモデルのときは、数字を出さない */
+export function shown<K extends Item>(
+  item: K,
+  option: Option<K>,
+  models: ServerModels | undefined,
+): Option<K> & { model?: string } {
+  const spec = SERVER_TASKS[item];
+  const model = option.value === "server" && spec ? models?.[spec.task] : undefined;
+  if (!spec || !model) return option;
+  const same = ITEMS[item].options.find((o) => o.value === spec.same[model.id]);
+  return { ...option, accuracy: same?.accuracy, speed: same?.speed, model: model.label };
+}
+
 /** 足りない鍵を入れに行くボタンの文 */
 export const ENTER_KEYS = "API キーを入れる";
 
@@ -539,11 +583,17 @@ function grade(accuracy: string) {
 
 /**
  * モードを見比べるための、工程ごとの正確さ（その工程で選んだ選択肢の、測った値。物差しは工程ごとに違う）。
- * 翻訳を GPT にしたモードは、用語を GPT が翻訳と同時に判定するので、用語の値はない
+ * 翻訳を GPT にしたモードは、用語を GPT が翻訳と同時に判定するので、用語の値はない。
+ * サーバーに頼む工程は、サーバーが今使っているモデル（`models`）の値。分からなければ、その工程は出さない
  */
-export function modeStats(t: Engines): { label: string; value: string; grade: string }[] {
-  const accuracy = <K extends Item>(item: K) =>
-    ITEMS[item].options.find((o) => o.value === t[item])?.accuracy;
+export function modeStats(
+  t: Engines,
+  models?: ServerModels,
+): { label: string; value: string; grade: string }[] {
+  const accuracy = <K extends Item>(item: K) => {
+    const option = ITEMS[item].options.find((o) => o.value === t[item]);
+    return option && shown(item, option, models).accuracy;
+  };
   const terms = llmTranslation(t) ? "GPT が判定" : accuracy("terms");
   return [
     { label: "文字起こし", value: accuracy("transcription") },

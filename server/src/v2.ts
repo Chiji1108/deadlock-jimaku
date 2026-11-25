@@ -2,14 +2,13 @@
 // 断り方は、どの口も同じ（`refuse`）。使う人は、ベータのコード（この PC の印）で見分ける
 
 import { Hono } from "hono";
-import { betaClosed, betaProviders, betaRelayKeys, reserveBeta, settleBeta } from "./beta";
-import { appVersion, CODE_DAILY_USD, refusal, seen, todayUsd, type Code } from "./db";
+import { betaClosed, betaMinVersion, betaProviders, betaRelayKeys, reserveBeta, settleBeta, type Work } from "./beta";
+import { appVersion, CODE_DAILY_USD, olderThan, refusal, seen, todayUsd, type Code } from "./db";
 import { language } from "./lang";
 import { tokensOf } from "./price";
-import { relayQwenLive } from "./qwenLive";
 import { bearerCode, openrouterUsd, parsed, sent, usdOf, type App, type Ctx } from "./relay";
-import { MAX_TRANSLATION_TOKENS, openTasks, taskOf, type Model, type TaskName } from "./tasks";
-import { chat, openrouter, qwen, wait } from "./upstream";
+import { allTasks, MAX_TRANSLATION_TOKENS, openTasks, taskOf, type Model, type TaskName } from "./tasks";
+import { chat, openrouter, perplexity, qwen, wait } from "./upstream";
 
 export const v2 = new Hono<App>();
 
@@ -35,16 +34,33 @@ export async function status(c: Ctx) {
   if (!code) return refuse(c, "unknown");
   const now = Date.now();
   // 覚えられなくても、コードの答えは返す（アプリは、答えが来ないと字幕を始めない）
-  const noted = seen(c.var.db, code.id, appVersion(c.req.header("User-Agent")), now);
+  const version = appVersion(c.req.header("User-Agent"));
+  const noted = seen(c.var.db, code.id, version, now);
   c.executionCtx.waitUntil(noted.catch((e: unknown) => console.error("seen", e)));
   const error = refusal(code, now);
   if (error) return refuse(c, error);
-  const providers = await betaProviders(c.var.db, c.env);
+  // 古い版は、字幕を始めるときのこの確かめで断る（版を伝えない 0.9.6 までは、どの版より古い）
+  const min = await betaMinVersion(c.var.db);
+  if (min && (version === null || olderThan(version, min))) return refuse(c, "outdated");
+  const all = await betaProviders(c.var.db, c.env);
+  // 中継する会社として答えるのは、/v1 にある 2 社だけ（古い版のアプリは、知らない名前があると答えを読めない）
+  const providers = all.filter((p) => p === "qwen" || p === "openrouter");
   const remaining = Math.max(1 - todayUsd(code, now) / (code.dailyLimitUsd ?? CODE_DAILY_USD), 0);
-  return c.json({ tasks: await openTasks(c.var.db, providers), providers, remaining });
+  return c.json({ tasks: await openTasks(c.var.db, all), providers, remaining });
 }
 
 v2.get("/status", status);
+
+/**
+ * 仕事ごとの、今のモデル（名前と、画面に出す言い方）。コードは要らない: どのモデルに送るかは、サーバーを使うと決める前の人にも見せる。
+ * アプリは、同じモデルを知っていれば、その正確さと速さを出す。LP の測定結果のページも、ブラウザから読んで印を付けるので、
+ * この口だけ、どのサイトからも読めるようにする（誰でも読める中身で、コードを使わない）
+ */
+v2.get("/models", async (c) => {
+  const all = await allTasks(c.var.db);
+  const models = Object.fromEntries(all.map((t) => [t.task, { id: t.id, label: t.model.label }]));
+  return c.json(models, 200, { "Access-Control-Allow-Origin": "*" });
+});
 
 /** 仕事を頼めるコード。頼めなければ、断る答え。上限は、送る直前に額を先に足して確かめる（`reserveBeta`） */
 async function asker(c: Ctx): Promise<Code | Response> {
@@ -56,12 +72,12 @@ async function asker(c: Ctx): Promise<Code | Response> {
   return success ? code : refuse(c, "busy");
 }
 
-/** その仕事のモデルと、開発者のキー（使う順）。止めているか、その会社のキーがなければ undefined */
+/** その仕事のモデルと、開発者のキー（使う順）、費用の内訳に数える名前。止めているか、その会社のキーがなければ undefined */
 async function worker<T extends TaskName>(c: Ctx, name: T) {
-  const { model, enabled } = await taskOf(c.var.db, name);
+  const { id, model, enabled } = await taskOf(c.var.db, name);
   const closed = !enabled || (await betaClosed(c.var.db));
   const keys = closed ? [] : await betaRelayKeys(c.var.db, c.env, model.provider, c.env.SHARE_KEY);
-  return keys.length > 0 ? { model, keys } : undefined;
+  return keys.length > 0 ? { model, keys, work: { task: name, model: id } satisfies Work } : undefined;
 }
 
 /**
@@ -71,13 +87,14 @@ async function worker<T extends TaskName>(c: Ctx, name: T) {
 async function asked(
   c: Ctx,
   code: Code,
+  work: Work,
   estimate: number,
   send: () => Promise<Response | undefined>,
   usd: (answer: Record<string, unknown>) => number | undefined,
 ): Promise<Record<string, unknown> | Response> {
   const now = Date.now();
   if (!(await reserveBeta(c.var.db, code.id, estimate, now))) return refuse(c, "limit");
-  const settle = (actual: number) => c.executionCtx.waitUntil(settleBeta(c.var.db, code.id, estimate, actual, now));
+  const settle = (actual: number) => c.executionCtx.waitUntil(settleBeta(c.var.db, code.id, work, estimate, actual, now));
   const res = await send();
   if (!res?.ok) {
     settle(0);
@@ -87,6 +104,12 @@ async function asked(
   const answer = parsed<Record<string, unknown>>(await res.text().catch(() => "")) ?? {};
   settle(usd(answer) ?? estimate);
   return answer;
+}
+
+/** 応答のトークンの数と、モデルの単価から出した額 */
+function priced(usage: unknown, model: Model) {
+  const { input, output } = tokensOf(usage);
+  return usdOf(input, model.price.input) + usdOf(output, model.price.output);
 }
 
 /** 1 回に訳す文の長さの上限（文字数）。1 発話は長くても 13 秒ほどで、200 文字に届かない */
@@ -123,7 +146,7 @@ v2.post("/translate", async (c) => {
   const db = c.var.db;
   const task = await worker(c, "translate");
   if (!task) return refuse(c, "stopped");
-  const { model, keys } = task;
+  const { model, keys, work } = task;
 
   // 文字数より多いトークンにはならない。出力は上限まで見ておく
   const one = usdOf(text.length + PROMPT_CHARS, model.price.input) + usdOf(MAX_TRANSLATION_TOKENS, model.price.output);
@@ -156,7 +179,7 @@ v2.post("/translate", async (c) => {
     }),
   );
   const actual = asked.reduce((sum, { usd }) => sum + usd, 0);
-  c.executionCtx.waitUntil(settleBeta(db, code.id, estimate, actual, now));
+  c.executionCtx.waitUntil(settleBeta(db, code.id, work, estimate, actual, now));
   const translations = Object.fromEntries(asked.filter((a) => a.translated).map((a) => [a.target, a.translated]));
   return c.json({ translations });
 });
@@ -172,10 +195,12 @@ const MAX_QUESTIONS = 40;
 const text = (value: unknown): value is string => typeof value === "string";
 
 /**
- * 選ばせる（用語と読み）。文と前の文（`state`）と、候補つきの問いを受けて、問いごとに選んだ値を返す。
- * 候補を出すのはアプリ（辞書はアプリの中にある）。答えのない問いは、返さない
+ * 選ばせる。文と前の文（`state`）と、候補つきの問いを受けて、問いごとに選んだ値を返す。
+ * 候補を出すのはアプリ（辞書はアプリの中にある）。答えのない問いは、返さない。
+ * 用語（`/decide`）と読み（`/read`）は、同じ形の問いで、仕事が別（合うモデルが違う。DESIGN.md 9.3）。
+ * 0.10.0 までのアプリは、読みも `/decide` に頼む
  */
-v2.post("/decide", async (c) => {
+const choose = (name: "decide" | "read") => async (c: Ctx) => {
   const code = await asker(c);
   if (code instanceof Response) return code;
   const received = await c.req.text();
@@ -197,18 +222,20 @@ v2.post("/decide", async (c) => {
   ) {
     return c.json({ error: "invalid" }, 400);
   }
-  const task = await worker(c, "decide");
+  const task = await worker(c, name);
   if (!task) return refuse(c, "stopped");
-  const { model, keys } = task;
+  const { model, keys, work } = task;
   const body = model.body({ state, questions: listed as never });
   // 文字数より多いトークンにはならない。出力は数えられない
   const estimate = usdOf(received.length, model.price.input);
   const answer = await asked(
     c,
     code,
+    work,
     estimate,
-    () => sent(c, keys, (key) => openrouter(model.path, key, body, ANSWER_TIMEOUT_MS)),
-    (answer) => openrouterUsd(answer.usage),
+    () => sent(c, keys, (key) => (model.provider === "perplexity" ? perplexity : openrouter)(model.path, key, body, ANSWER_TIMEOUT_MS)),
+    // OpenRouter は料金を答えに入れる。Perplexity は入れないので、トークンの数と単価から数える
+    (answer) => openrouterUsd(answer.usage) ?? (answer.usage === undefined ? undefined : priced(answer.usage, model)),
   );
   if (answer instanceof Response) return answer;
   const answers = (answer.answers ?? {}) as Record<string, { choice?: unknown } | null>;
@@ -219,7 +246,10 @@ v2.post("/decide", async (c) => {
     return offered ? [[q.name, choice]] : [];
   });
   return c.json({ choices: Object.fromEntries(chosen) });
-});
+};
+
+v2.post("/decide", choose("decide"));
+v2.post("/read", choose("read"));
 
 /** 文字起こしの本文の上限（文字数）。発話はいちばん長くて 13 秒ほど（WAV で 0.4 MB、base64 で 0.6 MB） */
 const MAX_AUDIO_BODY = 2_000_000;
@@ -249,7 +279,7 @@ v2.post("/transcribe", async (c) => {
   }
   const task = await worker(c, "transcribe");
   if (!task) return refuse(c, "stopped");
-  const { model, keys } = task;
+  const { model, keys, work } = task;
   const body = model.body({ wav: audio, language, hints });
   // 16kHz・16bit の WAV として、音声 1 秒が入力約 11 トークン。出力は長くても数百トークン。倍を見ておく
   const seconds = (audio.length * 0.75) / 32_000;
@@ -257,13 +287,10 @@ v2.post("/transcribe", async (c) => {
   const answer = await asked(
     c,
     code,
+    work,
     estimate,
     () => sent(c, keys, (key) => qwen(model.path, key, body, ANSWER_TIMEOUT_MS)),
-    (answer) => {
-      if (answer.usage === undefined) return undefined;
-      const { input, output } = tokensOf(answer.usage);
-      return usdOf(input, model.price.input) + usdOf(output, model.price.output);
-    },
+    (answer) => (answer.usage === undefined ? undefined : priced(answer.usage, model)),
   );
   if (answer instanceof Response) return answer;
   const output = (answer.output ?? {}) as {
@@ -273,23 +300,6 @@ v2.post("/transcribe", async (c) => {
   };
   const said = [output.text, output.sentence?.text, output.choices?.[0]?.message?.content?.[0]?.text].find(text);
   return said === undefined ? c.json({ error: "upstream" }, 502) : c.json({ text: said.trim() });
-});
-
-/**
- * 途中の文字起こし（WebSocket）。話す言語を `language` で受けて、音声（16kHz・16bit の PCM）を流してもらい、
- * 書きかけの文と確定した文を送る（やりとりは qwenLive.ts）
- */
-v2.get("/live", async (c) => {
-  if (c.req.header("Upgrade") !== "websocket") return c.json({ error: "invalid" }, 426);
-  const code = await asker(c);
-  if (code instanceof Response) return code;
-  const language = c.req.query("language");
-  if (!language || !SPOKEN.test(language)) return c.json({ error: "invalid" }, 400);
-  const task = await worker(c, "live");
-  if (!task) return refuse(c, "stopped");
-  const relayed = await relayQwenLive(c.var.db, code.id, task.keys, c.executionCtx, language);
-  if (relayed instanceof Response) return relayed;
-  return relayed.error === "limit" ? refuse(c, "limit") : c.json(relayed, 502);
 });
 
 /** 文字のやりとりの答え（OpenAI 互換） */

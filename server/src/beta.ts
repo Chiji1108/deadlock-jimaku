@@ -2,12 +2,14 @@
 // 使う人はアプリが自動でもらうコードで見分ける。コードには 1 日の上限があり、管理画面から止められる
 
 import { and, eq, inArray, sql } from "drizzle-orm";
-import { CODE_DAILY_USD, day, month, type Db } from "./db";
-import { betaGrants, betaKeys, betaSettings, betaSpend, codes, codeUsage } from "./schema";
+import { CODE_DAILY_USD, day, month, VERSION, type Db } from "./db";
+import { betaGrants, betaKeys, betaSettings, betaSpend, codes, codeUsage, taskSpend } from "./schema";
+import type { TaskName } from "./tasks";
 import { decrypt, newCode, newId, normalizeCode, sha256 } from "./secrets";
 
-/** ベータで中継する会社 */
-export type BetaProvider = "qwen" | "openrouter";
+/** 開発者のキーを持つ会社。Perplexity は、仕事の口（/v2）からだけ頼む */
+export const BETA_PROVIDERS = ["qwen", "openrouter", "perplexity", "openai"] as const;
+export type BetaProvider = (typeof BETA_PROVIDERS)[number];
 
 export interface BetaEnv {
   /** 開発者のキー（管理画面ができる前の入れ方。`wrangler secret put`）。管理画面で足したキーがあれば、そちらを先に使う */
@@ -37,6 +39,15 @@ export async function betaClosed(db: Db): Promise<boolean> {
   return row?.value === "1";
 }
 
+/**
+ * この版より前のアプリには、もう答えない（管理画面で決める。決めていなければ undefined）。
+ * アプリは 0.9.7 から、断られると「アプリを更新してください」と出して、サーバーを使わない作り方で続ける
+ */
+export async function betaMinVersion(db: Db): Promise<string | undefined> {
+  const row = await db.select().from(betaSettings).where(eq(betaSettings.name, "minVersion")).get();
+  return row && VERSION.test(row.value) ? row.value : undefined;
+}
+
 /** 1 日の上限（ドル）。管理画面で変えていなければ、既定の値（DESIGN.md 17.3） */
 export async function betaLimits(db: Db): Promise<{ dailyUsd: number; codeDailyUsd: number }> {
   const rows = await db
@@ -63,10 +74,14 @@ export async function betaRelayKeys(db: Db, env: BetaEnv, provider: BetaProvider
     .map((row) => ({ row, order: Math.random() }))
     .sort((a, b) => (a.row.failedAt ?? 0) - (b.row.failedAt ?? 0) || a.order - b.order);
   const keys: RelayKey[] = shuffled.map(({ row }) => ({ id: row.id, key: () => decrypt(row.sealed, secret) }));
-  const fallback = provider === "qwen" ? env.BETA_QWEN_KEY : env.BETA_OPENROUTER_KEY;
+  const fallback = fallbackKey(env, provider);
   if (fallback) keys.push({ key: async () => fallback });
   return keys;
 }
+
+/** 秘密の設定のキー。あるのは、管理画面ができる前からの 2 社だけ */
+const fallbackKey = (env: BetaEnv, provider: BetaProvider) =>
+  ({ qwen: env.BETA_QWEN_KEY, openrouter: env.BETA_OPENROUTER_KEY, perplexity: undefined, openai: undefined })[provider];
 
 /** 開発者のキーがある会社。閉じていれば、どの会社もない */
 export async function betaProviders(db: Db, env: BetaEnv): Promise<BetaProvider[]> {
@@ -75,9 +90,7 @@ export async function betaProviders(db: Db, env: BetaEnv): Promise<BetaProvider[
     .selectDistinct({ provider: betaKeys.provider })
     .from(betaKeys)
     .where(eq(betaKeys.enabled, true));
-  const has = (p: BetaProvider) =>
-    rows.some((r) => r.provider === p) || !!(p === "qwen" ? env.BETA_QWEN_KEY : env.BETA_OPENROUTER_KEY);
-  return (["qwen", "openrouter"] as const).filter(has);
+  return BETA_PROVIDERS.filter((p) => rows.some((r) => r.provider === p) || !!fallbackKey(env, p));
 }
 
 /** 断られた理由として覚える、外が返した本文の長さ（文字数）。何の上限に当たったかが分かれば足りる */
@@ -179,11 +192,27 @@ export async function reserveBeta(db: Db, codeId: string, estimate: number, now:
   return false;
 }
 
-/** 先に足した見積もりを、実際の額に直す。月の集計には実際の額を足す。日が変わっていたら、今日の分は直さない */
-export async function settleBeta(db: Db, codeId: string, estimate: number, actual: number, now: number) {
+/** 何の仕事を、どのモデルに頼んだか（tasks.ts での名前）。費用の内訳に数える */
+export interface Work {
+  task: TaskName | "live";
+  model: string;
+}
+
+/**
+ * 先に足した見積もりを、実際の額に直す。月の集計と、仕事ごとの内訳には実際の額を足す。
+ * 日が変わっていたら、今日の分は直さない
+ */
+export async function settleBeta(db: Db, codeId: string, work: Work, estimate: number, actual: number, now: number) {
   const today = day(now);
   const diff = actual - estimate;
   await db.batch([
+    db
+      .insert(taskSpend)
+      .values({ day: today, ...work, usd: actual, count: actual > 0 ? 1 : 0 })
+      .onConflictDoUpdate({
+        target: [taskSpend.day, taskSpend.task, taskSpend.model],
+        set: { usd: sql`${taskSpend.usd} + excluded.usd`, count: sql`${taskSpend.count} + excluded.count` },
+      }),
     db
       .insert(codeUsage)
       .values({ codeId, month: month(now), usd: actual })

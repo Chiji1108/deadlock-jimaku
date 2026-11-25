@@ -3,8 +3,10 @@ import type { CodeStatus } from "../generated/CodeStatus";
 import type { Fetched } from "../generated/Fetched";
 import type { FontEntry } from "../generated/FontEntry";
 import type { Gpus } from "../generated/Gpus";
+import type { Mic } from "../generated/Mic";
 import type { Provider } from "../generated/Provider";
 import type { RankState } from "../generated/RankState";
+import type { ServerModel } from "../generated/ServerModel";
 import type { SettingsPatch } from "../generated/SettingsPatch";
 import type { SettingsView } from "../generated/SettingsView";
 
@@ -33,7 +35,7 @@ export const api = {
       method: "PUT",
       body: JSON.stringify({ key }),
     }),
-  devices: () => request<string[]>("/api/devices"),
+  devices: () => request<Mic[]>("/api/devices"),
   /** 人の辞書のアイコンに、選んだ画像を保存する */
   savePersonIcon: async (image: Blob) => {
     const res = await fetch("/api/people/icon", { method: "POST", body: image });
@@ -71,6 +73,9 @@ export const api = {
 
   /** 新しい版に入れ替えて再起動する（デスクトップアプリが行う。終わる前に返る） */
   updateApp: () => post("/api/update"),
+
+  /** デドロ字幕のサーバーが、仕事ごとに今使っているモデル */
+  serverModels: () => request<Record<string, ServerModel>>("/api/server/models"),
 
   /** ベータのコードをもらって保存する。もらえなければ理由を返す（投げない） */
   joinBeta: async (): Promise<CodeStatus | BetaRefusal> => {

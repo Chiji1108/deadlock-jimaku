@@ -1,5 +1,7 @@
 // Chrome の音声認識と翻訳（Web Speech API と Translator API）。音声は Google に送られ、翻訳は端末の中で動く
 
+import { namedAlike } from "../lib/mic-names";
+
 export type Availability = "unavailable" | "downloadable" | "downloading" | "available";
 
 interface Alternative {
@@ -188,22 +190,12 @@ export function micNotice(trouble: MicTrouble, using?: string) {
     : `${reason}。Chrome の既定のマイクを使っています。OS の既定のマイクを『${trouble.name}』にすると揃います`;
 }
 
-const tidy = (text: string) => text.normalize("NFKC").trim().replace(/\s+/g, " ");
-
-/** 末尾の括弧を 1 つ除く。Chrome は機器の ID や接続の種類（(045e:0810)、(Built-in)）を足す */
-const withoutSuffix = (label: string) => label.replace(/\s*\([^()]*\)$/, "");
-
 const realMics = (inputs: MediaDeviceInfo[]) =>
   inputs.filter((d) => d.deviceId && !MIC_ALIASES.has(d.deviceId));
 
-/** アプリのマイクの名前に当たるデバイスを返す。部分一致は別のマイクに当たるので、全体を比べる。
- * 同じ名前が複数なら見分けられない（アプリも先頭のものを開く） */
-export function findMics(inputs: MediaDeviceInfo[], name: string) {
-  const mics = realMics(inputs);
-  const wanted = tidy(name);
-  const exact = mics.filter((d) => tidy(d.label) === wanted);
-  return exact.length ? exact : mics.filter((d) => withoutSuffix(tidy(d.label)) === wanted);
-}
+/** アプリのマイクの名前に当たるデバイスを返す。同じ名前が複数なら見分けられない（アプリも先頭のものを開く） */
+export const findMics = (inputs: MediaDeviceInfo[], name: string) =>
+  namedAlike(realMics(inputs), (d) => [d.label, name]);
 
 const openAudio = (audio: MediaStreamConstraints["audio"]) =>
   navigator.mediaDevices.getUserMedia({ audio });
@@ -301,6 +293,8 @@ export interface Microphone {
   chosen?: MicChoice;
   /** 選んだマイクを閉じて、既定のマイクを開く */
   useDefault(): Promise<void>;
+  /** 今開いているマイクの、Chrome でのラベル */
+  label(): string | undefined;
   release(): void;
 }
 
@@ -315,6 +309,8 @@ export async function openMicrophone(
 ): Promise<Microphone> {
   let closeStream = () => {};
   let released = false;
+  let opened: string | undefined;
+  const label = () => opened;
   const close = () => {
     closeStream();
     closeStream = () => {};
@@ -322,6 +318,7 @@ export async function openMicrophone(
   const useDefault = async () => {
     close();
     const stream = await openAudio(true);
+    opened = stream.getAudioTracks()[0]?.label;
     if (released) stopStream(stream);
     else closeStream = () => stopStream(stream);
   };
@@ -335,7 +332,7 @@ export async function openMicrophone(
     remembered?: MicChoice,
   ) => {
     await useDefault();
-    return { trouble, choices, chosen: remembered, useDefault, release };
+    return { trouble, choices, chosen: remembered, useDefault, label, release };
   };
 
   if (!name) return fallBack();
@@ -367,7 +364,8 @@ export async function openMicrophone(
       trouble = { name: device.label, problem: { type: "unopenable", error } };
       continue;
     }
-    log(`開きました: ${stream.getAudioTracks()[0]?.label}`);
+    opened = stream.getAudioTracks()[0]?.label;
+    log(`開きました: ${opened}`);
     const sound = watchSound(stream);
     closeStream = () => {
       sound.close();
@@ -381,6 +379,7 @@ export async function openMicrophone(
       choices,
       chosen: remembered,
       useDefault,
+      label,
       release,
     };
   }

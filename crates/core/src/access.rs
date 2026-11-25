@@ -68,12 +68,17 @@ pub struct Server {
 impl Server {
     /// `api` は開発者のサーバーの根元（設定の `apiBase`。コードをもらう口のある `/v1` を指す）。仕事の口は、同じ所の `/v2`
     pub fn new(api: &str, code: String) -> Self {
-        let root = api.trim_end_matches('/');
-        let root = root.strip_suffix("/v1").unwrap_or(root);
         Self {
-            base: format!("{root}/v2"),
+            base: Self::base(api),
             code,
         }
+    }
+
+    /// 仕事の口の根元（`https://…/v2`）。コードの要らない口（今のモデル）は、ここから頼む
+    pub fn base(api: &str) -> String {
+        let root = api.trim_end_matches('/');
+        let root = root.strip_suffix("/v1").unwrap_or(root);
+        format!("{root}/v2")
     }
 
     pub fn url(&self, path: &str) -> String {

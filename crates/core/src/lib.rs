@@ -2,6 +2,7 @@ pub mod access;
 pub mod annotate;
 pub mod assets;
 pub mod audio;
+mod bluetooth;
 pub mod chrome;
 pub mod decide;
 pub mod demo;

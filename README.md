@@ -89,13 +89,14 @@ macOS 版は Apple の署名と公証を済ませています。Windows 版は�
 | 工程 | おすすめ | Chrome（既定） | Chrome+ | 最高精度 | クラウド | ローカル |
 |---|---|---|---|---|---|---|
 | 途中の字幕 | Chrome | Chrome | Chrome | Chrome | Qwen-Audio-3.1-ASR-Flash-Streaming | Haas-ja |
-| 確定の文字起こし | Qwen-Audio-3.1-ASR-Flash | Chrome | Chrome | GPT-Transcribe | Qwen-Audio-3.1-ASR-Flash | Whisper large-v3-turbo |
-| 用語 | Perplexity Decider | 辞書の一致 | Gemini Nano | GPT-6.1 Terra | Perplexity Decider | Gemma 4 E4B |
-| 翻訳 | サーバーが決める（今は Hy-MT2） | Chrome Translator | Chrome Translator | GPT-6.1 Terra | サーバーが決める（今は Hy-MT2） | Gemma 4 E4B |
-| ふりがな | 辞書 + Perplexity Decider | 辞書 | 辞書 | 辞書 + GPT-6.1 Terra | 辞書 + Perplexity Decider | 辞書 |
+| 確定の文字起こし | サーバーが決める | Chrome | Chrome | GPT-Transcribe | サーバーが決める | Whisper large-v3-turbo |
+| 用語 | サーバーが決める | 辞書の一致 | Gemini Nano | GPT-6.1 Terra | サーバーが決める | Gemma 4 E4B |
+| 翻訳 | サーバーが決める | Chrome Translator | Chrome Translator | GPT-6.1 Terra | サーバーが決める | Gemma 4 E4B |
+| ふりがな | 辞書 + サーバーが決める | 辞書 | 辞書 | 辞書 + GPT-6.1 Terra | 辞書 + サーバーが決める | 辞書 |
 | 要るもの | なし（ベータ期間中） | なし | なし | OpenAI の API キー | なし（ベータ期間中） | なし |
 | 声と文字の送り先 | Google、開発者のサーバー | Google | Google | Google、OpenAI | 開発者のサーバー | PC から出ない |
 
+- 「サーバーが決める」は、開発者のサーバーが、そのときのおすすめのモデルに頼む工程です。モデルはアプリを更新しなくても替わるので、ここには書きません。今のモデルは、[測定の結果のページ](https://jimaku.deadlock.jp/models)に印が付いています。
 - 途中の字幕が Chrome のときは、話している途中から訳も出ます（Chrome Translator）。途中の字幕には、辞書の読みと、辞書の一致で見つけた用語が付きます。
 - 翻訳先がない、翻訳だけを見せる、ふりがなやデッドロックモードを切る、話す言語が日本語でない（読みの辞書と用語の一致は日本語だけ）ときは、その工程を動かしません。設定と `engines` から、実際に何を動かすかを `Settings::plan` が決めます。
 - 作れない組み合わせは `Engines::sanitized` が直します。確定の文字起こしが Chrome なら途中の字幕も Chrome（発話の区切りを Chrome が決める）、Chrome の翻訳は途中の字幕が Chrome のときだけです。翻訳を GPT にしたときは、用語も同じ問い合わせで判定します（訳文の名前を用語から作るので）。

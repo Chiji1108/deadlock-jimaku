@@ -20,6 +20,7 @@
   import AboutDialog from "./parts/AboutDialog.svelte";
   import BetaDialog from "./parts/BetaDialog.svelte";
   import UpdateNotice from "./parts/UpdateNotice.svelte";
+  import MicAlerts from "./parts/MicAlerts.svelte";
   import WhatsNew from "./parts/WhatsNew.svelte";
   import { STATUS_DOTS, fallbackText, panel, transcriptionErrorText } from "./panel.svelte";
   import { total, unpriced, usd } from "./usage";
@@ -229,6 +230,7 @@
               </Alert.Description>
             </Alert.Root>
           {/if}
+          <MicAlerts />
 
           {#each TABS as t (t.value)}
             <Tabs.Content value={t.value}><t.page /></Tabs.Content>

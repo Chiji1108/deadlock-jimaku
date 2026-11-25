@@ -1,6 +1,7 @@
 //! 開発者のサーバー（Worker）に仕事を頼むコード（DESIGN.md 17.2、17.4）。ベータのコードをもらう、まだ使えるか確かめる、
 //! 断られた理由を読む。0.10.0 までは、コードを会社のキーの代わりにして、サーバーが会社の形のまま中継していた
 
+use std::collections::BTreeMap;
 use std::time::Duration;
 
 use reqwest::StatusCode;
@@ -178,6 +179,28 @@ pub async fn join_beta(api: &str) -> Result<String, BetaRefusal> {
     }
 }
 
+/// サーバーが、ある仕事に今使っているモデル。`id` はサーバーの付けた名前、`label` は画面に出す言い方
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct ServerModel {
+    pub id: String,
+    pub label: String,
+}
+
+/// サーバーが仕事（`translate`、`decide`、`transcribe`）ごとに今使っているモデル。コードは要らない。
+/// 操作パネルは、同じモデルを知っていれば、その正確さと速さを出す
+pub async fn models(api: &str) -> reqwest::Result<BTreeMap<String, ServerModel>> {
+    crate::http()
+        .get(format!("{}/models", Server::base(api)))
+        .header(reqwest::header::USER_AGENT, app())
+        .timeout(TIMEOUT)
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await
+}
+
 /// 動いていない字幕を始めるときに、コードがまだ使えるか確かめる
 pub async fn check_code(api: &str, code: &str) -> Result<(), TranscriptionError> {
     match code_status(api, code).await {
@@ -256,7 +279,8 @@ mod tests {
                 { "value": "none", "description": "not a game term" },
             ],
         }]);
-        match crate::decide::ask_server(crate::http(), &server, &state, &questions).await {
+        match crate::decide::ask_server(crate::http(), &server, "/decide", &state, &questions).await
+        {
             Ok(chosen) => println!("decision: {chosen:?}"),
             Err(e) => upstream(&e),
         }

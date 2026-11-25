@@ -1,6 +1,7 @@
 <script lang="ts">
   // Chrome の品のページ。アプリが起動し、認識した文を core に送り、頼まれた文を訳す（DESIGN.md 9.6）
   import { onMount } from "svelte";
+  import type { ChromeMic } from "../generated/ChromeMic";
   import type { ChromeMsg } from "../generated/ChromeMsg";
   import type { ChromeCommand } from "../generated/ChromeCommand";
   import type { LiveStatus } from "../generated/LiveStatus";
@@ -119,6 +120,13 @@
     send({ type: "translated", ...translated });
   }
 
+  /** 開いているマイク（操作パネルが、Bluetooth か、アプリのマイクと違うかを見る）。つなぎ直したら送り直す */
+  let mic: ChromeMic | null = null;
+  function showMic(next: ChromeMic | null) {
+    mic = next;
+    send({ type: "mic", mic });
+  }
+
   function show(next: LiveStatus) {
     status = next;
     send({ type: "status", status: next });
@@ -137,6 +145,7 @@
     socket = next;
     next.addEventListener("open", () => {
       show(status);
+      showMic(mic);
       void sync();
     });
     next.addEventListener("message", (e) => {
@@ -311,13 +320,19 @@
       microphone.release();
       return;
     }
-    const showMic = (trouble?: MicTrouble, using?: MicChoice) => {
+    const showTrouble = (trouble?: MicTrouble, using?: MicChoice) => {
       micTrouble = trouble && micNotice(trouble, using?.label);
       if (trouble && microphone.choices.length) micTrouble += "。Chrome のウィンドウで選べます";
       micChoices = trouble || microphone.chosen ? microphone.choices : [];
       micChosen = using?.deviceId ?? DEFAULT_MIC.deviceId;
     };
-    showMic(microphone.trouble, microphone.opened);
+    showTrouble(microphone.trouble, microphone.opened);
+    /** `fellBack`: アプリのマイクを使えずに、Chrome の既定のマイクへ戻った */
+    const reportMic = (fellBack: boolean) => {
+      const label = microphone.label();
+      showMic(label ? { label, insteadOf: (fellBack && s.micDevice) || null } : null);
+    };
+    reportMic(!microphone.opened && !!microphone.trouble);
     hybrid = !chromeFinals(s.engines);
     const sink = hybrid ? hybridSink() : chromeSink(s);
     const recognition = listen(s.micLanguage, {
@@ -334,15 +349,20 @@
       track: microphone.track,
       heardSound: microphone.heardSound,
       onDefaultMic(problem) {
-        showMic({ name: microphone.opened?.label ?? s.micDevice ?? "", problem });
+        showTrouble({ name: microphone.opened?.label ?? s.micDevice ?? "", problem });
         showListening();
-        microphone.useDefault().catch((e: Error) => logMic(`既定のマイクを開けません: ${e.name}`));
+        microphone
+          .useDefault()
+          // 待っている間に止められたら、閉じたマイクを知らせない
+          .then(() => started === runs && reportMic(true))
+          .catch((e: Error) => logMic(`既定のマイクを開けません: ${e.name}`));
       },
       onMicLog: logMic,
     });
     stop = () => {
       recognition.stop();
       microphone.release();
+      showMic(null);
       sink.reset();
     };
     reset = sink.reset;

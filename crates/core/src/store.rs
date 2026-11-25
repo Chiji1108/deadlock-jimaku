@@ -17,8 +17,8 @@ use crate::settings::{
 };
 use crate::stats::Tally;
 use crate::types::{
-    ChromeCommand, Decided, Downloading, Heard, ItemCardsView, LiveState, LiveStatus, RankState,
-    Segment, ServerMsg, Stage, TranscriptionError, Translated,
+    ChromeCommand, ChromeMic, Decided, Downloading, Heard, ItemCardsView, LiveState, LiveStatus,
+    RankState, Segment, ServerMsg, Stage, TranscriptionError, Translated,
 };
 use crate::usage::Meter;
 
@@ -43,6 +43,8 @@ pub struct ChromeTab {
     status: Option<LiveStatus>,
     /// ウィンドウを開けない、閉じられた理由。ページがつながっている間は出さない
     window: Option<LiveStatus>,
+    /// ページが開いているマイク
+    mic: Option<ChromeMic>,
 }
 
 impl ChromeTab {
@@ -386,6 +388,9 @@ impl Store {
         msgs.push(ServerMsg::ChromeStatus {
             status: self.chrome_tab.borrow().view(),
         });
+        msgs.push(ServerMsg::ChromeMic {
+            mic: self.chrome_tab.borrow().mic.clone(),
+        });
         msgs.push(ServerMsg::ObsStatus {
             subtitles: self.obs_subtitles.load(Ordering::Relaxed) > 0,
         });
@@ -419,11 +424,14 @@ impl Store {
     /// 変わったときだけ知らせる
     fn change_chrome_tab(&self, change: impl FnOnce(&mut ChromeTab)) {
         self.chrome_tab.send_modify(|tab| {
-            let before = tab.view();
+            let before = (tab.view(), tab.mic.clone());
             change(tab);
-            let status = tab.view();
-            if status != before {
+            let (status, mic) = (tab.view(), tab.mic.clone());
+            if status != before.0 {
                 let _ = self.tx.send(ServerMsg::ChromeStatus { status });
+            }
+            if mic != before.1 {
+                let _ = self.tx.send(ServerMsg::ChromeMic { mic });
             }
         });
     }
@@ -437,6 +445,7 @@ impl Store {
             tab.id += 1;
             id = tab.id;
             replaced = tab.status.is_some();
+            tab.mic = None;
             // 読み込み直されたので、落ちたという案内は要らない。ほかの案内は開き直すまで残す
             let crashed = |window: &LiveStatus| window.detail.as_deref() == Some(chrome::CRASHED);
             if tab.window.as_ref().is_some_and(crashed) {
@@ -458,11 +467,21 @@ impl Store {
         });
     }
 
+    /// 古いページの知らせは捨てる
+    pub fn set_chrome_mic(&self, id: u64, mic: Option<ChromeMic>) {
+        self.change_chrome_tab(|tab| {
+            if tab.id == id {
+                tab.mic = mic;
+            }
+        });
+    }
+
     /// ページが切れた。代わられたあとの古いページなら、今のページの状態を消さない
     pub fn chrome_tab_closed(&self, id: u64) {
         self.change_chrome_tab(|tab| {
             if tab.id == id {
                 tab.status = None;
+                tab.mic = None;
                 self.send_chrome_event(ChromeEvent::Closed);
             }
         });
@@ -937,6 +956,37 @@ mod tests {
             rx.try_recv().unwrap(),
             ServerMsg::ChromeStatus { status: None }
         );
+    }
+
+    #[test]
+    fn the_microphone_chrome_opened_is_told_until_the_page_goes() {
+        let store = Store::new(Ok(Settings::default()), PathBuf::new());
+        let mic = || {
+            Some(ChromeMic {
+                label: "AirPods (Bluetooth)".into(),
+                instead_of: Some("Yeti".into()),
+            })
+        };
+        let told = |store: &Store| {
+            store.current_state().into_iter().find_map(|msg| match msg {
+                ServerMsg::ChromeMic { mic } => Some(mic),
+                _ => None,
+            })
+        };
+        let (old, _) = store.connect_chrome();
+        let (id, _) = store.connect_chrome();
+        let mut rx = store.subscribe();
+
+        // 代わられた古いページの知らせは捨てる
+        store.set_chrome_mic(old, mic());
+        assert!(rx.try_recv().is_err());
+
+        store.set_chrome_mic(id, mic());
+        assert_eq!(rx.try_recv().unwrap(), ServerMsg::ChromeMic { mic: mic() });
+        assert_eq!(told(&store), Some(mic()));
+
+        store.chrome_tab_closed(id);
+        assert_eq!(told(&store), Some(None));
     }
 
     #[test]

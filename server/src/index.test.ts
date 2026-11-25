@@ -6,9 +6,16 @@ import { network } from "./beta";
 import { codeByValue, day, open, type Db } from "./db";
 import { app, type Env } from "./index";
 import { encrypt } from "./secrets";
-import { chat, openrouter, qwen, qwenLive, wait } from "./upstream";
+import { chat, openrouter, perplexity, qwen, qwenLive, wait } from "./upstream";
 
-vi.mock("./upstream", () => ({ chat: vi.fn(), openrouter: vi.fn(), qwen: vi.fn(), qwenLive: vi.fn(), wait: vi.fn() }));
+vi.mock("./upstream", () => ({
+  chat: vi.fn(),
+  openrouter: vi.fn(),
+  perplexity: vi.fn(),
+  qwen: vi.fn(),
+  qwenLive: vi.fn(),
+  wait: vi.fn(),
+}));
 vi.mock("./access", () => ({ accessEmail: vi.fn() }));
 
 let proxy: Awaited<ReturnType<typeof getPlatformProxy<{ DB: D1Database }>>>;
@@ -58,7 +65,7 @@ beforeAll(async () => {
 afterAll(() => proxy.dispose());
 
 beforeEach(async () => {
-  for (const table of ["code_usage", "codes", "beta_grants", "beta_spend", "beta_keys", "beta_settings", "tasks"]) {
+  for (const table of ["code_usage", "codes", "beta_grants", "beta_spend", "beta_keys", "beta_settings", "tasks", "task_spend"]) {
     await env.DB.prepare(`DELETE FROM ${table}`).run();
   }
   vi.mocked(accessEmail).mockReset();
@@ -66,6 +73,7 @@ beforeEach(async () => {
   vi.mocked(qwen).mockReset();
   vi.mocked(qwenLive).mockReset();
   vi.mocked(openrouter).mockReset();
+  vi.mocked(perplexity).mockReset();
   vi.mocked(chat).mockReset();
   vi.mocked(wait).mockReset();
   env.BETA_QWEN_KEY = "sk-beta-qwen";
@@ -155,7 +163,7 @@ describe("beta", () => {
   it("gives a code that relays Qwen and OpenRouter with the developer's keys, under a small daily limit", async () => {
     const code = await joined();
     const gift = await call("/gift", { token: code });
-    expect(await gift.json()).toEqual({ tasks: ["translate", "decide", "transcribe", "live"], providers: ["qwen", "openrouter"], remaining: 1 });
+    expect(await gift.json()).toEqual({ tasks: ["translate", "decide", "read", "transcribe"], providers: ["qwen", "openrouter"], remaining: 1 });
     expect((await codeByValue(db, code))!.dailyLimitUsd).toBe(0.5);
     // 0.7 までのギフトコードの口は、もうない
     for (const path of ["/openai/responses", "/xai/stt", "/share/codes"]) {
@@ -502,8 +510,17 @@ describe("tasks (/v2)", () => {
     expect(JSON.stringify(body)).toContain("[Source Text]\\n⟦Haze⟧強い");
     expect(await dayUsd(code)).toBeCloseTo(0.002, 8);
     const state = await ask("/status", code);
-    const tasks = ["translate", "decide", "transcribe", "live"];
+    const tasks = ["translate", "decide", "read", "transcribe"];
     expect(await state.json()).toEqual({ tasks, providers: ["qwen", "openrouter"], remaining: 0.996 });
+  });
+
+  it("lets any site read the models in use, and nothing else", async () => {
+    const origin = { headers: { Origin: "https://jimaku.deadlock.jp" } };
+    const models = await call("/models", { version: "v2", ...origin });
+    expect(models.headers.get("Access-Control-Allow-Origin")).toBe("*");
+    const state = await call("/status", { version: "v2", token: await joined(), ...origin });
+    expect(state.status).toBe(200);
+    expect(state.headers.get("Access-Control-Allow-Origin")).toBeNull();
   });
 
   it("changes the model from the admin page, without a new app", async () => {
@@ -511,12 +528,21 @@ describe("tasks (/v2)", () => {
     const listed = (await (await manage("/api/tasks")).json()) as { tasks: { name: string; model: string; models: unknown[] }[] };
     expect(listed.tasks).toMatchObject([
       { name: "translate", label: "翻訳", model: "hy-mt2", enabled: true },
-      { name: "decide", model: "pplx-decider", enabled: true },
+      { name: "decide", label: "用語を選ぶ", model: "pplx-decider", enabled: true },
+      { name: "read", label: "読みを選ぶ", model: "pplx-decider", enabled: true },
       { name: "transcribe", model: "qwen-audio", enabled: true },
-      { name: "live", model: "qwen-audio-streaming", enabled: true },
     ]);
-    expect(listed.tasks[0]!.models).toContainEqual({ id: "qwen-mt-flash", label: "Qwen-MT-Flash" });
+    expect(listed.tasks[0]!.models).toContainEqual({ id: "qwen-mt-flash", label: "Qwen-MT-Flash", keyed: true });
+    // 今のモデルは、コードがなくても読める
+    const models = async () => (await call("/models", { version: "v2" })).json();
+    expect(await models()).toEqual({
+      translate: { id: "hy-mt2", label: "Hy-MT2（OpenRouter）" },
+      decide: { id: "pplx-decider", label: "Perplexity Decider V1.2（OpenRouter）" },
+      read: { id: "pplx-decider", label: "Perplexity Decider V1.2（OpenRouter）" },
+      transcribe: { id: "qwen-audio", label: "Qwen-Audio-3.1-ASR-Flash" },
+    });
     expect((await manage("/api/tasks/translate", "PATCH", { model: "qwen-mt-flash" })).status).toBe(204);
+    expect(await models()).toMatchObject({ translate: { id: "qwen-mt-flash", label: "Qwen-MT-Flash" } });
     for (const [path, body] of [
       ["/api/tasks/translate", { model: "gpt-9" }],
       ["/api/tasks/translate", { model: "toString" }],
@@ -556,7 +582,7 @@ describe("tasks (/v2)", () => {
     expect(await dayUsd(code)).toBe(0);
     // アプリには、頼める仕事から外して伝える。コードは使えるまま（ほかの工程は続く）
     expect(await (await ask("/status", code)).json()).toMatchObject({
-      tasks: ["decide", "transcribe", "live"],
+      tasks: ["decide", "read", "transcribe"],
       providers: ["qwen", "openrouter"],
     });
     // 止めても、選んでいたモデルは変わらない
@@ -677,6 +703,112 @@ describe("tasks (/v2)", () => {
     expect(content(2)).toHaveLength(1);
   });
 
+  it("asks Gemma through OpenRouter, only at companies that keep nothing", async () => {
+    const code = await joined();
+    expect((await manage("/api/tasks/translate", "PATCH", { model: "gemma-4-26b" })).status).toBe(204);
+    vi.mocked(chat).mockImplementation(async () => answered("strong"));
+    expect(await (await translate(code, { ...request, targets: ["en"] })).json()).toEqual({ translations: { en: "strong" } });
+    expect(vi.mocked(chat).mock.calls[0]).toEqual([
+      "openrouter",
+      "sk-beta-openrouter",
+      expect.objectContaining({
+        model: "google/gemma-4-26b-a4b-it",
+        reasoning: { enabled: false },
+        provider: { data_collection: "deny" },
+        max_tokens: 512,
+      }),
+      3000,
+    ]);
+    // 料金は、OpenRouter が答えに入れた額
+    expect(await dayUsd(code)).toBeCloseTo(0.001, 8);
+  });
+
+  it("asks OpenAI itself to translate, once the developer adds its key and picks GPT-6 Luna", async () => {
+    const code = await joined();
+    // キーがない間は替えられない
+    expect((await manage("/api/tasks/translate", "PATCH", { model: "gpt-6-luna" })).status).toBe(409);
+    expect((await manage("/api/keys", "POST", { provider: "openai", key: "sk-test-openai-0000000001" })).status).toBe(200);
+    expect((await manage("/api/tasks/translate", "PATCH", { model: "gpt-6-luna" })).status).toBe(204);
+    // 古い版のアプリは、知らない会社の名前があると答えを読めないので、中継する会社には入れない
+    expect(await (await ask("/status", code)).json()).toMatchObject({ tasks: ["translate", "decide", "read", "transcribe"], providers: ["qwen", "openrouter"] });
+
+    // 料金は答えに入っていないので、トークンの数と単価（100 万あたり入力 $0.10、出力 $0.50）から数える
+    vi.mocked(chat).mockImplementation(async () => answered("strong", { prompt_tokens: 1_000_000, completion_tokens: 1_000_000 }));
+    expect(await (await translate(code, { ...request, targets: ["en"] })).json()).toEqual({ translations: { en: "strong" } });
+    expect(vi.mocked(chat).mock.calls[0]).toEqual([
+      "openai",
+      "sk-test-openai-0000000001",
+      {
+        model: "gpt-6-luna",
+        messages: [
+          { role: "system", content: expect.stringMatching(/^Translate the Japanese text into English\. .*Reply with the translation only\.$/) },
+          { role: "user", content: "⟦Haze⟧強い" },
+        ],
+        reasoning_effort: "none",
+        max_completion_tokens: 512,
+        store: false,
+      },
+      4000,
+    ]);
+    expect(await dayUsd(code)).toBeCloseTo(0.1 + 0.5, 8);
+  });
+
+  it("asks Perplexity itself, once the developer adds its key and picks it", async () => {
+    const code = await joined();
+    const status = async () => (await ask("/status", code)).json();
+    type Listed = { tasks: { name: string; keyed: boolean; models: { id: string; keyed: boolean }[] }[] };
+    const decide = async () => ((await (await manage("/api/tasks")).json()) as Listed).tasks.find((t) => t.name === "decide")!;
+    // Perplexity のキーがない間は、そのモデルに替えさせない（替えると、選ぶ仕事が丸ごと断られる）
+    expect((await decide()).models).toContainEqual({ id: "pplx-decider-direct", label: "Perplexity Decider V1.2（Perplexity）", keyed: false });
+    const refused = await manage("/api/tasks/decide", "PATCH", { model: "pplx-decider-direct" });
+    expect([refused.status, await refused.json()]).toEqual([409, { error: "noKey" }]);
+    expect(await status()).toMatchObject({ tasks: ["translate", "decide", "read", "transcribe"] });
+    const added = await manage("/api/keys", "POST", { provider: "perplexity", key: "pplx-test-key-000000000001" });
+    expect(added.status).toBe(200);
+    expect((await manage("/api/tasks/decide", "PATCH", { model: "pplx-decider-direct" })).status).toBe(204);
+    expect(await decide()).toMatchObject({ model: "pplx-decider-direct", keyed: true });
+    // 古い版のアプリは、知らない会社の名前があると答えを読めないので、中継する会社には入れない
+    expect(await status()).toMatchObject({ tasks: ["translate", "decide", "read", "transcribe"], providers: ["qwen", "openrouter"] });
+
+    // 料金は答えに入っていないので、トークンの数と単価（入力 100 万あたり $0.02）から数える
+    vi.mocked(perplexity).mockResolvedValue(
+      Response.json({ answers: { c0: { type: "choice", choice: "hero:13" } }, usage: { input_tokens: 1_000_000, output_tokens: 1 } }),
+    );
+    expect(await (await ask("/decide", code, decision)).json()).toEqual({ choices: { c0: "hero:13" } });
+    expect(vi.mocked(perplexity).mock.calls[0]).toMatchObject(["/v1/decisions", "pplx-test-key-000000000001", { model: "pplx-decider-v1.2", state: "ヘイズ強い" }, 15_000]);
+    expect(vi.mocked(openrouter)).not.toHaveBeenCalled();
+    expect(await dayUsd(code)).toBeCloseTo(0.02, 8);
+
+    // 選んだあとでキーを止めると、頼めなくなる。管理画面には、キーがないと出す
+    const { id } = (await added.json()) as { id: string };
+    expect((await manage(`/api/keys/${id}`, "PATCH", { enabled: false })).status).toBe(204);
+    expect(await decide()).toMatchObject({ model: "pplx-decider-direct", keyed: false });
+    expect(await status()).toMatchObject({ tasks: ["translate", "read", "transcribe"] });
+  });
+
+  it("picks readings on a door of their own, so terms and readings can use different models", async () => {
+    const code = await joined();
+    await manage("/api/keys", "POST", { provider: "perplexity", key: "pplx-test-key-000000000001" });
+    // 用語は V1.3 に、読みは初めのモデル（V1.2）のままにする
+    expect((await manage("/api/tasks/decide", "PATCH", { model: "pplx-decider-1.3-direct" })).status).toBe(204);
+    const answered = () => Response.json({ answers: { c0: { choice: "hero:13" } }, usage: { cost: 0.001, prompt_tokens: 100 } });
+    vi.mocked(perplexity).mockImplementation(async () => answered());
+    vi.mocked(openrouter).mockImplementation(async () => answered());
+    expect(await (await ask("/decide", code, decision)).json()).toEqual({ choices: { c0: "hero:13" } });
+    expect(await (await ask("/read", code, decision)).json()).toEqual({ choices: { c0: "hero:13" } });
+    expect(vi.mocked(perplexity).mock.calls[0]![2]).toMatchObject({ model: "pplx-decider-v1.3" });
+    expect(vi.mocked(openrouter).mock.calls[0]![2]).toMatchObject({ model: "perplexity/pplx-decider-v1.2" });
+    // 仕事ごとに止められて、費用の内訳も別の行になる
+    expect((await manage("/api/tasks/read", "PATCH", { enabled: false })).status).toBe(204);
+    expect(await (await ask("/read", code, decision)).json()).toEqual({ error: "stopped" });
+    expect((await ask("/decide", code, decision)).status).toBe(200);
+    const { work } = (await (await manage("/api/summary")).json()) as { work: { rows: { label: string; model: string }[] } };
+    expect(work.rows.map((w) => [w.label, w.model]).sort()).toEqual([
+      ["用語を選ぶ", "pplx-decider-1.3-direct"],
+      ["読みを選ぶ", "pplx-decider"],
+    ]);
+  });
+
   it("takes only what a task needs, and hides the upstream's trouble", async () => {
     const code = await joined();
     for (const bad of [
@@ -720,120 +852,7 @@ describe("tasks (/v2)", () => {
     await manage("/api/tasks/decide", "PATCH", { enabled: false });
     expect(await refused(await ask("/decide", code, decision))).toEqual([403, "stopped"]);
     const state = (await (await ask("/status", code)).json()) as { tasks: string[] };
-    expect(state.tasks).toEqual(["translate", "transcribe", "live"]);
-  });
-
-  describe("live", () => {
-    const audio = (seconds: number) => new ArrayBuffer(seconds * 32_000);
-    const event = (name: string, payload: unknown = {}) => JSON.stringify({ header: { event: name }, payload });
-    const SECOND = (2 * (11 * 0.93 + 3 * 0.7)) / 1e6;
-    let client: FakeSocket;
-    let upstream: FakeSocket;
-    const connect = (code: string, language = "ja") =>
-      call(`/live?language=${language}`, { version: "v2", token: code, headers: { Upgrade: "websocket" } });
-    async function settled() {
-      await Promise.allSettled(pending);
-      pending = [];
-    }
-
-    beforeEach(() => {
-      client = new FakeSocket();
-      upstream = new FakeSocket();
-      stubSockets(() => client);
-      vi.mocked(qwenLive).mockResolvedValue({ webSocket: upstream } as unknown as Response);
-    });
-    afterEach(() => vi.unstubAllGlobals());
-
-    it("talks to Qwen for the app: the app only streams audio and reads sentences", async () => {
-      const code = await joined();
-      await connect(code);
-      const [started] = upstream.sent.map((sent) => JSON.parse(sent as string));
-      expect(started).toMatchObject({
-        header: { action: "run-task", task_id: expect.stringMatching(/^[0-9a-f]{32}$/), streaming: "duplex" },
-        payload: {
-          model: "qwen-audio-3.1-asr-flash-streaming",
-          parameters: { format: "pcm", sample_rate: 16_000, language_hints: ["ja"] },
-        },
-      });
-      upstream.message(event("task-started"));
-      client.message(audio(1));
-      const words = [
-        { begin_time: 400, text: "さあ", punctuation: "" },
-        { begin_time: 900, text: "始まりました", punctuation: "。" },
-      ];
-      const usage = { input_tokens: 11, output_tokens: 3 };
-      upstream.message(event("result-generated", { usage, output: { sentence: { sentence_id: 1, begin_time: 400, text: "さあ始まりました。", words } } }));
-      // 文のない知らせ（使用量だけ）と、知らない知らせは渡さない
-      upstream.message(event("result-generated", { usage }));
-      upstream.message(event("something-new", { secret: true }));
-      client.message(JSON.stringify({ type: "finish" }));
-      expect(client.sent.map((sent) => JSON.parse(sent as string))).toEqual([
-        { type: "ready" },
-        {
-          type: "sentence",
-          id: 1,
-          begin: 400,
-          text: "さあ始まりました。",
-          words: [
-            { at: 400, text: "さあ" },
-            { at: 900, text: "始まりました。" },
-          ],
-        },
-      ]);
-      expect(upstream.sent.slice(1)).toEqual([
-        audio(1),
-        JSON.stringify({ header: { action: "finish-task", task_id: started.header.task_id, streaming: "duplex" }, payload: { input: {} } }),
-      ]);
-      upstream.message(event("task-finished"));
-      await settled();
-      expect(client.closed).toEqual({ code: 1000, reason: "finished" });
-      expect(await dayUsd(code)).toBeCloseTo((11 * 0.93 + 3 * 0.7) / 1e6, 10);
-    });
-
-    it.each([
-      ["audio before Qwen listens", () => client.message(audio(1)), "wait for ready"],
-      ["Qwen's own messages", () => client.message(JSON.stringify({ header: { action: "run-task" } })), "message not allowed"],
-    ])("closes on %s", async (_, send, reason) => {
-      const code = await joined();
-      await connect(code);
-      send();
-      await settled();
-      expect(client.closed).toEqual({ code: 1008, reason });
-      expect(upstream.sent).toHaveLength(1);
-      expect(await dayUsd(code)).toBe(0);
-    });
-
-    it("refuses before connecting in the same words as the other doors, and stops at the daily limit", async () => {
-      const code = await joined();
-      const refused = async (res: Response) => [res.status, res.headers.get("X-Refusal"), ((await res.json()) as { error: string }).error];
-      expect(await refused(await connect("NOPE-NOPE-NOPE"))).toEqual([401, "unknown", "unknown"]);
-      expect((await connect(code, "Japanese")).status).toBe(400);
-      expect((await call("/live?language=ja", { version: "v2", token: code })).status).toBe(426);
-      await manage("/api/tasks/live", "PATCH", { enabled: false });
-      expect(await refused(await connect(code))).toEqual([403, "stopped", "stopped"]);
-      await manage("/api/tasks/live", "PATCH", { enabled: true });
-      expect(qwenLive).not.toHaveBeenCalled();
-
-      const { id } = (await codeByValue(db, code))!;
-      await env.DB.prepare("UPDATE codes SET daily_limit_usd = ? WHERE id = ?").bind(20 * SECOND, id).run();
-      await connect(code);
-      upstream.message(event("task-started"));
-      client.message(audio(30));
-      await settled();
-      expect(client.closed).toEqual({ code: 1008, reason: "limit" });
-      expect(await refused(await connect(code))).toEqual([403, "limit", "limit"]);
-
-      // Qwen が断ったら、中身を渡さずに切る
-      await env.DB.prepare("UPDATE codes SET daily_limit_usd = NULL, day_usd = 0 WHERE id = ?").bind(id).run();
-      client = new FakeSocket();
-      upstream = new FakeSocket();
-      vi.mocked(qwenLive).mockResolvedValue({ webSocket: upstream } as unknown as Response);
-      await connect(code);
-      upstream.message(JSON.stringify({ header: { event: "task-failed", error_code: "BadRequest", error_message: "secret" } }));
-      await settled();
-      expect(client.sent).toEqual([]);
-      expect(client.closed).toEqual({ code: 1011, reason: "failed" });
-    });
+    expect(state.tasks).toEqual(["translate", "read", "transcribe"]);
   });
 
   it("waits and asks again when the model is busy, and leaves out what it could not translate", async () => {
@@ -874,6 +893,36 @@ describe("admin", () => {
     expect((await manage("/api/summary")).status).toBe(503);
   });
 
+  it("refuses apps older than the version the developer sets, when they start captions", async () => {
+    const agent = (version: string) => ({ "User-Agent": `deadlock-jimaku/${version} (windows)` });
+    const code = await joined();
+    const started = async (door: "v1" | "v2", headers: Record<string, string> = {}) => {
+      const res = await call(door === "v1" ? "/gift" : "/status", { version: door, token: code, headers });
+      return [res.status, ((await res.json()) as { error?: string }).error];
+    };
+    const set = (minVersion: unknown) => manage("/api/settings", "PUT", { minVersion });
+    // 決めていなければ、どの版も断らない（版を伝えない 0.9.6 以前も）
+    expect(await started("v1")).toEqual([200, undefined]);
+    expect((await set("0.10")).status).toBe(400);
+    expect((await set("0.10.0")).status).toBe(204);
+    // 0.9.7 からのアプリは、この答えで「アプリを更新してください」と出す
+    expect(await started("v1", agent("0.9.9"))).toEqual([403, "outdated"]);
+    expect(await started("v1")).toEqual([403, "outdated"]);
+    // rc は、同じ番号の正式版より古い
+    expect(await started("v2", agent("0.10.0-rc.5"))).toEqual([403, "outdated"]);
+    expect(await started("v2", agent("0.10.0"))).toEqual([200, undefined]);
+    expect(await started("v2", agent("0.11.0-rc.1"))).toEqual([200, undefined]);
+    // 管理画面には、決めた版と、断っている版を出す
+    const summary = (await (await manage("/api/summary")).json()) as { minVersion: string; versions: { version: string; refused: boolean }[] };
+    expect(summary.minVersion).toBe("0.10.0");
+    await call("/gift", { token: await joined("203.0.113.9"), headers: agent("0.9.9") });
+    const after = (await (await manage("/api/summary")).json()) as typeof summary;
+    expect(after.versions.map((v) => [v.version, v.refused]).toSorted()).toEqual([["0.11.0-rc.1", false], ["0.9.9", true]]);
+    // 空にすると、また断らなくなる
+    expect((await set("")).status).toBe(204);
+    expect(await started("v1", agent("0.9.9"))).toEqual([200, undefined]);
+  });
+
   it("shows which versions of the app still start captions", async () => {
     const agent = (version: string) => ({ "User-Agent": `deadlock-jimaku/${version} (windows)` });
     const [old, current, updated, idle] = [await joined("203.0.113.1"), await joined("203.0.113.2"), await joined("203.0.113.3"), await joined("203.0.113.4")];
@@ -883,24 +932,28 @@ describe("admin", () => {
     // 更新した人は、新しい版で数える
     await call("/gift", { token: updated, headers: agent("0.9.7") });
     await call("/gift", { token: updated, headers: agent("0.10.0-rc.1") });
-    // 2 週間より前に始めたきりのコードは数えない（字幕を始めていないコードも）
-    await env.DB.prepare("UPDATE codes SET seen_day = '2026-01-01', app_version = '0.9.7' WHERE seen_day IS NULL").run();
+    // 字幕を始めていないコードは数えない
     expect(idle).toBeTruthy();
+    // 前に来たきりの版も、最後に来た日と一緒に出す（新しく来た版から）
+    await env.DB.prepare("UPDATE codes SET seen_day = '2026-01-01' WHERE app_version = '0.9.7'").run();
+    const today = day(Date.now());
     const summary = (await (await manage("/api/summary")).json()) as Record<string, any>;
-    expect(summary.versions).toEqual({
-      days: 14,
-      rows: [
-        { version: "0.9.7", codes: 1 },
-        { version: "0.10.0-rc.1", codes: 1 },
-        { version: null, codes: 1 },
-      ],
-    });
+    expect(summary.versions).toEqual([
+      { version: "0.10.0-rc.1", codes: 1, lastDay: today, refused: false },
+      { version: null, codes: 1, lastDay: today, refused: false },
+      { version: "0.9.7", codes: 1, lastDay: "2026-01-01", refused: false },
+    ]);
+    // コードごとにも、版と最後に来た日を出す
+    const listed = (await (await manage("/api/codes")).json()) as { codes: { version: string | null; seenDay: string | null }[] };
+    expect(listed.codes.map((c) => [c.version, c.seenDay]).toSorted()).toEqual(
+      [["0.10.0-rc.1", today], ["0.9.7", "2026-01-01"], [null, today], [null, null]].toSorted(),
+    );
     // 止めたコードは数えない
     await env.DB.prepare("UPDATE codes SET revoked = 1 WHERE app_version = '0.10.0-rc.1'").run();
     const after = (await (await manage("/api/summary")).json()) as Record<string, any>;
-    expect(after.versions.rows).toEqual([
-      { version: "0.9.7", codes: 1 },
-      { version: null, codes: 1 },
+    expect(after.versions).toEqual([
+      { version: null, codes: 1, lastDay: today, refused: false },
+      { version: "0.9.7", codes: 1, lastDay: "2026-01-01", refused: false },
     ]);
     // 版の形でないものは、伝えていないのと同じ
     await call("/gift", { token: current, headers: { "User-Agent": "curl/8.0" } });
@@ -927,6 +980,24 @@ describe("admin", () => {
     expect((await manage(`/api/codes/${listed[0]!.id}`, "PATCH", { revoked: true })).status).toBe(204);
     const stopped = await translate(code);
     expect([stopped.status, stopped.headers.get("X-Gift-Refusal")]).toEqual([403, "revoked"]);
+  });
+
+  it("shows what each task and model cost, for old and new apps together, without the requests that cost nothing", async () => {
+    const code = await joined();
+    vi.mocked(openrouter).mockImplementation(async () => answered());
+    expect((await translate(code)).status).toBe(200);
+    // 新しいアプリ（/v2）の翻訳は、同じモデルなので同じ行に足す。翻訳先が 2 つでも 1 回
+    vi.mocked(chat).mockImplementation(async () => answered());
+    const asked = { text: "強い", source: "ja", targets: ["en", "ru"] };
+    expect((await call("/translate", { version: "v2", token: code, method: "POST", ...json(asked) })).status).toBe(200);
+    // 外に断られた要求は、料金がかからないので数えない
+    vi.mocked(openrouter).mockImplementation(async () => new Response("", { status: 500 }));
+    expect((await translate(code)).status).toBe(502);
+    const { work } = (await (await manage("/api/summary")).json()) as { work: { days: number; rows: Record<string, unknown>[] } };
+    expect(work.days).toBe(30);
+    expect(work.rows).toEqual([
+      { task: "translate", model: "hy-mt2", label: "翻訳", modelLabel: "Hy-MT2（OpenRouter）", usd: expect.closeTo(0.03), count: 2 },
+    ]);
   });
 
   it("keeps several keys, never shows them, and moves on to the next when one is refused", async () => {

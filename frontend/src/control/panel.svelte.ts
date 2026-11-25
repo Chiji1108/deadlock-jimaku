@@ -1,6 +1,7 @@
 // 操作パネルの状態。各タブはこれを読み、変更は api 経由でサーバーに送る（サーバーの返す設定で置き換える）
 import { toast } from "svelte-sonner";
 import { SvelteMap, SvelteSet } from "svelte/reactivity";
+import type { ChromeMic } from "../generated/ChromeMic";
 import type { LiveStatus } from "../generated/LiveStatus";
 import type { BetaRefusal } from "../generated/BetaRefusal";
 import type { Downloading } from "../generated/Downloading";
@@ -9,12 +10,14 @@ import type { Provider } from "../generated/Provider";
 import type { ServerMsg } from "../generated/ServerMsg";
 import type { SettingsPatch } from "../generated/SettingsPatch";
 import type { SettingsView } from "../generated/SettingsView";
+import type { Mic } from "../generated/Mic";
 import type { MicError } from "../generated/MicError";
 import type { TranscriptionError } from "../generated/TranscriptionError";
 import type { Periods } from "../generated/Periods";
 import type { Stats } from "../generated/Stats";
 import type { UsageView } from "./usage";
 import { api } from "../lib/api";
+import { namedAlike } from "../lib/mic-names";
 import {
   CHROME,
   PROVIDER_NAMES,
@@ -22,6 +25,7 @@ import {
   keyNames,
   providers,
   usesServer,
+  type ServerModels,
 } from "../lib/engines";
 import { addFontFaces, fontWeights } from "../lib/overlay-fonts";
 import type { MergePatch } from "../lib/text-style";
@@ -44,7 +48,7 @@ const languageNames = new Intl.DisplayNames("ja", { type: "language" });
 /** Intl の名前が不自然なもの（「ポルトガル語 (イベリア半島)」）は地域を外す */
 const NAME_CODE: Record<string, string> = { "pt-PT": "pt" };
 
-/** これより小さい入力が続いたら「音が届いていない」 */
+/** 字幕を始めてからこの間、これより大きい入力が一度も来なければ「音が届いていない」 */
 const SILENT_DB = -60;
 const SILENT_MS = 5000;
 
@@ -64,8 +68,10 @@ class Panel {
   view = $state<SettingsView | undefined>();
   /** 対応している言語のコード */
   languages = $state<string[]>([]);
+  /** デドロ字幕のサーバーが仕事ごとに今使っているモデル。取れるまでと、つながらないときは undefined */
+  serverModels = $state<ServerModels | undefined>();
   /** 取れるまでは undefined */
-  devices = $state<string[] | undefined>();
+  devices = $state<Mic[] | undefined>();
   /** 選べるフォント */
   fonts = $state<FontList>("loading");
   /** ダウンロード中のファミリー。タブを移っても続くので、ここで持つ */
@@ -97,14 +103,18 @@ class Panel {
   betaOffer = $state<Engines>();
   /** 送った設定の変更の数 */
   private updates = 0;
-  /** 最後に SILENT_DB を超えた時刻 */
-  private heardAt = 0;
+  /** 音が来たかを数え始めた時刻（レベルが届き始めた、張り直しで届き直した、始め直した、マイクを替えた） */
+  private startedAt = 0;
+  /** 数え始めてから、SILENT_DB を超える音が来た */
+  private heard = false;
 
   /** 最後にレベルが届いた時刻 */
   private levelAt = 0;
   now = $state(Date.now());
   /** Chrome のページの状態。ページが開いていなければ undefined */
   chromeStatus = $state<LiveStatus>();
+  /** Chrome のウィンドウが開いているマイク */
+  chromeMic = $state<ChromeMic>();
   /** OBS の中で、字幕オーバーレイがつながっている（字幕が OBS に出ている） */
   obsSubtitles = $state(false);
   /** 最後に設定を保存できた時刻。上の帯に、少しの間「保存しました」と出す */
@@ -158,14 +168,18 @@ class Panel {
     return !!this.settings?.transcriptionEnabled && !this.transcriptionError;
   }
 
-  /** 動いているのに、しばらく音が来ていない。確定の文を Chrome が作るなら、マイクはページが開く */
+  /**
+   * 動いているのに、始めてから一度も音が来ていない（マイクの選び間違いやつなぎ忘れ）。確定の文を Chrome が作るなら、マイクはページが開く。
+   * 一度でも音が来たあとの無音は、黙っているだけ（ノイズを消すマイクは、黙ると完全な無音になる）なので数えない
+   */
   get silent() {
     return (
       this.running &&
       !!this.settings &&
       !chromeFinals(this.view!.running) &&
       this.level !== undefined &&
-      this.now - this.heardAt > SILENT_MS
+      !this.heard &&
+      this.now - this.startedAt > SILENT_MS
     );
   }
 
@@ -217,6 +231,9 @@ class Panel {
       [this.view, this.languages] = await Promise.all([api.settings(), api.languages()]);
     });
     void this.refreshDevices();
+    // あとからつないだイヤホンも、操作パネルに戻ったときに拾う（OS の既定のマイクが替わる）
+    const refreshDevices = () => void this.refreshDevices();
+    window.addEventListener("focus", refreshDevices);
     // WebView が名前で描ける PC のフォントは、起動したときにあったもの。その一覧をここで覚える
     void this.loadFonts();
     const disconnect = connect(
@@ -230,6 +247,7 @@ class Panel {
     );
     return () => {
       clearInterval(tick);
+      window.removeEventListener("focus", refreshDevices);
       disconnect();
     };
   }
@@ -243,6 +261,8 @@ class Panel {
       this.downloading = msg.downloading ?? undefined;
     } else if (msg.type === "chrome.status") {
       this.chromeStatus = msg.status ?? undefined;
+    } else if (msg.type === "chrome.mic") {
+      this.chromeMic = msg.mic ?? undefined;
     } else if (msg.type === "obs.status") {
       this.obsSubtitles = msg.subtitles;
     } else if (msg.type === "usage") {
@@ -254,16 +274,48 @@ class Panel {
     } else if (msg.type === "segment.upsert") {
       if (this.running) this.subtitled = true;
     } else if (msg.type === "audio.level") {
-      // 届き始めた（張り直しで途切れた後も）時点を「聞こえた」とみなし、そこから数える
+      // 届き始めた（張り直しで途切れた後も）時点から数える
       const now = Date.now();
-      if (now - this.levelAt > 1000 || msg.db > SILENT_DB) this.heardAt = now;
+      if (now - this.levelAt > 1000) {
+        this.startedAt = now;
+        this.heard = false;
+      }
+      if (msg.db > SILENT_DB) this.heard = true;
       this.levelAt = now;
       this.level = msg.db;
     }
   }
 
+  /** アプリのマイク（選んでいなければ、OS の既定のマイク） */
+  get mic() {
+    const chosen = this.settings?.micDevice;
+    return this.devices?.find((d) => (chosen ? d.name === chosen : d.default));
+  }
+
+  /** Chrome のウィンドウが開いているマイク。Chrome のラベルから見つからなければ、分からないままにする */
+  get chromeHears() {
+    const label = this.chromeMic?.label;
+    return label ? namedAlike(this.devices ?? [], (d) => [label, d.name])[0] : undefined;
+  }
+
+  /** Chrome が、アプリのマイクを使えずに別のマイクで聞いているなら、使えなかったアプリのマイク。
+   * 戻った先の Chrome の既定が同じマイクなら、ずれていない */
+  get chromeMissed() {
+    const wanted = this.chromeMic?.insteadOf;
+    return wanted && this.chromeHears?.name !== wanted ? wanted : undefined;
+  }
+
+  /** 字幕に使うマイクのどれかが Bluetooth。Chrome は、アプリのマイクと違うマイクを開いていることがある */
+  get bluetoothMic() {
+    return !!(this.mic?.bluetooth || this.chromeHears?.bluetooth);
+  }
+
   async refreshDevices() {
     this.devices = await api.devices().catch(() => []);
+  }
+
+  async refreshServerModels() {
+    this.serverModels = await api.serverModels().catch(() => undefined);
   }
 
   /** 続けて変えたとき、古い応答で新しい設定を上書きしない */
@@ -279,6 +331,11 @@ class Panel {
       const id = ++this.updates;
       const view = await api.updateSettings(patch);
       if (id === this.updates) this.view = view;
+      // 始め直したときと、マイクを替えたときは、音が来たかを数え直す（前のマイクの音で、新しいマイクの無音を隠さない）
+      if ("micDevice" in patch || patch.transcriptionEnabled !== undefined) {
+        this.startedAt = Date.now();
+        this.heard = false;
+      }
       // 字幕を始める・止めるのは設定の変更ではないので、知らせない
       if (patch.transcriptionEnabled === undefined) this.savedAt = Date.now();
     });
