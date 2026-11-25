@@ -46,6 +46,7 @@ ts-rs = { version = "12.0.1", features = ["no-serde-warnings"] }
 fontdb = "0.24.0"
 percent-encoding = "2.3.2"
 zip = { version = "9.3.0", default-features = false, features = ["deflate"] }
+rusqlite = { version = "0.43.0", features = ["bundled", "fallible_uint"] }
 
 [dev-dependencies]
 # 辞書を組み立てる例（`examples/build_dictionary.rs`）が、MeCab の重みから小さい辞書を作るのに使う

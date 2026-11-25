@@ -956,7 +956,9 @@ mod tests {
         use crate::store::{ChromeEvent, Store};
         use crate::types::{ChromeCommand, Decided};
 
-        let store = Store::new(Ok(Settings::default()), std::path::PathBuf::new());
+        let dir = tempfile::tempdir().unwrap();
+
+        let store = Store::new(Ok(Settings::default()), dir.path().to_owned());
         let asked = Asker::new("ja".into())
             .ask("", "拡マガを取る", &[], &loaded())
             .unwrap();

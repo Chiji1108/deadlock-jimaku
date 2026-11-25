@@ -119,7 +119,7 @@ impl Store {
             }
         };
         let meter = Arc::new(Meter::new(data_dir.join("usage.json")));
-        let tally = Arc::new(Tally::new(data_dir.join("stats.json")));
+        let tally = Arc::new(Tally::open(&data_dir.join("stats.db")));
         let fonts = Arc::new(Library::new(&data_dir));
         Arc::new(Self {
             settings: watch::Sender::new(settings),
@@ -399,7 +399,7 @@ impl Store {
             usage: self.meter.watch().borrow().clone(),
         });
         msgs.push(ServerMsg::Stats {
-            stats: self.tally.watch().borrow().clone(),
+            stats: self.tally.view(),
         });
         msgs
     }
@@ -785,7 +785,8 @@ mod tests {
             },
             ..Settings::default()
         };
-        let store = Store::new(Ok(settings), PathBuf::new());
+        let dir = tempfile::tempdir().unwrap();
+        let store = Store::new(Ok(settings), dir.path().to_owned());
         assert!(!store.fall_back(&TranscriptionError::BetaLimit, false));
         assert_eq!(store.fallback(), None);
         // 自分のキーがあれば、Chrome を使っていなくても、同じ作り方のまま続ける
@@ -906,7 +907,8 @@ mod tests {
     /// OBS の字幕オーバーレイは、1 つでもつながっていれば「出ている」。変わったときだけ知らせる
     #[tokio::test]
     async fn obs_shows_subtitles_while_an_overlay_is_connected() {
-        let store = Store::new(Ok(Settings::default()), PathBuf::new());
+        let dir = tempfile::tempdir().unwrap();
+        let store = Store::new(Ok(Settings::default()), dir.path().to_owned());
         let mut messages = store.subscribe();
         let shown = |store: &Store| {
             store
@@ -934,7 +936,8 @@ mod tests {
     /// ページの読み込みで消えるのは落ちたという案内だけで、消えたことは操作パネルに届く
     #[tokio::test]
     async fn a_loaded_page_clears_only_the_crash_notice() {
-        let store = Store::new(Ok(Settings::default()), PathBuf::new());
+        let dir = tempfile::tempdir().unwrap();
+        let store = Store::new(Ok(Settings::default()), dir.path().to_owned());
         let window = |detail: &str| {
             Some(LiveStatus {
                 state: LiveState::Failed,
@@ -960,7 +963,8 @@ mod tests {
 
     #[test]
     fn the_microphone_chrome_opened_is_told_until_the_page_goes() {
-        let store = Store::new(Ok(Settings::default()), PathBuf::new());
+        let dir = tempfile::tempdir().unwrap();
+        let store = Store::new(Ok(Settings::default()), dir.path().to_owned());
         let mic = || {
             Some(ChromeMic {
                 label: "AirPods (Bluetooth)".into(),
@@ -991,7 +995,8 @@ mod tests {
 
     #[test]
     fn upsert_replaces_by_id_and_broadcasts() {
-        let store = Store::new(Ok(Settings::default()), PathBuf::new());
+        let dir = tempfile::tempdir().unwrap();
+        let store = Store::new(Ok(Settings::default()), dir.path().to_owned());
         let mut rx = store.subscribe();
         store.upsert_segment(seg("a", "さあ"));
         store.upsert_segment(seg("a", "さあ始まりました"));
@@ -1006,7 +1011,8 @@ mod tests {
 
     #[test]
     fn keeps_only_recent_segments() {
-        let store = Store::new(Ok(Settings::default()), PathBuf::new());
+        let dir = tempfile::tempdir().unwrap();
+        let store = Store::new(Ok(Settings::default()), dir.path().to_owned());
         for i in 0..KEEP_SEGMENTS + 5 {
             store.upsert_segment(seg(&i.to_string(), ""));
         }
@@ -1063,7 +1069,8 @@ mod tests {
     #[tokio::test]
     async fn an_update_is_shown_and_a_stale_request_is_forgotten() {
         use futures_util::FutureExt;
-        let store = Store::new(Ok(Settings::default()), PathBuf::new());
+        let dir = tempfile::tempdir().unwrap();
+        let store = Store::new(Ok(Settings::default()), dir.path().to_owned());
         let mut rx = store.subscribe();
         assert_eq!(store.update(), None);
         store.set_update(Some("0.9.8".into()));

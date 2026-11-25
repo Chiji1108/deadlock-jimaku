@@ -13,8 +13,7 @@ import type { SettingsView } from "../generated/SettingsView";
 import type { Mic } from "../generated/Mic";
 import type { MicError } from "../generated/MicError";
 import type { TranscriptionError } from "../generated/TranscriptionError";
-import type { Periods } from "../generated/Periods";
-import type { Stats } from "../generated/Stats";
+import type { StatsView } from "../generated/StatsView";
 import type { UsageView } from "./usage";
 import { api } from "../lib/api";
 import { namedAlike } from "../lib/mic-names";
@@ -96,7 +95,7 @@ class Panel {
   /** OpenAI の使用量と概算の料金 */
   usage = $state<UsageView | undefined>();
   /** 字幕の統計（喋った量と、呼んだ名前の回数） */
-  stats = $state<Periods<Stats> | undefined>();
+  stats = $state<StatsView | undefined>();
   /** 起動してから、字幕を動かして字幕が出た（テスト字幕は数えない） */
   subtitled = $state(false);
   /** ベータのコードをもらえば使える作り方。選んだ人の同意を待っている（DESIGN.md 17.2） */

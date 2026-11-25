@@ -559,7 +559,8 @@ mod tests {
     /// 頼んだときから聞くので、訳がすぐ届いても取りこぼさない
     #[tokio::test]
     async fn the_chrome_translation_is_put_on_the_subtitle() {
-        let store = Store::new(Ok(Settings::default()), std::path::PathBuf::new());
+        let dir = tempfile::tempdir().unwrap();
+        let store = Store::new(Ok(Settings::default()), dir.path().to_owned());
         let _page = store.subscribe_chrome_commands();
         let translate = Translatable {
             text: "Extended Magazineを取る".into(),
@@ -699,7 +700,8 @@ mod tests {
             translate_to: vec!["en".into()],
             ..Default::default()
         };
-        let store = Store::new(Ok(settings.clone()), std::path::PathBuf::new());
+        let dir = tempfile::tempdir().unwrap();
+        let store = Store::new(Ok(settings.clone()), dir.path().to_owned());
         let glossary: Glossary = serde_json::from_value(serde_json::json!({
             "clientVersion": 1, "languages": ["ja", "en"],
             "entities": {
@@ -767,7 +769,8 @@ mod tests {
 
     #[tokio::test]
     async fn without_llm_the_local_marks_are_kept() {
-        let store = Store::new(Ok(Settings::default()), std::path::PathBuf::new());
+        let dir = tempfile::tempdir().unwrap();
+        let store = Store::new(Ok(Settings::default()), dir.path().to_owned());
         let finisher = Finisher::new(store, &Settings::default(), &Accesses::default(), None);
         let phase = Settings::default().plan().finals;
         let heard = Heard {
