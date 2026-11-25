@@ -1,15 +1,26 @@
 <script lang="ts">
   // 「統計」のタブ。字幕を始めてから止めるまでを 1 回として、確定した字幕から数えた、
-  // 喋った量と、よく呼んだヒーロー・アイテム・スキル。上に今月の合計、下に回ごとの一覧。
+  // 喋った量と、よく呼んだヒーロー・アイテム・スキル。上に今日・今週・今月・ぜんぶの合計、下に回ごとの一覧。
   // 数だけをこの PC に保存する（文そのものは残さない）
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
   import { Badge } from "$lib/components/ui/badge";
   import * as Card from "$lib/components/ui/card";
+  import * as ToggleGroup from "$lib/components/ui/toggle-group";
   import type { Totals } from "../../generated/Totals";
   import StatsNames from "../parts/StatsNames.svelte";
   import { panel } from "../panel.svelte";
 
   const stats = $derived(panel.stats);
+
+  const PERIODS = [
+    { value: "today", label: "今日" },
+    { value: "week", label: "今週" },
+    { value: "month", label: "今月" },
+    { value: "all", label: "ぜんぶ" },
+  ] as const;
+  type Period = (typeof PERIODS)[number]["value"];
+  let period = $state<Period>("today");
+  const totals = $derived(stats?.[period]);
   const lang = $derived(panel.settings?.micLanguage ?? "ja");
   // 空白で区切らない言語は文字数、ほかは語の数で見せる
   const byCharacter = $derived(
@@ -35,28 +46,40 @@
 <div class="flex flex-col gap-6">
   <Card.Root>
     <Card.Header>
-      <Card.Title>今月</Card.Title>
+      <Card.Title>合計</Card.Title>
       <Card.Description>
-        今月始めた回の合計です。確定した字幕から数えます。数だけをこの PC
+        その期間に始めた回の合計です。週は月曜から数えます。確定した字幕から数えます。数だけをこの
+        PC
         に保存し、文そのものは残しません。名前は、字幕で用語を強調しているときだけ数えます（略称で呼んでも同じものとして数えます）
       </Card.Description>
     </Card.Header>
     <Card.Content class="flex flex-col gap-6">
+      <ToggleGroup.Root
+        type="single"
+        variant="outline"
+        class="w-full"
+        value={period}
+        onValueChange={(v) => v && (period = v as Period)}
+      >
+        {#each PERIODS as p (p.value)}
+          <ToggleGroup.Item value={p.value} class="flex-1">{p.label}</ToggleGroup.Item>
+        {/each}
+      </ToggleGroup.Root>
       <div class="grid grid-cols-2 gap-4">
         <div>
           <div class="text-xs text-muted-foreground">字幕の数</div>
           <div class="text-2xl font-medium tabular-nums">
-            {(stats?.month.utterances ?? 0).toLocaleString()}
+            {(totals?.utterances ?? 0).toLocaleString()}
           </div>
         </div>
         <div>
           <div class="text-xs text-muted-foreground">喋った量</div>
           <div class="text-2xl font-medium tabular-nums">
-            {stats ? amount(stats.month) : "—"}
+            {totals ? amount(totals) : "—"}
           </div>
         </div>
       </div>
-      <StatsNames names={stats?.month.names ?? {}} {lang} />
+      <StatsNames names={totals?.names ?? {}} {lang} />
     </Card.Content>
   </Card.Root>
 
