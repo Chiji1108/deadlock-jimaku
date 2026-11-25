@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Help from "../parts/Help.svelte";
   import { Button } from "$lib/components/ui/button";
   import * as Card from "$lib/components/ui/card";
   import * as Field from "$lib/components/ui/field";
@@ -62,15 +63,17 @@
 
     <Card.Root>
       <Card.Header>
-        <Card.Title>ランクオーバーレイ</Card.Title>
-        <Card.Description>
-          ランクのアイコン・名前・ゲージを出します。試合の結果が反映されるまで少しかかります
-        </Card.Description>
+        <Card.Title class="flex items-center gap-1.5"
+          >ランクオーバーレイ<Help
+            >ランクのアイコン・名前・ゲージを出します。試合の結果が反映されるまで少しかかります</Help
+          ></Card.Title
+        >
       </Card.Header>
       <Card.Content class="flex flex-col gap-6">
         <Field.Field>
-          <Field.Label>出すもの</Field.Label>
-          <Field.Description>「アイコンだけ」以外は、アイコンの横に出します</Field.Description>
+          <Field.Label
+            >出すもの<Help>「アイコンだけ」以外は、アイコンの横に出します</Help></Field.Label
+          >
           <ToggleGroup.Root
             type="single"
             variant="outline"
@@ -85,17 +88,21 @@
         </Field.Field>
 
         <Field.Field>
-          <Field.Label>位置</Field.Label>
+          <Field.Label>位置<Help>OBS のソースの箱の中で、ランクを寄せる位置です</Help></Field.Label>
           <AnchorPicker
             label="ランクの位置"
             value={s.rankAnchor}
             onchange={(rankAnchor) => panel.update({ rankAnchor })}
           />
-          <Field.Description>OBS のソースの箱の中で、ランクを寄せる位置です</Field.Description>
         </Field.Field>
 
         <Field.Field>
-          <Field.Label>エターナスの順位</Field.Label>
+          <Field.Label
+            >エターナスの順位<Help
+              >エターナスのときだけ、ポイントの代わりにリーダーボードの順位（例: アジア
+              123位）を出します。更新は 1 時間ごとで、順位が分からないときはポイントを出します</Help
+            ></Field.Label
+          >
           <Select.Root
             type="single"
             value={s.rankRegion ?? NO_REGION}
@@ -111,10 +118,6 @@
               {/each}
             </Select.Content>
           </Select.Root>
-          <Field.Description>
-            エターナスのときだけ、ポイントの代わりにリーダーボードの順位（例: アジア
-            123位）を出します。更新は 1 時間ごとで、順位が分からないときはポイントを出します
-          </Field.Description>
         </Field.Field>
 
         <Field.Field>

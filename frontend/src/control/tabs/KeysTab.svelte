@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Help from "../parts/Help.svelte";
   import ChevronIcon from "@lucide/svelte/icons/chevron-down";
   import { Badge } from "$lib/components/ui/badge";
   import { Button } from "$lib/components/ui/button";
@@ -82,11 +83,12 @@
 <div class="flex flex-col gap-6">
   <Card.Root>
     <Card.Header>
-      <Card.Title>API キー</Card.Title>
-      <Card.Description>
-        「最高精度」や、工程ごとに選んだ有料のモデルに要ります。「おすすめ」と Chrome
-        のモードには要りません。キーは OS の資格情報ストアに保存します
-      </Card.Description>
+      <Card.Title class="flex items-center gap-1.5"
+        >API キー<Help
+          >「最高精度」や、工程ごとに選んだ有料のモデルに要ります。「おすすめ」と Chrome
+          のモードには要りません。キーは OS の資格情報ストアに保存します</Help
+        ></Card.Title
+      >
     </Card.Header>
     <Card.Content>
       <Field.Group>

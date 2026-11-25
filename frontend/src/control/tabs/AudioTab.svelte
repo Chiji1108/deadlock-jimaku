@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Help from "../parts/Help.svelte";
   import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
   import { Button } from "$lib/components/ui/button";
   import * as Card from "$lib/components/ui/card";
@@ -43,8 +44,9 @@
 <div class="flex flex-col gap-6">
   <Card.Root>
     <Card.Header>
-      <Card.Title>マイク</Card.Title>
-      <Card.Description>配信に乗せている声のマイクを選んでください</Card.Description>
+      <Card.Title class="flex items-center gap-1.5"
+        >マイク<Help>配信に乗せている声のマイクを選んでください</Help></Card.Title
+      >
     </Card.Header>
     <Card.Content class="flex flex-col gap-5">
       <Field.Field>

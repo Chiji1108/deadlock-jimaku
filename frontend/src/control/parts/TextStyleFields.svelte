@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Help from "./Help.svelte";
   import type { Snippet } from "svelte";
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
   import { Button } from "$lib/components/ui/button";
@@ -56,9 +57,13 @@
 
 <div class="flex flex-col gap-6">
   <Field.Field>
-    <Field.Label>文字の見た目</Field.Label>
+    <Field.Label
+      >文字の見た目<Help
+        >Google Fonts のフォントと、この PC
+        に入っているフォントから選べます。太字の面がないフォントは、太字を合成して描きます</Help
+      ></Field.Label
+    >
     {@render fonts()}
-    <Field.Description>太字の面がないフォントは、太字を合成して描きます</Field.Description>
   </Field.Field>
 
   {@render band?.()}

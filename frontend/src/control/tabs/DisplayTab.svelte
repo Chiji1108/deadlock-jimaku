@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Help from "../parts/Help.svelte";
   import PlayIcon from "@lucide/svelte/icons/play";
   import AlignCenterIcon from "@lucide/svelte/icons/text-align-center";
   import AlignEndIcon from "@lucide/svelte/icons/text-align-end";
@@ -87,9 +88,9 @@
     <Card.Content class="flex flex-col gap-6">
       <Field.Group>
         <Field.Field>
-          <Field.Label>揃え</Field.Label>
-          <Field.Description
-            >OBS で字幕を置く位置に合わせます（画面の左に置くなら左寄せ）</Field.Description
+          <Field.Label
+            >揃え<Help>OBS で字幕を置く位置に合わせます（画面の左に置くなら左寄せ）</Help
+            ></Field.Label
           >
           <ToggleGroup.Root
             type="single"
@@ -145,9 +146,6 @@
           ]}
         >
           {#snippet fonts()}
-            <Field.Description>
-              Google Fonts のフォントと、この PC に入っているフォントから言語ごとに選べます
-            </Field.Description>
             {#each languages as language (language)}
               <FontPicker
                 target={{ kind: "subtitle", language }}
@@ -160,9 +158,9 @@
           {#snippet band()}
             <Field.Field orientation="horizontal">
               <Field.Content>
-                <Field.Label>半透明の帯</Field.Label>
-                <Field.Description
-                  >明るい場面でも読めるよう、行の後ろに帯を敷きます</Field.Description
+                <Field.Label
+                  >半透明の帯<Help>明るい場面でも読めるよう、行の後ろに帯を敷きます</Help
+                  ></Field.Label
                 >
               </Field.Content>
               <Switch
@@ -247,9 +245,9 @@
 
         <Field.Field orientation="horizontal">
           <Field.Content>
-            <Field.Label for="furigana">ふりがなを付ける</Field.Label>
-            <Field.Description
-              >漢字に読みを付けます（日本語を学んでいる視聴者向け）</Field.Description
+            <Field.Label for="furigana"
+              >ふりがなを付ける<Help>漢字に読みを付けます（日本語を学んでいる視聴者向け）</Help
+              ></Field.Label
             >
           </Field.Content>
           <Switch

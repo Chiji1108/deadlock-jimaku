@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Help from "../parts/Help.svelte";
   import CircleAlertIcon from "@lucide/svelte/icons/circle-alert";
   import * as Alert from "$lib/components/ui/alert";
   import * as Card from "$lib/components/ui/card";
@@ -40,10 +41,11 @@
 
   <Card.Root>
     <Card.Header>
-      <Card.Title>アイテム説明オーバーレイ</Card.Title>
-      <Card.Description>
-        字幕でアイテム名が出たら、そのアイテムの説明をゲーム内と同じカードで出します
-      </Card.Description>
+      <Card.Title class="flex items-center gap-1.5"
+        >アイテム説明オーバーレイ<Help
+          >字幕でアイテム名が出たら、そのアイテムの説明をゲーム内と同じカードで出します</Help
+        ></Card.Title
+      >
     </Card.Header>
     <Card.Content class="flex flex-col gap-6">
       {#if !s.deadlockMode}
@@ -55,13 +57,14 @@
       <Field.Group>
         <Field.Field>
           <div class="flex items-center justify-between">
-            <Field.Label>出しておく時間</Field.Label>
+            <Field.Label
+              >出しておく時間<Help
+                >続けて話したアイテムは順番に 1
+                枚ずつ出します。出しているアイテムをもう一度話すと、最初から数え直します</Help
+              ></Field.Label
+            >
             <ItemHoldDialog />
           </div>
-          <Field.Description>
-            続けて話したアイテムは順番に 1
-            枚ずつ出します。出しているアイテムをもう一度話すと、最初から数え直します
-          </Field.Description>
           <ToggleGroup.Root
             type="single"
             variant="outline"
@@ -78,7 +81,9 @@
           {/if}
         </Field.Field>
         <Field.Field>
-          <Field.Label>説明の言語</Field.Label>
+          <Field.Label
+            >説明の言語<Help>カードが対応していない言語は英語で出します</Help></Field.Label
+          >
           <Select.Root
             type="single"
             value={language}
@@ -98,16 +103,16 @@
               {/each}
             </Select.Content>
           </Select.Root>
-          <Field.Description>カードが対応していない言語は英語で出します</Field.Description>
         </Field.Field>
         <Field.Field>
-          <Field.Label>カードの位置</Field.Label>
+          <Field.Label
+            >カードの位置<Help>OBS のソースの箱の中で、カードを寄せる位置です</Help></Field.Label
+          >
           <AnchorPicker
             label="カードの位置"
             value={c.anchor}
             onchange={(anchor) => panel.update({ itemCards: { anchor } })}
           />
-          <Field.Description>OBS のソースの箱の中で、カードを寄せる位置です</Field.Description>
         </Field.Field>
       </Field.Group>
     </Card.Content>

@@ -1,6 +1,7 @@
 <script lang="ts">
   // 「モード」のタブ。モードを選ぶのはここだけ（「マイクと翻訳」は今のモードを出すだけ）。モードを選ぶと工程ごとの作り方がまとめて決まり、工程ごとにも変えられる（DESIGN.md 9.6）。
   // 押したらすぐ保存する
+  import Help from "../parts/Help.svelte";
   import ChevronIcon from "@lucide/svelte/icons/chevron-down";
   import { Badge } from "$lib/components/ui/badge";
   import { Button } from "$lib/components/ui/button";
@@ -67,18 +68,25 @@
 <div class="flex flex-col gap-6">
   <Card.Root>
     <Card.Header>
-      <Card.Title>字幕をどこで作るか</Card.Title>
-      <Card.Description>正確さ、速さ、料金、音声の送り先が変わります</Card.Description>
+      <Card.Title class="flex items-center gap-1.5"
+        >字幕をどこで作るか<Help>
+          <p>正確さ、速さ、料金、音声の送り先が変わります。切り替えると、字幕は始め直します</p>
+          <p>
+            料金は、話し続けた 1 時間の目安です（1 ドル {YEN_PER_USD} 円）。正確さと速さは、デドロ字幕で測った値です
+          </p>
+        </Help></Card.Title
+      >
     </Card.Header>
     <Card.Content><ModePicker /></Card.Content>
   </Card.Root>
 
   <Card.Root>
     <Card.Header>
-      <Card.Title>工程ごとに選ぶ</Card.Title>
-      <Card.Description>
-        モードは、下の工程の組み合わせです。工程ごとに変えると「カスタム」になります
-      </Card.Description>
+      <Card.Title class="flex items-center gap-1.5"
+        >工程ごとに選ぶ<Help
+          >モードは、下の工程の組み合わせです。工程ごとに変えると「カスタム」になります</Help
+        ></Card.Title
+      >
     </Card.Header>
     <Card.Content class="flex flex-col gap-3">
       <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
@@ -154,9 +162,4 @@
     </Card.Root>
   {/each}
   <LocalGpu />
-  {#if stages}
-    <p class="text-sm text-muted-foreground">
-      料金は、話し続けた 1 時間の目安です（1 ドル {YEN_PER_USD} 円）。正確さと速さは、デドロ字幕で測った値です。切り替えると、字幕は始め直します
-    </p>
-  {/if}
 </div>

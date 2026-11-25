@@ -2,6 +2,7 @@
   // 「プロフィール」のタブ。人の辞書（自分と、よく一緒に遊ぶ人）の、名前・呼ばれ方・アイコンを入れる。
   // 入れた名前は、ヒーローの名前と同じように、字幕で強調してアイコンを付け、翻訳ではその言語の名前にする（DESIGN.md 9.12）。
   // この PC にだけ保存する。変えたらすぐ保存する
+  import Help from "../parts/Help.svelte";
   import ImageIcon from "@lucide/svelte/icons/image";
   import LinkIcon from "@lucide/svelte/icons/link";
   import TrashIcon from "@lucide/svelte/icons/trash-2";
@@ -244,29 +245,31 @@
       {/each}
     </div>
     <Field.Field>
-      <Field.Label for="{person.id}-aliases">呼ばれ方</Field.Label>
+      <Field.Label for="{person.id}-aliases"
+        >呼ばれ方<Help
+          >あだ名など。ひらがなとカタカナの違いは自動で拾います。漢字の名前は、かなも足してください</Help
+        ></Field.Label
+      >
       <Input
         id="{person.id}-aliases"
         placeholder="あだ名など。「、」で区切る"
         value={person.aliases.join("、")}
         onchange={(e) => realias(person, e.currentTarget.value)}
       />
-      <Field.Description>
-        あだ名など。ひらがなとカタカナの違いは自動で拾います。漢字の名前は、かなも足してください
-      </Field.Description>
     </Field.Field>
     {#if person.me}
       <Field.Field>
-        <Field.Label for="{person.id}-first-person">一人称</Field.Label>
+        <Field.Label for="{person.id}-first-person"
+          >一人称<Help
+            >字幕の「私」「俺」などにも、自分のアイコンが付きます（翻訳は変わりません）。「自分」は相手を指すこともあるので、入れないのがおすすめです</Help
+          ></Field.Label
+        >
         <Input
           id="{person.id}-first-person"
           placeholder="私、わたし、俺、僕 など。「、」で区切る"
           value={person.firstPerson.join("、")}
           onchange={(e) => change(person.id, { firstPerson: words(e.currentTarget.value) })}
         />
-        <Field.Description>
-          字幕の「私」「俺」などにも、自分のアイコンが付きます（翻訳は変わりません）。「自分」は相手を指すこともあるので、入れないのがおすすめです
-        </Field.Description>
       </Field.Field>
     {/if}
   </div>
@@ -296,10 +299,17 @@
   <div class="flex flex-col gap-6">
     <Card.Root>
       <Card.Header>
-        <Card.Title>自分</Card.Title>
-        <Card.Description>
-          字幕で自分の名前が、ヒーローの名前と同じように強調されます。翻訳では、その言語の名前になります
-        </Card.Description>
+        <Card.Title class="flex items-center gap-1.5"
+          >自分<Help>
+            <p>
+              字幕で自分の名前が、ヒーローの名前と同じように強調されます。翻訳では、その言語の名前になります
+            </p>
+            <p>
+              名前とアイコンは、この PC
+              にだけ保存します。名前は、用語と同じように、文字起こしや翻訳のサービスに送られることがあります（Chrome・Chrome+・ローカルのモードでは送りません）。アイコンは送りません
+            </p>
+          </Help></Card.Title
+        >
       </Card.Header>
       <Card.Content class="flex flex-col gap-4">
         {#if me}
@@ -324,10 +334,9 @@
         <Card.Title class="flex items-center gap-2">
           一緒に遊ぶ人
           {#if others.length}<Badge variant="secondary">{others.length}</Badge>{/if}
-        </Card.Title>
-        <Card.Description>
-          よく名前を呼ぶ人を入れておくと、文字起こしが名前を書き間違えにくくなります
-        </Card.Description>
+          <Help>よく名前を呼ぶ人を入れておくと、文字起こしが名前を書き間違えにくくなります</Help
+          ></Card.Title
+        >
       </Card.Header>
       <Card.Content class="flex flex-col gap-4">
         {#each others as person (person.id)}
@@ -350,11 +359,12 @@
 
     <Card.Root>
       <Card.Header>
-        <Card.Title>書き出しと読み込み</Card.Title>
-        <Card.Description>
-          アイコンごと 1
-          つのファイルにして、一緒に配信する人に渡せます。読み込むと、一覧に足されます
-        </Card.Description>
+        <Card.Title class="flex items-center gap-1.5"
+          >書き出しと読み込み<Help
+            >アイコンごと 1
+            つのファイルにして、一緒に配信する人に渡せます。読み込むと、一覧に足されます</Help
+          ></Card.Title
+        >
       </Card.Header>
       <Card.Content class="flex flex-wrap gap-2">
         <Button variant="outline" disabled={!people.length} onclick={exportPeople}>
@@ -369,10 +379,5 @@
         <input type="file" accept="application/json,.json" class="hidden" onchange={importPeople} />
       </Card.Content>
     </Card.Root>
-
-    <p class="text-sm text-muted-foreground">
-      名前とアイコンは、この PC
-      にだけ保存します。名前は、用語と同じように、文字起こしや翻訳のサービスに送られることがあります（Chrome・Chrome+・ローカルのモードでは送りません）。アイコンは送りません
-    </p>
   </div>
 </OverlayPage>
