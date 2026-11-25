@@ -4,9 +4,21 @@ import type { Totals } from "./Totals";
 
 export type StatsView = { 
 /**
- * 今月（PC の時刻の月）に始めた回の合計
+ * 今日（PC の時刻で 0 時から）に始めた回の合計
+ */
+today: Totals, 
+/**
+ * 今週（月曜の 0 時から）に始めた回の合計
+ */
+week: Totals, 
+/**
+ * 今月（1 日の 0 時から）に始めた回の合計
  */
 month: Totals, 
+/**
+ * すべての回の合計
+ */
+all: Totals, 
 /**
  * 新しい順に、最近の回
  */

@@ -1,6 +1,6 @@
 //! 字幕の統計。字幕を始めてから止めるまでを 1 回として、確定した字幕から、喋った量と、
 //! 呼んだヒーロー・アイテム・スキルの回数を数える。文そのものは残さず、数だけを `stats.db`（SQLite）に書く。
-//! 「今月」は、見せるときに回ごとの数を足して出す（月ごとの数は持たない）。
+//! 今日・今週・今月・ぜんぶの合計は、見せるときに回ごとの数を足して出す（期間ごとの数は持たない）。
 
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -62,8 +62,14 @@ pub struct Session {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct StatsView {
-    /// 今月（PC の時刻の月）に始めた回の合計
+    /// 今日（PC の時刻で 0 時から）に始めた回の合計
+    pub today: Totals,
+    /// 今週（月曜の 0 時から）に始めた回の合計
+    pub week: Totals,
+    /// 今月（1 日の 0 時から）に始めた回の合計
     pub month: Totals,
+    /// すべての回の合計
+    pub all: Totals,
     /// 新しい順に、最近の回
     pub sessions: Vec<Session>,
 }
@@ -168,7 +174,7 @@ impl Tally {
         self.view.subscribe()
     }
 
-    /// 今の値を数え直す（つながったときに送る。月が変わっていても今の月で出す）
+    /// 今の値を数え直す（つながったときに送る。日付が変わっていても今日の値で出す）
     pub fn view(&self) -> StatsView {
         let db = self.db.lock().unwrap();
         self.publish(&db);
@@ -227,18 +233,13 @@ impl Db {
         Ok(())
     }
 
-    fn view(&self) -> rusqlite::Result<StatsView> {
-        // PC の時刻で今月の初め（epoch ms）
-        let month_start: i64 = self.conn.query_row(
-            "SELECT unixepoch('now', 'localtime', 'start of month', 'utc') * 1000",
-            [],
-            |row| row.get(0),
-        )?;
-        let mut month = self.conn.query_row(
+    /// `since`（epoch ms）以降に始めた回の合計
+    fn totals(&self, since: i64) -> rusqlite::Result<Totals> {
+        let mut totals = self.conn.query_row(
             "SELECT COALESCE(SUM(utterances), 0), COALESCE(SUM(characters), 0),
                 COALESCE(SUM(words), 0)
              FROM sessions WHERE started_at >= ?1",
-            params![month_start],
+            params![since],
             |row| {
                 Ok(Totals {
                     utterances: row.get(0)?,
@@ -252,9 +253,28 @@ impl Db {
             "SELECT n.ref, SUM(n.count) FROM session_names n JOIN sessions s ON s.id = n.session_id
              WHERE s.started_at >= ?1 GROUP BY n.ref",
         )?;
-        month.names = names
-            .query_map(params![month_start], |row| Ok((row.get(0)?, row.get(1)?)))?
+        totals.names = names
+            .query_map(params![since], |row| Ok((row.get(0)?, row.get(1)?)))?
             .collect::<rusqlite::Result<_>>()?;
+        Ok(totals)
+    }
+
+    fn view(&self) -> rusqlite::Result<StatsView> {
+        // PC の時刻で、今日・今週（月曜）・今月の初め（epoch ms）。
+        // 週は、6 日戻ってから次の月曜（その日が月曜ならその日）へ進める
+        let (today, week, month): (i64, i64, i64) = self.conn.query_row(
+            "SELECT unixepoch('now', 'localtime', 'start of day', 'utc') * 1000,
+                unixepoch('now', 'localtime', 'start of day', '-6 days', 'weekday 1', 'utc') * 1000,
+                unixepoch('now', 'localtime', 'start of month', 'utc') * 1000",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )?;
+        let (today, week, month, all) = (
+            self.totals(today)?,
+            self.totals(week)?,
+            self.totals(month)?,
+            self.totals(0)?,
+        );
 
         let live = self.current.filter(|_| self.running);
         let mut recent = self.conn.prepare_cached(
@@ -286,7 +306,13 @@ impl Db {
                 .query_map(params![session.id], |row| Ok((row.get(0)?, row.get(1)?)))?
                 .collect::<rusqlite::Result<_>>()?;
         }
-        Ok(StatsView { month, sessions })
+        Ok(StatsView {
+            today,
+            week,
+            month,
+            all,
+            sessions,
+        })
     }
 }
 
@@ -390,7 +416,10 @@ mod tests {
                 ("hero:13".to_owned(), 2)
             ])
         );
+        assert_eq!(view.today, *s);
+        assert_eq!(view.week, *s);
         assert_eq!(view.month, *s);
+        assert_eq!(view.all, *s);
     }
 
     #[test]
