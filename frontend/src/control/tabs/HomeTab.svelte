@@ -10,7 +10,6 @@
   import ChromeWindow from "../parts/ChromeWindow.svelte";
   import HotkeyCard from "../parts/HotkeyCard.svelte";
   import LevelMeter from "../parts/LevelMeter.svelte";
-  import SilentAlert from "../parts/SilentAlert.svelte";
   import ModeBadges from "../parts/ModeBadges.svelte";
   import Onboarding from "../parts/Onboarding.svelte";
   import OverlayPreview from "../parts/OverlayPreview.svelte";
@@ -106,11 +105,6 @@
             <LevelMeter />
           </div>
         {/if}
-        <SilentAlert>
-          <Button variant="outline" size="sm" onclick={() => (panel.tab = "audio")}>
-            マイクを選ぶ
-          </Button>
-        </SilentAlert>
       </Card.Content>
     </Card.Root>
 

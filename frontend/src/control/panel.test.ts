@@ -73,9 +73,27 @@ test("操作パネルを開いたときに一覧を読む（あとで入れた�
   for (const name of ["settings", "languages", "devices"] as const)
     vi.spyOn(api, name).mockImplementation(never);
   const fonts = vi.spyOn(api, "fonts").mockImplementation(never);
+  vi.stubGlobal("window", new EventTarget());
   const stop = fresh.start();
   expect(fonts).toHaveBeenCalledTimes(1);
   stop();
+  vi.unstubAllGlobals();
+});
+
+test("操作パネルに戻ったら、マイクの一覧を読み直す（あとからつないだイヤホンを拾う）", () => {
+  const fresh = freshPanel();
+  for (const name of ["settings", "languages", "fonts"] as const)
+    vi.spyOn(api, name).mockImplementation(never);
+  const devices = vi.spyOn(api, "devices").mockImplementation(never);
+  const window = new EventTarget();
+  vi.stubGlobal("window", window);
+  const stop = fresh.start();
+  window.dispatchEvent(new Event("focus"));
+  expect(devices).toHaveBeenCalledTimes(2);
+  stop();
+  window.dispatchEvent(new Event("focus"));
+  expect(devices).toHaveBeenCalledTimes(2);
+  vi.unstubAllGlobals();
 });
 
 test("最初の一覧では、PC にないダウンロード済みのフォントだけ読み込む", async () => {
@@ -379,4 +397,20 @@ test("ベータのコードがあるか、要らないモードは、聞かず�
   await fresh.chooseMode(CHROME);
   expect(update.mock.calls).toEqual([[{ engines: BETA }], [{ engines: CHROME }]]);
   expect(fresh.betaOffer).toBeUndefined();
+});
+
+test("字幕に使うマイクは、選んだもの。選んでいなければ OS の既定のマイク", () => {
+  const next = freshPanel();
+  next.devices = [
+    { name: "AirPods", bluetooth: true, default: true },
+    { name: "Yeti", bluetooth: false, default: false },
+  ];
+  const choose = (micDevice: string | null) =>
+    (next.view = { settings: { micDevice } } as unknown as SettingsView);
+  choose(null);
+  expect(next.mic?.bluetooth).toBe(true);
+  choose("Yeti");
+  expect(next.mic?.bluetooth).toBe(false);
+  choose("もうないマイク");
+  expect(next.mic).toBeUndefined();
 });
