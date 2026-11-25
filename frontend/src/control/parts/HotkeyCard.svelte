@@ -1,6 +1,7 @@
 <script lang="ts">
   // どのアプリが前にあっても字幕を始める・止めるキー（設定の `toggleHotkey`）。
   // 登録するのはデスクトップアプリで、押した結果は OS の通知で返る（DESIGN.md 13.6）
+  import Help from "./Help.svelte";
   import * as Card from "$lib/components/ui/card";
   import { Button } from "$lib/components/ui/button";
   import { panel } from "../panel.svelte";
@@ -49,8 +50,12 @@
 
 <Card.Root>
   <Card.Header>
-    <Card.Title>ホットキー</Card.Title>
-    <Card.Description>ゲームをしたまま、キーで字幕を始めたり止めたりできます</Card.Description>
+    <Card.Title class="flex items-center gap-1.5"
+      >ホットキー<Help>
+        ゲームをしたまま、キーで字幕を始めたり止めたりできます。押すと、始めたか止めたかを OS
+        の通知で知らせます。デスクトップアプリが動いている間だけ効きます
+      </Help></Card.Title
+    >
   </Card.Header>
   <Card.Content class="flex flex-col gap-2">
     <div class="flex flex-wrap items-center gap-2">
@@ -74,15 +79,8 @@
         </Button>
       {/if}
     </div>
-    <p class="text-xs text-muted-foreground">
-      {#if listening && hint}
-        {hint}
-      {:else if listening}
-        Esc でやめます
-      {:else}
-        押すと、始めたか止めたかを OS
-        の通知で知らせます。デスクトップアプリが動いている間だけ効きます
-      {/if}
-    </p>
+    {#if listening}
+      <p class="text-xs text-muted-foreground">{hint || "Esc でやめます"}</p>
+    {/if}
   </Card.Content>
 </Card.Root>

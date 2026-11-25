@@ -1,5 +1,6 @@
 <script lang="ts">
   // Steam のアカウント。ランクを取るのに使うので、「ランク」のタブに置く（プロフィールの自分のアイコンも、ここから取れる）
+  import Help from "./Help.svelte";
   import { Button } from "$lib/components/ui/button";
   import * as Card from "$lib/components/ui/card";
   import * as Field from "$lib/components/ui/field";
@@ -18,8 +19,9 @@
 
 <Card.Root>
   <Card.Header>
-    <Card.Title>Steam のアカウント</Card.Title>
-    <Card.Description>つなぐと、ランクのオーバーレイが出ます</Card.Description>
+    <Card.Title class="flex items-center gap-1.5"
+      >Steam のアカウント<Help>つなぐと、ランクのオーバーレイが出ます</Help></Card.Title
+    >
   </Card.Header>
   <Card.Content>
     <form
@@ -29,7 +31,12 @@
       }}
     >
       <Field.Field>
-        <Field.Label for="account">フレンドコード</Field.Label>
+        <Field.Label for="account"
+          >フレンドコード<Help
+            >Steam の「フレンド」→「フレンドを追加」に出ている数字です（SteamID64
+            でも可）。空にすると、つながりを切ります</Help
+          ></Field.Label
+        >
         <div class="flex gap-2">
           <Input
             id="account"
@@ -40,10 +47,6 @@
           />
           <Button type="submit" disabled={account === saved()}>保存</Button>
         </div>
-        <Field.Description>
-          Steam の「フレンド」→「フレンドを追加」に出ている数字です（SteamID64
-          でも可）。空にすると、つながりを切ります
-        </Field.Description>
       </Field.Field>
     </form>
   </Card.Content>

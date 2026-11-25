@@ -1,6 +1,7 @@
 <script lang="ts">
   // 開いたときの画面。配信の間に見るものを 1 つに集める: 状態、今出ている字幕、マイクに届いている音、今のモード、言語。
   // 広いときは 2 列にして、スクロールせずに見渡せるようにする。細かい設定は、それぞれのタブへ送る（DESIGN.md 13 章）
+  import Help from "../parts/Help.svelte";
   import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
   import PlayIcon from "@lucide/svelte/icons/play";
   import SparklesIcon from "@lucide/svelte/icons/sparkles";
@@ -111,8 +112,9 @@
     <div class="flex flex-col gap-6">
       <Card.Root>
         <Card.Header>
-          <Card.Title>モード</Card.Title>
-          <Card.Description>字幕をどこで作るかです</Card.Description>
+          <Card.Title class="flex items-center gap-1.5"
+            >モード<Help>字幕をどこで作るかです</Help></Card.Title
+          >
           <Card.Action>
             <Button variant="outline" size="sm" onclick={() => (panel.tab = "engines")}>
               変える<ArrowRightIcon />

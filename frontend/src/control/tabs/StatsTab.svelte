@@ -2,6 +2,7 @@
   // 「統計」のタブ。字幕を始めてから止めるまでを 1 回として、確定した字幕から数えた、
   // 喋った量と、よく呼んだヒーロー・アイテム・スキル。上に今日・今週・今月・ぜんぶの合計、下に回ごとの一覧。
   // 数だけをこの PC に保存する（文そのものは残さない）
+  import Help from "../parts/Help.svelte";
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
   import { Badge } from "$lib/components/ui/badge";
   import * as Card from "$lib/components/ui/card";
@@ -46,12 +47,13 @@
 <div class="flex flex-col gap-6">
   <Card.Root>
     <Card.Header>
-      <Card.Title>合計</Card.Title>
-      <Card.Description>
-        その期間に始めた回の合計です。週は月曜から数えます。確定した字幕から数えます。数だけをこの
-        PC
-        に保存し、文そのものは残しません。名前は、字幕で用語を強調しているときだけ数えます（略称で呼んでも同じものとして数えます）
-      </Card.Description>
+      <Card.Title class="flex items-center gap-1.5"
+        >合計<Help
+          >その期間に始めた回の合計です。週は月曜から数えます。確定した字幕から数えます。数だけをこの
+          PC
+          に保存し、文そのものは残しません。名前は、字幕で用語を強調しているときだけ数えます（略称で呼んでも同じものとして数えます）</Help
+        ></Card.Title
+      >
     </Card.Header>
     <Card.Content class="flex flex-col gap-6">
       <ToggleGroup.Root
@@ -85,11 +87,12 @@
 
   <Card.Root>
     <Card.Header>
-      <Card.Title>回ごと</Card.Title>
-      <Card.Description>
-        字幕を始めてから止めるまでを 1
-        回にします。何も字幕が出なかった回は残しません。押すと、その回に呼んだ名前が出ます
-      </Card.Description>
+      <Card.Title class="flex items-center gap-1.5"
+        >回ごと<Help
+          >字幕を始めてから止めるまでを 1
+          回にします。何も字幕が出なかった回は残しません。押すと、その回に呼んだ名前が出ます</Help
+        ></Card.Title
+      >
     </Card.Header>
     <Card.Content>
       {#if !stats?.sessions.length}

@@ -1,6 +1,7 @@
 <script lang="ts">
   // PC の中の AI（Haas-ja、Whisper、Gemma）に使わせる GPU を選ぶ。GPU が 2 つ以上ある PC でだけ出す
   // （内蔵の GPU と、あとから付けた GPU がある PC。DESIGN.md 9.11）
+  import Help from "./Help.svelte";
   import * as Card from "$lib/components/ui/card";
   import * as Select from "$lib/components/ui/select";
   import type { Gpus } from "../../generated/Gpus";
@@ -21,11 +22,12 @@
 {#if listed && listed.gpus.length > 1}
   <Card.Root>
     <Card.Header>
-      <Card.Title>ローカルの AI に使う GPU</Card.Title>
-      <Card.Description>
-        自動は、内蔵でない GPU を使います。ゲームと分けたいときは、内蔵の GPU
-        を選べます（遅くなります）
-      </Card.Description>
+      <Card.Title class="flex items-center gap-1.5"
+        >ローカルの AI に使う GPU<Help
+          >自動は、内蔵でない GPU を使います。ゲームと分けたいときは、内蔵の GPU
+          を選べます（遅くなります）</Help
+        ></Card.Title
+      >
     </Card.Header>
     <Card.Content>
       <Select.Root
