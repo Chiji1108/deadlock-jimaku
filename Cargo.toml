@@ -9,3 +9,8 @@ license-file = "LICENSE.md"
 
 [workspace.dependencies]
 tauri = "2.12.5"
+
+# 依存クレートのデバッグ情報は作らない（target が大きくなりすぎるのを防ぐ）。
+# 自分のクレートはそのまま。依存の中をデバッガで追いたいときだけ、ここを消す
+[profile.dev.package."*"]
+debug = false
