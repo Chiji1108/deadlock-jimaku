@@ -23,7 +23,9 @@
   const stats = $derived(panel.stats?.[period]);
   const lang = $derived(panel.settings?.micLanguage ?? "ja");
   // 空白で区切らない言語は文字数、ほかは語の数で見せる
-  const byCharacter = $derived(["ja", "zh"].some((l) => lang === l || lang.startsWith(`${l}-`)));
+  const byCharacter = $derived(
+    ["ja", "zh", "th", "lo", "my", "km"].some((l) => lang === l || lang.startsWith(`${l}-`)),
+  );
   const amount = $derived(
     byCharacter
       ? `${(stats?.characters ?? 0).toLocaleString()} 文字`
@@ -80,7 +82,9 @@
   <Card.Root>
     <Card.Header>
       <Card.Title>よく呼んだ名前</Card.Title>
-      <Card.Description>略称で呼んでも、同じものとして数えます</Card.Description>
+      <Card.Description
+        >略称で呼んでも、同じものとして数えます。字幕で用語を強調しているときだけ数えます</Card.Description
+      >
     </Card.Header>
     <Card.Content class="grid gap-6 sm:grid-cols-3">
       {#each KINDS as k (k.kind)}
