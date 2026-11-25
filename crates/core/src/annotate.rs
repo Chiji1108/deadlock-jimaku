@@ -586,7 +586,8 @@ mod tests {
 
     #[tokio::test]
     async fn the_table_follows_the_glossary_and_the_status_ends_with_the_annotator() {
-        let store = Store::new(Ok(Settings::default()), std::path::PathBuf::new());
+        let dir = tempfile::tempdir().unwrap();
+        let store = Store::new(Ok(Settings::default()), dir.path().to_owned());
         let mut annotator = Annotator::new(store.clone(), &Settings::default()).await;
         assert!(
             store

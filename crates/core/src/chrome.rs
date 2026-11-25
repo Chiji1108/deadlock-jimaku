@@ -682,7 +682,8 @@ mod tests {
             transcription_enabled: true,
             ..Settings::default()
         };
-        Store::new(Ok(settings), std::path::PathBuf::new())
+        // 字幕の処理はテストより長く動くので、データの置き場所は消さずに残す
+        Store::new(Ok(settings), tempfile::tempdir().unwrap().keep())
     }
 
     async fn watch_fake_chrome_for(store: Arc<Store>) -> (JoinHandle<anyhow::Error>, FakeChrome) {
@@ -803,7 +804,8 @@ mod tests {
             translate_to: vec!["en".into()],
             ..Settings::default()
         };
-        let store = Store::new(Ok(settings.clone()), std::path::PathBuf::new());
+        let dir = tempfile::tempdir().unwrap();
+        let store = Store::new(Ok(settings.clone()), dir.path().to_owned());
         let messages = store.subscribe();
         let annotator = Annotator::new(store.clone(), &settings).await;
         let finisher = Arc::new(Finisher::new(

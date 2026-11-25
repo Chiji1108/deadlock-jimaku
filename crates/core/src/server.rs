@@ -668,7 +668,8 @@ mod tests {
 
     /// 手元のポートで動かす。アドレス（`127.0.0.1:…`）を返す
     async fn serve_on_any_port() -> String {
-        serve_with_data(PathBuf::new()).await
+        // サーバーはテストより長く動くので、データの置き場所は消さずに残す
+        serve_with_data(tempfile::tempdir().unwrap().keep()).await
     }
 
     async fn serve_with_data(data_dir: PathBuf) -> String {
@@ -938,7 +939,8 @@ mod tests {
     async fn the_chrome_page_sends_text_and_status_until_it_closes() {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
-        let store = Store::new(Ok(Settings::default()), PathBuf::new());
+        let dir = tempfile::tempdir().unwrap();
+        let store = Store::new(Ok(Settings::default()), dir.path().to_owned());
         tokio::spawn(serve(listener, store.clone()));
         let mut events = store.subscribe_chrome();
         let mut messages = store.subscribe();
@@ -1003,7 +1005,8 @@ mod tests {
     async fn a_new_page_replaces_the_old_one_and_keeps_its_own_state() {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
-        let store = Store::new(Ok(Settings::default()), PathBuf::new());
+        let dir = tempfile::tempdir().unwrap();
+        let store = Store::new(Ok(Settings::default()), dir.path().to_owned());
         tokio::spawn(serve(listener, store.clone()));
         let mut messages = store.subscribe();
 

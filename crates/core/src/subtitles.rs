@@ -806,7 +806,8 @@ mod tests {
             engines: crate::settings::Engines::STANDARD,
             ..Settings::default()
         };
-        let store = Store::new(Ok(settings.clone()), std::path::PathBuf::new());
+        let dir = tempfile::tempdir().unwrap();
+        let store = Store::new(Ok(settings.clone()), dir.path().to_owned());
         let (finished_tx, finished_rx) = mpsc::channel(64);
         let cloud = Cloud {
             finisher: Arc::new(Finisher::new(
