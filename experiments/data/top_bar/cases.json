@@ -1,0 +1,32 @@
+[
+  {
+    "file": "before_start.png",
+    "note": "試合が始まる前のカウントダウン",
+    "screen": [1920, 1080],
+    "heroes": ["McGinnis", "Kelvin", "The Doorman", "Rat King", "Vindicta", "Dynamo", "Rem", "Yamato", "Bebop", "Haze", "Abrams", "Infernus"]
+  },
+  {
+    "file": "in_match.png",
+    "note": "試合中",
+    "screen": [1920, 1080],
+    "heroes": ["McGinnis", "Kelvin", "The Doorman", "Rat King", "Vindicta", "Dynamo", "Rem", "Yamato", "Bebop", "Haze", "Abrams", "Infernus"]
+  },
+  {
+    "file": "dead.png",
+    "note": "3 枠目（自分）が死亡中で暗い。9 枠目はキルの直後で大きく出ている",
+    "screen": [1920, 1080],
+    "heroes": ["McGinnis", "Kelvin", "The Doorman", "Rat King", "Vindicta", "Dynamo", "Rem", "Yamato", "Bebop", "Haze", "Abrams", "Infernus"]
+  },
+  {
+    "file": "gloat.png",
+    "note": "サンドボックスの 2 対 1。6 枠目（自分）は調子がいいときの絵で、ふだんの絵と違う。7 枠目は死亡中で暗い。右上のアバターは黒く塗った",
+    "screen": [1920, 1080],
+    "heroes": [null, null, null, null, "Infernus", "The Doorman", "Abrams", null, null, null, null, null]
+  },
+  {
+    "file": "critical.png",
+    "note": "サンドボックスの 2 対 1。6 枠目（自分）は瀕死のときの絵で、ふだんの絵と違う。右上のアバターは黒く塗った",
+    "screen": [1920, 1080],
+    "heroes": [null, null, null, null, "Infernus", "The Doorman", "Abrams", null, null, null, null, null]
+  }
+]

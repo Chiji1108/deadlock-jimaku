@@ -1,0 +1,519 @@
+{
+  "threshold": 0.800000011920929,
+  "heroes": 44,
+  "correct": 55,
+  "unknown": 5,
+  "wrong": 0,
+  "cases": [
+    {
+      "file": "before_start.png",
+      "note": "試合が始まる前のカウントダウン",
+      "slots": [
+        {
+          "expected": "McGinnis",
+          "answer": "McGinnis",
+          "best": "McGinnis",
+          "score": 0.9488127827644348,
+          "second": 0.47849172353744507,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Kelvin",
+          "answer": "Kelvin",
+          "best": "Kelvin",
+          "score": 0.9495172500610352,
+          "second": 0.47303077578544617,
+          "verdict": "correct"
+        },
+        {
+          "expected": "The Doorman",
+          "answer": "The Doorman",
+          "best": "The Doorman",
+          "score": 0.951290488243103,
+          "second": 0.5640518665313721,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Rat King",
+          "answer": "Rat King",
+          "best": "Rat King",
+          "score": 0.9560392498970032,
+          "second": 0.297693133354187,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Vindicta",
+          "answer": "Vindicta",
+          "best": "Vindicta",
+          "score": 0.9641962647438049,
+          "second": 0.45429089665412903,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Dynamo",
+          "answer": "Dynamo",
+          "best": "Dynamo",
+          "score": 0.9421709775924683,
+          "second": 0.2796713411808014,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Rem",
+          "answer": "Rem",
+          "best": "Rem",
+          "score": 0.9760398864746094,
+          "second": 0.4178844094276428,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Yamato",
+          "answer": "Yamato",
+          "best": "Yamato",
+          "score": 0.9551461338996887,
+          "second": 0.3689570128917694,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Bebop",
+          "answer": "Bebop",
+          "best": "Bebop",
+          "score": 0.9498381018638611,
+          "second": 0.3475704789161682,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Haze",
+          "answer": "Haze",
+          "best": "Haze",
+          "score": 0.9296773076057434,
+          "second": 0.3232435882091522,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Abrams",
+          "answer": "Abrams",
+          "best": "Abrams",
+          "score": 0.9543682336807251,
+          "second": 0.26649394631385803,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Infernus",
+          "answer": "Infernus",
+          "best": "Infernus",
+          "score": 0.9622482061386108,
+          "second": 0.3259539306163788,
+          "verdict": "correct"
+        }
+      ]
+    },
+    {
+      "file": "in_match.png",
+      "note": "試合中",
+      "slots": [
+        {
+          "expected": "McGinnis",
+          "answer": "McGinnis",
+          "best": "McGinnis",
+          "score": 0.9501850605010986,
+          "second": 0.4723277986049652,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Kelvin",
+          "answer": "Kelvin",
+          "best": "Kelvin",
+          "score": 0.9557775855064392,
+          "second": 0.46685248613357544,
+          "verdict": "correct"
+        },
+        {
+          "expected": "The Doorman",
+          "answer": "The Doorman",
+          "best": "The Doorman",
+          "score": 0.9521629810333252,
+          "second": 0.5341730713844299,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Rat King",
+          "answer": "Rat King",
+          "best": "Rat King",
+          "score": 0.9514797329902649,
+          "second": 0.49800539016723633,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Vindicta",
+          "answer": "Vindicta",
+          "best": "Vindicta",
+          "score": 0.9654907584190369,
+          "second": 0.4298490881919861,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Dynamo",
+          "answer": "Dynamo",
+          "best": "Dynamo",
+          "score": 0.9432113766670227,
+          "second": 0.2773370146751404,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Rem",
+          "answer": "Rem",
+          "best": "Rem",
+          "score": 0.9759692549705505,
+          "second": 0.427173376083374,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Yamato",
+          "answer": "Yamato",
+          "best": "Yamato",
+          "score": 0.9556711316108704,
+          "second": 0.3667401969432831,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Bebop",
+          "answer": "Bebop",
+          "best": "Bebop",
+          "score": 0.9503180980682373,
+          "second": 0.3425765931606293,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Haze",
+          "answer": "Haze",
+          "best": "Haze",
+          "score": 0.9282616376876831,
+          "second": 0.30636289715766907,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Abrams",
+          "answer": "Abrams",
+          "best": "Abrams",
+          "score": 0.953662633895874,
+          "second": 0.24926143884658813,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Infernus",
+          "answer": "Infernus",
+          "best": "Infernus",
+          "score": 0.9623225331306458,
+          "second": 0.3249412477016449,
+          "verdict": "correct"
+        }
+      ]
+    },
+    {
+      "file": "dead.png",
+      "note": "3 枠目（自分）が死亡中で暗い。9 枠目はキルの直後で大きく出ている",
+      "slots": [
+        {
+          "expected": "McGinnis",
+          "answer": "McGinnis",
+          "best": "McGinnis",
+          "score": 0.9484290480613708,
+          "second": 0.5256037712097168,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Kelvin",
+          "answer": "Kelvin",
+          "best": "Kelvin",
+          "score": 0.9498646855354309,
+          "second": 0.4885859191417694,
+          "verdict": "correct"
+        },
+        {
+          "expected": "The Doorman",
+          "answer": null,
+          "best": "The Doorman",
+          "score": 0.5182016491889954,
+          "second": 0.4124182164669037,
+          "verdict": "unknown"
+        },
+        {
+          "expected": "Rat King",
+          "answer": "Rat King",
+          "best": "Rat King",
+          "score": 0.9565374255180359,
+          "second": 0.3362991213798523,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Vindicta",
+          "answer": "Vindicta",
+          "best": "Vindicta",
+          "score": 0.9656006693840027,
+          "second": 0.44334661960601807,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Dynamo",
+          "answer": "Dynamo",
+          "best": "Dynamo",
+          "score": 0.9442304372787476,
+          "second": 0.27116039395332336,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Rem",
+          "answer": "Rem",
+          "best": "Rem",
+          "score": 0.975983202457428,
+          "second": 0.4455930292606354,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Yamato",
+          "answer": "Yamato",
+          "best": "Yamato",
+          "score": 0.955145001411438,
+          "second": 0.3716205656528473,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Bebop",
+          "answer": null,
+          "best": "Viscous",
+          "score": 0.3529508709907532,
+          "second": 0.23230865597724915,
+          "verdict": "unknown"
+        },
+        {
+          "expected": "Haze",
+          "answer": "Haze",
+          "best": "Haze",
+          "score": 0.922639787197113,
+          "second": 0.3710807263851166,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Abrams",
+          "answer": "Abrams",
+          "best": "Abrams",
+          "score": 0.9463948011398315,
+          "second": 0.29181012511253357,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Infernus",
+          "answer": "Infernus",
+          "best": "Infernus",
+          "score": 0.9622772932052612,
+          "second": 0.3238527476787567,
+          "verdict": "correct"
+        }
+      ]
+    },
+    {
+      "file": "gloat.png",
+      "note": "サンドボックスの 2 対 1。6 枠目（自分）は調子がいいときの絵で、ふだんの絵と違う。7 枠目は死亡中で暗い。右上のアバターは黒く塗った",
+      "slots": [
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Paige",
+          "score": 0.4813602864742279,
+          "second": 0.4260200560092926,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "The Doorman",
+          "score": 0.5166766047477722,
+          "second": 0.5087682008743286,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Apollo",
+          "score": 0.47776609659194946,
+          "second": 0.46646085381507874,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Paige",
+          "score": 0.5324532985687256,
+          "second": 0.4665886461734772,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Infernus",
+          "answer": "Infernus",
+          "best": "Infernus",
+          "score": 0.9639061689376831,
+          "second": 0.43034085631370544,
+          "verdict": "correct"
+        },
+        {
+          "expected": "The Doorman",
+          "answer": null,
+          "best": "The Doorman",
+          "score": 0.47403866052627563,
+          "second": 0.4644218981266022,
+          "verdict": "unknown"
+        },
+        {
+          "expected": "Abrams",
+          "answer": null,
+          "best": "Abrams",
+          "score": 0.47958821058273315,
+          "second": 0.3442213833332062,
+          "verdict": "unknown"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Paige",
+          "score": 0.5560714602470398,
+          "second": 0.495089054107666,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Paige",
+          "score": 0.5504913330078125,
+          "second": 0.4888263940811157,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Paige",
+          "score": 0.5696719288825989,
+          "second": 0.5079472661018372,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Paige",
+          "score": 0.5600157380104065,
+          "second": 0.48673850297927856,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Paige",
+          "score": 0.49586766958236694,
+          "second": 0.47582298517227173,
+          "verdict": "correct"
+        }
+      ]
+    },
+    {
+      "file": "critical.png",
+      "note": "サンドボックスの 2 対 1。6 枠目（自分）は瀕死のときの絵で、ふだんの絵と違う。右上のアバターは黒く塗った",
+      "slots": [
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Silver",
+          "score": 0.49920299649238586,
+          "second": 0.4956861436367035,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Paige",
+          "score": 0.5220129489898682,
+          "second": 0.5072876811027527,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Apollo",
+          "score": 0.48015639185905457,
+          "second": 0.4487040340900421,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Infernus",
+          "score": 0.5102458000183105,
+          "second": 0.37046536803245544,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Infernus",
+          "answer": "Infernus",
+          "best": "Infernus",
+          "score": 0.9641653299331665,
+          "second": 0.4294991195201874,
+          "verdict": "correct"
+        },
+        {
+          "expected": "The Doorman",
+          "answer": null,
+          "best": "Baba",
+          "score": 0.510880172252655,
+          "second": 0.4759218096733093,
+          "verdict": "unknown"
+        },
+        {
+          "expected": "Abrams",
+          "answer": "Abrams",
+          "best": "Abrams",
+          "score": 0.9530863165855408,
+          "second": 0.2832196354866028,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Apollo",
+          "score": 0.4978311061859131,
+          "second": 0.4865367114543915,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Paige",
+          "score": 0.49711957573890686,
+          "second": 0.4845229387283325,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Paige",
+          "score": 0.5141169428825378,
+          "second": 0.47347673773765564,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Paige",
+          "score": 0.5221937298774719,
+          "second": 0.4745897352695465,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Paige",
+          "score": 0.4950198531150818,
+          "second": 0.4687332808971405,
+          "verdict": "correct"
+        }
+      ]
+    }
+  ]
+}

@@ -52,6 +52,8 @@ rusqlite = { version = "0.43.0", features = ["bundled", "fallible_uint"] }
 # 辞書を組み立てる例（`examples/build_dictionary.rs`）が、MeCab の重みから小さい辞書を作るのに使う
 vibrato = { version = "0.5.3", features = ["train"] }
 tempfile = "3.27.0"
+# 画面からヒーローを読めるかを測る例（`examples/heroes_eval.rs`）が、PNG を読んで縮めるのに使う
+image = { version = "0.25", default-features = false, features = ["png"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2-core-audio = { version = "0.3.2", default-features = false, features = ["std", "AudioHardware"] }
