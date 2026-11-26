@@ -83,7 +83,7 @@ async fn main() -> anyhow::Result<()> {
     let given = std::env::args().nth(1);
     let out = given
         .as_ref()
-        .map(|path| path.replace(".json", ".result.json"));
+        .map(|path| Path::new(path).with_extension("result.json"));
     let cases = screen::cases(given.as_deref().unwrap_or(CASES))?;
     let mut results = Vec::new();
     for (case, frame) in &cases {
@@ -118,7 +118,7 @@ async fn main() -> anyhow::Result<()> {
         results.push((case, reads, started.elapsed()));
     }
     screen::report(
-        out.as_deref().unwrap_or(OUT),
+        out.as_deref().unwrap_or(Path::new(OUT)),
         THRESHOLD,
         images.len(),
         &results,
