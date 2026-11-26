@@ -8,7 +8,7 @@ import type { Token } from "./Token";
  */
 export type Segment = { id: string, 
 /**
- * epoch ms。表示順のキー
+ * epoch ms。表示順のキー。途中の字幕を出さないときなどは、見せ始めた時刻に書き換わる
  */
 startedAt: number, stage: Stage, lang: string, text: string, enriched?: Enriched, 
 /**

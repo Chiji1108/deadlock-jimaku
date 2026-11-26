@@ -173,6 +173,7 @@ fn new_segment() -> Segment {
     Segment {
         id: format!("demo-{started_at}"),
         started_at,
+        spoken_at: started_at,
         stage: Stage::Partial,
         lang: "ja".into(),
         text: String::new(),

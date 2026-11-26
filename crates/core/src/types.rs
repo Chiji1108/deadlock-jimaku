@@ -69,9 +69,13 @@ pub type Translations = BTreeMap<LangCode, Vec<Token>>;
 #[ts(export)]
 pub struct Segment {
     pub id: String,
-    /// epoch ms。表示順のキー
+    /// epoch ms。表示順のキー。途中の字幕を出さないときなどは、見せ始めた時刻に書き換わる
     #[ts(type = "number")]
     pub started_at: u64,
+    /// 話し始めた時刻（epoch ms）。書き換えない。統計に残すだけで、表示には使わないので送らない
+    #[serde(skip)]
+    #[ts(skip)]
+    pub spoken_at: u64,
     pub stage: Stage,
     pub lang: LangCode,
     pub text: String,
