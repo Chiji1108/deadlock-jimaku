@@ -1,0 +1,20 @@
+[
+  {
+    "file": "before_start.png",
+    "note": "試合が始まる前のカウントダウン",
+    "screen": [1920, 1080],
+    "heroes": ["McGinnis", "Kelvin", "The Doorman", "Rat King", "Vindicta", "Dynamo", "Rem", "Yamato", "Bebop", "Haze", "Abrams", "Infernus"]
+  },
+  {
+    "file": "in_match.png",
+    "note": "試合中",
+    "screen": [1920, 1080],
+    "heroes": ["McGinnis", "Kelvin", "The Doorman", "Rat King", "Vindicta", "Dynamo", "Rem", "Yamato", "Bebop", "Haze", "Abrams", "Infernus"]
+  },
+  {
+    "file": "dead.png",
+    "note": "3 枠目（自分）が死亡中で暗い。9 枠目はキルの直後で大きく出ている",
+    "screen": [1920, 1080],
+    "heroes": ["McGinnis", "Kelvin", "The Doorman", "Rat King", "Vindicta", "Dynamo", "Rem", "Yamato", "Bebop", "Haze", "Abrams", "Infernus"]
+  }
+]
