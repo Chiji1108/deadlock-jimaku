@@ -67,14 +67,10 @@
   });
   const until = new Intl.DateTimeFormat("ja-JP", { hour: "2-digit", minute: "2-digit" });
   /** 始めた日時から、止めた時刻まで（日付が変わっていたら、止めた日も） */
-  function span(s: { startedAt: number; endedAt: number; live: boolean }) {
+  function span(s: Session) {
     if (s.live) return `${when.format(s.startedAt)}〜`;
     const sameDay = new Date(s.startedAt).toDateString() === new Date(s.endedAt).toDateString();
     return `${when.format(s.startedAt)}〜${(sameDay ? until : when).format(s.endedAt)}`;
-  }
-  function length(ms: number) {
-    const minutes = Math.max(1, Math.round(ms / 60_000));
-    return minutes < 60 ? `${minutes} 分` : `${Math.floor(minutes / 60)} 時間 ${minutes % 60} 分`;
   }
 </script>
 
@@ -204,7 +200,7 @@
                       {#if s.live}<Badge>字幕を出しています</Badge>{/if}
                     </div>
                     <div class="text-xs text-muted-foreground">
-                      {length((s.live ? panel.now : s.endedAt) - s.startedAt)}
+                      {hoursAndMinutes((s.live ? panel.now : s.endedAt) - s.startedAt)}
                     </div>
                   </div>
                   <div class="text-right tabular-nums">
