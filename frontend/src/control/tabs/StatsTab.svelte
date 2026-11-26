@@ -57,6 +57,12 @@
     minute: "2-digit",
   });
   const until = new Intl.DateTimeFormat("ja-JP", { hour: "2-digit", minute: "2-digit" });
+  /** 始めた日時から、止めた時刻まで（日付が変わっていたら、止めた日も） */
+  function span(s: { startedAt: number; endedAt: number; live: boolean }) {
+    if (s.live) return `${when.format(s.startedAt)}〜`;
+    const sameDay = new Date(s.startedAt).toDateString() === new Date(s.endedAt).toDateString();
+    return `${when.format(s.startedAt)}〜${(sameDay ? until : when).format(s.endedAt)}`;
+  }
   function length(ms: number) {
     const minutes = Math.max(1, Math.round(ms / 60_000));
     return minutes < 60 ? `${minutes} 分` : `${Math.floor(minutes / 60)} 時間 ${minutes % 60} 分`;
@@ -80,7 +86,7 @@
       >
       {#if last}
         <Card.Description>
-          {when.format(last.startedAt)}〜{last.live ? "" : until.format(last.endedAt)}
+          {span(last)}
         </Card.Description>
       {/if}
     </Card.Header>
@@ -184,7 +190,7 @@
                   <div class="min-w-0 flex-1">
                     <div class="flex items-center gap-2">
                       <span class="font-medium">
-                        {when.format(s.startedAt)}〜{s.live ? "" : until.format(s.endedAt)}
+                        {span(s)}
                       </span>
                       {#if s.live}<Badge>字幕を出しています</Badge>{/if}
                     </div>
