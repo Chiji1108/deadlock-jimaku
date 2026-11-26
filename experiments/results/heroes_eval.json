@@ -1,8 +1,8 @@
 {
   "threshold": 0.800000011920929,
-  "cards": 132,
-  "correct": 57,
-  "unknown": 3,
+  "heroes": 44,
+  "correct": 55,
+  "unknown": 5,
   "wrong": 0,
   "cases": [
     {
@@ -30,7 +30,7 @@
           "answer": "The Doorman",
           "best": "The Doorman",
           "score": 0.951290488243103,
-          "second": 0.5853930711746216,
+          "second": 0.5640518665313721,
           "verdict": "correct"
         },
         {
@@ -38,7 +38,7 @@
           "answer": "Rat King",
           "best": "Rat King",
           "score": 0.9560392498970032,
-          "second": 0.3853662312030792,
+          "second": 0.297693133354187,
           "verdict": "correct"
         },
         {
@@ -46,7 +46,7 @@
           "answer": "Vindicta",
           "best": "Vindicta",
           "score": 0.9641962647438049,
-          "second": 0.522983729839325,
+          "second": 0.45429089665412903,
           "verdict": "correct"
         },
         {
@@ -54,7 +54,7 @@
           "answer": "Dynamo",
           "best": "Dynamo",
           "score": 0.9421709775924683,
-          "second": 0.292434424161911,
+          "second": 0.2796713411808014,
           "verdict": "correct"
         },
         {
@@ -62,7 +62,7 @@
           "answer": "Rem",
           "best": "Rem",
           "score": 0.9760398864746094,
-          "second": 0.4185284972190857,
+          "second": 0.4178844094276428,
           "verdict": "correct"
         },
         {
@@ -70,7 +70,7 @@
           "answer": "Yamato",
           "best": "Yamato",
           "score": 0.9551461338996887,
-          "second": 0.37179601192474365,
+          "second": 0.3689570128917694,
           "verdict": "correct"
         },
         {
@@ -78,7 +78,7 @@
           "answer": "Bebop",
           "best": "Bebop",
           "score": 0.9498381018638611,
-          "second": 0.44469010829925537,
+          "second": 0.3475704789161682,
           "verdict": "correct"
         },
         {
@@ -86,7 +86,7 @@
           "answer": "Haze",
           "best": "Haze",
           "score": 0.9296773076057434,
-          "second": 0.38549309968948364,
+          "second": 0.3232435882091522,
           "verdict": "correct"
         },
         {
@@ -102,7 +102,7 @@
           "answer": "Infernus",
           "best": "Infernus",
           "score": 0.9622482061386108,
-          "second": 0.3498062491416931,
+          "second": 0.3259539306163788,
           "verdict": "correct"
         }
       ]
@@ -116,7 +116,7 @@
           "answer": "McGinnis",
           "best": "McGinnis",
           "score": 0.9501850605010986,
-          "second": 0.5052569508552551,
+          "second": 0.4723277986049652,
           "verdict": "correct"
         },
         {
@@ -132,7 +132,7 @@
           "answer": "The Doorman",
           "best": "The Doorman",
           "score": 0.9521629810333252,
-          "second": 0.565569281578064,
+          "second": 0.5341730713844299,
           "verdict": "correct"
         },
         {
@@ -140,7 +140,7 @@
           "answer": "Rat King",
           "best": "Rat King",
           "score": 0.9514797329902649,
-          "second": 0.5428614020347595,
+          "second": 0.49800539016723633,
           "verdict": "correct"
         },
         {
@@ -148,7 +148,7 @@
           "answer": "Vindicta",
           "best": "Vindicta",
           "score": 0.9654907584190369,
-          "second": 0.5070593953132629,
+          "second": 0.4298490881919861,
           "verdict": "correct"
         },
         {
@@ -156,7 +156,7 @@
           "answer": "Dynamo",
           "best": "Dynamo",
           "score": 0.9432113766670227,
-          "second": 0.29547637701034546,
+          "second": 0.2773370146751404,
           "verdict": "correct"
         },
         {
@@ -180,7 +180,7 @@
           "answer": "Bebop",
           "best": "Bebop",
           "score": 0.9503180980682373,
-          "second": 0.44357725977897644,
+          "second": 0.3425765931606293,
           "verdict": "correct"
         },
         {
@@ -188,7 +188,7 @@
           "answer": "Haze",
           "best": "Haze",
           "score": 0.9282616376876831,
-          "second": 0.38402479887008667,
+          "second": 0.30636289715766907,
           "verdict": "correct"
         },
         {
@@ -204,7 +204,7 @@
           "answer": "Infernus",
           "best": "Infernus",
           "score": 0.9623225331306458,
-          "second": 0.3693408668041229,
+          "second": 0.3249412477016449,
           "verdict": "correct"
         }
       ]
@@ -242,7 +242,7 @@
           "answer": "Rat King",
           "best": "Rat King",
           "score": 0.9565374255180359,
-          "second": 0.40817320346832275,
+          "second": 0.3362991213798523,
           "verdict": "correct"
         },
         {
@@ -250,7 +250,7 @@
           "answer": "Vindicta",
           "best": "Vindicta",
           "score": 0.9656006693840027,
-          "second": 0.511760413646698,
+          "second": 0.44334661960601807,
           "verdict": "correct"
         },
         {
@@ -258,7 +258,7 @@
           "answer": "Dynamo",
           "best": "Dynamo",
           "score": 0.9442304372787476,
-          "second": 0.2872970402240753,
+          "second": 0.27116039395332336,
           "verdict": "correct"
         },
         {
@@ -274,15 +274,15 @@
           "answer": "Yamato",
           "best": "Yamato",
           "score": 0.955145001411438,
-          "second": 0.372751921415329,
+          "second": 0.3716205656528473,
           "verdict": "correct"
         },
         {
           "expected": "Bebop",
           "answer": null,
           "best": "Viscous",
-          "score": 0.3536488711833954,
-          "second": 0.2856924831867218,
+          "score": 0.3529508709907532,
+          "second": 0.23230865597724915,
           "verdict": "unknown"
         },
         {
@@ -290,7 +290,7 @@
           "answer": "Haze",
           "best": "Haze",
           "score": 0.922639787197113,
-          "second": 0.38656824827194214,
+          "second": 0.3710807263851166,
           "verdict": "correct"
         },
         {
@@ -306,45 +306,45 @@
           "answer": "Infernus",
           "best": "Infernus",
           "score": 0.9622772932052612,
-          "second": 0.368282675743103,
+          "second": 0.3238527476787567,
           "verdict": "correct"
         }
       ]
     },
     {
       "file": "gloat.png",
-      "note": "サンドボックスの 2 対 1。6 枠目（自分）は調子がいいときの絵、7 枠目は死亡中で暗い。右上のアバターは黒く塗った",
+      "note": "サンドボックスの 2 対 1。6 枠目（自分）は調子がいいときの絵で、ふだんの絵と違う。7 枠目は死亡中で暗い。右上のアバターは黒く塗った",
       "slots": [
         {
           "expected": null,
           "answer": null,
-          "best": "Vyper",
-          "score": 0.5355824828147888,
-          "second": 0.4813602864742279,
+          "best": "Paige",
+          "score": 0.4813602864742279,
+          "second": 0.4260200560092926,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "The Doorman",
+          "score": 0.5166766047477722,
+          "second": 0.5087682008743286,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Apollo",
+          "score": 0.47776609659194946,
+          "second": 0.46646085381507874,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Paige",
-          "score": 0.5552554130554199,
-          "second": 0.5169448852539062,
-          "verdict": "correct"
-        },
-        {
-          "expected": null,
-          "answer": null,
-          "best": "Vyper",
-          "score": 0.6606901288032532,
-          "second": 0.5896628499031067,
-          "verdict": "correct"
-        },
-        {
-          "expected": null,
-          "answer": null,
-          "best": "Vyper",
-          "score": 0.6318506002426147,
-          "second": 0.5808218121528625,
+          "score": 0.5324532985687256,
+          "second": 0.4665886461734772,
           "verdict": "correct"
         },
         {
@@ -352,101 +352,101 @@
           "answer": "Infernus",
           "best": "Infernus",
           "score": 0.9639061689376831,
-          "second": 0.4390702247619629,
+          "second": 0.43034085631370544,
           "verdict": "correct"
         },
         {
           "expected": "The Doorman",
-          "answer": "The Doorman",
+          "answer": null,
           "best": "The Doorman",
-          "score": 0.9308342337608337,
+          "score": 0.47403866052627563,
           "second": 0.4644218981266022,
-          "verdict": "correct"
+          "verdict": "unknown"
         },
         {
           "expected": "Abrams",
           "answer": null,
           "best": "Abrams",
           "score": 0.47958821058273315,
-          "second": 0.3519868552684784,
+          "second": 0.3442213833332062,
           "verdict": "unknown"
         },
         {
           "expected": null,
           "answer": null,
-          "best": "Vyper",
-          "score": 0.6189535856246948,
-          "second": 0.5850584506988525,
+          "best": "Paige",
+          "score": 0.5560714602470398,
+          "second": 0.495089054107666,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Paige",
-          "score": 0.6245825290679932,
-          "second": 0.6139092445373535,
+          "score": 0.5504913330078125,
+          "second": 0.4888263940811157,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Paige",
-          "score": 0.6254732608795166,
-          "second": 0.620956540107727,
+          "score": 0.5696719288825989,
+          "second": 0.5079472661018372,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Paige",
-          "score": 0.6424691081047058,
-          "second": 0.6272252202033997,
+          "score": 0.5600157380104065,
+          "second": 0.48673850297927856,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Paige",
-          "score": 0.5995374917984009,
-          "second": 0.5589580535888672,
+          "score": 0.49586766958236694,
+          "second": 0.47582298517227173,
           "verdict": "correct"
         }
       ]
     },
     {
       "file": "critical.png",
-      "note": "サンドボックスの 2 対 1。6 枠目（自分）は瀕死のときの絵で、下に「CRITICAL」が重なる。右上のアバターは黒く塗った",
+      "note": "サンドボックスの 2 対 1。6 枠目（自分）は瀕死のときの絵で、ふだんの絵と違う。右上のアバターは黒く塗った",
       "slots": [
         {
           "expected": null,
           "answer": null,
-          "best": "Paige",
-          "score": 0.7010318040847778,
-          "second": 0.52918940782547,
+          "best": "Silver",
+          "score": 0.49920299649238586,
+          "second": 0.4956861436367035,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Paige",
-          "score": 0.6466050744056702,
+          "score": 0.5220129489898682,
           "second": 0.5072876811027527,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
-          "best": "Haze",
-          "score": 0.5908530950546265,
-          "second": 0.5420095324516296,
+          "best": "Apollo",
+          "score": 0.48015639185905457,
+          "second": 0.4487040340900421,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
-          "best": "Paige",
-          "score": 0.5380914807319641,
-          "second": 0.5102458000183105,
+          "best": "Infernus",
+          "score": 0.5102458000183105,
+          "second": 0.37046536803245544,
           "verdict": "correct"
         },
         {
@@ -454,16 +454,16 @@
           "answer": "Infernus",
           "best": "Infernus",
           "score": 0.9641653299331665,
-          "second": 0.4306403398513794,
+          "second": 0.4294991195201874,
           "verdict": "correct"
         },
         {
           "expected": "The Doorman",
-          "answer": "The Doorman",
-          "best": "The Doorman",
-          "score": 0.9268959164619446,
-          "second": 0.5379413962364197,
-          "verdict": "correct"
+          "answer": null,
+          "best": "Baba",
+          "score": 0.510880172252655,
+          "second": 0.4759218096733093,
+          "verdict": "unknown"
         },
         {
           "expected": "Abrams",
@@ -476,41 +476,41 @@
         {
           "expected": null,
           "answer": null,
-          "best": "Paige",
-          "score": 0.6115733981132507,
-          "second": 0.5117008686065674,
+          "best": "Apollo",
+          "score": 0.4978311061859131,
+          "second": 0.4865367114543915,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Paige",
-          "score": 0.6223260760307312,
-          "second": 0.5081910490989685,
+          "score": 0.49711957573890686,
+          "second": 0.4845229387283325,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Paige",
-          "score": 0.6316276788711548,
-          "second": 0.5005638599395752,
+          "score": 0.5141169428825378,
+          "second": 0.47347673773765564,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Paige",
-          "score": 0.635094404220581,
-          "second": 0.519990861415863,
+          "score": 0.5221937298774719,
+          "second": 0.4745897352695465,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Paige",
-          "score": 0.5613583922386169,
-          "second": 0.546920120716095,
+          "score": 0.4950198531150818,
+          "second": 0.4687332808971405,
           "verdict": "correct"
         }
       ]
