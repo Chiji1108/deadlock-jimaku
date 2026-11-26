@@ -1,7 +1,7 @@
 {
   "threshold": 0.800000011920929,
   "cards": 132,
-  "correct": 45,
+  "correct": 57,
   "unknown": 3,
   "wrong": 0,
   "cases": [
@@ -409,6 +409,108 @@
           "best": "Paige",
           "score": 0.5995374917984009,
           "second": 0.5589580535888672,
+          "verdict": "correct"
+        }
+      ]
+    },
+    {
+      "file": "critical.png",
+      "note": "サンドボックスの 2 対 1。6 枠目（自分）は瀕死のときの絵で、下に「CRITICAL」が重なる。右上のアバターは黒く塗った",
+      "slots": [
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Paige",
+          "score": 0.7010318040847778,
+          "second": 0.52918940782547,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Paige",
+          "score": 0.6466050744056702,
+          "second": 0.5072876811027527,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Haze",
+          "score": 0.5908530950546265,
+          "second": 0.5420095324516296,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Paige",
+          "score": 0.5380914807319641,
+          "second": 0.5102458000183105,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Infernus",
+          "answer": "Infernus",
+          "best": "Infernus",
+          "score": 0.9641653299331665,
+          "second": 0.4306403398513794,
+          "verdict": "correct"
+        },
+        {
+          "expected": "The Doorman",
+          "answer": "The Doorman",
+          "best": "The Doorman",
+          "score": 0.9268959164619446,
+          "second": 0.5379413962364197,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Abrams",
+          "answer": "Abrams",
+          "best": "Abrams",
+          "score": 0.9530863165855408,
+          "second": 0.2832196354866028,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Paige",
+          "score": 0.6115733981132507,
+          "second": 0.5117008686065674,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Paige",
+          "score": 0.6223260760307312,
+          "second": 0.5081910490989685,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Paige",
+          "score": 0.6316276788711548,
+          "second": 0.5005638599395752,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Paige",
+          "score": 0.635094404220581,
+          "second": 0.519990861415863,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Paige",
+          "score": 0.5613583922386169,
+          "second": 0.546920120716095,
           "verdict": "correct"
         }
       ]
