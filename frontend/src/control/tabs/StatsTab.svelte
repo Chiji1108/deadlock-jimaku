@@ -1,7 +1,7 @@
 <script lang="ts">
   // 「統計」のタブ。字幕を始めてから止めるまでを 1 回として、確定した字幕から数えた、
   // 字幕を出していた時間、喋った量と、よく呼んだヒーロー・アイテム・スキル。
-  // 上から、今日・今週・今月・ぜんぶの合計、日ごとの草、時間帯の表、回ごとの一覧。
+  // 上から、前回（出している間は今回）、今週・今月・ぜんぶの合計、日ごとの草、時間帯の表、回ごとの一覧。
   // 数だけをこの PC に保存する（文そのものは残さない）
   import Help from "../parts/Help.svelte";
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
@@ -18,15 +18,16 @@
   const stats = $derived(panel.stats);
 
   const PERIODS = [
-    { value: "today", label: "今日" },
     { value: "week", label: "今週" },
     { value: "month", label: "今月" },
     { value: "all", label: "ぜんぶ" },
   ] as const;
   type Period = (typeof PERIODS)[number]["value"];
-  let period = $state<Period>("today");
+  let period = $state<Period>("week");
   const totals = $derived(stats?.[period]);
   const live = $derived(stats?.sessions.find((s) => s.live));
+  /** 一番新しい回。出している間は、その回 */
+  const last = $derived(stats?.sessions[0]);
   /** 今出している回は、最後に字幕が確定したところまでしか数えていないので、今までを足す */
   const duration = $derived(
     totals
@@ -62,7 +63,44 @@
   }
 </script>
 
+{#snippet tile(label: string, value: string)}
+  <div class="min-w-0">
+    <div class="text-xs text-muted-foreground">{label}</div>
+    <div class="truncate text-2xl font-medium tabular-nums" title={value}>{value}</div>
+  </div>
+{/snippet}
+
 <div class="flex flex-col gap-6">
+  <Card.Root>
+    <Card.Header>
+      <Card.Title class="flex items-center gap-1.5"
+        >{last?.live ? "今回" : "前回"}<Help
+          >字幕を始めてから止めるまでを 1 回にします。字幕を出している間は、今の回が出ます</Help
+        ></Card.Title
+      >
+      {#if last}
+        <Card.Description>
+          {when.format(last.startedAt)}〜{last.live ? "" : until.format(last.endedAt)}
+        </Card.Description>
+      {/if}
+    </Card.Header>
+    <Card.Content class="flex flex-col gap-6">
+      {#if !last}
+        <div class="text-sm text-muted-foreground">まだありません</div>
+      {:else}
+        <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          {@render tile(
+            "字幕を出していた時間",
+            hoursAndMinutes((last.live ? panel.now : last.endedAt) - last.startedAt),
+          )}
+          {@render tile("喋った量", amount(last))}
+          {@render tile("字幕の数", count(last.utterances))}
+        </div>
+        <StatsNames names={last.names} {lang} />
+      {/if}
+    </Card.Content>
+  </Card.Root>
+
   <Card.Root>
     <Card.Header>
       <Card.Title class="flex items-center gap-1.5"
@@ -86,18 +124,10 @@
         {/each}
       </ToggleGroup.Root>
       <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        {#snippet tile(label: string, value: string)}
-          <div class="min-w-0">
-            <div class="text-xs text-muted-foreground">{label}</div>
-            <div class="truncate text-2xl font-medium tabular-nums" title={value}>{value}</div>
-          </div>
-        {/snippet}
         {@render tile("字幕を出していた時間", hoursAndMinutes(duration))}
         {@render tile("喋った量", totals ? amount(totals) : "—")}
         {@render tile("字幕の数", count(totals?.utterances ?? 0))}
-        {#if period !== "today"}
-          {@render tile("字幕を出した日", `${count(totals?.activeDays ?? 0)} 日`)}
-        {/if}
+        {@render tile("字幕を出した日", `${count(totals?.activeDays ?? 0)} 日`)}
       </div>
       <StatsNames names={totals?.names ?? {}} {lang} />
     </Card.Content>

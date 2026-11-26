@@ -96,8 +96,6 @@ pub struct StatsDay {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct StatsView {
-    /// 今日（PC の時刻で 0 時から）
-    pub today: StatsPeriod,
     /// 今週（月曜の 0 時から）
     pub week: StatsPeriod,
     /// 今月（1 日の 0 時から）
@@ -357,26 +355,20 @@ impl Db {
     }
 
     fn view(&self) -> rusqlite::Result<StatsView> {
-        // PC の時刻で、今日・今週（月曜）・今月の初め（epoch ms）。
+        // PC の時刻で、今週（月曜）・今月の初め（epoch ms）。
         // 週は、6 日戻ってから次の月曜（その日が月曜ならその日）へ進める
         // 草は 52 週前の月曜から、時間帯は 90 日前の 0 時から
-        let (today, week, month, year, recent): (i64, i64, i64, i64, i64) = self.conn.query_row(
-            "SELECT unixepoch('now', 'localtime', 'start of day', 'utc') * 1000,
-                unixepoch('now', 'localtime', 'start of day', '-6 days', 'weekday 1', 'utc') * 1000,
+        let (week, month, year, recent): (i64, i64, i64, i64) = self.conn.query_row(
+            "SELECT unixepoch('now', 'localtime', 'start of day', '-6 days', 'weekday 1', 'utc') * 1000,
                 unixepoch('now', 'localtime', 'start of month', 'utc') * 1000,
                 unixepoch('now', 'localtime', 'start of day', '-6 days', 'weekday 1', '-364 days', 'utc')
                     * 1000,
                 unixepoch('now', 'localtime', 'start of day', '-89 days', 'utc') * 1000",
             [],
-            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?)),
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
         )?;
         let (days, hours) = (self.days(year)?, self.hours(recent)?);
-        let (today, week, month, all) = (
-            self.period(today)?,
-            self.period(week)?,
-            self.period(month)?,
-            self.period(0)?,
-        );
+        let (week, month, all) = (self.period(week)?, self.period(month)?, self.period(0)?);
 
         let live = self.current.filter(|_| self.running);
         let mut recent = self.conn.prepare_cached(
@@ -409,7 +401,6 @@ impl Db {
                 .collect::<rusqlite::Result<_>>()?;
         }
         Ok(StatsView {
-            today,
             week,
             month,
             all,
@@ -520,7 +511,7 @@ mod tests {
                 ("hero:13".to_owned(), 2)
             ])
         );
-        for period in [&view.today, &view.week, &view.month, &view.all] {
+        for period in [&view.week, &view.month, &view.all] {
             assert_eq!(period.totals, *s);
         }
         let [day] = view.days.as_slice() else {
