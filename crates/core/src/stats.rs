@@ -208,6 +208,27 @@ impl Tally {
         self.publish(&db);
     }
 
+    /// 回を消す（`None` ならすべて）。名前と字幕ごとの行も一緒に消える。
+    /// 字幕を出している回を消したら、続きは新しい回として数える
+    pub fn forget(&self, session: Option<i64>) -> rusqlite::Result<()> {
+        let mut db = self.db.lock().unwrap();
+        match session {
+            Some(id) => db
+                .conn
+                .execute("DELETE FROM sessions WHERE id = ?1", params![id])?,
+            None => db.conn.execute("DELETE FROM sessions", [])?,
+        };
+        if db
+            .current
+            .is_some_and(|current| session.is_none_or(|id| id == current))
+        {
+            db.current = None;
+            db.started_at = db.running.then(now_ms);
+        }
+        self.publish(&db);
+        Ok(())
+    }
+
     pub fn watch(&self) -> watch::Receiver<StatsView> {
         self.view.subscribe()
     }
@@ -548,6 +569,56 @@ mod tests {
             )
             .unwrap();
         assert_eq!(row, (session.id, 1, "ja".to_owned(), 13, 3));
+    }
+
+    #[test]
+    fn forgetting_removes_a_session_with_its_rows_and_keeps_counting() {
+        let dir = tempfile::tempdir().unwrap();
+        let tally = Tally::open(&dir.path().join("stats.db"));
+        tally.set_running(true);
+        tally.count(&haze());
+        tally.set_running(false);
+        tally.set_running(true);
+        tally.count(&haze());
+        let ids: Vec<i64> = tally.view().sessions.iter().map(|s| s.id).collect();
+        let [live, old] = ids.as_slice() else {
+            panic!("two sessions: {ids:?}");
+        };
+        let rows = |tally: &Tally| -> (u64, u64) {
+            let db = tally.db.lock().unwrap();
+            db.conn
+                .query_row(
+                    "SELECT (SELECT COUNT(*) FROM session_names), (SELECT COUNT(*) FROM utterances)",
+                    [],
+                    |r| Ok((r.get(0)?, r.get(1)?)),
+                )
+                .unwrap()
+        };
+
+        tally.forget(Some(*old)).unwrap();
+        let view = tally.view();
+        assert_eq!(
+            view.sessions.iter().map(|s| s.id).collect::<Vec<_>>(),
+            [*live]
+        );
+        assert_eq!(view.all.totals.utterances, 1);
+        assert_eq!(rows(&tally), (2, 1));
+
+        // 出している回を消しても、続きは新しい回として数える
+        tally.forget(Some(*live)).unwrap();
+        assert!(tally.view().sessions.is_empty());
+        tally.count(&haze());
+        let view = tally.view();
+        let [session] = view.sessions.as_slice() else {
+            panic!("one session: {view:?}");
+        };
+        assert!(session.live && session.id != *live);
+
+        tally.forget(None).unwrap();
+        let view = tally.view();
+        assert!(view.sessions.is_empty() && view.days.is_empty());
+        assert_eq!(view.all.totals.utterances, 0);
+        assert_eq!(rows(&tally), (0, 0));
     }
 
     #[test]

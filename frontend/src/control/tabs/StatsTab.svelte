@@ -3,11 +3,14 @@
   // 字幕を出していた時間、喋った量と、よく呼んだヒーロー・アイテム・スキル。
   // 上から、前回（出している間は今回）、今週・今月・ぜんぶの合計、日ごとの草、時間帯の表、回ごとの一覧。
   // 数だけをこの PC に保存する（文そのものは残さない）
+  import ConfirmDialog from "../parts/ConfirmDialog.svelte";
   import Help from "../parts/Help.svelte";
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
   import { Badge } from "$lib/components/ui/badge";
+  import { Button } from "$lib/components/ui/button";
   import * as Card from "$lib/components/ui/card";
   import * as ToggleGroup from "$lib/components/ui/toggle-group";
+  import type { Session } from "../../generated/Session";
   import type { Totals } from "../../generated/Totals";
   import StatsGrass from "../parts/StatsGrass.svelte";
   import StatsHours from "../parts/StatsHours.svelte";
@@ -16,6 +19,10 @@
   import { panel } from "../panel.svelte";
 
   const stats = $derived(panel.stats);
+  /** 消すかを確かめている回 */
+  let forgetting = $state<Session>();
+  let confirmingSession = $state(false);
+  let confirmingAll = $state(false);
 
   const PERIODS = [
     { value: "week", label: "今週" },
@@ -205,8 +212,17 @@
                     </div>
                   </div>
                 </summary>
-                <div class="pb-4 pl-7">
+                <div class="flex flex-col items-start gap-3 pb-4 pl-7">
                   <StatsNames names={s.names} {lang} />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    class="-ml-2.5 text-muted-foreground"
+                    onclick={() => {
+                      forgetting = s;
+                      confirmingSession = true;
+                    }}>この回を消す</Button
+                  >
                 </div>
               </details>
             </li>
@@ -215,4 +231,38 @@
       {/if}
     </Card.Content>
   </Card.Root>
+
+  {#if stats?.sessions.length}
+    <div class="flex justify-end">
+      <Button
+        variant="ghost"
+        size="sm"
+        class="text-muted-foreground"
+        onclick={() => (confirmingAll = true)}>統計をすべて消す</Button
+      >
+    </div>
+  {/if}
 </div>
+
+<ConfirmDialog
+  bind:open={confirmingSession}
+  title="この回を消しますか？"
+  action="消す"
+  destructive
+  onconfirm={() => (forgetting ? panel.forgetSession(forgetting.id) : Promise.resolve(true))}
+>
+  {#if forgetting}
+    <p>{span(forgetting)} の回を消します。合計や日ごとの草からも外れます。元には戻せません。</p>
+    {#if forgetting.live}<p>今出している字幕は、続きを新しい回として数えます。</p>{/if}
+  {/if}
+</ConfirmDialog>
+
+<ConfirmDialog
+  bind:open={confirmingAll}
+  title="統計をすべて消しますか？"
+  action="すべて消す"
+  destructive
+  onconfirm={panel.forgetStats}
+>
+  <p>これまでのすべての回を消します。元には戻せません。</p>
+</ConfirmDialog>

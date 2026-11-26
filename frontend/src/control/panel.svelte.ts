@@ -347,6 +347,18 @@ class Panel {
       toast.success("Chrome をリセットしました");
     });
 
+  forgetSession = (id: number) =>
+    this.run(async () => {
+      await api.forgetSession(id);
+      toast.success("回を消しました");
+    });
+
+  forgetStats = () =>
+    this.run(async () => {
+      await api.forgetStats();
+      toast.success("統計をすべて消しました");
+    });
+
   /** 鍵がないときの入口。押した人にだけ、Chrome のモードに切り替えて始める */
   startWithChrome = () => {
     this.level = undefined;

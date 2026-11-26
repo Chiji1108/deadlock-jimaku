@@ -20,8 +20,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await res.json()) as T;
 }
 
-async function post(path: string) {
-  const res = await fetch(path, { method: "POST" });
+async function post(path: string, method = "POST") {
+  const res = await fetch(path, { method });
   if (!res.ok) throw new Error((await res.text()) || res.statusText);
 }
 
@@ -67,6 +67,10 @@ export const api = {
   openChrome: () => post("/api/chrome/open"),
   /** Chrome の専用のデータを消して始め直す */
   resetChrome: () => post("/api/chrome/reset"),
+  /** 統計の回を 1 つ消す */
+  forgetSession: (id: number) => post(`/api/stats/sessions/${id}`, "DELETE"),
+  /** 統計をすべて消す */
+  forgetStats: () => post("/api/stats", "DELETE"),
   /** ランクのプレビューの見本。その言語の名前とアイコンは、初めてのときに core が取ってくる */
   rankSample: (lang: string, signal?: AbortSignal) =>
     request<RankState>(`/api/rank/sample?lang=${encodeURIComponent(lang)}`, { signal }),
