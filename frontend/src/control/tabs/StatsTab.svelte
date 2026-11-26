@@ -17,8 +17,45 @@
   import StatsNames from "../parts/StatsNames.svelte";
   import { count, hoursAndMinutes } from "../parts/stats";
   import { panel } from "../panel.svelte";
+  import { api } from "$lib/api";
+  import { toast } from "svelte-sonner";
 
   const stats = $derived(panel.stats);
+  /** いつも届く回の数（core の RECENT）。「もっと見る」で、この数ずつ増やす */
+  const PAGE = 50;
+  let shown = $state(PAGE);
+  /** 「もっと見る」で取ってきた、新しいほうから `shown` 回。届いている回と重なるところは、届いたほうを使う */
+  let fetched = $state<Session[]>([]);
+  let loading = $state(false);
+  const sessions = $derived.by(() => {
+    const pushed = stats?.sessions ?? [];
+    // 届いた回が PAGE に満たなければ、それより古い回はない（別の窓ですべて消したときも、取ってきた回を出さない）
+    if (pushed.length < PAGE) return pushed;
+    const oldest = pushed.at(-1)?.id ?? Infinity;
+    return [...pushed, ...fetched.filter((s) => s.id < oldest)];
+  });
+  async function load(limit: number) {
+    loading = true;
+    try {
+      fetched = await api.statsSessions(limit);
+      shown = limit;
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    } finally {
+      loading = false;
+    }
+  }
+  async function forgetSession(id: number) {
+    const ok = await panel.forgetSession(id);
+    // 取ってきた回から消えた分を、その先の回で埋める
+    if (ok && fetched.length) await load(shown);
+    return ok;
+  }
+  async function forgetAll() {
+    const ok = await panel.forgetStats();
+    if (ok) [fetched, shown] = [[], PAGE];
+    return ok;
+  }
   /** 消すかを確かめている回 */
   let forgetting = $state<Session>();
   let confirmingSession = $state(false);
@@ -181,11 +218,11 @@
       >
     </Card.Header>
     <Card.Content>
-      {#if !stats?.sessions.length}
+      {#if !sessions.length}
         <div class="text-sm text-muted-foreground">まだありません</div>
       {:else}
         <ul class="flex flex-col divide-y">
-          {#each stats.sessions as s (s.id)}
+          {#each sessions as s (s.id)}
             <li>
               <details class="group">
                 <summary
@@ -228,11 +265,20 @@
             </li>
           {/each}
         </ul>
+        {#if sessions.length >= shown}
+          <Button
+            variant="outline"
+            size="sm"
+            class="mt-2 w-full"
+            disabled={loading}
+            onclick={() => load(shown + PAGE)}>もっと見る</Button
+          >
+        {/if}
       {/if}
     </Card.Content>
   </Card.Root>
 
-  {#if stats?.sessions.length}
+  {#if sessions.length}
     <div class="flex justify-end">
       <Button
         variant="ghost"
@@ -249,7 +295,7 @@
   title="この回を消しますか？"
   action="消す"
   destructive
-  onconfirm={() => (forgetting ? panel.forgetSession(forgetting.id) : Promise.resolve(true))}
+  onconfirm={() => (forgetting ? forgetSession(forgetting.id) : Promise.resolve(true))}
 >
   {#if forgetting}
     <p>{span(forgetting)} の回を消します。合計や日ごとの草からも外れます。元には戻せません。</p>
@@ -262,7 +308,7 @@
   title="統計をすべて消しますか？"
   action="すべて消す"
   destructive
-  onconfirm={panel.forgetStats}
+  onconfirm={forgetAll}
 >
   <p>これまでのすべての回を消します。元には戻せません。</p>
 </ConfirmDialog>

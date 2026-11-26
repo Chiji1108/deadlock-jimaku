@@ -7,6 +7,7 @@ import type { Mic } from "../generated/Mic";
 import type { Provider } from "../generated/Provider";
 import type { RankState } from "../generated/RankState";
 import type { ServerModel } from "../generated/ServerModel";
+import type { Session } from "../generated/Session";
 import type { SettingsPatch } from "../generated/SettingsPatch";
 import type { SettingsView } from "../generated/SettingsView";
 
@@ -67,6 +68,8 @@ export const api = {
   openChrome: () => post("/api/chrome/open"),
   /** Chrome の専用のデータを消して始め直す */
   resetChrome: () => post("/api/chrome/reset"),
+  /** 統計の回を、新しい順に `limit` 回 */
+  statsSessions: (limit: number) => request<Session[]>(`/api/stats/sessions?limit=${limit}`),
   /** 統計の回を 1 つ消す */
   forgetSession: (id: number) => post(`/api/stats/sessions/${id}`, "DELETE"),
   /** 統計をすべて消す */

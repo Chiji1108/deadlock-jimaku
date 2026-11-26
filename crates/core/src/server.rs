@@ -60,6 +60,7 @@ pub fn router(store: Arc<Store>) -> Router {
         .route("/fonts/{family}/{postscript}", get(font_file))
         .route("/rank/sample", get(rank_sample))
         .route("/stats", delete(forget_stats))
+        .route("/stats/sessions", get(stats_sessions))
         .route("/stats/sessions/{id}", delete(forget_session))
         .route("/chrome/open", post(open_chrome))
         .route("/chrome/reset", post(reset_chrome))
@@ -213,6 +214,26 @@ async fn open_chrome(State(store): State<Arc<Store>>) -> StatusCode {
 }
 
 /// 専用のプロファイルを消して、Chrome を始め直す
+#[derive(Deserialize)]
+struct SessionsQuery {
+    limit: u32,
+}
+
+/// 統計の回を、新しい順に `limit` 回（回ごとの一覧の「もっと見る」）
+async fn stats_sessions(
+    State(store): State<Arc<Store>>,
+    Query(query): Query<SessionsQuery>,
+) -> Response {
+    match blocking(move || store.tally().sessions(query.limit)).await {
+        Ok(sessions) => Json(sessions).into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("統計を読めません（{e}）"),
+        )
+            .into_response(),
+    }
+}
+
 /// 統計をすべて消す
 async fn forget_stats(State(store): State<Arc<Store>>) -> Response {
     forget(store, None).await
