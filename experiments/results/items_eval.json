@@ -1,0 +1,417 @@
+{
+  "threshold": 0.8500000238418579,
+  "templates": 173,
+  "correct": 45,
+  "unknown": 3,
+  "wrong": 0,
+  "cases": [
+    {
+      "file": "before_buying.png",
+      "note": "7 個持っている。上の段の 2 つ目と 3 つ目は、クールダウンで暗い",
+      "slots": [
+        {
+          "expected": "Rapid Recharge",
+          "answer": "Rapid Recharge",
+          "best": "Rapid Recharge",
+          "score": 0.9864230751991272,
+          "second": 0.3076772391796112,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Tankbuster",
+          "answer": null,
+          "best": "Tankbuster",
+          "score": 0.6744841933250427,
+          "second": 0.32775697112083435,
+          "verdict": "unknown"
+        },
+        {
+          "expected": "Mystic Reverb",
+          "answer": null,
+          "best": "Mystic Reverb",
+          "score": 0.6842210292816162,
+          "second": 0.2972085773944855,
+          "verdict": "unknown"
+        },
+        {
+          "expected": "Spirit Burn",
+          "answer": "Spirit Burn",
+          "best": "Spirit Burn",
+          "score": 0.9841161370277405,
+          "second": 0.5654833912849426,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Ballistic Enchantment",
+          "score": 0.6948269009590149,
+          "second": 0.6213223934173584,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Active Reload",
+          "score": 0.7128652334213257,
+          "second": 0.6757849454879761,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Surge of Power",
+          "answer": "Surge of Power",
+          "best": "Surge of Power",
+          "score": 0.959356427192688,
+          "second": 0.3623184561729431,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Greater Expansion",
+          "answer": "Greater Expansion",
+          "best": "Greater Expansion",
+          "score": 0.9688606858253479,
+          "second": 0.3098914921283722,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Boundless Spirit",
+          "answer": "Boundless Spirit",
+          "best": "Boundless Spirit",
+          "score": 0.9754135608673096,
+          "second": 0.3215491771697998,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Active Reload",
+          "score": 0.6719784140586853,
+          "second": 0.619778037071228,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Active Reload",
+          "score": 0.6892387270927429,
+          "second": 0.6097469329833984,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Long Range",
+          "score": 0.5157522559165955,
+          "second": 0.45644906163215637,
+          "verdict": "correct"
+        }
+      ]
+    },
+    {
+      "file": "after_buying.png",
+      "note": "Blood Tribute を買った直後。並びが入れ替わっている",
+      "slots": [
+        {
+          "expected": "Rapid Recharge",
+          "answer": "Rapid Recharge",
+          "best": "Rapid Recharge",
+          "score": 0.9864553213119507,
+          "second": 0.3068401515483856,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Tankbuster",
+          "answer": "Tankbuster",
+          "best": "Tankbuster",
+          "score": 0.9784021377563477,
+          "second": 0.5051457285881042,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Blood Tribute",
+          "answer": "Blood Tribute",
+          "best": "Blood Tribute",
+          "score": 0.9809766411781311,
+          "second": 0.6633983850479126,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Boundless Spirit",
+          "answer": "Boundless Spirit",
+          "best": "Boundless Spirit",
+          "score": 0.9753344655036926,
+          "second": 0.3215927183628082,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Active Reload",
+          "score": 0.679742157459259,
+          "second": 0.609606921672821,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Active Reload",
+          "score": 0.6601677536964417,
+          "second": 0.6443215608596802,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Surge of Power",
+          "answer": "Surge of Power",
+          "best": "Surge of Power",
+          "score": 0.9594611525535583,
+          "second": 0.3592016100883484,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Greater Expansion",
+          "answer": "Greater Expansion",
+          "best": "Greater Expansion",
+          "score": 0.9691169261932373,
+          "second": 0.31204164028167725,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Mystic Reverb",
+          "answer": "Mystic Reverb",
+          "best": "Mystic Reverb",
+          "score": 0.9406177401542664,
+          "second": 0.24177853763103485,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Spirit Burn",
+          "answer": "Spirit Burn",
+          "best": "Spirit Burn",
+          "score": 0.984249472618103,
+          "second": 0.5658724308013916,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Active Reload",
+          "score": 0.6916954517364502,
+          "second": 0.5977680683135986,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Active Reload",
+          "score": 0.6781115531921387,
+          "second": 0.6223294734954834,
+          "verdict": "correct"
+        }
+      ]
+    },
+    {
+      "file": "cooldown.png",
+      "note": "Alchemical Fire（上の段の 1 つ目）を使った直後で、クールダウンで暗い",
+      "slots": [
+        {
+          "expected": "Alchemical Fire",
+          "answer": null,
+          "best": "Alchemical Fire",
+          "score": 0.7728000283241272,
+          "second": 0.4526335597038269,
+          "verdict": "unknown"
+        },
+        {
+          "expected": "Headhunter",
+          "answer": "Headhunter",
+          "best": "Headhunter",
+          "score": 0.9824091196060181,
+          "second": 0.6722341179847717,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Active Reload",
+          "score": 0.6642524600028992,
+          "second": 0.6090430617332458,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Active Reload",
+          "score": 0.674623429775238,
+          "second": 0.6336919665336609,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Active Reload",
+          "score": 0.6974992156028748,
+          "second": 0.6100652813911438,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Active Reload",
+          "score": 0.6885100603103638,
+          "second": 0.6364517211914062,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Heroic Aura",
+          "answer": "Heroic Aura",
+          "best": "Heroic Aura",
+          "score": 0.9592214226722717,
+          "second": 0.609770655632019,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Berserker",
+          "answer": "Berserker",
+          "best": "Berserker",
+          "score": 0.9773971438407898,
+          "second": 0.5351266264915466,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Active Reload",
+          "score": 0.6967679858207703,
+          "second": 0.6287819147109985,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Active Reload",
+          "score": 0.6802164912223816,
+          "second": 0.6214401721954346,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Active Reload",
+          "score": 0.691409707069397,
+          "second": 0.6433169841766357,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Active Reload",
+          "score": 0.6609575152397156,
+          "second": 0.6338108777999878,
+          "verdict": "correct"
+        }
+      ]
+    },
+    {
+      "file": "ready.png",
+      "note": "上と同じ持ち物で、クールダウンが明けている",
+      "slots": [
+        {
+          "expected": "Alchemical Fire",
+          "answer": "Alchemical Fire",
+          "best": "Alchemical Fire",
+          "score": 0.9558353424072266,
+          "second": 0.5575535297393799,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Headhunter",
+          "answer": "Headhunter",
+          "best": "Headhunter",
+          "score": 0.9825869202613831,
+          "second": 0.6708257794380188,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Active Reload",
+          "score": 0.7167289853096008,
+          "second": 0.6477829813957214,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Active Reload",
+          "score": 0.6849616169929504,
+          "second": 0.6212226152420044,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Active Reload",
+          "score": 0.6888328194618225,
+          "second": 0.6179922223091125,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Active Reload",
+          "score": 0.6746786832809448,
+          "second": 0.6521603465080261,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Heroic Aura",
+          "answer": "Heroic Aura",
+          "best": "Heroic Aura",
+          "score": 0.9575461745262146,
+          "second": 0.6066776514053345,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Berserker",
+          "answer": "Berserker",
+          "best": "Berserker",
+          "score": 0.9774436354637146,
+          "second": 0.5357819199562073,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Active Reload",
+          "score": 0.6879192590713501,
+          "second": 0.6381052136421204,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Active Reload",
+          "score": 0.691724956035614,
+          "second": 0.6710800528526306,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Active Reload",
+          "score": 0.6913352012634277,
+          "second": 0.5831160545349121,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Active Reload",
+          "score": 0.6844717264175415,
+          "second": 0.5639791488647461,
+          "verdict": "correct"
+        }
+      ]
+    }
+  ]
+}

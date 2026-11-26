@@ -1,0 +1,30 @@
+[
+  {
+    "file": "before_buying.png",
+    "note": "7 個持っている。上の段の 2 つ目と 3 つ目は、クールダウンで暗い",
+    "screen": [1920, 1080],
+    "crop": [0, 930],
+    "names": ["Rapid Recharge", "Tankbuster", "Mystic Reverb", "Spirit Burn", null, null, "Surge of Power", "Greater Expansion", "Boundless Spirit", null, null, null]
+  },
+  {
+    "file": "after_buying.png",
+    "note": "Blood Tribute を買った直後。並びが入れ替わっている",
+    "screen": [1920, 1080],
+    "crop": [0, 930],
+    "names": ["Rapid Recharge", "Tankbuster", "Blood Tribute", "Boundless Spirit", null, null, "Surge of Power", "Greater Expansion", "Mystic Reverb", "Spirit Burn", null, null]
+  },
+  {
+    "file": "cooldown.png",
+    "note": "Alchemical Fire（上の段の 1 つ目）を使った直後で、クールダウンで暗い",
+    "screen": [1920, 1080],
+    "crop": [0, 930],
+    "names": ["Alchemical Fire", "Headhunter", null, null, null, null, "Heroic Aura", "Berserker", null, null, null, null]
+  },
+  {
+    "file": "ready.png",
+    "note": "上と同じ持ち物で、クールダウンが明けている",
+    "screen": [1920, 1080],
+    "crop": [0, 930],
+    "names": ["Alchemical Fire", "Headhunter", null, null, null, null, "Heroic Aura", "Berserker", null, null, null, null]
+  }
+]

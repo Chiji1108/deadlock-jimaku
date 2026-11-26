@@ -1,6 +1,6 @@
 {
   "threshold": 0.800000011920929,
-  "heroes": 44,
+  "templates": 44,
   "correct": 55,
   "unknown": 5,
   "wrong": 0,
