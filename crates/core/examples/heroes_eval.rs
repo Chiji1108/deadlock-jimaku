@@ -1,6 +1,7 @@
 //! 試合の画面の上部バーから、出ているヒーローを読めるかを測る（DESIGN.md 15 章「画面からの読み取り」）。
 //! 上部バーの枠は、deadlock-api のカード画像（`icon_hero_card`）を縮めて、決まった位置に置いたもの。
 //! なので、枠ごとに全ヒーローのカードと比べて（正規化相互相関）、いちばん近いものを答えにする。
+//! カードは、調子がいいときと瀕死のときに別の絵に変わるので、その絵も見本にする。
 //!
 //! usage: cargo run -p overlays-core --release --example heroes_eval
 //!   画面: experiments/data/top_bar/cases.json（画面の上の端を切り出した PNG と、左から順のヒーローの名前）
@@ -21,6 +22,8 @@ const CASES: &str = "experiments/data/top_bar/cases.json";
 const OUT: &str = "experiments/results/heroes_eval.json";
 const CARDS: &str = "target/heroes_eval";
 const API: &str = "https://api.deadlock-api.com/v1/assets/heroes";
+/// 見本にするカード（API の `images` のキー）。ふだんの絵、調子がいいとき、瀕死のとき
+const CARD_KINDS: [&str; 3] = ["icon_hero_card", "hero_card_gloat", "hero_card_critical"];
 
 /// 配置は 1080p で測った。ほかの解像度では、画面の高さに比例させる（16:9 の 1080p でしか確かめていない）
 const BASE_HEIGHT: f32 = 1080.0;
@@ -138,7 +141,7 @@ fn slots(screen_width: u32, scale: f32) -> Vec<f32> {
     left.chain(offsets.map(|offset| center + offset)).collect()
 }
 
-/// 枠にいちばん近いヒーローと近さ、その次の近さ
+/// 枠にいちばん近いヒーローと近さ、その次に近い別のヒーローの近さ
 fn read<'a>(
     frame: &RgbImage,
     templates: &'a [Template],
@@ -162,10 +165,13 @@ fn read<'a>(
         })
         .collect();
     scores.sort_by(|a, b| b.0.total_cmp(&a.0));
-    (scores[0].1, scores[0].0, scores[1].0)
+    let (score, best) = scores[0];
+    // 同じヒーローの別の絵は、次点に数えない
+    let second = scores.iter().find(|(_, name)| *name != best);
+    (best, score, second.map_or(-1.0, |(score, _)| *score))
 }
 
-/// 選べるヒーローのカード画像を取る（一度取ったら、置いてある分を使う）
+/// 選べるヒーローのカード画像を、絵の種類ごとに取る（一度取ったら、置いてある分を使う）
 async fn cards() -> anyhow::Result<Vec<(String, RgbaImage)>> {
     let http = reqwest::Client::new();
     let heroes: Vec<Hero> = http
@@ -181,22 +187,24 @@ async fn cards() -> anyhow::Result<Vec<(String, RgbaImage)>> {
         if !hero.player_selectable || hero.disabled {
             continue;
         }
-        let Some(url) = hero.images.get("icon_hero_card").and_then(Value::as_str) else {
-            continue;
-        };
-        let path = Path::new(CARDS).join(format!("{}.png", hero.id));
-        if !path.exists() {
-            let bytes = http
-                .get(url)
-                .send()
-                .await?
-                .error_for_status()?
-                .bytes()
-                .await?;
-            std::fs::write(&path, bytes)?;
+        for kind in CARD_KINDS {
+            let Some(url) = hero.images.get(kind).and_then(Value::as_str) else {
+                continue;
+            };
+            let path = Path::new(CARDS).join(format!("{}-{kind}.png", hero.id));
+            if !path.exists() {
+                let bytes = http
+                    .get(url)
+                    .send()
+                    .await?
+                    .error_for_status()?
+                    .bytes()
+                    .await?;
+                std::fs::write(&path, bytes)?;
+            }
+            let card = image::open(&path).with_context(|| format!("{}", path.display()))?;
+            cards.push((hero.name.clone(), card.into_rgba8()));
         }
-        let card = image::open(&path).with_context(|| format!("{}", path.display()))?;
-        cards.push((hero.name, card.into_rgba8()));
     }
     Ok(cards)
 }
@@ -261,7 +269,7 @@ async fn main() -> anyhow::Result<()> {
     println!("正解 {correct}　不明 {unknown}　間違い {wrong}（しきい値 {THRESHOLD}）");
     let out = json!({
         "threshold": THRESHOLD,
-        "heroes": cards.len(),
+        "cards": cards.len(),
         "correct": correct, "unknown": unknown, "wrong": wrong,
         "cases": results,
     });

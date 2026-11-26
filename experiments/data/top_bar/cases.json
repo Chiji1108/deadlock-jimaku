@@ -16,5 +16,11 @@
     "note": "3 枠目（自分）が死亡中で暗い。9 枠目はキルの直後で大きく出ている",
     "screen": [1920, 1080],
     "heroes": ["McGinnis", "Kelvin", "The Doorman", "Rat King", "Vindicta", "Dynamo", "Rem", "Yamato", "Bebop", "Haze", "Abrams", "Infernus"]
+  },
+  {
+    "file": "gloat.png",
+    "note": "サンドボックスの 2 対 1。6 枠目（自分）は調子がいいときの絵、7 枠目は死亡中で暗い。右上のアバターは黒く塗った",
+    "screen": [1920, 1080],
+    "heroes": [null, null, null, null, "Infernus", "The Doorman", "Abrams", null, null, null, null, null]
   }
 ]
