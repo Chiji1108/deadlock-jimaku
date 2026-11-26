@@ -6,6 +6,7 @@
   import ConfirmDialog from "../parts/ConfirmDialog.svelte";
   import Help from "../parts/Help.svelte";
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
+  import TrashIcon from "@lucide/svelte/icons/trash-2";
   import { Badge } from "$lib/components/ui/badge";
   import { Button } from "$lib/components/ui/button";
   import * as Card from "$lib/components/ui/card";
@@ -219,7 +220,7 @@
                     onclick={() => {
                       forgetting = s;
                       confirmingSession = true;
-                    }}>この回を消す</Button
+                    }}><TrashIcon />この回を消す</Button
                   >
                 </div>
               </details>
@@ -244,7 +245,7 @@
         variant="ghost"
         size="sm"
         class="text-muted-foreground"
-        onclick={() => (confirmingAll = true)}>統計をすべて消す</Button
+        onclick={() => (confirmingAll = true)}><TrashIcon />統計をすべて消す</Button
       >
     </div>
   {/if}
