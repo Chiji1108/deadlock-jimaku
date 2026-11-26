@@ -5,10 +5,6 @@ import type { StatsPeriod } from "./StatsPeriod";
 
 export type StatsView = { 
 /**
- * 今日（PC の時刻で 0 時から）
- */
-today: StatsPeriod, 
-/**
  * 今週（月曜の 0 時から）
  */
 week: StatsPeriod, 
