@@ -18,6 +18,7 @@
   import { count, hoursAndMinutes } from "../parts/stats";
   import { panel } from "../panel.svelte";
   import { api } from "$lib/api";
+  import { untrack } from "svelte";
   import { toast } from "svelte-sonner";
 
   const stats = $derived(panel.stats);
@@ -45,12 +46,14 @@
       loading = false;
     }
   }
-  async function forgetSession(id: number) {
-    const ok = await panel.forgetSession(id);
-    // 取ってきた回から消えた分を、その先の回で埋める
-    if (ok && fetched.length) await load(shown);
-    return ok;
-  }
+  // 回が消えたら（この窓でも、OBS のドックなど別の窓でも）、取ってきた回を取り直して、消えた分をその先の回で埋める。
+  // 字幕のない回は残さないので、回が消えると字幕の数の合計は必ず減る
+  let utterances = 0;
+  $effect(() => {
+    const now = stats?.all.utterances ?? 0;
+    if (now < utterances && untrack(() => fetched.length)) void load(untrack(() => shown));
+    utterances = now;
+  });
   async function forgetAll() {
     const ok = await panel.forgetStats();
     if (ok) [fetched, shown] = [[], PAGE];
@@ -295,7 +298,7 @@
   title="この回を消しますか？"
   action="消す"
   destructive
-  onconfirm={() => (forgetting ? forgetSession(forgetting.id) : Promise.resolve(true))}
+  onconfirm={() => (forgetting ? panel.forgetSession(forgetting.id) : Promise.resolve(true))}
 >
   {#if forgetting}
     <p>{span(forgetting)} の回を消します。合計や日ごとの草からも外れます。元には戻せません。</p>
