@@ -1,6 +1,7 @@
 //! 字幕の統計。字幕を始めてから止めるまでを 1 回として、確定した字幕から、喋った量と、
 //! 呼んだヒーロー・アイテム・スキルの回数を数える。文そのものは残さず、数だけを `stats.db`（SQLite）に書く。
-//! 今日・今週・今月・ぜんぶの合計は、見せるときに回ごとの数を足して出す（期間ごとの数は持たない）。
+//! 字幕ごとにも、話し始めた時刻・言語・数を 1 行残す（回の中の流れや、日付をまたいだ回を後から分けるため）。
+//! 今週・今月・ぜんぶの合計は、見せるときに回ごとの数を足して出す（期間ごとの数は持たない）。
 
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -201,7 +202,7 @@ impl Tally {
         let words = seg.text.split_whitespace().count() as u64;
 
         let mut db = self.db.lock().unwrap();
-        if let Err(e) = db.add(names, characters, words) {
+        if let Err(e) = db.add(seg.started_at, &seg.lang, names, characters, words) {
             tracing::warn!("cannot count the subtitle: {e:#}");
         }
         self.publish(&db);
@@ -235,6 +236,8 @@ impl Tally {
 impl Db {
     fn add<'a>(
         &mut self,
+        spoken_at: u64,
+        lang: &str,
         names: impl Iterator<Item = &'a str>,
         characters: u64,
         words: u64,
@@ -256,6 +259,11 @@ impl Db {
             "UPDATE sessions SET utterances = utterances + 1, characters = characters + ?1,
                 words = words + ?2, ended_at = MAX(ended_at, ?3) WHERE id = ?4",
             params![characters, words, now, id],
+        )?;
+        tx.execute(
+            "INSERT INTO utterances (session_id, started_at, lang, characters, words)
+             VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![id, spoken_at, lang, characters, words],
         )?;
         for name in names {
             tx.execute(
@@ -433,7 +441,16 @@ fn migrate(conn: Connection) -> rusqlite::Result<Connection> {
                 ref TEXT NOT NULL,
                 count INTEGER NOT NULL,
                 PRIMARY KEY (session_id, ref)
-            );",
+            );
+            -- 確定した字幕ごとに 1 行。started_at は話し始めた時刻（epoch ms）
+            CREATE TABLE utterances (
+                session_id INTEGER NOT NULL REFERENCES sessions (id) ON DELETE CASCADE,
+                started_at INTEGER NOT NULL,
+                lang TEXT NOT NULL,
+                characters INTEGER NOT NULL,
+                words INTEGER NOT NULL
+            );
+            CREATE INDEX utterances_session_id ON utterances (session_id, started_at);",
         )?;
     }
     // 新しい版で作った DB を古い版で開いても、版の印は戻さない（戻すと、また新しい版で移し直して失敗する）
@@ -519,6 +536,17 @@ mod tests {
         };
         assert!(day.start <= session.started_at && session.started_at - day.start < 86_400_000);
         assert_eq!((day.utterances, day.characters), (1, 13));
+        // 字幕ごとの行も残る（話し始めた時刻と言語）
+        let db = tally.db.lock().unwrap();
+        let row: (i64, u64, String, u64, u64) = db
+            .conn
+            .query_row(
+                "SELECT session_id, started_at, lang, characters, words FROM utterances",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)),
+            )
+            .unwrap();
+        assert_eq!(row, (session.id, 1, "ja".to_owned(), 13, 3));
     }
 
     #[test]
