@@ -221,7 +221,7 @@
                     onclick={() => {
                       forgetting = s;
                       confirmingSession = true;
-                    }}><TrashIcon />この回を消す</Button
+                    }}><TrashIcon />この回を削除</Button
                   >
                 </div>
               </details>
@@ -246,7 +246,7 @@
         variant="ghost"
         size="sm"
         class="text-muted-foreground"
-        onclick={() => (confirmingAll = true)}><TrashIcon />統計をすべて消す</Button
+        onclick={() => (confirmingAll = true)}><TrashIcon />統計をすべて削除</Button
       >
     </div>
   {/if}
@@ -254,8 +254,8 @@
 
 <ConfirmDialog
   bind:open={confirmingSession}
-  title="この回を消しますか？"
-  action="消す"
+  title="この回を削除しますか？"
+  action="削除"
   destructive
   onconfirm={() => (forgetting ? panel.forgetSession(forgetting.id) : Promise.resolve(true))}
 >
@@ -267,8 +267,8 @@
 
 <ConfirmDialog
   bind:open={confirmingAll}
-  title="統計をすべて消しますか？"
-  action="すべて消す"
+  title="統計をすべて削除しますか？"
+  action="すべて削除"
   destructive
   onconfirm={panel.forgetStats}
 >

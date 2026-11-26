@@ -327,7 +327,7 @@
             }}
           >
             <Input class="flex-1" placeholder="自分の名前" bind:value={adding.me} />
-            <Button type="submit" disabled={!adding.me.trim()}><PlusIcon />足す</Button>
+            <Button type="submit" disabled={!adding.me.trim()}><PlusIcon />追加</Button>
           </form>
         {/if}
       </Card.Content>
@@ -356,7 +356,7 @@
           >
             <Input class="flex-1" placeholder="足す人の名前" bind:value={adding.other} />
             <Button type="submit" variant="outline" disabled={!adding.other.trim()}
-              ><PlusIcon />足す</Button
+              ><PlusIcon />追加</Button
             >
           </form>
         {/if}
