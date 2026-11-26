@@ -4,6 +4,7 @@
 
 pub mod heroes;
 pub mod items;
+pub mod purchases;
 
 use image::imageops::FilterType;
 use image::{RgbImage, RgbaImage};

@@ -45,7 +45,8 @@ pub struct Slots {
     pub shop: bool,
 }
 
-/// アイテム欄を読む。ショップを開いているかは分からないので、両方の位置を読んで、よく合うほうを採る
+/// アイテム欄を読む。ショップを開いているかは分からないので、両方の位置を読んで、読めた枠の多いほうを採る
+/// （同じなら、開いていないほう）
 pub fn read(frame: &Frame, templates: &[Template], scale: f32) -> Slots {
     let at = |rise: f32| -> Vec<Read> {
         (0..GRID.1)
@@ -57,9 +58,15 @@ pub fn read(frame: &Frame, templates: &[Template], scale: f32) -> Slots {
             })
             .collect()
     };
-    let total = |reads: &[Read]| reads.iter().map(|read| read.score).sum::<f32>();
+    // 近さの合計で比べると、アイテムが少ないときに、空の枠の点の揺れで入れ替わる。読めた枠の数で比べる
+    let known = |reads: &[Read]| {
+        reads
+            .iter()
+            .filter(|read| read.answer(THRESHOLD).is_some())
+            .count()
+    };
     let (usual, raised) = (at(0.0), at(SHOP_RISE));
-    let shop = total(&raised) > total(&usual);
+    let shop = known(&raised) > known(&usual);
     Slots {
         reads: if shop { raised } else { usual },
         shop,
