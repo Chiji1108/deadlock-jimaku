@@ -5,7 +5,7 @@
 //! 起動時に最新の clientVersion を確認し、キャッシュがなければ作る。通信できなければ手元の最新を使う。
 
 mod aliases;
-mod api;
+pub(crate) mod api;
 mod glossary;
 mod readings;
 
