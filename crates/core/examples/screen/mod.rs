@@ -26,6 +26,9 @@ pub struct Case {
     /// 切り出した左上の、画面での位置
     #[serde(default)]
     pub crop: (i32, i32),
+    /// ショップを開いている画面か（アイテム欄の位置が変わる）
+    #[serde(default)]
+    pub shop: bool,
     /// 枠の順に、出ているものの名前。何もない枠は null
     pub names: Vec<Option<String>>,
 }

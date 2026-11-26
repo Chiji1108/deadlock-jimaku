@@ -1,7 +1,7 @@
 {
-  "threshold": 0.8500000238418579,
+  "threshold": 0.800000011920929,
   "templates": 173,
-  "correct": 45,
+  "correct": 69,
   "unknown": 3,
   "wrong": 0,
   "cases": [
@@ -409,6 +409,210 @@
           "best": "Active Reload",
           "score": 0.6844717264175415,
           "second": 0.5639791488647461,
+          "verdict": "correct"
+        }
+      ]
+    },
+    {
+      "file": "full.png",
+      "note": "12 枠が全部埋まっている",
+      "slots": [
+        {
+          "expected": "Headhunter",
+          "answer": "Headhunter",
+          "best": "Headhunter",
+          "score": 0.9799606800079346,
+          "second": 0.6727283000946045,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Point Blank",
+          "answer": "Point Blank",
+          "best": "Point Blank",
+          "score": 0.972234308719635,
+          "second": 0.5541465878486633,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Escalating Resilience",
+          "answer": "Escalating Resilience",
+          "best": "Escalating Resilience",
+          "score": 0.962188720703125,
+          "second": 0.4115872383117676,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Disarming Hex",
+          "answer": "Disarming Hex",
+          "best": "Disarming Hex",
+          "score": 0.8872275948524475,
+          "second": 0.4321281313896179,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Fortitude",
+          "answer": "Fortitude",
+          "best": "Fortitude",
+          "score": 0.967901885509491,
+          "second": 0.6351810693740845,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Boundless Spirit",
+          "answer": "Boundless Spirit",
+          "best": "Boundless Spirit",
+          "score": 0.9742483496665955,
+          "second": 0.32110923528671265,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Berserker",
+          "answer": "Berserker",
+          "best": "Berserker",
+          "score": 0.9730727076530457,
+          "second": 0.5405884981155396,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Shadow Weave",
+          "answer": "Shadow Weave",
+          "best": "Shadow Weave",
+          "score": 0.9344086050987244,
+          "second": 0.5960121154785156,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Bullet Resilience",
+          "answer": "Bullet Resilience",
+          "best": "Bullet Resilience",
+          "score": 0.9676066637039185,
+          "second": 0.489036500453949,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Counterspell",
+          "answer": "Counterspell",
+          "best": "Counterspell",
+          "score": 0.9633710980415344,
+          "second": 0.44514021277427673,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Lightning Scroll",
+          "answer": "Lightning Scroll",
+          "best": "Lightning Scroll",
+          "score": 0.9778662919998169,
+          "second": 0.628243625164032,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Escalating Exposure",
+          "answer": "Escalating Exposure",
+          "best": "Escalating Exposure",
+          "score": 0.976150393486023,
+          "second": 0.4018220901489258,
+          "verdict": "correct"
+        }
+      ]
+    },
+    {
+      "file": "shop.png",
+      "note": "上と同じ持ち物で、ショップを開いている。欄が上にずれる",
+      "slots": [
+        {
+          "expected": "Headhunter",
+          "answer": "Headhunter",
+          "best": "Headhunter",
+          "score": 0.9796528220176697,
+          "second": 0.6726645827293396,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Point Blank",
+          "answer": "Point Blank",
+          "best": "Point Blank",
+          "score": 0.9720944166183472,
+          "second": 0.5548095107078552,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Escalating Resilience",
+          "answer": "Escalating Resilience",
+          "best": "Escalating Resilience",
+          "score": 0.9617397785186768,
+          "second": 0.40882939100265503,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Disarming Hex",
+          "answer": "Disarming Hex",
+          "best": "Disarming Hex",
+          "score": 0.8275423049926758,
+          "second": 0.34809938073158264,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Fortitude",
+          "answer": "Fortitude",
+          "best": "Fortitude",
+          "score": 0.9676343202590942,
+          "second": 0.6332687139511108,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Boundless Spirit",
+          "answer": "Boundless Spirit",
+          "best": "Boundless Spirit",
+          "score": 0.9744163155555725,
+          "second": 0.3204595446586609,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Berserker",
+          "answer": "Berserker",
+          "best": "Berserker",
+          "score": 0.9732467532157898,
+          "second": 0.5416519045829773,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Shadow Weave",
+          "answer": "Shadow Weave",
+          "best": "Shadow Weave",
+          "score": 0.9537525177001953,
+          "second": 0.5728145241737366,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Bullet Resilience",
+          "answer": "Bullet Resilience",
+          "best": "Bullet Resilience",
+          "score": 0.9674772620201111,
+          "second": 0.48797622323036194,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Counterspell",
+          "answer": "Counterspell",
+          "best": "Counterspell",
+          "score": 0.9630618691444397,
+          "second": 0.4423244297504425,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Lightning Scroll",
+          "answer": "Lightning Scroll",
+          "best": "Lightning Scroll",
+          "score": 0.977897047996521,
+          "second": 0.6275392174720764,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Escalating Exposure",
+          "answer": "Escalating Exposure",
+          "best": "Escalating Exposure",
+          "score": 0.9763858318328857,
+          "second": 0.4026249349117279,
           "verdict": "correct"
         }
       ]

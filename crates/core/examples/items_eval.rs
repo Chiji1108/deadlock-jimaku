@@ -26,11 +26,13 @@ const SLOT: f32 = 54.0;
 const SPACING: f32 = 62.0;
 /// 左上の枠の、画面での位置
 const FIRST: (f32, f32) = (26.0, 946.0);
+/// ショップを開いている間は、欄がこれだけ上にずれる（買うのはショップの中なので、買った瞬間はこの位置に出る）
+const SHOP_RISE: f32 = 40.0;
 /// 枠の並び（横、縦）。鍵の掛かった枠も数える
 const GRID: (usize, usize) = (6, 2);
 /// これより近くなければ「不明」にする（空の枠、鍵の掛かった枠、クールダウンで暗い枠）。
-/// 空の枠は 0.7 前後まで上がるので、ヒーロー（0.8）より高くする
-const THRESHOLD: f32 = 0.85;
+/// 空の枠は 0.72 まで上がり、暗くない枠は 0.83 まで下がる（Disarming Hex）ので、その間に置く
+const THRESHOLD: f32 = 0.8;
 
 /// 枠のうち、比べる範囲。右上は段の印（III など）が重なり、縁は枠の線が掛かる
 fn compared(x: f32, y: f32) -> bool {
@@ -81,12 +83,13 @@ async fn main() -> anyhow::Result<()> {
             .iter()
             .map(|(name, image)| Template::new(name, image, (size, size), compared))
             .collect();
+        let first_top = FIRST.1 - if case.shop { SHOP_RISE } else { 0.0 };
         let started = Instant::now();
         let mut reads = Vec::new();
         for row in 0..GRID.1 {
             for column in 0..GRID.0 {
                 let left = ((FIRST.0 + SPACING * column as f32) * scale).round() as i32;
-                let top = ((FIRST.1 + SPACING * row as f32) * scale).round() as i32;
+                let top = ((first_top + SPACING * row as f32) * scale).round() as i32;
                 reads.push(screen::read(
                     frame,
                     &templates,

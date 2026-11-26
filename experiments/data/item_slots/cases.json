@@ -26,5 +26,20 @@
     "screen": [1920, 1080],
     "crop": [0, 930],
     "names": ["Alchemical Fire", "Headhunter", null, null, null, null, "Heroic Aura", "Berserker", null, null, null, null]
+  },
+  {
+    "file": "full.png",
+    "note": "12 枠が全部埋まっている",
+    "screen": [1920, 1080],
+    "crop": [0, 930],
+    "names": ["Headhunter", "Point Blank", "Escalating Resilience", "Disarming Hex", "Fortitude", "Boundless Spirit", "Berserker", "Shadow Weave", "Bullet Resilience", "Counterspell", "Lightning Scroll", "Escalating Exposure"]
+  },
+  {
+    "file": "shop.png",
+    "note": "上と同じ持ち物で、ショップを開いている。欄が上にずれる",
+    "screen": [1920, 1080],
+    "crop": [0, 890],
+    "shop": true,
+    "names": ["Headhunter", "Point Blank", "Escalating Resilience", "Disarming Hex", "Fortitude", "Boundless Spirit", "Berserker", "Shadow Weave", "Bullet Resilience", "Counterspell", "Lightning Scroll", "Escalating Exposure"]
   }
 ]
