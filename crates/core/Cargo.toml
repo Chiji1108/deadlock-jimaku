@@ -47,12 +47,14 @@ fontdb = "0.24.0"
 percent-encoding = "2.3.2"
 zip = { version = "9.3.0", default-features = false, features = ["deflate"] }
 rusqlite = { version = "0.43.0", features = ["bundled", "fallible_uint"] }
+# ゲームの画面を読む見本を、画面の大きさに縮める（`screen`）
+image = { version = "0.25", default-features = false }
 
 [dev-dependencies]
 # 辞書を組み立てる例（`examples/build_dictionary.rs`）が、MeCab の重みから小さい辞書を作るのに使う
 vibrato = { version = "0.5.3", features = ["train"] }
 tempfile = "3.27.0"
-# 画面からヒーローを読めるかを測る例（`examples/heroes_eval.rs`）が、PNG を読んで縮めるのに使う
+# 画面を読めるかを測る例（`examples/heroes_eval.rs`、`items_eval.rs`）が、PNG を読むのに使う
 image = { version = "0.25", default-features = false, features = ["png"] }
 
 # 画面を取り込めるかを確かめる例（`examples/capture.rs`）が、Windows.Graphics.Capture を呼ぶのに使う

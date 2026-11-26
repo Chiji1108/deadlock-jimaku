@@ -12,7 +12,7 @@ use std::collections::BTreeMap;
 use std::path::Path;
 use std::time::Instant;
 
-use screen::Template;
+use overlays_core::screen::heroes;
 use serde::Deserialize;
 use serde_json::Value;
 
@@ -20,22 +20,6 @@ const CASES: &str = "experiments/data/top_bar/cases.json";
 const OUT: &str = "experiments/results/heroes_eval.json";
 const CARDS: &str = "target/heroes_eval";
 const API: &str = "https://api.deadlock-api.com/v1/assets/heroes";
-
-/// 枠に出るカードの大きさ（1080p）。上の端は画面の上の端に付く
-const CARD: (f32, f32) = (70.0, 95.0);
-/// 隣の枠の中心までの幅
-const SPACING: f32 = 88.0;
-/// 画面の中央から、いちばん内側の枠の中心までの幅
-const INNER: f32 = 146.0;
-/// チームの枠の数。人数の少ないモード（ストリートブロール）は、内側から詰める
-const TEAM: usize = 6;
-/// これより近くなければ「不明」にする（死亡中の暗い枠、誰もいない枠、見た目を変える MOD）
-const THRESHOLD: f32 = 0.8;
-
-/// カードのうち、比べる範囲。左右はチームの印（「!」）が、下は丸い縁とソウルの数が重なる
-fn compared(x: f32, y: f32) -> bool {
-    (0.25..0.75).contains(&x) && y < 0.8
-}
 
 #[derive(Deserialize)]
 struct Hero {
@@ -47,14 +31,6 @@ struct Hero {
     disabled: bool,
     #[serde(default)]
     images: BTreeMap<String, Value>,
-}
-
-/// 枠の中心の x 座標を、左の枠から順に
-fn slots(screen_width: u32, scale: f32) -> Vec<f32> {
-    let center = screen_width as f32 / 2.0;
-    let offsets = (0..TEAM).map(|i| (INNER + SPACING * i as f32) * scale);
-    let left = offsets.clone().rev().map(|offset| center - offset);
-    left.chain(offsets.map(|offset| center + offset)).collect()
 }
 
 #[tokio::main]
@@ -87,29 +63,19 @@ async fn main() -> anyhow::Result<()> {
         .map(|path| Path::new(path).with_extension("result.json"));
     let cases = screen::cases(given.as_deref().unwrap_or(CASES))?;
     let mut results = Vec::new();
-    for (case, frame) in &cases {
+    for (case, image) in &cases {
         let scale = case.scale();
-        let size = (
-            (CARD.0 * scale).round() as u32,
-            (CARD.1 * scale).round() as u32,
+        let templates = heroes::templates(
+            cards.iter().map(|(name, card)| (name.as_str(), card)),
+            scale,
         );
-        let templates: Vec<Template> = cards
-            .iter()
-            .map(|(name, card)| Template::new(name, card, size, compared))
-            .collect();
         let started = Instant::now();
-        let reads: Vec<_> = slots(case.screen.0, scale)
-            .into_iter()
-            .map(|center| {
-                let left = (center - CARD.0 * scale / 2.0).round() as i32;
-                screen::read(frame, &templates, left - case.crop.0, -case.crop.1)
-            })
-            .collect();
+        let reads = heroes::read(&case.frame(image), &templates, case.screen.0, scale);
         results.push((case, reads, started.elapsed()));
     }
     screen::report(
         out.as_deref().unwrap_or(Path::new(OUT)),
-        THRESHOLD,
+        heroes::THRESHOLD,
         cards.len(),
         &results,
     )

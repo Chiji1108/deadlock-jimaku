@@ -24,6 +24,7 @@ pub mod reading;
 pub mod reazon;
 pub mod relay;
 pub mod runtime;
+pub mod screen;
 pub mod secrets;
 pub mod segment;
 pub mod server;
