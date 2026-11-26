@@ -168,7 +168,7 @@ pub fn read(frame: &RgbImage, templates: &[Template], left: i32, top: i32) -> Re
 
 /// 読んだ結果を正解と比べて出し、`out` に書く。`threshold` より近くなければ「不明」にする
 pub fn report(
-    out: &str,
+    out: &Path,
     threshold: f32,
     templates: usize,
     results: &[(&Case, Vec<Read>, Duration)],
