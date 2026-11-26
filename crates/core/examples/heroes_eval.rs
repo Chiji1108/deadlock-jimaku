@@ -223,6 +223,12 @@ async fn main() -> anyhow::Result<()> {
             .map(|center| read(&frame, &templates, center, scale))
             .collect();
         let elapsed = started.elapsed();
+        anyhow::ensure!(
+            case.heroes.len() == reads.len(),
+            "{}: heroes は枠の数（{}）だけ書く（誰もいない枠は null）",
+            case.file,
+            reads.len()
+        );
 
         println!("{}（{}）{elapsed:.0?}", case.file, case.note);
         let mut slots = Vec::new();
