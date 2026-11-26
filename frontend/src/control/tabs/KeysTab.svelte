@@ -1,4 +1,5 @@
 <script lang="ts">
+  import TrashIcon from "@lucide/svelte/icons/trash-2";
   import Help from "../parts/Help.svelte";
   import ChevronIcon from "@lucide/svelte/icons/chevron-down";
   import { Badge } from "$lib/components/ui/badge";
@@ -73,7 +74,9 @@
         />
         <Button type="submit" disabled={!inputs[p.id]}>保存</Button>
         {#if saved}
-          <Button type="button" variant="outline" onclick={() => save(p.id, "")}>削除</Button>
+          <Button type="button" variant="outline" onclick={() => save(p.id, "")}
+            ><TrashIcon />削除</Button
+          >
         {/if}
       </div>
     </Field.Field>

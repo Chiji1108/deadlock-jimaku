@@ -1,4 +1,5 @@
 <script lang="ts">
+  import RotateCcwIcon from "@lucide/svelte/icons/rotate-ccw";
   import Help from "./Help.svelte";
   import type { Snippet } from "svelte";
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
@@ -127,7 +128,7 @@
       {@render details()}
       <div>
         <Button variant="outline" size="sm" onclick={() => (confirming = true)}>
-          文字の見た目を標準に戻す
+          <RotateCcwIcon />文字の見た目を標準に戻す
         </Button>
       </div>
     </div>

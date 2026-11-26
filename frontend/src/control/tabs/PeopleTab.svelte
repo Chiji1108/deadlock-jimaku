@@ -1,4 +1,8 @@
 <script lang="ts">
+  import XIcon from "@lucide/svelte/icons/x";
+  import PlusIcon from "@lucide/svelte/icons/plus";
+  import DownloadIcon from "@lucide/svelte/icons/download";
+  import UploadIcon from "@lucide/svelte/icons/upload";
   // 「プロフィール」のタブ。人の辞書（自分と、よく一緒に遊ぶ人）の、名前・呼ばれ方・アイコンを入れる。
   // 入れた名前は、ヒーローの名前と同じように、字幕で強調してアイコンを付け、翻訳ではその言語の名前にする（DESIGN.md 9.12）。
   // この PC にだけ保存する。変えたらすぐ保存する
@@ -193,7 +197,7 @@
               size="sm"
               onclick={() => change(person.id, { icon: undefined })}
             >
-              アイコンを外す
+              <XIcon />アイコンを外す
             </Button>
           {/if}
         </div>
@@ -323,7 +327,7 @@
             }}
           >
             <Input class="flex-1" placeholder="自分の名前" bind:value={adding.me} />
-            <Button type="submit" disabled={!adding.me.trim()}>足す</Button>
+            <Button type="submit" disabled={!adding.me.trim()}><PlusIcon />足す</Button>
           </form>
         {/if}
       </Card.Content>
@@ -351,7 +355,9 @@
             }}
           >
             <Input class="flex-1" placeholder="足す人の名前" bind:value={adding.other} />
-            <Button type="submit" variant="outline" disabled={!adding.other.trim()}>足す</Button>
+            <Button type="submit" variant="outline" disabled={!adding.other.trim()}
+              ><PlusIcon />足す</Button
+            >
           </form>
         {/if}
       </Card.Content>
@@ -368,13 +374,13 @@
       </Card.Header>
       <Card.Content class="flex flex-wrap gap-2">
         <Button variant="outline" disabled={!people.length} onclick={exportPeople}>
-          ファイルに書き出す
+          <DownloadIcon />ファイルに書き出す
         </Button>
         <Button
           variant="outline"
           onclick={(e) => (e.currentTarget.nextElementSibling as HTMLInputElement | null)?.click()}
         >
-          ファイルを読み込む
+          <UploadIcon />ファイルを読み込む
         </Button>
         <input type="file" accept="application/json,.json" class="hidden" onchange={importPeople} />
       </Card.Content>

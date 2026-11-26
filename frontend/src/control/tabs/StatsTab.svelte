@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
   // 「統計」のタブ。字幕を始めてから止めるまでを 1 回として、確定した字幕から数えた、
   // 字幕を出していた時間、喋った量と、よく呼んだヒーロー・アイテム・スキル。
   // 上から、前回（出している間は今回）、今週・今月・ぜんぶの合計、日ごとの草、時間帯の表、回ごとの一覧。
@@ -232,7 +233,7 @@
             variant="outline"
             size="sm"
             class="mt-2 w-full"
-            onclick={() => panel.showMoreSessions()}>もっと見る</Button
+            onclick={() => panel.showMoreSessions()}><ChevronDownIcon />もっと見る</Button
           >
         {/if}
       {/if}
