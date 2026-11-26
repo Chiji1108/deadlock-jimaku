@@ -2,6 +2,8 @@
 import miri from "../assets/miri.webp?url";
 import obsPoster from "../assets/obs-drag.webp?url";
 import obsVideo from "../assets/obs-drag.mp4?url";
+import statsDays from "../assets/stats-days.webp?url";
+import statsTotals from "../assets/stats-totals.webp?url";
 import { siTwitch } from "simple-icons";
 import Layout from "../layouts/Layout.astro";
 import { MODES, price } from "../../../frontend/src/lib/engines";
@@ -194,7 +196,7 @@ const jsonLd = {
   <section class="mx-auto mt-24 grid max-w-6xl items-center gap-10 px-4 sm:mt-32 md:grid-cols-2">
     <div>
       <h2 class="display reveal text-[clamp(2.1rem,4.5vw,3.6rem)]">
-        聞き取りの<br /><span class="band">精度が違う。</span>
+        <span class="band">正確な</span>文字起こし
       </h2>
       <p class="reveal mt-5 text-lg leading-relaxed text-muted">
         「おすすめ」のモードでは、話し終えた文を、文字起こし専用のモデルで作り直します。略して呼んだアイテムも、「ドアマンのカート」のように略したスキルも、どれのことか見分けます。
@@ -211,7 +213,7 @@ const jsonLd = {
     </div>
     <div class="order-first md:order-none">
       <h2 class="display reveal text-[clamp(2.1rem,4.5vw,3.6rem)]">
-        <span class="band">ふりがな</span>付きで、<br />海外の学習者にも。
+        <span class="band">ふりがな</span>付きの字幕
       </h2>
       <p class="reveal mt-5 text-lg leading-relaxed text-muted">
         漢字に読みが付くので、日本語を学んでいる海外の視聴者にも読みやすい字幕になります。句読点も付け、数字は「8分」のように読みやすい形にそろえます。英語やロシア語など、最大 4 つの言語への翻訳も同時に出せます。
@@ -221,7 +223,7 @@ const jsonLd = {
 
   <section class="mx-auto mt-28 max-w-6xl px-4 sm:mt-40">
     <h2 class="display reveal max-w-4xl text-[clamp(2.1rem,5.4vw,4.25rem)]">
-      <span class="band">デッドロック特化。</span>
+      <span class="band">ゲームの用語</span>に対応
     </h2>
     <p class="reveal mt-5 max-w-2xl text-lg leading-relaxed text-muted">
       ヒーロー・スキル・アイテムの名前は色とアイコンで強調します。アイテムの名前が出たら、ゲーム内と同じカードで説明も出します。
@@ -261,7 +263,7 @@ const jsonLd = {
 
   <section class="mx-auto mt-28 grid max-w-6xl items-center gap-10 px-4 sm:mt-40 md:grid-cols-2">
     <div>
-      <h2 class="display reveal text-[clamp(2.1rem,4.5vw,3.6rem)]">ランクは、<br /><span class="band">シンプルに。</span></h2>
+      <h2 class="display reveal text-[clamp(2.1rem,4.5vw,3.6rem)]"><span class="band">ランク</span>の表示</h2>
       <p class="reveal mt-5 text-lg leading-relaxed text-muted">
         配信にはランクだけを、すっきり出せます。アイコンだけにもできて、ランク名は日本語にもできます。試合が終わると自動で更新します。
       </p>
@@ -284,7 +286,7 @@ const jsonLd = {
   <section class="mx-auto mt-28 grid max-w-6xl items-center gap-10 px-4 sm:mt-40 md:grid-cols-2">
     <LookDemo client:visible />
     <div class="order-first md:order-none">
-      <h2 class="display reveal text-[clamp(2.1rem,4.5vw,3.6rem)]">文字の見た目も、<br /><span class="band">好きなように。</span></h2>
+      <h2 class="display reveal text-[clamp(2.1rem,4.5vw,3.6rem)]">文字の見た目を<br /><span class="band">変えられる</span></h2>
       <p class="reveal mt-5 text-lg leading-relaxed text-muted">
         字幕は言語ごとにフォント・太さ・字間を、ランクもフォントを選べます。色、縁取り、影、行間、字幕の後ろの半透明の帯も変えられます。
       </p>
@@ -294,9 +296,23 @@ const jsonLd = {
     </div>
   </section>
 
+  <section class="mx-auto mt-28 grid max-w-6xl items-center gap-10 px-4 sm:mt-40 md:grid-cols-2">
+    <div>
+      <h2 class="display reveal text-[clamp(2.1rem,4.5vw,3.6rem)]"><span class="band">統計</span>タブ</h2>
+      <p class="reveal mt-5 text-lg leading-relaxed text-muted">
+        字幕を出していた時間、喋った量、よく呼んだヒーロー・アイテム・スキルを、前回の配信と、今週・今月・ぜんぶの合計で見られます。日ごとの草と、配信している時間帯の表もあります。
+      </p>
+      <p class="reveal mt-3 text-lg leading-relaxed text-muted">数だけをこの PC に保存します。話した文は残しません。</p>
+    </div>
+    <div class="reveal plate flex flex-col gap-3 p-4 sm:p-6">
+      <img src={statsTotals} alt="統計の合計（字幕を出していた時間、喋った量、よく呼んだヒーロー・アイテム・スキル）" width="1472" height="760" loading="lazy" class="w-full rounded-xl" />
+      <img src={statsDays} alt="日ごとの喋った量の草" width="1472" height="436" loading="lazy" class="w-full rounded-xl" />
+    </div>
+  </section>
+
   <section class="mx-auto mt-28 max-w-6xl px-4 sm:mt-40">
     <h2 class="display reveal text-[clamp(2.1rem,5.4vw,4.25rem)]">
-      ゲームの<span class="band">邪魔をしない。</span>
+      ゲームが<span class="band">重くならない</span>
     </h2>
     <p class="reveal mt-5 max-w-2xl text-lg leading-relaxed text-muted">
       文字起こしをクラウドで動かすので、ゲーム中の PC に重い処理をさせません。アプリも小さくて軽いです。
@@ -316,7 +332,7 @@ const jsonLd = {
 
   <section class="mx-auto mt-28 max-w-6xl px-4 text-center sm:mt-40">
     <h2 class="display reveal text-[clamp(2.1rem,5.4vw,4.25rem)]">
-      OBS に<span class="band">ドラッグするだけ。</span>
+      OBS に<span class="band">ドラッグで追加</span>
     </h2>
     <p class="reveal mx-auto mt-5 max-w-2xl text-lg text-muted">
       見せ方はアプリの画面で変えられます。一度追加すれば、貼り直す必要はありません。
@@ -338,7 +354,7 @@ const jsonLd = {
 
   <section id="modes" class="mx-auto mt-28 max-w-6xl px-4 sm:mt-40">
     <h2 class="display reveal text-[clamp(2.1rem,5.4vw,4.25rem)]">
-      3 つの<span class="band">モード</span>から選べる。
+      3 つの<span class="band">モード</span>
     </h2>
     <ul class="mt-10 grid gap-8 md:grid-cols-3">
       {
