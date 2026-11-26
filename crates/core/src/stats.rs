@@ -449,7 +449,8 @@ fn migrate(conn: Connection) -> rusqlite::Result<Connection> {
     if version < 1 {
         conn.execute_batch(
             "CREATE TABLE sessions (
-                id INTEGER PRIMARY KEY,
+                -- 消した回の id を使い回さない（消すのを確かめている間に、新しい回が同じ id にならないように）
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
                 started_at INTEGER NOT NULL,
                 ended_at INTEGER NOT NULL,
                 utterances INTEGER NOT NULL DEFAULT 0,
@@ -595,24 +596,25 @@ mod tests {
                 .unwrap()
         };
 
-        tally.forget(Some(*old)).unwrap();
+        // 出している回を消しても、続きは新しい回として数える。消した回の id は使い回さない
+        tally.forget(Some(*live)).unwrap();
         let view = tally.view();
         assert_eq!(
             view.sessions.iter().map(|s| s.id).collect::<Vec<_>>(),
-            [*live]
+            [*old]
         );
         assert_eq!(view.all.totals.utterances, 1);
         assert_eq!(rows(&tally), (2, 1));
-
-        // 出している回を消しても、続きは新しい回として数える
-        tally.forget(Some(*live)).unwrap();
-        assert!(tally.view().sessions.is_empty());
         tally.count(&haze());
-        let view = tally.view();
-        let [session] = view.sessions.as_slice() else {
-            panic!("one session: {view:?}");
+        let ids: Vec<i64> = tally.view().sessions.iter().map(|s| s.id).collect();
+        let [new, _] = ids.as_slice() else {
+            panic!("two sessions: {ids:?}");
         };
-        assert!(session.live && session.id != *live);
+        assert!(*new > *live);
+        assert!(tally.view().sessions[0].live);
+
+        tally.forget(Some(*old)).unwrap();
+        assert_eq!(rows(&tally), (2, 1));
 
         tally.forget(None).unwrap();
         let view = tally.view();
