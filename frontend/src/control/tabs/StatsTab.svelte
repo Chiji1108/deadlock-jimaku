@@ -94,7 +94,7 @@
       {#if !last}
         <div class="text-sm text-muted-foreground">まだありません</div>
       {:else}
-        <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div class="grid grid-cols-2 gap-4 sm:grid-cols-3">
           {@render tile(
             "字幕を出していた時間",
             hoursAndMinutes((last.live ? panel.now : last.endedAt) - last.startedAt),
