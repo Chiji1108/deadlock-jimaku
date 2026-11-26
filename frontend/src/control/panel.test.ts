@@ -7,7 +7,7 @@ import type { SettingsView } from "../generated/SettingsView";
 import { BEST, BETA, CHROME } from "../lib/engines";
 
 vi.mock("../lib/overlay-fonts", () => ({ addFontFaces: vi.fn(), fontWeights: vi.fn() }));
-vi.mock("../lib/ws", () => ({ connect: vi.fn(() => () => {}) }));
+vi.mock("../lib/ws", () => ({ connect: vi.fn(() => Object.assign(() => {}, { send: () => {} })) }));
 
 const pc = (...families: string[]): FontEntry[] =>
   families.map((family) => ({ family, downloaded: false }));

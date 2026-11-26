@@ -18,7 +18,7 @@ async function reloadIfUpdated() {
 /**
  * /ws に接続してトピックを購読する。切れたら指数バックオフで再接続し、
  * 再接続後はサーバーが送る snapshot で状態を置き換える（DESIGN.md 10 章）。
- * 戻り値は切断する関数。
+ * 戻り値は切断する関数。`send` で、つながっている間にメッセージを送れる（切れている間に送ったものは捨てる）。
  */
 export function connect(
   topics: Topic[],
@@ -26,7 +26,7 @@ export function connect(
   onStatus: (status: Status) => void = () => {},
   /** OBS の中で開いた字幕オーバーレイ。つながっている間、操作パネルに「OBS に表示中」と出る */
   obs = false,
-): () => void {
+): (() => void) & { send: (msg: ClientMsg) => void } {
   let ws: WebSocket | undefined;
   let retry = 0;
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -44,8 +44,9 @@ export function connect(
       retry = 0;
       if (reconnecting) void reloadIfUpdated();
       reconnecting = true;
-      onStatus("open");
+      // 購読を先に送る（つないだ側が "open" で送るメッセージは、購読のあとに届く）
       socket.send(JSON.stringify({ type: "subscribe", topics, obs } satisfies ClientMsg));
+      onStatus("open");
     });
     socket.addEventListener("message", (e) => onMessage(JSON.parse(e.data) as ServerMsg));
     socket.addEventListener("close", () => {
@@ -55,9 +56,13 @@ export function connect(
   };
 
   open();
-  return () => {
+  const close = () => {
     stopped = true;
     clearTimeout(timer);
     ws?.close();
   };
+  const send = (msg: ClientMsg) => {
+    if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+  };
+  return Object.assign(close, { send });
 }

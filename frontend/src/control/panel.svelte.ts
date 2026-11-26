@@ -7,6 +7,7 @@ import type { BetaRefusal } from "../generated/BetaRefusal";
 import type { Downloading } from "../generated/Downloading";
 import type { Engines } from "../generated/Engines";
 import type { Provider } from "../generated/Provider";
+import type { ClientMsg } from "../generated/ClientMsg";
 import type { ServerMsg } from "../generated/ServerMsg";
 import type { SettingsPatch } from "../generated/SettingsPatch";
 import type { SettingsView } from "../generated/SettingsView";
@@ -32,6 +33,9 @@ import type { FontEntry } from "../generated/FontEntry";
 import type { FontStyle } from "../generated/FontStyle";
 import { loadGlossary } from "../lib/glossary.svelte";
 import { connect, type Status } from "../lib/ws";
+
+/** 統計の回ごとの一覧で、いつも届く回の数と、「もっと見る」で増やす数（core の `stats::RECENT`） */
+const STATS_PAGE = 50;
 
 /** 選べるフォントの一覧。取れるまでと、取れなかったときは名前の配列の代わりにその状態が入る */
 export type FontList = FontEntry[] | "loading" | "failed";
@@ -96,6 +100,9 @@ class Panel {
   usage = $state<UsageView | undefined>();
   /** 字幕の統計（喋った量と、呼んだ名前の回数） */
   stats = $state<StatsView | undefined>();
+  /** 統計の回ごとの一覧を、新しい順に何回分送ってもらうか（「もっと見る」で増える。core の RECENT から） */
+  statsSessions = $state(STATS_PAGE);
+  private send: (msg: ClientMsg) => void = () => {};
   /** 起動してから、字幕を動かして字幕が出た（テスト字幕は数えない） */
   subtitled = $state(false);
   /** ベータのコードをもらえば使える作り方。選んだ人の同意を待っている（DESIGN.md 17.2） */
@@ -240,10 +247,15 @@ class Panel {
       (msg) => this.onMessage(msg),
       (s) => {
         this.server = s;
+        if (s !== "open") return;
         // アプリを更新して開き直したときなど、つなぎ直したら最新の状態（版など）にする
-        if (s === "open") void this.refreshSettings();
+        void this.refreshSettings();
+        // 「もっと見る」で増やした数は、つなぎ直すと core が忘れるので送り直す
+        if (this.statsSessions > STATS_PAGE)
+          this.send({ type: "stats", sessions: this.statsSessions });
       },
     );
+    this.send = disconnect.send;
     return () => {
       clearInterval(tick);
       window.removeEventListener("focus", refreshDevices);
@@ -346,6 +358,11 @@ class Panel {
       await api.resetChrome();
       toast.success("Chrome をリセットしました");
     });
+
+  showMoreSessions() {
+    this.statsSessions += STATS_PAGE;
+    this.send({ type: "stats", sessions: this.statsSessions });
+  }
 
   forgetSession = (id: number) =>
     this.run(async () => {
