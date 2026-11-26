@@ -51,6 +51,11 @@ struct Item {
     shop_image: Option<String>,
 }
 
+/// 枠の近さの合計
+fn total(reads: &[screen::Read]) -> f32 {
+    reads.iter().map(|read| read.score).sum()
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
@@ -83,21 +88,28 @@ async fn main() -> anyhow::Result<()> {
             .iter()
             .map(|(name, image)| Template::new(name, image, (size, size), compared))
             .collect();
-        let first_top = FIRST.1 - if case.shop { SHOP_RISE } else { 0.0 };
         let started = Instant::now();
-        let mut reads = Vec::new();
-        for row in 0..GRID.1 {
-            for column in 0..GRID.0 {
-                let left = ((FIRST.0 + SPACING * column as f32) * scale).round() as i32;
-                let top = ((first_top + SPACING * row as f32) * scale).round() as i32;
-                reads.push(screen::read(
-                    frame,
-                    &templates,
-                    left - case.crop.0,
-                    top - case.crop.1,
-                ));
-            }
-        }
+        // ショップを開いているかは分からないので、両方の位置を読んで、よく合うほうを採る
+        let reads = [0.0, SHOP_RISE]
+            .map(|rise| {
+                let mut reads = Vec::new();
+                for row in 0..GRID.1 {
+                    for column in 0..GRID.0 {
+                        let left = (FIRST.0 + SPACING * column as f32) * scale;
+                        let top = (FIRST.1 - rise + SPACING * row as f32) * scale;
+                        reads.push(screen::read(
+                            frame,
+                            &templates,
+                            left.round() as i32 - case.crop.0,
+                            top.round() as i32 - case.crop.1,
+                        ));
+                    }
+                }
+                reads
+            })
+            .into_iter()
+            .max_by(|a, b| total(a).total_cmp(&total(b)))
+            .expect("two positions");
         results.push((case, reads, started.elapsed()));
     }
     screen::report(OUT, THRESHOLD, images.len(), &results)
