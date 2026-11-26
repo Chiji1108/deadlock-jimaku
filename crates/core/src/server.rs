@@ -19,6 +19,7 @@ use crate::fonts;
 use crate::relay;
 use crate::secrets::{self, Provider};
 use crate::settings::SettingsPatch;
+use crate::stats::{self, StatsView};
 use crate::store::{ChromeEvent, Store};
 use crate::types::{
     ChromeCommand, ChromeMsg, ClientMsg, LangCode, RankState, ServerMsg, SettingsView, Topic,
@@ -60,7 +61,6 @@ pub fn router(store: Arc<Store>) -> Router {
         .route("/fonts/{family}/{postscript}", get(font_file))
         .route("/rank/sample", get(rank_sample))
         .route("/stats", delete(forget_stats))
-        .route("/stats/sessions", get(stats_sessions))
         .route("/stats/sessions/{id}", delete(forget_session))
         .route("/chrome/open", post(open_chrome))
         .route("/chrome/reset", post(reset_chrome))
@@ -214,26 +214,6 @@ async fn open_chrome(State(store): State<Arc<Store>>) -> StatusCode {
 }
 
 /// 専用のプロファイルを消して、Chrome を始め直す
-#[derive(Deserialize)]
-struct SessionsQuery {
-    limit: u32,
-}
-
-/// 統計の回を、新しい順に `limit` 回（回ごとの一覧の「もっと見る」）
-async fn stats_sessions(
-    State(store): State<Arc<Store>>,
-    Query(query): Query<SessionsQuery>,
-) -> Response {
-    match blocking(move || store.tally().sessions(query.limit)).await {
-        Ok(sessions) => Json(sessions).into_response(),
-        Err(e) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("統計を読めません（{e}）"),
-        )
-            .into_response(),
-    }
-}
-
 /// 統計をすべて消す
 async fn forget_stats(State(store): State<Arc<Store>>) -> Response {
     forget(store, None).await
@@ -598,6 +578,10 @@ async fn session(mut socket: WebSocket, store: Arc<Store>) {
     let (topics, obs) = match socket.recv().await {
         Some(Ok(Message::Text(text))) => match serde_json::from_str(text.as_str()) {
             Ok(ClientMsg::Subscribe { topics, obs }) => (topics, obs),
+            Ok(other) => {
+                tracing::warn!("expected subscribe first: {other:?}");
+                return;
+            }
             Err(e) => {
                 tracing::warn!("invalid subscribe: {e}");
                 return;
@@ -617,6 +601,8 @@ async fn session(mut socket: WebSocket, store: Arc<Store>) {
     let wants_stats = topics.contains(&Topic::Stats);
     let mut stats = store.tally().watch();
     stats.mark_unchanged();
+    // この窓の回ごとの一覧に送る回の数（「もっと見る」で増える）
+    let mut sessions = stats::RECENT;
     if send_all(&mut socket, &topics, store.current_state())
         .await
         .is_err()
@@ -632,6 +618,14 @@ async fn session(mut socket: WebSocket, store: Arc<Store>) {
                     Err(RecvError::Lagged(_)) => store.current_state(),
                     Err(RecvError::Closed) => return,
                 };
+                // 送り直す統計も、この窓が頼んだ数の回にする
+                let msgs = msgs
+                    .into_iter()
+                    .map(|msg| match msg {
+                        ServerMsg::Stats { stats } => stats_msg(&store, stats, sessions),
+                        msg => msg,
+                    })
+                    .collect();
                 if send_all(&mut socket, &topics, msgs).await.is_err() {
                     return;
                 }
@@ -649,18 +643,38 @@ async fn session(mut socket: WebSocket, store: Arc<Store>) {
                 }
             }
             Ok(()) = stats.changed(), if wants_stats => {
-                let stats = stats.borrow_and_update().clone();
-                if send_all(&mut socket, &topics, vec![ServerMsg::Stats { stats }]).await.is_err() {
+                let msg = stats_msg(&store, stats.borrow_and_update().clone(), sessions);
+                if send_all(&mut socket, &topics, vec![msg]).await.is_err() {
                     return;
                 }
             }
             incoming = socket.recv() => {
-                if !matches!(incoming, Some(Ok(_))) {
+                let Some(Ok(message)) = incoming else {
                     return;
+                };
+                if let Message::Text(text) = message
+                    && let Ok(ClientMsg::Stats { sessions: n }) = serde_json::from_str(text.as_str())
+                {
+                    sessions = n.max(stats::RECENT);
+                    let msg = stats_msg(&store, stats.borrow().clone(), sessions);
+                    if send_all(&mut socket, &topics, vec![msg]).await.is_err() {
+                        return;
+                    }
                 }
             }
         }
     }
+}
+
+/// 統計。回ごとの一覧は、窓ごとに `sessions` 回（届いている値は新しい `RECENT` 回）
+fn stats_msg(store: &Store, mut stats: StatsView, sessions: u32) -> ServerMsg {
+    if sessions > stats::RECENT {
+        match store.tally().sessions(sessions) {
+            Ok(more) => stats.sessions = more,
+            Err(e) => tracing::warn!("cannot read stats sessions: {e:#}"),
+        }
+    }
+    ServerMsg::Stats { stats }
 }
 
 /// 購読しているトピックのものだけを送る
@@ -722,6 +736,44 @@ mod tests {
         let store = Store::new(Ok(Settings::default()), data_dir);
         tokio::spawn(serve(listener, store));
         addr
+    }
+
+    #[tokio::test]
+    async fn each_window_gets_as_many_stats_sessions_as_it_asks_for() {
+        let dir = tempfile::tempdir().unwrap().keep();
+        // 回を 60 回入れておく（表は Tally が作る）
+        drop(crate::stats::Tally::open(&dir.join("stats.db")));
+        let conn = rusqlite::Connection::open(dir.join("stats.db")).unwrap();
+        for i in 0..60 {
+            conn.execute(
+                "INSERT INTO sessions (started_at, ended_at, utterances) VALUES (?1, ?1, 1)",
+                rusqlite::params![i],
+            )
+            .unwrap();
+        }
+        drop(conn);
+        let addr = serve_with_data(dir).await;
+
+        let (mut socket, _) = tokio_tungstenite::connect_async(format!("ws://{addr}/ws"))
+            .await
+            .unwrap();
+        let sessions = async |socket: &mut tokio_tungstenite::WebSocketStream<_>| loop {
+            if let tungstenite::Message::Text(text) = socket.next().await.unwrap().unwrap()
+                && let Ok(ServerMsg::Stats { stats }) = serde_json::from_str(&text)
+            {
+                return stats.sessions.len();
+            }
+        };
+        socket
+            .send(r#"{ "type": "subscribe", "topics": ["stats"] }"#.into())
+            .await
+            .unwrap();
+        assert_eq!(sessions(&mut socket).await, 50);
+        socket
+            .send(r#"{ "type": "stats", "sessions": 100 }"#.into())
+            .await
+            .unwrap();
+        assert_eq!(sessions(&mut socket).await, 60);
     }
 
     #[tokio::test]

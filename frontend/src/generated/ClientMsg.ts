@@ -5,4 +5,4 @@ export type ClientMsg = { "type": "subscribe", topics: Array<Topic>,
 /**
  * OBS の中で開いた字幕オーバーレイ。つながっている間、操作パネルに「OBS に表示中」と出す
  */
-obs: boolean, };
+obs: boolean, } | { "type": "stats", sessions: number, };

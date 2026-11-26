@@ -18,7 +18,7 @@ use crate::types::{Segment, Token};
 /// 数える用語の種類。人と基本用語は数えない
 const COUNTED: &[&str] = &["hero:", "item:", "ability:"];
 /// 画面に出す回の数（DB には全部残す）
-const RECENT: u32 = 50;
+pub const RECENT: u32 = 50;
 /// テーブルの形を変えたら上げて、`migrate` に足す
 const SCHEMA: i32 = 1;
 

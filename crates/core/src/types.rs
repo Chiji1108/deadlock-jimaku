@@ -126,6 +126,8 @@ pub enum ClientMsg {
         #[serde(default)]
         obs: bool,
     },
+    /// 統計の回ごとの一覧を、新しい順に何回分送るか（操作パネルの「もっと見る」）。つなぎ直したら送り直す
+    Stats { sessions: u32 },
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
