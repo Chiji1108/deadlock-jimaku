@@ -80,7 +80,12 @@ async fn main() -> anyhow::Result<()> {
         cards.push((hero.name, screen::fetch(&http, url, &path).await?));
     }
 
-    let cases = screen::cases(CASES)?;
+    // 引数で、ほかの画面（cases.json）を測れる。結果はその隣に書く
+    let given = std::env::args().nth(1);
+    let out = given
+        .as_ref()
+        .map(|path| path.replace(".json", ".result.json"));
+    let cases = screen::cases(given.as_deref().unwrap_or(CASES))?;
     let mut results = Vec::new();
     for (case, frame) in &cases {
         let scale = case.scale();
@@ -102,5 +107,10 @@ async fn main() -> anyhow::Result<()> {
             .collect();
         results.push((case, reads, started.elapsed()));
     }
-    screen::report(OUT, THRESHOLD, cards.len(), &results)
+    screen::report(
+        out.as_deref().unwrap_or(OUT),
+        THRESHOLD,
+        cards.len(),
+        &results,
+    )
 }
