@@ -515,6 +515,7 @@ pub(crate) fn partial_segment(seq: u64, lang: &str) -> Segment {
     Segment {
         id: format!("mic-{started_at}-{seq}"),
         started_at,
+        spoken_at: started_at,
         stage: Stage::Partial,
         lang: lang.to_owned(),
         text: String::new(),

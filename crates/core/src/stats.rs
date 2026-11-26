@@ -202,7 +202,7 @@ impl Tally {
         let words = seg.text.split_whitespace().count() as u64;
 
         let mut db = self.db.lock().unwrap();
-        if let Err(e) = db.add(seg.started_at, &seg.lang, names, characters, words) {
+        if let Err(e) = db.add(seg.spoken_at, &seg.lang, names, characters, words) {
             tracing::warn!("cannot count the subtitle: {e:#}");
         }
         self.publish(&db);
@@ -483,7 +483,8 @@ mod tests {
     fn haze() -> Segment {
         Segment {
             id: "mic-1-1".to_owned(),
-            started_at: 1,
+            started_at: 5,
+            spoken_at: 1,
             stage: Stage::Enriched,
             lang: "ja".to_owned(),
             text: "ヘイズ の ウルト、ヘイズ強い".to_owned(),

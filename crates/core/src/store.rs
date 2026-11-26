@@ -805,6 +805,7 @@ mod tests {
         Segment {
             id: id.into(),
             started_at: 0,
+            spoken_at: 0,
             stage: Stage::Partial,
             lang: "ja".into(),
             text: text.into(),
