@@ -1,7 +1,7 @@
 {
   "threshold": 0.800000011920929,
   "templates": 173,
-  "correct": 69,
+  "correct": 93,
   "unknown": 3,
   "wrong": 0,
   "cases": [
@@ -613,6 +613,210 @@
           "best": "Escalating Exposure",
           "score": 0.9763858318328857,
           "second": 0.4026249349117279,
+          "verdict": "correct"
+        }
+      ]
+    },
+    {
+      "file": "before_quick_buy.png",
+      "note": "11 個持っている。欄の右は、クイックバイに入れたアイテム（Extra Regen）で、まだ買っていない",
+      "slots": [
+        {
+          "expected": "Berserker",
+          "answer": "Berserker",
+          "best": "Berserker",
+          "score": 0.9777714610099792,
+          "second": 0.534978985786438,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Shadow Weave",
+          "answer": "Shadow Weave",
+          "best": "Shadow Weave",
+          "score": 0.931907594203949,
+          "second": 0.5984203815460205,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Bullet Resilience",
+          "answer": "Bullet Resilience",
+          "best": "Bullet Resilience",
+          "score": 0.9697363376617432,
+          "second": 0.4838782846927643,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Counterspell",
+          "answer": "Counterspell",
+          "best": "Counterspell",
+          "score": 0.9662672877311707,
+          "second": 0.4396386444568634,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Lightning Scroll",
+          "answer": "Lightning Scroll",
+          "best": "Lightning Scroll",
+          "score": 0.9791577458381653,
+          "second": 0.6287901401519775,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Escalating Exposure",
+          "answer": "Escalating Exposure",
+          "best": "Escalating Exposure",
+          "score": 0.9789121150970459,
+          "second": 0.40196430683135986,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Point Blank",
+          "answer": "Point Blank",
+          "best": "Point Blank",
+          "score": 0.978966474533081,
+          "second": 0.5523224472999573,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Escalating Resilience",
+          "answer": "Escalating Resilience",
+          "best": "Escalating Resilience",
+          "score": 0.966296911239624,
+          "second": 0.41191747784614563,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Disarming Hex",
+          "answer": "Disarming Hex",
+          "best": "Disarming Hex",
+          "score": 0.8815470337867737,
+          "second": 0.4196047782897949,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Fortitude",
+          "answer": "Fortitude",
+          "best": "Fortitude",
+          "score": 0.9715256690979004,
+          "second": 0.6322829127311707,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Boundless Spirit",
+          "answer": "Boundless Spirit",
+          "best": "Boundless Spirit",
+          "score": 0.9752708673477173,
+          "second": 0.3215382397174835,
+          "verdict": "correct"
+        },
+        {
+          "expected": null,
+          "answer": null,
+          "best": "Active Reload",
+          "score": 0.7270323634147644,
+          "second": 0.6405558586120605,
+          "verdict": "correct"
+        }
+      ]
+    },
+    {
+      "file": "after_quick_buy.png",
+      "note": "ショップを開かずに、ショートカットで Extra Regen を買った直後。並びが大きく入れ替わっている",
+      "slots": [
+        {
+          "expected": "Extra Regen",
+          "answer": "Extra Regen",
+          "best": "Extra Regen",
+          "score": 0.983578622341156,
+          "second": 0.5128750801086426,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Point Blank",
+          "answer": "Point Blank",
+          "best": "Point Blank",
+          "score": 0.9788779020309448,
+          "second": 0.5517813563346863,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Escalating Resilience",
+          "answer": "Escalating Resilience",
+          "best": "Escalating Resilience",
+          "score": 0.9649235606193542,
+          "second": 0.41216930747032166,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Disarming Hex",
+          "answer": "Disarming Hex",
+          "best": "Disarming Hex",
+          "score": 0.8489381074905396,
+          "second": 0.44257453083992004,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Fortitude",
+          "answer": "Fortitude",
+          "best": "Fortitude",
+          "score": 0.9714487195014954,
+          "second": 0.6319360733032227,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Boundless Spirit",
+          "answer": "Boundless Spirit",
+          "best": "Boundless Spirit",
+          "score": 0.9750706553459167,
+          "second": 0.3214358985424042,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Berserker",
+          "answer": "Berserker",
+          "best": "Berserker",
+          "score": 0.9772202968597412,
+          "second": 0.5354965925216675,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Shadow Weave",
+          "answer": "Shadow Weave",
+          "best": "Shadow Weave",
+          "score": 0.916023850440979,
+          "second": 0.6025403141975403,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Bullet Resilience",
+          "answer": "Bullet Resilience",
+          "best": "Bullet Resilience",
+          "score": 0.9699575901031494,
+          "second": 0.4845449924468994,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Counterspell",
+          "answer": "Counterspell",
+          "best": "Counterspell",
+          "score": 0.9666934013366699,
+          "second": 0.43836334347724915,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Lightning Scroll",
+          "answer": "Lightning Scroll",
+          "best": "Lightning Scroll",
+          "score": 0.9792728424072266,
+          "second": 0.6281233429908752,
+          "verdict": "correct"
+        },
+        {
+          "expected": "Escalating Exposure",
+          "answer": "Escalating Exposure",
+          "best": "Escalating Exposure",
+          "score": 0.9789230227470398,
+          "second": 0.40211671590805054,
           "verdict": "correct"
         }
       ]

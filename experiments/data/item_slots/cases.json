@@ -40,5 +40,19 @@
     "screen": [1920, 1080],
     "crop": [0, 890],
     "names": ["Headhunter", "Point Blank", "Escalating Resilience", "Disarming Hex", "Fortitude", "Boundless Spirit", "Berserker", "Shadow Weave", "Bullet Resilience", "Counterspell", "Lightning Scroll", "Escalating Exposure"]
+  },
+  {
+    "file": "before_quick_buy.png",
+    "note": "11 個持っている。欄の右は、クイックバイに入れたアイテム（Extra Regen）で、まだ買っていない",
+    "screen": [1920, 1080],
+    "crop": [0, 930],
+    "names": ["Berserker", "Shadow Weave", "Bullet Resilience", "Counterspell", "Lightning Scroll", "Escalating Exposure", "Point Blank", "Escalating Resilience", "Disarming Hex", "Fortitude", "Boundless Spirit", null]
+  },
+  {
+    "file": "after_quick_buy.png",
+    "note": "ショップを開かずに、ショートカットで Extra Regen を買った直後。並びが大きく入れ替わっている",
+    "screen": [1920, 1080],
+    "crop": [0, 930],
+    "names": ["Extra Regen", "Point Blank", "Escalating Resilience", "Disarming Hex", "Fortitude", "Boundless Spirit", "Berserker", "Shadow Weave", "Bullet Resilience", "Counterspell", "Lightning Scroll", "Escalating Exposure"]
   }
 ]
