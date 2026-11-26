@@ -36,8 +36,10 @@ pub struct Tracker {
     baseline: Option<u32>,
     shop: bool,
     after_shop: u32,
-    /// 上部バーの枠ごとの、読めたヒーロー
+    /// 上部バーの枠ごとの、この試合で初めに読めたヒーロー
     roster: Vec<Option<String>>,
+    /// 初めに読めたのと違うヒーローが読めた枠。同じ画面で揃って読めるとは限らないので、覚えておく
+    moved: BTreeSet<usize>,
     readable_at: Option<Duration>,
 }
 
@@ -48,11 +50,13 @@ impl Tracker {
             .iter()
             .map(|read| read.answer(heroes::THRESHOLD))
             .collect();
-        let known: Vec<&str> = items
-            .reads
-            .iter()
-            .filter_map(|read| read.answer(items::THRESHOLD))
-            .collect();
+        // 枠は 1 つずつ読むので、2 つの枠が同じアイテムと読めることがある。1 回の読み取りでは 1 回に数える
+        let mut known: Vec<&str> = Vec::new();
+        for name in (items.reads.iter()).filter_map(|read| read.answer(items::THRESHOLD)) {
+            if !known.contains(&name) {
+                known.push(name);
+            }
+        }
 
         if heroes.iter().all(Option::is_none) && known.is_empty() {
             // 試合の外か、ほかの画面に隠れている
@@ -68,10 +72,15 @@ impl Tracker {
         self.readable_at = Some(at);
 
         self.roster.resize(heroes.len(), None);
-        let changed = (self.roster.iter().zip(&heroes))
-            .filter(|(before, now)| matches!((before, now), (Some(a), Some(b)) if a != b))
-            .count();
-        if changed >= ROSTER_CHANGES {
+        for (slot, (before, now)) in self.roster.iter().zip(&heroes).enumerate() {
+            match (before, now) {
+                (Some(before), Some(now)) if before != now => self.moved.insert(slot),
+                // 読み間違いだった
+                (Some(_), Some(_)) => self.moved.remove(&slot),
+                _ => false,
+            };
+        }
+        if self.moved.len() >= ROSTER_CHANGES {
             *self = Self {
                 roster: vec![None; heroes.len()],
                 readable_at: Some(at),
@@ -79,7 +88,7 @@ impl Tracker {
             };
         }
         for (slot, hero) in self.roster.iter_mut().zip(&heroes) {
-            if let Some(hero) = hero {
+            if let (None, Some(hero)) = (&slot, hero) {
                 *slot = Some((*hero).to_owned());
             }
         }
@@ -344,6 +353,43 @@ mod tests {
     fn the_next_match_starts_over() {
         let mut game = Game::started_with(&["Headhunter"]);
         game.nothing(40);
+        assert!(game.watch(&held(&[]), 5).is_empty());
+        assert_eq!(game.watch(&held(&["Headhunter"]), 2), ["Headhunter"]);
+    }
+
+    #[test]
+    fn the_same_item_in_two_slots_of_one_reading_counts_once() {
+        let mut game = Game::started_with(&["Headhunter"]);
+        let twice = held(&["Berserker", "Headhunter", "Berserker"]);
+        assert!(game.see(&twice).is_empty());
+        assert_eq!(game.see(&twice), ["Berserker"]);
+    }
+
+    #[test]
+    fn the_heroes_of_the_next_match_may_become_readable_one_at_a_time() {
+        let mut game = Game::started_with(&["Headhunter"]);
+        // 1 枠だけ変わって読めても、読み間違いかもしれない
+        game.team = heroes(&["Rem", "Kelvin", "The Doorman"]);
+        assert_eq!(
+            game.watch(&held(&["Headhunter", "Berserker"]), 2),
+            ["Berserker"]
+        );
+        // 読み間違いだったなら、数えない
+        game.team = heroes(&["McGinnis", "Kelvin", "The Doorman"]);
+        game.see(&held(&["Headhunter", "Berserker"]));
+        game.team = heroes(&["McGinnis", "Yamato", "The Doorman"]);
+        assert!(
+            game.watch(&held(&["Headhunter", "Berserker"]), 2)
+                .is_empty()
+        );
+
+        // 別の画面で 1 枠ずつ変わって読めたら、次の試合
+        let mut game = Game::started_with(&["Headhunter"]);
+        let mut first = heroes(&["Rem"]);
+        first[1] = read("Haze", 0.5, 0.45);
+        game.team = first;
+        game.see(&held(&[]));
+        game.team = heroes(&["Rem", "Yamato", "The Doorman"]);
         assert!(game.watch(&held(&[]), 5).is_empty());
         assert_eq!(game.watch(&held(&["Headhunter"]), 2), ["Headhunter"]);
     }
