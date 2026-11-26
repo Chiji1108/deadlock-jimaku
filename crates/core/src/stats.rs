@@ -110,6 +110,10 @@ pub struct StatsView {
     pub hours: Vec<u64>,
     /// 新しい順に、最近の回
     pub sessions: Vec<Session>,
+    /// 起動してから回を消した回数。操作パネルは、変わったら「もっと見る」で取ってきた回を取り直す
+    /// （送るのは最新の値だけなので、消したのと同時に字幕が増えても、合計ではなくこれで気づく）
+    #[ts(type = "number")]
+    pub forgotten: u64,
 }
 
 pub struct Tally {
@@ -126,6 +130,8 @@ struct Db {
     current: Option<i64>,
     /// 始めたが、まだ字幕が確定していない回の、始めた時刻（字幕のない回は残さない）
     started_at: Option<u64>,
+    /// 起動してから回を消した回数（`StatsView::forgotten`）
+    forgotten: u64,
 }
 
 impl Tally {
@@ -149,6 +155,7 @@ impl Tally {
             running: false,
             current: None,
             started_at: None,
+            forgotten: 0,
         };
         let view = db.view().unwrap_or_default();
         Self {
@@ -218,6 +225,7 @@ impl Tally {
                 .execute("DELETE FROM sessions WHERE id = ?1", params![id])?,
             None => db.conn.execute("DELETE FROM sessions", [])?,
         };
+        db.forgotten += 1;
         if db
             .current
             .is_some_and(|current| session.is_none_or(|id| id == current))
@@ -441,6 +449,7 @@ impl Db {
 
         let sessions = self.recent(RECENT)?;
         Ok(StatsView {
+            forgotten: self.forgotten,
             week,
             month,
             all,
@@ -610,6 +619,7 @@ mod tests {
         // 出している回を消しても、続きは新しい回として数える。消した回の id は使い回さない
         tally.forget(Some(*live)).unwrap();
         let view = tally.view();
+        assert_eq!(view.forgotten, 1);
         assert_eq!(
             view.sessions.iter().map(|s| s.id).collect::<Vec<_>>(),
             [*old]

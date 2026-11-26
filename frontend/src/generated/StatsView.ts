@@ -27,4 +27,9 @@ hours: number[],
 /**
  * 新しい順に、最近の回
  */
-sessions: Array<Session>, };
+sessions: Array<Session>, 
+/**
+ * 起動してから回を消した回数。操作パネルは、変わったら「もっと見る」で取ってきた回を取り直す
+ * （送るのは最新の値だけなので、消したのと同時に字幕が増えても、合計ではなくこれで気づく）
+ */
+forgotten: number, };

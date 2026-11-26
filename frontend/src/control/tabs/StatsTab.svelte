@@ -46,13 +46,13 @@
       loading = false;
     }
   }
-  // 回が消えたら（この窓でも、OBS のドックなど別の窓でも）、取ってきた回を取り直して、消えた分をその先の回で埋める。
-  // 字幕のない回は残さないので、回が消えると字幕の数の合計は必ず減る
-  let utterances = 0;
+  // 回が消えたら（この窓でも、OBS のドックなど別の窓でも）、取ってきた回を取り直して、消えた分をその先の回で埋める
+  let forgotten: number | undefined;
   $effect(() => {
-    const now = stats?.all.utterances ?? 0;
-    if (now < utterances && untrack(() => fetched.length)) void load(untrack(() => shown));
-    utterances = now;
+    const now = stats?.forgotten;
+    if (forgotten !== undefined && now !== forgotten && untrack(() => fetched.length))
+      void load(untrack(() => shown));
+    forgotten = now;
   });
   async function forgetAll() {
     const ok = await panel.forgetStats();
