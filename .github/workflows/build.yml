@@ -1,11 +1,10 @@
 # Mac・Windows・Linux のインストーラーを作り、Actions の成果物に置く。
-# PR と main で壊れていないかを確かめ（main のキャッシュはタグのビルドでも使える）、リリースでは release.yml から呼ぶ。
+# main に入ったら作る（誰も待たない。main のキャッシュをタグのビルドが使うので、リリースが速くなる）。リリースでは release.yml から呼ぶ。
+# PR では作らない（lint・型・テストは push の前に手元で流す。OS ごとに分かれたコードを触った PR は、手で実行して確かめる）。
 # Mac はリリースのときだけ Developer ID で署名して公証する（数分かかる）。それ以外はアドホック署名（tauri.conf.json）
 name: build
 
 on:
-  pull_request:
-    paths-ignore: ["**.md", "experiments/**", "web/**", "server/**"]
   push:
     branches: [main]
     paths-ignore: ["**.md", "experiments/**", "web/**", "server/**"]
