@@ -1,4 +1,7 @@
 <script lang="ts">
+  import RotateCcwIcon from "@lucide/svelte/icons/rotate-ccw";
+  import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
+  import ExternalLinkIcon from "@lucide/svelte/icons/external-link";
   // 字幕に使う Chrome のウィンドウの今の状態と、開き直す・リセットする操作。途中の字幕を Chrome が作るときだけ出す
   import * as Alert from "$lib/components/ui/alert";
   import { Button } from "$lib/components/ui/button";
@@ -33,7 +36,7 @@
 
 {#snippet resetButton()}
   <Button variant="outline" size="sm" onclick={() => (confirmingReset = true)}>
-    Chrome をリセット
+    <RotateCcwIcon />Chrome をリセット
   </Button>
 {/snippet}
 
@@ -52,7 +55,7 @@
           target="_blank"
           rel="noreferrer"
         >
-          Google Chrome をインストールする
+          <ExternalLinkIcon />Google Chrome をインストールする
         </Button>
       {:else}
         {@render resetButton()}
@@ -70,7 +73,9 @@
       {/if}
     </p>
     {#if s.transcriptionEnabled && !closed}
-      <Button variant="outline" size="sm" onclick={panel.openChrome}>Chrome を開き直す</Button>
+      <Button variant="outline" size="sm" onclick={panel.openChrome}
+        ><RefreshCwIcon />Chrome を開き直す</Button
+      >
     {/if}
     {@render resetButton()}
   </div>

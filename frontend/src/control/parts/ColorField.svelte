@@ -1,4 +1,5 @@
 <script lang="ts">
+  import RotateCcwIcon from "@lucide/svelte/icons/rotate-ccw";
   import { Button } from "$lib/components/ui/button";
   import * as Field from "$lib/components/ui/field";
 
@@ -43,7 +44,8 @@
     {#if description}<Field.Description>{description}</Field.Description>{/if}
   </Field.Content>
   {#if shown}
-    <Button variant="ghost" size="sm" onclick={() => send(null)}>標準に戻す</Button>
+    <Button variant="ghost" size="sm" onclick={() => send(null)}><RotateCcwIcon />標準に戻す</Button
+    >
   {/if}
   <input
     type="color"

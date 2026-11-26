@@ -36,7 +36,7 @@
           : ""}
       </span>
       <span>
-        <Button size="sm" disabled={asking} onclick={update}>更新する</Button>
+        <Button size="sm" disabled={asking} onclick={update}><DownloadIcon />更新する</Button>
       </span>
     </Alert.Description>
   </Alert.Root>
