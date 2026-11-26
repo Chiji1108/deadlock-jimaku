@@ -66,7 +66,7 @@
             class="h-auto p-0 text-xs"
             onclick={() => (panel.tab = "display")}
           >
-            追加する
+            追加
           </Button>
         {/if}
       </p>

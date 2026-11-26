@@ -367,13 +367,13 @@ class Panel {
   forgetSession = (id: number) =>
     this.run(async () => {
       await api.forgetSession(id);
-      toast.success("回を消しました");
+      toast.success("回を削除しました");
     });
 
   forgetStats = () =>
     this.run(async () => {
       await api.forgetStats();
-      toast.success("統計をすべて消しました");
+      toast.success("統計をすべて削除しました");
     });
 
   /** 鍵がないときの入口。押した人にだけ、Chrome のモードに切り替えて始める */
