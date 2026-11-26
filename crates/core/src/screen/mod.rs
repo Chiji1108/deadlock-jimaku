@@ -5,6 +5,8 @@
 pub mod heroes;
 pub mod items;
 pub mod purchases;
+pub mod rates;
+pub mod samples;
 
 use image::imageops::FilterType;
 use image::{RgbImage, RgbaImage};

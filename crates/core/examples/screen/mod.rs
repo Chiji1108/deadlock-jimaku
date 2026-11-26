@@ -1,11 +1,11 @@
 //! 画面を読めるかを測る例（`heroes_eval`、`items_eval`）が分け合う部分（DESIGN.md 15 章「画面からの読み取り」）。
-//! 測る画面と正解を読み、見本の画像を取り、読んだ結果を正解と比べて出す。読むのは本体の `overlays_core::screen`。
+//! 測る画面と正解を読み、読んだ結果を正解と比べて出す。見本を取るのも、読むのも、本体の `overlays_core::screen`。
 
 use std::path::Path;
 use std::time::Duration;
 
 use anyhow::Context;
-use image::{RgbImage, RgbaImage};
+use image::RgbImage;
 use overlays_core::screen::{BASE_HEIGHT, Frame, Read};
 use serde::Deserialize;
 use serde_json::json;
@@ -49,22 +49,8 @@ pub fn cases(path: &str) -> anyhow::Result<Vec<(Case, RgbImage)>> {
         .collect()
 }
 
-/// 見本の画像を取る（一度取ったら、置いてある分を使う）
-pub async fn fetch(http: &reqwest::Client, url: &str, path: &Path) -> anyhow::Result<RgbaImage> {
-    if !path.exists() {
-        std::fs::create_dir_all(path.parent().context("folder")?)?;
-        let bytes = http
-            .get(url)
-            .send()
-            .await?
-            .error_for_status()?
-            .bytes()
-            .await?;
-        std::fs::write(path, bytes)?;
-    }
-    let image = image::open(path).with_context(|| format!("{}", path.display()))?;
-    Ok(image.into_rgba8())
-}
+/// 見本の画像を置く場所（一度取ったら、置いてある分を使う）
+pub const SAMPLES: &str = "target/screen_samples";
 
 /// 読んだ結果を正解と比べて出し、`out` に書く。`threshold` より近くなければ「不明」にする
 pub fn report(
