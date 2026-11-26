@@ -229,6 +229,11 @@ impl Tally {
         Ok(())
     }
 
+    /// 新しい順に `limit` 回（回ごとの一覧の「もっと見る」。いつも送るのは新しい `RECENT` 回だけ）
+    pub fn sessions(&self, limit: u32) -> rusqlite::Result<Vec<Session>> {
+        self.db.lock().unwrap().recent(limit)
+    }
+
     pub fn watch(&self) -> watch::Receiver<StatsView> {
         self.view.subscribe()
     }
@@ -297,6 +302,41 @@ impl Db {
         self.current = Some(id);
         self.started_at = None;
         Ok(())
+    }
+
+    /// 新しい順に `limit` 回
+    fn recent(&self, limit: u32) -> rusqlite::Result<Vec<Session>> {
+        let live = self.current.filter(|_| self.running);
+        let mut recent = self.conn.prepare_cached(
+            "SELECT id, started_at, ended_at, utterances, characters, words
+             FROM sessions ORDER BY started_at DESC, id DESC LIMIT ?1",
+        )?;
+        let mut sessions: Vec<Session> = recent
+            .query_map(params![limit], |row| {
+                let id = row.get(0)?;
+                Ok(Session {
+                    id,
+                    started_at: row.get(1)?,
+                    ended_at: row.get(2)?,
+                    live: live == Some(id),
+                    totals: Totals {
+                        utterances: row.get(3)?,
+                        characters: row.get(4)?,
+                        words: row.get(5)?,
+                        names: BTreeMap::new(),
+                    },
+                })
+            })?
+            .collect::<rusqlite::Result<_>>()?;
+        let mut session_names = self
+            .conn
+            .prepare_cached("SELECT ref, count FROM session_names WHERE session_id = ?1")?;
+        for session in &mut sessions {
+            session.totals.names = session_names
+                .query_map(params![session.id], |row| Ok((row.get(0)?, row.get(1)?)))?
+                .collect::<rusqlite::Result<_>>()?;
+        }
+        Ok(sessions)
     }
 
     /// `since`（epoch ms）以降に始めた回の合計
@@ -399,36 +439,7 @@ impl Db {
         let (days, hours) = (self.days(year)?, self.hours(recent)?);
         let (week, month, all) = (self.period(week)?, self.period(month)?, self.period(0)?);
 
-        let live = self.current.filter(|_| self.running);
-        let mut recent = self.conn.prepare_cached(
-            "SELECT id, started_at, ended_at, utterances, characters, words
-             FROM sessions ORDER BY started_at DESC, id DESC LIMIT ?1",
-        )?;
-        let mut sessions: Vec<Session> = recent
-            .query_map(params![RECENT], |row| {
-                let id = row.get(0)?;
-                Ok(Session {
-                    id,
-                    started_at: row.get(1)?,
-                    ended_at: row.get(2)?,
-                    live: live == Some(id),
-                    totals: Totals {
-                        utterances: row.get(3)?,
-                        characters: row.get(4)?,
-                        words: row.get(5)?,
-                        names: BTreeMap::new(),
-                    },
-                })
-            })?
-            .collect::<rusqlite::Result<_>>()?;
-        let mut session_names = self
-            .conn
-            .prepare_cached("SELECT ref, count FROM session_names WHERE session_id = ?1")?;
-        for session in &mut sessions {
-            session.totals.names = session_names
-                .query_map(params![session.id], |row| Ok((row.get(0)?, row.get(1)?)))?
-                .collect::<rusqlite::Result<_>>()?;
-        }
+        let sessions = self.recent(RECENT)?;
         Ok(StatsView {
             week,
             month,
@@ -621,6 +632,24 @@ mod tests {
         assert!(view.sessions.is_empty() && view.days.is_empty());
         assert_eq!(view.all.totals.utterances, 0);
         assert_eq!(rows(&tally), (0, 0));
+    }
+
+    #[test]
+    fn older_sessions_are_read_on_request() {
+        let dir = tempfile::tempdir().unwrap();
+        let tally = Tally::open(&dir.path().join("stats.db"));
+        for _ in 0..RECENT + 3 {
+            tally.set_running(true);
+            tally.count(&haze());
+            tally.set_running(false);
+        }
+        let view = tally.view();
+        assert_eq!(view.sessions.len(), RECENT as usize);
+        let more = tally.sessions(RECENT + 10).unwrap();
+        assert_eq!(more.len(), RECENT as usize + 3);
+        assert_eq!(more[..RECENT as usize], view.sessions);
+        assert!(more.windows(2).all(|w| w[0].id > w[1].id));
+        assert_eq!(more.last().unwrap().totals.names.len(), 2);
     }
 
     #[test]
