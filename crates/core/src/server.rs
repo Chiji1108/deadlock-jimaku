@@ -9,7 +9,7 @@ use axum::extract::{DefaultBodyLimit, Path, Query, Request, State};
 use axum::http::{HeaderMap, StatusCode, Uri, header};
 use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Response};
-use axum::routing::{get, post, put};
+use axum::routing::{delete, get, post, put};
 use rust_embed::RustEmbed;
 use serde::{Deserialize, Serialize};
 use tokio::net::TcpListener;
@@ -59,6 +59,8 @@ pub fn router(store: Arc<Store>) -> Router {
         .route("/fonts/{family}/download", post(download_font))
         .route("/fonts/{family}/{postscript}", get(font_file))
         .route("/rank/sample", get(rank_sample))
+        .route("/stats", delete(forget_stats))
+        .route("/stats/sessions/{id}", delete(forget_session))
         .route("/chrome/open", post(open_chrome))
         .route("/chrome/reset", post(reset_chrome))
         .route("/chrome/ws", get(chrome_ws));
@@ -211,6 +213,27 @@ async fn open_chrome(State(store): State<Arc<Store>>) -> StatusCode {
 }
 
 /// 専用のプロファイルを消して、Chrome を始め直す
+/// 統計をすべて消す
+async fn forget_stats(State(store): State<Arc<Store>>) -> Response {
+    forget(store, None).await
+}
+
+/// 統計の回を 1 つ消す
+async fn forget_session(State(store): State<Arc<Store>>, Path(id): Path<i64>) -> Response {
+    forget(store, Some(id)).await
+}
+
+async fn forget(store: Arc<Store>, session: Option<i64>) -> Response {
+    match blocking(move || store.tally().forget(session)).await {
+        Ok(()) => StatusCode::NO_CONTENT.into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("統計を消せません（{e}）"),
+        )
+            .into_response(),
+    }
+}
+
 async fn reset_chrome(State(store): State<Arc<Store>>) -> Response {
     match blocking(move || store.reset_chrome()).await {
         Ok(()) => StatusCode::NO_CONTENT.into_response(),
