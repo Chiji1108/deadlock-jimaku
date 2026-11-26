@@ -118,19 +118,23 @@ mod windows_capture {
 
             for index in 0..count {
                 let waiting = Instant::now();
-                // 画面が変わらないとフレームは来ない。溜まっている古いフレームは捨てて、いちばん新しいものを使う
-                let mut frame = None;
-                while frame.is_none() || waiting.elapsed() < Duration::from_millis(50) {
+                // プールに残っているのは、前に空けた直後の古い画面。プールは 1 枚で、空けるまで次は入らないので、
+                // 古いほうは捨てて次を待つ（画面が変わらないとフレームは来ない）
+                if index > 0
+                    && let Ok(stale) = pool.TryGetNextFrame()
+                {
+                    stale.Close()?;
+                }
+                let frame = loop {
                     match pool.TryGetNextFrame() {
-                        Ok(next) => frame = Some(next),
-                        Err(_) => std::thread::sleep(Duration::from_millis(2)),
+                        Ok(frame) => break frame,
+                        Err(_) => std::thread::sleep(Duration::from_millis(1)),
                     }
                     anyhow::ensure!(
                         waiting.elapsed() < Duration::from_secs(5),
                         "5 秒待ってもフレームが来ない"
                     );
-                }
-                let frame = frame.expect("frame");
+                };
                 let waited = waiting.elapsed();
 
                 let reading = Instant::now();
@@ -169,7 +173,11 @@ mod windows_capture {
                 let path = if count == 1 {
                     out.clone()
                 } else {
-                    out.replace(".png", &format!("-{}.png", index + 1))
+                    let path = std::path::Path::new(&out);
+                    let stem = path.file_stem().unwrap_or_default().to_string_lossy();
+                    path.with_file_name(format!("{stem}-{}.png", index + 1))
+                        .to_string_lossy()
+                        .into_owned()
                 };
                 image::RgbImage::from_raw(width as u32, height as u32, rgb)
                     .context("image")?
