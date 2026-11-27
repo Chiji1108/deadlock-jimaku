@@ -107,17 +107,21 @@ impl Source {
     }
 
     /// 新しい画面を読む。画面が変わっていなければ None
-    fn read(&mut self) -> anyhow::Result<Option<Images>> {
+    /// アビリティのところは、自分のヒーローを決めるときだけ読み出す（`abilities`）。読み出さなければ、空の画像
+    fn read(&mut self, abilities: bool) -> anyhow::Result<Option<Images>> {
         let size = self.capture.size();
-        let areas = [
+        let mut areas = vec![
             heroes::area(size, self.scale),
             items::area(size, self.scale),
             clock::area(size, self.scale),
-            abilities::area(size, self.scale),
         ];
-        let Some(images) = self.capture.read(&areas)? else {
+        if abilities {
+            areas.push(abilities::area(size, self.scale));
+        }
+        let Some(mut images) = self.capture.read(&areas)? else {
             return Ok(None);
         };
+        images.resize(4, image::RgbImage::new(0, 0));
         Ok(images.try_into().ok())
     }
 
@@ -178,6 +182,40 @@ impl Source {
     }
 }
 
+/// 自分のヒーローが出ていた枠に、別のヒーローがこの回数続けて読めたら、ヒーローを変えたと決める
+const REPLACED: u32 = 3;
+
+/// この試合の自分のヒーロー
+#[derive(Default)]
+struct Own {
+    /// `class_name`。まだ決まっていなければ None
+    hero: Option<String>,
+    /// 上部バーで、自分のヒーローが出ていた枠
+    slot: Option<usize>,
+    /// その枠に、別のヒーローが続けて読めた回数
+    replaced: u32,
+}
+
+impl Own {
+    /// 上部バーの読み（枠の順。読めない枠は None）を見て、ヒーローを変えていたら忘れる。
+    /// サンドボックスでは、試合の途中でヒーローを変えられる。変わるのは自分の枠だけなので、試合が変わったとは数えられない。
+    /// 読めないだけの枠（調子がいいとき、死亡中）では忘れない
+    fn seen(&mut self, bar: &[Option<String>]) {
+        let Some(hero) = &self.hero else { return };
+        if let Some(slot) = bar.iter().position(|name| name.as_ref() == Some(hero)) {
+            (self.slot, self.replaced) = (Some(slot), 0);
+        } else if self
+            .slot
+            .is_some_and(|slot| bar.get(slot).is_some_and(Option::is_some))
+        {
+            self.replaced += 1;
+            if self.replaced >= REPLACED {
+                *self = Self::default();
+            }
+        }
+    }
+}
+
 /// 見せる相手がいる間、画面を読み続ける。新しいフレームを待つので、専用のスレッドで呼ぶ
 fn read(store: &Store, samples: &Samples, runtime: &tokio::runtime::Handle) {
     let started = Instant::now();
@@ -187,7 +225,7 @@ fn read(store: &Store, samples: &Samples, runtime: &tokio::runtime::Handle) {
             .map(|sample| sample.id)
     };
     // この試合の自分のヒーロー（`class_name`）と、決めたときの試合の番号、最後に比べたとき
-    let mut own: Option<String> = None;
+    let mut own = Own::default();
     let (mut own_match, mut own_tried) = (0, None::<Instant>);
     // ヒーロー（deadlock-api の id）ごとの、アイテムの集計。取れたものから入る。取れなければ、集計なしで出す
     let rates: Arc<Mutex<BTreeMap<u32, Rates>>> = Arc::default();
@@ -216,18 +254,26 @@ fn read(store: &Store, samples: &Samples, runtime: &tokio::runtime::Handle) {
             }
             continue;
         };
-        match open.read() {
+        match open.read(own.hero.is_none()) {
             Ok(Some(images)) => {
                 let reads = open.matched(&images, last.take());
+                let bar: Vec<Option<String>> =
+                    answers(&reads.heroes.reads, heroes::THRESHOLD).collect();
                 if tracker.matches() != own_match {
-                    (own, own_match) = (None, tracker.matches());
+                    (own, own_match) = (Own::default(), tracker.matches());
+                }
+                if !reads.heroes.spectating {
+                    own.seen(&bar);
                 }
                 // 観戦中は、下の中央も相手のアビリティになる
                 let due = own_tried.is_none_or(|at| at.elapsed() >= OWN_INTERVAL);
-                if own.is_none() && due && !reads.heroes.spectating {
+                // 読み出していなければ（前の回に決まっていた）、次の回に比べる
+                let read_out = images[3].width() > 0;
+                if own.hero.is_none() && due && read_out && !reads.heroes.spectating {
                     own_tried = Some(Instant::now());
-                    own = open.own(&images);
-                    if let Some(hero) = own.as_deref().and_then(|own| id(&samples.heroes, own))
+                    own.hero = open.own(&images);
+                    if let Some(hero) =
+                        (own.hero.as_deref()).and_then(|own| id(&samples.heroes, own))
                         && !requested.contains(&hero)
                     {
                         requested.push(hero);
@@ -246,12 +292,12 @@ fn read(store: &Store, samples: &Samples, runtime: &tokio::runtime::Handle) {
                 store.set_screen_status(ScreenStatus::Reading {
                     width,
                     height,
-                    heroes: answers(&reads.heroes.reads, heroes::THRESHOLD).collect(),
+                    heroes: bar,
                     items: answers(&reads.items.reads, items::THRESHOLD)
                         .flatten()
                         .collect(),
                     shop: reads.items.shop,
-                    own: own.clone(),
+                    own: own.hero.clone(),
                     clock: reads.clock,
                 });
                 if let Some(seconds) = reads.clock {
@@ -260,11 +306,11 @@ fn read(store: &Store, samples: &Samples, runtime: &tokio::runtime::Handle) {
                 let bought = tracker.observe(started.elapsed(), &reads.heroes, &reads.items);
                 if !bought.is_empty() {
                     let rates = rates.lock().unwrap();
-                    let rates = (own.as_deref())
+                    let rates = (own.hero.as_deref())
                         .and_then(|own| id(&samples.heroes, own))
                         .and_then(|hero| rates.get(&hero));
                     store.purchased(Purchase {
-                        hero: own.clone(),
+                        hero: own.hero.clone(),
                         clock_seconds: clock
                             .filter(|(_, at)| at.elapsed() < CLOCK_KEPT)
                             .map(|(seconds, at)| seconds as f32 + at.elapsed().as_secs_f32()),
@@ -297,4 +343,38 @@ fn answers(reads: &[Read], threshold: f32) -> impl Iterator<Item = Option<String
     reads
         .iter()
         .map(move |read| read.answer(threshold).map(str::to_owned))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn bar(names: &[Option<&str>]) -> Vec<Option<String>> {
+        names.iter().map(|name| name.map(str::to_owned)).collect()
+    }
+
+    #[test]
+    fn another_hero_in_the_own_slot_means_the_hero_was_changed() {
+        let mut own = Own {
+            hero: Some("hero_chessmaster".to_owned()),
+            ..Own::default()
+        };
+        let solomon = bar(&[Some("hero_inferno"), Some("hero_chessmaster"), None]);
+        own.seen(&solomon);
+        // 調子がいいときや死亡中は、自分の枠が読めないだけ
+        let unreadable = bar(&[Some("hero_inferno"), None, None]);
+        for _ in 0..10 {
+            own.seen(&unreadable);
+        }
+        assert_eq!(own.hero.as_deref(), Some("hero_chessmaster"));
+        // サンドボックスでヒーローを変えた。1 回だけなら読み間違いかもしれない
+        let changed = bar(&[Some("hero_inferno"), Some("hero_vampirebat"), None]);
+        own.seen(&changed);
+        own.seen(&solomon);
+        own.seen(&changed);
+        own.seen(&changed);
+        assert_eq!(own.hero.as_deref(), Some("hero_chessmaster"));
+        own.seen(&changed);
+        assert_eq!(own.hero, None);
+    }
 }
