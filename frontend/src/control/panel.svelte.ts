@@ -33,6 +33,7 @@ import type { MergePatch } from "../lib/text-style";
 import type { FontEntry } from "../generated/FontEntry";
 import type { FontStyle } from "../generated/FontStyle";
 import { loadGlossary } from "../lib/glossary.svelte";
+import { samplePurchase } from "../lib/purchase-sample";
 import { connect, type Status } from "../lib/ws";
 
 /** 統計の回ごとの一覧で、いつも届く回の数と、「もっと見る」で増やす数（core の `stats::RECENT`） */
@@ -515,6 +516,16 @@ class Panel {
   demo = () =>
     this.run(async () => {
       const res = await api.demo();
+      if (!res.ok) throw new Error(await res.text());
+    });
+
+  /** OBS の買ったアイテムの表示に、見本を 1 回出す（位置や大きさを、ゲームで買わずに確かめる） */
+  demoPurchase = () =>
+    this.run(async () => {
+      const sample = samplePurchase();
+      if (!sample)
+        throw new Error("ゲームのデータを読み込んでいます。少し待ってから、もう一度押してください");
+      const res = await api.showPurchase(sample);
       if (!res.ok) throw new Error(await res.text());
     });
 
