@@ -260,7 +260,9 @@
   onconfirm={() => (forgetting ? panel.forgetSession(forgetting.id) : Promise.resolve(true))}
 >
   {#if forgetting}
-    <p>{span(forgetting)} の回を消します。合計や日ごとの草からも外れます。元には戻せません。</p>
+    <p>
+      {span(forgetting)} の回を消します。合計や日ごとのヒートマップからも外れます。元には戻せません。
+    </p>
     {#if forgetting.live}<p>今出している字幕は、続きを新しい回として数えます。</p>{/if}
   {/if}
 </ConfirmDialog>
