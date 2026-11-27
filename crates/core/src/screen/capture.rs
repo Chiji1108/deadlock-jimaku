@@ -21,7 +21,7 @@ impl Capture {
         Ok(None)
     }
 
-    /// 取り込んでいる画面の大きさ（幅、高さ）
+    /// 取り込んでいるゲームの画面の大きさ（幅、高さ）。ウィンドウの表示では、タイトルバーと枠を除いた中身
     pub fn size(&self) -> (u32, u32) {
         #[cfg(windows)]
         return self.inner.size;
@@ -54,21 +54,26 @@ mod windows {
     use ::windows::Graphics::DirectX::Direct3D11::IDirect3DDevice;
     use ::windows::Graphics::DirectX::DirectXPixelFormat;
     use ::windows::Graphics::SizeInt32;
-    use ::windows::Win32::Foundation::{HMODULE, HWND};
+    use ::windows::Win32::Foundation::{HMODULE, HWND, POINT, RECT};
     use ::windows::Win32::Graphics::Direct3D::D3D_DRIVER_TYPE_HARDWARE;
     use ::windows::Win32::Graphics::Direct3D11::{
         D3D11_BOX, D3D11_CPU_ACCESS_READ, D3D11_CREATE_DEVICE_BGRA_SUPPORT, D3D11_MAP_READ,
         D3D11_MAPPED_SUBRESOURCE, D3D11_SDK_VERSION, D3D11_TEXTURE2D_DESC, D3D11_USAGE_STAGING,
         D3D11CreateDevice, ID3D11Device, ID3D11DeviceContext, ID3D11Texture2D,
     };
+    use ::windows::Win32::Graphics::Dwm::{DWMWA_EXTENDED_FRAME_BOUNDS, DwmGetWindowAttribute};
     use ::windows::Win32::Graphics::Dxgi::Common::{DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_SAMPLE_DESC};
     use ::windows::Win32::Graphics::Dxgi::IDXGIDevice;
+    use ::windows::Win32::Graphics::Gdi::ClientToScreen;
     use ::windows::Win32::System::WinRT::Direct3D11::{
         CreateDirect3D11DeviceFromDXGIDevice, IDirect3DDxgiInterfaceAccess,
     };
     use ::windows::Win32::System::WinRT::Graphics::Capture::IGraphicsCaptureItemInterop;
     use ::windows::Win32::System::WinRT::{RO_INIT_MULTITHREADED, RoInitialize};
-    use ::windows::Win32::UI::WindowsAndMessaging::{FindWindowW, IsWindow};
+    use ::windows::Win32::UI::HiDpi::{
+        DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2, SetThreadDpiAwarenessContext,
+    };
+    use ::windows::Win32::UI::WindowsAndMessaging::{FindWindowW, GetClientRect, IsWindow};
     use ::windows::core::{Interface, w};
     use anyhow::Context;
     use image::RgbImage;
@@ -85,6 +90,11 @@ mod windows {
         context: ID3D11DeviceContext,
         pool: Direct3D11CaptureFramePool,
         session: GraphicsCaptureSession,
+        /// 取り込んだフレームの大きさ。ウィンドウの表示では、タイトルバーと枠を含む
+        content: (u32, u32),
+        /// ゲームの画面（ウィンドウの中身）の、フレームの中での左上
+        origin: (u32, u32),
+        /// ゲームの画面の大きさ
         pub size: (u32, u32),
         /// 読み出し先。大きさごとに 1 つ作って、使い回す
         staging: Vec<((u32, u32), ID3D11Texture2D)>,
@@ -126,6 +136,8 @@ mod windows {
                     return Ok(None);
                 };
                 let size = item.Size()?;
+                let content = (size.Width as u32, size.Height as u32);
+                let (origin, inside) = client(window, content);
                 // プールは 1 枚。手元のフレームを閉じるまで、次は入らない
                 let pool = Direct3D11CaptureFramePool::CreateFreeThreaded(
                     &direct3d,
@@ -144,7 +156,9 @@ mod windows {
                     context,
                     pool,
                     session,
-                    size: (size.Width as u32, size.Height as u32),
+                    content,
+                    origin,
+                    size: inside,
                     staging: Vec::new(),
                 }))
             }
@@ -175,7 +189,7 @@ mod windows {
                     .Surface()?
                     .cast::<IDirect3DDxgiInterfaceAccess>()?
                     .GetInterface()?;
-                let images = if (Width as u32, Height as u32) == self.size {
+                let images = if (Width as u32, Height as u32) == self.content {
                     areas
                         .iter()
                         .map(|&area| self.copy(&texture, area))
@@ -243,11 +257,11 @@ mod windows {
                     texture,
                     0,
                     Some(&D3D11_BOX {
-                        left,
-                        top,
+                        left: self.origin.0 + left,
+                        top: self.origin.1 + top,
                         front: 0,
-                        right: left + width,
-                        bottom: top + height,
+                        right: self.origin.0 + left + width,
+                        bottom: self.origin.1 + top + height,
                         back: 1,
                     }),
                 );
@@ -266,6 +280,43 @@ mod windows {
                 }
                 self.context.Unmap(&staging, 0);
                 RgbImage::from_raw(width, height, rgb).context("image")
+            }
+        }
+    }
+
+    /// ゲームの画面（ウィンドウの中身）が、取り込んだフレーム（大きさ `content`）のどこにあるか（左上、大きさ）。
+    /// ウィンドウの表示では、フレームにタイトルバーと枠が入る。フレームの左上は、影を除いたウィンドウの左上
+    /// （`DWMWA_EXTENDED_FRAME_BOUNDS`。OBS のウィンドウキャプチャと同じ求め方）。
+    /// 全画面とボーダーレスでは、フレームの全体が中身。求められなければ、フレームの全体にする
+    unsafe fn client(window: HWND, content: (u32, u32)) -> ((u32, u32), (u32, u32)) {
+        unsafe {
+            // 画面の拡大（125% など）に関わらず、画素で測る
+            let before = SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+            let (mut frame, mut inside, mut corner) =
+                (RECT::default(), RECT::default(), POINT::default());
+            let measured = DwmGetWindowAttribute(
+                window,
+                DWMWA_EXTENDED_FRAME_BOUNDS,
+                (&raw mut frame).cast(),
+                size_of::<RECT>() as u32,
+            )
+            .is_ok()
+                && GetClientRect(window, &mut inside).is_ok()
+                && ClientToScreen(window, &mut corner).as_bool();
+            SetThreadDpiAwarenessContext(before);
+            let origin = (
+                (corner.x - frame.left).max(0) as u32,
+                (corner.y - frame.top).max(0) as u32,
+            );
+            let size = (inside.right.max(0) as u32, inside.bottom.max(0) as u32);
+            let fits = size.0 > 0
+                && size.1 > 0
+                && origin.0 + size.0 <= content.0
+                && origin.1 + size.1 <= content.1;
+            if measured && fits {
+                (origin, size)
+            } else {
+                ((0, 0), content)
             }
         }
     }
