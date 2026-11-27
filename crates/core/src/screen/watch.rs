@@ -127,41 +127,41 @@ impl Source {
         Ok(images.try_into().ok())
     }
 
-    /// 画像を読む。`before` は、前に読んだ画像とその答え。同じ画像のところは、照合を飛ばして前の答えを使う
-    /// （上の端は後ろの景色が透けて毎回変わるが、アイテム欄は、買ったとき以外ほとんど変わらない）
-    fn matched(&self, images: &Images, before: Option<(Images, Reads)>) -> Reads {
+    /// 画像を読む。`before` は前の回の答えで、同じ見本がまだ合う枠は、ほかの見本と比べない
+    fn matched(&self, images: &Images, before: Option<&Reads>) -> Reads {
         let [top, slots, time, _] = images;
         let size = self.capture.size();
-        let (mut heroes, mut items, mut clock) = (None, None, None);
-        if let Some(([top_before, slots_before, time_before, _], reads)) = before {
-            heroes = (top_before == *top).then_some(reads.heroes);
-            items = (slots_before == *slots).then_some(reads.items);
-            clock = (time_before == *time).then_some(reads.clock);
-        }
-        let heroes = heroes.unwrap_or_else(|| {
-            let frame = Frame {
+        let heroes = heroes::read(
+            &Frame {
                 image: top,
                 origin: (0, 0),
-            };
-            heroes::read(&frame, &self.heroes, size.0, self.scale)
-        });
-        let items = items.unwrap_or_else(|| {
-            let [left, upper, _, _] = items::area(size, self.scale);
-            let frame = Frame {
+            },
+            &self.heroes,
+            size.0,
+            self.scale,
+            before.map(|before| &before.heroes),
+        );
+        let [left, upper, _, _] = items::area(size, self.scale);
+        let items = items::read(
+            &Frame {
                 image: slots,
                 origin: (left as i32, upper as i32),
-            };
-            items::read(&frame, &self.items, self.scale)
-        });
-        // 時計の位置は、観戦中かどうかで変わる。時計の画像が同じなら、観戦中かどうかも前と同じ
-        let clock = clock.unwrap_or_else(|| {
-            let [left, upper, _, _] = clock::area(size, self.scale);
-            let frame = Frame {
+            },
+            &self.items,
+            self.scale,
+            before.map(|before| &before.items),
+        );
+        let [left, upper, _, _] = clock::area(size, self.scale);
+        let clock = clock::read(
+            &Frame {
                 image: time,
                 origin: (left as i32, upper as i32),
-            };
-            clock::read(&frame, &self.digits, size.0, self.scale, heroes.spectating)
-        });
+            },
+            &self.digits,
+            size.0,
+            self.scale,
+            heroes.spectating,
+        );
         Reads {
             heroes,
             items,
@@ -248,8 +248,8 @@ fn read(store: &Store, samples: &Samples, runtime: &tokio::runtime::Handle) {
     let mut held: VecDeque<Held> = VecDeque::new();
     let mut tracker = Tracker::default();
     let mut source: Option<Source> = None;
-    // 前に読んだ画像と、その答え
-    let mut last: Option<(Images, Reads)> = None;
+    // 前の回の答え
+    let mut last: Option<Reads> = None;
     // 最後に読めた時計と、そのとき。ショップを開いている間は時計が隠れるので、そこから数える
     let mut clock: Option<(u32, Instant)> = None;
     while wanted(store) {
@@ -272,7 +272,7 @@ fn read(store: &Store, samples: &Samples, runtime: &tokio::runtime::Handle) {
         };
         match open.read(own.hero.is_none()) {
             Ok(Some(images)) => {
-                let reads = open.matched(&images, last.take());
+                let reads = open.matched(&images, last.as_ref());
                 let bar: Vec<Option<String>> =
                     answers(&reads.heroes.reads, heroes::THRESHOLD).collect();
                 if tracker.matches() != own_match {
@@ -340,7 +340,7 @@ fn read(store: &Store, samples: &Samples, runtime: &tokio::runtime::Handle) {
                         since: Instant::now(),
                     });
                 }
-                last = Some((images, reads));
+                last = Some(reads);
             }
             // 画面が変わっていないか、最小化している
             Ok(None) => {}

@@ -40,7 +40,27 @@ async fn main() -> anyhow::Result<()> {
         let scale = case.scale();
         let templates = heroes::templates(named(), scale);
         let started = Instant::now();
-        let bar = heroes::read(&case.frame(image), &templates, case.screen.0, scale);
+        let bar = heroes::read(&case.frame(image), &templates, case.screen.0, scale, None);
+        // 同じ画面をもう一度、前の答えを渡して読む。答えは変わらず、速くなる
+        let again = Instant::now();
+        let second = heroes::read(
+            &case.frame(image),
+            &templates,
+            case.screen.0,
+            scale,
+            Some(&bar),
+        );
+        let answers = |bar: &heroes::Bar| -> Vec<Option<String>> {
+            (bar.reads.iter())
+                .map(|read| read.answer(heroes::THRESHOLD).map(str::to_owned))
+                .collect()
+        };
+        anyhow::ensure!(
+            answers(&second) == answers(&bar) && second.spectating == bar.spectating,
+            "{}: 前の答えを渡すと、答えが変わった",
+            case.file
+        );
+        println!("  2 回目 {:.1?}", again.elapsed());
         // 観戦しているかも、正解と比べる
         if bar.spectating != case.spectating {
             println!(
