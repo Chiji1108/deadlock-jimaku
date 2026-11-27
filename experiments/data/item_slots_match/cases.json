@@ -244,7 +244,7 @@
     },
     {
         "file":  "spectate_892.png",
-        "note":  "また別の味方を観戦している。上の段の 1、2 つ目は丸い絵で、名前は分からない（null にしてある）",
+        "note":  "また別の味方を観戦している。上の段の 1、2 つ目は丸い絵で、名前は分からない（\"?\" にしてある）",
         "screen":  [
                        1920,
                        1080
@@ -255,8 +255,8 @@
                  ],
         "spectating":  true,
         "names":  [
-                      null,
-                      null,
+                      "?",
+                      "?",
                       "Improved Spirit",
                       "Rapid Recharge",
                       "Transcendent Cooldown",

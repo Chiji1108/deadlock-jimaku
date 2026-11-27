@@ -1,8 +1,9 @@
 //! 読んだ持ち物の移り変わりから、買ったアイテムを出す（DESIGN.md 18.3）。画面も通信も触らない。
 //!
-//! 持ち物は名前の集まりで持ち、増えるだけにする（買うと並びが入れ替わるので、枠では比べない）。
-//! 空の枠は背景が透けていて、読めないだけの枠（クールダウンで暗い、ほかの表示に隠れた）と見分けられないので、
-//! 「なくなった」とは決めない。売ったものを同じ試合でもう一度買ったときは、出ない。
+//! 持ち物は名前の集まりで持つ（買うと並びが入れ替わるので、枠では比べない）。
+//! 持っていたアイテムがどの枠にも読めなくなっても、読めないだけの枠（クールダウンで暗い）にあるのかもしれない。
+//! アイテムの入っている枠には段の印が出ているので、印のある枠が全部読めているのに、どこにもないときだけ、
+//! 売ったと決める。売ったものを同じ試合でもう一度買えば、もう一度出る。
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::time::Duration;
@@ -22,6 +23,8 @@ const ROSTER_CHANGES: usize = 2;
 const AT_ONCE: usize = 2;
 /// ショップを閉じてから、この回数は、まとめて増えても買ったものとして出す
 const AFTER_SHOP: u32 = 6;
+/// 持っていたアイテムが、続けてこの回数（3 秒ほど）どの枠にもなければ、売ったと決める
+const SOLD: u32 = 9;
 /// クールダウンで暗い枠は、近さは足りないが、ほかの見本とは離れている（0.67〜0.77 と、次点 0.30〜0.45）。
 /// 空の枠は、いちばん近い見本と次点が近い（0.73 と 0.64）。基準を作るときだけ、暗い枠も持ち物に数える
 const FAINT: (f32, f32) = (0.6, 0.2);
@@ -32,6 +35,8 @@ pub struct Tracker {
     owned: BTreeSet<String>,
     /// まだ持っていると決めていないアイテムが、続けて読めた回数
     seen: BTreeMap<String, u32>,
+    /// 持っていると決めたアイテムが、続けてどの枠にもなかった回数
+    missing: BTreeMap<String, u32>,
     /// 基準を作る残りの回数
     baseline: Option<u32>,
     shop: bool,
@@ -58,6 +63,8 @@ impl Tracker {
         bar: &heroes::Bar,
         items: &items::Slots,
     ) -> Vec<String> {
+        // 続けて数えるものなので、数えない回（観戦している、隠れている、ショップを開いている）があれば、初めから
+        let missing = std::mem::take(&mut self.missing);
         if bar.spectating {
             // 左下に出ているのは、観戦している相手の持ち物
             self.readable_at = Some(at);
@@ -158,6 +165,21 @@ impl Tracker {
             // 開いている間は出さない（買い直しがよくある）。閉じたときに、開く前から増えた分が出る
             return Vec::new();
         }
+        // 印のある枠が全部読めていて、ほかのアイテムは読めているのに、どの枠にもないものは、売った。
+        // 1 つも読めないときは、欄がほかの表示に隠れているのと見分けられないので、決めない
+        let unread = (items.occupied.iter().zip(&items.reads))
+            .any(|(occupied, read)| *occupied && read.answer(items::THRESHOLD).is_none());
+        if !unread && !known.is_empty() {
+            for name in &self.owned {
+                if !known.contains(&name.as_str()) {
+                    let count = missing.get(name).copied().unwrap_or(0) + 1;
+                    self.missing.insert(name.clone(), count);
+                }
+            }
+            self.owned
+                .retain(|name| self.missing.get(name).is_none_or(|count| *count < SOLD));
+            self.missing.retain(|_, count| *count < SOLD);
+        }
         let from_shop = self.after_shop > 0;
         self.after_shop = self.after_shop.saturating_sub(1);
         let bought: Vec<String> = known
@@ -211,7 +233,13 @@ mod tests {
     fn slots(reads: Vec<Read>, shop: bool) -> items::Slots {
         let mut reads = reads;
         reads.resize(12, empty());
-        items::Slots { reads, shop }
+        // 段の印は、アイテムの入っている枠に、暗い間も出ている
+        let occupied = reads.iter().map(|read| *read != empty()).collect();
+        items::Slots {
+            reads,
+            occupied,
+            shop,
+        }
     }
 
     fn held(names: &[&str]) -> items::Slots {
@@ -334,6 +362,51 @@ mod tests {
             game.watch(&held(&["Fortitude", "Headhunter", "Berserker"]), 3)
                 .is_empty()
         );
+    }
+
+    #[test]
+    fn an_item_sold_and_bought_again_is_a_purchase_again() {
+        let mut game = Game::started_with(&["Headhunter", "Berserker"]);
+        // 売ると、残りが詰まって、印のある枠は全部読めている
+        assert!(game.watch(&held(&["Berserker"]), SOLD).is_empty());
+        let again = held(&["Berserker", "Headhunter"]);
+        assert_eq!(game.watch(&again, CONFIRM), ["Headhunter"]);
+    }
+
+    #[test]
+    fn an_item_too_dark_to_read_is_not_sold() {
+        let mut game = Game::started_with(&["Headhunter", "Berserker"]);
+        // クールダウンで、どの見本にも近くない。印は出ている
+        let cooling = slots(
+            vec![
+                read("Active Reload", 0.5, 0.45),
+                read("Berserker", 0.97, 0.5),
+            ],
+            false,
+        );
+        assert!(game.watch(&cooling, SOLD * 3).is_empty());
+        let ready = held(&["Headhunter", "Berserker"]);
+        assert!(game.watch(&ready, CONFIRM + 2).is_empty());
+    }
+
+    #[test]
+    fn items_are_not_sold_while_none_can_be_read() {
+        let mut game = Game::started_with(&["Headhunter", "Berserker"]);
+        // 欄がほかの表示に隠れた。上部バーは読めている
+        assert!(game.watch(&held(&[]), SOLD * 3).is_empty());
+        let back = held(&["Headhunter", "Berserker"]);
+        assert!(game.watch(&back, CONFIRM + 2).is_empty());
+    }
+
+    #[test]
+    fn missing_is_counted_only_in_a_row() {
+        let mut game = Game::started_with(&["Headhunter", "Berserker"]);
+        for _ in 0..3 {
+            assert!(game.watch(&held(&["Berserker"]), SOLD - 1).is_empty());
+            assert!(game.see(&held(&["Headhunter", "Berserker"])).is_empty());
+        }
+        let back = held(&["Headhunter", "Berserker"]);
+        assert!(game.watch(&back, CONFIRM + 2).is_empty());
     }
 
     #[test]
