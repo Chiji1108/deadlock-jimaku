@@ -13,96 +13,96 @@
           "expected": "Rapid Recharge",
           "answer": "Rapid Recharge",
           "best": "Rapid Recharge",
-          "score": 0.9864230751991272,
-          "second": 0.3076772391796112,
+          "score": 0.9864863753318787,
+          "second": 0.30769041180610657,
           "verdict": "correct"
         },
         {
           "expected": "Tankbuster",
           "answer": null,
           "best": "Tankbuster",
-          "score": 0.6744841933250427,
-          "second": 0.32775697112083435,
+          "score": 0.6744800806045532,
+          "second": 0.270106703042984,
           "verdict": "unknown"
         },
         {
           "expected": "Mystic Reverb",
           "answer": null,
           "best": "Mystic Reverb",
-          "score": 0.6842210292816162,
-          "second": 0.2972085773944855,
+          "score": 0.6842449903488159,
+          "second": 0.2825886011123657,
           "verdict": "unknown"
         },
         {
           "expected": "Spirit Burn",
           "answer": "Spirit Burn",
           "best": "Spirit Burn",
-          "score": 0.9841161370277405,
-          "second": 0.5654833912849426,
+          "score": 0.984150230884552,
+          "second": 0.5654993653297424,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Ballistic Enchantment",
-          "score": 0.6948269009590149,
-          "second": 0.6213223934173584,
+          "score": 0.6950293183326721,
+          "second": 0.621479868888855,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Active Reload",
-          "score": 0.7128652334213257,
-          "second": 0.6757849454879761,
+          "score": 0.713078498840332,
+          "second": 0.6759724020957947,
           "verdict": "correct"
         },
         {
           "expected": "Surge of Power",
           "answer": "Surge of Power",
           "best": "Surge of Power",
-          "score": 0.959356427192688,
-          "second": 0.3623184561729431,
+          "score": 0.9594159722328186,
+          "second": 0.36233606934547424,
           "verdict": "correct"
         },
         {
           "expected": "Greater Expansion",
           "answer": "Greater Expansion",
           "best": "Greater Expansion",
-          "score": 0.9688606858253479,
-          "second": 0.3098914921283722,
+          "score": 0.9689463376998901,
+          "second": 0.3095386326313019,
           "verdict": "correct"
         },
         {
           "expected": "Boundless Spirit",
           "answer": "Boundless Spirit",
           "best": "Boundless Spirit",
-          "score": 0.9754135608673096,
-          "second": 0.3215491771697998,
+          "score": 0.975432276725769,
+          "second": 0.32154861092567444,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Active Reload",
-          "score": 0.6719784140586853,
-          "second": 0.619778037071228,
+          "score": 0.6721083521842957,
+          "second": 0.6199121475219727,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Active Reload",
-          "score": 0.6892387270927429,
-          "second": 0.6097469329833984,
+          "score": 0.6893401145935059,
+          "second": 0.6098484396934509,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Long Range",
-          "score": 0.5157522559165955,
-          "second": 0.45644906163215637,
+          "score": 0.5157893896102905,
+          "second": 0.45648127794265747,
           "verdict": "correct"
         }
       ]
@@ -115,96 +115,96 @@
           "expected": "Rapid Recharge",
           "answer": "Rapid Recharge",
           "best": "Rapid Recharge",
-          "score": 0.9864553213119507,
-          "second": 0.3068401515483856,
+          "score": 0.9865023493766785,
+          "second": 0.3068530261516571,
           "verdict": "correct"
         },
         {
           "expected": "Tankbuster",
           "answer": "Tankbuster",
           "best": "Tankbuster",
-          "score": 0.9784021377563477,
-          "second": 0.5051457285881042,
+          "score": 0.9784730672836304,
+          "second": 0.48091641068458557,
           "verdict": "correct"
         },
         {
           "expected": "Blood Tribute",
           "answer": "Blood Tribute",
           "best": "Blood Tribute",
-          "score": 0.9809766411781311,
-          "second": 0.6633983850479126,
+          "score": 0.9810318946838379,
+          "second": 0.663428783416748,
           "verdict": "correct"
         },
         {
           "expected": "Boundless Spirit",
           "answer": "Boundless Spirit",
           "best": "Boundless Spirit",
-          "score": 0.9753344655036926,
-          "second": 0.3215927183628082,
+          "score": 0.9753560423851013,
+          "second": 0.32159218192100525,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Active Reload",
-          "score": 0.679742157459259,
-          "second": 0.609606921672821,
+          "score": 0.6798745393753052,
+          "second": 0.609732985496521,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Active Reload",
-          "score": 0.6601677536964417,
-          "second": 0.6443215608596802,
+          "score": 0.6603434681892395,
+          "second": 0.6444893479347229,
           "verdict": "correct"
         },
         {
           "expected": "Surge of Power",
           "answer": "Surge of Power",
           "best": "Surge of Power",
-          "score": 0.9594611525535583,
-          "second": 0.3592016100883484,
+          "score": 0.9595243334770203,
+          "second": 0.3592194616794586,
           "verdict": "correct"
         },
         {
           "expected": "Greater Expansion",
           "answer": "Greater Expansion",
           "best": "Greater Expansion",
-          "score": 0.9691169261932373,
-          "second": 0.31204164028167725,
+          "score": 0.9692017436027527,
+          "second": 0.3098994195461273,
           "verdict": "correct"
         },
         {
           "expected": "Mystic Reverb",
           "answer": "Mystic Reverb",
           "best": "Mystic Reverb",
-          "score": 0.9406177401542664,
-          "second": 0.24177853763103485,
+          "score": 0.9406605958938599,
+          "second": 0.24179066717624664,
           "verdict": "correct"
         },
         {
           "expected": "Spirit Burn",
           "answer": "Spirit Burn",
           "best": "Spirit Burn",
-          "score": 0.984249472618103,
-          "second": 0.5658724308013916,
+          "score": 0.9842869639396667,
+          "second": 0.5658936500549316,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Active Reload",
-          "score": 0.6916954517364502,
-          "second": 0.5977680683135986,
+          "score": 0.6918208003044128,
+          "second": 0.597885012626648,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Active Reload",
-          "score": 0.6781115531921387,
-          "second": 0.6223294734954834,
+          "score": 0.6782057881355286,
+          "second": 0.6224135756492615,
           "verdict": "correct"
         }
       ]
@@ -217,96 +217,96 @@
           "expected": "Alchemical Fire",
           "answer": null,
           "best": "Alchemical Fire",
-          "score": 0.7728000283241272,
-          "second": 0.4526335597038269,
+          "score": 0.7728061676025391,
+          "second": 0.4526255130767822,
           "verdict": "unknown"
         },
         {
           "expected": "Headhunter",
           "answer": "Headhunter",
           "best": "Headhunter",
-          "score": 0.9824091196060181,
-          "second": 0.6722341179847717,
+          "score": 0.9824944734573364,
+          "second": 0.6722928881645203,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Active Reload",
-          "score": 0.6642524600028992,
-          "second": 0.6090430617332458,
+          "score": 0.6643280386924744,
+          "second": 0.6091123819351196,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Active Reload",
-          "score": 0.674623429775238,
-          "second": 0.6336919665336609,
+          "score": 0.6746905446052551,
+          "second": 0.6337471604347229,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Active Reload",
-          "score": 0.6974992156028748,
-          "second": 0.6100652813911438,
+          "score": 0.6975676417350769,
+          "second": 0.6101183891296387,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Active Reload",
-          "score": 0.6885100603103638,
-          "second": 0.6364517211914062,
+          "score": 0.6885641813278198,
+          "second": 0.6365135312080383,
           "verdict": "correct"
         },
         {
           "expected": "Heroic Aura",
           "answer": "Heroic Aura",
           "best": "Heroic Aura",
-          "score": 0.9592214226722717,
-          "second": 0.609770655632019,
+          "score": 0.9592791795730591,
+          "second": 0.6098189353942871,
           "verdict": "correct"
         },
         {
           "expected": "Berserker",
           "answer": "Berserker",
           "best": "Berserker",
-          "score": 0.9773971438407898,
-          "second": 0.5351266264915466,
+          "score": 0.9774593114852905,
+          "second": 0.5351543426513672,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Active Reload",
-          "score": 0.6967679858207703,
-          "second": 0.6287819147109985,
+          "score": 0.6968279480934143,
+          "second": 0.628847599029541,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Active Reload",
-          "score": 0.6802164912223816,
-          "second": 0.6214401721954346,
+          "score": 0.6802467107772827,
+          "second": 0.6214866638183594,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Active Reload",
-          "score": 0.691409707069397,
-          "second": 0.6433169841766357,
+          "score": 0.6914553642272949,
+          "second": 0.643369197845459,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Active Reload",
-          "score": 0.6609575152397156,
-          "second": 0.6338108777999878,
+          "score": 0.6610179543495178,
+          "second": 0.6338698863983154,
           "verdict": "correct"
         }
       ]
@@ -319,96 +319,96 @@
           "expected": "Alchemical Fire",
           "answer": "Alchemical Fire",
           "best": "Alchemical Fire",
-          "score": 0.9558353424072266,
-          "second": 0.5575535297393799,
+          "score": 0.9559172987937927,
+          "second": 0.5576024651527405,
           "verdict": "correct"
         },
         {
           "expected": "Headhunter",
           "answer": "Headhunter",
           "best": "Headhunter",
-          "score": 0.9825869202613831,
-          "second": 0.6708257794380188,
+          "score": 0.9826687574386597,
+          "second": 0.670874297618866,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Active Reload",
-          "score": 0.7167289853096008,
-          "second": 0.6477829813957214,
+          "score": 0.7168033719062805,
+          "second": 0.6478563547134399,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Active Reload",
-          "score": 0.6849616169929504,
-          "second": 0.6212226152420044,
+          "score": 0.6850079298019409,
+          "second": 0.621271014213562,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Active Reload",
-          "score": 0.6888328194618225,
-          "second": 0.6179922223091125,
+          "score": 0.6888743042945862,
+          "second": 0.6180418133735657,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Active Reload",
-          "score": 0.6746786832809448,
-          "second": 0.6521603465080261,
+          "score": 0.6747347712516785,
+          "second": 0.6522241234779358,
           "verdict": "correct"
         },
         {
           "expected": "Heroic Aura",
           "answer": "Heroic Aura",
           "best": "Heroic Aura",
-          "score": 0.9575461745262146,
-          "second": 0.6066776514053345,
+          "score": 0.9576281309127808,
+          "second": 0.6067264080047607,
           "verdict": "correct"
         },
         {
           "expected": "Berserker",
           "answer": "Berserker",
           "best": "Berserker",
-          "score": 0.9774436354637146,
-          "second": 0.5357819199562073,
+          "score": 0.9775046110153198,
+          "second": 0.5358085036277771,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Active Reload",
-          "score": 0.6879192590713501,
-          "second": 0.6381052136421204,
+          "score": 0.6879792213439941,
+          "second": 0.6381717920303345,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Active Reload",
-          "score": 0.691724956035614,
-          "second": 0.6710800528526306,
+          "score": 0.6917747855186462,
+          "second": 0.6711443662643433,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Active Reload",
-          "score": 0.6913352012634277,
-          "second": 0.5831160545349121,
+          "score": 0.6914269328117371,
+          "second": 0.583207905292511,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Active Reload",
-          "score": 0.6844717264175415,
-          "second": 0.5639791488647461,
+          "score": 0.6846182346343994,
+          "second": 0.564103364944458,
           "verdict": "correct"
         }
       ]
@@ -421,96 +421,96 @@
           "expected": "Headhunter",
           "answer": "Headhunter",
           "best": "Headhunter",
-          "score": 0.9799606800079346,
-          "second": 0.6727283000946045,
+          "score": 0.980040431022644,
+          "second": 0.67277991771698,
           "verdict": "correct"
         },
         {
           "expected": "Point Blank",
           "answer": "Point Blank",
           "best": "Point Blank",
-          "score": 0.972234308719635,
-          "second": 0.5541465878486633,
+          "score": 0.9722912907600403,
+          "second": 0.5328721404075623,
           "verdict": "correct"
         },
         {
           "expected": "Escalating Resilience",
           "answer": "Escalating Resilience",
           "best": "Escalating Resilience",
-          "score": 0.962188720703125,
-          "second": 0.4115872383117676,
+          "score": 0.9622520804405212,
+          "second": 0.41161471605300903,
           "verdict": "correct"
         },
         {
           "expected": "Disarming Hex",
           "answer": "Disarming Hex",
           "best": "Disarming Hex",
-          "score": 0.8872275948524475,
-          "second": 0.4321281313896179,
+          "score": 0.8873445391654968,
+          "second": 0.43218550086021423,
           "verdict": "correct"
         },
         {
           "expected": "Fortitude",
           "answer": "Fortitude",
           "best": "Fortitude",
-          "score": 0.967901885509491,
-          "second": 0.6351810693740845,
+          "score": 0.967980682849884,
+          "second": 0.6352300047874451,
           "verdict": "correct"
         },
         {
           "expected": "Boundless Spirit",
           "answer": "Boundless Spirit",
           "best": "Boundless Spirit",
-          "score": 0.9742483496665955,
-          "second": 0.32110923528671265,
+          "score": 0.9742739796638489,
+          "second": 0.3211115300655365,
           "verdict": "correct"
         },
         {
           "expected": "Berserker",
           "answer": "Berserker",
           "best": "Berserker",
-          "score": 0.9730727076530457,
-          "second": 0.5405884981155396,
+          "score": 0.9731410145759583,
+          "second": 0.540622353553772,
           "verdict": "correct"
         },
         {
           "expected": "Shadow Weave",
           "answer": "Shadow Weave",
           "best": "Shadow Weave",
-          "score": 0.9344086050987244,
-          "second": 0.5960121154785156,
+          "score": 0.9344953894615173,
+          "second": 0.5960665941238403,
           "verdict": "correct"
         },
         {
           "expected": "Bullet Resilience",
           "answer": "Bullet Resilience",
           "best": "Bullet Resilience",
-          "score": 0.9676066637039185,
-          "second": 0.489036500453949,
+          "score": 0.9676819443702698,
+          "second": 0.4890846014022827,
           "verdict": "correct"
         },
         {
           "expected": "Counterspell",
           "answer": "Counterspell",
           "best": "Counterspell",
-          "score": 0.9633710980415344,
-          "second": 0.44514021277427673,
+          "score": 0.9634360074996948,
+          "second": 0.44517064094543457,
           "verdict": "correct"
         },
         {
           "expected": "Lightning Scroll",
           "answer": "Lightning Scroll",
           "best": "Lightning Scroll",
-          "score": 0.9778662919998169,
-          "second": 0.628243625164032,
+          "score": 0.9778866767883301,
+          "second": 0.6282649040222168,
           "verdict": "correct"
         },
         {
           "expected": "Escalating Exposure",
           "answer": "Escalating Exposure",
           "best": "Escalating Exposure",
-          "score": 0.976150393486023,
-          "second": 0.4018220901489258,
+          "score": 0.9761766195297241,
+          "second": 0.38438737392425537,
           "verdict": "correct"
         }
       ]
@@ -523,96 +523,96 @@
           "expected": "Headhunter",
           "answer": "Headhunter",
           "best": "Headhunter",
-          "score": 0.9796528220176697,
-          "second": 0.6726645827293396,
+          "score": 0.9797335863113403,
+          "second": 0.6727146506309509,
           "verdict": "correct"
         },
         {
           "expected": "Point Blank",
           "answer": "Point Blank",
           "best": "Point Blank",
-          "score": 0.9720944166183472,
-          "second": 0.5548095107078552,
+          "score": 0.9721471667289734,
+          "second": 0.5334957242012024,
           "verdict": "correct"
         },
         {
           "expected": "Escalating Resilience",
           "answer": "Escalating Resilience",
           "best": "Escalating Resilience",
-          "score": 0.9617397785186768,
-          "second": 0.40882939100265503,
+          "score": 0.9618045687675476,
+          "second": 0.4088544547557831,
           "verdict": "correct"
         },
         {
           "expected": "Disarming Hex",
           "answer": "Disarming Hex",
           "best": "Disarming Hex",
-          "score": 0.8275423049926758,
-          "second": 0.34809938073158264,
+          "score": 0.8276118636131287,
+          "second": 0.34813737869262695,
           "verdict": "correct"
         },
         {
           "expected": "Fortitude",
           "answer": "Fortitude",
           "best": "Fortitude",
-          "score": 0.9676343202590942,
-          "second": 0.6332687139511108,
+          "score": 0.9676896929740906,
+          "second": 0.6333077549934387,
           "verdict": "correct"
         },
         {
           "expected": "Boundless Spirit",
           "answer": "Boundless Spirit",
           "best": "Boundless Spirit",
-          "score": 0.9744163155555725,
-          "second": 0.3204595446586609,
+          "score": 0.9744405746459961,
+          "second": 0.3204602301120758,
           "verdict": "correct"
         },
         {
           "expected": "Berserker",
           "answer": "Berserker",
           "best": "Berserker",
-          "score": 0.9732467532157898,
-          "second": 0.5416519045829773,
+          "score": 0.9733059406280518,
+          "second": 0.5416839718818665,
           "verdict": "correct"
         },
         {
           "expected": "Shadow Weave",
           "answer": "Shadow Weave",
           "best": "Shadow Weave",
-          "score": 0.9537525177001953,
-          "second": 0.5728145241737366,
+          "score": 0.9538424015045166,
+          "second": 0.5499561429023743,
           "verdict": "correct"
         },
         {
           "expected": "Bullet Resilience",
           "answer": "Bullet Resilience",
           "best": "Bullet Resilience",
-          "score": 0.9674772620201111,
-          "second": 0.48797622323036194,
+          "score": 0.9675531387329102,
+          "second": 0.48802345991134644,
           "verdict": "correct"
         },
         {
           "expected": "Counterspell",
           "answer": "Counterspell",
           "best": "Counterspell",
-          "score": 0.9630618691444397,
-          "second": 0.4423244297504425,
+          "score": 0.9631322622299194,
+          "second": 0.44235673546791077,
           "verdict": "correct"
         },
         {
           "expected": "Lightning Scroll",
           "answer": "Lightning Scroll",
           "best": "Lightning Scroll",
-          "score": 0.977897047996521,
-          "second": 0.6275392174720764,
+          "score": 0.9779263734817505,
+          "second": 0.6272163987159729,
           "verdict": "correct"
         },
         {
           "expected": "Escalating Exposure",
           "answer": "Escalating Exposure",
           "best": "Escalating Exposure",
-          "score": 0.9763858318328857,
-          "second": 0.4026249349117279,
+          "score": 0.976412296295166,
+          "second": 0.38557425141334534,
           "verdict": "correct"
         }
       ]
@@ -625,96 +625,96 @@
           "expected": "Berserker",
           "answer": "Berserker",
           "best": "Berserker",
-          "score": 0.9777714610099792,
-          "second": 0.534978985786438,
+          "score": 0.9778362512588501,
+          "second": 0.5350098013877869,
           "verdict": "correct"
         },
         {
           "expected": "Shadow Weave",
           "answer": "Shadow Weave",
           "best": "Shadow Weave",
-          "score": 0.931907594203949,
-          "second": 0.5984203815460205,
+          "score": 0.9319784045219421,
+          "second": 0.5984677076339722,
           "verdict": "correct"
         },
         {
           "expected": "Bullet Resilience",
           "answer": "Bullet Resilience",
           "best": "Bullet Resilience",
-          "score": 0.9697363376617432,
-          "second": 0.4838782846927643,
+          "score": 0.9698114991188049,
+          "second": 0.4839254915714264,
           "verdict": "correct"
         },
         {
           "expected": "Counterspell",
           "answer": "Counterspell",
           "best": "Counterspell",
-          "score": 0.9662672877311707,
-          "second": 0.4396386444568634,
+          "score": 0.9663359522819519,
+          "second": 0.43966981768608093,
           "verdict": "correct"
         },
         {
           "expected": "Lightning Scroll",
           "answer": "Lightning Scroll",
           "best": "Lightning Scroll",
-          "score": 0.9791577458381653,
-          "second": 0.6287901401519775,
+          "score": 0.979181170463562,
+          "second": 0.6275588870048523,
           "verdict": "correct"
         },
         {
           "expected": "Escalating Exposure",
           "answer": "Escalating Exposure",
           "best": "Escalating Exposure",
-          "score": 0.9789121150970459,
-          "second": 0.40196430683135986,
+          "score": 0.9789426922798157,
+          "second": 0.3879190981388092,
           "verdict": "correct"
         },
         {
           "expected": "Point Blank",
           "answer": "Point Blank",
           "best": "Point Blank",
-          "score": 0.978966474533081,
-          "second": 0.5523224472999573,
+          "score": 0.9790136218070984,
+          "second": 0.552350640296936,
           "verdict": "correct"
         },
         {
           "expected": "Escalating Resilience",
           "answer": "Escalating Resilience",
           "best": "Escalating Resilience",
-          "score": 0.966296911239624,
-          "second": 0.41191747784614563,
+          "score": 0.9663591384887695,
+          "second": 0.4119437634944916,
           "verdict": "correct"
         },
         {
           "expected": "Disarming Hex",
           "answer": "Disarming Hex",
           "best": "Disarming Hex",
-          "score": 0.8815470337867737,
-          "second": 0.4196047782897949,
+          "score": 0.8816452622413635,
+          "second": 0.41965895891189575,
           "verdict": "correct"
         },
         {
           "expected": "Fortitude",
           "answer": "Fortitude",
           "best": "Fortitude",
-          "score": 0.9715256690979004,
-          "second": 0.6322829127311707,
+          "score": 0.9715938568115234,
+          "second": 0.6323253512382507,
           "verdict": "correct"
         },
         {
           "expected": "Boundless Spirit",
           "answer": "Boundless Spirit",
           "best": "Boundless Spirit",
-          "score": 0.9752708673477173,
-          "second": 0.3215382397174835,
+          "score": 0.975290060043335,
+          "second": 0.32153716683387756,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Active Reload",
-          "score": 0.7270323634147644,
-          "second": 0.6405558586120605,
+          "score": 0.7272072434425354,
+          "second": 0.6407340168952942,
           "verdict": "correct"
         }
       ]
@@ -727,96 +727,96 @@
           "expected": "Extra Regen",
           "answer": "Extra Regen",
           "best": "Extra Regen",
-          "score": 0.983578622341156,
-          "second": 0.5128750801086426,
+          "score": 0.9835479259490967,
+          "second": 0.5128422379493713,
           "verdict": "correct"
         },
         {
           "expected": "Point Blank",
           "answer": "Point Blank",
           "best": "Point Blank",
-          "score": 0.9788779020309448,
-          "second": 0.5517813563346863,
+          "score": 0.9789305329322815,
+          "second": 0.5518091320991516,
           "verdict": "correct"
         },
         {
           "expected": "Escalating Resilience",
           "answer": "Escalating Resilience",
           "best": "Escalating Resilience",
-          "score": 0.9649235606193542,
-          "second": 0.41216930747032166,
+          "score": 0.9649850726127625,
+          "second": 0.41219502687454224,
           "verdict": "correct"
         },
         {
           "expected": "Disarming Hex",
           "answer": "Disarming Hex",
           "best": "Disarming Hex",
-          "score": 0.8489381074905396,
-          "second": 0.44257453083992004,
+          "score": 0.8490351438522339,
+          "second": 0.44262373447418213,
           "verdict": "correct"
         },
         {
           "expected": "Fortitude",
           "answer": "Fortitude",
           "best": "Fortitude",
-          "score": 0.9714487195014954,
-          "second": 0.6319360733032227,
+          "score": 0.9715314507484436,
+          "second": 0.6319801211357117,
           "verdict": "correct"
         },
         {
           "expected": "Boundless Spirit",
           "answer": "Boundless Spirit",
           "best": "Boundless Spirit",
-          "score": 0.9750706553459167,
-          "second": 0.3214358985424042,
+          "score": 0.9750819802284241,
+          "second": 0.32143646478652954,
           "verdict": "correct"
         },
         {
           "expected": "Berserker",
           "answer": "Berserker",
           "best": "Berserker",
-          "score": 0.9772202968597412,
-          "second": 0.5354965925216675,
+          "score": 0.9772822260856628,
+          "second": 0.5355244278907776,
           "verdict": "correct"
         },
         {
           "expected": "Shadow Weave",
           "answer": "Shadow Weave",
           "best": "Shadow Weave",
-          "score": 0.916023850440979,
-          "second": 0.6025403141975403,
+          "score": 0.916094183921814,
+          "second": 0.6025866270065308,
           "verdict": "correct"
         },
         {
           "expected": "Bullet Resilience",
           "answer": "Bullet Resilience",
           "best": "Bullet Resilience",
-          "score": 0.9699575901031494,
-          "second": 0.4845449924468994,
+          "score": 0.9700357913970947,
+          "second": 0.48430466651916504,
           "verdict": "correct"
         },
         {
           "expected": "Counterspell",
           "answer": "Counterspell",
           "best": "Counterspell",
-          "score": 0.9666934013366699,
-          "second": 0.43836334347724915,
+          "score": 0.9667566418647766,
+          "second": 0.4383891820907593,
           "verdict": "correct"
         },
         {
           "expected": "Lightning Scroll",
           "answer": "Lightning Scroll",
           "best": "Lightning Scroll",
-          "score": 0.9792728424072266,
-          "second": 0.6281233429908752,
+          "score": 0.9792977571487427,
+          "second": 0.6269109845161438,
           "verdict": "correct"
         },
         {
           "expected": "Escalating Exposure",
           "answer": "Escalating Exposure",
           "best": "Escalating Exposure",
-          "score": 0.9789230227470398,
-          "second": 0.40211671590805054,
+          "score": 0.9789519906044006,
+          "second": 0.3872540295124054,
           "verdict": "correct"
         }
       ]

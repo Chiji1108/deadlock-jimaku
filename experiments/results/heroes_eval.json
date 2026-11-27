@@ -13,96 +13,96 @@
           "expected": "McGinnis",
           "answer": "McGinnis",
           "best": "McGinnis",
-          "score": 0.9488127827644348,
-          "second": 0.47849172353744507,
+          "score": 0.9488659501075745,
+          "second": 0.47852110862731934,
           "verdict": "correct"
         },
         {
           "expected": "Kelvin",
           "answer": "Kelvin",
           "best": "Kelvin",
-          "score": 0.9495172500610352,
-          "second": 0.47303077578544617,
+          "score": 0.949615478515625,
+          "second": 0.47307464480400085,
           "verdict": "correct"
         },
         {
           "expected": "The Doorman",
           "answer": "The Doorman",
           "best": "The Doorman",
-          "score": 0.951290488243103,
-          "second": 0.5640518665313721,
+          "score": 0.9513777494430542,
+          "second": 0.5640999674797058,
           "verdict": "correct"
         },
         {
           "expected": "Rat King",
           "answer": "Rat King",
           "best": "Rat King",
-          "score": 0.9560392498970032,
-          "second": 0.297693133354187,
+          "score": 0.95614093542099,
+          "second": 0.2977196276187897,
           "verdict": "correct"
         },
         {
           "expected": "Vindicta",
           "answer": "Vindicta",
           "best": "Vindicta",
-          "score": 0.9641962647438049,
-          "second": 0.45429089665412903,
+          "score": 0.9642030596733093,
+          "second": 0.4543243646621704,
           "verdict": "correct"
         },
         {
           "expected": "Dynamo",
           "answer": "Dynamo",
           "best": "Dynamo",
-          "score": 0.9421709775924683,
-          "second": 0.2796713411808014,
+          "score": 0.9422072172164917,
+          "second": 0.26466625928878784,
           "verdict": "correct"
         },
         {
           "expected": "Rem",
           "answer": "Rem",
           "best": "Rem",
-          "score": 0.9760398864746094,
-          "second": 0.4178844094276428,
+          "score": 0.9760696291923523,
+          "second": 0.4179081320762634,
           "verdict": "correct"
         },
         {
           "expected": "Yamato",
           "answer": "Yamato",
           "best": "Yamato",
-          "score": 0.9551461338996887,
-          "second": 0.3689570128917694,
+          "score": 0.9552157521247864,
+          "second": 0.3689773976802826,
           "verdict": "correct"
         },
         {
           "expected": "Bebop",
           "answer": "Bebop",
           "best": "Bebop",
-          "score": 0.9498381018638611,
-          "second": 0.3475704789161682,
+          "score": 0.9499204158782959,
+          "second": 0.34759849309921265,
           "verdict": "correct"
         },
         {
           "expected": "Haze",
           "answer": "Haze",
           "best": "Haze",
-          "score": 0.9296773076057434,
-          "second": 0.3232435882091522,
+          "score": 0.9296821355819702,
+          "second": 0.32324835658073425,
           "verdict": "correct"
         },
         {
           "expected": "Abrams",
           "answer": "Abrams",
           "best": "Abrams",
-          "score": 0.9543682336807251,
-          "second": 0.26649394631385803,
+          "score": 0.9544477462768555,
+          "second": 0.26651301980018616,
           "verdict": "correct"
         },
         {
           "expected": "Infernus",
           "answer": "Infernus",
           "best": "Infernus",
-          "score": 0.9622482061386108,
-          "second": 0.3259539306163788,
+          "score": 0.9623029828071594,
+          "second": 0.3259744942188263,
           "verdict": "correct"
         }
       ]
@@ -115,96 +115,96 @@
           "expected": "McGinnis",
           "answer": "McGinnis",
           "best": "McGinnis",
-          "score": 0.9501850605010986,
-          "second": 0.4723277986049652,
+          "score": 0.9502395987510681,
+          "second": 0.47235432267189026,
           "verdict": "correct"
         },
         {
           "expected": "Kelvin",
           "answer": "Kelvin",
           "best": "Kelvin",
-          "score": 0.9557775855064392,
-          "second": 0.46685248613357544,
+          "score": 0.955874502658844,
+          "second": 0.4668983221054077,
           "verdict": "correct"
         },
         {
           "expected": "The Doorman",
           "answer": "The Doorman",
           "best": "The Doorman",
-          "score": 0.9521629810333252,
-          "second": 0.5341730713844299,
+          "score": 0.9522530436515808,
+          "second": 0.5342215895652771,
           "verdict": "correct"
         },
         {
           "expected": "Rat King",
           "answer": "Rat King",
           "best": "Rat King",
-          "score": 0.9514797329902649,
-          "second": 0.49800539016723633,
+          "score": 0.951576828956604,
+          "second": 0.4980586767196655,
           "verdict": "correct"
         },
         {
           "expected": "Vindicta",
           "answer": "Vindicta",
           "best": "Vindicta",
-          "score": 0.9654907584190369,
-          "second": 0.4298490881919861,
+          "score": 0.9655109643936157,
+          "second": 0.4298805892467499,
           "verdict": "correct"
         },
         {
           "expected": "Dynamo",
           "answer": "Dynamo",
           "best": "Dynamo",
-          "score": 0.9432113766670227,
-          "second": 0.2773370146751404,
+          "score": 0.9432454705238342,
+          "second": 0.27734819054603577,
           "verdict": "correct"
         },
         {
           "expected": "Rem",
           "answer": "Rem",
           "best": "Rem",
-          "score": 0.9759692549705505,
-          "second": 0.427173376083374,
+          "score": 0.9760147333145142,
+          "second": 0.42719438672065735,
           "verdict": "correct"
         },
         {
           "expected": "Yamato",
           "answer": "Yamato",
           "best": "Yamato",
-          "score": 0.9556711316108704,
-          "second": 0.3667401969432831,
+          "score": 0.9557420611381531,
+          "second": 0.36676061153411865,
           "verdict": "correct"
         },
         {
           "expected": "Bebop",
           "answer": "Bebop",
           "best": "Bebop",
-          "score": 0.9503180980682373,
-          "second": 0.3425765931606293,
+          "score": 0.9504055380821228,
+          "second": 0.3426046371459961,
           "verdict": "correct"
         },
         {
           "expected": "Haze",
           "answer": "Haze",
           "best": "Haze",
-          "score": 0.9282616376876831,
-          "second": 0.30636289715766907,
+          "score": 0.9282609224319458,
+          "second": 0.30636581778526306,
           "verdict": "correct"
         },
         {
           "expected": "Abrams",
           "answer": "Abrams",
           "best": "Abrams",
-          "score": 0.953662633895874,
-          "second": 0.24926143884658813,
+          "score": 0.9537444114685059,
+          "second": 0.24927835166454315,
           "verdict": "correct"
         },
         {
           "expected": "Infernus",
           "answer": "Infernus",
           "best": "Infernus",
-          "score": 0.9623225331306458,
-          "second": 0.3249412477016449,
+          "score": 0.96237713098526,
+          "second": 0.32496213912963867,
           "verdict": "correct"
         }
       ]
@@ -217,96 +217,96 @@
           "expected": "McGinnis",
           "answer": "McGinnis",
           "best": "McGinnis",
-          "score": 0.9484290480613708,
-          "second": 0.5256037712097168,
+          "score": 0.9484866857528687,
+          "second": 0.5256420373916626,
           "verdict": "correct"
         },
         {
           "expected": "Kelvin",
           "answer": "Kelvin",
           "best": "Kelvin",
-          "score": 0.9498646855354309,
-          "second": 0.4885859191417694,
+          "score": 0.9499592185020447,
+          "second": 0.4886349141597748,
           "verdict": "correct"
         },
         {
           "expected": "The Doorman",
           "answer": null,
           "best": "The Doorman",
-          "score": 0.5182016491889954,
-          "second": 0.4124182164669037,
+          "score": 0.5182402729988098,
+          "second": 0.4124501943588257,
           "verdict": "unknown"
         },
         {
           "expected": "Rat King",
           "answer": "Rat King",
           "best": "Rat King",
-          "score": 0.9565374255180359,
-          "second": 0.3362991213798523,
+          "score": 0.9566278457641602,
+          "second": 0.33632707595825195,
           "verdict": "correct"
         },
         {
           "expected": "Vindicta",
           "answer": "Vindicta",
           "best": "Vindicta",
-          "score": 0.9656006693840027,
-          "second": 0.44334661960601807,
+          "score": 0.9656367301940918,
+          "second": 0.4433771073818207,
           "verdict": "correct"
         },
         {
           "expected": "Dynamo",
           "answer": "Dynamo",
           "best": "Dynamo",
-          "score": 0.9442304372787476,
-          "second": 0.27116039395332336,
+          "score": 0.944267988204956,
+          "second": 0.2594948410987854,
           "verdict": "correct"
         },
         {
           "expected": "Rem",
           "answer": "Rem",
           "best": "Rem",
-          "score": 0.975983202457428,
-          "second": 0.4455930292606354,
+          "score": 0.9760224223136902,
+          "second": 0.4456161558628082,
           "verdict": "correct"
         },
         {
           "expected": "Yamato",
           "answer": "Yamato",
           "best": "Yamato",
-          "score": 0.955145001411438,
-          "second": 0.3716205656528473,
+          "score": 0.9552124738693237,
+          "second": 0.37164267897605896,
           "verdict": "correct"
         },
         {
           "expected": "Bebop",
           "answer": null,
           "best": "Viscous",
-          "score": 0.3529508709907532,
-          "second": 0.23230865597724915,
+          "score": 0.3529818058013916,
+          "second": 0.21898862719535828,
           "verdict": "unknown"
         },
         {
           "expected": "Haze",
           "answer": "Haze",
           "best": "Haze",
-          "score": 0.922639787197113,
-          "second": 0.3710807263851166,
+          "score": 0.9226418137550354,
+          "second": 0.37108656764030457,
           "verdict": "correct"
         },
         {
           "expected": "Abrams",
           "answer": "Abrams",
           "best": "Abrams",
-          "score": 0.9463948011398315,
-          "second": 0.29181012511253357,
+          "score": 0.9464706778526306,
+          "second": 0.2918374538421631,
           "verdict": "correct"
         },
         {
           "expected": "Infernus",
           "answer": "Infernus",
           "best": "Infernus",
-          "score": 0.9622772932052612,
-          "second": 0.3238527476787567,
+          "score": 0.9623331427574158,
+          "second": 0.32387399673461914,
           "verdict": "correct"
         }
       ]
@@ -319,96 +319,96 @@
           "expected": null,
           "answer": null,
           "best": "Paige",
-          "score": 0.4813602864742279,
-          "second": 0.4260200560092926,
+          "score": 0.48135906457901,
+          "second": 0.4260215759277344,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "The Doorman",
-          "score": 0.5166766047477722,
-          "second": 0.5087682008743286,
+          "score": 0.5166757702827454,
+          "second": 0.5087592005729675,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Apollo",
-          "score": 0.47776609659194946,
-          "second": 0.46646085381507874,
+          "score": 0.47776299715042114,
+          "second": 0.46645691990852356,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Paige",
-          "score": 0.5324532985687256,
-          "second": 0.4665886461734772,
+          "score": 0.5324519276618958,
+          "second": 0.4665897488594055,
           "verdict": "correct"
         },
         {
           "expected": "Infernus",
           "answer": "Infernus",
           "best": "Infernus",
-          "score": 0.9639061689376831,
-          "second": 0.43034085631370544,
+          "score": 0.9639632701873779,
+          "second": 0.4303635060787201,
           "verdict": "correct"
         },
         {
           "expected": "The Doorman",
           "answer": null,
           "best": "The Doorman",
-          "score": 0.47403866052627563,
-          "second": 0.4644218981266022,
+          "score": 0.4740799069404602,
+          "second": 0.46446430683135986,
           "verdict": "unknown"
         },
         {
           "expected": "Abrams",
           "answer": null,
           "best": "Abrams",
-          "score": 0.47958821058273315,
-          "second": 0.3442213833332062,
+          "score": 0.4796012341976166,
+          "second": 0.34422755241394043,
           "verdict": "unknown"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Paige",
-          "score": 0.5560714602470398,
-          "second": 0.495089054107666,
+          "score": 0.5560685396194458,
+          "second": 0.4950985908508301,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Paige",
-          "score": 0.5504913330078125,
-          "second": 0.4888263940811157,
+          "score": 0.550489604473114,
+          "second": 0.48882701992988586,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Paige",
-          "score": 0.5696719288825989,
-          "second": 0.5079472661018372,
+          "score": 0.5696706771850586,
+          "second": 0.5079469680786133,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Paige",
-          "score": 0.5600157380104065,
-          "second": 0.48673850297927856,
+          "score": 0.5600258708000183,
+          "second": 0.48673757910728455,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Paige",
-          "score": 0.49586766958236694,
-          "second": 0.47582298517227173,
+          "score": 0.4958633780479431,
+          "second": 0.47581392526626587,
           "verdict": "correct"
         }
       ]
@@ -421,96 +421,96 @@
           "expected": null,
           "answer": null,
           "best": "Silver",
-          "score": 0.49920299649238586,
-          "second": 0.4956861436367035,
+          "score": 0.49920740723609924,
+          "second": 0.48271849751472473,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Paige",
-          "score": 0.5220129489898682,
-          "second": 0.5072876811027527,
+          "score": 0.5220052003860474,
+          "second": 0.5072846412658691,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Apollo",
-          "score": 0.48015639185905457,
-          "second": 0.4487040340900421,
+          "score": 0.48017165064811707,
+          "second": 0.4487159550189972,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Infernus",
-          "score": 0.5102458000183105,
-          "second": 0.37046536803245544,
+          "score": 0.510273277759552,
+          "second": 0.3704824447631836,
           "verdict": "correct"
         },
         {
           "expected": "Infernus",
           "answer": "Infernus",
           "best": "Infernus",
-          "score": 0.9641653299331665,
-          "second": 0.4294991195201874,
+          "score": 0.9642174243927002,
+          "second": 0.4295211434364319,
           "verdict": "correct"
         },
         {
           "expected": "The Doorman",
           "answer": null,
           "best": "Baba",
-          "score": 0.510880172252655,
-          "second": 0.4759218096733093,
+          "score": 0.5109186768531799,
+          "second": 0.4759557247161865,
           "verdict": "unknown"
         },
         {
           "expected": "Abrams",
           "answer": "Abrams",
           "best": "Abrams",
-          "score": 0.9530863165855408,
-          "second": 0.2832196354866028,
+          "score": 0.9531631469726562,
+          "second": 0.28323671221733093,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Apollo",
-          "score": 0.4978311061859131,
-          "second": 0.4865367114543915,
+          "score": 0.49782872200012207,
+          "second": 0.48653897643089294,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Paige",
-          "score": 0.49711957573890686,
-          "second": 0.4845229387283325,
+          "score": 0.4971185028553009,
+          "second": 0.4845171272754669,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Paige",
-          "score": 0.5141169428825378,
-          "second": 0.47347673773765564,
+          "score": 0.514123797416687,
+          "second": 0.4734790027141571,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Paige",
-          "score": 0.5221937298774719,
-          "second": 0.4745897352695465,
+          "score": 0.5221878886222839,
+          "second": 0.47459501028060913,
           "verdict": "correct"
         },
         {
           "expected": null,
           "answer": null,
           "best": "Paige",
-          "score": 0.4950198531150818,
-          "second": 0.4687332808971405,
+          "score": 0.49501800537109375,
+          "second": 0.4687279760837555,
           "verdict": "correct"
         }
       ]
