@@ -8,9 +8,20 @@ export const PURCHASES_SIZE: [number, number] = [380, 330];
 /** アイテム説明のカード（deadlock-ui）の幅。既定のソースでは、カードを縮めてソースの幅に合わせる */
 export const ITEM_CARD_WIDTH = 450;
 
-/** ランクの既定の大きさは、出すものに合わせる（アイコンだけなのに箱が横に広いと OBS で置きにくい） */
-export const rankSize = (content: RankContent): [number, number] =>
+/** ランクの中身を描くときの基準の大きさ。出すものに合わせる（アイコンだけなのに箱が横に広いと OBS で置きにくい） */
+export const rankBasis = (content: RankContent): [number, number] =>
   content === "icon" ? [112, 112] : [400, 112];
+
+/**
+ * ランクの既定のソースの大きさ。基準を同じ比で縮めて、幅を 330 にする。
+ * 1080p の画面の左上に置くと、ゲームの上部バー（ヒーローの絵は x 336 から）の手前にちょうど収まる。
+ * 基準のまま（幅 400）だと、長いランク名が上部バーに重なる
+ */
+export const rankSize = (content: RankContent): [number, number] => {
+  const [width, height] = rankBasis(content);
+  const factor = 330 / 400;
+  return [Math.round(width * factor), Math.round(height * factor)];
+};
 
 /**
  * ブラウザソースの大きさと既定の大きさの比（幅と高さの小さい方。片方だけ変えても切れない）を求め、変わるたびに渡す。
