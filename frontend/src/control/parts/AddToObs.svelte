@@ -95,6 +95,12 @@
           class="font-mono text-xs"
           onfocus={(e) => e.currentTarget.select()}
         />
+        <!-- 追加はできたが、動きがおかしいとき。ゲームが GPU を使い切っていると、後ろにある OBS の中のブラウザの描画が待たされる -->
+        <p>
+          OBS
+          に出した表示の動きがカクつくときは、ゲームの設定で、FPS（フレームレート）に上限を付けてみてください。ゲームが
+          GPU を使い切っていると、OBS の中の表示が遅れることがあります。
+        </p>
       </Popover.Content>
     </Popover.Root>
   </div>
