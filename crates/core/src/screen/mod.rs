@@ -23,6 +23,8 @@ const SHIFT: i32 = 2;
 const REFINED: usize = 3;
 /// 候補を絞るときに、比べる画素を何個に 1 個にするか
 const COARSE: usize = 4;
+/// 前の答えの見本がこれより近ければ、ほかの見本とは比べない（どのしきい値よりも高くしておく）
+const KEPT: f32 = 0.9;
 /// 画面から切り出すときに、枠のまわりに取っておく幅（1080p での画素。ずれを探す分より広く取る）
 const MARGIN: f32 = 4.0;
 
@@ -146,6 +148,39 @@ impl Read {
 /// （全部の見本でずれを探すと、アイテム欄を 1 回読むのに 1 秒近くかかる）
 pub fn read(frame: &Frame, templates: &[Template], left: i32, top: i32) -> Read {
     read_refining(frame, templates, left, top, REFINED)
+}
+
+/// `read` と同じ。`before` は、前の回にこの枠を読んだ答えで、同じ見本がまだよく合うなら、ほかの見本とは比べない。
+/// 枠の中身は、買ったときや試合が変わったとき以外は変わらないので、ほとんどの回は見本 1 つと比べるだけで済む
+pub fn read_again(
+    frame: &Frame,
+    templates: &[Template],
+    left: i32,
+    top: i32,
+    before: Option<&Read>,
+) -> Read {
+    if let Some(before) = before.filter(|before| before.score >= KEPT)
+        && let Some(template) = templates
+            .iter()
+            .find(|template| template.name == before.name)
+    {
+        let mut score = -1.0f32;
+        for dy in -SHIFT..=SHIFT {
+            for dx in -SHIFT..=SHIFT {
+                if let Some(shifted) = template.score(frame, left + dx, top + dy, 1) {
+                    score = score.max(shifted);
+                }
+            }
+        }
+        if score >= KEPT {
+            return Read {
+                name: before.name.clone(),
+                score,
+                second: before.second,
+            };
+        }
+    }
+    read(frame, templates, left, top)
 }
 
 /// `read` と同じ。ずれを探す見本の数を選べる（見本が少なく、形が似ているものは、全部で探す）

@@ -39,8 +39,23 @@ async fn main() -> anyhow::Result<()> {
         let scale = case.scale();
         let templates = items::templates(named(), scale);
         let started = Instant::now();
-        let slots = items::read(&case.frame(image), &templates, scale);
-        results.push((case, slots.reads, started.elapsed()));
+        let slots = items::read(&case.frame(image), &templates, scale, None);
+        let elapsed = started.elapsed();
+        // 同じ画面をもう一度、前の答えを渡して読む。答えは変わらず、速くなる
+        let started = Instant::now();
+        let again = items::read(&case.frame(image), &templates, scale, Some(&slots));
+        let answers = |slots: &items::Slots| -> Vec<Option<String>> {
+            (slots.reads.iter())
+                .map(|read| read.answer(items::THRESHOLD).map(str::to_owned))
+                .collect()
+        };
+        anyhow::ensure!(
+            answers(&again) == answers(&slots) && again.shop == slots.shop,
+            "{}: 前の答えを渡すと、答えが変わった",
+            case.file
+        );
+        println!("  2 回目 {:.1?}", started.elapsed());
+        results.push((case, slots.reads, elapsed));
     }
     screen::report(
         out.as_deref().unwrap_or(Path::new(OUT)),

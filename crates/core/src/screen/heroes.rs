@@ -53,16 +53,33 @@ pub struct Bar {
 }
 
 /// 上部バーを読む。観戦しているかは分からないので、両方の位置を読んで、読めた枠の多いほうを採る
-/// （同じなら、観戦していないほう）
-pub fn read(frame: &Frame, templates: &[Template], screen_width: u32, scale: f32) -> Bar {
+/// （同じなら、観戦していないほう）。`before` は前の回の答え。前と同じ位置で 1 つでも読めたら、もう一方の位置は読まない
+pub fn read(
+    frame: &Frame,
+    templates: &[Template],
+    screen_width: u32,
+    scale: f32,
+    before: Option<&Bar>,
+) -> Bar {
     let center = screen_width as f32 / 2.0;
-    let at = |drop: f32| -> Vec<Read> {
+    let at = |spectating: bool| -> Vec<Read> {
+        let drop = if spectating { SPECTATING_DROP } else { 0.0 };
+        // 前の答えは、同じ位置で読んだものだけを使う
+        let before = before.filter(|before| before.spectating == spectating);
         let offsets = (0..TEAM).map(|i| (INNER + SPACING * i as f32) * scale);
         let left = offsets.clone().rev().map(|offset| center - offset);
         left.chain(offsets.map(|offset| center + offset))
-            .map(|center| {
+            .enumerate()
+            .map(|(slot, center)| {
                 let left = (center - CARD.0 * scale / 2.0).round() as i32;
-                super::read(frame, templates, left, (drop * scale).round() as i32)
+                let before = before.and_then(|before| before.reads.get(slot));
+                super::read_again(
+                    frame,
+                    templates,
+                    left,
+                    (drop * scale).round() as i32,
+                    before,
+                )
             })
             .collect()
     };
@@ -72,7 +89,20 @@ pub fn read(frame: &Frame, templates: &[Template], screen_width: u32, scale: f32
             .filter(|read| read.answer(THRESHOLD).is_some())
             .count()
     };
-    let (usual, dropped) = (at(0.0), at(SPECTATING_DROP));
+    let first = before.is_some_and(|before| before.spectating);
+    let reads = at(first);
+    if known(&reads) > 0 {
+        return Bar {
+            reads,
+            spectating: first,
+        };
+    }
+    let other = at(!first);
+    let (usual, dropped) = if first {
+        (other, reads)
+    } else {
+        (reads, other)
+    };
     let spectating = known(&dropped) > known(&usual);
     Bar {
         reads: if spectating { dropped } else { usual },

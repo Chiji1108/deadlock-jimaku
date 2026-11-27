@@ -66,15 +66,27 @@ pub struct Slots {
 }
 
 /// アイテム欄を読む。ショップを開いているかは分からないので、両方の位置を読んで、読めた枠の多いほうを採る
-/// （同じなら、開いていないほう）
-pub fn read(frame: &Frame, templates: &[Template], scale: f32) -> Slots {
-    let at = |rise: f32| -> Vec<Read> {
+/// （同じなら、開いていないほう）。`before` は前の回の答え。前と同じ位置で 1 つでも読めたら、もう一方の位置は読まない
+/// （欄が動くと、元の位置では 1 つも読めなくなる）
+pub fn read(frame: &Frame, templates: &[Template], scale: f32, before: Option<&Slots>) -> Slots {
+    let at = |shop: bool| -> Vec<Read> {
+        let rise = if shop { SHOP_RISE } else { 0.0 };
+        // 前の答えは、同じ位置で読んだものだけを使う
+        let before = before.filter(|before| before.shop == shop);
         (0..GRID.1)
             .flat_map(|row| (0..GRID.0).map(move |column| (row, column)))
-            .map(|(row, column)| {
+            .enumerate()
+            .map(|(slot, (row, column))| {
                 let left = (FIRST.0 + SPACING * column as f32) * scale;
                 let top = (FIRST.1 - rise + SPACING * row as f32) * scale;
-                super::read(frame, templates, left.round() as i32, top.round() as i32)
+                let before = before.and_then(|before| before.reads.get(slot));
+                super::read_again(
+                    frame,
+                    templates,
+                    left.round() as i32,
+                    top.round() as i32,
+                    before,
+                )
             })
             .collect()
     };
@@ -85,7 +97,17 @@ pub fn read(frame: &Frame, templates: &[Template], scale: f32) -> Slots {
             .filter(|read| read.answer(THRESHOLD).is_some())
             .count()
     };
-    let (usual, raised) = (at(0.0), at(SHOP_RISE));
+    let first = before.is_some_and(|before| before.shop);
+    let reads = at(first);
+    if known(&reads) > 0 {
+        return Slots { reads, shop: first };
+    }
+    let other = at(!first);
+    let (usual, raised) = if first {
+        (other, reads)
+    } else {
+        (reads, other)
+    };
     let shop = known(&raised) > known(&usual);
     Slots {
         reads: if shop { raised } else { usual },
