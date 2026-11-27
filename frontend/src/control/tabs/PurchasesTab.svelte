@@ -36,7 +36,8 @@
       title="買ったアイテムのオーバーレイのプレビュー"
       size={PURCHASES_SIZE}
     />
-    {#if usable}
+    <!-- オフの間は、足しても何も出ないので、足し方を出さない -->
+    {#if usable && c.enabled}
       <AddToObs
         url={overlayUrl("purchases")}
         name="買ったアイテム"
@@ -88,75 +89,80 @@
                 onCheckedChange={(enabled) => panel.update({ purchaseCards: { enabled } })}
               />
             </Field.Field>
-            <Field.Field>
-              <Field.Label>出しておく時間</Field.Label>
-              <ToggleGroup.Root
-                type="single"
-                variant="outline"
-                class="w-full"
-                value={String(c.holdSeconds)}
-                onValueChange={(v) =>
-                  v && panel.update({ purchaseCards: { holdSeconds: Number(v) } })}
-              >
-                {#each HOLDS as n (n)}
-                  <ToggleGroup.Item value={String(n)} class="flex-1">{n} 秒</ToggleGroup.Item>
-                {/each}
-              </ToggleGroup.Root>
-            </Field.Field>
-            <Field.Field>
-              <Field.Label
-                >位置<Help>OBS のソースの箱の中で、表示を寄せる位置です</Help></Field.Label
-              >
-              <AnchorPicker
-                label="買ったアイテムの位置"
-                value={c.anchor}
-                onchange={(anchor) => panel.update({ purchaseCards: { anchor } })}
-              />
-            </Field.Field>
-            <Field.Field>
-              <Field.Label
-                >アイテムの名前の言語<Help>統計のラベルは、日本語のほかは英語で出します</Help
-                ></Field.Label
-              >
-              <Select.Root
-                type="single"
-                value={language}
-                onValueChange={(v) => panel.update({ purchaseCards: { language: v } })}
-              >
-                <Select.Trigger class="w-full">
-                  {language === FOLLOW
-                    ? `話す言語に合わせる（${panel.label(s.micLanguage)}）`
-                    : panel.label(language)}
-                </Select.Trigger>
-                <Select.Content>
-                  <Select.Item value={FOLLOW}
-                    >話す言語に合わせる（{panel.label(s.micLanguage)}）</Select.Item
-                  >
-                  {#each languages as code (code)}
-                    <Select.Item value={code}>{panel.label(code)}</Select.Item>
+            <!-- オフの間は、ほかの設定を出さない（並んでいると、オフでも動くように見える） -->
+            {#if c.enabled}
+              <Field.Field>
+                <Field.Label>出しておく時間</Field.Label>
+                <ToggleGroup.Root
+                  type="single"
+                  variant="outline"
+                  class="w-full"
+                  value={String(c.holdSeconds)}
+                  onValueChange={(v) =>
+                    v && panel.update({ purchaseCards: { holdSeconds: Number(v) } })}
+                >
+                  {#each HOLDS as n (n)}
+                    <ToggleGroup.Item value={String(n)} class="flex-1">{n} 秒</ToggleGroup.Item>
                   {/each}
-                </Select.Content>
-              </Select.Root>
-            </Field.Field>
-            <Field.Field orientation="horizontal">
-              <Field.Content>
+                </ToggleGroup.Root>
+              </Field.Field>
+              <Field.Field>
                 <Field.Label
-                  >統計を添える<Help
-                    >自分のヒーローでそのアイテムが買われる割合（最近 30
-                    日の試合）と、買われる時刻の平均を出します。めったに買われないアイテムには「珍しい」、半分以上の試合で買われるアイテムには「定番」と付けます</Help
+                  >位置<Help>OBS のソースの箱の中で、表示を寄せる位置です</Help></Field.Label
+                >
+                <AnchorPicker
+                  label="買ったアイテムの位置"
+                  value={c.anchor}
+                  onchange={(anchor) => panel.update({ purchaseCards: { anchor } })}
+                />
+              </Field.Field>
+              <Field.Field>
+                <Field.Label
+                  >アイテムの名前の言語<Help>統計のラベルは、日本語のほかは英語で出します</Help
                   ></Field.Label
                 >
-              </Field.Content>
-              <Switch
-                aria-label="統計を添える"
-                checked={c.showRate}
-                onCheckedChange={(showRate) => panel.update({ purchaseCards: { showRate } })}
-              />
-            </Field.Field>
+                <Select.Root
+                  type="single"
+                  value={language}
+                  onValueChange={(v) => panel.update({ purchaseCards: { language: v } })}
+                >
+                  <Select.Trigger class="w-full">
+                    {language === FOLLOW
+                      ? `話す言語に合わせる（${panel.label(s.micLanguage)}）`
+                      : panel.label(language)}
+                  </Select.Trigger>
+                  <Select.Content>
+                    <Select.Item value={FOLLOW}
+                      >話す言語に合わせる（{panel.label(s.micLanguage)}）</Select.Item
+                    >
+                    {#each languages as code (code)}
+                      <Select.Item value={code}>{panel.label(code)}</Select.Item>
+                    {/each}
+                  </Select.Content>
+                </Select.Root>
+              </Field.Field>
+              <Field.Field orientation="horizontal">
+                <Field.Content>
+                  <Field.Label
+                    >統計を添える<Help
+                      >自分のヒーローでそのアイテムが買われる割合（最近 30
+                      日の試合）と、買われる時刻の平均を出します。めったに買われないアイテムには「珍しい」、半分以上の試合で買われるアイテムには「定番」と付けます</Help
+                    ></Field.Label
+                  >
+                </Field.Content>
+                <Switch
+                  aria-label="統計を添える"
+                  checked={c.showRate}
+                  onCheckedChange={(showRate) => panel.update({ purchaseCards: { showRate } })}
+                />
+              </Field.Field>
+            {/if}
           </Field.Group>
         </Card.Content>
       </Card.Root>
-      <ScreenReading />
+      {#if c.enabled}
+        <ScreenReading />
+      {/if}
     {/if}
   </div>
 </OverlayPage>
