@@ -60,10 +60,20 @@
         name: entity ? entityName(entity, lang) : item,
         icon: entity?.icon,
         slot: entity?.slot,
-        rate: view?.showRate ? rate : null,
-        // 買った時刻が読めたときだけ、平均と比べる
-        timing:
-          rate && clockSeconds != null ? timing(clockSeconds, rate.boughtAtSeconds) : undefined,
+        // 統計は、数字、その数字が目立つときの一言、何の数字か、の組で出す
+        stats:
+          view?.showRate && rate
+            ? [
+                { value: percent(rate.share), tag: badge(rate.share), label: text.share },
+                {
+                  value: clock(rate.boughtAtSeconds),
+                  // 買った時刻が読めたときだけ、平均と比べる
+                  tag:
+                    clockSeconds == null ? undefined : timing(clockSeconds, rate.boughtAtSeconds),
+                  label: text.boughtAt,
+                },
+              ]
+            : [],
       };
     }),
   );
@@ -113,31 +123,28 @@
         in:fly={{ x: view.anchor.endsWith("right") ? 24 : -24, duration: 250 }}
         out:fade={{ duration: 300 }}
       >
+        <!-- 誰が買ったか。下の数字が、このヒーローでの数字だという印にもなる -->
+        <li class="head">
+          {#if hero?.icon}<img src={hero.icon} alt="" />{/if}
+          {#if hero}<span class="who">{entityName(hero, lang)}</span>{/if}
+          <span>{text.purchased}</span>
+        </li>
         {#each rows as row (row.key)}
-          {@const mark = row.rate ? badge(row.rate.share) : undefined}
           <li class="row {row.slot ?? ''}">
-            <!-- 右下のヒーローは、そのヒーローでの数字だという印 -->
-            <div class="icons">
-              {#if row.icon}<img class="icon" src={row.icon} alt="" />{/if}
-              {#if row.rate && hero?.icon}<img class="hero" src={hero.icon} alt="" />{/if}
-            </div>
+            {#if row.icon}<img class="icon" src={row.icon} alt="" />{/if}
             <div class="body">
               <p class="name">{row.name}</p>
-              {#if row.rate}
+              {#if row.stats.length}
                 <dl class="stats">
-                  <div>
-                    <dd>{percent(row.rate.share)}</dd>
-                    <dt>{text.share}</dt>
-                  </div>
-                  <div>
-                    <dd>
-                      {clock(row.rate.boughtAtSeconds)}
-                      {#if row.timing}<span class="timing {row.timing}">{text[row.timing]}</span
-                        >{/if}
-                    </dd>
-                    <dt>{text.boughtAt}</dt>
-                  </div>
-                  {#if mark}<span class="badge {mark}">{text[mark]}</span>{/if}
+                  {#each row.stats as stat (stat.label)}
+                    <div>
+                      <dd>
+                        {stat.value}
+                        {#if stat.tag}<span class="tag {stat.tag}">{text[stat.tag]}</span>{/if}
+                      </dd>
+                      <dt>{stat.label}</dt>
+                    </div>
+                  {/each}
                 </dl>
               {/if}
             </div>
@@ -200,15 +207,10 @@
   .spirit {
     --slot: #cfa2ff;
   }
-  .icons {
-    position: relative;
+  .icon {
     width: 64px;
     height: 64px;
     flex: none;
-  }
-  .icon {
-    width: 100%;
-    height: 100%;
     border-radius: 6px;
   }
   .body {
@@ -228,35 +230,21 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  /* 統計の行の右の端に置く（名前の幅を取らない） */
-  .badge {
-    margin-left: auto;
-    padding: 2px 8px;
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 700;
-    white-space: nowrap;
-  }
-  .rare {
-    background: #ffd84d;
-    color: #2a2000;
-  }
-  .staple {
-    background: rgb(255 255 255 / 0.16);
-    color: #f4f1ea;
-  }
   /* 数字を大きく、ラベルを小さく（文より一目で読める） */
   .stats {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 18px;
     margin: 0;
   }
   .stats div {
     display: flex;
     flex-direction: column;
   }
-  /* 「早い」「遅い」は、平均の時刻の横に付ける（何と比べて早いのかが分かる） */
+  /* 並べたときに、2 つ目の数字の位置がそろうように、1 つ目の幅を決めておく */
+  .stats div:first-child {
+    min-width: 104px;
+  }
   .stats dd {
     display: flex;
     align-items: center;
@@ -273,12 +261,21 @@
     color: rgb(244 241 234 / 0.7);
     white-space: nowrap;
   }
-  .timing {
+  /* その数字が目立つときの一言。数字のすぐ横に置く（何についての一言かが分かる） */
+  .tag {
     padding: 1px 6px;
     border-radius: 4px;
     font-size: 11px;
     line-height: 1.4;
     white-space: nowrap;
+  }
+  .staple {
+    background: rgb(255 255 255 / 0.18);
+    color: #f4f1ea;
+  }
+  .rare {
+    background: #ffd84d;
+    color: #2a2000;
   }
   .early {
     background: #7fd4ff;
@@ -288,12 +285,25 @@
     background: #ff9b7a;
     color: #3a0e00;
   }
-  .hero {
-    position: absolute;
-    right: -8px;
-    bottom: -8px;
-    width: 30px;
-    height: 30px;
-    filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.8));
+  .head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    align-self: flex-start;
+    padding: 3px 12px 3px 6px;
+    border-radius: 999px;
+    background: rgb(18 20 24 / 0.88);
+    box-shadow: 0 2px 10px rgb(0 0 0 / 0.45);
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.2;
+    color: rgb(244 241 234 / 0.7);
+  }
+  .head img {
+    width: 24px;
+    height: 24px;
+  }
+  .who {
+    color: #f4f1ea;
   }
 </style>
