@@ -20,6 +20,10 @@ pub struct Case {
     /// 切り出した左上の、画面での位置
     #[serde(default)]
     pub crop: (i32, i32),
+    /// 死んで、ほかの人を観戦している（上部バーが下がる。アイテム欄は相手の持ち物になる）
+    #[serde(default)]
+    #[allow(dead_code)] // 見るのは heroes_eval だけ
+    pub spectating: bool,
     /// 枠の順に、出ているものの名前。何もない枠は null
     pub names: Vec<Option<String>>,
 }

@@ -15,6 +15,8 @@ const SPACING: f32 = 88.0;
 const INNER: f32 = 146.0;
 /// チームの枠の数。人数の少ないモード（ストリートブロール）は、内側から詰める
 const TEAM: usize = 6;
+/// 死んでほかの人を観戦している間は、画面の上の端にチームの色の帯が出て、バーがこれだけ下がる
+const SPECTATING_DROP: f32 = 8.0;
 
 /// カードのうち、比べる範囲。左右はチームの印（「!」）が、下は丸い縁とソウルの数が重なる
 fn compared(x: f32, y: f32) -> bool {
@@ -38,19 +40,42 @@ pub fn templates<'a>(
 
 /// 読むのに要る画面の範囲（左、上、幅、高さ）。上の端の帯
 pub fn area(screen: (u32, u32), scale: f32) -> [u32; 4] {
-    let height = ((CARD.1 + super::MARGIN) * scale).ceil() as u32;
+    let height = ((CARD.1 + SPECTATING_DROP + super::MARGIN) * scale).ceil() as u32;
     [0, 0, screen.0, height.min(screen.1)]
 }
 
-/// 枠を左から順に読む（左のチームの 6 枠、右のチームの 6 枠）
-pub fn read(frame: &Frame, templates: &[Template], screen_width: u32, scale: f32) -> Vec<Read> {
+/// 読んだ上部バー
+pub struct Bar {
+    /// 左から順に（左のチームの 6 枠、右のチームの 6 枠）
+    pub reads: Vec<Read>,
+    /// 下がった位置で読めた。死んで、ほかの人を観戦している
+    pub spectating: bool,
+}
+
+/// 上部バーを読む。観戦しているかは分からないので、両方の位置を読んで、読めた枠の多いほうを採る
+/// （同じなら、観戦していないほう）
+pub fn read(frame: &Frame, templates: &[Template], screen_width: u32, scale: f32) -> Bar {
     let center = screen_width as f32 / 2.0;
-    let offsets = (0..TEAM).map(|i| (INNER + SPACING * i as f32) * scale);
-    let left = offsets.clone().rev().map(|offset| center - offset);
-    left.chain(offsets.map(|offset| center + offset))
-        .map(|center| {
-            let left = (center - CARD.0 * scale / 2.0).round() as i32;
-            super::read(frame, templates, left, 0)
-        })
-        .collect()
+    let at = |drop: f32| -> Vec<Read> {
+        let offsets = (0..TEAM).map(|i| (INNER + SPACING * i as f32) * scale);
+        let left = offsets.clone().rev().map(|offset| center - offset);
+        left.chain(offsets.map(|offset| center + offset))
+            .map(|center| {
+                let left = (center - CARD.0 * scale / 2.0).round() as i32;
+                super::read(frame, templates, left, (drop * scale).round() as i32)
+            })
+            .collect()
+    };
+    let known = |reads: &[Read]| {
+        reads
+            .iter()
+            .filter(|read| read.answer(THRESHOLD).is_some())
+            .count()
+    };
+    let (usual, dropped) = (at(0.0), at(SPECTATING_DROP));
+    let spectating = known(&dropped) > known(&usual);
+    Bar {
+        reads: if spectating { dropped } else { usual },
+        spectating,
+    }
 }
