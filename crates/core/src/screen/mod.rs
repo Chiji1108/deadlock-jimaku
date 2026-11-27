@@ -3,6 +3,7 @@
 //! （色の正規化相互相関）、いちばん近いものを答えにする。画面の取り込みも通信もしない。
 
 pub mod capture;
+pub mod clock;
 pub mod heroes;
 pub mod items;
 pub mod purchases;
@@ -143,6 +144,17 @@ impl Read {
 /// まず、ずらさずに、画素を間引いて全部の見本と比べ、近かった `REFINED` 個だけ、全部の画素でずれを探す
 /// （全部の見本でずれを探すと、アイテム欄を 1 回読むのに 1 秒近くかかる）
 pub fn read(frame: &Frame, templates: &[Template], left: i32, top: i32) -> Read {
+    read_refining(frame, templates, left, top, REFINED)
+}
+
+/// `read` と同じ。ずれを探す見本の数を選べる（見本が少なく、形が似ているものは、全部で探す）
+fn read_refining(
+    frame: &Frame,
+    templates: &[Template],
+    left: i32,
+    top: i32,
+    refined: usize,
+) -> Read {
     let mut scores: Vec<(f32, &Template)> = templates
         .iter()
         .map(|template| {
@@ -151,7 +163,7 @@ pub fn read(frame: &Frame, templates: &[Template], left: i32, top: i32) -> Read 
         })
         .collect();
     scores.sort_by(|a, b| b.0.total_cmp(&a.0));
-    for (best, template) in scores.iter_mut().take(REFINED) {
+    for (best, template) in scores.iter_mut().take(refined) {
         *best = -1.0;
         for dy in -SHIFT..=SHIFT {
             for dx in -SHIFT..=SHIFT {

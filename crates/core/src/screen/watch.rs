@@ -7,7 +7,7 @@ use std::time::{Duration, Instant};
 use super::capture::Capture;
 use super::purchases::Tracker;
 use super::samples::{self, Sample, Samples};
-use super::{BASE_HEIGHT, Frame, Read, Template, heroes, items};
+use super::{BASE_HEIGHT, Frame, Read, Template, clock, heroes, items};
 use crate::store::Store;
 use crate::types::{Purchase, PurchasedItem, ScreenStatus};
 
@@ -56,13 +56,17 @@ fn wanted(store: &Store) -> bool {
     *store.screen_watchers().borrow() > 0 && store.settings().purchase_cards.enabled
 }
 
-/// 読み出した画像（上の端と、左下のアイテム欄）
-type Images = [image::RgbImage; 2];
+/// 読み出した画像（上の端、左下のアイテム欄、時計）
+type Images = [image::RgbImage; 3];
+/// 時計が読めなくなってから（ショップを開いている間など）、これより経ったら、買った時刻は分からないとする
+const CLOCK_KEPT: Duration = Duration::from_secs(120);
 
 /// 画像から読んだもの
 struct Reads {
     heroes: heroes::Bar,
     items: items::Slots,
+    /// 試合の時計（試合が始まってからの秒）
+    clock: Option<u32>,
 }
 
 /// 取り込みと、その画面の大きさに合わせた見本
@@ -71,6 +75,7 @@ struct Source {
     scale: f32,
     heroes: Vec<Template>,
     items: Vec<Template>,
+    digits: Vec<Template>,
 }
 
 impl Source {
@@ -88,6 +93,7 @@ impl Source {
         Ok(Some(Self {
             heroes: heroes::templates(named(&samples.heroes), scale),
             items: items::templates(named(&samples.items), scale),
+            digits: clock::templates(scale),
             capture,
             scale,
         }))
@@ -99,6 +105,7 @@ impl Source {
         let areas = [
             heroes::area(size, self.scale),
             items::area(size, self.scale),
+            clock::area(size, self.scale),
         ];
         let Some(images) = self.capture.read(&areas)? else {
             return Ok(None);
@@ -106,27 +113,46 @@ impl Source {
         Ok(images.try_into().ok())
     }
 
-    fn matched(&self, [top, slots]: &Images) -> Reads {
+    /// 画像を読む。`before` は、前に読んだ画像とその答え。同じ画像のところは、照合を飛ばして前の答えを使う
+    /// （上の端は後ろの景色が透けて毎回変わるが、アイテム欄は、買ったとき以外ほとんど変わらない）
+    fn matched(&self, images: &Images, before: Option<(Images, Reads)>) -> Reads {
+        let [top, slots, time] = images;
         let size = self.capture.size();
-        let [left, upper, _, _] = items::area(size, self.scale);
-        let heroes = heroes::read(
-            &Frame {
+        let (mut heroes, mut items, mut clock) = (None, None, None);
+        if let Some(([top_before, slots_before, time_before], reads)) = before {
+            heroes = (top_before == *top).then_some(reads.heroes);
+            items = (slots_before == *slots).then_some(reads.items);
+            clock = (time_before == *time).then_some(reads.clock);
+        }
+        let heroes = heroes.unwrap_or_else(|| {
+            let frame = Frame {
                 image: top,
                 origin: (0, 0),
-            },
-            &self.heroes,
-            size.0,
-            self.scale,
-        );
-        let items = items::read(
-            &Frame {
+            };
+            heroes::read(&frame, &self.heroes, size.0, self.scale)
+        });
+        let items = items.unwrap_or_else(|| {
+            let [left, upper, _, _] = items::area(size, self.scale);
+            let frame = Frame {
                 image: slots,
                 origin: (left as i32, upper as i32),
-            },
-            &self.items,
-            self.scale,
-        );
-        Reads { heroes, items }
+            };
+            items::read(&frame, &self.items, self.scale)
+        });
+        // 時計の位置は、観戦中かどうかで変わる。時計の画像が同じなら、観戦中かどうかも前と同じ
+        let clock = clock.unwrap_or_else(|| {
+            let [left, upper, _, _] = clock::area(size, self.scale);
+            let frame = Frame {
+                image: time,
+                origin: (left as i32, upper as i32),
+            };
+            clock::read(&frame, &self.digits, size.0, self.scale, heroes.spectating)
+        });
+        Reads {
+            heroes,
+            items,
+            clock,
+        }
     }
 }
 
@@ -135,8 +161,10 @@ fn read(store: &Store, samples: &Samples) {
     let started = Instant::now();
     let mut tracker = Tracker::default();
     let mut source: Option<Source> = None;
-    // 前に読んだ画像と、その答え。画面が同じなら、照合を飛ばす（アイテム欄は、買ったとき以外ほとんど変わらない）
+    // 前に読んだ画像と、その答え
     let mut last: Option<(Images, Reads)> = None;
+    // 最後に読めた時計と、そのとき。ショップを開いている間は時計が隠れるので、そこから数える
+    let mut clock: Option<(u32, Instant)> = None;
     while wanted(store) {
         let Some(open) = &mut source else {
             match Source::open(samples) {
@@ -157,10 +185,7 @@ fn read(store: &Store, samples: &Samples) {
         };
         match open.read() {
             Ok(Some(images)) => {
-                let reads = match last.take() {
-                    Some((before, reads)) if before == images => reads,
-                    _ => open.matched(&images),
-                };
+                let reads = open.matched(&images, last.take());
                 let (width, height) = open.capture.size();
                 store.set_screen_status(ScreenStatus::Reading {
                     width,
@@ -171,12 +196,17 @@ fn read(store: &Store, samples: &Samples) {
                         .collect(),
                     shop: reads.items.shop,
                 });
+                if let Some(seconds) = reads.clock {
+                    clock = Some((seconds, Instant::now()));
+                }
                 let bought = tracker.observe(started.elapsed(), &reads.heroes, &reads.items);
                 if !bought.is_empty() {
-                    // 自分のヒーローと試合の時計は、まだ読めない（DESIGN.md 18.6）
+                    // 自分のヒーローは、まだ読めない（DESIGN.md 18.6）
                     store.purchased(Purchase {
                         hero: None,
-                        clock_seconds: None,
+                        clock_seconds: clock
+                            .filter(|(_, at)| at.elapsed() < CLOCK_KEPT)
+                            .map(|(seconds, at)| seconds as f32 + at.elapsed().as_secs_f32()),
                         items: bought
                             .into_iter()
                             .map(|item| PurchasedItem { item, rate: None })
