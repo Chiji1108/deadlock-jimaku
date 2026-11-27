@@ -1,0 +1,152 @@
+<!doctype html>
+<!-- 新しい版の告知の画像（Discord などに貼る）。`mise run announce` が、この頁を Chrome で開いて 1 枚の PNG にする。
+     文言と絵は、URL のパラメータで渡す（web/scripts/announce.ts）。見た目は LP に合わせる（紙色の地、帯の見出し、暗い板） -->
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <title>告知の画像</title>
+    <style>
+      /* LP の大きい見出しと同じフォント。LP の見出しに出る字だけが入っているので、入っていない字は端末のフォントで出る */
+      @font-face {
+        font-family: "Display";
+        src: url("../src/assets/fonts/noto-sans-jp-900.woff2") format("woff2");
+        font-weight: 900;
+      }
+      html,
+      body {
+        margin: 0;
+      }
+      body {
+        position: relative;
+        width: 1200px;
+        height: 675px;
+        overflow: hidden;
+        background:
+          radial-gradient(rgb(18 17 14 / 0.2) 1px, transparent 1.5px) 0 0 / 22px 22px,
+          #f1efe9;
+        color: #12110e;
+        font-family: system-ui, "Hiragino Sans", "Yu Gothic UI", "Meiryo", sans-serif;
+      }
+      .text {
+        position: absolute;
+        inset: 0 auto 0 64px;
+        display: flex;
+        width: 520px;
+        flex-direction: column;
+        justify-content: center;
+      }
+      .app {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 24px;
+        font-weight: 800;
+      }
+      .app img {
+        width: 40px;
+        height: 40px;
+      }
+      .version {
+        padding: 3px 12px;
+        border-radius: 999px;
+        background: #12110e;
+        color: #f1efe9;
+        font-size: 17px;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+      }
+      h1 {
+        margin: 26px 0 0;
+        font-family: "Display", system-ui, "Hiragino Sans", sans-serif;
+        font-size: 60px;
+        font-weight: 900;
+        font-feature-settings: "palt";
+        letter-spacing: -0.035em;
+        line-height: 1.2;
+      }
+      .band {
+        padding: 0 0.08em;
+        background: linear-gradient(#ffcf33, #ffcf33) no-repeat 0 88% / 100% 0.34em;
+      }
+      ul {
+        display: flex;
+        margin: 34px 0 0;
+        padding: 0;
+        flex-direction: column;
+        gap: 16px;
+        font-size: 21px;
+        font-weight: 700;
+        list-style: none;
+      }
+      li {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+      li::before {
+        width: 12px;
+        height: 12px;
+        flex: none;
+        background: #ffcf33;
+        content: "";
+      }
+      /* 右の絵。1 枚ずつ暗い板に載せて、縦に並べる */
+      .plates {
+        position: absolute;
+        inset: 48px 56px 48px auto;
+        display: flex;
+        width: 520px;
+        flex-direction: column;
+        justify-content: center;
+        gap: 16px;
+      }
+      .plates img {
+        display: block;
+        width: 100%;
+        max-height: 100%;
+        min-height: 0;
+        border-radius: 20px;
+        background: radial-gradient(ellipse at 50% 0, #2b2a24, #12110e 72%);
+        object-fit: contain;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="text">
+      <div class="app"><img src="../public/favicon.svg" alt="" />デドロ字幕<span class="version"></span></div>
+      <h1></h1>
+      <ul></ul>
+    </div>
+    <div class="plates"></div>
+    <script>
+      const params = new URLSearchParams(location.search);
+      document.querySelector(".version").textContent = params.get("version");
+      // 見出しは、`[ ]` で囲んだところに帯を引き、`|` で改行する
+      const title = document.querySelector("h1");
+      for (const [index, line] of (params.get("title") ?? "").split("|").entries()) {
+        if (index > 0) title.append(document.createElement("br"));
+        for (const part of line.split(/(\[[^\]]*\])/)) {
+          if (!part.startsWith("[")) {
+            title.append(part);
+            continue;
+          }
+          const band = document.createElement("span");
+          band.className = "band";
+          band.textContent = part.slice(1, -1);
+          title.append(band);
+        }
+      }
+      for (const point of params.getAll("point")) {
+        const item = document.createElement("li");
+        item.textContent = point;
+        document.querySelector("ul").append(item);
+      }
+      for (const image of params.getAll("image")) {
+        const plate = document.createElement("img");
+        plate.src = image;
+        plate.alt = "";
+        document.querySelector(".plates").append(plate);
+      }
+    </script>
+  </body>
+</html>
