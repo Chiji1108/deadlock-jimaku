@@ -13,6 +13,7 @@
   import AnchorPicker from "../parts/AnchorPicker.svelte";
   import OverlayPage from "../parts/OverlayPage.svelte";
   import OverlayPreview from "../parts/OverlayPreview.svelte";
+  import ScreenReading from "../parts/ScreenReading.svelte";
   import { PURCHASES_SIZE } from "../../lib/overlay-size";
   import { overlayUrl, panel } from "../panel.svelte";
 
@@ -73,7 +74,7 @@
                 <Field.Label
                   >ゲームの画面を読む<Help
                     >読むのは、このオーバーレイが OBS
-                    につながっている間だけです。ショップを開いている間は出さず、閉じたときに、増えた分をまとめて出します</Help
+                    につながっている間と、このタブを開いている間だけです。ショップを開いている間は出さず、閉じたときに、増えた分をまとめて出します</Help
                   ></Field.Label
                 >
                 <Field.Description>
@@ -155,6 +156,7 @@
           </Field.Group>
         </Card.Content>
       </Card.Root>
+      <ScreenReading />
     {/if}
   </div>
 </OverlayPage>
