@@ -38,6 +38,10 @@ run = "node frontend/scripts/font-samples.ts"
 description = "LP の文字の見た目の見本と大きい見出しのフォントを、使う字だけの woff2 に作り直す（LP をビルドして見出しの字を拾い、GitHub からフォントを取る）"
 run = ["pnpm --dir web build", "node web/scripts/fonts.ts"]
 
+[tasks.announce]
+description = "新しい版の告知の画像（Discord などに貼る 1 枚）を作る。使い方は web/scripts/announce.ts の頭（Chrome が要る）"
+run = "node web/scripts/announce.ts"
+
 [tasks.check]
 description = "整形・リント・型チェック・テストをまとめて実行する"
 run = [
