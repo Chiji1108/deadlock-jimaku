@@ -27,6 +27,8 @@ pub struct Samples {
     pub client_version: u32,
     pub heroes: Vec<Sample>,
     pub items: Vec<Sample>,
+    /// ヒーローのアビリティの絵（1 人に 4 つ）。`id` はアビリティのもの、`class_name` と `name` は持ち主のヒーローのもの
+    pub abilities: Vec<Sample>,
 }
 
 /// 見本を読む。手元になければ取る。`version` が None なら、いちばん新しい版
@@ -41,7 +43,8 @@ pub async fn load(root: &Path, version: Option<u32>) -> anyhow::Result<Samples> 
         client.items(LANGUAGE, version)
     )?;
     let dir = root.join(version.to_string());
-    let (heroes, items) = tokio::try_join!(
+    let abilities = abilities(&heroes, &items);
+    let (heroes, items, abilities) = tokio::try_join!(
         images(
             &client,
             dir.join("heroes"),
@@ -52,12 +55,14 @@ pub async fn load(root: &Path, version: Option<u32>) -> anyhow::Result<Samples> 
             dir.join("items"),
             items.into_iter().filter_map(item)
         ),
+        images(&client, dir.join("abilities"), abilities.into_iter()),
     )?;
     remove_other_versions(root, version).await;
     Ok(Samples {
         client_version: version,
         heroes,
         items,
+        abilities,
     })
 }
 
@@ -81,6 +86,31 @@ fn hero(hero: ApiHero) -> Option<Source> {
         class_name: hero.class_name,
         url,
     })
+}
+
+/// 選べるヒーローの、画面の下の中央に並ぶ 4 つのアビリティの絵
+fn abilities(heroes: &[ApiHero], items: &[ApiItem]) -> Vec<Source> {
+    let mut sources = Vec::new();
+    for hero in heroes {
+        let Some(name) = &hero.name else { continue };
+        if !hero.player_selectable || hero.disabled {
+            continue;
+        }
+        for slot in ["signature1", "signature2", "signature3", "signature4"] {
+            let ability = (hero.items.get(slot).and_then(Option::as_deref))
+                .and_then(|class_name| items.iter().find(|item| item.class_name == class_name));
+            if let Some((ability, url)) = ability.and_then(|item| Some((item, item.image.clone()?)))
+            {
+                sources.push(Source {
+                    id: ability.id,
+                    class_name: hero.class_name.clone(),
+                    name: name.clone(),
+                    url,
+                });
+            }
+        }
+    }
+    sources
 }
 
 /// ショップで買えるアイテムの、アイテム欄に出る画像
