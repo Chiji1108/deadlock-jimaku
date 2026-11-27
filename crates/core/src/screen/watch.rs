@@ -1,7 +1,7 @@
 //! ゲームの画面を読み続けて、買ったアイテムを知らせる（DESIGN.md 18.2）。
 //! 読むのは、設定がオンで、見せる相手（OBS の中のオーバーレイか、読み取りの状態を出している操作パネル）がいる間だけ。
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, VecDeque};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -218,6 +218,18 @@ impl Own {
     }
 }
 
+/// 自分のヒーローの集計が届くのを、買ったと知らせる前に待つ長さ。過ぎたら、集計なしで知らせる
+const RATES_WAIT: Duration = Duration::from_secs(3);
+
+/// 買ったと決めたが、まだ知らせていないもの
+struct Held {
+    /// 買ったときの自分のヒーロー（`class_name`）
+    hero: Option<String>,
+    clock_seconds: Option<f32>,
+    items: Vec<String>,
+    since: Instant,
+}
+
 /// 見せる相手がいる間、画面を読み続ける。新しいフレームを待つので、専用のスレッドで呼ぶ
 fn read(store: &Store, samples: &Samples, runtime: &tokio::runtime::Handle) {
     let started = Instant::now();
@@ -232,6 +244,8 @@ fn read(store: &Store, samples: &Samples, runtime: &tokio::runtime::Handle) {
     // ヒーロー（deadlock-api の id）ごとの、アイテムの集計。取れたものから入る。取れなければ、集計なしで出す
     let rates: Arc<Mutex<BTreeMap<u32, Rates>>> = Arc::default();
     let mut requested: Vec<u32> = Vec::new();
+    // 買ったと決めたが、まだ知らせていないもの。自分のヒーローが決まった直後は、集計がまだ届いていない
+    let mut held: VecDeque<Held> = VecDeque::new();
     let mut tracker = Tracker::default();
     let mut source: Option<Source> = None;
     // 前に読んだ画像と、その答え
@@ -285,7 +299,11 @@ fn read(store: &Store, samples: &Samples, runtime: &tokio::runtime::Handle) {
                                 Ok(fetched) => {
                                     rates.lock().unwrap().insert(hero, fetched);
                                 }
-                                Err(e) => tracing::warn!("cannot fetch item rates: {e:#}"),
+                                Err(e) => {
+                                    // 取れなかったら、集計なしで出す（買うたびに待たせない）
+                                    tracing::warn!("cannot fetch item rates: {e:#}");
+                                    rates.lock().unwrap().insert(hero, Rates::default());
+                                }
                             }
                         });
                     }
@@ -313,24 +331,13 @@ fn read(store: &Store, samples: &Samples, runtime: &tokio::runtime::Handle) {
                 }
                 let bought = tracker.observe(started.elapsed(), &reads.heroes, &reads.items);
                 if !bought.is_empty() {
-                    let rates = rates.lock().unwrap();
-                    let rates = (own.hero.as_deref())
-                        .and_then(|own| id(&samples.heroes, own))
-                        .and_then(|hero| rates.get(&hero));
-                    store.purchased(Purchase {
+                    held.push_back(Held {
                         hero: own.hero.clone(),
                         clock_seconds: clock
                             .filter(|(_, at)| at.elapsed() < CLOCK_KEPT)
                             .map(|(seconds, at)| seconds as f32 + at.elapsed().as_secs_f32()),
-                        items: bought
-                            .into_iter()
-                            .map(|item| PurchasedItem {
-                                rate: rates
-                                    .zip(id(&samples.items, &item))
-                                    .and_then(|(rates, id)| rates.of(id)),
-                                item,
-                            })
-                            .collect(),
+                        items: bought,
+                        since: Instant::now(),
                     });
                 }
                 last = Some((images, reads));
@@ -342,6 +349,30 @@ fn read(store: &Store, samples: &Samples, runtime: &tokio::runtime::Handle) {
                 tracing::info!("reopening the capture: {e:#}");
                 source = None;
             }
+        }
+        // 集計が届いたものから知らせる
+        while let Some(next) = held.front() {
+            let fetched = rates.lock().unwrap();
+            let hero = (next.hero.as_deref()).and_then(|hero| id(&samples.heroes, hero));
+            let rates = hero.and_then(|hero| fetched.get(&hero));
+            if hero.is_some() && rates.is_none() && next.since.elapsed() < RATES_WAIT {
+                break;
+            }
+            let items = (next.items.iter())
+                .map(|item| PurchasedItem {
+                    rate: rates
+                        .zip(id(&samples.items, item))
+                        .and_then(|(rates, id)| rates.of(id)),
+                    item: item.clone(),
+                })
+                .collect();
+            store.purchased(Purchase {
+                hero: next.hero.clone(),
+                clock_seconds: next.clock_seconds,
+                items,
+            });
+            drop(fetched);
+            held.pop_front();
         }
         std::thread::sleep(INTERVAL);
     }
