@@ -37,6 +37,26 @@ pub fn templates<'a>(
         .collect()
 }
 
+/// 読むのに要る画面の範囲（左、上、幅、高さ）。ショップを開いているときの位置も入れる
+pub fn area(screen: (u32, u32), scale: f32) -> [u32; 4] {
+    let left = ((FIRST.0 - super::MARGIN) * scale).floor().max(0.0) as u32;
+    let top = ((FIRST.1 - SHOP_RISE - super::MARGIN) * scale)
+        .floor()
+        .max(0.0) as u32;
+    let right = (FIRST.0 + SPACING * (GRID.0 - 1) as f32 + SLOT + super::MARGIN) * scale;
+    let bottom = (FIRST.1 + SPACING * (GRID.1 - 1) as f32 + SLOT + super::MARGIN) * scale;
+    let (right, bottom) = (
+        (right.ceil() as u32).min(screen.0),
+        (bottom.ceil() as u32).min(screen.1),
+    );
+    [
+        left.min(right),
+        top.min(bottom),
+        right.saturating_sub(left),
+        bottom.saturating_sub(top),
+    ]
+}
+
 /// 読んだアイテム欄
 pub struct Slots {
     /// 上の段の左から順に
@@ -70,5 +90,28 @@ pub fn read(frame: &Frame, templates: &[Template], scale: f32) -> Slots {
     Slots {
         reads: if shop { raised } else { usual },
         shop,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 画面から切り出す範囲は、通常の位置とショップの位置の全部の枠を、ずれを探す分まで含む
+    #[test]
+    fn the_area_covers_every_slot_in_both_positions() {
+        for (screen, scale) in [((1920, 1080), 1.0), ((2560, 1440), 1440.0 / 1080.0)] {
+            let [left, top, width, height] = area(screen, scale);
+            let shift = 2.0;
+            assert!(left as f32 <= FIRST.0 * scale - shift);
+            assert!(top as f32 <= (FIRST.1 - SHOP_RISE) * scale - shift);
+            let last = (
+                (FIRST.0 + SPACING * 5.0 + SLOT) * scale,
+                (FIRST.1 + SPACING + SLOT) * scale,
+            );
+            assert!((left + width) as f32 >= last.0 + shift);
+            assert!((top + height) as f32 >= last.1 + shift);
+            assert!(left + width <= screen.0 && top + height <= screen.1);
+        }
     }
 }

@@ -36,6 +36,12 @@ pub fn templates<'a>(
         .collect()
 }
 
+/// 読むのに要る画面の範囲（左、上、幅、高さ）。上の端の帯
+pub fn area(screen: (u32, u32), scale: f32) -> [u32; 4] {
+    let height = ((CARD.1 + super::MARGIN) * scale).ceil() as u32;
+    [0, 0, screen.0, height.min(screen.1)]
+}
+
 /// 枠を左から順に読む（左のチームの 6 枠、右のチームの 6 枠）
 pub fn read(frame: &Frame, templates: &[Template], screen_width: u32, scale: f32) -> Vec<Read> {
     let center = screen_width as f32 / 2.0;

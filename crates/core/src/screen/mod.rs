@@ -8,6 +8,7 @@ pub mod items;
 pub mod purchases;
 pub mod rates;
 pub mod samples;
+pub mod watch;
 
 use image::imageops::FilterType;
 use image::{RgbImage, RgbaImage};
@@ -16,6 +17,8 @@ use image::{RgbImage, RgbaImage};
 pub const BASE_HEIGHT: f32 = 1080.0;
 /// 置かれる位置のずれを、この画素数まで探す
 const SHIFT: i32 = 2;
+/// 画面から切り出すときに、枠のまわりに取っておく幅（1080p での画素。ずれを探す分より広く取る）
+const MARGIN: f32 = 4.0;
 
 /// 画面の一部。読むのは上の端と左下だけなので、そこだけを切り出して渡せる
 pub struct Frame<'a> {

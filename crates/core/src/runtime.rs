@@ -149,6 +149,7 @@ pub async fn run(store: Arc<Store>, options: Options) {
     let meter = store.meter();
     tokio::spawn(async move { meter.persist().await });
     tokio::spawn(assets::watch_versions(store.clone()));
+    tokio::spawn(crate::screen::watch::run(store.clone()));
     let mut settings_rx = store.watch_settings();
     let mut assets_slot = Slot::new();
     let mut rank_slot = Slot::new();
