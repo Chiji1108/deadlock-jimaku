@@ -1,0 +1,299 @@
+[
+    {
+        "file":  "empty_bright_279.png",
+        "note":  "空の枠（下の段の 6 つ目）の後ろに明るい背景が通り、Shadow Weave と 0.80 で読み違えた",
+        "screen":  [
+                       1920,
+                       1080
+                   ],
+        "crop":  [
+                     0,
+                     890
+                 ],
+        "spectating":  false,
+        "names":  [
+                      "Extra Charge",
+                      "Mystic Expansion",
+                      "Fortitude",
+                      null,
+                      null,
+                      null,
+                      "Mystic Burst",
+                      "Improved Spirit",
+                      null,
+                      null,
+                      null,
+                      null
+                  ]
+    },
+    {
+        "file":  "empty_bright_439.png",
+        "note":  "空の枠（上の段の 4 つ目）を Titanic Magazine と 0.82 で読み違えた",
+        "screen":  [
+                       1920,
+                       1080
+                   ],
+        "crop":  [
+                     0,
+                     890
+                 ],
+        "spectating":  false,
+        "names":  [
+                      "Mystic Burst",
+                      "Improved Spirit",
+                      "Rapid Recharge",
+                      null,
+                      null,
+                      null,
+                      "Mystic Expansion",
+                      "Fortitude",
+                      null,
+                      null,
+                      null,
+                      null
+                  ]
+    },
+    {
+        "file":  "empty_bright_585.png",
+        "note":  "空の枠（上の段の 4 つ目）を Titanic Magazine と 0.80 で読み違えた",
+        "screen":  [
+                       1920,
+                       1080
+                   ],
+        "crop":  [
+                     0,
+                     890
+                 ],
+        "spectating":  false,
+        "names":  [
+                      "Mystic Expansion",
+                      "Fortitude",
+                      "Tankbuster",
+                      null,
+                      null,
+                      null,
+                      "Trophy Collector",
+                      "Rapid Recharge",
+                      "Boundless Spirit",
+                      null,
+                      null,
+                      null
+                  ]
+    },
+    {
+        "file":  "empty_bright_635.png",
+        "note":  "空の枠（下の段の 4 つ目）を Shadow Weave と 0.80 で読み違えた",
+        "screen":  [
+                       1920,
+                       1080
+                   ],
+        "crop":  [
+                     0,
+                     890
+                 ],
+        "spectating":  false,
+        "names":  [
+                      "Mystic Expansion",
+                      "Fortitude",
+                      "Tankbuster",
+                      null,
+                      null,
+                      null,
+                      "Trophy Collector",
+                      "Rapid Recharge",
+                      "Boundless Spirit",
+                      null,
+                      null,
+                      null
+                  ]
+    },
+    {
+        "file":  "empty_bright_679.png",
+        "note":  "空の枠（上の段の 4 つ目）を Shadow Weave と 0.81 で読み違えた",
+        "screen":  [
+                       1920,
+                       1080
+                   ],
+        "crop":  [
+                     0,
+                     890
+                 ],
+        "spectating":  false,
+        "names":  [
+                      "Trophy Collector",
+                      "Rapid Recharge",
+                      "Greater Expansion",
+                      null,
+                      null,
+                      null,
+                      "Fortitude",
+                      "Tankbuster",
+                      "Boundless Spirit",
+                      null,
+                      null,
+                      null
+                  ]
+    },
+    {
+        "file":  "dim_500.png",
+        "note":  "Tankbuster（上の段の 3 つ目）が暗くなっている（0.71）。数秒おきに暗くなったり戻ったりした",
+        "screen":  [
+                       1920,
+                       1080
+                   ],
+        "crop":  [
+                     0,
+                     890
+                 ],
+        "spectating":  false,
+        "names":  [
+                      "Mystic Expansion",
+                      "Fortitude",
+                      "Tankbuster",
+                      null,
+                      null,
+                      null,
+                      "Improved Spirit",
+                      "Rapid Recharge",
+                      null,
+                      null,
+                      null,
+                      null
+                  ]
+    },
+    {
+        "file":  "dead_831.png",
+        "note":  "自分が死んだ直後。まだ自分の持ち物が出ている。Tankbuster は暗い",
+        "screen":  [
+                       1920,
+                       1080
+                   ],
+        "crop":  [
+                     0,
+                     890
+                 ],
+        "spectating":  false,
+        "names":  [
+                      "Trophy Collector",
+                      "Rapid Recharge",
+                      "Greater Expansion",
+                      null,
+                      null,
+                      null,
+                      "Fortitude",
+                      "Tankbuster",
+                      "Boundless Spirit",
+                      null,
+                      null,
+                      null
+                  ]
+    },
+    {
+        "file":  "spectate_834.png",
+        "note":  "味方を観戦している。出ているのは観戦している相手の持ち物（11 個）。ソウルの数とレベルの表示（欄の上）がない",
+        "screen":  [
+                       1920,
+                       1080
+                   ],
+        "crop":  [
+                     0,
+                     890
+                 ],
+        "spectating":  true,
+        "names":  [
+                      "Monster Rounds",
+                      "Trophy Collector",
+                      "Healing Booster",
+                      "Recharging Rush",
+                      "Rapid Recharge",
+                      "Headhunter",
+                      "Extra Regen",
+                      "Compress Cooldown",
+                      "Duration Extender",
+                      "Improved Spirit",
+                      "Tankbuster",
+                      null
+                  ]
+    },
+    {
+        "file":  "spectate_890.png",
+        "note":  "別の味方を観戦している（10 個）。ソウルの数の表示は出ている（自分のもの）",
+        "screen":  [
+                       1920,
+                       1080
+                   ],
+        "crop":  [
+                     0,
+                     890
+                 ],
+        "spectating":  true,
+        "names":  [
+                      "Monster Rounds",
+                      "Melee Charge",
+                      "Recharging Rush",
+                      "Lifestrike",
+                      "Point Blank",
+                      null,
+                      "Mystic Shot",
+                      "Battle Vest",
+                      "Rapid Recharge",
+                      "Spirit Snatch",
+                      "Tankbuster",
+                      null
+                  ]
+    },
+    {
+        "file":  "spectate_892.png",
+        "note":  "また別の味方を観戦している。上の段の 1、2 つ目は丸い絵で、名前は分からない（null にしてある）",
+        "screen":  [
+                       1920,
+                       1080
+                   ],
+        "crop":  [
+                     0,
+                     890
+                 ],
+        "spectating":  true,
+        "names":  [
+                      null,
+                      null,
+                      "Improved Spirit",
+                      "Rapid Recharge",
+                      "Transcendent Cooldown",
+                      null,
+                      "Enchanter\u0027s Emblem",
+                      "Healing Booster",
+                      "Rescue Beam",
+                      "Tankbuster",
+                      null,
+                      null
+                  ]
+    },
+    {
+        "file":  "respawn_895.png",
+        "note":  "リスポーンした直後。自分の持ち物に戻った",
+        "screen":  [
+                       1920,
+                       1080
+                   ],
+        "crop":  [
+                     0,
+                     890
+                 ],
+        "spectating":  false,
+        "names":  [
+                      "Trophy Collector",
+                      "Rapid Recharge",
+                      "Greater Expansion",
+                      null,
+                      null,
+                      null,
+                      "Fortitude",
+                      "Tankbuster",
+                      "Boundless Spirit",
+                      null,
+                      null,
+                      null
+                  ]
+    }
+]
