@@ -55,6 +55,8 @@ pub struct Settings {
     pub subtitle_style: SubtitleStyle,
     /// アイテム説明のオーバーレイ（字幕でアイテム名が出たら説明のカードを出す）
     pub item_cards: ItemCards,
+    /// 買ったアイテムのオーバーレイ（ゲームの画面を読んで、買ったアイテムを出す）
+    pub purchase_cards: PurchaseCards,
     /// ランク名の言語。None なら話す言語に合わせる。
     /// 既定は None のまま（前の版の設定ファイルを変えない）で、新しく使い始める人は英語（`load`）
     #[ts(optional)]
@@ -268,6 +270,83 @@ pub struct ItemCardsPatch {
     pub language: Option<LangCode>,
     #[ts(optional)]
     pub anchor: Option<Anchor>,
+}
+
+/// 買ったアイテムのオーバーレイ（DESIGN.md 18 章）
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[serde(default, rename_all = "camelCase")]
+#[ts(export)]
+pub struct PurchaseCards {
+    /// ゲームの画面を読むか。画面を見る機能なので、本人が選んで入れる
+    pub enabled: bool,
+    /// 買ったアイテムを出しておく秒数
+    pub hold_seconds: f32,
+    /// アイテムの名前の言語。None なら話す言語
+    #[ts(optional)]
+    pub language: Option<LangCode>,
+    /// ソースの箱のどこに寄せるか
+    pub anchor: Anchor,
+    /// そのヒーローで買われる割合などの統計を添えるか
+    pub show_rate: bool,
+}
+
+impl Default for PurchaseCards {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            hold_seconds: 6.0,
+            language: None,
+            anchor: Anchor::TopRight,
+            show_rate: true,
+        }
+    }
+}
+
+impl PurchaseCards {
+    pub const HOLD_SECONDS: std::ops::RangeInclusive<f32> = 3.0..=30.0;
+
+    fn validate(&self) -> Result<(), String> {
+        if !Self::HOLD_SECONDS.contains(&self.hold_seconds) {
+            return Err(format!("holdSeconds must be in {:?}", Self::HOLD_SECONDS));
+        }
+        match self.language.as_deref() {
+            Some(code) if lang::find(code).is_none() => Err(format!("unknown language: {code}")),
+            _ => Ok(()),
+        }
+    }
+
+    fn apply(&self, patch: PurchaseCardsPatch) -> Result<Self, String> {
+        let next = Self {
+            enabled: patch.enabled.unwrap_or(self.enabled),
+            hold_seconds: patch.hold_seconds.unwrap_or(self.hold_seconds),
+            language: match patch.language {
+                Some(code) => Some(code).filter(|c| !c.is_empty()),
+                None => self.language.clone(),
+            },
+            anchor: patch.anchor.unwrap_or(self.anchor),
+            show_rate: patch.show_rate.unwrap_or(self.show_rate),
+        };
+        next.validate()?;
+        Ok(next)
+    }
+}
+
+/// 買ったアイテムの設定の変更。省いた項目は変えない
+#[derive(Clone, Debug, Default, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct PurchaseCardsPatch {
+    #[ts(optional)]
+    pub enabled: Option<bool>,
+    #[ts(optional)]
+    pub hold_seconds: Option<f32>,
+    /// 空文字列なら話す言語
+    #[ts(optional)]
+    pub language: Option<LangCode>,
+    #[ts(optional)]
+    pub anchor: Option<Anchor>,
+    #[ts(optional)]
+    pub show_rate: Option<bool>,
 }
 
 /// 字幕の見せ方の変更。省いた項目は変えない（続けて変えたとき、前の変更を古い値で戻さない）
@@ -1297,6 +1376,7 @@ impl Default for Settings {
             subtitle_display: SubtitleDisplay::default(),
             subtitle_style: SubtitleStyle::default(),
             item_cards: ItemCards::default(),
+            purchase_cards: PurchaseCards::default(),
             rank_language: None,
             rank_content: RankContent::Gauge,
             rank_anchor: Anchor::TopLeft,
@@ -1352,6 +1432,15 @@ impl Settings {
         self.item_cards
             .language
             .clone()
+            .unwrap_or_else(|| self.mic_language.clone())
+    }
+
+    /// 買ったアイテムの名前に使う言語。選んだ言語の名前を取っていなければ（翻訳先から外したなど）話す言語
+    pub fn purchase_language(&self) -> LangCode {
+        self.purchase_cards
+            .language
+            .clone()
+            .filter(|l| self.glossary_languages().contains(l))
             .unwrap_or_else(|| self.mic_language.clone())
     }
 
@@ -1536,6 +1625,7 @@ impl Settings {
             && self.subtitle_style.validate().is_ok()
             && self.rank_style.validate().is_ok()
             && self.item_cards.validate().is_ok()
+            && self.purchase_cards.validate().is_ok()
     }
 
     /// 操作パネルからの変更を当てる。読めない値はエラーにして何も変えない
@@ -1584,6 +1674,9 @@ impl Settings {
         }
         if let Some(cards) = patch.item_cards {
             next.item_cards = next.item_cards.apply(cards)?;
+        }
+        if let Some(cards) = patch.purchase_cards {
+            next.purchase_cards = next.purchase_cards.apply(cards)?;
         }
         if let Some(ms) = patch.min_silence_ms {
             if !Segmentation::MIN_SILENCE_MS.contains(&ms) {
@@ -1696,6 +1789,8 @@ pub struct SettingsPatch {
     pub rank_style: Option<Value>,
     #[ts(optional)]
     pub item_cards: Option<ItemCardsPatch>,
+    #[ts(optional)]
+    pub purchase_cards: Option<PurchaseCardsPatch>,
     /// 何 ms 黙ったら区切るか
     #[ts(optional)]
     pub min_silence_ms: Option<u32>,
@@ -3539,6 +3634,57 @@ mod tests {
             assert!(
                 s.apply(SettingsPatch {
                     item_cards: Some(bad),
+                    ..Default::default()
+                })
+                .is_err()
+            );
+        }
+    }
+
+    #[test]
+    fn purchase_cards_start_off_and_follow_the_spoken_language() {
+        let s = Settings::default();
+        assert!(!s.purchase_cards.enabled);
+        assert_eq!(s.purchase_language(), "ja");
+        let next = s
+            .apply(SettingsPatch {
+                purchase_cards: Some(PurchaseCardsPatch {
+                    enabled: Some(true),
+                    language: Some("en".into()),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            })
+            .unwrap();
+        assert!(next.purchase_cards.enabled);
+        assert_eq!(next.purchase_language(), "en");
+        // ほかの項目は変えない
+        assert_eq!(next.purchase_cards.anchor, s.purchase_cards.anchor);
+        // 名前を取っていない言語は、話す言語で出す
+        let ru = PurchaseCardsPatch {
+            language: Some("ru".into()),
+            ..Default::default()
+        };
+        let ru = s
+            .apply(SettingsPatch {
+                purchase_cards: Some(ru),
+                ..Default::default()
+            })
+            .unwrap();
+        assert_eq!(ru.purchase_language(), "ja");
+        for bad in [
+            PurchaseCardsPatch {
+                hold_seconds: Some(1.0),
+                ..Default::default()
+            },
+            PurchaseCardsPatch {
+                language: Some("xx".into()),
+                ..Default::default()
+            },
+        ] {
+            assert!(
+                s.apply(SettingsPatch {
+                    purchase_cards: Some(bad),
                     ..Default::default()
                 })
                 .is_err()

@@ -3,6 +3,8 @@ import type { RankContent } from "../generated/RankContent";
 /** OBS のブラウザソースの既定の大きさ（操作パネルの案内と、オーバーレイの基準を同じ値にする） */
 export const SUBTITLE_SIZE: [number, number] = [1000, 400];
 export const ITEMS_SIZE: [number, number] = [420, 480];
+/** 買ったアイテム。3 つまで縦に並ぶ */
+export const PURCHASES_SIZE: [number, number] = [380, 330];
 /** アイテム説明のカード（deadlock-ui）の幅。既定のソースでは、カードを縮めてソースの幅に合わせる */
 export const ITEM_CARD_WIDTH = 450;
 

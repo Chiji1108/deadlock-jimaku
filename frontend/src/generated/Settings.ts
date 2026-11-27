@@ -4,6 +4,7 @@ import type { Engines } from "./Engines";
 import type { ItemCards } from "./ItemCards";
 import type { Models } from "./Models";
 import type { Person } from "./Person";
+import type { PurchaseCards } from "./PurchaseCards";
 import type { RankContent } from "./RankContent";
 import type { RankStyle } from "./RankStyle";
 import type { Region } from "./Region";
@@ -60,6 +61,10 @@ subtitleStyle: SubtitleStyle,
  * アイテム説明のオーバーレイ（字幕でアイテム名が出たら説明のカードを出す）
  */
 itemCards: ItemCards, 
+/**
+ * 買ったアイテムのオーバーレイ（ゲームの画面を読んで、買ったアイテムを出す）
+ */
+purchaseCards: PurchaseCards, 
 /**
  * ランク名の言語。None なら話す言語に合わせる。
  * 既定は None のまま（前の版の設定ファイルを変えない）で、新しく使い始める人は英語（`load`）

@@ -12,6 +12,16 @@ export const glossary = {
   entity(ref: string): Entity | undefined {
     return current?.entities[ref];
   },
+  /** `class_name` から引く（ゲームの画面から読んだものは、参照ではなく `class_name` で届く） */
+  named(kind: Entity["kind"], className: string): Entity | undefined {
+    return Object.values(current?.entities ?? {}).find(
+      (entity) => entity.kind === kind && entity.className === className,
+    );
+  },
+  /** アイテム（辞書の順） */
+  get items(): Entity[] {
+    return Object.values(current?.entities ?? {}).filter((entity) => entity.kind === "item");
+  },
   /** ヒーローの参照と中身（辞書の順） */
   get heroes(): [string, Entity][] {
     return Object.entries(current?.entities ?? {}).filter(([, entity]) => entity.kind === "hero");

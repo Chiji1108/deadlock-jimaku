@@ -114,6 +114,8 @@ pub enum Topic {
     Usage,
     /// 字幕の統計（操作パネル用）
     Stats,
+    /// 買ったアイテム。出来事なので、つないだときには何も届かない
+    Purchase,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
@@ -122,7 +124,8 @@ pub enum Topic {
 pub enum ClientMsg {
     Subscribe {
         topics: Vec<Topic>,
-        /// OBS の中で開いた字幕オーバーレイ。つながっている間、操作パネルに「OBS に表示中」と出す
+        /// OBS の中で開いたオーバーレイ。字幕なら、つながっている間、操作パネルに「OBS に表示中」と出す。
+        /// 買ったアイテムなら、つながっている間だけゲームの画面を読む
         #[serde(default)]
         obs: bool,
     },
@@ -162,6 +165,7 @@ pub enum ServerMsg {
         rank_anchor: crate::settings::Anchor,
         rank_style: Box<crate::settings::RankStyle>,
         item_cards: ItemCardsView,
+        purchase_cards: PurchaseCardsView,
     },
     /// 直近のピーク（dBFS）。1 秒に 10 回ほど
     #[serde(rename = "audio.level")]
@@ -185,6 +189,28 @@ pub enum ServerMsg {
     /// 操作パネル以外（OBS の字幕オーバーレイ、トレイ）で設定が変わった。パネルは取り直す
     #[serde(rename = "settings.changed")]
     SettingsChanged,
+    /// ゲームの画面から、アイテムを買ったと読めた
+    #[serde(rename = "purchase")]
+    Purchase { purchase: Purchase },
+}
+
+/// 一度に買ったアイテム（DESIGN.md 18 章）
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct Purchase {
+    /// 買ったヒーロー（`class_name`）。読めなければ None
+    pub hero: Option<String>,
+    /// 買ったアイテム。買った順
+    pub items: Vec<PurchasedItem>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct PurchasedItem {
+    /// アイテムの `class_name`
+    pub item: String,
+    /// そのヒーローでの集計。ヒーローが読めないときと、取れなかったときは None
+    pub rate: Option<crate::screen::rates::Rate>,
 }
 
 /// 字幕の処理や Chrome のページの状態（DESIGN.md 9.6）
@@ -416,6 +442,7 @@ impl ServerMsg {
             Self::AudioLevel { .. } => Topic::Level,
             Self::Usage { .. } => Topic::Usage,
             Self::Stats { .. } => Topic::Stats,
+            Self::Purchase { .. } => Topic::Purchase,
         }
     }
 }
@@ -549,6 +576,18 @@ pub struct ItemCardsView {
     pub anchor: crate::settings::Anchor,
 }
 
+/// 買ったアイテムのオーバーレイの見せ方
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct PurchaseCardsView {
+    pub hold_seconds: f32,
+    /// アイテムの名前の言語
+    pub language: LangCode,
+    pub anchor: crate::settings::Anchor,
+    pub show_rate: bool,
+}
+
 /// 操作パネルに返す設定。API キーはどこから読んだかだけ（キーそのものは返さない）
 #[derive(Clone, Debug, Serialize, TS)]
 #[ts(export)]
@@ -567,6 +606,9 @@ pub struct SettingsView {
     #[serde(rename = "continuesWith", skip_serializing_if = "Option::is_none")]
     pub continues_with: Option<crate::store::Fallback>,
     pub keys: crate::secrets::KeyStatus,
+    /// ゲームの画面を読めるか（Windows だけ。DESIGN.md 18 章）
+    #[serde(rename = "readsScreen")]
+    pub reads_screen: bool,
     /// 新しい版があれば、その版（デスクトップアプリが調べて知らせる。DESIGN.md 13.5）
     #[ts(optional)]
     #[serde(skip_serializing_if = "Option::is_none")]

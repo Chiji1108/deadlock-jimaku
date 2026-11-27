@@ -4,13 +4,16 @@ use std::collections::BTreeMap;
 use std::time::Duration;
 
 use anyhow::Context;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 const API: &str = "https://api.deadlock-api.com/v1/analytics";
 /// 集計する期間。API は、指定しなくても最近の試合だけを数えるが、期間を決めておく
 const PERIOD: Duration = Duration::from_secs(30 * 24 * 60 * 60);
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct Rate {
     /// そのヒーローの試合のうち、このアイテムを買った試合の割合（0〜1）
     pub share: f32,

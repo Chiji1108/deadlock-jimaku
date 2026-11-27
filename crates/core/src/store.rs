@@ -18,7 +18,8 @@ use crate::settings::{
 use crate::stats::Tally;
 use crate::types::{
     ChromeCommand, ChromeMic, Decided, Downloading, Heard, ItemCardsView, LiveState, LiveStatus,
-    RankState, Segment, ServerMsg, Stage, TranscriptionError, Translated,
+    Purchase, PurchaseCardsView, RankState, Segment, ServerMsg, Stage, TranscriptionError,
+    Translated,
 };
 use crate::usage::Meter;
 
@@ -92,6 +93,8 @@ pub struct Store {
     chrome_cuts: AtomicU32,
     /// OBS の中で開いている字幕オーバーレイの数
     obs_subtitles: AtomicU32,
+    /// 買ったアイテムを見せる相手の数。0 の間は、ゲームの画面を読まない（DESIGN.md 18.1）
+    screen_watchers: watch::Sender<u32>,
     meter: Arc<Meter>,
     tally: Arc<Tally>,
     fonts: Arc<Library>,
@@ -105,6 +108,15 @@ impl Drop for ObsSubtitles {
         if self.0.obs_subtitles.fetch_sub(1, Ordering::Relaxed) == 1 {
             let _ = self.0.tx.send(ServerMsg::ObsStatus { subtitles: false });
         }
+    }
+}
+
+/// 買ったアイテムを見せる相手（OBS の中のオーバーレイ）。切れたら（落としたら）数から外す
+pub struct ScreenWatcher(Arc<Store>);
+
+impl Drop for ScreenWatcher {
+    fn drop(&mut self) {
+        self.0.screen_watchers.send_modify(|count| *count -= 1);
     }
 }
 
@@ -144,6 +156,7 @@ impl Store {
             browser: Mutex::new(None),
             chrome_cuts: AtomicU32::new(0),
             obs_subtitles: AtomicU32::new(0),
+            screen_watchers: watch::Sender::new(0),
             meter,
             tally,
             fonts,
@@ -410,6 +423,22 @@ impl Store {
             let _ = self.tx.send(ServerMsg::ObsStatus { subtitles: true });
         }
         ObsSubtitles(self.clone())
+    }
+
+    /// 買ったアイテムを見せる相手がつながった。返したものを持っている間、ゲームの画面を読む
+    pub fn watch_screen(self: &Arc<Self>) -> ScreenWatcher {
+        self.screen_watchers.send_modify(|count| *count += 1);
+        ScreenWatcher(self.clone())
+    }
+
+    /// 買ったアイテムを見せる相手の数。画面を読む処理が、始めるときと止めるときを知る
+    pub fn screen_watchers(&self) -> watch::Receiver<u32> {
+        self.screen_watchers.subscribe()
+    }
+
+    /// 買ったアイテムを、オーバーレイに知らせる
+    pub fn purchased(&self, purchase: Purchase) {
+        let _ = self.tx.send(ServerMsg::Purchase { purchase });
     }
 
     /// 字幕の処理が文を受け取れるか。変わったときだけ知らせる
@@ -696,6 +725,12 @@ fn display(settings: &Settings) -> ServerMsg {
                 .to_owned(),
             anchor: settings.item_cards.anchor,
         },
+        purchase_cards: PurchaseCardsView {
+            hold_seconds: settings.purchase_cards.hold_seconds,
+            language: settings.purchase_language(),
+            anchor: settings.purchase_cards.anchor,
+            show_rate: settings.purchase_cards.show_rate,
+        },
     }
 }
 
@@ -932,6 +967,34 @@ mod tests {
             Ok(ServerMsg::ObsStatus { subtitles: false })
         );
         assert!(!shown(&store));
+    }
+
+    /// 画面を読むのは、買ったアイテムを見せる相手がいる間だけ。出来事は、つないだときには送らない
+    #[tokio::test]
+    async fn the_screen_is_watched_while_someone_sees_purchases() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = Store::new(Ok(Settings::default()), dir.path().to_owned());
+        let watchers = store.screen_watchers();
+        let first = store.watch_screen();
+        let second = store.watch_screen();
+        assert_eq!(*watchers.borrow(), 2);
+        drop(first);
+        drop(second);
+        assert_eq!(*watchers.borrow(), 0);
+
+        let mut messages = store.subscribe();
+        let purchase = Purchase {
+            hero: None,
+            items: Vec::new(),
+        };
+        store.purchased(purchase.clone());
+        assert_eq!(messages.try_recv(), Ok(ServerMsg::Purchase { purchase }));
+        assert!(
+            store
+                .current_state()
+                .iter()
+                .all(|msg| msg.topic() != crate::types::Topic::Purchase)
+        );
     }
 
     /// ページの読み込みで消えるのは落ちたという案内だけで、消えたことは操作パネルに届く

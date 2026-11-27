@@ -43,7 +43,7 @@ export type FontList = FontEntry[] | "loading" | "failed";
 export type FontTarget = { kind: "subtitle"; language: string } | { kind: "rank" };
 
 /** OBS に貼る URL（axum。開発中に Vite から開いても同じ） */
-export const overlayUrl = (name: "subtitles" | "rank" | "items") =>
+export const overlayUrl = (name: "subtitles" | "rank" | "items" | "purchases") =>
   `${import.meta.env.CORE_ORIGIN}/overlay/${name}`;
 
 /** 言語名は画面の言語（日本語）で出す。翻訳先は配信者が読める名前で選ぶ */

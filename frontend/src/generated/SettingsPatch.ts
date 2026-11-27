@@ -3,6 +3,7 @@ import type { Anchor } from "./Anchor";
 import type { Engines } from "./Engines";
 import type { ItemCardsPatch } from "./ItemCardsPatch";
 import type { Person } from "./Person";
+import type { PurchaseCardsPatch } from "./PurchaseCardsPatch";
 import type { RankContent } from "./RankContent";
 import type { SubtitleDisplayPatch } from "./SubtitleDisplayPatch";
 
@@ -37,7 +38,7 @@ subtitleStyle?: import("../lib/text-style").MergePatch<import("./SubtitleStyle")
 /**
  * `subtitle_style` と同じ
  */
-rankStyle?: import("../lib/text-style").MergePatch<import("./RankStyle").RankStyle>, itemCards?: ItemCardsPatch, 
+rankStyle?: import("../lib/text-style").MergePatch<import("./RankStyle").RankStyle>, itemCards?: ItemCardsPatch, purchaseCards?: PurchaseCardsPatch, 
 /**
  * 何 ms 黙ったら区切るか
  */

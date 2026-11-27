@@ -116,6 +116,7 @@ async fn get_settings(State(store): State<Arc<Store>>) -> Json<SettingsView> {
         fallback: store.fallback(),
         continues_with: store.continues_with(),
         keys,
+        reads_screen: cfg!(windows),
         update: store.update(),
         unsaved: store.unsaved(),
     })
@@ -590,8 +591,9 @@ async fn session(mut socket: WebSocket, store: Arc<Store>) {
         _ => return,
     };
 
-    // OBS の字幕オーバーレイなら、つながっている間だけ数える（この関数を抜けると外れる）
-    let _obs = obs.then(|| store.obs_subtitles());
+    // OBS の中のオーバーレイは、つながっている間だけ数える（この関数を抜けると外れる）
+    let _subtitles = (obs && topics.contains(&Topic::Subtitle)).then(|| store.obs_subtitles());
+    let _purchases = (obs && topics.contains(&Topic::Purchase)).then(|| store.watch_screen());
     let mut rx = store.subscribe();
     let wants_level = topics.contains(&Topic::Level);
     let mut level = store.watch_level();
