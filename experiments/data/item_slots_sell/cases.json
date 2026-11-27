@@ -1,0 +1,54 @@
+[
+    {
+        "file":  "sell_before.png",
+        "note":  "サンドボックス、ショップは閉じている。3 つ持っている（ITEM VALUE 4,800）。ユーザーが撮った WebP から切り出した",
+        "screen":  [
+                       1920,
+                       1080
+                   ],
+        "crop":  [
+                     0,
+                     890
+                 ],
+        "names":  [
+                      "Opening Rounds",
+                      "Trophy Collector",
+                      null,
+                      null,
+                      null,
+                      null,
+                      "Improved Spirit",
+                      null,
+                      null,
+                      null,
+                      null,
+                      null
+                  ]
+    },
+    {
+        "file":  "sell_after.png",
+        "note":  "Opening Rounds を売った 40 秒ほどあと（ITEM VALUE 3,200）。残った 2 つは並びが変わり、どちらも左の列に詰まっている。売った枠は空で、印もない",
+        "screen":  [
+                       1920,
+                       1080
+                   ],
+        "crop":  [
+                     0,
+                     890
+                 ],
+        "names":  [
+                      "Improved Spirit",
+                      null,
+                      null,
+                      null,
+                      null,
+                      null,
+                      "Trophy Collector",
+                      null,
+                      null,
+                      null,
+                      null,
+                      null
+                  ]
+    }
+]
