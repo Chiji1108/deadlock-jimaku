@@ -17,6 +17,10 @@ use image::{RgbImage, RgbaImage};
 pub const BASE_HEIGHT: f32 = 1080.0;
 /// 置かれる位置のずれを、この画素数まで探す
 const SHIFT: i32 = 2;
+/// ずれを探し直す見本の数（ずらさずに比べて近かった順）
+const REFINED: usize = 3;
+/// 候補を絞るときに、比べる画素を何個に 1 個にするか
+const COARSE: usize = 4;
 /// 画面から切り出すときに、枠のまわりに取っておく幅（1080p での画素。ずれを探す分より広く取る）
 const MARGIN: f32 = 4.0;
 
@@ -66,26 +70,48 @@ impl Template {
         }
     }
 
-    /// 見本の左上を画面の `(left, top)` に置いたときの近さ（-1〜1）。`frame` からはみ出すなら None
-    fn score(&self, frame: &Frame, left: i32, top: i32, buffer: &mut Vec<f32>) -> Option<f32> {
+    /// 見本の左上を画面の `(left, top)` に置いたときの近さ（-1〜1）。`frame` からはみ出すなら None。
+    /// `step` が 2 以上なら、比べる画素を `step` 個に 1 個に間引く（粗く比べて、候補を絞るのに使う）
+    fn score(&self, frame: &Frame, left: i32, top: i32, step: usize) -> Option<f32> {
         let (left, top) = (left - frame.origin.0, top - frame.origin.1);
         let (width, height) = (frame.image.width() as i32, frame.image.height() as i32);
-        buffer.clear();
-        for &(x, y) in &self.pixels {
+        // 見本の色と画面の色の、和・二乗の和・積の和
+        let (mut count, mut ours, mut ours2, mut theirs, mut theirs2, mut both) =
+            (0.0f32, 0.0f32, 0.0f32, 0.0f32, 0.0f32, 0.0f32);
+        for (&(x, y), ours_colors) in self
+            .pixels
+            .iter()
+            .zip(self.colors.as_chunks::<3>().0)
+            .step_by(step)
+        {
             let (x, y) = (left + x as i32, top + y as i32);
             if x < 0 || y < 0 || x >= width || y >= height {
                 return None;
             }
-            buffer.extend(frame.image.get_pixel(x as u32, y as u32).0.map(f32::from));
+            let pixel = frame.image.get_pixel(x as u32, y as u32).0;
+            for (&a, b) in ours_colors.iter().zip(pixel) {
+                let b = f32::from(b);
+                count += 1.0;
+                ours += a;
+                ours2 += a * a;
+                theirs += b;
+                theirs2 += b * b;
+                both += a * b;
+            }
         }
-        normalize(buffer);
-        Some(
-            self.colors
-                .iter()
-                .zip(buffer.iter())
-                .map(|(a, b)| a * b)
-                .sum(),
-        )
+        if count == 0.0 {
+            return None;
+        }
+        // 両方から平均を引いて、長さを 1 にしたときの内積
+        let (ours_spread, theirs_spread) = (
+            ours2 - ours * ours / count,
+            theirs2 - theirs * theirs / count,
+        );
+        // 一色の場所は、どの見本にも似ていない（散らばりが 0 に近いと、割り算が丸めの誤差を大きくする）
+        if theirs_spread < count {
+            return Some(0.0);
+        }
+        Some((both - ours * theirs / count) / (ours_spread * theirs_spread).sqrt().max(1e-6))
     }
 }
 
@@ -113,25 +139,32 @@ impl Read {
     }
 }
 
-/// 見本の左上が画面の `(left, top)` に来る枠を読む
+/// 見本の左上が画面の `(left, top)` に来る枠を読む。
+/// まず、ずらさずに、画素を間引いて全部の見本と比べ、近かった `REFINED` 個だけ、全部の画素でずれを探す
+/// （全部の見本でずれを探すと、アイテム欄を 1 回読むのに 1 秒近くかかる）
 pub fn read(frame: &Frame, templates: &[Template], left: i32, top: i32) -> Read {
-    let mut buffer = Vec::new();
-    let mut scores: Vec<(f32, &str)> = templates
+    let mut scores: Vec<(f32, &Template)> = templates
         .iter()
         .map(|template| {
-            let mut best = -1.0f32;
-            for dy in -SHIFT..=SHIFT {
-                for dx in -SHIFT..=SHIFT {
-                    if let Some(score) = template.score(frame, left + dx, top + dy, &mut buffer) {
-                        best = best.max(score);
-                    }
-                }
-            }
-            (best, template.name.as_str())
+            let score = template.score(frame, left, top, COARSE);
+            (score.unwrap_or(-1.0), template)
         })
         .collect();
     scores.sort_by(|a, b| b.0.total_cmp(&a.0));
-    let (score, name) = scores.first().copied().unwrap_or((-1.0, ""));
+    for (best, template) in scores.iter_mut().take(REFINED) {
+        *best = -1.0;
+        for dy in -SHIFT..=SHIFT {
+            for dx in -SHIFT..=SHIFT {
+                if let Some(score) = template.score(frame, left + dx, top + dy, 1) {
+                    *best = best.max(score);
+                }
+            }
+        }
+    }
+    scores.sort_by(|a, b| b.0.total_cmp(&a.0));
+    let (score, name) = scores.first().map_or((-1.0, ""), |(score, template)| {
+        (*score, template.name.as_str())
+    });
     Read {
         name: name.to_owned(),
         score,
