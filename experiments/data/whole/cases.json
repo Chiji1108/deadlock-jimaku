@@ -1,0 +1,65 @@
+[
+    {
+        "file":  "match_8m48.png",
+        "note":  "試合中（8:48）。アビリティは 3 つ取っている（4 つ目は灰色）",
+        "screen":  [
+                       1920,
+                       1080
+                   ],
+        "hero":  "The Doorman"
+    },
+    {
+        "file":  "sandbox_1600x900_window.png",
+        "note":  "サンドボックス、1600×900 のウィンドウの表示。アビリティは 4 つとも使える",
+        "screen":  [
+                       1600,
+                       900
+                   ],
+        "hero":  "The Doorman"
+    },
+    {
+        "file":  "haze_sandbox_untaken.png",
+        "note":  "サンドボックスに入った直後（0:16）。アビリティを 1 つも取っていない（白い絵）。ユーザーが撮った WebP から起こした",
+        "screen":  [
+                       1920,
+                       1080
+                   ],
+        "hero":  "Haze"
+    },
+    {
+        "file":  "haze_match_locked.png",
+        "note":  "試合が始まる前（GAME STARTING）。アビリティは 4 つとも鍵が掛かって薄い。WebP から起こした",
+        "screen":  [
+                       1920,
+                       1080
+                   ],
+        "hero":  "Haze"
+    },
+    {
+        "file":  "haze_match_scoreboard.png",
+        "note":  "試合が始まる前に、スコアボード（Tab）を開いている。アビリティの上に LOCKED の板が出る。プレイヤー名の段は黒く塗った。WebP から起こした",
+        "screen":  [
+                       1920,
+                       1080
+                   ],
+        "hero":  "Haze"
+    },
+    {
+        "file":  "solomon_match_locked.png",
+        "note":  "別の試合が始まる前。自分の枠は左から 3 つ目。アビリティは鍵が掛かって薄い。WebP から起こした",
+        "screen":  [
+                       1920,
+                       1080
+                   ],
+        "hero":  "Solomon"
+    },
+    {
+        "file":  "solomon_sandbox_taken.png",
+        "note":  "サンドボックス。アビリティを 4 つ取っている。3 つ目はクールダウン中（数字の 21 が重なる）。1 つ目と 4 つ目の上に小さい印が出ている。右上のアバターは黒く塗った。WebP から起こした",
+        "screen":  [
+                       1920,
+                       1080
+                   ],
+        "hero":  "Solomon"
+    }
+]
