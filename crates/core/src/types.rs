@@ -221,6 +221,10 @@ pub enum ScreenStatus {
         items: Vec<String>,
         /// ショップを開いている
         shop: bool,
+        /// 自分のヒーロー（`class_name`）。アビリティの絵から決める。まだ決まっていなければ None
+        own: Option<String>,
+        /// 試合の時計（試合が始まってからの秒）。読めていなければ None
+        clock: Option<u32>,
     },
     /// 見本を取れない、または取り込めない
     Failed { detail: String },

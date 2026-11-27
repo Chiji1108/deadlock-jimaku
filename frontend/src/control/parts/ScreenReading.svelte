@@ -5,6 +5,7 @@
   import * as Card from "$lib/components/ui/card";
   import type { ScreenStatus } from "../../generated/ScreenStatus";
   import { entityName, glossary } from "../../lib/glossary.svelte";
+  import { clock } from "../../lib/purchase-stats";
   import { connect } from "../../lib/ws";
   import { STATUS_DOTS, panel } from "../panel.svelte";
   import Help from "./Help.svelte";
@@ -32,6 +33,9 @@
     status.state === "reading"
       ? status.items.flatMap((name) => glossary.named("item", name) ?? [])
       : [],
+  );
+  const own = $derived(
+    status.state === "reading" && status.own ? glossary.named("hero", status.own) : undefined,
   );
   /** 上部バーもアイテム欄も読めていない。試合の外か、何かに隠れているか、読めない環境 */
   const nothing = $derived(
@@ -107,6 +111,28 @@
             {/each}
           </ul>
         </div>
+        <!-- 購入率は自分のヒーローの数字、「早い」「遅い」は試合の時計から出す。どちらも読めないと出ない -->
+        <dl class="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-1.5 text-sm">
+          <dt class="text-xs text-muted-foreground">自分のヒーロー</dt>
+          <dd class="flex items-center gap-1.5">
+            {#if own}
+              {#if own.icon}<img class="size-6 rounded" src={own.icon} alt="" />{/if}
+              {entityName(own, lang)}
+            {:else}
+              <span class="text-muted-foreground"
+                >まだ分かりません（アビリティを取ると分かります）</span
+              >
+            {/if}
+          </dd>
+          <dt class="text-xs text-muted-foreground">試合の時計</dt>
+          <dd class="tabular-nums">
+            {#if status.clock != null}
+              {clock(status.clock)}
+            {:else}
+              <span class="text-muted-foreground">読めていません</span>
+            {/if}
+          </dd>
+        </dl>
         <div class="flex flex-col gap-1.5">
           <p class="text-xs text-muted-foreground">持っているアイテム（{items.length} 個）</p>
           <ul class="flex min-h-9 flex-wrap gap-1">

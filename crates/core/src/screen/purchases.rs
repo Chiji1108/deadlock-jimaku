@@ -41,9 +41,16 @@ pub struct Tracker {
     /// 初めに読めたのと違うヒーローが読めた枠。同じ画面で揃って読めるとは限らないので、覚えておく
     moved: BTreeSet<usize>,
     readable_at: Option<Duration>,
+    /// 試合が変わったと決めた回数
+    matches: u32,
 }
 
 impl Tracker {
+    /// 試合が変わったと決めた回数。変わったら、試合ごとに覚えたもの（自分のヒーローなど）を捨てる
+    pub fn matches(&self) -> u32 {
+        self.matches
+    }
+
     /// 1 回読んだ結果を渡す。買ったと決めたアイテムを、枠の順に返す。`at` は読んだ時刻（どこから測ってもよい）
     pub fn observe(
         &mut self,
@@ -76,7 +83,10 @@ impl Tracker {
                 .readable_at
                 .is_some_and(|last| at.saturating_sub(last) >= GAP)
             {
-                *self = Self::default();
+                *self = Self {
+                    matches: self.matches + 1,
+                    ..Self::default()
+                };
             }
             self.seen.clear();
             return Vec::new();
@@ -96,6 +106,7 @@ impl Tracker {
             *self = Self {
                 roster: vec![None; heroes.len()],
                 readable_at: Some(at),
+                matches: self.matches + 1,
                 ..Self::default()
             };
         }
@@ -428,6 +439,8 @@ mod tests {
                 .is_empty()
         );
 
+        assert_eq!(game.tracker.matches(), 0);
+
         // 別の画面で 1 枠ずつ変わって読めたら、次の試合
         let mut game = Game::started_with(&["Headhunter"]);
         let mut first = heroes(&["Rem"]);
@@ -436,6 +449,7 @@ mod tests {
         game.see(&held(&[]));
         game.team = heroes(&["Rem", "Yamato", "The Doorman"]);
         assert!(game.watch(&held(&[]), 5).is_empty());
+        assert_eq!(game.tracker.matches(), 1);
         assert_eq!(game.watch(&held(&["Headhunter"]), CONFIRM), ["Headhunter"]);
     }
 

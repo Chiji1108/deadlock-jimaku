@@ -19,4 +19,12 @@ items: Array<string>,
 /**
  * ショップを開いている
  */
-shop: boolean, } | { "state": "failed", detail: string, };
+shop: boolean, 
+/**
+ * 自分のヒーロー（`class_name`）。アビリティの絵から決める。まだ決まっていなければ None
+ */
+own: string | null, 
+/**
+ * 試合の時計（試合が始まってからの秒）。読めていなければ None
+ */
+clock: number | null, } | { "state": "failed", detail: string, };

@@ -2,6 +2,7 @@
 //! 枠に出る絵は、deadlock-api の画像を縮めて決まった位置に置いたものなので、枠ごとに全部の見本と比べて
 //! （色の正規化相互相関）、いちばん近いものを答えにする。画面の取り込みも通信もしない。
 
+pub mod abilities;
 pub mod capture;
 pub mod clock;
 pub mod heroes;
