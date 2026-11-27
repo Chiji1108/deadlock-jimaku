@@ -196,10 +196,13 @@ pub enum ServerMsg {
 
 /// 一度に買ったアイテム（DESIGN.md 18 章）
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct Purchase {
     /// 買ったヒーロー（`class_name`）。読めなければ None
     pub hero: Option<String>,
+    /// 買ったときの試合の時計（試合が始まってからの秒）。読めなければ None。平均より早いか遅いかを出すのに使う
+    pub clock_seconds: Option<f32>,
     /// 買ったアイテム。買った順
     pub items: Vec<PurchasedItem>,
 }

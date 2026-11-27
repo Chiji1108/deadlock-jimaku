@@ -2,8 +2,22 @@
 
 /** 選んだ言語のラベル。用意のない言語は英語で出す */
 const LABELS = {
-  ja: { share: "購入率", boughtAt: "平均の購入", rare: "珍しい", staple: "定番" },
-  en: { share: "Pick rate", boughtAt: "Avg. buy time", rare: "Rare", staple: "Staple" },
+  ja: {
+    share: "購入率",
+    boughtAt: "平均の購入",
+    rare: "珍しい",
+    staple: "定番",
+    early: "早い",
+    late: "遅い",
+  },
+  en: {
+    share: "Pick rate",
+    boughtAt: "Avg. buy time",
+    rare: "Rare",
+    staple: "Staple",
+    early: "Early",
+    late: "Late",
+  },
 };
 
 export const labels = (lang: string) => (lang === "ja" ? LABELS.ja : LABELS.en);
@@ -15,6 +29,17 @@ const STAPLE = 0.5;
 export function badge(share: number): "rare" | "staple" | undefined {
   if (share < RARE) return "rare";
   if (share >= STAPLE) return "staple";
+  return undefined;
+}
+
+/** 平均の時刻の何倍より前なら「早い」、何倍より後なら「遅い」か。差の秒数で決めると、序盤のアイテムは少し遅れただけで「遅い」になる */
+const EARLY = 0.6;
+const LATE = 1.5;
+
+/** 買った時刻（試合の時計の秒）が、そのアイテムの平均と比べて早いか遅いか */
+export function timing(clock: number, average: number): "early" | "late" | undefined {
+  if (clock < average * EARLY) return "early";
+  if (clock > average * LATE) return "late";
   return undefined;
 }
 

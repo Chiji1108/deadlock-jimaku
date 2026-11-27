@@ -7,7 +7,7 @@
   import type { PurchaseCardsView } from "../../generated/PurchaseCardsView";
   import { placeItems } from "../../lib/anchor";
   import { entityName, glossary, loadGlossary } from "../../lib/glossary.svelte";
-  import { badge, clock, labels, percent } from "../../lib/purchase-stats";
+  import { badge, clock, labels, percent, timing } from "../../lib/purchase-stats";
   import { connect } from "../../lib/ws";
 
   /** 操作パネルのプレビュー（`?preview`）では、買わなくても見本を出しておく。OBS には出さない */
@@ -20,6 +20,8 @@
   /** 待っている買い物の上限。買ったときから大きく遅れないよう、古いものは捨てる */
   const MAX_QUEUE = 3;
 
+  /** 見本の買った時刻（10:00。1 つ目には遅く、2 つ目には早い） */
+  const SAMPLE_CLOCK = 600;
   /** 見本の数字（定番と、珍しいもの） */
   const SAMPLE_RATES = [
     { share: 0.62, boughtAtSeconds: 190 },
@@ -40,7 +42,7 @@
       const entity = glossary.items[i];
       return entity ? [{ item: entity.className, rate }] : [];
     });
-    return { hero: glossary.heroes[0]?.[1].className ?? null, items };
+    return { hero: glossary.heroes[0]?.[1].className ?? null, clockSeconds: SAMPLE_CLOCK, items };
   });
   const shown = $derived(current ?? (sample && { id: 0, purchase: sample }));
 
@@ -49,6 +51,7 @@
   const hero = $derived(
     shown?.purchase.hero ? glossary.named("hero", shown.purchase.hero) : undefined,
   );
+  const clockSeconds = $derived(shown?.purchase.clockSeconds);
   const rows = $derived(
     (shown?.purchase.items ?? []).slice(-MAX_ITEMS).map(({ item, rate }) => {
       const entity = glossary.named("item", item);
@@ -58,6 +61,9 @@
         icon: entity?.icon,
         slot: entity?.slot,
         rate: view?.showRate ? rate : null,
+        // 買った時刻が読めたときだけ、平均と比べる
+        timing:
+          rate && clockSeconds != null ? timing(clockSeconds, rate.boughtAtSeconds) : undefined,
       };
     }),
   );
@@ -110,18 +116,25 @@
         {#each rows as row (row.key)}
           {@const mark = row.rate ? badge(row.rate.share) : undefined}
           <li class="row {row.slot ?? ''}">
-            {#if row.icon}<img class="icon" src={row.icon} alt="" />{/if}
+            <!-- 右下のヒーローは、そのヒーローでの数字だという印 -->
+            <div class="icons">
+              {#if row.icon}<img class="icon" src={row.icon} alt="" />{/if}
+              {#if row.rate && hero?.icon}<img class="hero" src={hero.icon} alt="" />{/if}
+            </div>
             <div class="body">
               <p class="name">{row.name}</p>
               {#if row.rate}
                 <dl class="stats">
-                  {#if hero?.icon}<img class="hero" src={hero.icon} alt="" />{/if}
                   <div>
                     <dd>{percent(row.rate.share)}</dd>
                     <dt>{text.share}</dt>
                   </div>
                   <div>
-                    <dd>{clock(row.rate.boughtAtSeconds)}</dd>
+                    <dd>
+                      {clock(row.rate.boughtAtSeconds)}
+                      {#if row.timing}<span class="timing {row.timing}">{text[row.timing]}</span
+                        >{/if}
+                    </dd>
                     <dt>{text.boughtAt}</dt>
                   </div>
                   {#if mark}<span class="badge {mark}">{text[mark]}</span>{/if}
@@ -187,10 +200,15 @@
   .spirit {
     --slot: #cfa2ff;
   }
-  .icon {
+  .icons {
+    position: relative;
     width: 64px;
     height: 64px;
     flex: none;
+  }
+  .icon {
+    width: 100%;
+    height: 100%;
     border-radius: 6px;
   }
   .body {
@@ -238,7 +256,11 @@
     display: flex;
     flex-direction: column;
   }
+  /* 「早い」「遅い」は、平均の時刻の横に付ける（何と比べて早いのかが分かる） */
   .stats dd {
+    display: flex;
+    align-items: center;
+    gap: 6px;
     margin: 0;
     font-size: 18px;
     font-weight: 700;
@@ -251,13 +273,27 @@
     color: rgb(244 241 234 / 0.7);
     white-space: nowrap;
   }
-  /* そのヒーローでの数字だと分かるように添える */
+  .timing {
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    line-height: 1.4;
+    white-space: nowrap;
+  }
+  .early {
+    background: #7fd4ff;
+    color: #00263a;
+  }
+  .late {
+    background: #ff9b7a;
+    color: #3a0e00;
+  }
   .hero {
+    position: absolute;
+    right: -8px;
+    bottom: -8px;
     width: 30px;
     height: 30px;
-    flex: none;
-    border-radius: 50%;
-    object-fit: cover;
-    object-position: top;
+    filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.8));
   }
 </style>
