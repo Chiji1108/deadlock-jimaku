@@ -16,7 +16,7 @@ const INNER: f32 = 146.0;
 /// チームの枠の数。人数の少ないモード（ストリートブロール）は、内側から詰める
 const TEAM: usize = 6;
 /// 死んでほかの人を観戦している間は、画面の上の端にチームの色の帯が出て、バーがこれだけ下がる
-const SPECTATING_DROP: f32 = 8.0;
+pub(super) const SPECTATING_DROP: f32 = 8.0;
 
 /// カードのうち、比べる範囲。左右はチームの印（「!」）が、下は丸い縁とソウルの数が重なる
 fn compared(x: f32, y: f32) -> bool {
