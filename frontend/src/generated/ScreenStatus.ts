@@ -21,6 +21,10 @@ items: Array<string>,
  */
 shop: boolean, 
 /**
+ * 死んで、ほかの人を観戦している（その間は、買ったと数えない）
+ */
+spectating: boolean, 
+/**
  * 自分のヒーロー（`class_name`）。アビリティの絵から決める。まだ決まっていなければ None
  */
 own: string | null, 

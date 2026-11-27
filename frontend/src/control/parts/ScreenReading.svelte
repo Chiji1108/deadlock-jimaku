@@ -54,6 +54,9 @@
         return { tone: "error", label: `読めません（${status.detail}）` };
       case "reading":
         if (nothing) return { tone: "warning", label: "試合の画面が読めていません" };
+        // 観戦中は、左下が相手の持ち物になるので、買ったと数えない
+        if (status.spectating)
+          return { tone: "live", label: "読めています（観戦中。買ったアイテムは出しません）" };
         return {
           tone: "live",
           label: status.shop ? "読めています（ショップを開いています）" : "読めています",
@@ -134,7 +137,11 @@
           </dd>
         </dl>
         <div class="flex flex-col gap-1.5">
-          <p class="text-xs text-muted-foreground">持っているアイテム（{items.length} 個）</p>
+          <p class="text-xs text-muted-foreground">
+            {status.spectating
+              ? "観戦している相手のアイテム"
+              : "持っているアイテム"}（{items.length} 個）
+          </p>
           <ul class="flex min-h-9 flex-wrap gap-1">
             {#each items as item (item.className)}
               <li class="size-9 overflow-hidden rounded-md border" title={entityName(item, lang)}>

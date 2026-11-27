@@ -221,6 +221,8 @@ pub enum ScreenStatus {
         items: Vec<String>,
         /// ショップを開いている
         shop: bool,
+        /// 死んで、ほかの人を観戦している（その間は、買ったと数えない）
+        spectating: bool,
         /// 自分のヒーロー（`class_name`）。アビリティの絵から決める。まだ決まっていなければ None
         own: Option<String>,
         /// 試合の時計（試合が始まってからの秒）。読めていなければ None
