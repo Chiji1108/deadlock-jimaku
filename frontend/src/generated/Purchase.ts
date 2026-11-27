@@ -10,6 +10,10 @@ export type Purchase = {
  */
 hero: string | null, 
 /**
+ * 買ったときの試合の時計（試合が始まってからの秒）。読めなければ None。平均より早いか遅いかを出すのに使う
+ */
+clockSeconds: number | null, 
+/**
  * 買ったアイテム。買った順
  */
 items: Array<PurchasedItem>, };

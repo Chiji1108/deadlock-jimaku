@@ -985,6 +985,7 @@ mod tests {
         let mut messages = store.subscribe();
         let purchase = Purchase {
             hero: None,
+            clock_seconds: None,
             items: Vec::new(),
         };
         store.purchased(purchase.clone());
