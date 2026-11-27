@@ -121,12 +121,14 @@
         in:fly={{ x: view.anchor.endsWith("right") ? 24 : -24, duration: 250 }}
         out:fade={{ duration: 300 }}
       >
-        <!-- 誰が買ったか。下の数字が、このヒーローでの数字だという印にもなる -->
-        <li class="head">
-          {#if hero?.icon}<img src={hero.icon} alt="" />{/if}
-          {#if hero}<span class="who">{entityName(hero, lang)}</span>{/if}
-          <span>{text.purchased}</span>
-        </li>
+        <!-- 誰が買ったか。下の数字が、このヒーローでの数字だという印になる。「購入」とは書かない
+             （下に「購入率」と出るし、言葉が無ければ、どの言語の配信でも通じる）。自分のヒーローがまだ分からなければ、出さない -->
+        {#if hero}
+          <li class="head">
+            {#if hero.icon}<img src={hero.icon} alt="" />{/if}
+            {entityName(hero, lang)}
+          </li>
+        {/if}
         {#each rows as row (row.key)}
           <li class="row {row.slot ?? ''}">
             {#if row.icon}<img class="icon" src={row.icon} alt="" />{/if}
@@ -295,13 +297,9 @@
     font-size: 13px;
     font-weight: 700;
     line-height: 1.2;
-    color: rgb(244 241 234 / 0.7);
   }
   .head img {
     width: 24px;
     height: 24px;
-  }
-  .who {
-    color: #f4f1ea;
   }
 </style>
