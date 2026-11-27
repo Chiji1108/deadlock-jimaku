@@ -4,6 +4,7 @@ import obsPoster from "../assets/obs-drag.webp?url";
 import obsVideo from "../assets/obs-drag.mp4?url";
 import statsDays from "../assets/stats-days.webp?url";
 import statsTotals from "../assets/stats-totals.webp?url";
+import purchases from "../assets/purchases.webp?url";
 import { siTwitch } from "simple-icons";
 import Layout from "../layouts/Layout.astro";
 import { MODES, price } from "../../../frontend/src/lib/engines";
@@ -307,6 +308,26 @@ const jsonLd = {
     <div class="reveal plate flex flex-col gap-3 p-4 sm:p-6">
       <img src={statsTotals} alt="統計の合計（字幕を出していた時間、喋った量、よく呼んだヒーロー・アイテム・スキル）" width="1472" height="760" loading="lazy" class="w-full rounded-xl" />
       <img src={statsDays} alt="日ごとの喋った量の草" width="1472" height="436" loading="lazy" class="w-full rounded-xl" />
+    </div>
+  </section>
+
+  <section class="mx-auto mt-28 grid max-w-6xl items-center gap-10 px-4 sm:mt-40 md:grid-cols-2">
+    <div class="reveal plate p-4 sm:p-6">
+      <img
+        src={purchases}
+        alt="買ったアイテムの表示（ミナが買ったスイフトストライカーは購入率 40%、平均の購入 16:36 で「早い」。ミスティックエクスパンダーは 78% で「定番」）"
+        width="1080"
+        height="680"
+        loading="lazy"
+        class="w-full rounded-xl"
+      />
+    </div>
+    <div class="order-first md:order-none">
+      <h2 class="display reveal text-[clamp(2.1rem,4.5vw,3.6rem)]"><span class="band">買ったアイテム</span>の表示</h2>
+      <p class="reveal mt-5 text-lg leading-relaxed text-muted">
+        ゲームでアイテムを買うと、配信に小さく出します。購入率などの統計も付きます。
+      </p>
+      <p class="reveal mt-3 text-lg leading-relaxed text-muted">Windows 版だけの機能です。見た目を変える MOD を入れていると動きません。</p>
     </div>
   </section>
 
