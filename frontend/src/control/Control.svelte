@@ -13,7 +13,8 @@
   import UserRoundIcon from "@lucide/svelte/icons/user-round";
   import WorkflowIcon from "@lucide/svelte/icons/workflow";
   import { ModeWatcher } from "mode-watcher";
-  import { onMount, untrack } from "svelte";
+  import { onMount, untrack, type Component } from "svelte";
+  import type { Overlay } from "../generated/Overlay";
   import * as Alert from "$lib/components/ui/alert";
   import { Button } from "$lib/components/ui/button";
   import { Toaster } from "$lib/components/ui/sonner";
@@ -43,7 +44,16 @@
   /** 中身の欄（広い画面ではここだけがスクロールする） */
   let content = $state<HTMLElement>();
 
-  const TABS = [
+  const TABS: {
+    value: string;
+    label: string;
+    icon: typeof HouseIcon;
+    page: Component;
+    heading?: string;
+    wide?: boolean;
+    /** OBS に置くオーバーレイのタブなら、その種類 */
+    overlay?: Overlay;
+  }[] = [
     { value: "home", label: "ホーム", icon: HouseIcon, page: HomeTab, wide: true },
     {
       value: "audio",
@@ -61,15 +71,31 @@
       page: DisplayTab,
       heading: "オーバーレイ",
       wide: true,
+      overlay: "subtitles",
     },
-    { value: "items", label: "アイテム説明", icon: PackageIcon, page: ItemsTab, wide: true },
-    { value: "rank", label: "ランク", icon: TrophyIcon, page: RankTab, wide: true },
+    {
+      value: "items",
+      label: "アイテム説明",
+      icon: PackageIcon,
+      page: ItemsTab,
+      wide: true,
+      overlay: "items",
+    },
+    {
+      value: "rank",
+      label: "ランク",
+      icon: TrophyIcon,
+      page: RankTab,
+      wide: true,
+      overlay: "rank",
+    },
     {
       value: "purchases",
       label: "買ったアイテム",
       icon: ShoppingCartIcon,
       page: PurchasesTab,
       wide: true,
+      overlay: "purchases",
     },
     { value: "stats", label: "統計", icon: ChartColumnIcon, page: StatsTab, heading: "" },
     // 自分の API キーを使う人だけが開く。料金も同じタブに置く
@@ -177,7 +203,25 @@
               aria-label={t.label}
               class="h-9 flex-none px-0 md:justify-start md:px-3"
             >
-              <t.icon /><span class="hidden md:inline">{t.label}</span>
+              <!-- OBS につながっているオーバーレイには、緑の丸を付ける（何が配信に出ているかが、どのタブからも分かる）。
+                   狭いときはアイコンの右上に、広いときは名前の右に置く -->
+              <span class="relative flex">
+                <t.icon />
+                {#if t.overlay && panel.obs.includes(t.overlay)}
+                  <span
+                    class="absolute -top-0.5 -right-0.5 size-1.5 rounded-full bg-emerald-500 md:hidden"
+                  ></span>
+                {/if}
+              </span>
+              <span class="hidden md:inline">{t.label}</span>
+              {#if t.overlay && panel.obs.includes(t.overlay)}
+                <span
+                  class="ml-auto hidden size-2 shrink-0 rounded-full bg-emerald-500 md:block"
+                  role="img"
+                  aria-label="OBS に表示中"
+                  title="OBS に表示中"
+                ></span>
+              {/if}
             </Tabs.Trigger>
           {/each}
         </Tabs.List>

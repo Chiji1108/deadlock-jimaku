@@ -592,10 +592,7 @@ async fn session(mut socket: WebSocket, store: Arc<Store>) {
     };
 
     // OBS の中のオーバーレイは、つながっている間だけ数える（この関数を抜けると外れる）
-    let _subtitles = (obs && topics.contains(&Topic::Subtitle)).then(|| store.obs_subtitles());
-    // 操作パネルが読み取りの状態を出している間も、画面を読む
-    let watches = (obs && topics.contains(&Topic::Purchase)) || topics.contains(&Topic::Screen);
-    let _screen = watches.then(|| store.watch_screen());
+    let _obs = obs.map(|overlay| store.in_obs(overlay));
     let mut rx = store.subscribe();
     let wants_level = topics.contains(&Topic::Level);
     let mut level = store.watch_level();

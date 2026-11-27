@@ -8,12 +8,10 @@
   import { placeItems } from "../../lib/anchor";
   import { entityName, glossary, loadGlossary } from "../../lib/glossary.svelte";
   import { badge, clock, labels, percent, timing } from "../../lib/purchase-stats";
-  import { connect } from "../../lib/ws";
+  import { connect, inObs } from "../../lib/ws";
 
   /** 操作パネルのプレビュー（`?preview`）では、買わなくても見本を出しておく。OBS には出さない */
   const preview = new URLSearchParams(location.search).has("preview");
-  /** OBS の中で開いている間だけ、ゲームの画面を読んでもらう（iframe の中は除く。プレビューで読ませない） */
-  const inObs = "obsstudio" in window && window.parent === window;
 
   /** 一度に並べる数。それより多く買ったら、新しいほう */
   const MAX_ITEMS = 3;
@@ -104,7 +102,7 @@
         }
       },
       undefined,
-      inObs,
+      inObs() ? "purchases" : undefined,
     );
     return () => {
       clearTimeout(timer);

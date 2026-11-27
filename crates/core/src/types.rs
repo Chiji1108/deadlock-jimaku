@@ -116,8 +116,19 @@ pub enum Topic {
     Stats,
     /// 買ったアイテム。出来事なので、つないだときには何も届かない
     Purchase,
-    /// ゲームの画面の読み取りの状態（操作パネル用。購読している間は、ゲームの画面を読む）
+    /// ゲームの画面の読み取りの状態（操作パネル用）
     Screen,
+}
+
+/// OBS に置くオーバーレイの種類
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, TS)]
+#[serde(rename_all = "lowercase")]
+#[ts(export)]
+pub enum Overlay {
+    Subtitles,
+    Items,
+    Rank,
+    Purchases,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
@@ -126,10 +137,10 @@ pub enum Topic {
 pub enum ClientMsg {
     Subscribe {
         topics: Vec<Topic>,
-        /// OBS の中で開いたオーバーレイ。字幕なら、つながっている間、操作パネルに「OBS に表示中」と出す。
+        /// OBS の中で開いたオーバーレイなら、その種類。つながっている間、操作パネルに印を出す。
         /// 買ったアイテムなら、つながっている間だけゲームの画面を読む
         #[serde(default)]
-        obs: bool,
+        obs: Option<Overlay>,
     },
     /// 統計の回ごとの一覧を、新しい順に何回分送るか（操作パネルの「もっと見る」）。つなぎ直したら送り直す
     Stats { sessions: u32 },
@@ -185,9 +196,9 @@ pub enum ServerMsg {
     /// Chrome のページが開いているマイク。None は開いていない
     #[serde(rename = "chrome.mic")]
     ChromeMic { mic: Option<ChromeMic> },
-    /// OBS の中で、字幕オーバーレイがつながっているか（字幕が OBS に出ているか）
+    /// OBS の中でつながっているオーバーレイ（OBS に出ているもの）
     #[serde(rename = "obs.status")]
-    ObsStatus { subtitles: bool },
+    ObsStatus { overlays: Vec<Overlay> },
     /// 操作パネル以外（OBS の字幕オーバーレイ、トレイ）で設定が変わった。パネルは取り直す
     #[serde(rename = "settings.changed")]
     SettingsChanged,
@@ -203,7 +214,7 @@ pub enum ServerMsg {
 #[serde(tag = "state", rename_all = "camelCase")]
 #[ts(export)]
 pub enum ScreenStatus {
-    /// 読んでいない（オフか、見せる相手がいない）
+    /// 読んでいない（買ったアイテムのオーバーレイが、OBS につながっていない）
     #[default]
     Off,
     /// 見本の画像を取っている

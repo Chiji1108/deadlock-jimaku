@@ -1,5 +1,5 @@
 //! ゲームの画面を読み続けて、買ったアイテムを知らせる（DESIGN.md 18.2）。
-//! 読むのは、設定がオンで、見せる相手（OBS の中のオーバーレイか、読み取りの状態を出している操作パネル）がいる間だけ。
+//! 読むのは、買ったアイテムのオーバーレイが OBS につながっている間だけ（OBS に足すことが、画面を読んでよいという本人の選択）。
 
 use std::collections::{BTreeMap, VecDeque};
 use std::sync::{Arc, Mutex};
@@ -11,7 +11,7 @@ use super::rates::{self, Rates};
 use super::samples::{self, Sample, Samples};
 use super::{BASE_HEIGHT, Frame, Read, Template, abilities, clock, heroes, items};
 use crate::store::Store;
-use crate::types::{Purchase, PurchasedItem, ScreenStatus};
+use crate::types::{Overlay, Purchase, PurchasedItem, ScreenStatus};
 
 /// 見本の画像を置く場所（データの場所の中）
 const SAMPLES: &str = "screen_samples";
@@ -23,15 +23,11 @@ const SEARCH: Duration = Duration::from_secs(3);
 const RETRY: Duration = Duration::from_secs(30);
 
 pub async fn run(store: Arc<Store>) {
-    let mut settings = store.watch_settings();
-    let mut watchers = store.screen_watchers();
+    let mut obs = store.watch_obs();
     loop {
         if !wanted(&store) {
             store.set_screen_status(ScreenStatus::Off);
-            tokio::select! {
-                _ = settings.changed() => {}
-                _ = watchers.changed() => {}
-            }
+            let _ = obs.changed().await;
             continue;
         }
         store.set_screen_status(ScreenStatus::Preparing);
@@ -56,7 +52,7 @@ pub async fn run(store: Arc<Store>) {
 }
 
 fn wanted(store: &Store) -> bool {
-    *store.screen_watchers().borrow() > 0 && store.settings().purchase_cards.enabled
+    store.watch_obs().borrow().contains_key(&Overlay::Purchases)
 }
 
 /// 読み出した画像（上の端、左下のアイテム欄、時計、下の中央のアビリティ）

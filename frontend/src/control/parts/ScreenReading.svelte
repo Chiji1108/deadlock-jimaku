@@ -1,7 +1,7 @@
 <script lang="ts">
   // 買ったアイテムのタブの「読み取りの状態」（DESIGN.md 18.5）。読めていなくても、配信の間は何も出ないだけで
-  // 気づけないので、配信の前にここを見れば分かるようにする。このタブを開いている間は、OBS につながっていなくても
-  // ゲームの画面を読む（`screen` を購読している間、core が見せる相手に数える）
+  // 気づけないので、配信の前にここを見れば分かるようにする。読むのは、オーバーレイが OBS につながっている間だけで、
+  // ここは、その結果を見せるだけ（タブを開いただけでは、ゲームの画面を読み始めない）
   import * as Card from "$lib/components/ui/card";
   import type { ScreenStatus } from "../../generated/ScreenStatus";
   import { entityName, glossary } from "../../lib/glossary.svelte";
@@ -45,7 +45,7 @@
   const summary = $derived.by((): { tone: keyof typeof STATUS_DOTS; label: string } => {
     switch (status.state) {
       case "off":
-        return { tone: "idle", label: "読んでいません（「ゲームの画面を読む」がオフです）" };
+        return { tone: "idle", label: "読んでいません（OBS に追加すると、読み始めます）" };
       case "preparing":
         return { tone: "busy", label: "見本の画像を用意しています（初めは 13 MB ほど取ります）" };
       case "noWindow":
@@ -69,8 +69,8 @@
   <Card.Header>
     <Card.Title class="flex items-center gap-1.5"
       >読み取りの状態<Help
-        >いま読めているヒーローとアイテムです。ゲームの画面と見比べて、合っていれば動いています。このタブを開いている間は、OBS
-        につながっていなくても読みます。サンドボックスに入れば、配信の前に試せます</Help
+        >いま読めているヒーローとアイテムです。ゲームの画面と見比べて、合っていれば動いています。オーバーレイを
+        OBS に追加して、サンドボックスに入れば、配信の前に試せます</Help
       ></Card.Title
     >
   </Card.Header>
