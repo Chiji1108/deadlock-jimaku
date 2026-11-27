@@ -62,32 +62,21 @@
           <Card.Title class="flex items-center gap-1.5"
             >買ったアイテムのオーバーレイ<Help
               >ゲームの画面を PC
-              の中だけで見て、持ち物が増えたときに、買ったアイテムを出します。画像は保存も送信もしません。OBS
-              と同じ画面の取り込みです</Help
+              の中だけで見て、持ち物が増えたときに、買ったアイテムを出します。画像は保存も送信もしません。見るのは、このオーバーレイが
+              OBS
+              につながっている間だけです。ショップを開いている間は出さず、閉じたときに、増えた分をまとめて出します。一度出したアイテムは、売って買い直しても、同じ試合の間は出しません（持っているのに、もう一度出るのを防ぐため）</Help
             ></Card.Title
           >
+          <!-- スイッチは置かない。OBS に足すことが、画面を読んでよいという本人の選択（ほかのオーバーレイと同じく、足せば出る） -->
+          <Card.Description>
+            OBS
+            に追加すると、ゲームの画面を読んで、買ったアイテムを出します。ヒーローやアイテム、HUD
+            の見た目を変える MOD
+            を入れていると読めません。ゲームのアップデートで画面の見た目が変わったときも、読めなくなることがあります
+          </Card.Description>
         </Card.Header>
         <Card.Content class="flex flex-col gap-6">
           <Field.Group>
-            <Field.Field orientation="horizontal">
-              <Field.Content>
-                <Field.Label
-                  >ゲームの画面を読む<Help
-                    >読むのは、このオーバーレイが OBS
-                    につながっている間と、このタブを開いている間だけです。ショップを開いている間は出さず、閉じたときに、増えた分をまとめて出します。一度出したアイテムは、売って買い直しても、同じ試合の間は出しません（持っているのに、もう一度出るのを防ぐため）</Help
-                  ></Field.Label
-                >
-                <Field.Description>
-                  ヒーローやアイテム、HUD の見た目を変える MOD
-                  を入れていると読めません。ゲームのアップデートで画面の見た目が変わったときも、読めなくなることがあります。読めないときは何も出ないだけで、字幕やほかのオーバーレイには影響しません
-                </Field.Description>
-              </Field.Content>
-              <Switch
-                aria-label="ゲームの画面を読む"
-                checked={c.enabled}
-                onCheckedChange={(enabled) => panel.update({ purchaseCards: { enabled } })}
-              />
-            </Field.Field>
             <Field.Field>
               <Field.Label>出しておく時間</Field.Label>
               <ToggleGroup.Root

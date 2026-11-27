@@ -2,6 +2,7 @@
 import { toast } from "svelte-sonner";
 import { SvelteMap, SvelteSet } from "svelte/reactivity";
 import type { ChromeMic } from "../generated/ChromeMic";
+import type { Overlay } from "../generated/Overlay";
 import type { LiveStatus } from "../generated/LiveStatus";
 import type { BetaRefusal } from "../generated/BetaRefusal";
 import type { Downloading } from "../generated/Downloading";
@@ -121,8 +122,12 @@ class Panel {
   chromeStatus = $state<LiveStatus>();
   /** Chrome のウィンドウが開いているマイク */
   chromeMic = $state<ChromeMic>();
-  /** OBS の中で、字幕オーバーレイがつながっている（字幕が OBS に出ている） */
-  obsSubtitles = $state(false);
+  /** OBS の中でつながっているオーバーレイ（OBS に出ているもの） */
+  obs = $state<Overlay[]>([]);
+  /** 字幕が OBS に出ている */
+  get obsSubtitles() {
+    return this.obs.includes("subtitles");
+  }
   /** 最後に設定を保存できた時刻。上の帯に、少しの間「保存しました」と出す */
   savedAt = $state(0);
 
@@ -275,7 +280,7 @@ class Panel {
     } else if (msg.type === "chrome.mic") {
       this.chromeMic = msg.mic ?? undefined;
     } else if (msg.type === "obs.status") {
-      this.obsSubtitles = msg.subtitles;
+      this.obs = msg.overlays;
     } else if (msg.type === "usage") {
       this.usage = msg.usage;
     } else if (msg.type === "stats") {

@@ -10,7 +10,7 @@
   import { fitSource, rankSize } from "../../lib/overlay-size";
   import RankBadge from "../../lib/RankBadge.svelte";
   import { api } from "../../lib/api";
-  import { connect } from "../../lib/ws";
+  import { connect, inObs } from "../../lib/ws";
 
   let rank = $state<RankState | undefined>();
   /** ランク名の言語と、出すもの。操作パネルで変え、サーバーから届く（名前がなければ英語） */
@@ -71,17 +71,22 @@
   onMount(() => {
     // 表示の言語が届くのを待たずに、英語の名前とアイコンを取り始める
     loadSample("en");
-    const disconnect = connect(["rank", "display"], (msg) => {
-      if (msg.type === "rank.update") rank = msg.rank ?? undefined;
-      if (msg.type === "display") {
-        applyFontImports(fontImports([msg.rankStyle.font]));
-        look = msg.rankStyle;
-        lang = msg.rankLanguage;
-        content = msg.rankContent;
-        anchor = msg.rankAnchor;
-        loadSample(msg.rankLanguage);
-      }
-    });
+    const disconnect = connect(
+      ["rank", "display"],
+      (msg) => {
+        if (msg.type === "rank.update") rank = msg.rank ?? undefined;
+        if (msg.type === "display") {
+          applyFontImports(fontImports([msg.rankStyle.font]));
+          look = msg.rankStyle;
+          lang = msg.rankLanguage;
+          content = msg.rankContent;
+          anchor = msg.rankAnchor;
+          loadSample(msg.rankLanguage);
+        }
+      },
+      undefined,
+      inObs() ? "rank" : undefined,
+    );
     return () => {
       disconnect();
       request?.controller.abort();

@@ -1,6 +1,6 @@
 //! 状態ストア + broadcast（DESIGN.md 10 章）。状態はサーバーが持ち、変更は最新の状態をそのまま流す。
 
-use std::collections::VecDeque;
+use std::collections::{BTreeMap, VecDeque};
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
@@ -18,7 +18,7 @@ use crate::settings::{
 use crate::stats::Tally;
 use crate::types::{
     ChromeCommand, ChromeMic, Decided, Downloading, Heard, ItemCardsView, LiveState, LiveStatus,
-    Purchase, PurchaseCardsView, RankState, ScreenStatus, Segment, ServerMsg, Stage,
+    Overlay, Purchase, PurchaseCardsView, RankState, ScreenStatus, Segment, ServerMsg, Stage,
     TranscriptionError, Translated,
 };
 use crate::usage::Meter;
@@ -91,33 +91,36 @@ pub struct Store {
     browser: Mutex<Option<Browser>>,
     /// ハイブリッドの発話を閉じた回数
     chrome_cuts: AtomicU32,
-    /// OBS の中で開いている字幕オーバーレイの数
-    obs_subtitles: AtomicU32,
-    /// 買ったアイテムを見せる相手の数。0 の間は、ゲームの画面を読まない（DESIGN.md 18.1）
-    screen_watchers: watch::Sender<u32>,
+    /// OBS の中で開いているオーバーレイの数（種類ごと。つながっていない種類は入れない）。
+    /// 買ったアイテムがつながっている間だけ、ゲームの画面を読む（DESIGN.md 18.1）
+    obs: watch::Sender<BTreeMap<Overlay, u32>>,
     screen_status: Mutex<ScreenStatus>,
     meter: Arc<Meter>,
     tally: Arc<Tally>,
     fonts: Arc<Library>,
 }
 
-/// OBS の中でつながっている字幕オーバーレイ。切れたら（落としたら）数から外す
-pub struct ObsSubtitles(Arc<Store>);
-
-impl Drop for ObsSubtitles {
-    fn drop(&mut self) {
-        if self.0.obs_subtitles.fetch_sub(1, Ordering::Relaxed) == 1 {
-            let _ = self.0.tx.send(ServerMsg::ObsStatus { subtitles: false });
-        }
-    }
+/// OBS の中でつながっているオーバーレイ。切れたら（落としたら）数から外す
+pub struct InObs {
+    store: Arc<Store>,
+    overlay: Overlay,
 }
 
-/// 買ったアイテムを見せる相手（OBS の中のオーバーレイと、読み取りの状態を出している操作パネル）。切れたら（落としたら）数から外す
-pub struct ScreenWatcher(Arc<Store>);
-
-impl Drop for ScreenWatcher {
+impl Drop for InObs {
     fn drop(&mut self) {
-        self.0.screen_watchers.send_modify(|count| *count -= 1);
+        let mut gone = false;
+        self.store.obs.send_modify(|counts| {
+            if let Some(count) = counts.get_mut(&self.overlay) {
+                *count -= 1;
+                gone = *count == 0;
+            }
+            if gone {
+                counts.remove(&self.overlay);
+            }
+        });
+        if gone {
+            let _ = self.store.tx.send(self.store.obs_status());
+        }
     }
 }
 
@@ -156,8 +159,7 @@ impl Store {
             chrome_tab: watch::Sender::new(ChromeTab::default()),
             browser: Mutex::new(None),
             chrome_cuts: AtomicU32::new(0),
-            obs_subtitles: AtomicU32::new(0),
-            screen_watchers: watch::Sender::new(0),
+            obs: watch::Sender::new(BTreeMap::new()),
             screen_status: Mutex::new(ScreenStatus::Off),
             meter,
             tally,
@@ -406,9 +408,7 @@ impl Store {
         msgs.push(ServerMsg::ChromeMic {
             mic: self.chrome_tab.borrow().mic.clone(),
         });
-        msgs.push(ServerMsg::ObsStatus {
-            subtitles: self.obs_subtitles.load(Ordering::Relaxed) > 0,
-        });
+        msgs.push(self.obs_status());
         msgs.push(ServerMsg::ScreenStatus {
             status: self.screen_status.lock().unwrap().clone(),
         });
@@ -422,23 +422,33 @@ impl Store {
         msgs
     }
 
-    /// OBS の中の字幕オーバーレイがつながった。返したものを持っている間、つながっていると数える
-    pub fn obs_subtitles(self: &Arc<Self>) -> ObsSubtitles {
-        if self.obs_subtitles.fetch_add(1, Ordering::Relaxed) == 0 {
-            let _ = self.tx.send(ServerMsg::ObsStatus { subtitles: true });
+    /// OBS の中のオーバーレイがつながった。返したものを持っている間、つながっていると数える。
+    /// つながっている種類が変わったときだけ知らせる
+    pub fn in_obs(self: &Arc<Self>, overlay: Overlay) -> InObs {
+        let mut first = false;
+        self.obs.send_modify(|counts| {
+            let count = counts.entry(overlay).or_default();
+            first = *count == 0;
+            *count += 1;
+        });
+        if first {
+            let _ = self.tx.send(self.obs_status());
         }
-        ObsSubtitles(self.clone())
+        InObs {
+            store: self.clone(),
+            overlay,
+        }
     }
 
-    /// 買ったアイテムを見せる相手がつながった。返したものを持っている間、ゲームの画面を読む
-    pub fn watch_screen(self: &Arc<Self>) -> ScreenWatcher {
-        self.screen_watchers.send_modify(|count| *count += 1);
-        ScreenWatcher(self.clone())
+    fn obs_status(&self) -> ServerMsg {
+        ServerMsg::ObsStatus {
+            overlays: self.obs.borrow().keys().copied().collect(),
+        }
     }
 
-    /// 買ったアイテムを見せる相手の数。画面を読む処理が、始めるときと止めるときを知る
-    pub fn screen_watchers(&self) -> watch::Receiver<u32> {
-        self.screen_watchers.subscribe()
+    /// OBS の中でつながっているオーバーレイ。画面を読む処理が、始めるときと止めるときを知る
+    pub fn watch_obs(&self) -> watch::Receiver<BTreeMap<Overlay, u32>> {
+        self.obs.subscribe()
     }
 
     /// ゲームの画面の読み取りの状態。変わったときだけ知らせる
@@ -960,42 +970,36 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let store = Store::new(Ok(Settings::default()), dir.path().to_owned());
         let mut messages = store.subscribe();
-        let shown = |store: &Store| {
-            store
-                .current_state()
-                .contains(&ServerMsg::ObsStatus { subtitles: true })
+        let status = |overlays: &[Overlay]| ServerMsg::ObsStatus {
+            overlays: overlays.to_vec(),
         };
-        assert!(!shown(&store));
-        let first = store.obs_subtitles();
-        let second = store.obs_subtitles();
-        assert_eq!(
-            messages.try_recv(),
-            Ok(ServerMsg::ObsStatus { subtitles: true })
-        );
+        let shown =
+            |store: &Store, overlays: &[Overlay]| store.current_state().contains(&status(overlays));
+        assert!(shown(&store, &[]));
+        let first = store.in_obs(Overlay::Subtitles);
+        let second = store.in_obs(Overlay::Subtitles);
+        assert_eq!(messages.try_recv(), Ok(status(&[Overlay::Subtitles])));
         drop(first);
         assert!(messages.try_recv().is_err());
-        assert!(shown(&store));
+        // 種類ごとに数える。買ったアイテムがつながっている間だけ、画面を読む
+        let watching = store.watch_obs();
+        let purchases = store.in_obs(Overlay::Purchases);
+        let both = [Overlay::Subtitles, Overlay::Purchases];
+        assert_eq!(messages.try_recv(), Ok(status(&both)));
+        assert!(watching.borrow().contains_key(&Overlay::Purchases));
         drop(second);
-        assert_eq!(
-            messages.try_recv(),
-            Ok(ServerMsg::ObsStatus { subtitles: false })
-        );
-        assert!(!shown(&store));
+        assert_eq!(messages.try_recv(), Ok(status(&[Overlay::Purchases])));
+        drop(purchases);
+        assert_eq!(messages.try_recv(), Ok(status(&[])));
+        assert!(shown(&store, &[]));
+        assert!(watching.borrow().is_empty());
     }
 
-    /// 画面を読むのは、買ったアイテムを見せる相手がいる間だけ。出来事は、つないだときには送らない
+    /// 買ったアイテムは出来事なので、つないだときには送らない
     #[tokio::test]
-    async fn the_screen_is_watched_while_someone_sees_purchases() {
+    async fn a_purchase_is_not_sent_again_on_connecting() {
         let dir = tempfile::tempdir().unwrap();
         let store = Store::new(Ok(Settings::default()), dir.path().to_owned());
-        let watchers = store.screen_watchers();
-        let first = store.watch_screen();
-        let second = store.watch_screen();
-        assert_eq!(*watchers.borrow(), 2);
-        drop(first);
-        drop(second);
-        assert_eq!(*watchers.borrow(), 0);
-
         let mut messages = store.subscribe();
         let purchase = Purchase {
             hero: None,

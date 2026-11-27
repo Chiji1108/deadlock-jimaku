@@ -277,8 +277,6 @@ pub struct ItemCardsPatch {
 #[serde(default, rename_all = "camelCase")]
 #[ts(export)]
 pub struct PurchaseCards {
-    /// ゲームの画面を読むか。画面を見る機能なので、本人が選んで入れる
-    pub enabled: bool,
     /// 買ったアイテムを出しておく秒数
     pub hold_seconds: f32,
     /// アイテムの名前の言語。None なら話す言語
@@ -293,7 +291,6 @@ pub struct PurchaseCards {
 impl Default for PurchaseCards {
     fn default() -> Self {
         Self {
-            enabled: false,
             hold_seconds: 6.0,
             language: None,
             anchor: Anchor::TopRight,
@@ -317,7 +314,6 @@ impl PurchaseCards {
 
     fn apply(&self, patch: PurchaseCardsPatch) -> Result<Self, String> {
         let next = Self {
-            enabled: patch.enabled.unwrap_or(self.enabled),
             hold_seconds: patch.hold_seconds.unwrap_or(self.hold_seconds),
             language: match patch.language {
                 Some(code) => Some(code).filter(|c| !c.is_empty()),
@@ -336,8 +332,6 @@ impl PurchaseCards {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct PurchaseCardsPatch {
-    #[ts(optional)]
-    pub enabled: Option<bool>,
     #[ts(optional)]
     pub hold_seconds: Option<f32>,
     /// 空文字列なら話す言語
@@ -3642,21 +3636,18 @@ mod tests {
     }
 
     #[test]
-    fn purchase_cards_start_off_and_follow_the_spoken_language() {
+    fn purchase_cards_follow_the_spoken_language() {
         let s = Settings::default();
-        assert!(!s.purchase_cards.enabled);
         assert_eq!(s.purchase_language(), "ja");
         let next = s
             .apply(SettingsPatch {
                 purchase_cards: Some(PurchaseCardsPatch {
-                    enabled: Some(true),
                     language: Some("en".into()),
                     ..Default::default()
                 }),
                 ..Default::default()
             })
             .unwrap();
-        assert!(next.purchase_cards.enabled);
         assert_eq!(next.purchase_language(), "en");
         // ほかの項目は変えない
         assert_eq!(next.purchase_cards.anchor, s.purchase_cards.anchor);

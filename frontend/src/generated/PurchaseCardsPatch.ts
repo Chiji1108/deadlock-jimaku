@@ -4,7 +4,7 @@ import type { Anchor } from "./Anchor";
 /**
  * 買ったアイテムの設定の変更。省いた項目は変えない
  */
-export type PurchaseCardsPatch = { enabled?: boolean, holdSeconds?: number, 
+export type PurchaseCardsPatch = { holdSeconds?: number, 
 /**
  * 空文字列なら話す言語
  */

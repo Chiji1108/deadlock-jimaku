@@ -5,6 +5,7 @@ import type { ChromeMic } from "./ChromeMic";
 import type { Downloading } from "./Downloading";
 import type { ItemCardsView } from "./ItemCardsView";
 import type { LiveStatus } from "./LiveStatus";
+import type { Overlay } from "./Overlay";
 import type { Periods } from "./Periods";
 import type { Purchase } from "./Purchase";
 import type { PurchaseCardsView } from "./PurchaseCardsView";
@@ -27,4 +28,4 @@ preparing: boolean,
 /**
  * 準備の間に取っている大きいファイルの進み具合（分かるときだけ）
  */
-downloading: Downloading | null, } | { "type": "display", subtitles: SubtitleDisplay, subtitleStyle: SubtitleStyle, rankLanguage: string, rankContent: RankContent, rankAnchor: Anchor, rankStyle: RankStyle, itemCards: ItemCardsView, purchaseCards: PurchaseCardsView, } | { "type": "audio.level", db: number, } | { "type": "usage", usage: Periods<{ [key in Use]?: Amount }>, } | { "type": "stats", stats: StatsView, } | { "type": "live.status", status: LiveStatus | null, } | { "type": "chrome.status", status: LiveStatus | null, } | { "type": "chrome.mic", mic: ChromeMic | null, } | { "type": "obs.status", subtitles: boolean, } | { "type": "settings.changed" } | { "type": "purchase", purchase: Purchase, } | { "type": "screen.status", status: ScreenStatus, };
+downloading: Downloading | null, } | { "type": "display", subtitles: SubtitleDisplay, subtitleStyle: SubtitleStyle, rankLanguage: string, rankContent: RankContent, rankAnchor: Anchor, rankStyle: RankStyle, itemCards: ItemCardsView, purchaseCards: PurchaseCardsView, } | { "type": "audio.level", db: number, } | { "type": "usage", usage: Periods<{ [key in Use]?: Amount }>, } | { "type": "stats", stats: StatsView, } | { "type": "live.status", status: LiveStatus | null, } | { "type": "chrome.status", status: LiveStatus | null, } | { "type": "chrome.mic", mic: ChromeMic | null, } | { "type": "obs.status", overlays: Array<Overlay>, } | { "type": "settings.changed" } | { "type": "purchase", purchase: Purchase, } | { "type": "screen.status", status: ScreenStatus, };
