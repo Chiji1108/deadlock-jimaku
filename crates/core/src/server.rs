@@ -34,6 +34,7 @@ struct Frontend;
 pub fn router(store: Arc<Store>) -> Router {
     let api = Router::new()
         .route("/demo", post(demo))
+        .route("/purchases/demo", post(purchase_demo))
         .route("/glossary", get(glossary))
         .route("/settings", get(get_settings).patch(patch_settings))
         .route("/keys/{provider}", put(put_key))
@@ -403,6 +404,16 @@ pub async fn serve(listener: TcpListener, store: Arc<Store>) -> std::io::Result<
 
 async fn demo(State(store): State<Arc<Store>>) -> StatusCode {
     crate::demo::spawn_once(store);
+    StatusCode::ACCEPTED
+}
+
+/// 操作パネルの「テスト表示を出す」。渡された買い物を、OBS の買ったアイテムの表示に 1 回出す
+/// （位置や大きさを、ゲームで買わずに確かめる。中身は操作パネルのプレビューと同じ見本）
+async fn purchase_demo(
+    State(store): State<Arc<Store>>,
+    Json(purchase): Json<crate::types::Purchase>,
+) -> StatusCode {
+    store.purchased(purchase);
     StatusCode::ACCEPTED
 }
 

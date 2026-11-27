@@ -5,6 +5,7 @@ import type { FontEntry } from "../generated/FontEntry";
 import type { Gpus } from "../generated/Gpus";
 import type { Mic } from "../generated/Mic";
 import type { Provider } from "../generated/Provider";
+import type { Purchase } from "../generated/Purchase";
 import type { RankState } from "../generated/RankState";
 import type { ServerModel } from "../generated/ServerModel";
 import type { SettingsPatch } from "../generated/SettingsPatch";
@@ -63,6 +64,13 @@ export const api = {
   /** Google Fonts のフォントを取得する。終わるまで返らない */
   downloadFont: (family: string) => post(`/api/fonts/${encodeURIComponent(family)}/download`),
   demo: () => fetch("/api/demo", { method: "POST" }),
+  /** OBS の買ったアイテムの表示に、この買い物を 1 回出す（テスト表示） */
+  showPurchase: (purchase: Purchase) =>
+    fetch("/api/purchases/demo", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(purchase),
+    }),
   /** 聞き取りのページを Chrome で開く */
   openChrome: () => post("/api/chrome/open"),
   /** Chrome の専用のデータを消して始め直す */

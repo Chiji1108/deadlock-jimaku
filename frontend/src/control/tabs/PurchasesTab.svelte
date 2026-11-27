@@ -3,6 +3,8 @@
   // ほかの OS でもタブは出し、使えない理由と見本を見せる（隠すと、機能があることも分からない）
   import Help from "../parts/Help.svelte";
   import MonitorIcon from "@lucide/svelte/icons/monitor";
+  import PlayIcon from "@lucide/svelte/icons/play";
+  import { Button } from "$lib/components/ui/button";
   import * as Alert from "$lib/components/ui/alert";
   import * as Card from "$lib/components/ui/card";
   import * as Field from "$lib/components/ui/field";
@@ -23,6 +25,8 @@
   const s = $derived(panel.settings!);
   const c = $derived(s.purchaseCards);
   const usable = $derived(panel.view!.readsScreen);
+  /** このオーバーレイが OBS につながっている */
+  const inObs = $derived(panel.obs.includes("purchases"));
   // アイテムの名前を取ってくる言語（話す言語・英語・翻訳先）から選ぶ
   const languages = $derived([...new Set([s.micLanguage, "en", ...s.translateTo])]);
   /** 選べる言語にないもの（翻訳先から外した）は、サーバーと同じく話す言語に合わせる */
@@ -43,6 +47,17 @@
         size={PURCHASES_SIZE}
         hint="大きさは、ソースを引き伸ばさずにプロパティの幅と高さを同じ割合で変えてください"
       />
+    {/if}
+    <!-- ゲームで買わなくても、OBS での位置や大きさを確かめられるようにする（字幕の「テスト字幕を流す」と同じ） -->
+    {#if usable}
+      <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <Button variant="outline" size="sm" disabled={!inObs} onclick={panel.demoPurchase}>
+          <PlayIcon />テスト表示を出す
+        </Button>
+        <p class="text-xs text-muted-foreground">
+          {inObs ? "OBS に、見本を 1 回出します" : "OBS に追加すると使えます"}
+        </p>
+      </div>
     {/if}
   {/snippet}
 
