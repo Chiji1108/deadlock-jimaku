@@ -1605,7 +1605,7 @@ Deadlock のウィンドウ ─取り込む→ 上の端と左下の画像 ─�
 ```ts
 type ServerMsg =
   | { type: "purchase"; purchase: { hero: string | null /* class_name。読めなければ null */; clockSeconds: number | null /* 買ったときの試合の時計。読めなければ null */; items: { item: string /* class_name */; rate: { share: number; boughtAtSeconds: number } | null /* そのヒーローでの集計。分からなければ null */ }[] } }
-  | { type: "screen.status"; status: { state: "off" } | { state: "preparing" /* 見本を取っている */ } | { state: "noWindow" } | { state: "reading"; width: number; height: number; heroes: (string | null)[] /* 上部バーの枠の順。読めない枠は null */; items: string[]; shop: boolean; own: string | null /* 自分のヒーロー */; clock: number | null /* 試合の時計の秒 */ } | { state: "failed"; detail: string } } // 操作パネル向け。いま読めているもの
+  | { type: "screen.status"; status: { state: "off" } | { state: "preparing" /* 見本を取っている */ } | { state: "noWindow" } | { state: "reading"; width: number; height: number; heroes: (string | null)[] /* 上部バーの枠の順。読めない枠は null */; items: string[]; shop: boolean; spectating: boolean; own: string | null /* 自分のヒーロー */; clock: number | null /* 試合の時計の秒 */ } | { state: "failed"; detail: string } } // 操作パネル向け。いま読めているもの
 ```
 
 ### 18.3 買ったと決める決まり（`screen/purchases.rs`）

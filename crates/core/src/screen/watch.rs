@@ -297,6 +297,7 @@ fn read(store: &Store, samples: &Samples, runtime: &tokio::runtime::Handle) {
                         .flatten()
                         .collect(),
                     shop: reads.items.shop,
+                    spectating: reads.heroes.spectating,
                     own: own.hero.clone(),
                     clock: reads.clock,
                 });
