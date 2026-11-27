@@ -18,8 +18,8 @@ use crate::settings::{
 use crate::stats::Tally;
 use crate::types::{
     ChromeCommand, ChromeMic, Decided, Downloading, Heard, ItemCardsView, LiveState, LiveStatus,
-    Purchase, PurchaseCardsView, RankState, Segment, ServerMsg, Stage, TranscriptionError,
-    Translated,
+    Purchase, PurchaseCardsView, RankState, ScreenStatus, Segment, ServerMsg, Stage,
+    TranscriptionError, Translated,
 };
 use crate::usage::Meter;
 
@@ -95,6 +95,7 @@ pub struct Store {
     obs_subtitles: AtomicU32,
     /// 買ったアイテムを見せる相手の数。0 の間は、ゲームの画面を読まない（DESIGN.md 18.1）
     screen_watchers: watch::Sender<u32>,
+    screen_status: Mutex<ScreenStatus>,
     meter: Arc<Meter>,
     tally: Arc<Tally>,
     fonts: Arc<Library>,
@@ -111,7 +112,7 @@ impl Drop for ObsSubtitles {
     }
 }
 
-/// 買ったアイテムを見せる相手（OBS の中のオーバーレイ）。切れたら（落としたら）数から外す
+/// 買ったアイテムを見せる相手（OBS の中のオーバーレイと、読み取りの状態を出している操作パネル）。切れたら（落としたら）数から外す
 pub struct ScreenWatcher(Arc<Store>);
 
 impl Drop for ScreenWatcher {
@@ -157,6 +158,7 @@ impl Store {
             chrome_cuts: AtomicU32::new(0),
             obs_subtitles: AtomicU32::new(0),
             screen_watchers: watch::Sender::new(0),
+            screen_status: Mutex::new(ScreenStatus::Off),
             meter,
             tally,
             fonts,
@@ -407,6 +409,9 @@ impl Store {
         msgs.push(ServerMsg::ObsStatus {
             subtitles: self.obs_subtitles.load(Ordering::Relaxed) > 0,
         });
+        msgs.push(ServerMsg::ScreenStatus {
+            status: self.screen_status.lock().unwrap().clone(),
+        });
         msgs.push(display(&self.settings()));
         msgs.push(ServerMsg::Usage {
             usage: self.meter.watch().borrow().clone(),
@@ -434,6 +439,15 @@ impl Store {
     /// 買ったアイテムを見せる相手の数。画面を読む処理が、始めるときと止めるときを知る
     pub fn screen_watchers(&self) -> watch::Receiver<u32> {
         self.screen_watchers.subscribe()
+    }
+
+    /// ゲームの画面の読み取りの状態。変わったときだけ知らせる
+    pub fn set_screen_status(&self, status: ScreenStatus) {
+        let mut current = self.screen_status.lock().unwrap();
+        if *current != status {
+            current.clone_from(&status);
+            let _ = self.tx.send(ServerMsg::ScreenStatus { status });
+        }
     }
 
     /// 買ったアイテムを、オーバーレイに知らせる

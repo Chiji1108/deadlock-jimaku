@@ -1600,12 +1600,12 @@ Deadlock のウィンドウ ─取り込む→ 上の端と左下の画像 ─�
 - **読む:** 15 章の照合（`crates/core/src/screen/`。評価の例も同じものを呼ぶ）を使う。読み出した画像が前の回と同じなら、照合を飛ばす（アイテム欄は、買ったとき以外ほとんど変わらない）。見本にするカード画像（`icon_hero_card`）とショップの画像（`shop_image`）は、読み始めるときに取って、手元に置く（`screen/samples.rs`。合わせて 13 MB あるので、辞書のアイコン（8 章）と一緒には取らない。この機能を使わない人と、Windows 以外の人に取らせない）。縮めるのに `image` クレートを使う
 - **比べる:** 読んだ持ち物の列から、買ったアイテムを出す。画面も通信も触らない、状態だけの部品にする（18.3）
 - **知らせる:** トピック `purchase` を足す。買ったことは出来事なので、つないだときに送る今の状態には入れない（つなぎ直したときに、前の買い物を出し直さない）。一度に買ったものは 1 通にまとめる（並べて出すので、オーバーレイが時刻で束ね直さなくてよい）
-- **見せる相手を数える:** OBS の中で開いたオーバーレイは、購読のときに `obs: true` を付ける（字幕と同じ）。`purchase` を購読している `obs` の接続がある間、`Store::screen_watchers` が 1 以上になり、画面を読む処理はこれを見て始めて止める
+- **見せる相手を数える:** OBS の中で開いたオーバーレイは、購読のときに `obs: true` を付ける（字幕と同じ）。`purchase` を購読している `obs` の接続がある間、`Store::screen_watchers` が 1 以上になり、画面を読む処理（`screen/watch.rs`）はこれを見て始めて止める。操作パネルが `screen` を購読している間（「読み取りの状態」を出している間）も数える
 
 ```ts
 type ServerMsg =
   | { type: "purchase"; purchase: { hero: string | null /* class_name。読めなければ null */; clockSeconds: number | null /* 買ったときの試合の時計。読めなければ null */; items: { item: string /* class_name */; rate: { share: number; boughtAtSeconds: number } | null /* そのヒーローでの集計。分からなければ null */ }[] } }
-  | { type: "screen.status"; status: "off" | "noWindow" | { heroes: (string | null)[]; self: string | null; items: string[]; unread: number } } // 操作パネル向け。いま読めているもの。heroes は上部バーの枠の順で、読めない枠は null。unread は、何かあるのに読めないアイテムの枠の数
+  | { type: "screen.status"; status: { state: "off" } | { state: "preparing" /* 見本を取っている */ } | { state: "noWindow" } | { state: "reading"; width: number; height: number; heroes: (string | null)[] /* 上部バーの枠の順。読めない枠は null */; items: string[]; shop: boolean } | { state: "failed"; detail: string } } // 操作パネル向け。いま読めているもの
 ```
 
 ### 18.3 買ったと決める決まり（`screen/purchases.rs`）
@@ -1663,7 +1663,7 @@ type ServerMsg =
 |---|---|---|
 | 1 ✅ | 照合を `screen/` に移す | 評価（`heroes_eval`、`items_eval`）が、移す前と同じ結果になる（正解 55 / 不明 5 / 間違い 0 と、正解 93 / 不明 3 / 間違い 0） |
 | 2 ✅ | 買ったと決める部品（18.3）と単体テスト | クールダウン、並び替え、起動の直後、試合の切り替わり、売却、ショップの中での買い直し、ショートカットでの購入の筋書きが通る。Mac で確かめられる |
-| 3 | 見本を取って手元に置く。取り込みと `screen.status`（Windows） | ヘッドレスで動かし、買うとログに出る。Windows の実機で確かめる |
+| 3 ✅（実機での確かめはまだ） | 見本を取って手元に置く。取り込みと `screen.status`（Windows） | ヘッドレスで動かし、買うとログに出る。Windows の実機で確かめる |
 | 4 ✅ | `purchase` の知らせ、オーバーレイ、タブ、設定（3 の取り込みより先に入れた。取り込みが入るまで、Windows でオンにしても何も読まない。タブの「読み取りの状態」は 3 と一緒に入れる） | プレビューに見本が出る。Mac では、タブに Windows だけの機能だと出て、設定は出ない |
 | 5 | 買われる割合 | 割合が出る。API が止まっていても、買ったアイテムは出る |
 | 6 | Windows の実機で、配信しながら通しで確かめる | rc を出せる |

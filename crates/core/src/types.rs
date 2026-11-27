@@ -116,6 +116,8 @@ pub enum Topic {
     Stats,
     /// 買ったアイテム。出来事なので、つないだときには何も届かない
     Purchase,
+    /// ゲームの画面の読み取りの状態（操作パネル用。購読している間は、ゲームの画面を読む）
+    Screen,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
@@ -192,6 +194,36 @@ pub enum ServerMsg {
     /// ゲームの画面から、アイテムを買ったと読めた
     #[serde(rename = "purchase")]
     Purchase { purchase: Purchase },
+    #[serde(rename = "screen.status")]
+    ScreenStatus { status: ScreenStatus },
+}
+
+/// ゲームの画面の読み取りの状態（DESIGN.md 18.5）
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, TS)]
+#[serde(tag = "state", rename_all = "camelCase")]
+#[ts(export)]
+pub enum ScreenStatus {
+    /// 読んでいない（オフか、見せる相手がいない）
+    #[default]
+    Off,
+    /// 見本の画像を取っている
+    Preparing,
+    /// Deadlock のウィンドウがない
+    NoWindow,
+    /// 読んでいる
+    Reading {
+        /// 取り込んでいる画面の大きさ
+        width: u32,
+        height: u32,
+        /// 上部バーの枠の順のヒーロー（`class_name`）。読めない枠は None
+        heroes: Vec<Option<String>>,
+        /// 読めたアイテム（`class_name`）。枠の順
+        items: Vec<String>,
+        /// ショップを開いている
+        shop: bool,
+    },
+    /// 見本を取れない、または取り込めない
+    Failed { detail: String },
 }
 
 /// 一度に買ったアイテム（DESIGN.md 18 章）
@@ -446,6 +478,7 @@ impl ServerMsg {
             Self::Usage { .. } => Topic::Usage,
             Self::Stats { .. } => Topic::Stats,
             Self::Purchase { .. } => Topic::Purchase,
+            Self::ScreenStatus { .. } => Topic::Screen,
         }
     }
 }
