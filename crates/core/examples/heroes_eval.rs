@@ -40,8 +40,15 @@ async fn main() -> anyhow::Result<()> {
         let scale = case.scale();
         let templates = heroes::templates(named(), scale);
         let started = Instant::now();
-        let reads = heroes::read(&case.frame(image), &templates, case.screen.0, scale);
-        results.push((case, reads, started.elapsed()));
+        let bar = heroes::read(&case.frame(image), &templates, case.screen.0, scale);
+        // 観戦しているかも、正解と比べる
+        if bar.spectating != case.spectating {
+            println!(
+                "{}: 観戦中を {} と読んだ（正解は {}）",
+                case.file, bar.spectating, case.spectating
+            );
+        }
+        results.push((case, bar.reads, started.elapsed()));
     }
     screen::report(
         out.as_deref().unwrap_or(Path::new(OUT)),

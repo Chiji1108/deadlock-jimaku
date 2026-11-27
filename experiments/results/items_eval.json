@@ -1,8 +1,8 @@
 {
-  "threshold": 0.800000011920929,
+  "threshold": 0.8299999833106995,
   "templates": 173,
-  "correct": 93,
-  "unknown": 3,
+  "correct": 92,
+  "unknown": 4,
   "wrong": 0,
   "cases": [
     {
@@ -545,11 +545,11 @@
         },
         {
           "expected": "Disarming Hex",
-          "answer": "Disarming Hex",
+          "answer": null,
           "best": "Disarming Hex",
           "score": 0.8276118636131287,
           "second": 0.34813737869262695,
-          "verdict": "correct"
+          "verdict": "unknown"
         },
         {
           "expected": "Fortitude",

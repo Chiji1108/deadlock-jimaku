@@ -7,10 +7,10 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::time::Duration;
 
-use super::{Read, heroes, items};
+use super::{heroes, items};
 
 /// 続けてこの回数だけ読めたら、持っていると決める（画面の切り替わりの途中を読んだ間違いを出さない）
-const CONFIRM: u32 = 2;
+const CONFIRM: u32 = 4;
 /// 読み始めてから（試合が変わってから）この回数は、読めた持ち物を基準にするだけで、買ったとは出さない
 const BASELINE: u32 = 3;
 /// これだけの間、上部バーもアイテム欄も読めなければ、試合が終わったことにする
@@ -45,8 +45,20 @@ pub struct Tracker {
 
 impl Tracker {
     /// 1 回読んだ結果を渡す。買ったと決めたアイテムを、枠の順に返す。`at` は読んだ時刻（どこから測ってもよい）
-    pub fn observe(&mut self, at: Duration, heroes: &[Read], items: &items::Slots) -> Vec<String> {
-        let heroes: Vec<Option<&str>> = heroes
+    pub fn observe(
+        &mut self,
+        at: Duration,
+        bar: &heroes::Bar,
+        items: &items::Slots,
+    ) -> Vec<String> {
+        if bar.spectating {
+            // 左下に出ているのは、観戦している相手の持ち物
+            self.readable_at = Some(at);
+            self.seen.clear();
+            return Vec::new();
+        }
+        let heroes: Vec<Option<&str>> = bar
+            .reads
             .iter()
             .map(|read| read.answer(heroes::THRESHOLD))
             .collect();
@@ -113,6 +125,11 @@ impl Tracker {
             return Vec::new();
         }
 
+        if heroes.iter().all(Option::is_none) && !items.shop {
+            // 上部バーが隠れている（観戦に入る途中など）。ショップの中は、閉じたあとに数える
+            self.seen.clear();
+            return Vec::new();
+        }
         self.seen.retain(|name, _| known.contains(&name.as_str()));
         for name in &known {
             if !self.owned.contains(*name) {
@@ -144,6 +161,7 @@ impl Tracker {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::screen::Read;
 
     fn read(name: &str, score: f32, second: f32) -> Read {
         Read {
@@ -163,10 +181,13 @@ mod tests {
         read(name, 0.7, 0.35)
     }
 
-    fn heroes(names: &[&str]) -> Vec<Read> {
+    fn heroes(names: &[&str]) -> heroes::Bar {
         let mut reads: Vec<Read> = names.iter().map(|name| read(name, 0.95, 0.4)).collect();
         reads.resize(12, read("Haze", 0.5, 0.45));
-        reads
+        heroes::Bar {
+            reads,
+            spectating: false,
+        }
     }
 
     fn slots(reads: Vec<Read>, shop: bool) -> items::Slots {
@@ -193,7 +214,7 @@ mod tests {
     struct Game {
         tracker: Tracker,
         ticks: u32,
-        team: Vec<Read>,
+        team: heroes::Bar,
     }
 
     impl Game {
@@ -249,10 +270,10 @@ mod tests {
     }
 
     #[test]
-    fn a_new_item_is_bought_once_it_is_read_twice_in_a_row() {
+    fn a_new_item_is_bought_once_it_is_read_several_times_in_a_row() {
         let mut game = Game::started_with(&["Headhunter"]);
         let after = held(&["Extra Regen", "Headhunter"]);
-        assert!(game.see(&after).is_empty());
+        assert!(game.watch(&after, CONFIRM - 1).is_empty());
         assert_eq!(game.see(&after), ["Extra Regen"]);
         assert!(game.watch(&after, 5).is_empty());
     }
@@ -261,7 +282,10 @@ mod tests {
     fn the_first_item_of_a_match_is_a_purchase() {
         let mut game = Game::new();
         assert!(game.watch(&held(&[]), 9).is_empty());
-        assert_eq!(game.watch(&held(&["Extra Regen"]), 3), ["Extra Regen"]);
+        assert_eq!(
+            game.watch(&held(&["Extra Regen"]), CONFIRM),
+            ["Extra Regen"]
+        );
     }
 
     #[test]
@@ -303,15 +327,15 @@ mod tests {
             game.watch(&in_shop(&["Headhunter", "Berserker"]), 4)
                 .is_empty()
         );
-        assert!(game.watch(&in_shop(&["Headhunter"]), 2).is_empty());
+        assert!(game.watch(&in_shop(&["Headhunter"]), CONFIRM).is_empty());
         assert!(
             game.watch(&in_shop(&["Headhunter", "Fortitude"]), 4)
                 .is_empty()
         );
         // 説明のカードに欄が隠れる
-        assert!(game.watch(&slots(Vec::new(), true), 2).is_empty());
+        assert!(game.watch(&slots(Vec::new(), true), CONFIRM).is_empty());
         assert_eq!(
-            game.watch(&held(&["Fortitude", "Headhunter"]), 3),
+            game.watch(&held(&["Fortitude", "Headhunter"]), CONFIRM),
             ["Fortitude"]
         );
     }
@@ -322,7 +346,7 @@ mod tests {
         let bought = ["Extra Regen", "Headhunter", "Berserker", "Fortitude"];
         assert!(game.watch(&in_shop(&bought), 6).is_empty());
         let after = held(&bought);
-        assert!(game.see(&after).is_empty());
+        assert!(game.watch(&after, CONFIRM - 1).is_empty());
         assert_eq!(game.see(&after), bought);
     }
 
@@ -336,7 +360,7 @@ mod tests {
         assert_eq!(
             game.watch(
                 &held(&["Fortitude", "Extra Regen", "Headhunter", "Berserker"]),
-                2
+                CONFIRM
             ),
             ["Fortitude"]
         );
@@ -354,14 +378,35 @@ mod tests {
         let mut game = Game::started_with(&["Headhunter"]);
         game.nothing(40);
         assert!(game.watch(&held(&[]), 5).is_empty());
-        assert_eq!(game.watch(&held(&["Headhunter"]), 2), ["Headhunter"]);
+        assert_eq!(game.watch(&held(&["Headhunter"]), CONFIRM), ["Headhunter"]);
+    }
+
+    #[test]
+    fn items_of_a_spectated_player_are_not_purchases() {
+        let mut game = Game::started_with(&["Headhunter"]);
+        let mine = heroes(&["McGinnis", "Kelvin", "The Doorman"]);
+        // 死んだ。バーが下がる途中は、上部バーが読めないのに、左下はもう相手の持ち物
+        game.team = heroes(&[]);
+        assert!(game.watch(&held(&["Berserker"]), 6).is_empty());
+        game.team = heroes::Bar {
+            spectating: true,
+            ..heroes(&["McGinnis", "Kelvin", "The Doorman"])
+        };
+        assert!(game.watch(&held(&["Berserker"]), 90).is_empty());
+        // リスポーンした。相手の持ち物は覚えていないので、あとで自分が買えば出る
+        game.team = mine;
+        assert!(game.watch(&held(&["Headhunter"]), 6).is_empty());
+        assert_eq!(
+            game.watch(&held(&["Headhunter", "Berserker"]), CONFIRM),
+            ["Berserker"]
+        );
     }
 
     #[test]
     fn the_same_item_in_two_slots_of_one_reading_counts_once() {
         let mut game = Game::started_with(&["Headhunter"]);
         let twice = held(&["Berserker", "Headhunter", "Berserker"]);
-        assert!(game.see(&twice).is_empty());
+        assert!(game.watch(&twice, CONFIRM - 1).is_empty());
         assert_eq!(game.see(&twice), ["Berserker"]);
     }
 
@@ -371,7 +416,7 @@ mod tests {
         // 1 枠だけ変わって読めても、読み間違いかもしれない
         game.team = heroes(&["Rem", "Kelvin", "The Doorman"]);
         assert_eq!(
-            game.watch(&held(&["Headhunter", "Berserker"]), 2),
+            game.watch(&held(&["Headhunter", "Berserker"]), CONFIRM),
             ["Berserker"]
         );
         // 読み間違いだったなら、数えない
@@ -379,19 +424,19 @@ mod tests {
         game.see(&held(&["Headhunter", "Berserker"]));
         game.team = heroes(&["McGinnis", "Yamato", "The Doorman"]);
         assert!(
-            game.watch(&held(&["Headhunter", "Berserker"]), 2)
+            game.watch(&held(&["Headhunter", "Berserker"]), CONFIRM)
                 .is_empty()
         );
 
         // 別の画面で 1 枠ずつ変わって読めたら、次の試合
         let mut game = Game::started_with(&["Headhunter"]);
         let mut first = heroes(&["Rem"]);
-        first[1] = read("Haze", 0.5, 0.45);
+        first.reads[1] = read("Haze", 0.5, 0.45);
         game.team = first;
         game.see(&held(&[]));
         game.team = heroes(&["Rem", "Yamato", "The Doorman"]);
         assert!(game.watch(&held(&[]), 5).is_empty());
-        assert_eq!(game.watch(&held(&["Headhunter"]), 2), ["Headhunter"]);
+        assert_eq!(game.watch(&held(&["Headhunter"]), CONFIRM), ["Headhunter"]);
     }
 
     #[test]
@@ -399,6 +444,6 @@ mod tests {
         let mut game = Game::started_with(&["Headhunter"]);
         game.team = heroes(&["Rem", "Yamato", "The Doorman"]);
         assert!(game.watch(&held(&[]), 5).is_empty());
-        assert_eq!(game.watch(&held(&["Headhunter"]), 2), ["Headhunter"]);
+        assert_eq!(game.watch(&held(&["Headhunter"]), CONFIRM), ["Headhunter"]);
     }
 }

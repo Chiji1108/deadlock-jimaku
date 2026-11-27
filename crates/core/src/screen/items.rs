@@ -7,7 +7,7 @@ use super::{Frame, Read, Template};
 
 /// これより近くなければ「不明」にする（空の枠、鍵の掛かった枠、クールダウンで暗い枠）。
 /// 空の枠は 0.73 まで上がり、暗くない枠は 0.83 まで下がる（Disarming Hex）ので、その間に置く
-pub const THRESHOLD: f32 = 0.8;
+pub const THRESHOLD: f32 = 0.83;
 /// 枠の大きさ（1080p）
 const SLOT: f32 = 54.0;
 /// 隣の枠までの幅（横も縦も）

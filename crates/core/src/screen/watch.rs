@@ -61,7 +61,7 @@ type Images = [image::RgbImage; 2];
 
 /// 画像から読んだもの
 struct Reads {
-    heroes: Vec<Read>,
+    heroes: heroes::Bar,
     items: items::Slots,
 }
 
@@ -165,7 +165,7 @@ fn read(store: &Store, samples: &Samples) {
                 store.set_screen_status(ScreenStatus::Reading {
                     width,
                     height,
-                    heroes: answers(&reads.heroes, heroes::THRESHOLD).collect(),
+                    heroes: answers(&reads.heroes.reads, heroes::THRESHOLD).collect(),
                     items: answers(&reads.items.reads, items::THRESHOLD)
                         .flatten()
                         .collect(),
