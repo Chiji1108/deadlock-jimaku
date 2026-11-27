@@ -3,6 +3,7 @@
 /** 選んだ言語のラベル。用意のない言語は英語で出す */
 const LABELS = {
   ja: {
+    purchased: "購入",
     share: "購入率",
     boughtAt: "平均の購入",
     rare: "珍しい",
@@ -11,6 +12,7 @@ const LABELS = {
     late: "遅い",
   },
   en: {
+    purchased: "Purchased",
     share: "Pick rate",
     boughtAt: "Avg. buy time",
     rare: "Rare",
