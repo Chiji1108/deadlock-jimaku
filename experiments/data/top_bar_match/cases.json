@@ -1,0 +1,477 @@
+[
+    {
+        "file":  "t8m48.png",
+        "note":  "4 枠目は死亡中、5 枠目は瀕死",
+        "screen":  [
+                       1920,
+                       1080
+                   ],
+        "clock":  "8:48",
+        "own":  0,
+        "own_state":  "normal",
+        "names":  [
+                      "The Doorman",
+                      "Bebop",
+                      "Dynamo",
+                      "Viscous",
+                      "Rem",
+                      "Nurse Harrow",
+                      "Silver",
+                      "Kelvin",
+                      "Wraith",
+                      "Ivy",
+                      "Rat King",
+                      "Violet"
+                  ]
+    },
+    {
+        "file":  "t9m23.png",
+        "note":  "",
+        "screen":  [
+                       1920,
+                       1080
+                   ],
+        "clock":  "9:23",
+        "own":  0,
+        "own_state":  "normal",
+        "names":  [
+                      "The Doorman",
+                      "Bebop",
+                      "Dynamo",
+                      "Viscous",
+                      "Rem",
+                      "Nurse Harrow",
+                      "Silver",
+                      "Kelvin",
+                      "Wraith",
+                      "Ivy",
+                      "Rat King",
+                      "Violet"
+                  ]
+    },
+    {
+        "file":  "t9m58.png",
+        "note":  "",
+        "screen":  [
+                       1920,
+                       1080
+                   ],
+        "clock":  "9:58",
+        "own":  0,
+        "own_state":  "normal",
+        "names":  [
+                      "The Doorman",
+                      "Bebop",
+                      "Dynamo",
+                      "Viscous",
+                      "Rem",
+                      "Nurse Harrow",
+                      "Silver",
+                      "Kelvin",
+                      "Wraith",
+                      "Ivy",
+                      "Rat King",
+                      "Violet"
+                  ]
+    },
+    {
+        "file":  "t10m03.png",
+        "note":  "分が 2 桁になった直後",
+        "screen":  [
+                       1920,
+                       1080
+                   ],
+        "clock":  "10:03",
+        "own":  0,
+        "own_state":  "normal",
+        "names":  [
+                      "The Doorman",
+                      "Bebop",
+                      "Dynamo",
+                      "Viscous",
+                      "Rem",
+                      "Nurse Harrow",
+                      "Silver",
+                      "Kelvin",
+                      "Wraith",
+                      "Ivy",
+                      "Rat King",
+                      "Violet"
+                  ]
+    },
+    {
+        "file":  "t10m38.png",
+        "note":  "右の 4 枠目は瀕死",
+        "screen":  [
+                       1920,
+                       1080
+                   ],
+        "clock":  "10:38",
+        "own":  0,
+        "own_state":  "normal",
+        "names":  [
+                      "The Doorman",
+                      "Bebop",
+                      "Dynamo",
+                      "Viscous",
+                      "Rem",
+                      "Nurse Harrow",
+                      "Silver",
+                      "Kelvin",
+                      "Wraith",
+                      "Ivy",
+                      "Rat King",
+                      "Violet"
+                  ]
+    },
+    {
+        "file":  "t12m33.png",
+        "note":  "2 枠目は調子がいいときの絵（水色の光）。4、6、8、12 枠目は死亡中",
+        "screen":  [
+                       1920,
+                       1080
+                   ],
+        "clock":  "12:33",
+        "own":  0,
+        "own_state":  "normal",
+        "names":  [
+                      "The Doorman",
+                      "Bebop",
+                      "Dynamo",
+                      "Viscous",
+                      "Rem",
+                      "Nurse Harrow",
+                      "Silver",
+                      "Kelvin",
+                      "Wraith",
+                      "Ivy",
+                      "Rat King",
+                      "Violet"
+                  ]
+    },
+    {
+        "file":  "t15m08.png",
+        "note":  "自分（1 枠目）と 2 枠目が、調子がいいときの絵。自分の背景は四角ではなく、水色の炎の形。4 枠目は瀕死",
+        "screen":  [
+                       1920,
+                       1080
+                   ],
+        "clock":  "15:08",
+        "own":  0,
+        "own_state":  "gloat",
+        "names":  [
+                      "The Doorman",
+                      "Bebop",
+                      "Dynamo",
+                      "Viscous",
+                      "Rem",
+                      "Nurse Harrow",
+                      "Silver",
+                      "Kelvin",
+                      "Wraith",
+                      "Ivy",
+                      "Rat King",
+                      "Violet"
+                  ]
+    },
+    {
+        "file":  "shop_420.png",
+        "note":  "ショップを開いている。上部バーはショップに隠れ、時計も見えない（3 枠目だけ上に出ている）",
+        "screen":  [
+                       1920,
+                       1080
+                   ],
+        "clock":  null,
+        "own":  0,
+        "own_state":  "hidden",
+        "names":  [
+                      "The Doorman",
+                      "Bebop",
+                      "Dynamo",
+                      "Viscous",
+                      "Rem",
+                      "Nurse Harrow",
+                      "Silver",
+                      "Kelvin",
+                      "Wraith",
+                      "Ivy",
+                      "Rat King",
+                      "Violet"
+                  ]
+    },
+    {
+        "file":  "t16m23.png",
+        "note":  "自分は調子がいいときの絵で、背景は水色の四角",
+        "screen":  [
+                       1920,
+                       1080
+                   ],
+        "clock":  "16:23",
+        "own":  0,
+        "own_state":  "gloat",
+        "names":  [
+                      "The Doorman",
+                      "Bebop",
+                      "Dynamo",
+                      "Viscous",
+                      "Rem",
+                      "Nurse Harrow",
+                      "Silver",
+                      "Kelvin",
+                      "Wraith",
+                      "Ivy",
+                      "Rat King",
+                      "Violet"
+                  ]
+    },
+    {
+        "file":  "t17m28.png",
+        "note":  "自分は瀕死のときの絵で、背景は水色。4 枠目も瀕死、5 枠目は死亡中",
+        "screen":  [
+                       1920,
+                       1080
+                   ],
+        "clock":  "17:28",
+        "own":  0,
+        "own_state":  "critical",
+        "names":  [
+                      "The Doorman",
+                      "Bebop",
+                      "Dynamo",
+                      "Viscous",
+                      "Rem",
+                      "Nurse Harrow",
+                      "Silver",
+                      "Kelvin",
+                      "Wraith",
+                      "Ivy",
+                      "Rat King",
+                      "Violet"
+                  ]
+    },
+    {
+        "file":  "t18m53.png",
+        "note":  "自分の背景は水色の炎の形。2、6 枠目は死亡中",
+        "screen":  [
+                       1920,
+                       1080
+                   ],
+        "clock":  "18:53",
+        "own":  0,
+        "own_state":  "gloat",
+        "names":  [
+                      "The Doorman",
+                      "Bebop",
+                      "Dynamo",
+                      "Viscous",
+                      "Rem",
+                      "Nurse Harrow",
+                      "Silver",
+                      "Kelvin",
+                      "Wraith",
+                      "Ivy",
+                      "Rat King",
+                      "Violet"
+                  ]
+    },
+    {
+        "file":  "t19m48.png",
+        "note":  "自分の背景は水色の炎の形。右の 1 枠目は瀕死",
+        "screen":  [
+                       1920,
+                       1080
+                   ],
+        "clock":  "19:48",
+        "own":  0,
+        "own_state":  "gloat",
+        "names":  [
+                      "The Doorman",
+                      "Bebop",
+                      "Dynamo",
+                      "Viscous",
+                      "Rem",
+                      "Nurse Harrow",
+                      "Silver",
+                      "Kelvin",
+                      "Wraith",
+                      "Ivy",
+                      "Rat King",
+                      "Violet"
+                  ]
+    },
+    {
+        "file":  "t22m03.png",
+        "note":  "自分は水色の四角。3 枠目も調子がいいときの絵",
+        "screen":  [
+                       1920,
+                       1080
+                   ],
+        "clock":  "22:03",
+        "own":  0,
+        "own_state":  "gloat",
+        "names":  [
+                      "The Doorman",
+                      "Bebop",
+                      "Dynamo",
+                      "Viscous",
+                      "Rem",
+                      "Nurse Harrow",
+                      "Silver",
+                      "Kelvin",
+                      "Wraith",
+                      "Ivy",
+                      "Rat King",
+                      "Violet"
+                  ]
+    },
+    {
+        "file":  "t23m58.png",
+        "note":  "3、6 枠目は死亡中",
+        "screen":  [
+                       1920,
+                       1080
+                   ],
+        "clock":  "23:58",
+        "own":  0,
+        "own_state":  "normal",
+        "names":  [
+                      "The Doorman",
+                      "Bebop",
+                      "Dynamo",
+                      "Viscous",
+                      "Rem",
+                      "Nurse Harrow",
+                      "Silver",
+                      "Kelvin",
+                      "Wraith",
+                      "Ivy",
+                      "Rat King",
+                      "Violet"
+                  ]
+    },
+    {
+        "file":  "t25m48.png",
+        "note":  "右の 2 枠目は死亡中",
+        "screen":  [
+                       1920,
+                       1080
+                   ],
+        "clock":  "25:48",
+        "own":  0,
+        "own_state":  "normal",
+        "names":  [
+                      "The Doorman",
+                      "Bebop",
+                      "Dynamo",
+                      "Viscous",
+                      "Rem",
+                      "Nurse Harrow",
+                      "Silver",
+                      "Kelvin",
+                      "Wraith",
+                      "Ivy",
+                      "Rat King",
+                      "Violet"
+                  ]
+    },
+    {
+        "file":  "shop_1035.png",
+        "note":  "ショップを開いている。3〜6 枠目はショップの上に出ている",
+        "screen":  [
+                       1920,
+                       1080
+                   ],
+        "clock":  null,
+        "own":  0,
+        "own_state":  "hidden",
+        "names":  [
+                      "The Doorman",
+                      "Bebop",
+                      "Dynamo",
+                      "Viscous",
+                      "Rem",
+                      "Nurse Harrow",
+                      "Silver",
+                      "Kelvin",
+                      "Wraith",
+                      "Ivy",
+                      "Rat King",
+                      "Violet"
+                  ]
+    },
+    {
+        "file":  "t26m23.png",
+        "note":  "自分の背景は水色の炎の形",
+        "screen":  [
+                       1920,
+                       1080
+                   ],
+        "clock":  "26:23",
+        "own":  0,
+        "own_state":  "gloat",
+        "names":  [
+                      "The Doorman",
+                      "Bebop",
+                      "Dynamo",
+                      "Viscous",
+                      "Rem",
+                      "Nurse Harrow",
+                      "Silver",
+                      "Kelvin",
+                      "Wraith",
+                      "Ivy",
+                      "Rat King",
+                      "Violet"
+                  ]
+    },
+    {
+        "file":  "t29m38.png",
+        "note":  "自分は水色の四角。右は 4 人が死亡中",
+        "screen":  [
+                       1920,
+                       1080
+                   ],
+        "clock":  "29:38",
+        "own":  0,
+        "own_state":  "gloat",
+        "names":  [
+                      "The Doorman",
+                      "Bebop",
+                      "Dynamo",
+                      "Viscous",
+                      "Rem",
+                      "Nurse Harrow",
+                      "Silver",
+                      "Kelvin",
+                      "Wraith",
+                      "Ivy",
+                      "Rat King",
+                      "Violet"
+                  ]
+    },
+    {
+        "file":  "t31m08.png",
+        "note":  "",
+        "screen":  [
+                       1920,
+                       1080
+                   ],
+        "clock":  "31:08",
+        "own":  0,
+        "own_state":  "gloat",
+        "names":  [
+                      "The Doorman",
+                      "Bebop",
+                      "Dynamo",
+                      "Viscous",
+                      "Rem",
+                      "Nurse Harrow",
+                      "Silver",
+                      "Kelvin",
+                      "Wraith",
+                      "Ivy",
+                      "Rat King",
+                      "Violet"
+                  ]
+    }
+]
