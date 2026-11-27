@@ -7,7 +7,7 @@
   import type { RankStyle } from "../../generated/RankStyle";
   import { placeItems } from "../../lib/anchor";
   import { applyFontImports, fontImports } from "../../lib/overlay-fonts";
-  import { fitSource, rankSize } from "../../lib/overlay-size";
+  import { fitSource, rankBasis } from "../../lib/overlay-size";
   import RankBadge from "../../lib/RankBadge.svelte";
   import { api } from "../../lib/api";
   import { connect, inObs } from "../../lib/ws";
@@ -62,7 +62,7 @@
   // 大きさは --scale で描く（zoom だとポイントの数字のアニメーションの位置がずれる）
   $effect(() =>
     content
-      ? fitSource(rankSize(content), (factor) =>
+      ? fitSource(rankBasis(content), (factor) =>
           document.documentElement.style.setProperty("--scale", String(factor)),
         )
       : undefined,
