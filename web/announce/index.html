@@ -6,12 +6,6 @@
     <meta charset="UTF-8" />
     <title>告知の画像</title>
     <style>
-      /* LP の大きい見出しと同じフォント。LP の見出しに出る字だけが入っているので、入っていない字は端末のフォントで出る */
-      @font-face {
-        font-family: "Display";
-        src: url("../src/assets/fonts/noto-sans-jp-900.woff2") format("woff2");
-        font-weight: 900;
-      }
       html,
       body {
         margin: 0;
@@ -120,6 +114,9 @@
     <div class="plates"></div>
     <script>
       const params = new URLSearchParams(location.search);
+      // LP の大きい見出しと同じフォント（Noto Sans JP の 900）。LP に置いてあるものは見出しに出る字だけなので、
+      // 道具が取ってきた全部の字のフォントを使う
+      document.fonts.add(new FontFace("Display", `url("${params.get("font")}")`, { weight: "100 900" }));
       document.querySelector(".version").textContent = params.get("version");
       // 見出しは、`[ ]` で囲んだところに帯を引き、`|` で改行する
       const title = document.querySelector("h1");
