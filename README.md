@@ -67,7 +67,7 @@ macOS 版は Apple の署名と公証を済ませています。Windows 版は�
 | モード | 料金 | ひとこと |
 |---|---|---|
 | **最高精度** | OpenAI の API キー | 用語の判定と文字起こしがいちばん正確 |
-| **クラウド** | ベータ期間中は無料 | Chrome を開かず、音声を Google に送らない。使用メモリ最小 |
+| **クラウド** | Qwen の API キー | Chrome を開かず、音声を Google に送らない。使用メモリ最小 |
 | **ローカル** | 無料 | PC の中の AI だけで作り、外に送らない。VRAM 12 GB 以上推奨 |
 
 </details>
@@ -95,19 +95,19 @@ macOS 版は Apple の署名と公証を済ませています。Windows 版は�
 | 用語 | サーバーが決める | 辞書の一致 | Gemini Nano | GPT-6.1 Terra | サーバーが決める | Gemma 4 E4B |
 | 翻訳 | サーバーが決める | Chrome Translator | Chrome Translator | GPT-6.1 Terra | サーバーが決める | Gemma 4 E4B |
 | ふりがな | 辞書 + サーバーが決める | 辞書 | 辞書 | 辞書 + GPT-6.1 Terra | 辞書 + サーバーが決める | 辞書 |
-| 要るもの | なし（ベータ期間中） | なし | なし | OpenAI の API キー | なし（ベータ期間中） | なし |
-| 声と文字の送り先 | Google、開発者のサーバー | Google | Google | Google、OpenAI | 開発者のサーバー | PC から出ない |
+| 要るもの | なし（ベータ期間中） | なし | なし | OpenAI の API キー | Qwen の API キー（途中の字幕） | なし |
+| 声と文字の送り先 | Google、開発者のサーバー | Google | Google | Google、OpenAI | Qwen、開発者のサーバー | PC から出ない |
 
 - 「サーバーが決める」は、開発者のサーバーが、そのときのおすすめのモデルに頼む工程です。モデルはアプリを更新しなくても替わるので、ここには書きません。今のモデルは、[測定の結果のページ](https://jimaku.deadlock.jp/models)に印が付いています。
 - 途中の字幕が Chrome のときは、話している途中から訳も出ます（Chrome Translator）。途中の字幕には、辞書の読みと、辞書の一致で見つけた用語が付きます。
 - 翻訳先がない、翻訳だけを見せる、ふりがなやデッドロックモードを切る、話す言語が日本語でない（読みの辞書と用語の一致は日本語だけ）ときは、その工程を動かしません。設定と `engines` から、実際に何を動かすかを `Settings::plan` が決めます。
 - 作れない組み合わせは `Engines::sanitized` が直します。確定の文字起こしが Chrome なら途中の字幕も Chrome（発話の区切りを Chrome が決める）、Chrome の翻訳は途中の字幕が Chrome のときだけです。翻訳を GPT にしたときは、用語も同じ問い合わせで判定します（訳文の名前を用語から作るので）。
 
-**工程ごとに選べるもの。** 表のほかにも選べます。「おすすめ」と「クラウド」のモードのほかは、その会社の自分の API キーが要ります（PC の中で動くものは要りません）。
+**工程ごとに選べるもの。** 表のほかにも選べます。会社のモデルを名指しで選んだ工程には、その会社の自分の API キーが要ります（「デドロ字幕のサーバー」に頼む工程と、PC の中で動くものは要りません）。
 
 - **途中の字幕と確定の文字起こし**（`stt/`、`local.rs`、`whisper.rs`、`reazon.rs`）: Chrome、OpenAI（GPT-Live-Transcribe、GPT-Transcribe）、xAI の Grok Voice Transcribe、Qwen-Audio-3.1-ASR-Flash（DESIGN.md 3.4）、OpenRouter の MAI-Transcribe 2、PC の中の Haas-ja（speech.cpp）と Whisper（whisper.cpp。ヒーローの名前を教える）。確定だけなら、PC の中の ReazonSpeech k2（補助プログラム `crates/sherpa`。辞書の用語をホットワードで教える。DESIGN.md 9.14）も選べます。
 - **用語**（`terms.rs`、`decide.rs`）: 辞書の一致か、PC の中で出した候補を判定モデルに確かめさせます。判定モデルは、Chrome の中の Gemini Nano、PC の中の Gemma 4 E4B、OpenAI の Decisions API、TypeSafe AI の Jev、OpenRouter の Drex Max・Microsoft Decision 1・Perplexity Decider（DESIGN.md 9.7）。
-- **翻訳**（`mt.rs`、`enrich.rs`）: 用語を英語名に置き換えた文を、Chrome Translator、PC の中の Gemma 4 E4B、翻訳専門のモデル（Qwen-MT-Flash、OpenRouter の Hy-MT2）に渡します。「おすすめ」では、文と翻訳先だけをデドロ字幕のサーバーに送り、モデルはサーバーが決めます（`server/src/tasks.ts`）。GPT-6.1 Terra は、用語と翻訳を 1 回の問い合わせで作ります。
+- **翻訳**（`mt.rs`、`enrich.rs`）: 用語を英語名に置き換えた文を、Chrome Translator、PC の中の Gemma 4 E4B、翻訳専門のモデル（Qwen-MT-Flash、OpenRouter の Hy-MT2）、汎用のモデル（Qwen3.8 Flash、GPT-6 Luna、OpenRouter の Gemma 4 26B）に渡します。「おすすめ」では、文と翻訳先だけをデドロ字幕のサーバーに送り、モデルはサーバーが決めます（`server/src/tasks.ts`）。GPT-6.1 Terra は、用語と翻訳を 1 回の問い合わせで作ります。
 - **ふりがな**（`reading.rs`、`furigana.rs`）: 辞書の読み（vibrato と話し言葉の UniDic）をそのまま使うか、判定モデルか GPT に直させます。
 
 確定の文には、どの組み合わせでも `finish.rs` が工程ごとに用語・ふりがな・翻訳を付け、1 つの字幕にまとめます。その前に、日本語の文は `tidy.rs` が数字と句読点を整えます（DESIGN.md 9.15）。数のすぐ後ろに数える言葉があれば算用数字にし（「三十五秒」→「35秒」）、句読点を書かない文字起こし（Chrome、ReazonSpeech k2）の文には、話の間の空白から「、」と「。」を付けます。ふりがなと同じ形態素解析の辞書を使い、モデルは使いません。
@@ -156,13 +156,13 @@ flowchart LR
 - 買ったアイテムの表示は、Windows でだけ、Deadlock のウィンドウの上の端と左下を 1 秒に 3 回ほど読みます（`crates/core/src/screen/`。DESIGN.md 18 章）。枠の絵を deadlock-api の画像と比べて持ち物を当て、増えたものを「買った」として流します。画像は PC の中だけで見て、保存も送信もしません。読むのは、このオーバーレイが OBS につながっている間だけです。
 - 途中の字幕が Chrome の組み合わせでは、アプリが専用のプロファイルの Chrome を起動します。音声認識と翻訳は Chrome が行い、ふりがなと辞書の一致は中核の中で行います。
 - ローカルの AI（Haas-ja、Whisper、Gemma 4 E4B）は、選んだときに初めてダウンロードし、別のプロセスで立てて、OpenAI と同じ形の口で頼みます。字幕を止めると終わります。
-- OpenAI と xAI、TypeSafe AI には、自分の API キーで直接送ります。Qwen と OpenRouter は、ベータのコードがあれば Worker を通し（開発者のキー。「おすすめ」と「クラウド」のモード）、なければ自分の API キーで直接送ります。Worker は会社ごとに同じパスで中継するので、アプリは送り先を替えるだけです（`server/src/beta.ts`。DESIGN.md 17.2）。
+- OpenAI・xAI・Qwen・OpenRouter・TypeSafe AI には、工程でその会社のモデルを選んだときに、自分の API キーで直接送ります。「サーバーが決める」工程は、ベータのコードで Worker の仕事の口（`/v2/transcribe`・`/v2/decide`・`/v2/read`・`/v2/translate`）に頼み、Worker が開発者のキーで、そのときのモデルに送ります（`server/src/tasks.ts`。DESIGN.md 17.4）。
 
 ### 声と文字の流れ
 
 代表の 3 つのモードの、処理の順です。黄色は PC の外です。字幕は `/ws` でオーバーレイと操作パネルに届きます。
 
-**おすすめ。** 途中の字幕は Chrome で作ります。発話が終わると、アプリのマイクの声を開発者のサーバーに送り、確定の文に用語・翻訳・ふりがなを付けます。Chrome にも同じマイクを渡します（渡せない環境では Chrome の既定のマイクを使い、操作パネルに出します）。「最高精度」も同じ形で、送り先が OpenAI（自分の API キー）になります。「クラウド」は、途中の字幕も開発者のサーバーを通して作り、Chrome を開きません。
+**おすすめ。** 途中の字幕は Chrome で作ります。発話が終わると、アプリのマイクの声を開発者のサーバーに送り、確定の文に用語・翻訳・ふりがなを付けます。Chrome にも同じマイクを渡します（渡せない環境では Chrome の既定のマイクを使い、操作パネルに出します）。「最高精度」も同じ形で、送り先が OpenAI（自分の API キー）になります。「クラウド」は、途中の字幕を Qwen（自分の API キー）で作り、Chrome を開きません。
 
 ```mermaid
 flowchart LR
@@ -172,8 +172,8 @@ flowchart LR
   google -- "途中の文" --> tab
   tab <-- "/api/chrome/ws" --> core
   core -- "区切った音声" --> worker["開発者のサーバー"]
-  worker --> stt["Qwen<br/>確定の文字起こし"]
-  stt --> words["OpenRouter<br/>用語、翻訳、ふりがな"]
+  worker --> stt["確定の文字起こし<br/>（モデルはサーバーが決める）"]
+  stt --> words["用語、翻訳、ふりがな<br/>（モデルはサーバーが決める）"]
   core --> ws["/ws"]
   words --> ws
   classDef cloud fill:#ffcf33,stroke:#12110e,color:#12110e
