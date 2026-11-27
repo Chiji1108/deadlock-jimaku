@@ -7,6 +7,7 @@
   import KeyRoundIcon from "@lucide/svelte/icons/key-round";
   import MicIcon from "@lucide/svelte/icons/mic";
   import PackageIcon from "@lucide/svelte/icons/package";
+  import ShoppingCartIcon from "@lucide/svelte/icons/shopping-cart";
   import SquareIcon from "@lucide/svelte/icons/square";
   import TrophyIcon from "@lucide/svelte/icons/trophy";
   import UserRoundIcon from "@lucide/svelte/icons/user-round";
@@ -29,6 +30,7 @@
   import DisplayTab from "./tabs/DisplayTab.svelte";
   import EnginesTab from "./tabs/EnginesTab.svelte";
   import PeopleTab from "./tabs/PeopleTab.svelte";
+  import PurchasesTab from "./tabs/PurchasesTab.svelte";
   import ItemsTab from "./tabs/ItemsTab.svelte";
   import KeysTab from "./tabs/KeysTab.svelte";
   import RankTab from "./tabs/RankTab.svelte";
@@ -62,6 +64,13 @@
     },
     { value: "items", label: "アイテム説明", icon: PackageIcon, page: ItemsTab, wide: true },
     { value: "rank", label: "ランク", icon: TrophyIcon, page: RankTab, wide: true },
+    {
+      value: "purchases",
+      label: "買ったアイテム",
+      icon: ShoppingCartIcon,
+      page: PurchasesTab,
+      wide: true,
+    },
     { value: "stats", label: "統計", icon: ChartColumnIcon, page: StatsTab, heading: "" },
     // 自分の API キーを使う人だけが開く。料金も同じタブに置く
     { value: "keys", label: "API キーと料金", icon: KeyRoundIcon, page: KeysTab },

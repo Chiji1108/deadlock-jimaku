@@ -3,6 +3,7 @@ import type { Topic } from "./Topic";
 
 export type ClientMsg = { "type": "subscribe", topics: Array<Topic>, 
 /**
- * OBS の中で開いた字幕オーバーレイ。つながっている間、操作パネルに「OBS に表示中」と出す
+ * OBS の中で開いたオーバーレイ。字幕なら、つながっている間、操作パネルに「OBS に表示中」と出す。
+ * 買ったアイテムなら、つながっている間だけゲームの画面を読む
  */
 obs: boolean, } | { "type": "stats", sessions: number, };
