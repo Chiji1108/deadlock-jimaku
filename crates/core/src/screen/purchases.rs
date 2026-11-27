@@ -1,8 +1,9 @@
 //! 読んだ持ち物の移り変わりから、買ったアイテムを出す（DESIGN.md 18.3）。画面も通信も触らない。
 //!
-//! 持ち物は名前の集まりで持ち、増えるだけにする（買うと並びが入れ替わるので、枠では比べない）。
-//! 空の枠は背景が透けていて、読めないだけの枠（クールダウンで暗い、ほかの表示に隠れた）と見分けられないので、
-//! 「なくなった」とは決めない。売ったものを同じ試合でもう一度買ったときは、出ない。
+//! 持ち物は名前の集まりで持つ（買うと並びが入れ替わるので、枠では比べない）。
+//! 空の枠は背景が透けていて、読めないだけの枠（クールダウンで暗い、ほかの表示に隠れた）と見分けにくいので、
+//! 読めなくなっただけでは「なくなった」と決めない。試合の画面が見えているのに、どの枠にも薄くすら出ていないのが
+//! しばらく続いたときだけ、売った（または作り替えた）と決める。そうしないと、買い直したときに出ない。
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::time::Duration;
@@ -25,6 +26,9 @@ const AFTER_SHOP: u32 = 6;
 /// クールダウンで暗い枠は、近さは足りないが、ほかの見本とは離れている（0.67〜0.77 と、次点 0.30〜0.45）。
 /// 空の枠は、いちばん近い見本と次点が近い（0.73 と 0.64）。基準を作るときだけ、暗い枠も持ち物に数える
 const FAINT: (f32, f32) = (0.6, 0.2);
+/// 持っているアイテムが、どの枠のいちばん近い見本にもなっていない（これより近くない）のが、
+/// この回数続いたら、売ったと決める（5 秒ほど）。クールダウンで暗い枠は、近さは落ちても、いちばん近い見本はそのアイテムのまま
+const GONE: (f32, u32) = (0.45, 15);
 
 #[derive(Default)]
 pub struct Tracker {
@@ -41,6 +45,8 @@ pub struct Tracker {
     /// 初めに読めたのと違うヒーローが読めた枠。同じ画面で揃って読めるとは限らないので、覚えておく
     moved: BTreeSet<usize>,
     readable_at: Option<Duration>,
+    /// 持っているアイテムが、どの枠にも出ていない回数
+    gone: BTreeMap<String, u32>,
     /// 試合が変わったと決めた回数
     matches: u32,
 }
@@ -62,6 +68,7 @@ impl Tracker {
             // 左下に出ているのは、観戦している相手の持ち物
             self.readable_at = Some(at);
             self.seen.clear();
+            self.gone.clear();
             return Vec::new();
         }
         let heroes: Vec<Option<&str>> = bar
@@ -146,6 +153,7 @@ impl Tracker {
         if hidden && !items.shop {
             // 上部バーが隠れている（観戦に入る途中など）。ショップの中は、閉じたあとに数える
             self.seen.clear();
+            self.gone.clear();
             return Vec::new();
         }
         self.seen.retain(|name, _| known.contains(&name.as_str()));
@@ -155,9 +163,26 @@ impl Tracker {
             }
         }
         if self.shop {
-            // 開いている間は出さない（買い直しがよくある）。閉じたときに、開く前から増えた分が出る
+            // 開いている間は出さない（買い直しがよくある）。閉じたときに、開く前から増えた分が出る。
+            // 説明のカードに隠れた枠は読めないので、なくなったかも数えない
+            self.gone.clear();
             return Vec::new();
         }
+        // 試合の画面が見えているのに、どの枠にも出ていないアイテムは、売ったか作り替えた。
+        // 覚えたままにすると、買い直したときに出ない
+        let shown =
+            |name: &str| (items.reads.iter()).any(|read| read.name == name && read.score >= GONE.0);
+        self.gone.retain(|name, _| !shown(name));
+        for name in self.owned.iter().filter(|name| !shown(name)) {
+            *self.gone.entry(name.clone()).or_default() += 1;
+        }
+        self.gone.retain(|name, count| {
+            let sold = *count >= GONE.1;
+            if sold {
+                self.owned.remove(name);
+            }
+            !sold
+        });
         let from_shop = self.after_shop > 0;
         self.after_shop = self.after_shop.saturating_sub(1);
         let bought: Vec<String> = known
@@ -355,6 +380,51 @@ mod tests {
         assert_eq!(
             game.watch(&held(&["Fortitude", "Headhunter"]), CONFIRM),
             ["Fortitude"]
+        );
+    }
+
+    #[test]
+    fn what_was_sold_is_a_purchase_when_bought_again() {
+        let mut game = Game::started_with(&["Headhunter", "Berserker"]);
+        // 売った。どの枠にも出ていないのが続く
+        assert!(game.watch(&held(&["Headhunter"]), GONE.1).is_empty());
+        assert_eq!(
+            game.watch(&held(&["Headhunter", "Berserker"]), CONFIRM),
+            ["Berserker"]
+        );
+        // 全部売って、買い直す
+        assert!(game.watch(&held(&[]), GONE.1).is_empty());
+        assert_eq!(game.watch(&held(&["Berserker"]), CONFIRM), ["Berserker"]);
+    }
+
+    #[test]
+    fn what_is_only_unreadable_was_not_sold() {
+        let mut game = Game::started_with(&["Headhunter", "Berserker"]);
+        // クールダウンで、長く暗い。近さは落ちても、いちばん近い見本はそのアイテムのまま
+        let dim = slots(
+            vec![read("Headhunter", 0.97, 0.5), read("Berserker", 0.5, 0.46)],
+            false,
+        );
+        assert!(game.watch(&dim, 200).is_empty());
+        assert!(
+            game.watch(&held(&["Headhunter", "Berserker"]), 9)
+                .is_empty()
+        );
+        // ショップの説明のカードや、観戦中、上部バーが隠れている間は、数えない
+        assert!(game.watch(&in_shop(&["Headhunter"]), 60).is_empty());
+        game.team = heroes(&[]);
+        assert!(game.watch(&held(&["Headhunter"]), 60).is_empty());
+        game.team = heroes::Bar {
+            spectating: true,
+            ..heroes(&["McGinnis", "Kelvin", "The Doorman"])
+        };
+        assert!(game.watch(&held(&["Fortitude"]), 60).is_empty());
+        game.team = heroes(&["McGinnis", "Kelvin", "The Doorman"]);
+        // 少しの間だけ読めなくても、売ったとは決めない
+        assert!(game.watch(&held(&["Headhunter"]), GONE.1 - 1).is_empty());
+        assert!(
+            game.watch(&held(&["Headhunter", "Berserker"]), 9)
+                .is_empty()
         );
     }
 
