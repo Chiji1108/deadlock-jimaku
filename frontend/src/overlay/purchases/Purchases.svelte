@@ -18,13 +18,18 @@
   /** 待っている買い物の上限。買ったときから大きく遅れないよう、古いものは捨てる */
   const MAX_QUEUE = 3;
 
-  /** 見本の買った時刻（10:00。1 つ目には遅く、2 つ目には早い） */
-  const SAMPLE_CLOCK = 600;
-  /** 見本の数字（定番と、珍しいもの） */
-  const SAMPLE_RATES = [
-    { share: 0.62, boughtAtSeconds: 190 },
-    { share: 0.012, boughtAtSeconds: 1110 },
-  ];
+  /**
+   * 見本。実際の試合で出た組み合わせと数字（ミナ、時計 5:59。2026-11 の集計）。
+   * 1 つ目は平均よりかなり早く、2 つ目はほとんどの試合で買われて、平均よりかなり遅い
+   */
+  const SAMPLE: Purchase = {
+    hero: "hero_vampirebat",
+    clockSeconds: 359,
+    items: [
+      { item: "upgrade_blitz_bullets", rate: { share: 0.404, boughtAtSeconds: 996 } },
+      { item: "upgrade_improved_spirit", rate: { share: 0.968, boughtAtSeconds: 149 } },
+    ],
+  };
 
   let view = $state<PurchaseCardsView | undefined>();
   /** 今出している買い物。`id` は、同じものを続けて買ったときにも出し直すための番号 */
@@ -36,11 +41,13 @@
   /** 見本は辞書から作る（ゲームの画像は配布物に入れず、取ってきたものを使う） */
   const sample = $derived.by((): Purchase | undefined => {
     if (!preview || !glossary.ready) return undefined;
-    const items = SAMPLE_RATES.flatMap((rate, i) => {
-      const entity = glossary.items[i];
-      return entity ? [{ item: entity.className, rate }] : [];
-    });
-    return { hero: glossary.heroes[0]?.[1].className ?? null, clockSeconds: SAMPLE_CLOCK, items };
+    // ゲームの更新でヒーローやアイテムが無くなっていたら、辞書の初めのもので代える（数字は見本のまま）
+    const hero = glossary.named("hero", SAMPLE.hero!) ?? glossary.heroes[0]?.[1];
+    const items = SAMPLE.items.map(({ item, rate }, i) => ({
+      item: (glossary.named("item", item) ?? glossary.items[i])?.className ?? item,
+      rate,
+    }));
+    return { ...SAMPLE, hero: hero?.className ?? null, items };
   });
   const shown = $derived(current ?? (sample && { id: 0, purchase: sample }));
 
