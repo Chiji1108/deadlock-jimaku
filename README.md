@@ -2,7 +2,7 @@
 
 <a href="https://jimaku.deadlock.jp"><img src="web/src/assets/og.jpg" alt="デドロ字幕 — 「ドアマンのカートはディスペルで対策できます。」の字幕と英訳" width="720"></a>
 
-# デドロ配信を、世界に。
+# デドロ配信が、もっと伝わる。
 
 Deadlock に特化した、配信者向けの日本語字幕＆翻訳字幕アプリ（非公式）
 
