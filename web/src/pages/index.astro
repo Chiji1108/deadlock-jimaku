@@ -182,7 +182,7 @@ const jsonLd = {
                 rel="noopener"
                 class="flex items-center gap-3 rounded-full border border-line bg-panel py-1.5 pr-4 pl-1.5 transition-colors hover:border-ink"
               >
-                <img src={s.icon} alt="" width="40" height="40" class="size-10 rounded-full" />
+                <img src={s.icon} alt="" width="40" height="40" class="size-10 rounded-full border border-line bg-white" />
                 <span class="font-bold">{s.name}</span>
                 <BrandIcon icon={siTwitch} class="size-4 text-muted" />
               </a>
@@ -420,7 +420,7 @@ const jsonLd = {
         STREAMERS.map((s) => (
           <li class="flex items-start gap-3">
             <a href={s.url} target="_blank" rel="noopener" class="shrink-0">
-              <img src={s.icon} alt="" width="40" height="40" loading="lazy" class="size-10 rounded-full" />
+              <img src={s.icon} alt="" width="40" height="40" loading="lazy" class="size-10 rounded-full border border-line bg-white" />
             </a>
             <div>
               <a
