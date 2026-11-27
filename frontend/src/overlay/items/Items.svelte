@@ -11,7 +11,7 @@
   import type { Segment } from "../../generated/Segment";
   import { placeItems } from "../../lib/anchor";
   import { glossary, loadGlossary } from "../../lib/glossary.svelte";
-  import { connect } from "../../lib/ws";
+  import { connect, inObs } from "../../lib/ws";
 
   defineProvider();
   defineTooltip();
@@ -79,28 +79,33 @@
   }
 
   onMount(() => {
-    const disconnect = connect(["subtitle", "glossary", "display"], (msg) => {
-      switch (msg.type) {
-        // 接続した時点で説明まで済んでいた字幕は、説明済みとして扱う（つなぎ直すたびに出し直さない）。
-        // 途中の字幕は、説明が付いたときに拾う
-        case "snapshot":
-          for (const s of msg.segments) if (s.enriched) handled.add(s.id);
-          break;
-        case "segment.upsert":
-          onSegment(msg.segment);
-          break;
-        case "glossary.updated":
-          void loadGlossary().then(() => {
-            const waiting = [...pending.values()];
-            pending.clear();
-            waiting.forEach(onSegment);
-          });
-          break;
-        case "display":
-          view = msg.itemCards;
-          break;
-      }
-    });
+    const disconnect = connect(
+      ["subtitle", "glossary", "display"],
+      (msg) => {
+        switch (msg.type) {
+          // 接続した時点で説明まで済んでいた字幕は、説明済みとして扱う（つなぎ直すたびに出し直さない）。
+          // 途中の字幕は、説明が付いたときに拾う
+          case "snapshot":
+            for (const s of msg.segments) if (s.enriched) handled.add(s.id);
+            break;
+          case "segment.upsert":
+            onSegment(msg.segment);
+            break;
+          case "glossary.updated":
+            void loadGlossary().then(() => {
+              const waiting = [...pending.values()];
+              pending.clear();
+              waiting.forEach(onSegment);
+            });
+            break;
+          case "display":
+            view = msg.itemCards;
+            break;
+        }
+      },
+      undefined,
+      inObs() ? "items" : undefined,
+    );
     return () => {
       clearTimeout(timer);
       disconnect();

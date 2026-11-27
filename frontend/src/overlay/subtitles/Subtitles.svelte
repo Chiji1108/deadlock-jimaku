@@ -10,7 +10,7 @@
   import { loadGlossary } from "../../lib/glossary.svelte";
   import { applyFontImports, fontImports, fontSample } from "../../lib/overlay-fonts";
   import { isReady, visibleLines } from "../../lib/subtitle-lines";
-  import { connect } from "../../lib/ws";
+  import { connect, inObs } from "../../lib/ws";
 
   const segments = new SvelteMap<string, Segment>();
   let now = $state(Date.now());
@@ -59,10 +59,9 @@
   );
 
   onMount(() => {
-    // OBS の中で開かれたか（はじめかたのチェックに使う）。OBS のドックの操作パネルのプレビューも
-    // obsstudio を持つかもしれないので、iframe の中は除く
-    const inObs = "obsstudio" in window && window.parent === window;
-    if (inObs) void api.updateSettings({ obsSeen: true }).catch(() => {});
+    // OBS の中で開かれたか（はじめかたのチェックに使う）
+    const obs = inObs();
+    if (obs) void api.updateSettings({ obsSeen: true }).catch(() => {});
     const tick = setInterval(() => {
       now = Date.now();
       for (const [id, s] of segments) if (!isLive(s)) segments.delete(id);
@@ -92,7 +91,7 @@
         }
       },
       undefined,
-      inObs,
+      obs ? "subtitles" : undefined,
     );
     return () => {
       clearInterval(tick);

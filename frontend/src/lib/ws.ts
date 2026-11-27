@@ -1,8 +1,12 @@
 import type { ClientMsg } from "../generated/ClientMsg";
+import type { Overlay } from "../generated/Overlay";
 import type { ServerMsg } from "../generated/ServerMsg";
 import type { Topic } from "../generated/Topic";
 
 export type Status = "connecting" | "open" | "closed";
+
+/** OBS のブラウザソースとして開かれているか。操作パネルのプレビュー（iframe の中）は除く（OBS のドックの中でも obsstudio を持つかもしれない） */
+export const inObs = () => "obsstudio" in window && window.parent === window;
 
 /**
  * 読み込んだスクリプトが今の配信にないなら、アプリが更新されたので読み直す。
@@ -24,8 +28,8 @@ export function connect(
   topics: Topic[],
   onMessage: (msg: ServerMsg) => void,
   onStatus: (status: Status) => void = () => {},
-  /** OBS の中で開いた字幕オーバーレイ。つながっている間、操作パネルに「OBS に表示中」と出る */
-  obs = false,
+  /** OBS の中で開いたオーバーレイなら、その種類。つながっている間、操作パネルに印が出る */
+  obs?: Overlay,
 ): (() => void) & { send: (msg: ClientMsg) => void } {
   let ws: WebSocket | undefined;
   let retry = 0;
@@ -45,7 +49,9 @@ export function connect(
       if (reconnecting) void reloadIfUpdated();
       reconnecting = true;
       // 購読を先に送る（つないだ側が "open" で送るメッセージは、購読のあとに届く）
-      socket.send(JSON.stringify({ type: "subscribe", topics, obs } satisfies ClientMsg));
+      socket.send(
+        JSON.stringify({ type: "subscribe", topics, obs: obs ?? null } satisfies ClientMsg),
+      );
       onStatus("open");
     });
     socket.addEventListener("message", (e) => onMessage(JSON.parse(e.data) as ServerMsg));

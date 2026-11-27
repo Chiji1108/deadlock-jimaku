@@ -6,10 +6,6 @@ import type { Anchor } from "./Anchor";
  */
 export type PurchaseCards = { 
 /**
- * ゲームの画面を読むか。画面を見る機能なので、本人が選んで入れる
- */
-enabled: boolean, 
-/**
  * 買ったアイテムを出しておく秒数
  */
 holdSeconds: number, 
