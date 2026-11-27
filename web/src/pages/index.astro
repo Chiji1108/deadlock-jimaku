@@ -435,18 +435,6 @@ const jsonLd = {
               <p class="mt-1 w-fit rounded-2xl rounded-tl-sm border border-line bg-panel px-4 py-2 leading-relaxed font-bold">
                 {s.voice}
               </p>
-              {
-                s.chat && (
-                  <div class="mt-2 border-l-2 border-line pl-3">
-                    <p class="text-xs text-muted">配信のチャットより</p>
-                    <ul class="mt-1 flex flex-col gap-1 text-sm leading-relaxed">
-                      {s.chat.map((line) => (
-                        <li>{line}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )
-              }
             </div>
           </li>
         ))
