@@ -4,6 +4,7 @@ import obsPoster from "../assets/obs-drag.webp?url";
 import obsVideo from "../assets/obs-drag.mp4?url";
 import statsDays from "../assets/stats-days.webp?url";
 import statsTotals from "../assets/stats-totals.webp?url";
+import purchases from "../assets/purchases.webp?url";
 import { siTwitch } from "simple-icons";
 import Layout from "../layouts/Layout.astro";
 import { MODES, price } from "../../../frontend/src/lib/engines";
@@ -149,7 +150,7 @@ const jsonLd = {
     {
       "@type": "SoftwareApplication",
       name: "デドロ字幕",
-      description: "Deadlock に特化した、日本語字幕＆翻訳字幕アプリ。ランクやアイテム説明も出せます。",
+      description: "Deadlock に特化した、日本語字幕＆翻訳字幕アプリ。ランクやアイテム説明、買ったアイテムも出せます。",
       url: site,
       applicationCategory: "MultimediaApplication",
       operatingSystem: "Windows 10, Windows 11, macOS 11, Linux",
@@ -165,7 +166,7 @@ const jsonLd = {
   <script is:inline slot="head" type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
   <section class="dots px-4 pt-8 sm:pt-7">
     <div class="mx-auto max-w-6xl text-center">
-      <h1 class="display text-[clamp(2.5rem,5.6vw,4.5rem)]"><span class="inline-block">デドロ配信を、</span><span class="band inline-block">世界に。</span></h1>
+      <h1 class="display text-[clamp(2.5rem,5.6vw,4.5rem)]"><span class="inline-block">デドロ配信が、</span><span class="band inline-block">もっと伝わる。</span></h1>
       <p class="mt-4 text-lg text-muted">
         <span class="inline-block">Deadlock に特化した、</span><span class="inline-block">日本語字幕＆翻訳字幕アプリ</span>
       </p>
@@ -200,10 +201,10 @@ const jsonLd = {
   <section class="mx-auto mt-24 grid max-w-6xl items-center gap-10 px-4 sm:mt-32 md:grid-cols-2">
     <div>
       <h2 class="display reveal text-[clamp(2.1rem,4.5vw,3.6rem)]">
-        <span class="band">正確な</span>文字起こし
+        <span class="band">高精度な</span>文字起こし
       </h2>
       <p class="reveal mt-5 text-lg leading-relaxed text-muted">
-        「おすすめ」のモードでは、話し終えた文を、文字起こし専用のモデルで作り直します。略して呼んだアイテムも、「ドアマンのカート」のように略したスキルも、どれのことか見分けます。
+        「おすすめ」のモードでは、ゲームの用語や略した呼び方も、正しく書きます。
       </p>
     </div>
     <div class="reveal plate relative h-64 overflow-hidden">
@@ -220,7 +221,7 @@ const jsonLd = {
         <span class="band">ふりがな</span>付きの字幕
       </h2>
       <p class="reveal mt-5 text-lg leading-relaxed text-muted">
-        漢字に読みが付くので、日本語を学んでいる海外の視聴者にも読みやすい字幕になります。句読点も付け、数字は「8分」のように読みやすい形にそろえます。英語やロシア語など、最大 4 つの言語への翻訳も同時に出せます。
+        漢字に読みが付くので、日本語を学んでいる海外の視聴者にも読めます。翻訳も同時に出せます。
       </p>
     </div>
   </section>
@@ -230,7 +231,7 @@ const jsonLd = {
       <span class="band">ゲームの用語</span>に対応
     </h2>
     <p class="reveal mt-5 max-w-2xl text-lg leading-relaxed text-muted">
-      ヒーロー・スキル・アイテムの名前は色とアイコンで強調します。アイテムの名前が出たら、ゲーム内と同じカードで説明も出します。
+      ヒーロー・スキル・アイテムの名前を、色とアイコンで強調します。
     </p>
     <div class="mt-10 grid gap-4 md:grid-cols-2">
       <figure class="reveal">
@@ -269,7 +270,7 @@ const jsonLd = {
     <div>
       <h2 class="display reveal text-[clamp(2.1rem,4.5vw,3.6rem)]"><span class="band">ランク</span>の表示</h2>
       <p class="reveal mt-5 text-lg leading-relaxed text-muted">
-        配信にはランクだけを、すっきり出せます。アイコンだけにもできて、ランク名は日本語にもできます。試合が終わると自動で更新します。
+        配信にランクを、すっきり出せます。試合が終わると自動で更新します。
       </p>
     </div>
     <div class="reveal plate plate-rank flex flex-col items-center justify-center gap-5 p-6 sm:p-8">
@@ -291,26 +292,42 @@ const jsonLd = {
     <LookDemo client:visible />
     <div class="order-first md:order-none">
       <h2 class="display reveal text-[clamp(2.1rem,4.5vw,3.6rem)]">文字の見た目を<br /><span class="band">変えられる</span></h2>
-      <p class="reveal mt-5 text-lg leading-relaxed text-muted">
-        字幕は言語ごとにフォント・太さ・字間を、ランクもフォントを選べます。色、縁取り、影、行間、字幕の後ろの半透明の帯も変えられます。
-      </p>
-      <p class="reveal mt-3 text-lg leading-relaxed text-muted">
-        フォントは、Google Fonts や、PC に入っているフォントから選べます。
-      </p>
+      <p class="reveal mt-5 text-lg leading-relaxed text-muted">フォントや色など、文字の見た目を自由に設定できます。</p>
     </div>
   </section>
 
   <section class="mx-auto mt-28 grid max-w-6xl items-center gap-10 px-4 sm:mt-40 md:grid-cols-2">
     <div>
+      <p class="reveal mb-4 inline-block rounded-full border border-line px-3 py-1 text-sm font-bold text-muted tabular-nums">v0.11.0 で追加</p>
       <h2 class="display reveal text-[clamp(2.1rem,4.5vw,3.6rem)]"><span class="band">統計</span>タブ</h2>
       <p class="reveal mt-5 text-lg leading-relaxed text-muted">
-        字幕を出していた時間、喋った量、よく呼んだヒーロー・アイテム・スキルを、前回の配信と、今週・今月・ぜんぶの合計で見られます。日ごとの草と、配信している時間帯の表もあります。
+        配信でどれだけ喋ったかが、記録に残ります。よく呼んだヒーローやアイテムも分かります。
       </p>
-      <p class="reveal mt-3 text-lg leading-relaxed text-muted">数だけをこの PC に保存します。話した文は残しません。</p>
     </div>
     <div class="reveal plate flex flex-col gap-3 p-4 sm:p-6">
-      <img src={statsTotals} alt="統計の合計（字幕を出していた時間、喋った量、よく呼んだヒーロー・アイテム・スキル）" width="1472" height="760" loading="lazy" class="w-full rounded-xl" />
-      <img src={statsDays} alt="日ごとの喋った量の草" width="1472" height="436" loading="lazy" class="w-full rounded-xl" />
+      <img src={statsTotals} alt="統計の合計（字幕を出していた時間、喋った量、よく呼んだヒーロー・アイテム・スキル）" width="1476" height="764" loading="lazy" class="w-full rounded-xl" />
+      <img src={statsDays} alt="日ごとの喋った量のヒートマップ" width="1476" height="440" loading="lazy" class="w-full rounded-xl" />
+    </div>
+  </section>
+
+  <section class="mx-auto mt-28 grid max-w-6xl items-center gap-10 px-4 sm:mt-40 md:grid-cols-2">
+    <div class="reveal plate p-4 sm:p-6">
+      <img
+        src={purchases}
+        alt="買ったアイテムの表示（ミナのスイフトストライカーは購入率 40%、平均の購入 16:36 で「早い」。ミスティックエクスパンダーは 78% で「定番」）"
+        width="1080"
+        height="680"
+        loading="lazy"
+        class="w-full rounded-xl"
+      />
+    </div>
+    <div class="order-first md:order-none">
+      <p class="reveal mb-4 inline-block rounded-full border border-line px-3 py-1 text-sm font-bold text-muted tabular-nums">v0.12.0 で追加</p>
+      <h2 class="display reveal text-[clamp(2.1rem,4.5vw,3.6rem)]"><span class="band">買ったアイテム</span>の表示</h2>
+      <p class="reveal mt-5 text-lg leading-relaxed text-muted">
+        ゲームでアイテムを買うと、配信に小さく出します。購入率などの統計も付きます。
+      </p>
+      <p class="reveal mt-3 text-lg leading-relaxed text-muted">Windows 版だけの機能です。見た目を変える MOD を入れていると動きません。</p>
     </div>
   </section>
 
@@ -319,7 +336,7 @@ const jsonLd = {
       ゲームが<span class="band">重くならない</span>
     </h2>
     <p class="reveal mt-5 max-w-2xl text-lg leading-relaxed text-muted">
-      文字起こしをクラウドで動かすので、ゲーム中の PC に重い処理をさせません。アプリも小さくて軽いです。
+      文字起こしをクラウドで動かすので、ゲーム中の PC に重い処理をさせません。
     </p>
     <ul class="mt-10 grid gap-8 md:grid-cols-3">
       {
