@@ -65,6 +65,8 @@ type Images = [image::RgbImage; 4];
 const OWN_INTERVAL: Duration = Duration::from_secs(1);
 /// 時計が読めなくなってから（ショップを開いている間など）、これより経ったら、買った時刻は分からないとする
 const CLOCK_KEPT: Duration = Duration::from_secs(120);
+/// ショップの外で時計が読めなくなってから、これより経ったら、時計を忘れる（画面の切り替わりの途中は待つ）
+const CLOCK_GRACE: Duration = Duration::from_secs(5);
 
 /// 画像から読んだもの
 struct Reads {
@@ -303,6 +305,11 @@ fn read(store: &Store, samples: &Samples, runtime: &tokio::runtime::Handle) {
                 });
                 if let Some(seconds) = reads.clock {
                     clock = Some((seconds, Instant::now()));
+                } else if !reads.items.shop
+                    && clock.is_some_and(|(_, at)| at.elapsed() >= CLOCK_GRACE)
+                {
+                    // ショップの外で読めないのは、時計のない画面（メニュー、サンドボックス）。前の試合の時計から数えない
+                    clock = None;
                 }
                 let bought = tracker.observe(started.elapsed(), &reads.heroes, &reads.items);
                 if !bought.is_empty() {

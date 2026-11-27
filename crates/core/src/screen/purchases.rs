@@ -78,10 +78,12 @@ impl Tracker {
         }
 
         if heroes.iter().all(Option::is_none) && known.is_empty() {
-            // 試合の外か、ほかの画面に隠れている
-            if self
-                .readable_at
-                .is_some_and(|last| at.saturating_sub(last) >= GAP)
+            // 試合の外か、ほかの画面に隠れている。ショップを開いている間は、上部バーがショップに、
+            // アイテム欄が説明のカードに隠れるので、長く読めなくても試合は変わっていない
+            if !self.shop
+                && self
+                    .readable_at
+                    .is_some_and(|last| at.saturating_sub(last) >= GAP)
             {
                 *self = Self {
                     matches: self.matches + 1,
@@ -123,8 +125,13 @@ impl Tracker {
             self.shop = items.shop;
         }
 
+        let hidden = heroes.iter().all(Option::is_none);
         let baseline = self.baseline.get_or_insert(BASELINE);
         if *baseline > 0 {
+            if hidden || items.shop {
+                // ショップの中は、説明のカードに隠れた枠が読めない。基準は、試合の画面が見えているときに作る
+                return Vec::new();
+            }
             *baseline -= 1;
             let faint = items
                 .reads
@@ -136,7 +143,7 @@ impl Tracker {
             return Vec::new();
         }
 
-        if heroes.iter().all(Option::is_none) && !items.shop {
+        if hidden && !items.shop {
             // 上部バーが隠れている（観戦に入る途中など）。ショップの中は、閉じたあとに数える
             self.seen.clear();
             return Vec::new();
@@ -410,6 +417,44 @@ mod tests {
         assert_eq!(
             game.watch(&held(&["Headhunter", "Berserker"]), CONFIRM),
             ["Berserker"]
+        );
+    }
+
+    #[test]
+    fn a_long_visit_to_the_shop_does_not_forget_what_is_held() {
+        let mut game = Game::started_with(&["Headhunter", "Berserker"]);
+        // ショップを開くと、上部バーはショップに隠れる
+        game.team = heroes(&[]);
+        assert!(
+            game.watch(&in_shop(&["Headhunter", "Berserker"]), 3)
+                .is_empty()
+        );
+        // 説明のカードがアイテム欄を隠したまま、長く見ている
+        assert!(game.watch(&slots(Vec::new(), false), 120).is_empty());
+        // 1 つ買う。カードに隠れて、持っていたものが 1 つ読めない
+        assert!(
+            game.watch(&in_shop(&["Berserker", "Fortitude"]), 6)
+                .is_empty()
+        );
+        assert_eq!(game.tracker.matches(), 0);
+        // 閉じた。出るのは、買ったものだけ
+        game.team = heroes(&["McGinnis", "Kelvin", "The Doorman"]);
+        assert_eq!(
+            game.watch(&held(&["Headhunter", "Berserker", "Fortitude"]), CONFIRM),
+            ["Fortitude"]
+        );
+    }
+
+    #[test]
+    fn the_baseline_waits_until_the_shop_is_closed() {
+        // ショップを開いたまま読み始めた。説明のカードに隠れて、持っているものが 1 つ読めない
+        let mut game = Game::new();
+        game.team = heroes(&[]);
+        assert!(game.watch(&in_shop(&["Berserker"]), 9).is_empty());
+        game.team = heroes(&["McGinnis", "Kelvin", "The Doorman"]);
+        assert!(
+            game.watch(&held(&["Headhunter", "Berserker"]), 9)
+                .is_empty()
         );
     }
 
