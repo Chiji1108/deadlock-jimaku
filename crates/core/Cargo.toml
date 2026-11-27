@@ -55,9 +55,17 @@ image = { version = "0.25", default-features = false, features = ["png"] }
 vibrato = { version = "0.5.3", features = ["train"] }
 tempfile = "3.27.0"
 
-# 画面を取り込めるかを確かめる例（`examples/capture.rs`）が、Windows.Graphics.Capture を呼ぶのに使う
+# 取り込みの負荷を測る例（`examples/capture_load.rs`）が、自分の使った CPU の時間を取るのに使う
 [target.'cfg(windows)'.dev-dependencies]
+windows = { version = "0.62.2", features = ["Win32_System_Threading"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2-core-audio = { version = "0.3.2", default-features = false, features = ["std", "AudioHardware"] }
+objc2-core-foundation = { version = "0.3.2", default-features = false, features = ["std", "CFString"] }
+
+[target.'cfg(windows)'.dependencies]
 windows = { version = "0.62.2", features = [
+    # Deadlock のウィンドウを取り込む（`screen/capture.rs`。Windows.Graphics.Capture）
     "Foundation",
     "Graphics",
     "Graphics_Capture",
@@ -67,20 +75,11 @@ windows = { version = "0.62.2", features = [
     "Win32_Graphics_Direct3D11",
     "Win32_Graphics_Dxgi",
     "Win32_Graphics_Dxgi_Common",
-    "Win32_System_Threading",
     "Win32_System_WinRT",
     "Win32_System_WinRT_Direct3D11",
     "Win32_System_WinRT_Graphics_Capture",
-    "Win32_UI_HiDpi",
     "Win32_UI_WindowsAndMessaging",
-] }
-
-[target.'cfg(target_os = "macos")'.dependencies]
-objc2-core-audio = { version = "0.3.2", default-features = false, features = ["std", "AudioHardware"] }
-objc2-core-foundation = { version = "0.3.2", default-features = false, features = ["std", "CFString"] }
-
-[target.'cfg(windows)'.dependencies]
-windows = { version = "0.62.2", features = [
+    # Bluetooth のマイクを見分ける（`bluetooth.rs`）
     "Win32_Devices_Properties",
     "Win32_Foundation",
     "Win32_Media_Audio",
