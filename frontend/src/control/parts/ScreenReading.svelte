@@ -6,6 +6,7 @@
   import type { ScreenStatus } from "../../generated/ScreenStatus";
   import { entityName, glossary } from "../../lib/glossary.svelte";
   import { clock } from "../../lib/purchase-stats";
+  import { obsProblem } from "../../lib/screen-status";
   import { connect } from "../../lib/ws";
   import { STATUS_DOTS, panel } from "../panel.svelte";
   import Help from "./Help.svelte";
@@ -50,8 +51,11 @@
         return { tone: "busy", label: "見本の画像を用意しています（初めは 13 MB ほど取ります）" };
       case "noWindow":
         return { tone: "idle", label: "Deadlock が開いていません" };
+      case "noObs":
+      case "obsPassword":
+      case "noInput":
       case "failed":
-        return { tone: "error", label: `読めません（${status.detail}）` };
+        return { tone: "error", label: obsProblem(status)! };
       case "reading":
         if (nothing) return { tone: "warning", label: "試合の画面が読めていません" };
         // 観戦中は、左下が相手の持ち物になるので、買ったと数えない
@@ -80,11 +84,9 @@
       {summary.label}
     </p>
     {#if status.state === "noWindow"}
-      <!-- ゲーム用と配信用の PC を分けている人は、ここで止まる。開いていないのではなく、この PC にないと伝える。
-           アプリをゲーム用の PC に移しても、オーバーレイは同じ PC の OBS からしか開けないので、使えない -->
+      <!-- ゲーム用と配信用の PC を分けている人は、ここで止まる。開いていないのではなく、この PC にないと伝える -->
       <p class="text-sm text-muted-foreground">
-        読めるのは、この PC で動いている Deadlock だけです。ゲーム用と配信用の PC を分けている 2 PC
-        配信では、まだ使えません
+        ゲーム用と配信用の PC を分けているときは、「読む画面」を「OBS のソース」にしてください
       </p>
     {/if}
     {#if status.state === "reading"}

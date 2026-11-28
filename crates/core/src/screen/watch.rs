@@ -5,7 +5,7 @@ use std::collections::{BTreeMap, VecDeque};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use super::capture::Capture;
+use super::capture::{Capture, Feed};
 use super::purchases::Tracker;
 use super::rates::{self, Rates};
 use super::samples::{self, Sample, Samples};
@@ -17,7 +17,7 @@ use crate::types::{Overlay, Purchase, PurchasedItem, ScreenStatus};
 const SAMPLES: &str = "screen_samples";
 /// 読む間隔。1 秒に 3 回ほど
 const INTERVAL: Duration = Duration::from_millis(330);
-/// Deadlock のウィンドウがないときに、探し直す間隔
+/// 取り込みを始められないとき（Deadlock が開いていない、OBS につながらない）に、やり直す間隔
 const SEARCH: Duration = Duration::from_secs(3);
 /// 見本を取れなかったときに、取り直すまでの間
 const RETRY: Duration = Duration::from_secs(30);
@@ -74,6 +74,8 @@ struct Reads {
 
 /// 取り込みと、その画面の大きさに合わせた見本
 struct Source {
+    /// どこから読んでいるか。設定が変わったら、開き直す
+    feed: Feed,
     capture: Capture,
     scale: f32,
     heroes: Vec<Template>,
@@ -83,10 +85,9 @@ struct Source {
 }
 
 impl Source {
-    fn open(samples: &Samples) -> anyhow::Result<Option<Self>> {
-        let Some(capture) = Capture::open()? else {
-            return Ok(None);
-        };
+    /// 取り込みを始める。始められなければ、操作パネルに見せる理由を返す
+    fn open(samples: &Samples, feed: Feed) -> Result<Self, ScreenStatus> {
+        let capture = Capture::open(&feed)?;
         let scale = capture.size().1 as f32 / BASE_HEIGHT;
         // 読んだものは `class_name` で知らせる
         fn named(samples: &[Sample]) -> impl Iterator<Item = (&str, &image::RgbaImage)> {
@@ -94,14 +95,15 @@ impl Source {
                 .iter()
                 .map(|sample| (sample.class_name.as_str(), &sample.image))
         }
-        Ok(Some(Self {
+        Ok(Self {
             heroes: heroes::templates(named(&samples.heroes), scale),
             items: items::templates(named(&samples.items), scale),
             digits: clock::templates(scale),
             abilities: abilities::shapes(named(&samples.abilities), scale),
+            feed,
             capture,
             scale,
-        }))
+        })
     }
 
     /// 新しい画面を読む。画面が変わっていなければ None
@@ -248,19 +250,21 @@ fn read(store: &Store, samples: &Samples, runtime: &tokio::runtime::Handle) {
     let mut last: Option<Reads> = None;
     // 最後に読めた時計と、そのとき。ショップを開いている間は時計が隠れるので、そこから数える
     let mut clock: Option<(u32, Instant)> = None;
+    // OBS のパスワードと、それを読んだときの `obs_password_changes`
+    let mut password: Option<(u64, Option<String>)> = None;
     while wanted(store) {
+        let feed = feed(store, &mut password);
+        if source.as_ref().is_some_and(|open| open.feed != feed) {
+            source = None;
+        }
         let Some(open) = &mut source else {
-            match Source::open(samples) {
-                Ok(Some(opened)) => source = Some(opened),
-                Ok(None) => {
-                    store.set_screen_status(ScreenStatus::NoWindow);
-                    std::thread::sleep(SEARCH);
-                }
-                Err(e) => {
-                    tracing::warn!("cannot capture the game window: {e:#}");
-                    store.set_screen_status(ScreenStatus::Failed {
-                        detail: format!("{e:#}"),
-                    });
+            match Source::open(samples, feed) {
+                Ok(opened) => source = Some(opened),
+                Err(status) => {
+                    if let ScreenStatus::Failed { detail } = &status {
+                        tracing::warn!("cannot capture the game screen: {detail}");
+                    }
+                    store.set_screen_status(status);
                     std::thread::sleep(SEARCH);
                 }
             }
@@ -340,7 +344,7 @@ fn read(store: &Store, samples: &Samples, runtime: &tokio::runtime::Handle) {
             }
             // 画面が変わっていないか、最小化している
             Ok(None) => {}
-            // ウィンドウが閉じたか、大きさが変わった。開き直す
+            // ウィンドウや OBS が閉じたか、大きさが変わった。開き直す
             Err(e) => {
                 tracing::info!("reopening the capture: {e:#}");
                 source = None;
@@ -371,6 +375,24 @@ fn read(store: &Store, samples: &Samples, runtime: &tokio::runtime::Handle) {
             held.pop_front();
         }
         std::thread::sleep(INTERVAL);
+    }
+}
+
+/// いまの設定での、読む場所。OBS のパスワードは、保存し直されたときだけ資格情報ストアから読む
+fn feed(store: &Store, password: &mut Option<(u64, Option<String>)>) -> Feed {
+    let cards = store.purchase_cards();
+    if !cards.reads_obs() {
+        return Feed::Window;
+    }
+    let changes = store.obs_password_changes();
+    let (_, password) = match password {
+        Some(read) if read.0 == changes => read,
+        stale => stale.insert((changes, crate::secrets::obs())),
+    };
+    Feed::Obs {
+        port: cards.obs_port,
+        password: password.clone(),
+        input: cards.obs_input,
     }
 }
 

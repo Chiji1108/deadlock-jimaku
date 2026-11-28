@@ -74,6 +74,8 @@ enum Slot {
     Key(Provider),
     /// ベータのコード（DESIGN.md 17.2）
     Beta,
+    /// OBS の WebSocket サーバーのパスワード（DESIGN.md 18.8）
+    Obs,
 }
 
 impl Slot {
@@ -81,6 +83,7 @@ impl Slot {
         match self {
             Self::Key(provider) => provider.info().id,
             Self::Beta => "beta",
+            Self::Obs => "obs",
         }
     }
 }
@@ -107,6 +110,8 @@ pub struct KeyStatus {
     pub typesafe: KeyState,
     /// ベータのコード。コードそのものは返さない
     pub beta: KeyState,
+    /// OBS の WebSocket サーバーのパスワード
+    pub obs: KeyState,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -217,6 +222,7 @@ pub fn status() -> KeyStatus {
         openrouter: key(Provider::OpenRouter),
         typesafe: key(Provider::TypeSafe),
         beta: state(Slot::Beta),
+        obs: state(Slot::Obs),
     }
 }
 
@@ -245,6 +251,15 @@ pub fn beta() -> Option<String> {
 /// 空文字列なら消す
 pub fn set_beta(code: &str) -> anyhow::Result<()> {
     put(Slot::Beta, code)
+}
+
+pub fn obs() -> Option<String> {
+    get_or_warn(Slot::Obs)
+}
+
+/// 空文字列なら消す
+pub fn set_obs(password: &str) -> anyhow::Result<()> {
+    put(Slot::Obs, password)
 }
 
 /// 0.7 までの「おすそ分け」（人にキーを貸す仕組み。0.8 でなくした）が資格情報ストアに置いたものを消す。

@@ -26,9 +26,9 @@ fallback?: TranscriptionError,
  */
 continuesWith?: Fallback, keys: KeyStatus, 
 /**
- * ゲームの画面を読めるか（Windows だけ。DESIGN.md 18 章）
+ * この PC の Deadlock のウィンドウを読めるか（Windows だけ。ほかの OS では、OBS のソースから読む。DESIGN.md 18.8）
  */
-readsScreen: boolean, 
+readsWindow: boolean, 
 /**
  * 新しい版があれば、その版（デスクトップアプリが調べて知らせる。DESIGN.md 13.5）
  */

@@ -8,4 +8,4 @@ export type PurchaseCardsPatch = { holdSeconds?: number,
 /**
  * 空文字列なら話す言語
  */
-language?: string, anchor?: Anchor, showRate?: boolean, };
+language?: string, anchor?: Anchor, showRate?: boolean, fromObs?: boolean, obsPort?: number, obsInput?: string, };

@@ -1,3 +1,4 @@
+import type { ScreenStatus } from "../generated/ScreenStatus";
 import type { BetaRefusal } from "../generated/BetaRefusal";
 import type { CodeStatus } from "../generated/CodeStatus";
 import type { Fetched } from "../generated/Fetched";
@@ -36,6 +37,11 @@ export const api = {
       method: "PUT",
       body: JSON.stringify({ key }),
     }),
+  /** OBS の WebSocket サーバーのパスワード。空文字列なら消す */
+  setObsPassword: (key: string) =>
+    request<SettingsView>("/api/obs/password", { method: "PUT", body: JSON.stringify({ key }) }),
+  /** OBS のソースの名前。つながらなければ、その理由 */
+  obsInputs: async (): Promise<string[] | ScreenStatus> => (await fetch("/api/obs/inputs")).json(),
   devices: () => request<Mic[]>("/api/devices"),
   /** 人の辞書のアイコンに、選んだ画像を保存する */
   savePersonIcon: async (image: Blob) => {
