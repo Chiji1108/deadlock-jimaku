@@ -286,6 +286,13 @@ pub struct PurchaseCards {
     pub anchor: Anchor,
     /// そのヒーローで買われる割合などの統計を添えるか
     pub show_rate: bool,
+    /// ゲームの画面を、この PC の Deadlock のウィンドウではなく、OBS のソースから読む（DESIGN.md 18.8）。
+    /// Windows のほかでは、いつも OBS のソースから読む（`reads_obs`）
+    pub from_obs: bool,
+    /// OBS の WebSocket サーバーのポート
+    pub obs_port: u16,
+    /// ゲームの画面が映っている OBS のソースの名前。空なら、まだ選んでいない
+    pub obs_input: String,
 }
 
 impl Default for PurchaseCards {
@@ -295,6 +302,9 @@ impl Default for PurchaseCards {
             language: None,
             anchor: Anchor::TopRight,
             show_rate: true,
+            from_obs: false,
+            obs_port: crate::screen::obs::PORT,
+            obs_input: String::new(),
         }
     }
 }
@@ -302,9 +312,17 @@ impl Default for PurchaseCards {
 impl PurchaseCards {
     pub const HOLD_SECONDS: std::ops::RangeInclusive<f32> = 3.0..=30.0;
 
+    /// OBS のソースから読む。この PC のウィンドウを読めるのは Windows だけ
+    pub fn reads_obs(&self) -> bool {
+        self.from_obs || !cfg!(windows)
+    }
+
     fn validate(&self) -> Result<(), String> {
         if !Self::HOLD_SECONDS.contains(&self.hold_seconds) {
             return Err(format!("holdSeconds must be in {:?}", Self::HOLD_SECONDS));
+        }
+        if self.obs_port == 0 {
+            return Err("obsPort must not be 0".to_owned());
         }
         match self.language.as_deref() {
             Some(code) if lang::find(code).is_none() => Err(format!("unknown language: {code}")),
@@ -321,6 +339,9 @@ impl PurchaseCards {
             },
             anchor: patch.anchor.unwrap_or(self.anchor),
             show_rate: patch.show_rate.unwrap_or(self.show_rate),
+            from_obs: patch.from_obs.unwrap_or(self.from_obs),
+            obs_port: patch.obs_port.unwrap_or(self.obs_port),
+            obs_input: patch.obs_input.unwrap_or_else(|| self.obs_input.clone()),
         };
         next.validate()?;
         Ok(next)
@@ -341,6 +362,12 @@ pub struct PurchaseCardsPatch {
     pub anchor: Option<Anchor>,
     #[ts(optional)]
     pub show_rate: Option<bool>,
+    #[ts(optional)]
+    pub from_obs: Option<bool>,
+    #[ts(optional)]
+    pub obs_port: Option<u16>,
+    #[ts(optional)]
+    pub obs_input: Option<String>,
 }
 
 /// 字幕の見せ方の変更。省いた項目は変えない（続けて変えたとき、前の変更を古い値で戻さない）

@@ -7,6 +7,7 @@ pub mod capture;
 pub mod clock;
 pub mod heroes;
 pub mod items;
+pub mod obs;
 pub mod purchases;
 pub mod rates;
 pub mod samples;

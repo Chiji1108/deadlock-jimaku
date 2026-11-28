@@ -20,4 +20,17 @@ anchor: Anchor,
 /**
  * そのヒーローで買われる割合などの統計を添えるか
  */
-showRate: boolean, };
+showRate: boolean, 
+/**
+ * ゲームの画面を、この PC の Deadlock のウィンドウではなく、OBS のソースから読む（DESIGN.md 18.8）。
+ * Windows のほかでは、いつも OBS のソースから読む（`reads_obs`）
+ */
+fromObs: boolean, 
+/**
+ * OBS の WebSocket サーバーのポート
+ */
+obsPort: number, 
+/**
+ * ゲームの画面が映っている OBS のソースの名前。空なら、まだ選んでいない
+ */
+obsInput: string, };

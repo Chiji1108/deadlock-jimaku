@@ -39,6 +39,8 @@ pub fn router(store: Arc<Store>) -> Router {
         .route("/settings", get(get_settings).patch(patch_settings))
         .route("/keys/{provider}", put(put_key))
         .route("/beta", post(join_beta))
+        .route("/obs/password", put(put_obs_password))
+        .route("/obs/inputs", get(obs_inputs))
         .route("/server/models", get(server_models))
         .route("/update", post(update))
         .route("/devices", get(devices))
@@ -117,7 +119,7 @@ async fn get_settings(State(store): State<Arc<Store>>) -> Json<SettingsView> {
         fallback: store.fallback(),
         continues_with: store.continues_with(),
         keys,
-        reads_screen: cfg!(windows),
+        reads_window: cfg!(windows),
         update: store.update(),
         unsaved: store.unsaved(),
     })
@@ -167,6 +169,31 @@ async fn put_key(
     }
     store.restart();
     get_settings(State(store)).await.into_response()
+}
+
+/// OBS の WebSocket サーバーのパスワードを保存する（DESIGN.md 18.8）。空文字列なら消す
+async fn put_obs_password(State(store): State<Arc<Store>>, Json(body): Json<KeyBody>) -> Response {
+    if let Err(e) = blocking(move || secrets::set_obs(&body.key)).await {
+        return (StatusCode::INTERNAL_SERVER_ERROR, format!("{e:#}")).into_response();
+    }
+    store.obs_password_changed();
+    get_settings(State(store)).await.into_response()
+}
+
+/// OBS のソースの名前。つながらなければ、その理由（読み取りの状態と同じ形）を 502 で返す
+async fn obs_inputs(State(store): State<Arc<Store>>) -> Response {
+    use crate::screen::obs::Obs;
+    use crate::types::ScreenStatus;
+    let port = store.purchase_cards().obs_port;
+    let listed = blocking(move || {
+        Obs::connect(port, secrets::obs().as_deref()).and_then(|mut obs| obs.inputs())
+    });
+    match listed.await {
+        Ok(inputs) => Json(inputs).into_response(),
+        Err(refused) => {
+            (StatusCode::BAD_GATEWAY, Json(ScreenStatus::from(refused))).into_response()
+        }
+    }
 }
 
 async fn blocking<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'static) -> T {

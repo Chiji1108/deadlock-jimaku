@@ -221,6 +221,12 @@ pub enum ScreenStatus {
     Preparing,
     /// Deadlock のウィンドウがない
     NoWindow,
+    /// OBS につながらない（OBS が開いていないか、WebSocket サーバーが有効でない）
+    NoObs,
+    /// OBS のパスワードが違うか、入れていない
+    ObsPassword,
+    /// 選んだ OBS のソースがない（まだ選んでいないときも）
+    NoInput,
     /// 読んでいる
     Reading {
         /// 取り込んでいる画面の大きさ
@@ -659,9 +665,9 @@ pub struct SettingsView {
     #[serde(rename = "continuesWith", skip_serializing_if = "Option::is_none")]
     pub continues_with: Option<crate::store::Fallback>,
     pub keys: crate::secrets::KeyStatus,
-    /// ゲームの画面を読めるか（Windows だけ。DESIGN.md 18 章）
-    #[serde(rename = "readsScreen")]
-    pub reads_screen: bool,
+    /// この PC の Deadlock のウィンドウを読めるか（Windows だけ。ほかの OS では、OBS のソースから読む。DESIGN.md 18.8）
+    #[serde(rename = "readsWindow")]
+    pub reads_window: bool,
     /// 新しい版があれば、その版（デスクトップアプリが調べて知らせる。DESIGN.md 13.5）
     #[ts(optional)]
     #[serde(skip_serializing_if = "Option::is_none")]

@@ -5,4 +5,8 @@ export type KeyStatus = { openai: KeyState, xai: KeyState, qwen: KeyState, openr
 /**
  * ベータのコード。コードそのものは返さない
  */
-beta: KeyState, };
+beta: KeyState, 
+/**
+ * OBS の WebSocket サーバーのパスワード
+ */
+obs: KeyState, };

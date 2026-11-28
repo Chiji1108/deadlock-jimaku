@@ -3,7 +3,7 @@
 /**
  * ゲームの画面の読み取りの状態（DESIGN.md 18.5）
  */
-export type ScreenStatus = { "state": "off" } | { "state": "preparing" } | { "state": "noWindow" } | { "state": "reading", 
+export type ScreenStatus = { "state": "off" } | { "state": "preparing" } | { "state": "noWindow" } | { "state": "noObs" } | { "state": "obsPassword" } | { "state": "noInput" } | { "state": "reading", 
 /**
  * 取り込んでいる画面の大きさ
  */

@@ -1,45 +1,115 @@
-//! Deadlock のウィンドウを取り込んで、画面の要るところだけを読み出す（DESIGN.md 18.2）。
-//! Windows だけ（Windows.Graphics.Capture）。ほかの OS では、`open` がいつも `Ok(None)` を返す。
+//! ゲームの画面を取り込んで、要るところだけを読み出す（DESIGN.md 18.2）。
+//! この PC の Deadlock のウィンドウ（Windows だけ。Windows.Graphics.Capture）か、OBS のソース（`obs.rs`）から読む。
 //!
 //! 取り込みは動かしたままにして、呼ぶ側が要るときに `read` で新しい 1 枚を読む。
 //! 同じスレッドから順に呼ぶ（`read` は新しいフレームを少し待つので、専用のスレッドで呼ぶ）。
 
 use image::RgbImage;
 
+use super::obs::Obs;
+use crate::types::ScreenStatus;
+
+/// どこから読むか
+#[derive(Clone, Debug, PartialEq)]
+pub enum Feed {
+    /// この PC で動いている Deadlock のウィンドウ（Windows だけ）
+    Window,
+    /// OBS のソース（`obs.rs`）
+    Obs {
+        port: u16,
+        password: Option<String>,
+        input: String,
+    },
+}
+
 /// 動いている取り込み。落とすと止まる
 pub struct Capture {
+    inner: Inner,
+    /// ゲームの画面の大きさ（幅、高さ）
+    size: (u32, u32),
+}
+
+enum Inner {
     #[cfg(windows)]
-    inner: windows::Inner,
+    Window(windows::Inner),
+    Obs {
+        obs: Obs,
+        input: String,
+    },
 }
 
 impl Capture {
-    /// Deadlock のウィンドウを探して、取り込みを始める。ウィンドウがなければ `Ok(None)`
-    pub fn open() -> anyhow::Result<Option<Self>> {
-        #[cfg(windows)]
-        return Ok(windows::Inner::open()?.map(|inner| Self { inner }));
-        #[cfg(not(windows))]
-        Ok(None)
+    /// 取り込みを始める。始められなければ、操作パネルに見せる理由を返す（Deadlock が開いていない、OBS につながらない、など）
+    pub fn open(feed: &Feed) -> Result<Self, ScreenStatus> {
+        match feed {
+            #[cfg(windows)]
+            Feed::Window => match windows::Inner::open() {
+                Ok(Some(inner)) => Ok(Self {
+                    size: inner.size,
+                    inner: Inner::Window(inner),
+                }),
+                Ok(None) => Err(ScreenStatus::NoWindow),
+                Err(e) => Err(ScreenStatus::Failed {
+                    detail: format!("{e:#}"),
+                }),
+            },
+            #[cfg(not(windows))]
+            Feed::Window => Err(ScreenStatus::NoWindow),
+            Feed::Obs {
+                port,
+                password,
+                input,
+            } => {
+                let mut obs = Obs::connect(*port, password.as_deref())?;
+                // 大きさは、もらった 1 枚で知る
+                let shot = obs.screenshot(input)?;
+                Ok(Self {
+                    size: shot.dimensions(),
+                    inner: Inner::Obs {
+                        obs,
+                        input: input.clone(),
+                    },
+                })
+            }
+        }
     }
 
     /// 取り込んでいるゲームの画面の大きさ（幅、高さ）。ウィンドウの表示では、タイトルバーと枠を除いた中身
     pub fn size(&self) -> (u32, u32) {
-        #[cfg(windows)]
-        return self.inner.size;
-        #[cfg(not(windows))]
-        (0, 0)
+        self.size
     }
 
-    /// プールに残っている古い画面を捨て、新しい 1 枚を待って、`areas`（左、上、幅、高さ）を順に読み出す。
-    /// どれも同じ 1 枚から読む。新しいフレームが来なければ `Ok(None)`（画面が変わっていないか、最小化している。
-    /// そのまま次も呼べる）。ウィンドウが閉じた・大きさが変わった・GPU が使えなくなったときは `Err` で、
+    /// 新しい 1 枚から、`areas`（左、上、幅、高さ）を順に読み出す。どれも同じ 1 枚から読む。
+    /// ウィンドウでは、プールに残っている古い画面を捨てて新しい 1 枚を待ち、来なければ `Ok(None)`
+    /// （画面が変わっていないか、最小化している。そのまま次も呼べる）。
+    /// ウィンドウが閉じた・大きさが変わった・GPU が使えなくなった・OBS が閉じたときは `Err` で、
     /// この取り込みはもう使えない（落として、`open` し直す）
     pub fn read(&mut self, areas: &[[u32; 4]]) -> anyhow::Result<Option<Vec<RgbImage>>> {
-        #[cfg(windows)]
-        return self.inner.read(areas);
-        #[cfg(not(windows))]
-        {
-            let _ = areas;
-            Ok(None)
+        match &mut self.inner {
+            #[cfg(windows)]
+            Inner::Window(inner) => inner.read(areas),
+            Inner::Obs { obs, input } => {
+                let shot = (obs.screenshot(input))
+                    .map_err(|refused| anyhow::anyhow!("OBS から絵をもらえない（{refused:?}）"))?;
+                anyhow::ensure!(
+                    shot.dimensions() == self.size,
+                    "ソースの大きさが変わった（{}x{}）",
+                    shot.width(),
+                    shot.height()
+                );
+                let cut = |&[left, top, width, height]: &[u32; 4]| {
+                    anyhow::ensure!(
+                        left + width <= shot.width() && top + height <= shot.height(),
+                        "読み出す範囲が画面からはみ出している"
+                    );
+                    Ok(image::imageops::crop_imm(&shot, left, top, width, height).to_image())
+                };
+                areas
+                    .iter()
+                    .map(cut)
+                    .collect::<anyhow::Result<_>>()
+                    .map(Some)
+            }
         }
     }
 }

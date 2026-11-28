@@ -513,6 +513,13 @@ class Panel {
     return this.update({ engines });
   };
 
+  /** 保存できたら true */
+  setObsPassword = (password: string) =>
+    this.run(async () => {
+      this.view = await api.setObsPassword(password);
+      toast.success(password ? "保存しました" : "削除しました");
+    });
+
   demo = () =>
     this.run(async () => {
       const res = await api.demo();

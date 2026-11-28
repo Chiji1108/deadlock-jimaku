@@ -13,7 +13,7 @@ use std::time::{Duration, Instant};
 
 use anyhow::Context;
 use overlays_core::screen::BASE_HEIGHT;
-use overlays_core::screen::capture::Capture;
+use overlays_core::screen::capture::{Capture, Feed};
 
 /// 読み出す範囲（1080p。左、上、幅、高さ）。上部バーと、アイテム欄（ショップを開くと上にずれる分も入れる）
 const REGIONS: [[f32; 4]; 2] = [[0.0, 0.0, 1920.0, 120.0], [0.0, 890.0, 420.0, 190.0]];
@@ -41,7 +41,7 @@ fn cpu_time() -> Duration {
 }
 
 fn open() -> anyhow::Result<Capture> {
-    Capture::open()?.context("Deadlock のウィンドウがない（取り込めるのは Windows だけ）")
+    Capture::open(&Feed::Window).map_err(|status| anyhow::anyhow!("取り込めない（{status:?}）"))
 }
 
 fn main() -> anyhow::Result<()> {

@@ -95,6 +95,8 @@ pub struct Store {
     /// 買ったアイテムがつながっている間だけ、ゲームの画面を読む（DESIGN.md 18.1）
     obs: watch::Sender<BTreeMap<Overlay, u32>>,
     screen_status: Mutex<ScreenStatus>,
+    /// OBS のパスワードを保存し直した回数。画面を読む側が、変わったときだけ資格情報ストアを読み直す
+    obs_password_changes: std::sync::atomic::AtomicU64,
     meter: Arc<Meter>,
     tally: Arc<Tally>,
     fonts: Arc<Library>,
@@ -161,6 +163,7 @@ impl Store {
             chrome_cuts: AtomicU32::new(0),
             obs: watch::Sender::new(BTreeMap::new()),
             screen_status: Mutex::new(ScreenStatus::Off),
+            obs_password_changes: Default::default(),
             meter,
             tally,
             fonts,
@@ -449,6 +452,20 @@ impl Store {
     /// OBS の中でつながっているオーバーレイ。画面を読む処理が、始めるときと止めるときを知る
     pub fn watch_obs(&self) -> watch::Receiver<BTreeMap<Overlay, u32>> {
         self.obs.subscribe()
+    }
+
+    /// 買ったアイテムの設定（画面を読む側が、読む場所を見る）
+    pub fn purchase_cards(&self) -> crate::settings::PurchaseCards {
+        self.settings.borrow().purchase_cards.clone()
+    }
+
+    pub fn obs_password_changes(&self) -> u64 {
+        (self.obs_password_changes).load(std::sync::atomic::Ordering::Relaxed)
+    }
+
+    /// OBS のパスワードを保存し直した
+    pub fn obs_password_changed(&self) {
+        (self.obs_password_changes).fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     }
 
     /// ゲームの画面の読み取りの状態。変わったときだけ知らせる

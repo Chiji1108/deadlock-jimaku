@@ -47,8 +47,8 @@ fontdb = "0.24.0"
 percent-encoding = "2.3.2"
 zip = { version = "9.3.0", default-features = false, features = ["deflate"] }
 rusqlite = { version = "0.43.0", features = ["bundled", "fallible_uint"] }
-# ゲームの画面を読む見本（PNG）を読んで、画面の大きさに縮める（`screen`）
-image = { version = "0.25", default-features = false, features = ["png"] }
+# ゲームの画面を読む見本（PNG）を読んで、画面の大きさに縮める（`screen`）。JPEG は、OBS からもらう絵（`screen/obs.rs`）
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 
 [dev-dependencies]
 # 辞書を組み立てる例（`examples/build_dictionary.rs`）が、MeCab の重みから小さい辞書を作るのに使う

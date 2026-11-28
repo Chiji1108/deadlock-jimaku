@@ -12,7 +12,7 @@ use std::time::{Duration, Instant};
 
 use anyhow::Context;
 use overlays_core::screen::BASE_HEIGHT;
-use overlays_core::screen::capture::Capture;
+use overlays_core::screen::capture::{Capture, Feed};
 
 /// 上の端を書く間隔（秒）。左下は毎秒
 const TOP_EVERY: u64 = 5;
@@ -30,7 +30,7 @@ fn main() -> anyhow::Result<()> {
     let mut seen = false;
     let mut gone = Instant::now();
     while started.elapsed() < Duration::from_secs(minutes * 60) && !stop.exists() {
-        let Some(mut capture) = Capture::open()? else {
+        let Ok(mut capture) = Capture::open(&Feed::Window) else {
             if seen && gone.elapsed() > Duration::from_secs(30) {
                 break;
             }
