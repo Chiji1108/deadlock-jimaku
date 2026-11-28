@@ -79,6 +79,13 @@
       <span class="size-2 shrink-0 rounded-full {STATUS_DOTS[summary.tone]}"></span>
       {summary.label}
     </p>
+    {#if status.state === "noWindow"}
+      <!-- ゲーム用と配信用の PC を分けている人は、ここで止まる。開いていないのではなく、この PC にないと伝える -->
+      <p class="text-sm text-muted-foreground">
+        読めるのは、この PC で動いている Deadlock だけです。ゲーム用と配信用の PC
+        を分けているときは、このアプリをゲーム用の PC で動かさないと使えません
+      </p>
+    {/if}
     {#if status.state === "reading"}
       {#if nothing}
         <div class="text-sm text-muted-foreground">
