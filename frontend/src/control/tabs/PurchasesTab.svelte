@@ -53,6 +53,8 @@
         {inObs ? "OBS に、見本を 1 回出します" : "OBS に追加すると使えます"}
       </p>
     </div>
+    <!-- 設定（左）を変えた結果を、スクロールせずに見られるように、止めてある右の列に置く -->
+    <ScreenReading />
   {/snippet}
 
   <div class="flex flex-col gap-6">
@@ -142,6 +144,5 @@
       </Card.Content>
     </Card.Root>
     <ObsSource />
-    <ScreenReading />
   </div>
 </OverlayPage>
