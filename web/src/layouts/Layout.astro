@@ -20,7 +20,8 @@ const {
   description = "デドロ配信が、もっと伝わる。Deadlock に特化した、日本語字幕＆翻訳字幕アプリ。ランクやアイテム説明、買ったアイテムも出せます。",
   indexable = true,
 } = Astro.props;
-const fullTitle = title ? `${title} | ${SITE}` : SITE;
+// トップは名前だけだと何のサイトか伝わらず、名前でしか検索に出ないので、何のアプリかを添える
+const fullTitle = title ? `${title} | ${SITE}` : `${SITE} | Deadlock 配信の日本語字幕・翻訳アプリ`;
 // ページの URL。ビルドの形（astro.config.mjs の build.format）で pathname は /privacy.html になるが、
 // 配信は /privacy で返し、/index.html と /privacy.html は転送するので、転送されない形にする
 const pageUrl = new URL(Astro.url.pathname.replace(/(index)?\.html$/, ""), Astro.site);
