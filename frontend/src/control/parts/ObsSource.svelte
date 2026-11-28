@@ -9,7 +9,7 @@
   import * as Field from "$lib/components/ui/field";
   import { Input } from "$lib/components/ui/input";
   import * as Select from "$lib/components/ui/select";
-  import * as ToggleGroup from "$lib/components/ui/toggle-group";
+  import { Switch } from "$lib/components/ui/switch";
   import type { ScreenStatus } from "../../generated/ScreenStatus";
   import { api } from "../../lib/api";
   import { obsProblem } from "../../lib/screen-status";
@@ -52,39 +52,34 @@
 <Card.Root>
   <Card.Header>
     <Card.Title class="flex items-center gap-1.5"
-      >読む画面<Help
+      >2 PC 配信の方へ<Help
         >ゲーム用と配信用の PC を分けているときは、ゲームの画面が映っている OBS
         のソース（映像キャプチャデバイスなど）から読みます。画面は、同じ PC の OBS
         からもらうだけで、保存も送信もしません。Linux で遊んでいて、ゲームを OBS
         に映しているときも使えます</Help
       ></Card.Title
     >
-    <!-- 「この OS では」ではなく、誰に向けた設定かを書く。OBS から読むのは、ゲーム用と配信用の PC を分けている人 -->
+    <!-- 見出しは、設定の名前（「読む画面」）ではなく、誰に向けたものかにする。ほかの人は、このカードを読み飛ばせる -->
     <Card.Description>
-      {#if readsWindow}
-        ゲーム用と配信用の PC を分けている 2 PC 配信の方は、「OBS
-        のソース」を選んでください。キャプチャーボードから OBS に入っているゲームの画面を読みます
-      {:else}
-        ゲーム用と配信用の PC を分けている 2 PC 配信の方へ。キャプチャーボードから OBS
-        に入っているゲームの画面を読みます。下の手順で設定してください
-      {/if}
+      ゲーム用と配信用の PC を分けているときは、キャプチャーボードから OBS
+      に入っているゲームの画面を読みます
     </Card.Description>
   </Card.Header>
   <Card.Content>
     <Field.Group>
       {#if readsWindow}
-        <Field.Field>
-          <ToggleGroup.Root
-            type="single"
-            variant="outline"
-            class="w-full"
-            value={c.fromObs ? "obs" : "window"}
-            onValueChange={(v) => v && panel.update({ purchaseCards: { fromObs: v === "obs" } })}
-          >
-            <ToggleGroup.Item value="window" class="flex-1">この PC の Deadlock</ToggleGroup.Item>
-            <ToggleGroup.Item value="obs" class="flex-1">OBS のソース（2 PC 配信）</ToggleGroup.Item
-            >
-          </ToggleGroup.Root>
+        <Field.Field orientation="horizontal">
+          <Field.Content>
+            <Field.Label for="from-obs">OBS に映っているゲームの画面から読む</Field.Label>
+            <Field.Description>
+              オフのときは、この PC で動いている Deadlock を読みます
+            </Field.Description>
+          </Field.Content>
+          <Switch
+            id="from-obs"
+            checked={c.fromObs}
+            onCheckedChange={(fromObs) => panel.update({ purchaseCards: { fromObs } })}
+          />
         </Field.Field>
       {/if}
       {#if fromObs}
