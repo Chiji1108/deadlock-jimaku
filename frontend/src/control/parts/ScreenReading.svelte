@@ -86,7 +86,8 @@
     {#if status.state === "noWindow"}
       <!-- ゲーム用と配信用の PC を分けている人は、ここで止まる。開いていないのではなく、この PC にないと伝える -->
       <p class="text-sm text-muted-foreground">
-        ゲーム用と配信用の PC を分けているときは、「読む画面」を「OBS のソース」にしてください
+        ゲーム用と配信用の PC を分けているときは、上の「2 PC 配信の方へ」で、OBS
+        に映っているゲームの画面から読むようにしてください
       </p>
     {/if}
     {#if status.state === "reading"}
