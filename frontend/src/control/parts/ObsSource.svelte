@@ -55,15 +55,20 @@
       >読む画面<Help
         >ゲーム用と配信用の PC を分けているときは、ゲームの画面が映っている OBS
         のソース（映像キャプチャデバイスなど）から読みます。画面は、同じ PC の OBS
-        からもらうだけで、保存も送信もしません</Help
+        からもらうだけで、保存も送信もしません。Linux で遊んでいて、ゲームを OBS
+        に映しているときも使えます</Help
       ></Card.Title
     >
-    {#if !readsWindow}
-      <Card.Description>
-        この OS では、OBS に映っているゲームの画面から読みます（ゲーム用の PC
-        を分けているときや、Linux で遊んでいるとき）
-      </Card.Description>
-    {/if}
+    <!-- 「この OS では」ではなく、誰に向けた設定かを書く。OBS から読むのは、ゲーム用と配信用の PC を分けている人 -->
+    <Card.Description>
+      {#if readsWindow}
+        ゲーム用と配信用の PC を分けている 2 PC 配信の方は、「OBS
+        のソース」を選んでください。キャプチャーボードから OBS に入っているゲームの画面を読みます
+      {:else}
+        ゲーム用と配信用の PC を分けている 2 PC 配信の方へ。キャプチャーボードから OBS
+        に入っているゲームの画面を読みます。下の手順で設定してください
+      {/if}
+    </Card.Description>
   </Card.Header>
   <Card.Content>
     <Field.Group>
