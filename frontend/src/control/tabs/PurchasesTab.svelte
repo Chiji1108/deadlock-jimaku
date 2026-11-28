@@ -53,11 +53,13 @@
         {inObs ? "OBS に、見本を 1 回出します" : "OBS に追加すると使えます"}
       </p>
     </div>
-    <!-- 設定（左）を変えた結果を、スクロールせずに見られるように、止めてある右の列に置く -->
-    <ScreenReading />
   {/snippet}
 
   <div class="flex flex-col gap-6">
+    <!-- いちばん上に、動いているかどうか。その下に、読めないときに直す所（2 PC 配信の設定）を置いて、
+         変えた結果を同じ画面で見られるようにする。右の列に置くと、読めているときに縦に長くなって、低いウィンドウで下が隠れる -->
+    <ScreenReading />
+    <ObsSource />
     <Card.Root>
       <Card.Header>
         <Card.Title class="flex items-center gap-1.5"
@@ -143,6 +145,5 @@
         </Field.Group>
       </Card.Content>
     </Card.Root>
-    <ObsSource />
   </div>
 </OverlayPage>
